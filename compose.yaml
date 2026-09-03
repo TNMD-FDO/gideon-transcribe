@@ -1,0 +1,116 @@
+# Gideon Transcribe: the whole stack, as one Compose project named
+# `transcribe`.
+#
+# One `docker compose up -d` at the Install home brings up the app and the
+# WhisperX service together. The service is include-d from its own folder
+# rather than written out here, because it is a product of its own and still
+# runs on its own for a second Consumer or a test bench.
+#
+# Every value an office supplies is in .env beside this file, and every secret
+# is a file under secrets/. `./transcribe install` writes both.
+
+name: transcribe
+
+include:
+  - path: whisperx-service/compose.yaml
+    env_file: whisperx-service/.env
+
+services:
+  postgres:
+    image: postgres:18-trixie@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+    restart: unless-stopped
+    # Its own user, not the app's: the database owns its files.
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-transcribe}"
+      POSTGRES_USER: "${POSTGRES_USER:-transcribe}"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: "${TZ:-UTC}"
+    secrets:
+      - postgres_password
+    volumes:
+      - "${APP_DATA_DIR:?set APP_DATA_DIR in .env}/postgres:/var/lib/postgresql/data"
+    # Enough for a database that holds settings, users, the audit log, prompt
+    # templates, and one Login session's text.
+    command: >
+      postgres
+      -c shared_buffers=1GB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transcribe} -d ${POSTGRES_DB:-transcribe}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
+  app:
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:v0.1.0
+    build:
+      context: ./app
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_HOSTNAME: "${APP_HOSTNAME:?set APP_HOSTNAME in .env}"
+      APP_DATA_DIR: /srv/data
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: "${POSTGRES_DB:-transcribe}"
+      POSTGRES_USER: "${POSTGRES_USER:-transcribe}"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      WHISPERX_URL: "${WHISPERX_URL:-http://whisperx:8000}"
+      WHISPERX_TOKEN_FILE: /run/secrets/whisperx_consumer_token
+      TZ: "${TZ:-UTC}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+    secrets:
+      - postgres_password
+      - django_secret_key
+      - whisperx_consumer_token
+    volumes:
+      - "${APP_DATA_DIR}:/srv/data"
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=5).status == 200 else 1)
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    networks:
+      # The app reaches the WhisperX service on its own network, and nothing
+      # else on it.
+      - transcribe
+      - whisperx
+    logging:
+      driver: journald
+
+secrets:
+  postgres_password:
+    file: "${POSTGRES_PASSWORD_FILE:-./secrets/postgres_password}"
+  django_secret_key:
+    file: "${DJANGO_SECRET_KEY_FILE:-./secrets/django_secret_key}"
+  whisperx_consumer_token:
+    file: "${WHISPERX_TOKEN_FILE:-./secrets/whisperx_consumer_token}"
+
+networks:
+  transcribe:
+    name: transcribe

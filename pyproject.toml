@@ -13,10 +13,12 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
-# The service's tests import `service` directly, the way the container does.
-pythonpath = ["whisperx-service"]
-testpaths = ["whisperx-service/tests"]
+# Each side imports the way its own container does: the service imports
+# `service`, the app imports `transcribe` and `core`.
+pythonpath = ["whisperx-service", "app"]
+testpaths = ["whisperx-service/tests", "app/tests"]
 addopts = "-q"
+DJANGO_SETTINGS_MODULE = "transcribe.settings_test"
 
 [tool.ruff.lint.per-file-ignores]
 # FastAPI declares where a value comes from in the argument default, which is
