@@ -38,11 +38,16 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 
 ## 1. ffmpeg and the GPL
 
-Debian's ffmpeg is a GPL build, because it links libx264 (with libx265 and
-libxvid), which the app needs for the H.264 Playback copies and Clips.
-Calling ffmpeg as a separate program leaves the app's own terms untouched:
-running a program through pipes and command-line arguments does not combine
-the two works.
+The ffmpeg in both images is a GPL build, because it links libx264 (with
+libx265 and libxvid), which the app needs for the H.264 Playback copies and
+Clips. Calling ffmpeg as a separate program leaves the app's own terms
+untouched: running a program through pipes and command-line arguments does not
+combine the two works.
+
+The two images take it from different distributions, because they are built on
+different bases: the app image from Debian 13, and the WhisperX service image
+from Ubuntu 24.04, which is what its CUDA base image is built on. Both are
+recorded below.
 
 Publishing an image that contains that ffmpeg is another matter: whoever
 distributes GPL binaries must make the complete corresponding source
@@ -50,9 +55,15 @@ available for as long as the binaries are distributed. So **each Release
 records the exact ffmpeg and codec package versions it ships in the table
 below, with a pointer to Debian's source packages for them.**
 
-| Release | ffmpeg package | codec packages | Source |
-|---|---|---|---|
-| *(none published yet)* | — | — | — |
+| Release | Image | ffmpeg package | codec packages | Source |
+|---|---|---|---|---|
+| *(none published yet)* | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
+| *(none published yet)* | app | — | — | Debian 13 source packages |
+
+The service image's versions above are what it builds with today, during the
+Phase 1 build and before any Release. They are recorded here from the first
+build so that the obligation is met from the start rather than remembered at
+the end; each Release replaces them with the versions it actually ships.
 
 ## 2. The WhisperX image
 
