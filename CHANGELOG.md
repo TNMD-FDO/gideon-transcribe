@@ -20,12 +20,25 @@ installs or upgrades to.
 ## Unreleased
 
 ```
+Models: unchanged
+Database: unchanged
+```
+
+Nothing yet.
+
+## v0.1.0, 2026-09-03
+
+```
 Models: changed
 Database: unchanged
 ```
 
 The WhisperX service, built first and on its own, so that the app has a
 working engine to be written against.
+
+This is a build release, not a public one: `v1.0.0` is the first Release an
+office installs. It runs on the office's own server and has been measured
+there against the office's own recordings.
 
 ### Added
 
@@ -68,3 +81,24 @@ working engine to be written against.
   Nothing specified was changed; what was open is filled in and listed under
   "Settled by the build".
 - CI lints and tests the service and validates its compose file on its own.
+
+### Measured
+
+The Phase 1 benchmark gate, run on the office's own recordings on an RTX PRO
+6000 Blackwell under driver 595:
+
+- Speed, as the service publishes it: 194 times real time for
+  `large-v3-turbo` without speaker separation and 87 with it; 156 and 73 for
+  `large-v3`. These replace the research's reference figure of about 70.
+- Batch size 16. Above it, video memory grows about a gigabyte for every 8 of
+  batch size while transcription gains under 3 per cent.
+- A GPU budget of 20 GB, which is in the service README as the figure to check
+  before anything else is put on the same card.
+- The voice-activity thresholds ship unchanged: lowering them found no more
+  speech and no more words on nine narrowband calls.
+- The pinned ffmpeg identifies and decodes G.729 inside WAV on its own, and
+  the forced decoder still works.
+
+Two legs of the gate could not run and are still owed: the translation checks,
+which need non-English and mixed-language samples, and the Phone preprocessing
+profile, which ships only if it measurably lowers errors.
