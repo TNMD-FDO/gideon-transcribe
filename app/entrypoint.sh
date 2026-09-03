@@ -12,6 +12,9 @@ set -eu
 
 case "${1:-web}" in
   web)
+    # The app's own database role, below the account that made the database.
+    # It comes first, because from here on the migrations run as it.
+    python manage.py ensure_roles
     # Migrations run as the web service starts, so that an upgrade is a
     # restart and nobody has to remember a separate step. The workers wait for
     # the app to be healthy, so they never race it.

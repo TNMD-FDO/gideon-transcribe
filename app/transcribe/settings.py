@@ -112,11 +112,18 @@ TEMPLATES = [
     },
 ]
 
+# The account the PostgreSQL image bootstraps with is a superuser, and a
+# superuser ignores every permission rule, so the app does not connect as it:
+# the audit log's insert-only role would be decoration if it did. The app has
+# a role of its own, below it, made by `manage.py ensure_roles` before the
+# migrations run. The two share the one database password (ADR 0008).
+POSTGRES_SUPERUSER = os.environ.get("POSTGRES_USER", "transcribe")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("POSTGRES_DB", "transcribe"),
-        "USER": os.environ.get("POSTGRES_USER", "transcribe"),
+        "USER": os.environ.get("POSTGRES_APP_USER", "transcribe_app"),
         "PASSWORD": secret("POSTGRES_PASSWORD_FILE", default=""),
         "HOST": os.environ.get("POSTGRES_HOST", "postgres"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),

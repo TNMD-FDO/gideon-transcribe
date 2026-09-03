@@ -106,6 +106,8 @@ services:
       APP_DATA_DIR: /srv/data
       POSTGRES_HOST: postgres
       POSTGRES_DB: "${POSTGRES_DB:-transcribe}"
+      # The account that made the database, used once at start to make the
+      # app's own role, and never to serve a request.
       POSTGRES_USER: "${POSTGRES_USER:-transcribe}"
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
