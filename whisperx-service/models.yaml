@@ -19,12 +19,16 @@ asr:
     revision: edaa852ec7e145841d8ffdb056a99866b5f0a478
     licence: MIT
     size_gb: 3.09
-    default: true
   large-v3-turbo:
     repository: mobiuslabsgmbh/faster-whisper-large-v3-turbo
     revision: 0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf
     licence: MIT
     size_gb: 1.62
+    # The default since the Phase 1 benchmark gate, 2026-09-03: about 40 per
+    # cent faster, 4 GB less video memory, within 3 per cent of large-v3 on
+    # words found in 13 of 14 sample recordings, and right about the language
+    # on the one recording large-v3 misheard.
+    default: true
 
 # One model, one licence acceptance, one token. This repository carries its own
 # segmentation, embedding, and plda files, so there is no second gated

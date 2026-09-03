@@ -2229,7 +2229,7 @@ Each Side of the Recording is one Run, and every Run of a Job carries the same s
 
 The rest of the request:
 
-- `model`: the admin setting **Model** (`large-v3`, the default, or `large-v3-turbo`, about twice as fast, slightly worse, and still able to translate). The model used is recorded on the Recording at submission, in the "Batch submitted" audit row, and in the Provenance.
+- `model`: the admin setting **Model** (`large-v3-turbo`, the default since the Phase 1 benchmark gate, or `large-v3`). The model used is recorded on the Recording at submission, in the "Batch submitted" audit row, and in the Provenance.
 - `diarize` and `speakers`: as in the table above.
 - `vocabulary`: the Office Vocabulary first, then the Batch's own Vocabulary, as one list of strings. The service builds Whisper's prompt itself from the `context` line and the list, keeps it under 200 tokens by dropping terms from the end of the list, and reports `vocabulary_terms_used` and `prompt_tokens` in the result, which the Provenance keeps. Because the Office Vocabulary comes first, the Batch's own terms are the ones dropped when the prompt is too long. The service refuses more than 200 terms or a context line over 500 characters; the caps are in the WhisperX service API document.
 - `context`: the one-line context sentence, empty when none was given.
