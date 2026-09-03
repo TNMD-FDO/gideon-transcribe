@@ -50,6 +50,7 @@ class Command(BaseCommand):
         ) as connection:
             made = self._ensure_role(connection, app_role, database["PASSWORD"])
             self._hand_over(connection, bootstrap, app_role, database["NAME"])
+            self._audit_roles(connection, app_role)
 
         self.stdout.write(
             f"The app connects as {app_role}"
@@ -79,6 +80,35 @@ class Command(BaseCommand):
             ).format(name=sql.Identifier(role), password=sql.Literal(password))
             cursor.execute(statement)
             return not already
+
+    def _audit_roles(self, connection, app_role: str) -> None:
+        """The audit log's two roles, and the app's membership of both.
+
+        Made here rather than in a migration because making a role needs a
+        privilege the app's own role does not have and should not have. The
+        migration grants them what they may do on the audit table, which is
+        the app role's business, because it owns that table.
+
+        NOINHERIT is what makes the membership mean something: the app holds
+        neither role's privileges until it asks for one by name.
+        """
+        from psycopg import sql
+
+        with connection.cursor() as cursor:
+            for role in ("transcribe_audit", "transcribe_audit_sweep"):
+                cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
+                if not cursor.fetchone():
+                    cursor.execute(
+                        sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(role))
+                    )
+                cursor.execute(
+                    sql.SQL("GRANT {} TO {}").format(
+                        sql.Identifier(role), sql.Identifier(app_role)
+                    )
+                )
+            cursor.execute(
+                sql.SQL("ALTER ROLE {} NOINHERIT").format(sql.Identifier(app_role))
+            )
 
     def _hand_over(self, connection, bootstrap: str, role: str, database: str) -> None:
         """Give the app role what it needs, and the tables already there.
