@@ -44,22 +44,32 @@ HIGH_PASS = "highpass=f=20"
 LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=20"
 
 # What tells a two-party call from an ordinary stereo recording. Build
-# constants, tuned on the office's own two-channel files, and deliberately not
-# admin settings: an office has no way to judge them.
+# constants rather than admin settings, because an office has no way to judge
+# them, and tuned on the office's own two-channel recordings.
 #
-# The test is the difference signal. Subtract one channel from the other: on a
-# recording where both channels carry the same thing, what is left is tens of
-# decibels below either channel, because they cancel. On a call with one party
-# per channel they do not cancel, because the two parties are not saying the
-# same thing at the same time.
-DIFFERENCE_FLOOR_DB = 12.0
+# The test is the difference signal. Subtract one channel from the other and
+# measure what is left, against the quieter of the two channels. On a
+# recording where both channels carry the same sound the difference cancels
+# and sits below either channel. On a call with one party per channel it does
+# not, because the two parties are not talking at the same time.
+#
+# Measured on the sample corpus on 2026-09-03, as (quieter channel) minus
+# (difference), in decibels:
+#
+#     two-party calls        -13.1, -3.0, -2.6, -2.1
+#     ordinary stereo         +1.2, +2.1, +5.0
+#
+# Zero separates them with room on both sides. A dual-mono recording, where
+# the two channels are identical, sits far higher again, because the
+# difference cancels almost completely.
+DIFFERENCE_MARGIN_DB = 0.0
 
-# A channel this far below the other is silence rather than a party, and the
-# recording is not a call with two sides.
-SILENT_CHANNEL_DB = 45.0
+# A channel this far below the other is silence rather than a party. The
+# quietest real call in the corpus had 12.9 dB between its two channels.
+SILENT_CHANNEL_DB = 30.0
 
-# Narrowband is what a phone system gives. A two-channel test only applies to
-# audio that could be a call at all.
+# Narrowband is what a phone system gives. Nothing wider is tested, because an
+# interview recorder and a body-worn camera are stereo without being a call.
 NARROWBAND_HZ = 16000
 
 
@@ -226,20 +236,33 @@ def _astats(path: Path, track: Track | None, filters: str) -> dict[str, float]:
         timeout=DECODE_TIMEOUT,
     )
 
+    return read_levels(finished.stderr)
+
+
+def read_levels(output: str) -> dict[str, float]:
+    """The per-channel levels out of what ffmpeg printed.
+
+    Every line a filter prints carries a prefix naming the filter and its
+    address, as `[Parsed_astats_0 @ 0x7f...] Channel: 1`, so the prefix comes
+    off before anything is read. Missing that is why this returned nothing at
+    all the first time, and a two-party jail call was transcribed as one side.
+    """
     found: dict[str, float] = {}
-    channel = 0
-    for line in finished.stderr.splitlines():
-        line = line.strip()
+    channel = "overall"
+    for raw in output.splitlines():
+        line = raw.split("] ", 1)[-1].strip()
         if line.startswith("Channel:"):
-            channel = int(line.split(":")[1].strip())
+            channel = line.split(":", 1)[1].strip()
+        elif line.startswith("Overall"):
+            channel = "overall"
         elif line.startswith("RMS level dB:"):
             value = line.split(":", 1)[1].strip()
             try:
-                found[f"rms{channel}"] = float(value)
+                found[channel] = float(value)
             except ValueError:
                 # A silent channel prints -inf, which is a number to a person
                 # and not to Python.
-                found[f"rms{channel}"] = float("-inf")
+                found[channel] = float("-inf")
     return found
 
 
@@ -259,27 +282,26 @@ def looks_like_a_call(path: Path, track: Track) -> bool:
         return False
 
     levels = _astats(path, track, "astats")
-    left = levels.get("rms1", float("-inf"))
-    right = levels.get("rms2", float("-inf"))
+    left = levels.get("1", float("-inf"))
+    right = levels.get("2", float("-inf"))
     if left == float("-inf") or right == float("-inf"):
         return False
     if abs(left - right) > SILENT_CHANNEL_DB:
         return False
 
-    difference = _astats(path, track, "pan=1c|c0=c0-c1,astats").get(
-        "rms1", float("-inf")
-    )
+    difference = _astats(path, track, "pan=1c|c0=c0-c1,astats").get("1", float("-inf"))
     if difference == float("-inf"):
         return False
 
-    quieter_channel = min(left, right)
+    margin = min(left, right) - difference
     log.info(
-        "channels at %.1f and %.1f dB, difference at %.1f dB",
+        "channels at %.1f and %.1f dB, difference at %.1f dB, margin %.1f dB",
         left,
         right,
         difference,
+        margin,
     )
-    return (quieter_channel - difference) < DIFFERENCE_FLOOR_DB
+    return margin < DIFFERENCE_MARGIN_DB
 
 
 # The ASR audio ---------------------------------------------------------------
