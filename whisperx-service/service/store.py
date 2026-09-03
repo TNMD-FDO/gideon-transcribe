@@ -16,7 +16,7 @@ import json
 import sqlite3
 import threading
 import uuid
-from contextlib import closing
+from contextlib import closing, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -224,7 +224,8 @@ class Store:
             self._lock,
             closing(
                 self._db.execute(
-                    "SELECT COUNT(*) AS jobs, COALESCE(SUM(audio_seconds), 0) AS seconds "
+                    "SELECT COUNT(*) AS jobs, "
+                    "COALESCE(SUM(audio_seconds), 0) AS seconds "
                     "FROM jobs WHERE state IN (?, ?) AND sequence < ?",
                     (QUEUED, RUNNING, job.sequence),
                 )
@@ -239,7 +240,8 @@ class Store:
             self._lock,
             closing(
                 self._db.execute(
-                    "SELECT COUNT(*) AS jobs, COALESCE(SUM(audio_seconds), 0) AS seconds "
+                    "SELECT COUNT(*) AS jobs, "
+                    "COALESCE(SUM(audio_seconds), 0) AS seconds "
                     "FROM jobs WHERE state IN (?, ?)",
                     (QUEUED, RUNNING),
                 )
@@ -443,7 +445,8 @@ class Store:
         rows = 0
         with self._lock:
             waiting = self._many(
-                "SELECT * FROM jobs WHERE result_path IS NOT NULL AND result_deleted = 0"
+                "SELECT * FROM jobs WHERE result_path IS NOT NULL "
+                "AND result_deleted = 0"
             )
         for job in waiting:
             age = _age(job.finished)
@@ -468,6 +471,23 @@ class Store:
                 self.remove(job.id)
                 rows += 1
         return results, rows
+
+    def last_failure(self) -> tuple[str, str] | None:
+        """The most recent failure's class and time, for the status page."""
+        with (
+            self._lock,
+            closing(
+                self._db.execute(
+                    "SELECT failure_class, finished FROM jobs WHERE state = ? "
+                    "AND failure_class IS NOT NULL ORDER BY sequence DESC LIMIT 1",
+                    (FAILED,),
+                )
+            ) as cursor,
+        ):
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return row["failure_class"], row["finished"]
 
     # The measured speed ------------------------------------------------------
 
@@ -505,9 +525,7 @@ class Store:
 def _remove(path: str | None) -> None:
     if not path:
         return
-    try:
+    # A file that will not go is a matter for the journal, not for the Consumer
+    # waiting on the answer.
+    with suppress(OSError):
         Path(path).unlink(missing_ok=True)
-    except OSError:
-        # A file that will not go is a matter for the journal, not for the
-        # Consumer waiting on the answer.
-        pass

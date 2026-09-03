@@ -17,3 +17,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 pythonpath = ["whisperx-service"]
 testpaths = ["whisperx-service/tests"]
 addopts = "-q"
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI declares where a value comes from in the argument default, which is
+# the framework's own idiom and not the mistake this rule looks for.
+"whisperx-service/service/api.py" = ["B008"]
