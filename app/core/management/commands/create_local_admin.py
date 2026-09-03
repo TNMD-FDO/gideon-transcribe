@@ -14,6 +14,7 @@ import sys
 
 from django.core.management.base import BaseCommand, CommandError
 
+from core import audit
 from core.models import User, normalise_username
 
 DEFAULT_NAME = "transcribe-admin"
@@ -65,7 +66,16 @@ class Command(BaseCommand):
                 f"{LEAST_PASSWORD}."
             )
 
-        User.objects.create_local_admin(name, password)
+        user = User.objects.create_local_admin(name, password)
+        audit.write(
+            audit.Category.ACCOUNTS,
+            "Local admin created",
+            system="create-local-admin",
+            affected_user=user,
+            object_type="user",
+            object_id=user.pk,
+            object_label=user.username,
+        )
 
         self.stdout.write(f"\nThe Local admin {name} can now sign in.")
         self.stdout.write("Put its password in the office's password manager.")

@@ -54,6 +54,20 @@ DEFINITIONS = {
                 "activity."
             ),
         ),
+        Definition(
+            key="audit_retention_months",
+            name="Audit log retention",
+            default=3,
+            least=1,
+            most=120,
+            unit="months",
+            what_it_does=(
+                "How long an audit row is kept. Three months is enough to "
+                "troubleshoot with. An office that wants a longer record of "
+                "who opened whose material raises it, and the admin guide "
+                "says plainly that an Admin access is forgotten after this."
+            ),
+        ),
     ]
 }
 
@@ -104,3 +118,7 @@ def set_to(key: str, value: int) -> None:
 
 def idle_timeout() -> timedelta:
     return timedelta(minutes=get("idle_timeout_minutes"))
+
+
+def audit_retention_months() -> int:
+    return get("audit_retention_months")
