@@ -81,11 +81,16 @@ class Command(BaseCommand):
             return not already
 
     def _hand_over(self, connection, bootstrap: str, role: str, database: str) -> None:
-        """Give the app role the database and everything already in it.
+        """Give the app role what it needs, and the tables already there.
 
         On a database that has been running, the tables were made by the
-        bootstrap account. Reassigning them is what lets the app's own role
-        migrate its own tables from here on.
+        bootstrap account, and the app's own role has to own them to migrate
+        them from here on.
+
+        The tables and sequences are moved one by one rather than with REASSIGN
+        OWNED, which sweeps up everything a role owns and refuses when some of
+        it is pinned by the database system, which is what the database itself
+        and the public schema are.
         """
         from psycopg import sql
 
@@ -99,8 +104,27 @@ class Command(BaseCommand):
                     sql.Identifier(database), name
                 )
             )
+
             cursor.execute(
-                sql.SQL("REASSIGN OWNED BY {} TO {}").format(
-                    sql.Identifier(bootstrap), name
-                )
+                "SELECT tablename FROM pg_tables "
+                "WHERE schemaname = 'public' AND tableowner = %s",
+                (bootstrap,),
             )
+            for (table,) in cursor.fetchall():
+                cursor.execute(
+                    sql.SQL("ALTER TABLE public.{} OWNER TO {}").format(
+                        sql.Identifier(table), name
+                    )
+                )
+
+            cursor.execute(
+                "SELECT sequencename FROM pg_sequences "
+                "WHERE schemaname = 'public' AND sequenceowner = %s",
+                (bootstrap,),
+            )
+            for (sequence,) in cursor.fetchall():
+                cursor.execute(
+                    sql.SQL("ALTER SEQUENCE public.{} OWNER TO {}").format(
+                        sql.Identifier(sequence), name
+                    )
+                )
