@@ -11,8 +11,8 @@ Media work is CPU only. No container built from the app image ever sees a GPU.
 from __future__ import annotations
 
 import logging
-from contextlib import suppress
 
+from procrastinate import exceptions
 from procrastinate.contrib.django import app
 
 log = logging.getLogger("transcribe.tasks")
@@ -77,7 +77,7 @@ def hand_over_job(job_id: str) -> None:
 
     job = queue.hand_over(job)
     if job.state in JobState.LIVE:
-        poll_service.configure(queueing_lock=POLL_LOCK).defer(attempt=1)
+        _poll_again(1, when=0)
 
 
 @app.task(queue="default", name="poll_service")
@@ -115,10 +115,20 @@ def poll_service(attempt: int = 1) -> None:
         _poll_again(1)
 
 
-def _poll_again(attempt: int) -> None:
-    poll_service.configure(
-        queueing_lock=POLL_LOCK, schedule_in={"seconds": POLL_SECONDS}
-    ).defer(attempt=attempt)
+def _poll_again(attempt: int, when: int = POLL_SECONDS) -> None:
+    """Ask for one more poll, unless one is already waiting.
+
+    The queueing lock allows exactly one poll to be waiting, and asking for a
+    second raises rather than being ignored. That is the lock doing its work,
+    not a fault: whichever poll is already queued will find whatever this one
+    would have.
+    """
+    try:
+        poll_service.configure(
+            queueing_lock=POLL_LOCK, schedule_in={"seconds": when}
+        ).defer(attempt=attempt)
+    except exceptions.AlreadyEnqueued:
+        log.debug("a poll is already waiting")
 
 
 @app.periodic(cron="* * * * *")
@@ -137,10 +147,7 @@ def keep_the_queue_moving(timestamp: int) -> None:
         hand_over_job.defer(job_id=str(job.pk))
 
     if queue.live_jobs().exists():
-        # A lock already held means a poll is waiting, which is the point of
-        # the lock and not a problem.
-        with suppress(Exception):
-            _poll_again(1)
+        _poll_again(1)
 
 
 @app.periodic(cron="30 3 * * *")
