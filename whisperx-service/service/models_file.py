@@ -61,6 +61,26 @@ class Models:
                 return model
         return None
 
+    def snapshot(self, model: Model) -> Path | None:
+        """Where the pinned revision of a model actually sits on disk.
+
+        The hub can only resolve a model by name when it has a note of which
+        commit a branch points at, and a download of one exact revision writes
+        no such note. Handing the loader the folder itself keeps the service
+        offline and makes the pin bind at run time as well as at pull time.
+        """
+        home = os.environ.get("HF_HOME")
+        if not home or not model.revision:
+            return None
+        folder = (
+            Path(home)
+            / "hub"
+            / ("models--" + model.repository.replace("/", "--"))
+            / "snapshots"
+            / model.revision
+        )
+        return folder if folder.is_dir() else None
+
     def is_cached(self, model: Model) -> bool:
         """Whether the model's files are in the model folder already.
 
