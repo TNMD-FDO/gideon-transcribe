@@ -135,12 +135,22 @@ class Batch(models.Model):
     def is_finished(self) -> bool:
         """Finished when nothing in it is still on its way.
 
-        A Batch with no Recordings at all is finished: it was submitted and
-        everything in it was refused, or it never got that far.
+        Two things count, and missing either leaves a Batch looking finished
+        while it is not: a Recording still uploading, being checked or being
+        prepared, and a Job still queued or running at the service. A Batch
+        that only watched the first would stop being watched the moment the
+        audio was ready, with the transcription still to come, and it would
+        let somebody start a second Batch while the first was still running.
+
+        A Batch with no Recordings at all is finished: everything in it was
+        refused, or it never got that far.
         """
-        return not self.recordings.filter(
-            media_state__in=MediaState.UNFINISHED
-        ).exists()
+        from core.jobs import JobState
+
+        if self.recordings.filter(media_state__in=MediaState.UNFINISHED).exists():
+            return False
+
+        return not self.jobs.filter(state__in=JobState.LIVE).exists()
 
     @classmethod
     def unfinished_for(cls, user) -> Batch | None:
