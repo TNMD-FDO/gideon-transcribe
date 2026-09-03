@@ -31,13 +31,6 @@ Commands:
   version            print the service and API versions
 """
 
-# The commands this version of the image does not carry yet. Each one names the
-# document that says what it will do, so that nobody has to guess whether it is
-# missing or broken.
-NOT_BUILT_YET = {
-    "bench": "the benchmark gate (specification, Phase 1, chapter 16)",
-}
-
 
 def make_token(argv: list[str]) -> int:
     """Print a line for the tokens file. It is never written from in here.
@@ -103,13 +96,10 @@ def main(argv: list[str]) -> int:
     if command == "make-token":
         return make_token(rest)
 
-    if command in NOT_BUILT_YET:
-        print(
-            f"'{command}' is not built yet in service {SERVICE_VERSION}. "
-            f"It will be {NOT_BUILT_YET[command]}.",
-            file=sys.stderr,
-        )
-        return 2
+    if command == "bench":
+        from service.bench import bench
+
+        return bench(rest)
 
     print(f"Unknown command '{command}'.\n", file=sys.stderr)
     print(USAGE, end="", file=sys.stderr)
