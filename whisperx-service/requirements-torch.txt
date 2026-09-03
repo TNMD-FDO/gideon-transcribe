@@ -1,0 +1,21 @@
+# The GPU half of the pinned stack, installed as its own image layer.
+#
+# Every version here was chosen in docs/research/whisperx-pinned-stack.md for
+# the RTX PRO 6000 Blackwell cards (compute capability 12.0) under the NVIDIA
+# 595 driver. Read that file before changing any of them.
+#
+# The wheels come from PyTorch's own index because only it carries the +cu128
+# builds. Torch 2.7 first supported Blackwell in the cu128 wheels and 2.8 added
+# the sm12x FP8 paths. Do not move to a CUDA 13 torch: CTranslate2 ships CUDA 12
+# wheels only, and a cu13 torch would put the wrong cuBLAS on the library path.
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+torch==2.8.0+cu128
+torchvision==0.23.0+cu128
+torchaudio==2.8.0+cu128
+
+# The exact CUDA libraries torch 2.8.0 carries. CTranslate2's wheels are built
+# against the same CUDA 12.8 and cuDNN 9.10.2.21, so the two agree.
+nvidia-cudnn-cu12==9.10.2.21
+nvidia-cublas-cu12==12.8.4.1
+nvidia-cuda-runtime-cu12==12.8.90

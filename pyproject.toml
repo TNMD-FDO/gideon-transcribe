@@ -1,0 +1,19 @@
+# Tool settings for every Python folder in this repository: the WhisperX
+# service now, and the app when it arrives. There is no package to build here;
+# each image installs what it needs from its own requirements files.
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# Pyflakes and pycodestyle for the ordinary mistakes, isort for import order,
+# pyupgrade for syntax that has moved on, bugbear and simplify for the traps
+# that are easy to read past.
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+# The service's tests import `service` directly, the way the container does.
+pythonpath = ["whisperx-service"]
+testpaths = ["whisperx-service/tests"]
+addopts = "-q"
