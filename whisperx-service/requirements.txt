@@ -1,0 +1,23 @@
+# The rest of the pinned stack, installed as a second image layer on top of
+# requirements-torch.txt.
+#
+# The engine pins are from docs/research/whisperx-pinned-stack.md and the
+# reasons are in docs/whisperx-api.md under "The pinned stack". whisperx 3.8.6
+# anchors the whole set through its own torch, transformers, and
+# huggingface-hub pins, so moving one of these usually means moving all of them.
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+whisperx==3.8.6
+faster-whisper==1.2.1
+ctranslate2==4.8.2
+torchcodec==0.7.0
+pyannote.audio==4.0.7
+transformers==4.57.6
+huggingface-hub==0.36.2
+
+# The service itself: the API, its model, and the models file.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+python-multipart==0.0.32
+PyYAML==6.0.3

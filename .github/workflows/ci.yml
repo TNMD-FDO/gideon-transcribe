@@ -2,10 +2,15 @@ name: CI
 
 # Lint, unit tests, compose validation, and a secret scan, on every push and
 # pull request, on GitHub's hosted runners (specification, Phase 1, chapter 2,
-# "Access, branches, and CI"). No self-hosted runner is used, here or anywhere.
+# "Access, branches, and CI"). No self-hosted runner is used, here or anywhere,
+# including the one the office runs on its own server.
 #
-# The seed commit carries the specification pack and no code yet, so each step
-# that needs the code runs only once its files exist.
+# Nothing here needs a GPU. The service is written so that everything except
+# the model process runs without torch or whisperx, which is what lets its
+# tests run on a hosted runner at all.
+#
+# Each step that needs code runs only once that code exists, because the build
+# arrives one slice at a time.
 
 on:
   push:
@@ -26,23 +31,34 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install the app's requirements
-        if: hashFiles('app/requirements-dev.txt') != ''
-        run: pip install -r app/requirements-dev.txt
+      - name: Install what the checks need
+        if: hashFiles('whisperx-service/requirements-dev.txt', 'app/requirements-dev.txt') != ''
+        run: |
+          for file in whisperx-service/requirements-dev.txt app/requirements-dev.txt; do
+            if [ -f "$file" ]; then pip install -r "$file"; fi
+          done
 
       - name: Lint (ruff)
-        if: hashFiles('app/**/*.py') != ''
+        if: hashFiles('**/*.py') != ''
         run: |
-          pip install ruff
-          ruff check app
-          ruff format --check app
+          ruff check .
+          ruff format --check .
 
       - name: Unit tests
-        if: hashFiles('app/**/test_*.py', 'app/**/tests/**') != ''
-        working-directory: app
-        run: python -m pytest -q
+        if: hashFiles('whisperx-service/tests/**', 'app/**/tests/**') != ''
+        run: python -m pytest
 
-      - name: Compose files are valid
+      - name: The WhisperX service's compose file is valid
+        if: hashFiles('whisperx-service/compose.yaml') != ''
+        run: |
+          cp whisperx-service/.env.example whisperx-service/.env
+          mkdir -p whisperx-service/secrets
+          : > whisperx-service/secrets/hf_token
+          : > whisperx-service/secrets/tokens
+          docker compose -f whisperx-service/compose.yaml config --quiet
+          rm -rf whisperx-service/.env whisperx-service/secrets
+
+      - name: The app's compose file is valid
         if: hashFiles('compose.yaml') != ''
         run: |
           cp .env.example .env

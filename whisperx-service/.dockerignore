@@ -1,0 +1,7 @@
+# The build context is this folder, and on an installed server this folder also
+# holds the office's own settings and secrets. None of it belongs in an image.
+.env
+.env.*
+!.env.example
+secrets/
+README.md

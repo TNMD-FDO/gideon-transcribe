@@ -1,0 +1,123 @@
+# The WhisperX service.
+#
+# This file runs on its own from inside this folder:
+#
+#     docker compose up -d
+#
+# and it is also the file the app's own compose.yaml include-s, so that one
+# `docker compose up -d` at the Install home brings up the whole stack. The
+# service name is fixed at `whisperx` because documented commands use it
+# (docker compose run --rm whisperx pull), and the network name is fixed at
+# `whisperx` because a second Consumer's project joins it as an external
+# network.
+#
+# Every value below that an office has to supply lives in .env beside this
+# file. `./transcribe install` writes that file; .env.example lists every key.
+
+services:
+  whisperx:
+    # Compose pulls this image first and builds from source only when the pull
+    # finds nothing, because both image: and build: are set and no pull policy
+    # is. The digest is added to the image line at the first publish to
+    # ghcr.io; until then an office builds it on its own server.
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx:v0.1.0
+    build:
+      context: .
+    restart: unless-stopped
+
+    # The app's own system user, never root. The ids come from the office's
+    # `transcribe` account, and the two mounted folders belong to it.
+    user: "${WHISPERX_UID:?set WHISPERX_UID in .env}:${WHISPERX_GID:?set WHISPERX_GID in .env}"
+
+    # An init process, so that the supervised model process is reaped when it
+    # is killed. Cancelling a running job kills that process by design.
+    init: true
+
+    # One card, reserved by UUID through CDI, never by index. No other
+    # container in the stack sees a GPU.
+    deploy:
+      resources:
+        limits:
+          # A starting value, tuned at the Phase 1 benchmark gate.
+          memory: 32G
+        reservations:
+          devices:
+            - driver: cdi
+              device_ids:
+                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:?set WHISPERX_GPU_UUID in .env}"
+
+    volumes:
+      # The model folder: the ASR, diarization, and alignment models, and the
+      # driver's compiled kernels. Re-pullable, so it is never backed up.
+      - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
+      # The state folder: the job database, audio in flight, and results
+      # waiting to be collected. Nothing here outlives a job by more than the
+      # retention the contract fixes.
+      - "${WHISPERX_STATE_DIR:?set WHISPERX_STATE_DIR in .env}:/srv/state"
+
+    secrets:
+      - hf_token
+      - tokens
+
+    environment:
+      # The two secrets, at the paths Compose mounts them inside the container.
+      # The .env keys of the same name name the files on the server.
+      HF_TOKEN_FILE: /run/secrets/hf_token
+      WHISPERX_TOKENS_FILE: /run/secrets/tokens
+      # Limits, timeouts, retention, and the engine's own settings. Every one
+      # of them is echoed in every result, so a Consumer's Provenance can name
+      # them without guessing.
+      WHISPERX_MAX_UPLOAD_GB: "${WHISPERX_MAX_UPLOAD_GB:-2}"
+      WHISPERX_MAX_AUDIO_HOURS: "${WHISPERX_MAX_AUDIO_HOURS:-8}"
+      WHISPERX_JOB_TIMEOUT_BASE_MINUTES: "${WHISPERX_JOB_TIMEOUT_BASE_MINUTES:-30}"
+      WHISPERX_JOB_TIMEOUT_PER_AUDIO_HOUR_MINUTES: "${WHISPERX_JOB_TIMEOUT_PER_AUDIO_HOUR_MINUTES:-60}"
+      WHISPERX_RESULT_HOURS: "${WHISPERX_RESULT_HOURS:-24}"
+      WHISPERX_JOB_HISTORY_DAYS: "${WHISPERX_JOB_HISTORY_DAYS:-30}"
+      WHISPERX_BATCH_SIZE: "${WHISPERX_BATCH_SIZE:-16}"
+      WHISPERX_VAD_ONSET: "${WHISPERX_VAD_ONSET:-0.50}"
+      WHISPERX_VAD_OFFSET: "${WHISPERX_VAD_OFFSET:-0.363}"
+      WHISPERX_ALIGN_LANGUAGES: "${WHISPERX_ALIGN_LANGUAGES:-en,es}"
+      WHISPERX_LOG_LEVEL: "${WHISPERX_LOG_LEVEL:-info}"
+      TZ: "${TZ:-UTC}"
+
+    networks:
+      - whisperx
+
+    # The service publishes no host port and has no hostname. It is reached at
+    # http://whisperx:8000 from inside the network, and nowhere else.
+    expose:
+      - "8000"
+
+    healthcheck:
+      # /healthz is the contract's unauthenticated liveness check: 200 when the
+      # API is up and the model process is alive or loading. curl is not in the
+      # image, so Python asks.
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=3).status == 200 else 1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Long, because a cold start loads a model and may compile kernels.
+      start_period: 300s
+
+    # Cancelling and stopping both kill the model process; give it room to go
+    # down tidily.
+    stop_grace_period: 30s
+
+    logging:
+      driver: journald
+
+secrets:
+  hf_token:
+    file: "${HF_TOKEN_FILE:-./secrets/hf_token}"
+  tokens:
+    file: "${WHISPERX_TOKENS_FILE:-./secrets/tokens}"
+
+networks:
+  whisperx:
+    name: whisperx

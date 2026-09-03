@@ -1,0 +1,17 @@
+# What the tests need, and nothing else.
+#
+# The service is written so that everything except the model process runs
+# without torch, whisperx, or a GPU: the API, the line, the validation, the
+# prompt building, and the detection arithmetic are all plain Python. That is
+# what lets CI test them on a hosted runner, where none of the GPU stack could
+# be installed.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+python-multipart==0.0.32
+PyYAML==6.0.3
+httpx==0.28.1
+pytest==9.1.1
+
+# The linter and formatter, pinned like everything else.
+ruff==0.16.6
