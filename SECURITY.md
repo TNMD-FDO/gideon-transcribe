@@ -22,6 +22,30 @@ acknowledgement, and a fix or an explanation of why the behaviour is
 intended. Nothing is promised on a schedule: this app is maintained by one
 office's IT staff.
 
+## Standing alerts on the pinned stack
+
+Dependency scanning reports advisories against two packages the WhisperX
+service pins, and both pins are deliberate.
+
+- **transformers 4.57.6.** It cannot move to 5.x: whisperx caps
+  `huggingface-hub` below 1.0 and transformers 5 needs 1.5 or later, so the
+  two cannot be satisfied together. Moving would mean a new whisperx release
+  (see `docs/research/whisperx-pinned-stack.md`).
+- **torch 2.8.0+cu128.** It is pinned by whisperx and by the CUDA path this
+  generation of card needs.
+
+None of the reported paths is one this service uses. They are
+`save_pretrained` with chat-template names, the LightGlue model loader, the
+`Trainer` class, and three torch functions (`torch.jit.script`,
+`torch.lstm_cell`, `unpack_sequence`). The service loads two pinned local
+models, runs inference, and trains nothing. It also runs offline after the
+model pull, on an internal Docker network, with no published port.
+
+This is written down so that the answer is on the record rather than worked
+out again each time the alerts are looked at. When whisperx releases a version
+that frees the pins, the stack moves as a set, which is what
+`docs/research/whisperx-pinned-stack.md` exists to make possible.
+
 ## What this app holds
 
 Gideon Transcribe holds recordings, transcripts, and notes that are
