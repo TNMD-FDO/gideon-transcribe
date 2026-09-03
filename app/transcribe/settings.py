@@ -64,6 +64,12 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 
+# The app's own account model, and no permission framework beside it. There
+# are two roles and admin status has exactly three sources; a second system of
+# groups and permissions would be a way for the two to disagree.
+AUTH_USER_MODEL = "core.User"
+LOGIN_URL = "/sign-in"
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -82,6 +88,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # After authentication, because it works on the signed-in person: it ends
+    # a session that has sat idle, tells somebody who signed in elsewhere, and
+    # otherwise moves their idle clock on.
+    "core.middleware.LoginSessionMiddleware",
 ]
 
 ROOT_URLCONF = "transcribe.urls"
@@ -129,6 +139,12 @@ SCRATCH_DIR = DATA_DIR / "scratch"
 # Consumer of it.
 WHISPERX_URL = os.environ.get("WHISPERX_URL", "http://whisperx:8000")
 WHISPERX_TOKEN = secret("WHISPERX_TOKEN_FILE", default="")
+
+# Directory sign-in over LDAPS. Off until the office's bind account and the two
+# groups are configured; with it off, only Local admins can sign in, and a
+# directory user is told what they are told whenever the directory cannot be
+# reached, which is the truth.
+LDAP_ENABLED = flag("LDAP_ENABLED", default=False)
 
 LANGUAGE_CODE = "en-gb"
 TIME_ZONE = os.environ.get("TZ", "UTC")

@@ -1,0 +1,100 @@
+{% load static %}<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Gideon Transcribe{% endblock %}</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #1a1a1a;
+      --paper: #fbfbfa;
+      --line: #d8d6d1;
+      --quiet: #5c5a55;
+      --wrong: #8a1f11;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #e8e6e1;
+        --paper: #17181a;
+        --line: #34363a;
+        --quiet: #a6a29a;
+        --wrong: #ef8b7c;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    header .name { font-weight: 600; }
+    header .who { color: var(--quiet); font-size: 0.9rem; }
+    main { max-width: 40rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    h1 { font-size: 1.4rem; margin: 0 0 1.25rem; }
+    label { display: block; margin: 1rem 0 0.3rem; font-weight: 500; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      font: inherit;
+      color: var(--ink);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.55rem 1.1rem;
+      font: inherit;
+      font-weight: 500;
+      color: var(--paper);
+      background: var(--ink);
+      border: 0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .problem {
+      margin: 1rem 0 0;
+      padding: 0.7rem 0.85rem;
+      border-left: 3px solid var(--wrong);
+      color: var(--wrong);
+    }
+    .notice {
+      margin: 0 0 1.5rem;
+      padding: 0.7rem 0.85rem;
+      border-left: 3px solid var(--line);
+      color: var(--quiet);
+    }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.25rem; }
+    dt { color: var(--quiet); }
+    dd { margin: 0; }
+    a { color: inherit; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="name">Gideon Transcribe</span>
+    {% if user.is_authenticated %}
+      <span class="who">
+        {{ user.shown_name }}{% if user.is_admin %} (Admin){% endif %}
+        &middot; <a href="{% url 'sign-out' %}">Sign out</a>
+      </span>
+    {% endif %}
+  </header>
+  <main>
+    {% if messages %}
+      {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

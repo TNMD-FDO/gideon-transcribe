@@ -1,11 +1,16 @@
-"""What the app answers. For now, only whether it is alive."""
+"""What the app answers."""
 
 from __future__ import annotations
 
 import logging
 
+from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
+from django.urls import reverse
+
+from core import signin
 
 log = logging.getLogger("transcribe.health")
 
@@ -28,3 +33,55 @@ def healthz(request: HttpRequest) -> HttpResponse:
         return HttpResponse("the database cannot be reached\n", status=503)
 
     return HttpResponse("ok\n", content_type="text/plain")
+
+
+def sign_in(request: HttpRequest) -> HttpResponse:
+    """One form for everybody: directory users and Local admins alike."""
+    if request.user.is_authenticated:
+        return redirect(reverse("home"))
+
+    problem = None
+    username = ""
+
+    if request.method == "POST":
+        username = request.POST.get("username", "")
+        password = request.POST.get("password", "")
+        if not password:
+            # Refused by the form, before the directory is asked at all.
+            problem = "Enter your password."
+        else:
+            try:
+                signin.sign_in(request, username, password)
+                return redirect(reverse("home"))
+            except signin.Refused as refusal:
+                problem = refusal.message
+
+    return render(
+        request,
+        "sign-in.html",
+        {"problem": problem, "username": username},
+        status=400 if problem else 200,
+    )
+
+
+def sign_out(request: HttpRequest) -> HttpResponse:
+    signin.sign_out(request)
+    return redirect(reverse("sign-in"))
+
+
+@login_required
+def home(request: HttpRequest) -> HttpResponse:
+    """Where a person lands. It becomes the Recordings page.
+
+    Until uploading exists there is nothing on it but who you are, which is
+    enough to tell that signing in, the session, and the roles all work.
+    """
+    session = signin.current_session(request)
+    return render(
+        request,
+        "home.html",
+        {
+            "session": session,
+            "warning_due": bool(session and signin.warning_due(session)),
+        },
+    )
