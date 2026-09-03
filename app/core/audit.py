@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from contextlib import contextmanager
 from typing import Any
 
 from django.db import connection, models, transaction
@@ -169,6 +170,25 @@ def browser_family(user_agent: str) -> str:
     return "other"
 
 
+@contextmanager
+def acting_as(role: str):
+    """Do one thing as another database role, and switch back straight after.
+
+    SET LOCAL lasts until the end of the transaction, not until the end of the
+    block, and a savepoint does not undo it. Inside an outer transaction, which
+    is what a test and any request-wide transaction give, the connection would
+    otherwise stay switched to the insert-only role and every write after it
+    would be refused. So the switch back is explicit and happens whatever the
+    write does.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(f"SET LOCAL ROLE {role}")
+        try:
+            yield
+        finally:
+            cursor.execute("SET LOCAL ROLE NONE")
+
+
 def _previous() -> tuple[str, int]:
     """The hash of the newest row, and how many rows there are."""
     newest = Row.objects.order_by("-id").values("row_hash").first()
@@ -239,8 +259,7 @@ def write(
     row.previous_hash, _ = _previous()
     row.row_hash = row.compute_hash()
 
-    with connection.cursor() as cursor:
-        cursor.execute(f"SET LOCAL ROLE {WRITER_ROLE}")
+    with acting_as(WRITER_ROLE):
         row.save()
 
     return row
@@ -334,8 +353,7 @@ def sweep(keep_months: int) -> int:
     count = old.count()
 
     if count:
-        with transaction.atomic(), connection.cursor() as cursor:
-            cursor.execute(f"SET LOCAL ROLE {SWEEPER_ROLE}")
+        with transaction.atomic(), acting_as(SWEEPER_ROLE):
             old.delete()
 
     write(
