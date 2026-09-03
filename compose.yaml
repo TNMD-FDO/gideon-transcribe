@@ -101,7 +101,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
+    environment: &app-environment
       APP_HOSTNAME: "${APP_HOSTNAME:?set APP_HOSTNAME in .env}"
       APP_DATA_DIR: /srv/data
       POSTGRES_HOST: postgres
@@ -142,6 +142,80 @@ services:
     networks:
       # The app reaches the WhisperX service on its own network, and nothing
       # else on it.
+      - transcribe
+      - whisperx
+    logging:
+      driver: journald
+
+  media-worker:
+    # ffmpeg and audiowaveform: hashing, probing, Sides, the audio the service
+    # is sent, the Playback copy, the waveform, and Clip renders. CPU only; no
+    # container built from the app image ever sees a GPU.
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:v0.1.0
+    build:
+      context: ./app
+    command: ["media-worker"]
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment: *app-environment
+    secrets:
+      - postgres_password
+      - django_secret_key
+      - whisperx_consumer_token
+    volumes:
+      - "${APP_DATA_DIR}:/srv/data"
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "procrastinate", "healthchecks"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        # Four jobs of eight ffmpeg threads, and room to spare.
+        reservations:
+          cpus: "1"
+    cpus: 40
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
+  worker:
+    # The queue and the schedules: handing Runs to the WhisperX service,
+    # polling it, merging results, and the nightly sweeps.
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:v0.1.0
+    build:
+      context: ./app
+    command: ["worker"]
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment: *app-environment
+    secrets:
+      - postgres_password
+      - django_secret_key
+      - whisperx_consumer_token
+    volumes:
+      - "${APP_DATA_DIR}:/srv/data"
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "procrastinate", "healthchecks"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    networks:
       - transcribe
       - whisperx
     logging:
