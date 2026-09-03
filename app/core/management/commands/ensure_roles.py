@@ -95,20 +95,26 @@ class Command(BaseCommand):
         from psycopg import sql
 
         with connection.cursor() as cursor:
+            cursor.execute(
+                sql.SQL("ALTER ROLE {} NOINHERIT").format(sql.Identifier(app_role))
+            )
             for role in ("transcribe_audit", "transcribe_audit_sweep"):
                 cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
                 if not cursor.fetchone():
                     cursor.execute(
                         sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(role))
                     )
+                # WITH INHERIT FALSE on the grant itself, not only NOINHERIT on
+                # the role. From PostgreSQL 16 a membership carries its own
+                # inherit flag, fixed when it is granted, so changing the role
+                # afterwards leaves an older membership inheriting. Without
+                # this the app quietly inherited DELETE from the sweeper and
+                # could remove audit rows.
                 cursor.execute(
-                    sql.SQL("GRANT {} TO {}").format(
+                    sql.SQL("GRANT {} TO {} WITH INHERIT FALSE").format(
                         sql.Identifier(role), sql.Identifier(app_role)
                     )
                 )
-            cursor.execute(
-                sql.SQL("ALTER ROLE {} NOINHERIT").format(sql.Identifier(app_role))
-            )
 
     def _hand_over(self, connection, bootstrap: str, role: str, database: str) -> None:
         """Give the app role what it needs, and the tables already there.
