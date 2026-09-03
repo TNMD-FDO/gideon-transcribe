@@ -40,11 +40,16 @@ BEGIN
             CREATE ROLE transcribe_audit_sweep NOLOGIN;
         END IF;
 
-        EXECUTE format('GRANT transcribe_audit TO %I', CURRENT_USER);
-        EXECUTE format('GRANT transcribe_audit_sweep TO %I', CURRENT_USER);
-
         -- The app holds neither role's privileges until it asks by name.
+        -- WITH INHERIT FALSE on the grant as well, because from PostgreSQL 16
+        -- a membership carries its own inherit flag, fixed when it is granted.
         EXECUTE format('ALTER ROLE %I NOINHERIT', CURRENT_USER);
+        EXECUTE format(
+            'GRANT transcribe_audit TO %I WITH INHERIT FALSE', CURRENT_USER
+        );
+        EXECUTE format(
+            'GRANT transcribe_audit_sweep TO %I WITH INHERIT FALSE', CURRENT_USER
+        );
     END IF;
 END$$;
 """
