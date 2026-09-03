@@ -17,6 +17,7 @@ import json
 import os
 import threading
 import time
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -199,6 +200,10 @@ def run(inbox, outbox, settings: dict[str, Any]) -> None:
         try:
             _run_one(engine, job, outbox)
         except Exception as exc:  # noqa: BLE001 - every failure is reported
+            # The Consumer gets a reason class and a bare exception name. The
+            # detail goes to the journal, which is where the contract says to
+            # look for it: a traceback carries code, never content.
+            traceback.print_exc()
             outbox.put(
                 _message(
                     "failure",
