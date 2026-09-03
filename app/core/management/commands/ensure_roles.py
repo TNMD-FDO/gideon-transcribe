@@ -57,17 +57,28 @@ class Command(BaseCommand):
         )
 
     def _ensure_role(self, connection, role: str, password: str) -> bool:
+        """Make the role, or set its password again if it is already there.
+
+        CREATE ROLE and ALTER ROLE are utility statements and take no
+        parameters, so the password cannot be passed the ordinary way. It is
+        composed as a quoted literal instead, which psycopg escapes, rather
+        than pasted into a string.
+        """
+        from psycopg import sql
+
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
-            if cursor.fetchone():
-                # The password is set again on every start, so that changing
-                # the database password in secrets/ reaches both accounts.
-                cursor.execute(
-                    f'ALTER ROLE "{role}" WITH LOGIN PASSWORD %s', (password,)
-                )
-                return False
-            cursor.execute(f'CREATE ROLE "{role}" LOGIN PASSWORD %s', (password,))
-            return True
+            already = cursor.fetchone() is not None
+
+            # The password is set again on every start, so that changing the
+            # database password in secrets/ reaches both accounts.
+            statement = sql.SQL(
+                "ALTER ROLE {name} WITH LOGIN PASSWORD {password}"
+                if already
+                else "CREATE ROLE {name} LOGIN PASSWORD {password}"
+            ).format(name=sql.Identifier(role), password=sql.Literal(password))
+            cursor.execute(statement)
+            return not already
 
     def _hand_over(self, connection, bootstrap: str, role: str, database: str) -> None:
         """Give the app role the database and everything already in it.
@@ -76,7 +87,20 @@ class Command(BaseCommand):
         bootstrap account. Reassigning them is what lets the app's own role
         migrate its own tables from here on.
         """
+        from psycopg import sql
+
+        name = sql.Identifier(role)
         with connection.cursor() as cursor:
-            cursor.execute(f'GRANT CREATE, USAGE ON SCHEMA public TO "{role}"')
-            cursor.execute(f'GRANT ALL ON DATABASE "{database}" TO "{role}"')
-            cursor.execute(f'REASSIGN OWNED BY "{bootstrap}" TO "{role}"')
+            cursor.execute(
+                sql.SQL("GRANT CREATE, USAGE ON SCHEMA public TO {}").format(name)
+            )
+            cursor.execute(
+                sql.SQL("GRANT ALL ON DATABASE {} TO {}").format(
+                    sql.Identifier(database), name
+                )
+            )
+            cursor.execute(
+                sql.SQL("REASSIGN OWNED BY {} TO {}").format(
+                    sql.Identifier(bootstrap), name
+                )
+            )
