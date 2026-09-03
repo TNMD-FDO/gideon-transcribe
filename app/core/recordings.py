@@ -219,6 +219,18 @@ class Recording(models.Model):
         return self.folder / f"original{suffix}"
 
     @property
+    def waveform_path(self) -> Path:
+        return self.folder / "waveform.json"
+
+    def playback_path(self) -> Path | None:
+        """The one file the player is given, whichever shape it took."""
+        for suffix in (".mp4", ".m4a"):
+            candidate = self.folder / f"playback{suffix}"
+            if candidate.exists():
+                return candidate
+        return None
+
+    @property
     def is_ready(self) -> bool:
         return self.media_state == MediaState.READY
 
