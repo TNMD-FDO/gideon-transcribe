@@ -14,6 +14,7 @@ browser.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -84,4 +85,23 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"  side {side.number}      {side.name or 'the whole recording'}, "
                 f"{size / 1024 / 1024:.1f} MB of prepared audio"
+            )
+
+        # The Playback copy and the waveform follow Ready and never hold
+        # recognition up. Here they are run straight afterwards, because there
+        # is nothing else waiting.
+        recording = pipeline.make_playback(recording)
+        playback = recording.playback_path()
+        if playback is None:
+            self.stdout.write("  playback    could not be made; see the journal")
+            return
+        self.stdout.write(
+            f"  playback    {playback.name}, "
+            f"{playback.stat().st_size / 1024 / 1024:.1f} MB"
+        )
+        if recording.waveform_path.exists():
+            peaks = json.loads(recording.waveform_path.read_text())
+            self.stdout.write(
+                f"  waveform    {len(peaks.get('data', []))} points, "
+                f"{peaks.get('channels', 1)} channel(s)"
             )
