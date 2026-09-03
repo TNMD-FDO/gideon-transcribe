@@ -68,7 +68,7 @@ Request: a multipart body with two parts.
 Names and terms: a, b, c.
 ```
 
-The model's previous-text slot holds 223 tokens, and WhisperX applies the same prompt to every 30-second chunk, so the prompt is kept short by design: the service encodes the prompt, and when it exceeds 200 tokens it drops Vocabulary terms from the end of the list until it fits, then reports `vocabulary_terms_used` and `prompt_tokens` in the result. The prompt goes in as `initial_prompt`; `hotwords` and `prefix` are not used, because they share the same slot and `prefix` would silence the hotwords. `suppress_numerals` is off, so amounts and dates come out as digits.
+The model's previous-text slot holds 223 tokens, and WhisperX applies the same prompt to every 30-second chunk, so the prompt is kept short by design: the service encodes the prompt, and when it exceeds 200 tokens it drops Vocabulary terms from the end of the list until it fits, then reports `vocabulary_terms_used` and `prompt_tokens` in the result. The Vocabulary sentence follows the `context` line after a single space, and a context line that does not already end a sentence gains a full stop so the two do not run together; the count is the model's own tokenizer's. The prompt goes in as `initial_prompt`; `hotwords` and `prefix` are not used, because they share the same slot and `prefix` would silence the hotwords. `suppress_numerals` is off, so amounts and dates come out as digits.
 
 Facts behind the rule, from the WhisperX service research file: WhisperX's batched pipeline encodes `initial_prompt` as the previous-text tokens and repeats the same prompt for every chunk in the batch, not only the first; each of the `hotwords`, previous-text, and `prefix` slots is capped at 223 tokens separately; the generation length limit is 448 tokens, prompt included, and WhisperX passes it with no prompt-length check, so the 200-token cap keeps the prompt well inside it.
 
@@ -111,11 +111,11 @@ The app renders `stage` as the plain-word Step a user reads (loading the model, 
 | Part | Content |
 |---|---|
 | `audio` | `duration_seconds`, `sample_rate`, `channels`, as received. |
-| `language` | `requested` (the code given, or empty), `detected` and `probability` (the winner of detection), `windows` (one entry per detection window: `offset_seconds`, `language`, `probability`), `combined` (a total per language), and `mixed` (`true` or `false`). |
-| `word_timestamps` | `true`, or `false` with `reason`: `translation` (alignment is disabled whenever the service ran translate, including when it chose to) or `no_alignment_model` (a language WhisperX cannot align, or whose model could not be fetched). |
+| `language` | `requested` (the code given, or empty), `detected` and `probability` (the winner of detection), `windows` (one entry per detection window: `offset_seconds`, `language`, `probability`), `combined` (a figure per language: the mean of the probabilities of the windows that heard it, counting a window that heard something else as zero, so it stays between 0 and 1 whether a Run got one window or three), and `mixed` (`true` or `false`). |
+| `word_timestamps` | An object: `present` (`true` or `false`) and `reason`, which is empty when they are present and otherwise one of: `translation` (alignment is disabled whenever the service ran translate, including when it chose to) or `no_alignment_model` (a language WhisperX cannot align, or whose model could not be fetched). |
 | `segments` | Ordered: `start`, `end`, `text`, `speaker` (present when diarized), `words`. |
 | `words` (inside each segment) | `word`, `start`, `end`, `score`, `speaker`; a word the aligner could not place carries only `word`. |
-| `speakers` | The labels found, in the engine's own form (`SPEAKER_00` and on); with `embedding` (a list of floats) per Speaker only when asked, plus `embedding_dimension`. Labels are per job; the app renames them before anyone sees them, and prefixes them with the Side for a multi-Side Recording. |
+| `speakers` | An object: `labels`, the labels found in the engine's own form (`SPEAKER_00` and on), and, only when embeddings were asked for, `embeddings` (one list of floats per label) and `embedding_dimension`. Labels are per job; the app renames them before anyone sees them, and prefixes them with the Side for a multi-Side Recording. |
 | `settings_used` | `task` (as requested), `task_run` (`transcribe` or `translate`, what the service actually ran), `task_reason` (`requested`, `english_detected`, `mixed_detected`), `language`, `model` and its revision, `compute_type` (`float16`), `batch_size`, `vad` (`method`, `onset`, `offset`, `chunk_seconds`), `diarize` and the hint as applied, `vocabulary_terms_given`, `vocabulary_terms_used`, `context_given`, `prompt_tokens`, `return_speaker_embeddings`. |
 | `service` | `version`, `api_version`, and the pins (whisperx, faster-whisper, ctranslate2, torch, pyannote.audio, the diarization model revision). |
 | `timings_seconds` | `queued`, `load`, `transcribe`, `align`, `diarize`, `total`. |
@@ -146,7 +146,7 @@ The allow-list (`large-v3`, `large-v3-turbo`), with `cached` (the files are in t
 | `model_loaded` | The model the model process holds, and its revision. |
 | `gpu` | `uuid`, `name`, `vram_used_gb`, `vram_free_gb`, reported at all times. |
 | `queue` | `length`, `audio_minutes`. |
-| `current_job` | `id`, `consumer`, `stage`. |
+| `current_job` | `id`, `consumer`, `stage`. For a regular token whose own job is not the one running, `id` and `consumer` are empty and `stage` stands: that something is running, and how far along it is, is what a Consumer needs to judge its own wait; whose job it is, is not. |
 | `speed` | Audio minutes per wall-clock minute, per model, Diarization on and off (the rolling average of the last ten completed jobs). |
 | `versions` | service, API, pins. |
 | `uptime_seconds` | |
@@ -232,7 +232,7 @@ When `language` holds a code there is no detection, so the mixed rule cannot fir
 | `translate` | empty | Detect, then translate to English, telling Whisper the non-English language with the highest combined probability. | `translate` | `requested` |
 | `translate_if_needed` | `en` | Transcribe. No detection. | `transcribe` | `requested` |
 | `translate_if_needed` | any other code | Translate. No detection. | `translate` | `requested` |
-| `translate_if_needed` | empty | Detect, then transcribe when the detected language is English and translate otherwise. | `transcribe` or `translate` | `english_detected` when it transcribed, `requested` when it translated |
+| `translate_if_needed` | empty | Detect, then transcribe when the detected language is English and translate otherwise. A mixed Run is translated whatever its winning language, without consulting `translate_if_mixed`, which belongs to the plain transcribe task: the point of this task is English out, and the English part of a mixed Run passes through translate untouched. | `transcribe` or `translate` | `english_detected` when it transcribed, `mixed_detected` for a mixed Run, `requested` otherwise |
 
 `word_timestamps.reason` is `translation` whenever the service ran translate, including when it chose to.
 
@@ -268,7 +268,7 @@ it              7b2d...64 hex characters...c04f                                 
 ```
 
 - The service reloads the file when it changes; no restart.
-- The install command `make-token <name>` generates a token and appends the line. For the app's own token the install does this in the same step as the app's other secrets and hands the token to the app (the app reads it from the secret file its `.env` names as `WHISPERX_TOKEN_FILE`; see the Architecture and deployment chapter of the Phase 1 specification). The file lives at `whisperx-service/secrets/tokens` under the Install home and is never committed.
+- The command `make-token <name>` generates a token and prints the line for the tokens file. It does not write the file itself: the file reaches the container as a read-only secret, and a running service has no business adding Consumers to itself. On a full installation `./transcribe make-token` generates the line and puts it in the file in one step. For the app's own token the install does this in the same step as the app's other secrets and hands the token to the app (the app reads it from the secret file its `.env` names as `WHISPERX_TOKEN_FILE`; see the Architecture and deployment chapter of the Phase 1 specification). The file lives at `whisperx-service/secrets/tokens` under the Install home and is never committed.
 - A token is presented as `Authorization: Bearer <token>` on every request except `/healthz`. Tokens are compared in constant time and never logged. The last-used time per token is kept in the service database and shown on the status endpoint.
 - A **regular token** sees and cancels only its own jobs. The app holds a regular token.
 - An **admin token** lists every job (ids, Consumer names, stages, timings, never content) and can cancel any of them, so IT can clear a wedged line from a terminal without touching containers.
@@ -323,8 +323,8 @@ Every model is pinned to a revision in the service's `models.yaml`, and `pull` v
 
 | Model | Repository | Licence | Pin |
 |---|---|---|---|
-| ASR, `large-v3` | `Systran/faster-whisper-large-v3` | MIT | a revision (see Left to the build) |
-| ASR, `large-v3-turbo` | `mobiuslabsgmbh/faster-whisper-large-v3-turbo` | MIT | a revision (see Left to the build) |
+| ASR, `large-v3` | `Systran/faster-whisper-large-v3` | MIT | the revision in `models.yaml` |
+| ASR, `large-v3-turbo` | `mobiuslabsgmbh/faster-whisper-large-v3-turbo` | MIT | the revision in `models.yaml` |
 | Diarization | `pyannote/speaker-diarization-community-1` | CC-BY-4.0, gated | revision `3533c8cf8e369892e6b79ff1bf80f7b0286a54ee` (last modified 2025-09-29) |
 | Alignment, one per language in `WHISPERX_ALIGN_LANGUAGES` | the torchaudio bundle for `en` and `es`; a HuggingFace wav2vec2 model for the other languages WhisperX supports | per model | a pin per model (see Left to the build) |
 
@@ -340,7 +340,9 @@ Run at install (before the first start), after an image update when the Release 
 
 ### Offline after the pull
 
-After the pull the service runs offline: `HF_HUB_OFFLINE=1` (no HTTP calls; only cached files are read, and the etag check on them is skipped), with pyannote's telemetry off (`PYANNOTE_METRICS_ENABLED=0`; pyannote 4 otherwise reports the pipeline class, file duration, and speaker-count arguments on every call). One exception: a transcribe job in a language whose alignment model is not cached makes a single fetch attempt for it; if the network refuses, the job completes with Segment timing only and `no_alignment_model`, never fails.
+After the pull the service runs offline: `HF_HUB_OFFLINE=1` (no HTTP calls; only cached files are read, and the etag check on them is skipped), with pyannote's telemetry off (`PYANNOTE_METRICS_ENABLED=0`; pyannote 4 otherwise reports the pipeline class, file duration, and speaker-count arguments on every call). One exception: a transcribe job in a language whose alignment model is not cached makes a single fetch attempt for it; if the network refuses, the job completes with Segment timing only and `no_alignment_model`, never fails. The offline flag is lifted around that one call and put back whatever happens, the attempt is made once per language for the life of the model process, and its outcome is remembered, so a language that cannot be fetched is not reached for again.
+
+Every pinned model is loaded from the folder its revision was fetched into, and never by repository name. Fetching one exact revision leaves the cache with no note of where a branch points, so a lookup by name cannot be answered from the cache and reaches for the network; naming the folder keeps the service offline and makes the pin bind when a job runs as well as when the model was fetched.
 
 ### The HuggingFace token
 
@@ -459,19 +461,42 @@ The service was built so that another application can use it beside the app with
 
 - **The benchmark gate.** The Phase 1 benchmark gate on real hardware decides, and records in the service README: the model choice between `large-v3` and `large-v3-turbo` for the app's default; the batch size for `WHISPERX_BATCH_SIZE`; the measured speed figures that replace the research's reference points (about seventy times real time for batched transcription, about half a minute per hour of audio for Diarization on a datacentre card); the measured VRAM peak at the chosen batch size, written under "GPU budget" as the figure IT checks before another model is placed on the card; and the dropped-speech check on the jail-call files, which "may lower the thresholds, and any change is recorded in the settings". The gate also includes the translation leg (four checks defined in the Transcription, translation, and diarization choices chapter) and decides the Phone preprocessing profile, "band filter and gentle noise reduction for narrowband calls", which is "added as a third profile only if the Phase 1 benchmark gate shows it measurably lowers errors on the jail-call and phone files" (the Media handling chapter; it touches the service only through the ASR audio it receives).
 - **The first smoke check after install** is a real `pull` of the diarization model with the stored token: "`pull` fetches the diarization model with the stored token" is routed to the build as the first smoke check after `./transcribe install`, where it already sits as step 5 of the first-run list. The licence ticket is reopened only if that pull fails for a reason to do with the gate or the token.
-- **The ASR and alignment model pins** in `models.yaml`: the tickets fix the diarization model's revision and say "every model is pinned to a revision"; the revisions of `Systran/faster-whisper-large-v3` and `mobiuslabsgmbh/faster-whisper-large-v3-turbo`, and the form of the pin for the torchaudio alignment bundles (fetched by URL from `download.pytorch.org`) and any HuggingFace alignment model, are the build's to write down from what `pull` first fetches.
 - **The embedding dimension.** The research could not find community-1's embedding dimension (its config sits behind the gate); the build measures the vector length once at first run and reports it as `embedding_dimension`.
-- **The single alignment fetch under `HF_HUB_OFFLINE=1`.** The service runs offline after the pull and still makes "a single fetch attempt" for an uncached alignment model; how the offline flag is lifted for that one attempt, and how the attempt is bounded, is the build's.
-- **`translate_if_needed` on a mixed file.** The rule reads "runs transcribe when it is English and translate otherwise"; the mixed flag is defined separately, and the translation leg's interpreted-interview check expects English output under "Translate ticked". The build settles what a mixed file whose winner is English does under this task.
-- **`current_job` on the status endpoint for a regular token** when the running job belongs to another Consumer: the ticket lists `id`, `consumer`, `stage` and also says "Other Consumers' job ids are never shown here, only counts".
-- **`make-token`.** The ticket names the install command `make-token <name>`; its exact place beside `./transcribe` and its output are the build's, within the rules above (append a line, reload without restart, write the app's own token in the same step as the app's secrets).
-- **The debug log level.** "The README states what it reveals (still never text)"; the build writes that statement.
 - **Progress for aligning and diarizing.** WhisperX offers progress callbacks in all three stages; the contract publishes `percent` only while transcribing. The build may keep the other callbacks for the journal but must not add fields to the status body without a new API version.
-- **The exact prompt joining** (whitespace and punctuation between the `context` line and the "Names and terms" sentence) and the tokenizer used to count `prompt_tokens`; the rule fixes the order, the 200-token cap, and the drop-from-the-end behaviour.
 
 ## Sources
 
 WhisperX service API and operating contract; Pinned WhisperX stack for the target GPU generation; Accept the diarization model licence and create the HuggingFace token; Translation-to-English behaviour (the contract amendments only); Deployment topology on the rebuilt server (the Compose service name, network, internal port, memory limit, secret file paths, and the journal retention amendment); GitHub distribution and install story (the image name, the repository tree, the egress hosts, and the `./transcribe check` shape); ADR 0002 (a fresh, pinned, ASR-only WhisperX service); ADR 0005 (the serial rule lives in the service); the WhisperX service research file; the pinned stack research file.
+
+## Settled by the build
+
+The points the tickets left open were settled during the Phase 1 build and are
+written into the contract above, so that a second Consumer reads one document
+and not a history. What was decided, on 2026-09-03:
+
+- The ASR revisions and the alignment checksums are in `models.yaml`, taken
+  from what the first `pull` fetched. Every pinned model is loaded from its own
+  revision's folder rather than by name.
+- `combined` is a mean per language rather than a sum, so it stays between 0
+  and 1 whatever number of windows a Run got, and a Consumer can hold it
+  against a threshold.
+- `translate_if_needed` translates a mixed Run whatever its winning language,
+  with `task_reason` `mixed_detected`.
+- `word_timestamps` is an object of `present` and `reason`; `speakers` is an
+  object of `labels`, with `embeddings` and `embedding_dimension` only when
+  they were asked for.
+- `current_job` shows another Consumer's stage but neither its id nor its name.
+- `make-token` prints a line rather than writing the read-only tokens file.
+- The prompt joins with a single space after the context line, which gains a
+  full stop when it has none, and `prompt_tokens` is the model's own
+  tokenizer's count.
+- The single alignment fetch lifts the offline flag around that one call only,
+  is tried once per language for the life of the model process, and remembers
+  its outcome.
+- Language detection is counted inside the `load` timing, because the six
+  timings a result carries are fixed and detection is work done before any
+  transcription starts. What it cost per job goes to the journal instead.
+- The debug log level is described in the service README.
 
 ## Amendments applied
 
