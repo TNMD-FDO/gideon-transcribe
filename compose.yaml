@@ -177,10 +177,10 @@ services:
       resources:
         limits:
           memory: 8G
-    # Four media jobs of eight ffmpeg threads each, and room to spare. The
-    # only CPU cap in the stack: transcodes are the one thing here that will
-    # take every core it is given.
-    cpus: 40
+          # Four media jobs of eight ffmpeg threads each, and room to spare.
+          # The only CPU cap in the stack: transcodes are the one thing here
+          # that will take every core they are given.
+          cpus: "40"
     networks:
       - transcribe
     logging:
