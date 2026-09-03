@@ -43,6 +43,9 @@ services:
         reservations:
           devices:
             - driver: cdi
+              # Compose's schema asks for this even when the device is named
+              # through CDI.
+              capabilities: ["gpu"]
               device_ids:
                 - "nvidia.com/gpu=${WHISPERX_GPU_UUID:?set WHISPERX_GPU_UUID in .env}"
 
