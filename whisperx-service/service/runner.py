@@ -29,6 +29,10 @@ READY_SECONDS = 600.0
 # How often the loop looks for work when there is none.
 IDLE_SECONDS = 0.5
 
+# How long to wait before trying to start the model process again, when it
+# will not start at all.
+RESTART_SECONDS = 15.0
+
 
 class Runner:
     """One model process, one job at a time, for as long as the service runs."""
@@ -100,6 +104,16 @@ class Runner:
     def _tick(self) -> None:
         if not self.alive():
             self._spawn()
+
+        if not self.alive():
+            # The card or the driver is in no state to work. Jobs stay queued
+            # rather than being spent: each one would fail twice over and be
+            # gone by the time somebody looked, and a queued job is what a
+            # Consumer would want when the card comes back. The liveness check
+            # is already answering 503, so nobody is left guessing.
+            log.error("no model process, so nothing is being taken from the line")
+            self._stop.wait(RESTART_SECONDS)
+            return
 
         job = self.store.take_next()
         if job is None:
