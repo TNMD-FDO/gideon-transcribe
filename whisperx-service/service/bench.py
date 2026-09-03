@@ -413,7 +413,7 @@ def bench(argv: list[str]) -> int:
     report_file.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     _say()
-    _say(f"The report is at {report_file} inside the container,")
-    _say(f"which is {settings.state_dir}/bench on the server.")
+    _say(f"The report is at {report_file} inside the container, which is the")
+    _say("bench folder of the service's state folder on the server.")
     _say("Nothing from it belongs in the repository except the product figures.")
     return 0
