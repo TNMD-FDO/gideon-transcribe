@@ -59,6 +59,7 @@ class Run:
     profile: str
     model: str
     diarize: bool
+    task: str = "transcribe"
     job_id: str | None = None
     audio_seconds: float = 0.0
     wall_seconds: float = 0.0
@@ -256,7 +257,10 @@ def run_one(audio: Path, run: Run, token: str) -> Run:
         {
             "model": run.model,
             "diarize": run.diarize,
-            "client_reference": f"bench-{audio.stem}-{run.model}-{run.diarize}",
+            "task": run.task,
+            "client_reference": (
+                f"bench-{audio.stem}-{run.model}-{run.diarize}-{run.task}"
+            ),
         },
     )
     status, answer = _call("POST", "/v1/jobs", token, body, content_type)
@@ -305,6 +309,10 @@ def _summary(run: Run) -> dict[str, Any]:
         "profile": run.profile,
         "model": run.model,
         "diarize": run.diarize,
+        "task": run.task,
+        "task_run": result.get("settings_used", {}).get("task_run"),
+        "task_reason": result.get("settings_used", {}).get("task_reason"),
+        "word_timestamps": result.get("word_timestamps", {}),
         "audio_seconds": run.audio_seconds,
         "wall_seconds": run.wall_seconds,
         "audio_minutes_per_wall_minute": run.speed,
@@ -335,7 +343,8 @@ def bench(argv: list[str]) -> int:
     if not argv:
         _say(
             "Usage: bench FOLDER [--models=a,b] [--profiles=standard,off] "
-            "[--diarize=off,on] [--only=name] [--label=name]"
+            "[--diarize=off,on] [--tasks=transcribe,translate] [--only=name] "
+            "[--label=name]"
         )
         return 64
 
@@ -353,6 +362,11 @@ def bench(argv: list[str]) -> int:
     diarizations = [
         word.strip() == "on" for word in options.get("--diarize", "off,on").split(",")
     ]
+    # The three tasks a Consumer may ask for. Plain transcription is what the
+    # speed and memory legs measure; the other two are here so that the task
+    # table is proved against the engine and not only in the unit tests, and
+    # for the translation leg once an office has non-English samples.
+    tasks = options.get("--tasks", "transcribe").split(",")
     # A way to run one recording while something is being got working, without
     # waiting for a whole corpus.
     only = [piece for piece in options.get("--only", "").split(",") if piece.strip()]
@@ -387,19 +401,31 @@ def bench(argv: list[str]) -> int:
                 continue
             for model in models:
                 for diarize in diarizations:
-                    run = Run(source.name, profile, model, diarize)
-                    _say(
-                        f"  {model}, diarize {'on' if diarize else 'off'}: running",
-                    )
-                    run = run_one(audio, run, token)
-                    if run.failure:
-                        _say(f"    failed: {run.failure}")
-                    else:
+                    for task in tasks:
+                        run = Run(source.name, profile, model, diarize, task)
                         _say(
-                            f"    {run.wall_seconds}s, {run.speed}x real time, "
-                            f"{run.peak_vram_gb} GB peak"
+                            f"  {model}, diarize {'on' if diarize else 'off'}"
+                            f"{'' if task == 'transcribe' else ', ' + task}: running"
                         )
-                    runs.append(run)
+                        run = run_one(audio, run, token)
+                        if run.failure:
+                            _say(f"    failed: {run.failure}")
+                        else:
+                            used = run.result.get("settings_used", {})
+                            timing = run.result.get("word_timestamps", {})
+                            _say(
+                                f"    {run.wall_seconds}s, {run.speed}x real "
+                                f"time, {run.peak_vram_gb} GB peak, ran "
+                                f"{used.get('task_run')} "
+                                f"({used.get('task_reason')}), word timing "
+                                f"{timing.get('present')}"
+                                + (
+                                    f" because {timing.get('reason')}"
+                                    if timing.get("reason")
+                                    else ""
+                                )
+                            )
+                        runs.append(run)
 
     report = {
         "label": label,
