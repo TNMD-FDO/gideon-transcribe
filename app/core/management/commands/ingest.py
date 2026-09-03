@@ -36,6 +36,14 @@ class Command(BaseCommand):
             help="separate the speakers",
         )
         parser.add_argument(
+            "--queue",
+            action="store_true",
+            help=(
+                "hand the work to the workers instead of doing it here, which "
+                "is the path a real upload takes: prepare, then transcribe"
+            ),
+        )
+        parser.add_argument(
             "--preprocessing",
             default="standard",
             choices=["standard", "off"],
@@ -64,6 +72,19 @@ class Command(BaseCommand):
             preprocessing=options["preprocessing"],
         )
         self.stdout.write(f"recording {recording.id}")
+
+        if options["queue"]:
+            from core.tasks import prepare_recording
+
+            prepare_recording.defer(recording_id=str(recording.pk))
+            self.stdout.write(
+                "  given to the media worker. It will prepare it, join the "
+                "queue, and transcribe it."
+            )
+            self.stdout.write(
+                "  watch with: docker compose logs -f media-worker worker"
+            )
+            return
 
         recording = pipeline.prepare(recording)
 
