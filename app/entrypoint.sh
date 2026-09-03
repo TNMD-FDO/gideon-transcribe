@@ -36,6 +36,13 @@ case "${1:-web}" in
     exec python manage.py procrastinate worker --queues llm --concurrency 4
     ;;
   *)
-    exec python manage.py "$@"
+    # Anything else is a Django management command. The guides write these
+    # names with hyphens, as `docker compose run --rm app create-local-admin`,
+    # while Django takes them with underscores, because a Python module cannot
+    # have a hyphen in its name. The first word is translated so that the
+    # documented command is the one that works.
+    command=$(printf '%s' "$1" | tr '-' '_')
+    shift
+    exec python manage.py "$command" "$@"
     ;;
 esac
