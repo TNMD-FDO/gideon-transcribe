@@ -33,6 +33,7 @@ os.environ.setdefault(
 os.environ.setdefault("WHISPERX_TOKEN_FILE", _write("whisperx_token", "0" * 64))
 os.environ.setdefault("POSTGRES_HOST", "127.0.0.1")
 os.environ.setdefault("POSTGRES_USER", "postgres")
+os.environ.setdefault("POSTGRES_APP_USER", os.environ.get("POSTGRES_USER", "postgres"))
 os.environ.setdefault("POSTGRES_DB", "postgres")
 os.environ.setdefault("APP_DATA_DIR", tempfile.mkdtemp(prefix="transcribe-test-data-"))
 
