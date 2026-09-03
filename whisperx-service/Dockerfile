@@ -62,13 +62,6 @@ RUN pip install --no-cache-dir -r /tmp/requirements-torch.txt
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# torchcodec's own library has to load, not merely be installed. It links
-# against ffmpeg, NPP, and the shared Python runtime, and when any of those is
-# missing it fails quietly at import and pyannote warns that audio decoding
-# will fail. Checking it here means a missing library is a failed build rather
-# than a surprise on the first recording.
-RUN python -c "from torchcodec.decoders import AudioDecoder"
-
 # faster-whisper loads cuBLAS and cuDNN from the wheels torch brought with it,
 # and its README says to put those two folders on the library path.
 ENV LD_LIBRARY_PATH="/opt/venv/lib/python3.12/site-packages/nvidia/cublas/lib:/opt/venv/lib/python3.12/site-packages/nvidia/cudnn/lib:/opt/venv/lib/python3.12/site-packages/nvidia/npp/lib"
@@ -78,6 +71,13 @@ ENV LD_LIBRARY_PATH="/opt/venv/lib/python3.12/site-packages/nvidia/cublas/lib:/o
 # cannot create. Pointing HOME at the container's own temporary folder is
 # enough: everything the service keeps has a mounted folder of its own.
 ENV HOME=/tmp MPLCONFIGDIR=/tmp/matplotlib
+
+# torchcodec's own library has to load, not merely be installed. It links
+# against ffmpeg, NPP, and the shared Python runtime, and when any of those is
+# missing it fails quietly at import and pyannote warns that audio decoding
+# will fail. Checking it here means a missing library is a failed build rather
+# than a surprise on the first recording.
+RUN python -c "from torchcodec.decoders import AudioDecoder"
 
 # One mounted folder holds every model and the driver's compute cache:
 #   HF_HOME          the two ASR models, the diarization model, and any
