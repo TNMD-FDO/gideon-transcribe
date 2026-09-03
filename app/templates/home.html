@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Your recordings{% endblock %}
+{% block content %}
+  <h1>Your recordings</h1>
+
+  {% if warning_due %}
+    <p class="notice">
+      You will be signed out soon unless you do something. Anything you have
+      uploaded goes when your session ends.
+    </p>
+  {% endif %}
+
+  <p class="notice">
+    There is nothing here yet. Uploading arrives with the next piece of the
+    build, and this page becomes the list of your recordings.
+  </p>
+
+  <dl>
+    <dt>Signed in as</dt><dd>{{ user.username }}</dd>
+    <dt>Name</dt><dd>{{ user.shown_name }}</dd>
+    <dt>Role</dt><dd>{% if user.is_admin %}Admin{% else %}User{% endif %}</dd>
+    {% if user.admin_source %}
+      <dt>Admin because</dt><dd>{{ user.admin_source }}</dd>
+    {% endif %}
+    <dt>Session started</dt><dd>{{ session.started }}</dd>
+  </dl>
+{% endblock %}

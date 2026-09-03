@@ -24,3 +24,7 @@ DJANGO_SETTINGS_MODULE = "transcribe.settings_test"
 # FastAPI declares where a value comes from in the argument default, which is
 # the framework's own idiom and not the mistake this rule looks for.
 "whisperx-service/service/api.py" = ["B008"]
+# Django writes its own migrations, and they are a record of what was done
+# rather than code anybody reads. Reformatting them by hand would make them
+# disagree with what Django writes next time.
+"app/core/migrations/*" = ["E501"]
