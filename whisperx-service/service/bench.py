@@ -324,7 +324,7 @@ def _summary(run: Run) -> dict[str, Any]:
             round(speech / run.audio_seconds, 3) if run.audio_seconds else None
         ),
         "speakers": result.get("speakers", {}).get("labels", []),
-        "language": result.get("language", {}).get("detected"),
+        "language": result.get("language", {}),
         "settings_used": result.get("settings_used", {}),
         "timings_seconds": result.get("timings_seconds", {}),
         "failure": run.failure,
