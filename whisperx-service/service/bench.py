@@ -50,6 +50,10 @@ LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=20"
 
 PROFILES = ("standard", "off")
 
+# How wide a slice of time one line of a side-by-side covers. Half a minute is
+# about as much as a reader can hold in their head while comparing two of them.
+WINDOW_SECONDS = 30.0
+
 
 @dataclass
 class Run:
@@ -312,6 +316,120 @@ def run_one(audio: Path, run: Run, token: str) -> Run:
 # The report ------------------------------------------------------------------
 
 
+def _write_text(run: Run, folder: Path) -> None:
+    """Write one run's transcript out for somebody to read.
+
+    The gate's accuracy leg is a person reading, because a word count says
+    nothing about whether a name or a number is right. This is what they read.
+    It holds recorded speech, so it lands in the service's own folder on the
+    server with everything else the office owns, and never anywhere else.
+    """
+    folder.mkdir(parents=True, exist_ok=True)
+    lines = [
+        f"{run.recording}, {run.model}, "
+        f"{'with' if run.diarize else 'without'} speaker separation",
+        "",
+    ]
+    for segment in run.result.get("segments", []):
+        start = segment.get("start") or 0
+        speaker = segment.get("speaker")
+        who = f" {speaker}" if speaker else ""
+        lines.append(f"[{_clock(start)}]{who} {segment.get('text', '')}")
+
+    name = f"{Path(run.recording).stem}-{run.model}"
+    if run.diarize:
+        name += "-diarized"
+    (folder / f"{name}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _clock(seconds: float) -> str:
+    minutes, seconds = divmod(int(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
+
+
+def _windows(segments: list[dict[str, Any]]) -> dict[int, str]:
+    """A run's text, gathered into half-minute windows by where it starts."""
+    gathered: dict[int, list[str]] = {}
+    for segment in segments:
+        window = int((segment.get("start") or 0) // WINDOW_SECONDS)
+        text = (segment.get("text") or "").strip()
+        if text:
+            gathered.setdefault(window, []).append(text)
+    return {window: " ".join(texts) for window, texts in gathered.items()}
+
+
+def side_by_side(label: str, recording: str) -> int:
+    """Put two models' transcripts of one recording next to each other.
+
+    Written as one file rather than two, in half-minute windows, because what
+    a reader is looking for is where they disagree, and that is invisible when
+    the two are in separate files.
+    """
+    settings = Settings.from_environment()
+    folder = settings.state_dir / "bench" / "text" / label
+    if not folder.is_dir():
+        _say(f"There is no kept text for {label}. Run the harness with --text=on.")
+        return 66
+
+    files = sorted(path for path in folder.glob(f"*{recording}*.txt"))
+    if len(files) != 2:
+        _say(
+            f"Expected two transcripts of {recording} in {folder}, found {len(files)}."
+        )
+        for path in files:
+            _say(f"  {path.name}")
+        return 66
+
+    runs = []
+    for path in files:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        segments = []
+        for line in lines[2:]:
+            if not line.startswith("["):
+                continue
+            stamp, _, text = line.partition("]")
+            parts = [int(piece) for piece in stamp.strip("[").split(":")]
+            seconds = 0
+            for piece in parts:
+                seconds = seconds * 60 + piece
+            segments.append({"start": seconds, "text": text.strip()})
+        runs.append((path.stem, _windows(segments)))
+
+    (first_name, first), (second_name, second) = runs
+    out = folder / f"side-by-side-{recording}.txt"
+    lines = [
+        f"{recording}: two models on the same recording, half a minute a line",
+        "",
+        f"  A  {first_name}",
+        f"  B  {second_name}",
+        "",
+        "Read where A and B differ, with the recording playing. Names, numbers,",
+        "dates, and amounts are what matter; wording that differs but means the",
+        "same thing is not an error.",
+        "",
+    ]
+    for window in sorted(set(first) | set(second)):
+        at = _clock(window * WINDOW_SECONDS)
+        left = first.get(window, "")
+        right = second.get(window, "")
+        lines.append(f"[{at}]")
+        lines.append(f"  A  {left}" if left else "  A  -")
+        lines.append(f"  B  {right}" if right else "  B  -")
+        lines.append("")
+
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _say(f"Written to {out}")
+    _say(
+        f"{len(set(first) | set(second))} windows, "
+        f"{sum(1 for w in set(first) | set(second) if first.get(w) != second.get(w))} "
+        f"of them different."
+    )
+    return 0
+
+
 def _summary(run: Run) -> dict[str, Any]:
     result = run.result
     segments = result.get("segments", [])
@@ -417,7 +535,14 @@ def bench(argv: list[str]) -> int:
             "[--label=name]"
         )
         _say("       bench compare LABEL LABEL")
+        _say("       bench side-by-side LABEL RECORDING")
         return 64
+
+    if argv[0] == "side-by-side":
+        if len(argv) != 3:
+            _say("Usage: bench side-by-side LABEL RECORDING")
+            return 64
+        return side_by_side(argv[1], argv[2])
 
     if argv[0] == "compare":
         if len(argv) != 3:
@@ -447,6 +572,10 @@ def bench(argv: list[str]) -> int:
     # A way to run one recording while something is being got working, without
     # waiting for a whole corpus.
     only = [piece for piece in options.get("--only", "").split(",") if piece.strip()]
+    # Whether to keep each transcript for somebody to read. Off by default: the
+    # speed and memory legs do not need it, and a corpus of transcripts is a
+    # thing to make deliberately.
+    keep_text = options.get("--text", "off") == "on"
     label = options.get("--label", time.strftime("%Y-%m-%d-%H%M"))
 
     settings = Settings.from_environment()
@@ -502,6 +631,8 @@ def bench(argv: list[str]) -> int:
                                     else ""
                                 )
                             )
+                        if keep_text and not run.failure:
+                            _write_text(run, into / "text" / label)
                         runs.append(run)
 
     report = {
