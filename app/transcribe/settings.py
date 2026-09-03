@@ -42,7 +42,12 @@ def flag(name: str, default: bool = False) -> bool:
 # The app answers on one hostname, the office's own, and Caddy in front of it
 # is the only thing that talks to it.
 APP_HOSTNAME = os.environ.get("APP_HOSTNAME", "localhost")
-ALLOWED_HOSTS = [APP_HOSTNAME, "localhost", "127.0.0.1"]
+
+# The office's name for the app, plus the names the stack calls it by from
+# inside: the health check uses the loopback, and the upload sidecar calls the
+# hook endpoint by the service's own name on the project network. A request
+# with any other Host is not for this app.
+ALLOWED_HOSTS = [APP_HOSTNAME, "localhost", "127.0.0.1", "app"]
 
 # Debug is never on. There is no setting for it: an office that could turn it
 # on would eventually turn it on, and this app holds privileged material.
