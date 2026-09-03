@@ -30,7 +30,7 @@ What every Upload page starts with.
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
-| Model | large-v3 or large-v3-turbo (turbo for speed) | large-v3 | 1 | The model every Run asks for; users cannot change it, and the Upload page does not show it as a field. | The next Run; the service swaps once, in under a minute. |
+| Model | large-v3-turbo or large-v3 | large-v3-turbo | 1 | The model every Run asks for; users cannot change it, and the Upload page does not show it as a field. | The next Run; the service swaps once, in under a minute. |
 | Diarization ticked by default | On or Off | On | 1 | The Upload page's "Diarize" checkbox starts ticked. | The next Upload page opened. |
 | Speaker-count hint default | Let the app decide, Exactly N, Between N and M | Let the app decide | 1 | What the hint starts as. | The next Upload page opened. |
 | "Translate to English" ticked by default | On or Off | Off | 1 | For an office whose Recordings are mostly not in English. | The next Upload page opened. |
