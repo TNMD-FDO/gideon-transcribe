@@ -68,6 +68,78 @@ DEFINITIONS = {
                 "says plainly that an Admin access is forgotten after this."
             ),
         ),
+        Definition(
+            key="largest_file_gb",
+            name="Largest file",
+            default=10,
+            least=1,
+            most=100,
+            unit="GB",
+            what_it_does=(
+                "The biggest single upload accepted. A six-hour body-worn "
+                "camera export is about 13 GB, so an office with those raises "
+                "it."
+            ),
+        ),
+        Definition(
+            key="longest_recording_minutes",
+            name="Longest Recording",
+            default=6 * 60,
+            least=60,
+            most=8 * 60,
+            unit="minutes",
+            what_it_does=(
+                "Longer recordings are refused when the file is inspected. "
+                "The WhisperX service refuses anything over eight hours "
+                "whatever this says."
+            ),
+        ),
+        Definition(
+            key="longest_clip_minutes",
+            name="Longest Clip",
+            default=30,
+            least=1,
+            most=8 * 60,
+            unit="minutes",
+            what_it_does="How long a Clip a person may save.",
+        ),
+        Definition(
+            key="files_per_batch",
+            name="Files per Batch",
+            default=25,
+            least=1,
+            most=200,
+            unit="files",
+            what_it_does=(
+                "The only size rule for a Batch. Setting it to 1 makes every "
+                "Batch a single file, so there is no separate bulk-upload "
+                "switch."
+            ),
+        ),
+        Definition(
+            key="default_quota_gb",
+            name="Default Workspace quota per user",
+            default=50,
+            least=1,
+            most=5000,
+            unit="GB",
+            what_it_does=(
+                "Everything on disk for a person's recordings counts towards "
+                "it. A per-person override on the users list wins."
+            ),
+        ),
+        Definition(
+            key="minimum_free_disk_gb",
+            name="Minimum free disk space",
+            default=200,
+            least=10,
+            most=10000,
+            unit="GB",
+            what_it_does=(
+                "Uploads are refused below it. Nothing already stored is "
+                "discarded to make room."
+            ),
+        ),
     ]
 }
 
@@ -122,3 +194,33 @@ def idle_timeout() -> timedelta:
 
 def audit_retention_months() -> int:
     return get("audit_retention_months")
+
+
+# The limits, in the units the rest of the app works in. Kept as small whole
+# numbers in the database, because an Admin sets them in gigabytes and hours
+# rather than in bytes and seconds.
+GB = 1024**3
+
+
+def largest_file_bytes() -> int:
+    return get("largest_file_gb") * GB
+
+
+def longest_recording_seconds() -> int:
+    return get("longest_recording_minutes") * 60
+
+
+def longest_clip_seconds() -> int:
+    return get("longest_clip_minutes") * 60
+
+
+def files_per_batch() -> int:
+    return get("files_per_batch")
+
+
+def default_quota_bytes() -> int:
+    return get("default_quota_gb") * GB
+
+
+def minimum_free_disk_bytes() -> int:
+    return get("minimum_free_disk_gb") * GB

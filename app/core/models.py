@@ -254,3 +254,13 @@ class SignInAttempt(models.Model):
             if waited < THROTTLE_WAIT:
                 return THROTTLE_WAIT - waited
         return None
+
+
+# Django registers a model when the module defining it is imported, and it
+# infers the app from the package the module sits in. These live in modules of
+# their own because they are separate ideas, and they are imported here so that
+# whether Django knows about them does not depend on which other module
+# happened to be loaded first.
+from core.audit import Row  # noqa: E402, F401
+from core.recordings import Batch, Recording, Side  # noqa: E402, F401
+from core.settings_store import Setting  # noqa: E402, F401
