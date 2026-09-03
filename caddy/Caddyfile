@@ -30,8 +30,17 @@ https://{$APP_HOSTNAME}:443 {
 	# the host, not the traffic Docker forwards, so this is where the app is
 	# held to the office network. Everyone else is told 403 and nothing else:
 	# no page, no name, no hint that there is an app here.
+	#
+	# Both of these are `handle` blocks, and that matters. A Caddyfile runs its
+	# directives in Caddy's own order rather than the order they are written
+	# in, so a bare `respond` for the refusal would be reached after the proxy
+	# had already answered, and the allow-list would let everyone through
+	# while looking exactly as though it worked. `handle` blocks are mutually
+	# exclusive and are taken in the order they appear.
 	@outside not remote_ip {$ALLOWED_CLIENT_CIDRS}
-	respond @outside 403
+	handle @outside {
+		respond 403
+	}
 
 	# The uploads route (/files/*) and the media route (/media/*) arrive with
 	# the upload sidecar and the media worker. Until then everything is the
