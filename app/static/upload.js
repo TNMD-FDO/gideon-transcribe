@@ -222,41 +222,112 @@
     });
   });
 
+  // Uploading -----------------------------------------------------------------
+  //
+  // Each file gets a line saying where it has got to, because an upload that
+  // fails silently is an upload nobody knows to try again. A failed one keeps
+  // its own Try again, so one bad file does not mean starting the batch over.
+
+  function why(error) {
+    // The app refuses an upload with a plain message and a reason class. Any
+    // other failure is the network, and saying so is more use than saying
+    // nothing.
+    var answer = error && error.originalResponse;
+    if (answer) {
+      try {
+        var body = JSON.parse(answer.getBody());
+        if (body && body.error) { return body.error; }
+      } catch (ignored) { /* not the app's own answer */ }
+    }
+    return "The upload did not finish. Check the connection and try again.";
+  }
+
   function startUploads(files, recordings, batch) {
-    var waiting = files.slice();
     var byName = {};
     recordings.forEach(function (one) { byName[one.name] = one.id; });
 
-    document.getElementById("start").textContent = "Uploading...";
+    var progress = document.getElementById("progress");
+    var start = document.getElementById("start");
+    start.hidden = true;
+    document.getElementById("review").hidden = true;
+    progress.hidden = false;
 
+    var lines = {};
+    var waiting = files.slice();
     var running = 0;
     var done = 0;
 
-    function next() {
-      if (!waiting.length) {
-        if (running === 0) { window.location = "/batch/" + batch; }
+    files.forEach(function (one) {
+      var line = document.createElement("li");
+      line.className = "card";
+      line.innerHTML =
+        "<strong>" + escape(one.title) + "</strong>" +
+        "<p class='state quiet'>Waiting</p>";
+      progress.appendChild(line);
+      lines[one.file.name] = line;
+    });
+
+    function say(one, words, isProblem) {
+      var line = lines[one.file.name].querySelector(".state");
+      line.textContent = words;
+      line.className = isProblem ? "state problem" : "state quiet";
+    }
+
+    function offerRetry(one) {
+      var line = lines[one.file.name];
+      if (line.querySelector("button")) { return; }
+      var again = document.createElement("button");
+      again.type = "button";
+      again.className = "plain";
+      again.textContent = "Try again";
+      again.addEventListener("click", function () {
+        again.remove();
+        waiting.push(one);
+        next();
+      });
+      line.appendChild(again);
+    }
+
+    function finishedIfDone() {
+      if (waiting.length || running) { return; }
+      if (done === files.length) {
+        window.location = "/batch/" + batch;
         return;
       }
-      if (running >= AT_ONCE) { return; }
+      document.getElementById("to-batch-link").setAttribute(
+        "href", "/batch/" + batch
+      );
+      document.getElementById("to-batch").hidden = false;
+    }
+
+    function next() {
+      if (!waiting.length || running >= AT_ONCE) {
+        finishedIfDone();
+        return;
+      }
 
       var one = waiting.shift();
       running += 1;
+      say(one, "Uploading");
 
       var upload = new tus.Upload(one.file, {
         endpoint: "/files/",
         retryDelays: [0, 1000, 3000, 5000],
         chunkSize: 50 * 1024 * 1024,
         metadata: { recording: byName[one.file.name], filename: one.file.name },
-        onError: function () {
+        onProgress: function (sent, total) {
+          say(one, "Uploading " + Math.floor((sent / total) * 100) + "%");
+        },
+        onError: function (error) {
           running -= 1;
+          say(one, why(error), true);
+          offerRetry(one);
           next();
         },
         onSuccess: function () {
           running -= 1;
           done += 1;
-          if (!waiting.length && running === 0) {
-            window.location = "/batch/" + batch;
-          }
+          say(one, "Uploaded");
           next();
         }
       });
