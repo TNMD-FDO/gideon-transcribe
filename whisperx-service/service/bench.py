@@ -333,7 +333,10 @@ def _ffmpeg_version() -> str:
 def bench(argv: list[str]) -> int:
     """Run the gate over a folder of recordings."""
     if not argv:
-        _say("Usage: bench FOLDER [--models a,b] [--profiles standard,off]")
+        _say(
+            "Usage: bench FOLDER [--models=a,b] [--profiles=standard,off] "
+            "[--diarize=off,on] [--only=name] [--label=name]"
+        )
         return 64
 
     corpus = Path(argv[0])
@@ -346,6 +349,13 @@ def bench(argv: list[str]) -> int:
     )
     models = options.get("--models", "large-v3,large-v3-turbo").split(",")
     profiles = options.get("--profiles", "standard").split(",")
+    # "off,on" by default, because the gate needs the speed of both.
+    diarizations = [
+        word.strip() == "on" for word in options.get("--diarize", "off,on").split(",")
+    ]
+    # A way to run one recording while something is being got working, without
+    # waiting for a whole corpus.
+    only = [piece for piece in options.get("--only", "").split(",") if piece.strip()]
     label = options.get("--label", time.strftime("%Y-%m-%d-%H%M"))
 
     settings = Settings.from_environment()
@@ -356,7 +366,9 @@ def bench(argv: list[str]) -> int:
     recordings = sorted(
         path
         for path in corpus.iterdir()
-        if path.is_file() and path.suffix.lower() not in (".txt", ".json")
+        if path.is_file()
+        and path.suffix.lower() not in (".txt", ".json")
+        and (not only or any(piece in path.name for piece in only))
     )
     if not recordings:
         _say(f"There is nothing to run in {corpus}.")
@@ -374,7 +386,7 @@ def bench(argv: list[str]) -> int:
             if audio is None:
                 continue
             for model in models:
-                for diarize in (False, True):
+                for diarize in diarizations:
                     run = Run(source.name, profile, model, diarize)
                     _say(
                         f"  {model}, diarize {'on' if diarize else 'off'}: running",
