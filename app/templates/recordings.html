@@ -24,7 +24,7 @@
           </p>
           <p class="quiet">
             {% if recording.transcript %}
-              Transcribed
+              <a href="{% url 'viewer' recording.pk %}">Open</a>
             {% elif recording.media_state == "rejected" %}
               Refused: {{ recording.failure_message }}
             {% elif recording.media_state == "failed" %}
