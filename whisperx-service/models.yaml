@@ -1,0 +1,52 @@
+# Every model the service uses, pinned.
+#
+# `pull` fetches exactly what is listed here, checks each download against its
+# pin, and reports. After the pull the service runs offline, so anything not
+# listed here is not available to a job, with one exception the contract names:
+# a transcribe job in a language whose alignment model is not cached makes one
+# fetch attempt for it and completes with segment timing only if that fails.
+#
+# The revisions marked "filled by the first pull" are the ones the
+# specification left to the build: the diarization model's revision was fixed
+# by the planning tickets, and the rest are written down from what the first
+# pull actually fetched, so that every office afterwards gets the same files.
+
+# The two models a job may name. The English-only distil model is deliberately
+# absent: it cannot translate.
+asr:
+  large-v3:
+    repository: Systran/faster-whisper-large-v3
+    revision: null # filled by the first pull
+    licence: MIT
+    size_gb: 3.09
+    default: true
+  large-v3-turbo:
+    repository: mobiuslabsgmbh/faster-whisper-large-v3-turbo
+    revision: null # filled by the first pull
+    licence: MIT
+    size_gb: 1.62
+
+# One model, one licence acceptance, one token. This repository carries its own
+# segmentation, embedding, and plda files, so there is no second gated
+# repository to accept, as pyannote 3.1 had.
+diarization:
+  repository: pyannote/speaker-diarization-community-1
+  revision: 3533c8cf8e369892e6b79ff1bf80f7b0286a54ee
+  licence: CC-BY-4.0
+  gated: true
+  size_gb: 0.033
+
+# The alignment models for the languages in WHISPERX_ALIGN_LANGUAGES, so that
+# those languages are aligned offline from the first run. English and Spanish
+# come from torchaudio's own bundles, which torch fetches by URL rather than
+# from a repository, so the pin for those is the file's checksum. A language
+# whose alignment model comes from HuggingFace is pinned by revision instead.
+alignment:
+  en:
+    source: torchaudio
+    url: null # filled by the first pull
+    sha256: null # filled by the first pull
+  es:
+    source: torchaudio
+    url: null # filled by the first pull
+    sha256: null # filled by the first pull

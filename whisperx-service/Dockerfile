@@ -85,6 +85,7 @@ ENV HF_HOME=/models/hf \
 
 # The container runs as the app's own system user, set by the compose file, so
 # nothing here is owned by root beyond what is read-only anyway.
+COPY models.yaml /opt/service/models.yaml
 COPY service/ /opt/service/service/
 WORKDIR /opt/service
 
