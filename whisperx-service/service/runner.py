@@ -258,6 +258,16 @@ class Runner:
                     "revision": message.get("revision"),
                 }
             return None
+        if message["type"] == "detected":
+            log.info(
+                "job %s heard %s in %d windows in %.1fs, mixed %s",
+                message["job_id"],
+                message["language"],
+                message["windows"],
+                message["seconds"],
+                message["mixed"],
+            )
+            return None
         if message["type"] == "stage":
             self.store.set_stage(
                 message["job_id"], message["stage"], message["percent"]

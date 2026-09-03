@@ -250,16 +250,32 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
     )
     audio = whisperx.load_audio(job["audio_path"])
     duration = len(audio) / SAMPLE_RATE
-    timings["load"] = round(time.monotonic() - started, 3)
-
     peak_used, _ = _vram()
 
     # What to run -------------------------------------------------------------
+    #
+    # Detection is counted as part of getting ready rather than as a stage of
+    # its own: the contract fixes the six timings a result carries, and this is
+    # work done before any transcription starts. What it cost goes to the
+    # journal, where the gate can read it.
 
     detection = None
     if not request.get("language"):
+        at = time.monotonic()
         windows = engine.detect(audio, duration)
         detection = combine(windows)
+        outbox.put(
+            _message(
+                "detected",
+                job_id=job_id,
+                seconds=round(time.monotonic() - at, 3),
+                windows=len(windows),
+                language=detection.detected,
+                mixed=detection.mixed,
+            )
+        )
+
+    timings["load"] = round(time.monotonic() - started, 3)
     decision = decide(
         request.get("task", "transcribe"),
         request.get("language"),
