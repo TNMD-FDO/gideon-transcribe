@@ -1,0 +1,9 @@
+# What the app image installs, pinned.
+#
+# Procrastinate runs the background work on the app's own PostgreSQL, which is
+# why there is no Redis and no Valkey here and no scheduler container in the
+# compose file. The version is the one the specification names.
+Django==6.1.1
+gunicorn==26.2.0
+psycopg[binary]==3.3.5
+procrastinate==3.9.0

@@ -5,9 +5,10 @@ name: CI
 # "Access, branches, and CI"). No self-hosted runner is used, here or anywhere,
 # including the one the office runs on its own server.
 #
-# Nothing here needs a GPU. The service is written so that everything except
-# the model process runs without torch or whisperx, which is what lets its
-# tests run on a hosted runner at all.
+# Nothing here needs a GPU. The WhisperX service is written so that everything
+# except its model process runs without torch, and the app is tested against a
+# real PostgreSQL, because it is a database application and testing it against
+# anything else would be pretence.
 #
 # Each step that needs code runs only once that code exists, because the build
 # arrives one slice at a time.
@@ -22,6 +23,20 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-trixie@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -29,10 +44,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install what the checks need
-        if: hashFiles('whisperx-service/requirements-dev.txt', 'app/requirements-dev.txt') != ''
         run: |
           for file in whisperx-service/requirements-dev.txt app/requirements-dev.txt; do
             if [ -f "$file" ]; then pip install -r "$file"; fi
@@ -45,7 +59,12 @@ jobs:
           ruff format --check .
 
       - name: Unit tests
-        if: hashFiles('whisperx-service/tests/**', 'app/**/tests/**') != ''
+        if: hashFiles('whisperx-service/tests/**', 'app/tests/**') != ''
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
         run: python -m pytest
 
       - name: The WhisperX service's compose file is valid
@@ -56,21 +75,23 @@ jobs:
           : > whisperx-service/secrets/hf_token
           : > whisperx-service/secrets/tokens
           docker compose -f whisperx-service/compose.yaml config --quiet
-          rm -rf whisperx-service/.env whisperx-service/secrets
 
-      - name: The app's compose file is valid
+      - name: The whole stack's compose file is valid
         if: hashFiles('compose.yaml') != ''
         run: |
           cp .env.example .env
-          cp whisperx-service/.env.example whisperx-service/.env
+          mkdir -p secrets
+          : > secrets/django_secret_key
+          : > secrets/postgres_password
+          : > secrets/whisperx_consumer_token
           docker compose config --quiet
-          rm -f .env whisperx-service/.env
+          rm -rf .env secrets whisperx-service/.env whisperx-service/secrets
 
       - name: Secret scan (gitleaks)
         # The gitleaks command-line tool is MIT and needs no licence key. The
         # gitleaks GitHub Action is not used: since its version 2 it needs a
         # key for organisation accounts. The image tag is pinned at the first
-        # Release, as everything else in this repository is.
+        # public Release, as everything else in this repository is.
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" \
             zricethezav/gitleaks:latest dir /repo --redact --verbose

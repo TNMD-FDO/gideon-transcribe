@@ -1450,7 +1450,7 @@ Every Recording gets exactly one Playback copy; the player never touches the upl
 audiowaveform -i <audio> -o waveform.json -z 256 -b 8
 ```
 
-- audiowaveform is not in the Debian archive; the project publishes `.deb` files on its GitHub Releases for Debian 10 to 13 (`audiowaveform-1.10.2-1-13.amd64.deb` for Debian 13; the 1.10.3 tag ships no binaries and is functionally identical). Its inputs are MP3, WAV, FLAC, Ogg Vorbis, and Opus. Its JSON carries `version, channels, sample_rate, samples_per_pixel, bits, length, data` (interleaved min and max integer pairs).
+- audiowaveform is not in the Debian archive; the project publishes `.deb` files on its GitHub Releases for Debian 10 to 13 (`audiowaveform_1.10.2-1-13_amd64.deb` for Debian 13; the 1.10.3 tag ships no binaries and is functionally identical). Its inputs are MP3, WAV, FLAC, Ogg Vorbis, and Opus. Its JSON carries `version, channels, sample_rate, samples_per_pixel, bits, length, data` (interleaved min and max integer pairs).
 - The viewer decides how the peaks are drawn (chapter "Transcript viewer and player"); wavesurfer.js (BSD-3) accepts pre-computed peaks through `load(url, channelData, duration)`, with the integer pairs converted to floats (divide by 128 for 8-bit data) first.
 
 ### Clips on the media worker
