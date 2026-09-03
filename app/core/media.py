@@ -410,3 +410,204 @@ def make_asr_audio(
             "The audio in this file could not be prepared for transcription",
             "media_failed",
         )
+
+
+# The Playback copy ------------------------------------------------------------
+#
+# Every Recording gets exactly one, and the player never touches the uploaded
+# bytes. Chrome and Edge cannot play PCM inside mp4, G.729, or HEVC without
+# hardware support, and they seek badly in variable-bitrate MP3. One
+# predictable copy removes all of that, and the faithful file of record stays
+# outside the app.
+
+# Video already in this shape is copied rather than re-encoded, which turns a
+# 50-minute body-worn camera export into a remux of well under a minute.
+PLAYBACK_VIDEO_CODEC = "h264"
+PLAYBACK_MAX_HEIGHT = 720
+
+# What a voice recording needs and no more. Anything above this is spent on
+# room noise.
+PLAYBACK_BITRATE_MONO = "96k"
+PLAYBACK_BITRATE_STEREO = "128k"
+
+
+@dataclass(frozen=True)
+class Video:
+    """The video stream, when there is one."""
+
+    codec: str
+    height: int
+
+
+def video_stream(raw: dict) -> Video | None:
+    for stream in raw.get("streams", []):
+        if stream.get("codec_type") == "video":
+            # A cover image inside an audio file is a video stream that is one
+            # frame long, and is not video.
+            if stream.get("disposition", {}).get("attached_pic"):
+                continue
+            return Video(
+                codec=stream.get("codec_name", ""),
+                height=int(stream.get("height") or 0),
+            )
+    return None
+
+
+def can_copy_video(video: Video) -> bool:
+    """Whether the video can be kept as it is rather than encoded again."""
+    return (
+        video.codec == PLAYBACK_VIDEO_CODEC and 0 < video.height <= PLAYBACK_MAX_HEIGHT
+    )
+
+
+def make_playback_copy(
+    source: Path,
+    target: Path,
+    probed: Probe,
+    profile: str = "standard",
+) -> None:
+    """One file the browser can play, seek in, and start before it has it all.
+
+    The sound is normalised exactly as the ASR audio is, with the figures
+    measured in the first pass, so what the listener hears is what the model
+    heard. Channels are kept as recorded, so a two-party call still has one
+    side per ear.
+
+    Always with the index at the front: a video plays as it downloads only
+    when its index is there, and ffmpeg writes it at the end unless told
+    otherwise.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    track = probed.best_track
+    video = video_stream(probed.raw)
+
+    filters = HIGH_PASS
+    if profile == "standard":
+        measured = _measure_loudness(source, track, None)
+        if measured:
+            filters += (
+                f",{LOUDNORM}:linear=true"
+                f":measured_I={measured['input_i']}"
+                f":measured_TP={measured['input_tp']}"
+                f":measured_LRA={measured['input_lra']}"
+                f":measured_thresh={measured['input_thresh']}"
+                f":offset={measured['target_offset']}"
+            )
+        else:
+            filters += f",{LOUDNORM}"
+
+    channels = 2 if (track and track.channels >= 2) else 1
+    arguments = [
+        "ffmpeg",
+        "-nostdin",
+        "-y",
+        "-v",
+        "error",
+        *forced_decoder(track),
+        "-i",
+        str(source),
+        "-af",
+        filters,
+        "-c:a",
+        "aac",
+        "-b:a",
+        PLAYBACK_BITRATE_STEREO if channels == 2 else PLAYBACK_BITRATE_MONO,
+        "-ac",
+        str(channels),
+        "-movflags",
+        "+faststart",
+    ]
+
+    if video is None:
+        arguments += ["-vn"]
+    elif can_copy_video(video):
+        arguments += ["-c:v", "copy"]
+    else:
+        arguments += [
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            # Down to 720 at most, keeping the shape, and never scaled up.
+            # The frame rate is left alone.
+            "-vf",
+            f"scale=-2:'min({PLAYBACK_MAX_HEIGHT},ih)'",
+            "-pix_fmt",
+            "yuv420p",
+        ]
+
+    arguments.append(str(target))
+    finished = _run(arguments, timeout=DECODE_TIMEOUT)
+    if finished.returncode != 0 or not target.exists():
+        raise MediaError(
+            "The playback copy of this recording could not be made", "media_failed"
+        )
+
+
+def playback_suffix(probed: Probe) -> str:
+    """mp4 when there is a picture, m4a when there is only sound."""
+    return ".mp4" if video_stream(probed.raw) else ".m4a"
+
+
+# The waveform -----------------------------------------------------------------
+
+
+def make_waveform(source: Path, target: Path) -> None:
+    """The peaks the player draws, from the Playback copy.
+
+    audiowaveform reads MP3, WAV, FLAC, Ogg Vorbis, and Opus, and the Playback
+    copy is AAC, which is none of them. So ffmpeg decodes it to WAV on the way
+    through rather than a second file being written and deleted.
+
+    Eight bits and 256 samples a pixel is what the viewer draws with: the peaks
+    are a picture, and asking for more of them would only make the file bigger.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    decode = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-v",
+            "error",
+            "-i",
+            str(source),
+            "-f",
+            "wav",
+            "-",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    peaks = subprocess.run(
+        [
+            "audiowaveform",
+            "-i",
+            "-",
+            "--input-format",
+            "wav",
+            "-o",
+            str(target),
+            "--output-format",
+            "json",
+            "-z",
+            "256",
+            "-b",
+            "8",
+        ],
+        stdin=decode.stdout,
+        capture_output=True,
+        text=True,
+        timeout=DECODE_TIMEOUT,
+        check=False,
+    )
+    if decode.stdout:
+        decode.stdout.close()
+    decode.wait(timeout=DECODE_TIMEOUT)
+
+    if peaks.returncode != 0 or not target.exists():
+        raise MediaError(
+            "The waveform for this recording could not be made", "media_failed"
+        )

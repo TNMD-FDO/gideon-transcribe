@@ -165,6 +165,37 @@ def _make_asr_audio(recording: Recording) -> None:
         )
 
 
+def make_playback(recording: Recording) -> Recording:
+    """The Playback copy and the waveform, after the Recording is Ready.
+
+    Recognition never waits for these: a Job can be at the WhisperX service
+    while they are still being made, and the pages say "Preparing audio" or
+    "Preparing video" until they are there.
+    """
+    try:
+        probed = media.probe(recording.original_path)
+        target = recording.folder / f"playback{media.playback_suffix(probed)}"
+        media.make_playback_copy(
+            recording.original_path, target, probed, recording.preprocessing
+        )
+        media.make_waveform(target, recording.waveform_path)
+    except media.MediaError as problem:
+        # A Recording without a Playback copy is still transcribable, so this
+        # is not a failure of the Recording. The pages keep saying it is being
+        # prepared, and the journal says what went wrong.
+        log.warning(
+            "the playback copy of recording %s could not be made: %s",
+            recording.id,
+            problem.message,
+        )
+        return recording
+
+    recording.playback_ready = True
+    recording.save(update_fields=["playback_ready"])
+    log.info("recording %s can be played", recording.id)
+    return recording
+
+
 def _failed(recording: Recording, problem: media.MediaError) -> Recording:
     """A refusal or a failure, said plainly, with nothing thrown away.
 
