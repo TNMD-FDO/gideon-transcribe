@@ -16,6 +16,48 @@ include:
     env_file: whisperx-service/.env
 
 services:
+  caddy:
+    # The front door. It publishes the one port this stack has, and it is the
+    # only thing that talks to the app.
+    image: caddy:2.11-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      APP_HOSTNAME: "${APP_HOSTNAME:?set APP_HOSTNAME in .env}"
+      # Empty would be a Caddyfile error rather than a wide-open door, so an
+      # office that means everyone says so in full.
+      ALLOWED_CLIENT_CIDRS: "${ALLOWED_CLIENT_CIDRS:-0.0.0.0/0 ::/0}"
+      TZ: "${TZ:-UTC}"
+    ports:
+      # The address as well as the port: the server's own LAN address keeps
+      # this off every other interface the machine has.
+      - "${BIND_ADDRESS:-0.0.0.0}:${HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The office's certificate and its key, placed by hand before the first
+      # start. Caddy reads them once, so a renewed certificate needs
+      # `docker compose restart caddy`.
+      - ./tls:/etc/caddy/tls:ro
+      # Caddy keeps nothing that matters, but it wants somewhere to write.
+      - caddy-data:/data
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
   postgres:
     image: postgres:18-trixie@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
     restart: unless-stopped
@@ -110,6 +152,10 @@ secrets:
     file: "${DJANGO_SECRET_KEY_FILE:-./secrets/django_secret_key}"
   whisperx_consumer_token:
     file: "${WHISPERX_TOKEN_FILE:-./secrets/whisperx_consumer_token}"
+
+volumes:
+  caddy-data:
+  caddy-config:
 
 networks:
   transcribe:
