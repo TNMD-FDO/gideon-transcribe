@@ -42,9 +42,18 @@ https://{$APP_HOSTNAME}:443 {
 		respond 403
 	}
 
-	# The uploads route (/files/*) and the media route (/media/*) arrive with
-	# the upload sidecar and the media worker. Until then everything is the
-	# app's.
+	# Uploads go straight to the sidecar, with no size cap on this route and
+	# no buffering: Caddy streams request bodies unless it is told otherwise,
+	# and a ten-gigabyte upload must never be held in memory or pass through
+	# Python. The app's pre-create hook is what enforces the size limit.
+	handle /files/* {
+		reverse_proxy tusd:1080 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	# The media route (/media/*) arrives with the player. Until then the rest
+	# is the app's.
 	handle {
 		request_body {
 			max_size 64MB

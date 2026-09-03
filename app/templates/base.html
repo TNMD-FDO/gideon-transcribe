@@ -78,6 +78,48 @@
     dt { color: var(--quiet); }
     dd { margin: 0; }
     a { color: inherit; }
+    .quiet { color: var(--quiet); font-size: 0.9rem; margin: 0.25rem 0; }
+    .link { text-decoration: underline; cursor: pointer; }
+    button.plain {
+      background: none;
+      color: var(--quiet);
+      border: 1px solid var(--line);
+      margin-left: 0.5rem;
+    }
+    .steps { list-style: none; margin: 0; padding: 0; }
+    .steps h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+    .drop {
+      border: 2px dashed var(--line);
+      border-radius: 6px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .drop.over { border-color: var(--ink); }
+    .cards { list-style: none; margin: 1.25rem 0; padding: 0; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.6rem;
+    }
+    .card.refused { border-color: var(--wrong); }
+    .card input[type="text"] { margin-bottom: 0.35rem; }
+    .tick { display: block; margin: 1.25rem 0 0.25rem; font-weight: 500; }
+    .tick input { margin-right: 0.4rem; }
+    .indent { margin-left: 1.5rem; }
+    select, textarea {
+      width: 100%;
+      padding: 0.5rem 0.6rem;
+      font: inherit;
+      color: var(--ink);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    input[type="number"] { width: 5rem; padding: 0.4rem; font: inherit; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; margin-top: 1.25rem; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -85,7 +127,9 @@
     <span class="name">Gideon Transcribe</span>
     {% if user.is_authenticated %}
       <span class="who">
-        {{ user.shown_name }}{% if user.is_admin %} (Admin){% endif %}
+        <a href="{% url 'home' %}">Recordings</a>
+        &middot; <a href="{% url 'upload' %}">Upload</a>
+        &middot; {{ user.shown_name }}{% if user.is_admin %} (Admin){% endif %}
         &middot; <a href="{% url 'sign-out' %}">Sign out</a>
       </span>
     {% endif %}

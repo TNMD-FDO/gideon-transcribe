@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Your recordings{% endblock %}
+{% block content %}
+  <p class="notice">{{ standing_line }}</p>
+  {% if storage_warning %}<p class="notice">{{ storage_warning }}</p>{% endif %}
+
+  <h1>Your recordings</h1>
+
+  <p><a href="{% url 'upload' %}"><button type="button">Upload recordings</button></a></p>
+
+  {% if recordings %}
+    <ul class="cards">
+      {% for recording in recordings %}
+        <li class="card">
+          <strong>{{ recording.title }}</strong>
+          <p class="quiet">
+            {{ recording.original_filename }}
+            {% if recording.duration_seconds %}
+              · {{ recording.duration_seconds|floatformat:0 }} seconds
+            {% endif %}
+            {% if recording.is_two_channel_call %}
+              · Two-channel call: {{ recording.sides.count }} sides, each transcribed on its own
+            {% endif %}
+          </p>
+          <p class="quiet">
+            {% if recording.transcript %}
+              Transcribed
+            {% elif recording.media_state == "rejected" %}
+              Refused: {{ recording.failure_message }}
+            {% elif recording.media_state == "failed" %}
+              Failed: {{ recording.failure_message }}
+            {% else %}
+              {{ recording.get_media_state_display }}
+            {% endif %}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="notice">
+      Nothing here yet. Uploaded recordings appear here while you are signed in.
+    </p>
+  {% endif %}
+{% endblock %}
