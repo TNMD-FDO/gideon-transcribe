@@ -1,0 +1,34 @@
+# Environment files: the example files are the only ones ever tracked.
+.env
+.env.*
+!.env.example
+whisperx-service/.env
+whisperx-service/.env.*
+!whisperx-service/.env.example
+
+# Secrets, certificates, and the CA root: never committed, on any machine.
+secrets/
+whisperx-service/secrets/
+tls/
+ca/
+
+# Runtime folders on an installed server.
+backup/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local editor and OS files
+.claude/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
