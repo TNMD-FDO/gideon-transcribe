@@ -58,7 +58,13 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # faster-whisper loads cuBLAS and cuDNN from the wheels torch brought with it,
 # and its README says to put those two folders on the library path.
-ENV LD_LIBRARY_PATH="/opt/venv/lib/python3.12/site-packages/nvidia/cublas/lib:/opt/venv/lib/python3.12/site-packages/nvidia/cudnn/lib"
+ENV LD_LIBRARY_PATH="/opt/venv/lib/python3.12/site-packages/nvidia/cublas/lib:/opt/venv/lib/python3.12/site-packages/nvidia/cudnn/lib:/opt/venv/lib/python3.12/site-packages/nvidia/npp/lib"
+
+# The container runs as the office's own account, which has no home folder on
+# the server, so anything that writes to a home folder would land on a path it
+# cannot create. Pointing HOME at the container's own temporary folder is
+# enough: everything the service keeps has a mounted folder of its own.
+ENV HOME=/tmp MPLCONFIGDIR=/tmp/matplotlib
 
 # One mounted folder holds every model and the driver's compute cache:
 #   HF_HOME          the two ASR models, the diarization model, and any

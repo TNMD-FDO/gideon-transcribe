@@ -19,3 +19,9 @@ torchaudio==2.8.0+cu128
 nvidia-cudnn-cu12==9.10.2.21
 nvidia-cublas-cu12==12.8.4.1
 nvidia-cuda-runtime-cu12==12.8.90
+
+# NPP, which torchcodec's own library links against. Torch does not bring it,
+# so without it libtorchcodec cannot load at all and pyannote falls back to
+# saying that audio decoding will fail. The version is the one CUDA 12.8
+# carries, to match the libraries above.
+nvidia-npp-cu12==12.3.3.100
