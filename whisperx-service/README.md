@@ -131,9 +131,26 @@ every field means and what every refusal means, is in `docs/whisperx-api.md`.
 
 ## GPU budget
 
-To be filled in by the Phase 1 benchmark gate: the measured peak video memory
-at the batch size the gate chooses. That figure is what to check before
-anything else is placed on the same card.
+**Allow 20 GB of video memory for this service**, and check that figure before
+putting anything else on the same card.
+
+That comes from the Phase 1 benchmark gate, run on 2026-09-03 on an RTX PRO
+6000 Blackwell under driver 595, at batch size 16 over about six hours of real
+recordings:
+
+| What was running | Video memory high point |
+|---|---|
+| `large-v3-turbo`, the default, with and without speaker separation | 12.3 GB |
+| Both models used in turn, as happens when an admin changes the setting | 16.6 GB |
+
+The 20 GB to allow is the higher figure with room on top. The room matters:
+the number is sampled once a second, so a brief spike between samples would
+not appear in it, and the card holds what the engine has allocated rather than
+what it is using at that instant.
+
+Memory follows the batch size, at roughly a gigabyte for every 8 of it, so an
+office short of video memory can lower `WHISPERX_BATCH_SIZE` and lose little.
+The comment beside that setting in `.env.example` says what each step costs.
 
 ## Measuring it on your own recordings
 

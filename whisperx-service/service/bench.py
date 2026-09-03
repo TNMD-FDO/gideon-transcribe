@@ -68,11 +68,26 @@ class Run:
     failure: str | None = None
 
     @property
+    def service_seconds(self) -> float | None:
+        """How long the service says the job took, which is exact.
+
+        The harness's own clock is quantised by how often it polls, which on a
+        job of a few seconds is most of the measurement. The service times
+        itself from the moment it picks a job up.
+        """
+        return (self.result.get("timings_seconds") or {}).get("total")
+
+    @property
     def speed(self) -> float | None:
-        """Audio minutes finished per wall-clock minute."""
-        if self.wall_seconds <= 0:
+        """Audio minutes finished per wall-clock minute.
+
+        This is the same figure the service publishes for a Consumer to
+        multiply by the audio ahead of its job.
+        """
+        seconds = self.service_seconds or self.wall_seconds
+        if not seconds or seconds <= 0:
             return None
-        return round(self.audio_seconds / self.wall_seconds, 2)
+        return round(self.audio_seconds / seconds, 2)
 
 
 def _say(message: str = "") -> None:
@@ -314,6 +329,7 @@ def _summary(run: Run) -> dict[str, Any]:
         "task_reason": result.get("settings_used", {}).get("task_reason"),
         "word_timestamps": result.get("word_timestamps", {}),
         "audio_seconds": run.audio_seconds,
+        "service_seconds": run.service_seconds,
         "wall_seconds": run.wall_seconds,
         "audio_minutes_per_wall_minute": run.speed,
         "peak_vram_gb": run.peak_vram_gb,
@@ -475,7 +491,7 @@ def bench(argv: list[str]) -> int:
                             used = run.result.get("settings_used", {})
                             timing = run.result.get("word_timestamps", {})
                             _say(
-                                f"    {run.wall_seconds}s, {run.speed}x real "
+                                f"    {run.service_seconds}s, {run.speed}x real "
                                 f"time, {run.peak_vram_gb} GB peak, ran "
                                 f"{used.get('task_run')} "
                                 f"({used.get('task_reason')}), word timing "
