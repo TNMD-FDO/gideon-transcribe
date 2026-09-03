@@ -5,9 +5,9 @@ diarization for an office that handles privileged material. Django and Docker
 on the office's own server, free tools only, nothing leaves the building.
 
 This repository holds the specification pack and, from the build onward, the
-code. Daniel Meehan (the office's IT lead) owns it and is not a programmer:
-explain choices in plain words, and never assume familiarity with git,
-Docker, or Python idiom.
+code. Its maintainer is an office IT lead, not a programmer: explain choices
+in plain words, and never assume familiarity with git, Docker, or Python
+idiom.
 
 ## The specification decides, not you
 
@@ -20,12 +20,13 @@ Docker, or Python idiom.
   over 400 KB. Its contents list is at the top; each chapter ends with its
   sources and the amendments already folded in.
 - The specification says what the app does *and why*. If the code and the
-  specification disagree, the specification wins until Daniel says otherwise.
+  specification disagree, the specification wins until the maintainer says
+  otherwise.
 - Where a chapter says "left to the build", decide within the rules it gives,
   and write the decision down: an ADR in `docs/adr/` when it is hard to
   reverse, otherwise a line in the pull request or commit message.
 - Never quietly change specified behaviour. Say what you think is wrong, then
-  do as specified unless Daniel changes it.
+  do as specified unless the maintainer changes it.
 
 ## The words
 
