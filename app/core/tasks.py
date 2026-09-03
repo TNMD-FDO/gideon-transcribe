@@ -140,7 +140,11 @@ def keep_the_queue_moving(timestamp: int) -> None:
     while nothing was watching, and a poll that was lost with a worker. Both
     are cheap to check and neither should need a person to notice.
     """
-    from core import queue
+    from core import queue, uploads
+
+    dropped = uploads.drop_abandoned()
+    if dropped:
+        log.info("%d abandoned upload(s) were dropped", dropped)
 
     for recording in queue.ready_without_a_job():
         job = queue.make_job(recording)

@@ -14,12 +14,15 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+import time
 from dataclasses import dataclass
+from datetime import timedelta
 from http.cookies import SimpleCookie
 from pathlib import Path
 
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from core import settings_store
@@ -31,6 +34,11 @@ log = logging.getLogger("transcribe.uploads")
 # Near enough to the limit to be worth saying so, and far enough that a person
 # can act on it. A build constant, not a setting.
 QUOTA_WARNING_SHARE = 0.80
+
+# An upload that receives nothing for this long is dropped and its Recording
+# removed, so an unfinished upload can never hold a person's one Batch open.
+# A closed laptop must not stop somebody uploading tomorrow.
+SILENCE_ALLOWED = timedelta(minutes=10)
 
 
 @dataclass(frozen=True)
@@ -117,6 +125,94 @@ def storage_warning(user: User, adding_bytes: int = 0) -> str | None:
     if after > quota:
         return None  # The refusal says it instead.
     return f"You are close to your storage space: {as_gb(after)} of {as_gb(quota)}"
+
+
+def in_flight() -> dict[str, tuple[int, float]]:
+    """How far each upload has got, from the pieces on disk.
+
+    The app is told when an upload starts and when it finishes, and nothing in
+    between, which is what the contract asks of the sidecar. The pieces
+    themselves are the record of what is happening: an .info file naming the
+    Recording, and beside it the bytes so far.
+
+    Returns, per Recording id: how many bytes have arrived, and how long ago
+    the file last grew.
+    """
+    folder = Path(settings.UPLOADS_DIR)
+    if not folder.is_dir():
+        return {}
+
+    now = time.time()
+    found: dict[str, tuple[int, float]] = {}
+    for info in folder.glob("*.info"):
+        try:
+            described = json.loads(info.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        recording = (described.get("MetaData") or {}).get("recording")
+        if not recording:
+            continue
+
+        pieces = info.with_suffix("")
+        try:
+            state = pieces.stat()
+        except OSError:
+            found[recording] = (0, now - info.stat().st_mtime)
+            continue
+        found[recording] = (state.st_size, now - state.st_mtime)
+    return found
+
+
+def drop_abandoned() -> int:
+    """Remove uploads that have gone quiet, and the Recordings waiting on them.
+
+    Two ways an upload goes quiet: it started and stopped growing, or it never
+    started at all because the browser gave up or the person closed the page.
+    Both leave a Recording that would otherwise hold its owner's one Batch
+    open for ever.
+    """
+    from core.recordings import MediaState, Recording
+
+    arriving = in_flight()
+    cutoff = timezone.now() - SILENCE_ALLOWED
+    dropped = 0
+
+    for recording in Recording.objects.filter(media_state=MediaState.UPLOADING):
+        received, quiet_for = arriving.get(str(recording.pk), (None, None))
+
+        if received is None:
+            # Nothing on disk at all. Only old ones: a Recording made a moment
+            # ago is one whose first byte has not arrived yet.
+            if recording.created > cutoff:
+                continue
+        elif quiet_for < SILENCE_ALLOWED.total_seconds():
+            continue
+
+        log.info(
+            "dropping the upload of recording %s: nothing received for ten minutes",
+            recording.pk,
+        )
+        _remove_pieces(recording)
+        recording.delete()
+        dropped += 1
+
+    return dropped
+
+
+def _remove_pieces(recording) -> None:
+    """Take the half-arrived bytes and the Recording's folder off the disk."""
+    folder = Path(settings.UPLOADS_DIR)
+    for info in folder.glob("*.info"):
+        try:
+            described = json.loads(info.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if (described.get("MetaData") or {}).get("recording") == str(recording.pk):
+            info.with_suffix("").unlink(missing_ok=True)
+            info.unlink(missing_ok=True)
+
+    shutil.rmtree(recording.folder, ignore_errors=True)
 
 
 def _session_of(event: dict) -> LoginSession | None:

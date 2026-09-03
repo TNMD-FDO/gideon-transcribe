@@ -217,6 +217,8 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
     if found is None:
         return JsonResponse({"error": "no such batch"}, status=404)
 
+    arriving = uploads.in_flight()
+
     rows = []
     for recording in found.recordings.order_by("created"):
         job = recording.jobs.order_by("-created").first()
@@ -231,6 +233,7 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "two_channel_call": recording.is_two_channel_call,
                 "message": recording.failure_message,
                 "reason": recording.refusal_class,
+                "received": arriving.get(str(recording.pk), (0, 0))[0],
                 "job": _job_state(job),
                 "has_transcript": hasattr(recording, "transcript"),
             }

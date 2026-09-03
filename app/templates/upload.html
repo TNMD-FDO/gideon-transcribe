@@ -108,6 +108,12 @@
       <p id="submit-problem" class="problem" hidden></p>
       <button type="button" id="start">Upload and transcribe</button>
       <button type="button" class="plain" data-back="2">Back</button>
+
+      <ul id="progress" class="cards" hidden></ul>
+      <p id="to-batch" hidden>
+        Some files did not upload. The ones that did are being transcribed:
+        <a href="#" id="to-batch-link">see the batch</a>.
+      </p>
     </li>
   </ol>
   {% endif %}
