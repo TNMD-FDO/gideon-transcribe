@@ -111,7 +111,7 @@ class Engine:
 
         self.diarizer = DiarizationPipeline(
             model_name=self.settings["diarization_model"],
-            use_auth_token=_token(),
+            token=_token(),
             device="cuda",
         )
         return self.diarizer
@@ -356,16 +356,14 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
             counts["min_speakers"], counts["max_speakers"] = hint["between"]
 
         wanted = bool(request.get("return_speaker_embeddings"))
-        diarized = engine.diarization()(
-            {"waveform": _as_tensor(audio), "sample_rate": SAMPLE_RATE},
-            return_embeddings=wanted,
-            **counts,
-        )
+        # The pipeline takes the audio whisperx already loaded, so the file
+        # is read once for the whole job.
+        diarized = engine.diarization()(audio, return_embeddings=wanted, **counts)
         embeddings = None
         if wanted:
             diarized, embeddings = diarized
 
-        transcribed = whisperx.assign_word_speakers(diarized, transcribed)
+        transcribed = whisperx.assign_word_speakers(diarized, transcribed, embeddings)
         timings["diarize"] = round(time.monotonic() - at, 3)
         peak_used = max(peak_used, _vram()[0])
 
@@ -377,10 +375,13 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
             }
         )
         speakers = {"labels": labels}
-        if wanted and embeddings is not None:
+        if wanted and embeddings:
+            # One vector per speaker, keyed by the label. The dimension is
+            # measured rather than assumed: the model's own configuration sits
+            # behind a licence gate and does not state it.
             speakers["embeddings"] = {
                 label: [float(value) for value in vector]
-                for label, vector in _as_pairs(embeddings, labels)
+                for label, vector in embeddings.items()
             }
             first = next(iter(speakers["embeddings"].values()), [])
             speakers["embedding_dimension"] = len(first)
@@ -426,20 +427,6 @@ def _counter(pipeline):
             return len(text.split())
 
     return count
-
-
-def _as_tensor(audio):
-    import torch
-
-    return torch.from_numpy(audio).unsqueeze(0)
-
-
-def _as_pairs(embeddings, labels):
-    """pyannote hands back one vector per speaker, in the order of its labels."""
-    try:
-        return zip(labels, embeddings, strict=False)
-    except TypeError:
-        return []
 
 
 def _segments(transcribed: dict[str, Any]) -> list[dict[str, Any]]:
