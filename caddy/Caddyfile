@@ -1,0 +1,47 @@
+# The app's own front door.
+#
+# It answers on its own port, because another reverse proxy on the server may
+# already own 443, and the app's address carries the port. There is no port 80
+# and no ACME: the certificate comes from the office's own authority, which
+# office clients already trust.
+#
+# Everything an office supplies is an environment key from .env. Nothing
+# office-specific is written here.
+
+{
+	# The certificate is the office's, placed by hand. Caddy is never to go
+	# looking for one of its own.
+	auto_https off
+
+	# No admin API. Nothing needs to reconfigure Caddy while it runs, and an
+	# open admin socket inside the network is a way in that buys nothing.
+	admin off
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+https://{$APP_HOSTNAME}:443 {
+	tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem
+
+	# Only the office's own networks. A host firewall's default-deny protects
+	# the host, not the traffic Docker forwards, so this is where the app is
+	# held to the office network. Everyone else is told 403 and nothing else:
+	# no page, no name, no hint that there is an app here.
+	@outside not remote_ip {$ALLOWED_CLIENT_CIDRS}
+	respond @outside 403
+
+	# The uploads route (/files/*) and the media route (/media/*) arrive with
+	# the upload sidecar and the media worker. Until then everything is the
+	# app's.
+	handle {
+		request_body {
+			max_size 64MB
+		}
+		reverse_proxy app:8000 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+}
