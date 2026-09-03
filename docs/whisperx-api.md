@@ -60,7 +60,7 @@ Request: a multipart body with two parts.
 | `return_speaker_embeddings` | boolean | `true`, `false` | `false` | One vector per Speaker in the result. Needs `diarize`. Not requested or stored by the app in Phase 1; the flag exists for the day voice matching arrives. |
 | `client_reference` | string | any | none (optional) | The Consumer's own id for this request, used for duplicate protection. The app sends the Run id. |
 
-> UNRESOLVED: the ticket "WhisperX service API and operating contract" says two things about `speakers` without `diarize`. Its request-field table says the hint is "Ignored unless `diarize` is true", and its validation list names "`speakers` without `diarize`" among the submissions refused with `400` and a `reason_class`. Both statements are in the same Answer and no amendment settles which applies.
+**A `speakers` hint without `diarize` is refused**, `400` with a `reason_class`, not ignored (settled 2026-09-03; the two sources disagreed and the refusal was chosen). A Consumer that sends a Speaker-count hint without asking for Diarization has a bug, and silently dropping the hint hides it until someone wonders why the result has no Speakers.
 
 **The prompt rule.** The service builds Whisper's prompt itself: the `context` line first, then the Vocabulary as one sentence:
 
@@ -76,7 +76,7 @@ Facts behind the rule, from the WhisperX service research file: WhisperX's batch
 
 - unknown fields;
 - a `model` outside the allow-list;
-- `speakers` without `diarize` (see the blockquote above);
+- `speakers` without `diarize` (see the rule above the Validation list);
 - `between` with N greater than M;
 - a `context` over 500 characters;
 - more than 200 Vocabulary terms;
