@@ -27,7 +27,10 @@ asr:
     # The default since the Phase 1 benchmark gate, 2026-09-03: about 40 per
     # cent faster, 4 GB less video memory, within 3 per cent of large-v3 on
     # words found in 13 of 14 sample recordings, and right about the language
-    # on the one recording large-v3 misheard.
+    # on the one recording large-v3 misheard. Confirmed by a reader against
+    # both models' transcripts of a narrowband jail call and an office call,
+    # which is the test the specification asks for: a word count says nothing
+    # about whether a name or a number is right.
     default: true
 
 # One model, one licence acceptance, one token. This repository carries its own

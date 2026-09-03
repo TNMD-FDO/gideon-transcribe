@@ -61,8 +61,9 @@ working engine to be written against.
   on the office's own recordings: about 40 per cent faster than `large-v3`,
   about 4 GB less video memory, within 3 per cent of it on words found in 13
   of 14 recordings, and right about the language on the one recording
-  `large-v3` misheard. It stays an admin setting that takes effect on the next
-  Run.
+  `large-v3` misheard, and confirmed by a reader against both models'
+  transcripts of the same recordings. It stays an admin setting that takes
+  effect on the next Run.
 - `docs/whisperx-api.md` now carries the decisions it had left to the build.
   Nothing specified was changed; what was open is filled in and listed under
   "Settled by the build".
