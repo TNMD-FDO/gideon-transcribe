@@ -222,11 +222,18 @@ class Runner:
             "batch_size": self.settings.batch_size,
             "vad_onset": self.settings.vad_onset,
             "vad_offset": self.settings.vad_offset,
-            "diarization_model": self.models.diarization.repository,
+            "diarization_model": self._diarization_model(),
             "model_revisions": {
                 model.name: model.revision for model in self.models.models
             },
         }
+
+    def _diarization_model(self) -> str:
+        """The pinned diarization model, as a path when it is on disk."""
+        snapshot = self.models.snapshot(self.models.diarization)
+        if snapshot is not None:
+            return str(snapshot / "config.yaml")
+        return self.models.diarization.repository
 
     def _kill(self) -> None:
         process = self._process
