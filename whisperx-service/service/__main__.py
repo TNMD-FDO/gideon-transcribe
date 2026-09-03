@@ -35,7 +35,6 @@ Commands:
 # document that says what it will do, so that nobody has to guess whether it is
 # missing or broken.
 NOT_BUILT_YET = {
-    "serve": "the API under /v1/ (docs/whisperx-api.md)",
     "bench": "the benchmark gate (specification, Phase 1, chapter 16)",
 }
 
@@ -90,6 +89,11 @@ def main(argv: list[str]) -> int:
         from service.selftest import selftest
 
         return selftest()
+
+    if command == "serve":
+        from service.serve import serve
+
+        return serve()
 
     if command == "pull":
         from service.pull import pull
