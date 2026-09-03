@@ -338,6 +338,60 @@ def _ffmpeg_version() -> str:
     return (finished.stdout or "").splitlines()[0] if finished.stdout else "unknown"
 
 
+def compare(first: str, second: str) -> int:
+    """Put two reports side by side: what one heard that the other did not.
+
+    This is what the dropped-speech leg of the gate reads. A voice-activity
+    decision is the only way the service can leave speech out, so the way to
+    see whether the shipped thresholds are losing quiet speech is to run the
+    same recordings again with lower ones and look at what changed. Speech
+    seconds and words both matter: a few more words in the same seconds is
+    ordinary variation, while a jump in both is speech that was being missed.
+    """
+    settings = Settings.from_environment()
+    folder = settings.state_dir / "bench"
+
+    reports = []
+    for label in (first, second):
+        path = folder / f"report-{label}.json"
+        if not path.exists():
+            _say(f"There is no report called {label}. Looked in {folder}.")
+            return 66
+        reports.append(json.loads(path.read_text(encoding="utf-8")))
+
+    left, right = reports
+    _say(f"{first} against {second}")
+    _say()
+    _say(
+        f"{'recording':34} {'model':16} "
+        f"{'speech s':>10} {'speech s':>10} {'words':>8} {'words':>8}"
+    )
+    _say(
+        f"{'':34} {'':16} {first[:10]:>10} {second[:10]:>10} "
+        f"{first[:8]:>8} {second[:8]:>8}"
+    )
+
+    def key(run):
+        return (run["recording"], run["model"], run["diarize"], run.get("task"))
+
+    right_runs = {key(run): run for run in right["runs"]}
+    for run in left["runs"]:
+        other = right_runs.get(key(run))
+        if other is None:
+            continue
+        _say(
+            f"{run['recording'][:33]:34} {run['model'][:15]:16} "
+            f"{run['speech_seconds']:>10} {other['speech_seconds']:>10} "
+            f"{run['words']:>8} {other['words']:>8}"
+        )
+
+    _say()
+    _say("More speech and more words in the second run means the first was")
+    _say("leaving speech out. The recordings themselves say whether it was")
+    _say("speech worth keeping: listen to the spans that only one run found.")
+    return 0
+
+
 def bench(argv: list[str]) -> int:
     """Run the gate over a folder of recordings."""
     if not argv:
@@ -346,7 +400,14 @@ def bench(argv: list[str]) -> int:
             "[--diarize=off,on] [--tasks=transcribe,translate] [--only=name] "
             "[--label=name]"
         )
+        _say("       bench compare LABEL LABEL")
         return 64
+
+    if argv[0] == "compare":
+        if len(argv) != 3:
+            _say("Usage: bench compare LABEL LABEL")
+            return 64
+        return compare(argv[1], argv[2])
 
     corpus = Path(argv[0])
     if not corpus.is_dir():
