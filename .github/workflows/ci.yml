@@ -1,0 +1,60 @@
+name: CI
+
+# Lint, unit tests, compose validation, and a secret scan, on every push and
+# pull request, on GitHub's hosted runners (specification, Phase 1, chapter 2,
+# "Access, branches, and CI"). No self-hosted runner is used, here or anywhere.
+#
+# The seed commit carries the specification pack and no code yet, so each step
+# that needs the code runs only once its files exist.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the app's requirements
+        if: hashFiles('app/requirements-dev.txt') != ''
+        run: pip install -r app/requirements-dev.txt
+
+      - name: Lint (ruff)
+        if: hashFiles('app/**/*.py') != ''
+        run: |
+          pip install ruff
+          ruff check app
+          ruff format --check app
+
+      - name: Unit tests
+        if: hashFiles('app/**/test_*.py', 'app/**/tests/**') != ''
+        working-directory: app
+        run: python -m pytest -q
+
+      - name: Compose files are valid
+        if: hashFiles('compose.yaml') != ''
+        run: |
+          cp .env.example .env
+          cp whisperx-service/.env.example whisperx-service/.env
+          docker compose config --quiet
+          rm -f .env whisperx-service/.env
+
+      - name: Secret scan (gitleaks)
+        # The gitleaks command-line tool is MIT and needs no licence key. The
+        # gitleaks GitHub Action is not used: since its version 2 it needs a
+        # key for organisation accounts. The image tag is pinned at the first
+        # Release, as everything else in this repository is.
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" \
+            zricethezav/gitleaks:latest dir /repo --redact --verbose
