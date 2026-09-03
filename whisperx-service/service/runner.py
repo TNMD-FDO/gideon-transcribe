@@ -252,6 +252,11 @@ class Runner:
             return None
 
         if message["type"] == "gpu":
+            log.debug(
+                "the card holds %s GB, with %s GB free",
+                message["used_gb"],
+                message["free_gb"],
+            )
             with self._lock:
                 self._vram = {
                     "vram_used_gb": message["used_gb"],
@@ -276,6 +281,12 @@ class Runner:
             )
             return None
         if message["type"] == "stage":
+            log.debug(
+                "job %s is %s%s",
+                message["job_id"],
+                message["stage"],
+                f", {message['percent']}%" if message["percent"] is not None else "",
+            )
             self.store.set_stage(
                 message["job_id"], message["stage"], message["percent"]
             )
