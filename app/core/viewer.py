@@ -1,0 +1,253 @@
+"""The viewer: reading a Transcript, and correcting it.
+
+The Transcript comes first, at reading width. Everything else on the page is
+there to serve reading it: the player above, the speakers beside it, and the
+tools out of the way until they are wanted.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+
+from django.contrib.auth.decorators import login_required
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+
+from core import audit
+from core.jobs import Segment
+from core.recordings import Recording
+
+log = logging.getLogger("transcribe.viewer")
+
+# One colour per Speaker, used for the name, the colour bar beside the row, and
+# the Timeline lane, so that the same person is the same colour everywhere.
+# Chosen to stay apart on both themes and to survive the commonest colour
+# blindness, which red and green together do not.
+SPEAKER_COLOURS = [
+    "#2f6fb0",
+    "#b06a2f",
+    "#4a8a5c",
+    "#8a4a7c",
+    "#6a6a2f",
+    "#2f8a8a",
+    "#9a4a4a",
+    "#5a5a9a",
+]
+
+
+def colour_for(index: int) -> str:
+    return SPEAKER_COLOURS[index % len(SPEAKER_COLOURS)]
+
+
+def open_recording(request: HttpRequest, recording_id) -> Recording | None:
+    """The Recording, if this person may open it, with the Admin row written.
+
+    An Admin may open anybody's material, and every opening writes a row
+    naming the Admin, the item, and the owner. The banner on the page says the
+    same thing to the Admin.
+    """
+    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
+    if recording is None:
+        return None
+
+    if recording.user_id == request.user.pk:
+        audit.write(
+            audit.Category.RECORDINGS,
+            "Recording opened",
+            actor=request.user,
+            request=request,
+            object_type="recording",
+            object_id=recording.pk,
+            object_label=recording.original_filename,
+        )
+        return recording
+
+    if not request.user.is_admin:
+        return None
+
+    audit.write(
+        audit.Category.ADMIN,
+        "another user's item opened",
+        actor=request.user,
+        request=request,
+        affected_user=recording.user,
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        item="recording",
+    )
+    return recording
+
+
+@login_required
+def viewer(request: HttpRequest, recording_id) -> HttpResponse:
+    """The page itself."""
+    recording = open_recording(request, recording_id)
+    if recording is None:
+        return redirect(reverse("home"))
+
+    transcript = getattr(recording, "transcript", None)
+    playback = recording.playback_path()
+
+    speakers = []
+    if transcript is not None:
+        names = [
+            name
+            for name in transcript.segments.values_list("speaker", flat=True).distinct()
+            if name
+        ]
+        speakers = [
+            {"name": name, "colour": colour_for(number)}
+            for number, name in enumerate(sorted(names))
+        ]
+
+    return render(
+        request,
+        "viewer.html",
+        {
+            "recording": recording,
+            "transcript": transcript,
+            "speakers": speakers,
+            "is_someone_elses": recording.user_id != request.user.pk,
+            "media_url": (
+                f"/media/{recording.user_id}/{recording.pk}/{playback.name}"
+                if playback
+                else ""
+            ),
+            "is_video": bool(playback and playback.suffix == ".mp4"),
+            "waveform_url": (
+                f"/media/{recording.user_id}/{recording.pk}/waveform.json"
+                if recording.waveform_path.exists()
+                else ""
+            ),
+        },
+    )
+
+
+@login_required
+def segments(request: HttpRequest, recording_id) -> JsonResponse:
+    """The Transcript itself, as the page reads it."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or (
+        recording.user_id != request.user.pk and not request.user.is_admin
+    ):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"segments": []})
+
+    return JsonResponse(
+        {
+            "word_timestamps": transcript.word_timestamps,
+            "word_timestamps_reason": transcript.word_timestamps_reason,
+            "segments": [
+                {
+                    "id": segment.pk,
+                    "start": segment.start,
+                    "end": segment.end,
+                    "text": segment.text,
+                    "speaker": segment.speaker,
+                    "corrected": segment.corrected,
+                    "words": segment.words or [],
+                }
+                for segment in transcript.segments.all()
+            ],
+        }
+    )
+
+
+@login_required
+@require_POST
+def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
+    """Change one Segment's text.
+
+    The audit row says which Segment and when, and never what it said before
+    or after: the text of a correction is on the never-logged list, like the
+    Transcript it belongs to.
+    """
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or (
+        recording.user_id != request.user.pk and not request.user.is_admin
+    ):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    segment = Segment.objects.filter(
+        pk=segment_id, transcript__recording=recording
+    ).first()
+    if segment is None:
+        return JsonResponse({"error": "no such segment"}, status=404)
+
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "that could not be read"}, status=400)
+
+    segment.text = (wanted.get("text") or "").strip()
+    segment.corrected = True
+    segment.save(update_fields=["text", "corrected"])
+
+    audit.write(
+        audit.Category.EDITS,
+        "Segment corrected",
+        actor=request.user,
+        request=request,
+        affected_user=(
+            recording.user if recording.user_id != request.user.pk else None
+        ),
+        object_type="segment",
+        object_id=segment.pk,
+        object_label=f"{segment.start:.1f}-{segment.end:.1f}",
+    )
+    return JsonResponse({"corrected": True})
+
+
+@login_required
+@require_POST
+def speakers(request: HttpRequest, recording_id) -> JsonResponse:
+    """Rename a Speaker, or merge one into another.
+
+    Renaming applies to every Segment of that Speaker; merging relabels every
+    Segment of the merged one. Neither row holds a name, because a Speaker's
+    name is on the never-logged list.
+    """
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or (
+        recording.user_id != request.user.pk and not request.user.is_admin
+    ):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=404)
+
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "that could not be read"}, status=400)
+
+    was = (wanted.get("from") or "").strip()
+    now = (wanted.get("to") or "").strip()
+    if not was or not now:
+        return JsonResponse({"error": "both names are needed"}, status=400)
+
+    merging = transcript.segments.filter(speaker=now).exists()
+    changed = transcript.segments.filter(speaker=was).update(speaker=now)
+
+    audit.write(
+        audit.Category.EDITS,
+        "Speakers merged" if merging else "Speaker renamed",
+        actor=request.user,
+        request=request,
+        affected_user=(
+            recording.user if recording.user_id != request.user.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        segments_changed=changed,
+    )
+    return JsonResponse({"changed": changed, "merged": merging})

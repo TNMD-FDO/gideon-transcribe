@@ -41,6 +41,10 @@ services:
       # start. Caddy reads them once, so a renewed certificate needs
       # `docker compose restart caddy`.
       - ./tls:/etc/caddy/tls:ro
+      # The working folder, read-only: Caddy serves Playback copies, waveforms,
+      # and Clips straight off it. The uploaded bytes are in the same tree and
+      # are never served, which the app's own answer enforces.
+      - "${APP_DATA_DIR}/scratch:/srv/scratch:ro"
       # Caddy keeps nothing that matters, but it wants somewhere to write.
       - caddy-data:/data
       - caddy-config:/config

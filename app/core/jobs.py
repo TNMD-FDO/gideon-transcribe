@@ -244,6 +244,10 @@ class Segment(models.Model):
     # could not place keeps its word and loses its times.
     words = models.JSONField(default=list, blank=True)
 
+    # Somebody changed the text. The viewer marks it and exports say so, so
+    # that machine text and human text are never confused for one another.
+    corrected = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["start", "id"]
         indexes = [models.Index(fields=["transcript", "start"])]

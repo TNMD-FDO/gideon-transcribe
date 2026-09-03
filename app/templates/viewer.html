@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ recording.title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% if is_someone_elses %}
+    <p class="banner">Viewing {{ recording.user.username }}'s Workspace as an Admin</p>
+  {% endif %}
+
+  <div class="desk">
+    <aside class="sidebar">
+      <label for="search" class="quiet">Search</label>
+      <input type="text" id="search" placeholder="Find in transcript">
+      <p id="matches" class="quiet"></p>
+
+      <h2 class="small">Speakers</h2>
+      {% if transcript %}
+        {% if speakers %}
+          <p class="quiet">
+            Click a name to rename it. Drag one speaker onto another to merge
+            them, when two labels are the same person.
+          </p>
+          <ul id="speakers" class="chips">
+            {% for speaker in speakers %}
+              <li class="chip" draggable="true"
+                  data-name="{{ speaker.name }}"
+                  style="--speaker: {{ speaker.colour }}">{{ speaker.name }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="pill">Not diarized</p>
+        {% endif %}
+      {% endif %}
+
+      <h2 class="small">Keyboard</h2>
+      <dl class="keys">
+        <dt>Space</dt><dd>Play or pause</dd>
+        <dt>B</dt><dd>Back three seconds, keep playing</dd>
+        <dt>J K</dt><dd>Back and forward five seconds</dd>
+        <dt>[ ]</dt><dd>Slower and faster</dd>
+        <dt>0</dt><dd>Normal speed</dd>
+        <dt>F</dt><dd>Follow mode</dd>
+        <dt>E</dt><dd>Correct the current segment</dd>
+        <dt>/</dt><dd>Search</dd>
+      </dl>
+    </aside>
+
+    <main class="reading">
+      <header class="viewer-head">
+        <a href="{% url 'home' %}" class="quiet">Back to your recordings</a>
+        <h1>{{ recording.title }}</h1>
+        <p class="marks">
+          {% if recording.is_two_channel_call %}
+            <span class="pill">Two-channel call: {{ recording.sides.count }} sides</span>
+          {% endif %}
+          {% if transcript.task_run == "translate" %}
+            <span class="pill" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ transcript.language }}</span>
+          {% endif %}
+          {% if transcript and not transcript.word_timestamps %}
+            <span class="pill">No word timing</span>
+          {% endif %}
+        </p>
+      </header>
+
+      {% if media_url %}
+        <div class="dock">
+          {% if is_video %}
+            <video id="player" src="{{ media_url }}" preload="metadata"></video>
+          {% else %}
+            <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
+            <canvas id="waveform" height="72"></canvas>
+          {% endif %}
+
+          <div class="transport">
+            <button type="button" id="play">Play</button>
+            <button type="button" data-seek="-3" title="Back three seconds (B)">-3s</button>
+            <button type="button" data-seek="-5">-5s</button>
+            <button type="button" data-seek="5">+5s</button>
+            <span id="clock" class="quiet">0:00</span>
+            <label class="quiet">Speed
+              <select id="speed">
+                <option>0.5</option><option>0.75</option>
+                <option selected>1</option><option>1.25</option>
+                <option>1.5</option><option>1.75</option>
+                <option>2</option><option>2.5</option>
+              </select>
+            </label>
+            <label class="quiet">Boost
+              <input type="range" id="boost" min="100" max="400" step="25" value="100">
+              <span id="boost-figure">100%</span>
+            </label>
+            <label class="quiet">
+              <input type="checkbox" id="follow" checked> Follow
+            </label>
+          </div>
+        </div>
+      {% else %}
+        <p class="notice">Preparing {% if is_video %}video{% else %}audio{% endif %}. The player appears when it is ready.</p>
+      {% endif %}
+
+      {% if transcript %}
+        <ol id="transcript" class="transcript"></ol>
+      {% else %}
+        <p class="notice">
+          There is no transcript yet. This page shows it as soon as the
+          recording has been through the queue.
+        </p>
+      {% endif %}
+    </main>
+  </div>
+
+  {{ speakers|json_script:"speaker-colours" }}
+  <script>
+    window.VIEWER = {
+      recording: "{{ recording.pk }}",
+      waveform: "{{ waveform_url }}"
+    };
+  </script>
+  <script src="{% static 'viewer.js' %}"></script>
+{% endblock %}
