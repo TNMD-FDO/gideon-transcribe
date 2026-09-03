@@ -20,6 +20,11 @@ LABEL org.opencontainers.image.licenses="CC0-1.0"
 # Ubuntu 24.04 carries Python 3.12 and ffmpeg 6.1.1. whisperx wants Python 3.10
 # to 3.13 and torchcodec wants FFmpeg 4 to 9, so both sit in range.
 #
+# libpython3.12t64 is the shared Python runtime. Ubuntu's own python3 binary
+# does not need it, but torchcodec's library for ffmpeg 6 links against it, and
+# without it torchcodec cannot load and pyannote warns that audio decoding will
+# fail.
+#
 # These apt packages are taken from the distribution rather than pinned to an
 # exact version. Ubuntu removes superseded versions from its archive within
 # weeks, so an apt pin would make this image unbuildable long before any of the
@@ -31,6 +36,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       python3 \
       python3-venv \
+      libpython3.12t64 \
       ffmpeg \
       ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -55,6 +61,13 @@ RUN pip install --no-cache-dir -r /tmp/requirements-torch.txt
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# torchcodec's own library has to load, not merely be installed. It links
+# against ffmpeg, NPP, and the shared Python runtime, and when any of those is
+# missing it fails quietly at import and pyannote warns that audio decoding
+# will fail. Checking it here means a missing library is a failed build rather
+# than a surprise on the first recording.
+RUN python -c "from torchcodec.decoders import AudioDecoder"
 
 # faster-whisper loads cuBLAS and cuDNN from the wheels torch brought with it,
 # and its README says to put those two folders on the library path.
