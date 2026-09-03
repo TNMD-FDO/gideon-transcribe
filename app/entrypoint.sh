@@ -16,11 +16,12 @@ case "${1:-web}" in
     # restart and nobody has to remember a separate step. The workers wait for
     # the app to be healthy, so they never race it.
     python manage.py migrate --no-input
+    # No access log: Caddy keeps the request record, and gunicorn's would put a
+    # line in the journal for every health check, four times a minute, for ever.
     exec gunicorn transcribe.wsgi:application \
       --bind 0.0.0.0:8000 \
       --workers "${GUNICORN_WORKERS:-4}" \
       --timeout "${GUNICORN_TIMEOUT:-120}" \
-      --access-logfile - \
       --error-logfile -
     ;;
   media-worker)
