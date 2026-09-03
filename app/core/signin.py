@@ -15,7 +15,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.utils import timezone
 
-from core import settings_store
+from core import audit, settings_store
 from core.models import LoginSession, SignInAttempt, User, normalise_username
 
 log = logging.getLogger("transcribe.signin")
@@ -60,6 +60,7 @@ def sign_in(request, typed_username: str, password: str) -> User:
 
     waiting = SignInAttempt.wait_for(username, address)
     if waiting is not None:
+        audit.sign_in_failed(username, audit.Reason.THROTTLED, request)
         minutes = max(1, round(waiting.total_seconds() / 60))
         raise Refused(
             f"Too many attempts. Try again in {minutes} minute"
@@ -73,18 +74,30 @@ def sign_in(request, typed_username: str, password: str) -> User:
         # directory connection, and that is what the person is told. The same
         # words serve when the directory is configured and unreachable, which
         # is why they say what is true rather than what went wrong.
+        audit.sign_in_failed(username, audit.Reason.DIRECTORY_UNREACHABLE, request)
         raise Refused(DIRECTORY_UNAVAILABLE)
 
     if not user.check_password(password):
         SignInAttempt.record(username, address)
+        audit.sign_in_failed(username, audit.Reason.WRONG_PASSWORD, request, actor=user)
         log.info("sign-in refused for a local account: wrong password")
         raise Refused(WRONG)
 
     if not user.is_active:
+        reason = audit.Reason.BLOCKED if user.blocked_at else audit.Reason.DEACTIVATED
+        audit.sign_in_failed(username, reason, request, actor=user)
         log.info("sign-in refused for a local account: %s", user.status)
         raise Refused(NOT_ALLOWED)
 
-    begin_session(request, user, address)
+    session = begin_session(request, user, address)
+    audit.write(
+        audit.Category.SIGN_IN,
+        "sign-in succeeded",
+        actor=user,
+        request=request,
+        login_session=session,
+        source="local" if user.is_local else "directory",
+    )
     return user
 
 
@@ -97,6 +110,13 @@ def begin_session(request, user: User, address: str | None) -> LoginSession:
     """
     for older in LoginSession.objects.filter(user=user, ended__isnull=True):
         older.end(LoginSession.ELSEWHERE)
+        audit.write(
+            audit.Category.SIGN_IN,
+            "sign-out",
+            actor=user,
+            login_session=older,
+            cause=LoginSession.ELSEWHERE,
+        )
 
     django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     user.last_sign_in = timezone.now()
@@ -116,6 +136,14 @@ def sign_out(request, reason: str = LoginSession.LOGOUT) -> None:
     session = current_session(request)
     if session is not None:
         session.end(reason)
+        audit.write(
+            audit.Category.SIGN_IN,
+            "sign-out",
+            actor=session.user,
+            request=request,
+            login_session=session,
+            cause=reason,
+        )
         log.info("%s signed out (%s)", session.user.username, reason)
     django_logout(request)
 

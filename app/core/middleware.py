@@ -9,7 +9,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 
-from core import settings_store
+from core import audit, settings_store
 from core.models import LoginSession
 from core.signin import SIGNED_IN_ELSEWHERE
 
@@ -50,6 +50,14 @@ class LoginSessionMiddleware:
 
         if session.idle_for() > settings_store.idle_timeout():
             session.end(LoginSession.IDLE)
+            audit.write(
+                audit.Category.SIGN_IN,
+                "sign-out",
+                system="sweeper",
+                affected_user=request.user,
+                login_session=session,
+                cause=LoginSession.IDLE,
+            )
             log.info("%s was signed out after sitting idle", request.user.username)
             return self._end(request, "You were signed out after a long wait.")
 
@@ -60,6 +68,14 @@ class LoginSessionMiddleware:
                 else LoginSession.DEACTIVATED
             )
             session.end(reason)
+            audit.write(
+                audit.Category.SIGN_IN,
+                "sign-out",
+                system="sweeper",
+                affected_user=request.user,
+                login_session=session,
+                cause=reason,
+            )
             return self._end(request, "This account cannot sign in. Contact IT.")
 
         # Only a person's own request moves their clock. An Admin looking at
