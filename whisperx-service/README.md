@@ -171,8 +171,11 @@ the service actually used.
 
 ## When something is wrong
 
-`docker compose logs whisperx` and `journalctl CONTAINER_NAME=whisperx-1` say
-what the service has been doing. The status endpoint reports what is loaded,
+`docker compose logs whisperx` says what the service has been doing, wherever
+it is running. In the journal it is under its container's name, which follows
+the Compose project: `transcribe-whisperx-1` when the whole stack is up, and
+`whisperx-service-whisperx-1` when the service is running on its own. The
+status endpoint reports what is loaded,
 what the card holds, how long the line is, and the last failure. An admin token
 can list and cancel every Consumer's jobs, which is how a wedged line is
 cleared from a terminal without touching containers.
