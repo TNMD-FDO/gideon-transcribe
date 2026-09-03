@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Batch{% endblock %}
+{% block content %}
+  <p class="notice">{{ standing_line }}</p>
+
+  <h1 id="heading">Batch of {{ batch.recordings.count }}</h1>
+  <p class="quiet">Started {{ batch.created|time:"g:i a" }}</p>
+
+  <p id="counts" class="quiet"></p>
+
+  <ul id="rows" class="cards"></ul>
+
+  <p id="when-done" class="quiet"></p>
+
+  <div id="after" hidden>
+    <a href="{% url 'upload' %}"><button type="button">Upload more</button></a>
+  </div>
+
+  <button type="button" id="cancel" class="plain">Cancel batch</button>
+
+  <script>
+    window.BATCH = "{{ batch.pk }}";
+  </script>
+  <script src="{% static 'batch.js' %}"></script>
+{% endblock %}

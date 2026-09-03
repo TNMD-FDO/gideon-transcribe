@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
@@ -67,21 +66,3 @@ def sign_in(request: HttpRequest) -> HttpResponse:
 def sign_out(request: HttpRequest) -> HttpResponse:
     signin.sign_out(request)
     return redirect(reverse("sign-in"))
-
-
-@login_required
-def home(request: HttpRequest) -> HttpResponse:
-    """Where a person lands. It becomes the Recordings page.
-
-    Until uploading exists there is nothing on it but who you are, which is
-    enough to tell that signing in, the session, and the roles all work.
-    """
-    session = signin.current_session(request)
-    return render(
-        request,
-        "home.html",
-        {
-            "session": session,
-            "warning_due": bool(session and signin.warning_due(session)),
-        },
-    )

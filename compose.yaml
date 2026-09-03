@@ -147,6 +147,35 @@ services:
     logging:
       driver: journald
 
+  tusd:
+    # Resumable uploads, straight to disk. Bytes never pass through Python:
+    # the sidecar takes them and asks the app two questions about each one.
+    image: tusproject/tusd:v2.9@sha256:9c61565fccd2689b052aa78e52d9558f309e98f6320960746f225d2fd73a35e3
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    depends_on:
+      app:
+        condition: service_healthy
+    command:
+      - "-behind-proxy"
+      - "-base-path=/files/"
+      - "-upload-dir=/srv/data/uploads"
+      - "-hooks-http=http://app:8000/upload-hook/"
+      - "-hooks-enabled-events=pre-create,post-finish"
+      - "-port=1080"
+    volumes:
+      - "${APP_DATA_DIR}:/srv/data"
+    expose:
+      - "1080"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
   media-worker:
     # ffmpeg and audiowaveform: hashing, probing, Sides, the audio the service
     # is sent, the Playback copy, the waveform, and Clip renders. CPU only; no

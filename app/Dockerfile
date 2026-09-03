@@ -73,6 +73,13 @@ ENV HOME=/tmp \
 COPY . /opt/app/
 WORKDIR /opt/app
 
+# The static files are gathered when the image is built rather than when a
+# container starts, so every container serves the same bytes and none of them
+# writes to its own filesystem to do it. The settings need a secret to import,
+# and this one is thrown away with the layer.
+RUN DJANGO_SECRET_KEY_FILE=/dev/null python manage.py collectstatic --no-input \
+ && rm -rf /opt/app/static
+
 EXPOSE 8000
 ENTRYPOINT ["/opt/app/entrypoint.sh"]
 CMD ["web"]
