@@ -124,6 +124,9 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
         "viewer.html",
         {
             "recording": recording,
+            # The rest of the case, so somebody working through a matter moves
+            # between its recordings without going back to the case page.
+            "in_case": _the_rest_of_the_case(recording),
             "transcript": transcript,
             "speakers": speakers,
             "language_name": (
@@ -446,6 +449,33 @@ def _plainly(seconds: float) -> str:
         return f"{seconds:.0f} second{'' if round(seconds) == 1 else 's'}"
     minutes = seconds / 60
     return f"{minutes:.0f} minute{'' if round(minutes) == 1 else 's'}"
+
+
+def _the_rest_of_the_case(recording) -> list:
+    """Every Recording in this one's Case, in the order the Case page lists them.
+
+    Empty for a Recording in no Case, and empty while Folder management is
+    off, so the rail simply is not drawn.
+    """
+    from core import cases, exports
+
+    if not recording.case_id or not cases.folder_management_on():
+        return []
+
+    rows = []
+    for one in recording.case.recordings.order_by("-created"):
+        job = one.jobs.order_by("-created").first()
+        rows.append(
+            {
+                "recording": one,
+                "here": one.pk == recording.pk,
+                "length": exports.clock(one.duration_seconds or 0),
+                "ready": hasattr(one, "transcript"),
+                "in_the_queue": bool(job is not None and job.is_live),
+                "failed": one.media_state in ("failed", "rejected"),
+            }
+        )
+    return rows
 
 
 def _has_video(recording) -> bool:

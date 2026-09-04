@@ -41,6 +41,13 @@ Database: migrates
   batch with a per-file override, and **Move to case** from the recordings
   list, from a case page, and from the sign-out dialog. On disk a move is a
   folder rename, so it is instant whatever the size.
+- A **case rail** in the viewer: a recording opened from a case gets a third
+  column listing the rest of the case, so somebody working through a matter
+  moves between its recordings without going back to the case page. The
+  chapter lists the viewer as unchanged when reached from a case; this is
+  additive rather than contradictory and the maintainer asked for it. It
+  hides on a narrow screen and opens over the page there, the button in the
+  head is always present, and the choice is remembered.
 - The users list reads "3 in session, 41 in cases", and its **Reassign** and
   **Delete data** actions, greyed since the first release, now act. The status
   page gains a Cases line and, while the toggle is off, the date it went off.
