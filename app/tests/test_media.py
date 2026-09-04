@@ -5,6 +5,10 @@ corpus, because the interesting cases are its actual files. What is checked
 here is everything that reads or decides rather than measures.
 """
 
+import subprocess
+from pathlib import Path
+from unittest import mock
+
 from core import media
 from core.recordings import Refusal
 
@@ -96,3 +100,32 @@ def test_the_margin_that_separates_a_call_from_ordinary_stereo():
     stereo = [1.2, 2.1, 5.0]
     assert all(margin < media.DIFFERENCE_MARGIN_DB for margin in calls)
     assert all(margin >= media.DIFFERENCE_MARGIN_DB for margin in stereo)
+
+
+def test_the_playback_copy_pins_its_sample_rate():
+    """A browser will not play 96 kHz AAC, and nothing else pins the rate.
+
+    The loudness filter resamples to 192 kHz inside itself, so with no rate
+    asked for the encoder settles on 96 kHz and the whole file fails to play,
+    not only its sound. This is a regression guard, not a preference.
+    """
+    seen = {}
+
+    def remember(arguments, timeout):
+        seen["arguments"] = arguments
+        return subprocess.CompletedProcess(arguments, 0, "", "")
+
+    probed = media.Probe(
+        raw={"streams": [{"codec_type": "audio", "channels": 2}]},
+        duration_seconds=10.0,
+        tracks=(media.Track(index=0, codec="aac", channels=2, sample_rate=48000),),
+    )
+
+    with mock.patch.object(media, "_run", remember), mock.patch.object(
+        media, "_measure_loudness", return_value={}
+    ), mock.patch.object(Path, "exists", return_value=True):
+        media.make_playback_copy(Path("in.mp4"), Path("out.m4a"), probed, "standard")
+
+    arguments = seen["arguments"]
+    assert "-ar" in arguments
+    assert arguments[arguments.index("-ar") + 1] == "48000"
