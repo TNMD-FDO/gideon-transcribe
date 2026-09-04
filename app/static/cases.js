@@ -87,8 +87,14 @@
 
   // One case's own controls --------------------------------------------------
 
+  // Which case this page is already in, so the picker does not offer it. The
+  // case page carries it on the page; the viewer carries it on its own
+  // object, because the viewer belongs to a recording and not to a case.
   var holder = document.querySelector("[data-case]");
   var caseId = holder ? holder.dataset.case : "";
+  if (!caseId && window.VIEWER && window.VIEWER.inCase) {
+    caseId = window.VIEWER.inCase;
+  }
 
   var rename = document.getElementById("rename");
   if (rename) {

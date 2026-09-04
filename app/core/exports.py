@@ -861,8 +861,10 @@ def batch_download(request: HttpRequest, batch_id) -> HttpResponse:
     """The Batch page's one button: every Done Recording of this Batch, as text.
 
     Recordings still in the queue are simply left out, which is why the button
-    says how many are not ready.
+    says how many are not ready. So is a Recording in a Case that is out of
+    reach, because a hidden Case is hidden from every list, page, and zip.
     """
+    from core import cases
     from core.recordings import Batch
 
     batch = Batch.objects.filter(pk=batch_id).select_related("user").first()
@@ -871,9 +873,11 @@ def batch_download(request: HttpRequest, batch_id) -> HttpResponse:
     ):
         return HttpResponseNotFound("There is no such batch.")
 
-    body, included = transcripts_zip(
-        batch.recordings.select_related("transcript", "user").order_by("created")
-    )
+    wanted = batch.recordings.select_related("transcript", "user").order_by("created")
+    if not cases.folder_management_on():
+        wanted = wanted.filter(case__isnull=True)
+
+    body, included = transcripts_zip(wanted)
     for recording in included:
         _record(request, recording, "transcript text")
 
@@ -885,10 +889,12 @@ def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
     """The sign-out dialog's downloads: every Done Recording in the Workspace.
 
     Not offered on the Batch page, which has its own download of its own
-    Recordings only.
+    Recordings only. The Workspace is what has no Case: what is in a Case is
+    kept, so it is not among the things a person is being offered before they
+    lose them.
     """
     recordings = (
-        Recording.objects.filter(user=request.user)
+        Recording.objects.filter(user=request.user, case__isnull=True)
         .select_related("transcript", "user")
         .order_by("created")
     )

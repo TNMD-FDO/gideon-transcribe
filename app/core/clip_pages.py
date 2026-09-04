@@ -310,9 +310,9 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
     """Every Ready Clip in the Workspace, flat, with no zip inside a zip."""
     clips = [
         one
-        for one in Clip.objects.filter(recording__user=request.user).select_related(
-            "recording", "recording__user"
-        )
+        for one in Clip.objects.filter(
+            recording__user=request.user, recording__case__isnull=True
+        ).select_related("recording", "recording__user")
         if one.state == RenderState.READY and one.path.exists()
     ]
 
@@ -336,7 +336,13 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def clips_page(request: HttpRequest) -> HttpResponse:
-    """Every Clip in the Workspace, grouped by Recording in upload order."""
+    """Every Clip in the Workspace, grouped by Recording in upload order.
+
+    The Workspace's only: a Clip of a Recording in a Case is listed on that
+    Case's own page, so a Clip appears in one place and not two. The Case's
+    Clips tab is the Clips in Cases chapter's and is not built, so those Clips
+    have no list yet; their files are made and kept either way.
+    """
     if not clips_are_on():
         return redirect(reverse("home"))
 
@@ -345,7 +351,9 @@ def clips_page(request: HttpRequest) -> HttpResponse:
     groups = []
     total = 0
     for recording in (
-        Recording.objects.filter(user=request.user, clips__isnull=False)
+        Recording.objects.filter(
+            user=request.user, case__isnull=True, clips__isnull=False
+        )
         .distinct()
         .order_by("created")
     ):

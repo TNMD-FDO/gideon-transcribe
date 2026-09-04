@@ -272,7 +272,16 @@
         {% endif %}
 
         <div class="panel" data-panel="details" hidden>
-          <h2>Details</h2>
+          <div class="row">
+            <h2 class="grow">Details</h2>
+            {% if folder_management and transcript and not is_someone_elses %}
+              <button type="button" class="small move"
+                      data-recording="{{ recording.pk }}"
+                      data-title="{{ recording.title }}">
+                {% if recording.case_id %}Move to another case{% else %}Move to case{% endif %}
+              </button>
+            {% endif %}
+          </div>
           <p class="muted small">
             The provenance: where this recording came from and how it was
             processed. Printed on every export. Never the transcript itself.
@@ -339,11 +348,13 @@
       canPlay: {% if media_url %}true{% else %}false{% endif %},
       clips: {% if clips_available %}true{% else %}false{% endif %},
       twoChannel: {% if recording.is_two_channel_call %}true{% else %}false{% endif %},
-      batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %}
+      batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %},
+      inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %}
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
+  {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
 {% endblock %}
