@@ -8,6 +8,7 @@ audit row, because looking is not an access to anybody's material.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 from pathlib import Path
@@ -58,6 +59,7 @@ def status_lines(request: HttpRequest) -> JsonResponse:
             },
             "workspaces": _workspaces(),
             "media": _media(),
+            "directory": _directory(),
             "versions": _versions(),
         }
     )
@@ -214,6 +216,42 @@ def _media() -> dict:
             media_state__in=(MediaState.CHECKING, MediaState.PREPARING)
         ).count(),
         "pieces": waiting,
+    }
+
+
+def _directory() -> dict:
+    """Whether the directory answers, without asking it anything about anybody.
+
+    A bind and nothing more: the four checks are a button, because they read
+    two groups and resolve members and have no business running every five
+    seconds.
+    """
+    from core import audit, directory
+
+    if not directory.is_on():
+        return {"on": False, "says": "switched off: local admins only"}
+
+    try:
+        held = directory.connect()
+    except directory.Unreachable as problem:
+        return {"on": True, "reachable": False, "says": str(problem)}
+    with contextlib.suppress(Exception):
+        held.unbind_s()
+
+    last = (
+        audit.Row.objects.filter(event__startswith="Directory check")
+        .order_by("-at")
+        .first()
+    )
+    return {
+        "on": True,
+        "reachable": True,
+        "says": "reachable",
+        "last_check": (
+            f"{last.at:%d %b %H:%M} {last.event.lower()}, {last.outcome}"
+            if last
+            else "no check has run yet"
+        ),
     }
 
 
@@ -687,3 +725,36 @@ def integrity_check(request: HttpRequest) -> JsonResponse:
         message=result["message"],
     )
     return JsonResponse(result)
+
+
+# The directory ----------------------------------------------------------------
+
+
+@admins_only
+@require_POST
+def test_directory(request: HttpRequest) -> JsonResponse:
+    """The four checks, from the Status page or the Sign-in and directory page."""
+    from core import directory
+
+    results = directory.test_connection()
+    failed = [one for one in results if not one["ok"]]
+    audit.write(
+        audit.Category.ADMIN,
+        "Directory tested",
+        actor=request.user,
+        request=request,
+        outcome=audit.Outcome.SUCCESS if not failed else audit.Outcome.FAILURE,
+        reason_class="" if not failed else "directory_unreachable",
+        checks=len(results),
+        failed=len(failed),
+    )
+    return JsonResponse({"checks": results, "ok": not failed})
+
+
+@admins_only
+@require_POST
+def check_directory_now(request: HttpRequest) -> JsonResponse:
+    """Run the nightly check now, and say what it did."""
+    from core import directory
+
+    return JsonResponse(directory.check_accounts(actor=request.user))

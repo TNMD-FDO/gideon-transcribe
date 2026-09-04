@@ -87,6 +87,17 @@
       state.media.running + " media job(s) running, " +
       state.media.pieces + " upload piece(s) pending";
 
+    var directory = document.getElementById("directory");
+    if (directory) {
+      var told = state.directory;
+      directory.textContent = !told.on
+        ? "The directory is switched off: local admins only."
+        : (told.reachable
+            ? "Reachable. Last check: " + told.last_check
+            : "Unreachable: " + told.says);
+      directory.className = told.on && !told.reachable ? "notice" : "";
+    }
+
     facts("versions", [
       ["Release", state.versions.release],
       ["Database migration", state.versions.migration],

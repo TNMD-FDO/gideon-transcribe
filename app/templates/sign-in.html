@@ -17,4 +17,6 @@
 
     <button type="submit">Sign in</button>
   </form>
+
+  {% if notice %}<p class="quiet notice">{{ notice }}</p>{% endif %}
 {% endblock %}

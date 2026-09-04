@@ -1,9 +1,9 @@
 """Signing in and out, and what keeps a Login session alive.
 
-Directory sign-in over LDAPS is its own piece of work and is not here yet. Until
-it is, a username that is not a Local admin is told what a directory user is
-told when the directory cannot be reached, which is the truth: there is no
-directory connection.
+A username that matches a Local admin is checked here, against the password
+this app holds. Anything else is a directory account and goes to the office
+directory (see core.directory). Nobody else can sign in: there is no
+self-signup and no local account that is not an Admin.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.utils import timezone
 
-from core import audit, settings_store
+from core import audit, directory, settings_store
 from core.models import LoginSession, SignInAttempt, User, normalise_username
 
 log = logging.getLogger("transcribe.signin")
@@ -69,13 +69,17 @@ def sign_in(request, typed_username: str, password: str) -> User:
 
     user = User.objects.filter(username=username, is_local=True).first()
     if user is None:
-        # Not a Local admin, so this is a directory account. Asking the
-        # directory is the next piece of work; until it exists, there is no
-        # directory connection, and that is what the person is told. The same
-        # words serve when the directory is configured and unreachable, which
-        # is why they say what is true rather than what went wrong.
-        audit.sign_in_failed(username, audit.Reason.DIRECTORY_UNREACHABLE, request)
-        raise Refused(DIRECTORY_UNAVAILABLE)
+        user = _from_the_directory(request, username, password, address)
+        session = begin_session(request, user, address)
+        audit.write(
+            audit.Category.SIGN_IN,
+            "sign-in succeeded",
+            actor=user,
+            request=request,
+            login_session=session,
+            source="directory",
+        )
+        return user
 
     if not user.check_password(password):
         SignInAttempt.record(username, address)
@@ -97,6 +101,65 @@ def sign_in(request, typed_username: str, password: str) -> User:
         request=request,
         login_session=session,
         source="local" if user.is_local else "directory",
+    )
+    return user
+
+
+def _from_the_directory(request, username: str, password: str, address) -> User:
+    """Ask the directory, and make or update the account it describes.
+
+    An account is made at the first successful sign-in and never before, so
+    nobody pre-provisions users and nothing here changes when the office adds
+    somebody to the Sign-in group.
+    """
+    if not directory.is_on():
+        audit.sign_in_failed(username, audit.Reason.DIRECTORY_UNREACHABLE, request)
+        raise Refused(DIRECTORY_UNAVAILABLE)
+
+    try:
+        answer = directory.sign_in(username, password)
+    except directory.Unreachable as problem:
+        log.warning("the directory could not be reached: %s", problem)
+        audit.sign_in_failed(username, audit.Reason.DIRECTORY_UNREACHABLE, request)
+        raise Refused(DIRECTORY_UNAVAILABLE) from problem
+
+    known = User.objects.filter(username=username).first()
+
+    if not answer["ok"]:
+        why = answer["why"]
+        if why == "wrong_password":
+            SignInAttempt.record(username, address)
+            audit.sign_in_failed(
+                username, audit.Reason.WRONG_PASSWORD, request, actor=known
+            )
+            raise Refused(WRONG)
+        if why == "not_in_a_group":
+            audit.sign_in_failed(
+                username, audit.Reason.NOT_IN_A_GROUP, request, actor=known
+            )
+            raise Refused(NOT_ALLOWED)
+        if why in ("disabled", "no_such_account"):
+            audit.sign_in_failed(
+                username, audit.Reason.DEACTIVATED, request, actor=known
+            )
+            raise Refused(NOT_ALLOWED)
+        audit.sign_in_failed(username, audit.Reason.WRONG_PASSWORD, request)
+        raise Refused(WRONG)
+
+    # An Admin's Block is the app's own and the directory never lifts it.
+    if known is not None and known.blocked_at is not None:
+        audit.sign_in_failed(username, audit.Reason.BLOCKED, request, actor=known)
+        raise Refused(NOT_ALLOWED)
+
+    user = User.objects.from_directory(
+        answer["username"],
+        directory_address=answer["directory_address"],
+        display_name=answer["display_name"],
+        email=answer["email"],
+        in_admin_group=answer["in_admin_group"],
+        # The directory admits them, so a deactivation the check made is
+        # lifted here rather than waiting for the night.
+        deactivated_at=None,
     )
     return user
 

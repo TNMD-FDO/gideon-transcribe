@@ -9,7 +9,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from core import lifecycle, signin
+from core import lifecycle, settings_store, signin
 
 log = logging.getLogger("transcribe.health")
 
@@ -58,7 +58,13 @@ def sign_in(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "sign-in.html",
-        {"problem": problem, "username": username},
+        {
+            "problem": problem,
+            "username": username,
+            # An office's own line under the form: an authorised-use notice,
+            # or where to ring for help. Empty hides it.
+            "notice": settings_store.get("sign_in_notice"),
+        },
         status=400 if problem else 200,
     )
 
