@@ -49,7 +49,9 @@ def test_nothing_typed_is_nobody():
 def test_a_local_admin_signs_in(client, admin):
     answer = sign_in(client)
     assert answer.status_code == 302
-    assert answer.url == "/"
+    # Signing in opens the Upload page, whoever it is: it is what everybody
+    # came to do, and the other pages are one click away.
+    assert answer.url == "/upload"
 
 
 def test_a_local_admin_is_an_admin(admin):
