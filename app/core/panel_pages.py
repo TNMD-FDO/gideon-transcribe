@@ -73,13 +73,30 @@ def _services() -> list[dict]:
     """
     return [
         {"name": "app", "state": "healthy", "says": "answering this page"},
-        _reachable("caddy", "http://caddy:8080/healthz"),
+        _listening("caddy", "caddy", 443),
         _reachable("tusd", os.environ.get("TUSD_URL", "http://tusd:1080") + "/metrics"),
         _database(),
         _service_health(),
         _worker("default"),
         _worker("media"),
     ]
+
+
+def _listening(name: str, host: str, port: int) -> dict:
+    """Whether something is accepting connections on that port.
+
+    Caddy answers TLS only, and only for the office's own hostname, so a
+    request from inside the project network is turned away before it is a
+    request. That the listener accepts a connection is the thing worth
+    knowing, and it needs no certificate.
+    """
+    import socket
+
+    try:
+        with socket.create_connection((host, port), timeout=3):
+            return {"name": name, "state": "healthy", "says": f"listening on {port}"}
+    except OSError as problem:
+        return {"name": name, "state": "unreachable", "says": str(problem)[:80]}
 
 
 def _reachable(name: str, url: str) -> dict:
@@ -128,10 +145,13 @@ def _worker(queue: str) -> dict:
     from django.db import connection
     from django.utils import timezone
 
+    # Procrastinate's own event log is what says when, because a periodic
+    # job's row carries no time of its own.
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT max(scheduled_at) FROM procrastinate_jobs "
-            "WHERE queue_name = %s AND status = 'succeeded'",
+            "SELECT max(event.at) FROM procrastinate_events event "
+            "JOIN procrastinate_jobs job ON job.id = event.job_id "
+            "WHERE job.queue_name = %s AND event.type = 'succeeded'",
             [queue],
         )
         row = cursor.fetchone()
