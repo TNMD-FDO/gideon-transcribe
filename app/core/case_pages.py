@@ -14,7 +14,7 @@ from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, uploads
+from core import audit, cases, exports, uploads
 from core.cases import Case
 from core.jobs import Segment
 from core.recordings import Recording
@@ -131,6 +131,7 @@ def _rows_for(case: Case) -> list:
         )
         one.in_the_queue = bool(job is not None and job.is_live)
         one.speakers_in_words = _speakers_in_words(one)
+        one.length = exports.clock(one.duration_seconds or 0)
         rows.append(one)
     return rows
 
@@ -175,6 +176,9 @@ def _search(case: Case, asked: str) -> list:
         {
             "recording": one.transcript.recording,
             "start": one.start,
+            # A timestamp, because that is what a person reading a hit wants
+            # and it is the same shape a Citation is written in.
+            "at": exports.clock(one.start),
             "speaker": one.speaker,
             "text": one.text,
         }

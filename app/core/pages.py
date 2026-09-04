@@ -17,7 +17,16 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, lifecycle, settings_store, tasks, uploads, whisperx
+from core import (
+    audit,
+    cases,
+    exports,
+    lifecycle,
+    settings_store,
+    tasks,
+    uploads,
+    whisperx,
+)
 from core.jobs import JobState
 from core.recordings import Batch, MediaState, Recording, Refusal
 
@@ -65,6 +74,9 @@ def _with_their_state(recordings):
             job is not None and job.is_live and job.batch.is_reprocessing
         )
         one.in_the_queue = bool(job is not None and job.is_live)
+        # A length, not a count of seconds: the same shape a Citation and an
+        # export use, so the app says a length one way everywhere.
+        one.length = exports.clock(one.duration_seconds or 0)
         rows.append(one)
     return rows
 

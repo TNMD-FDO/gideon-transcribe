@@ -60,7 +60,7 @@
             {% for hit in hits %}
               <tr>
                 <td><a href="{% url 'viewer' hit.recording.pk %}?t={{ hit.start|floatformat:1 }}">{{ hit.recording.title }}</a></td>
-                <td class="mono muted">{{ hit.start|floatformat:1 }}s</td>
+                <td class="mono muted">{{ hit.at }}</td>
                 <td class="muted">{{ hit.speaker }}</td>
                 <td>{{ hit.text }}</td>
               </tr>
@@ -112,9 +112,7 @@
             </div>
             <p class="muted small" style="margin: 4px 0 0">
               {% if recording.recording_type %}{{ recording.recording_type }} &middot; {% endif %}
-              {% if recording.duration_seconds %}
-                {{ recording.duration_seconds|floatformat:0 }} seconds &middot;
-              {% endif %}
+              {% if recording.duration_seconds %}{{ recording.length }} &middot;{% endif %}
               {% if recording.speakers_in_words %}
                 {{ recording.speakers_in_words }} &middot;
               {% endif %}
