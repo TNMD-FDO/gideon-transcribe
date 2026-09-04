@@ -36,6 +36,7 @@ def a_recording(user, batch=None, name="one.mp3"):
     recording = Recording.objects.create(
         user=user,
         batch=batch,
+        title=name.rsplit(".", 1)[0],
         original_filename=name,
         media_state=MediaState.READY,
     )

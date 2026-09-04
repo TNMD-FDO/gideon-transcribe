@@ -449,7 +449,7 @@ def what_would_be_cleared(request: HttpRequest) -> JsonResponse:
             "recordings": len(recordings),
             "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
             "clips": sum(one.clips.count() for one in recordings),
-            "size": uploads.as_gb(sum(one.disk_bytes() for one in recordings)),
+            "size": uploads.as_size(sum(one.disk_bytes() for one in recordings)),
         }
     )
 
@@ -473,7 +473,7 @@ def clear_recordings(request: HttpRequest) -> JsonResponse:
         {
             "ok": True,
             "recordings": gone,
-            "freed": uploads.as_gb(freed),
+            "freed": uploads.as_size(freed),
             "where": reverse("upload") if batch_id else reverse("home"),
         }
     )
