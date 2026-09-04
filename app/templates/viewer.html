@@ -246,6 +246,10 @@
 
     {# The bottom sheet: clips and details. #}
     <div>
+      <div id="sheet-grip" class="sheetgrip" hidden
+           title="Drag to resize. Double-click to reset."
+           role="separator" aria-label="Resize the panel" tabindex="0"></div>
+
       <div class="sheetbar">
         {% if clips_available %}
           <button type="button" class="sheet-tab" data-panel="clips">Clips</button>

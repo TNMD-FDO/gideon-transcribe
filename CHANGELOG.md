@@ -50,6 +50,13 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **The bottom panel stays put and resizes.** Whichever panel was open, clips
+  or details, comes back on the next recording, so moving through a case no
+  longer closes it every time. Drag the strip above its tabs to make it taller
+  or shorter; double-click to reset, or use the arrows. Close still puts it
+  away, and that is remembered too. It can never be dragged so tall that the
+  transcript disappears: the limit is measured from the layout, because the
+  picture above it is itself resizable.
 - **Clips in a case.** The viewer's clips sheet now holds every clip in the
   case, this recording's own first and the rest under "Elsewhere in this
   case", each saying which recording it came from and who saved it. The case
