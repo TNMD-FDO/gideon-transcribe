@@ -68,6 +68,10 @@
   };
   window.VIEWER.seek = function (seconds) {
     if (player) { player.currentTime = Math.max(0, seconds); }
+    // Going somewhere on purpose is asking to watch from there, so a follow
+    // that was paused for reading comes back rather than leaving the
+    // transcript behind at the place that was just left.
+    if (window.VIEWER.resumeFollowing) { window.VIEWER.resumeFollowing(); }
   };
   window.VIEWER.play = function () { if (player) { player.play(); } };
   window.VIEWER.pause = function () { if (player) { player.pause(); } };
@@ -224,7 +228,18 @@
     if (pill) { pill.hidden = false; }
   }
 
+  function lineIsInView() {
+    // Whether the line being spoken is on the screen. Asked after a scroll,
+    // not before: a wheel event is delivered before the scroll it causes.
+    var row = column ? column.children[here] : null;
+    if (!row || !reading) { return false; }
+    var seen = row.getBoundingClientRect();
+    var box = reading.getBoundingClientRect();
+    return seen.top >= box.top - 1 && seen.bottom <= box.bottom + 1;
+  }
+
   function resumeFollowing() {
+    if (!paused) { return; }
     paused = false;
     following = true;
     if (followBox) { followBox.checked = true; }
@@ -234,12 +249,25 @@
   }
 
   if (reading) {
+    // Scrolling the transcript means "let me read", and the app stops pulling
+    // the page back. It cannot wait to see whether the line went off the
+    // screen first, because while it is still following it would have put the
+    // line straight back, and the reader would never get anywhere.
+    //
+    // The way back is scrolling to the line being spoken: bring it into view
+    // and the follow picks up again. That is also what undoes a nudge of the
+    // wheel nobody meant, without the app having to guess which nudges were
+    // meant.
     window.addEventListener("wheel", function (event) {
-      if (event.target.closest && event.target.closest(".read")) {
-        pauseFollowing();
-      }
+      if (!event.target.closest || !event.target.closest(".read")) { return; }
+      if (!paused) { pauseFollowing(); return; }
+      window.setTimeout(function () {
+        if (paused && lineIsInView()) { resumeFollowing(); }
+      }, 120);
     }, { passive: true });
   }
+  window.VIEWER.resumeFollowing = resumeFollowing;
+
   if (pill) {
     document.getElementById("resume-follow").addEventListener("click", resumeFollowing);
   }
@@ -390,11 +418,21 @@
   if (timeline) {
     var dragging = false;
     var dragFrom = 0;
+    var dragFromX = 0;
+
+    // A click and a drag are told apart by how far the mouse moved on the
+    // screen, not by how much time that is. Time was the old rule and it does
+    // not work: on a twenty-five minute recording one pixel of timeline is
+    // over a second, so every click, which always jitters a pixel or two,
+    // counted as a drag and marked a clip instead of seeking. How far a hand
+    // moves is the same however long the recording is.
+    var A_CLICK = 4;
 
     timeline.addEventListener("mousedown", function (event) {
       if (!duration) { return; }
       dragging = true;
       dragFrom = timeAt(event);
+      dragFromX = event.clientX;
       event.preventDefault();
     });
 
@@ -408,7 +446,7 @@
       if (!dragging) { return; }
       dragging = false;
       var now = timeAt(event);
-      if (Math.abs(now - dragFrom) < 0.4) {
+      if (Math.abs(event.clientX - dragFromX) < A_CLICK) {
         // A click, not a drag: seek there, and put back whatever range the
         // clip tool still holds rather than wiping it off the timeline.
         window.VIEWER.seek(now);
