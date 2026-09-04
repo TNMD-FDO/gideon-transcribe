@@ -21,7 +21,21 @@ WORKFLOW = HERE / ".github" / "workflows" / "release.yml"
 APP = "ghcr.io/tnmd-fdo/gideon-transcribe-app"
 WHISPERX = "ghcr.io/tnmd-fdo/gideon-transcribe-whisperx"
 
-needs_bash = pytest.mark.skipif(shutil.which("bash") is None, reason="no bash here")
+# The bash that PATH finds, by its full path. On Windows a bare "bash" goes
+# through the system's own search order, which reaches System32 before PATH
+# and finds the Windows Subsystem for Linux launcher there, whose only output
+# is that no distribution is installed. The full path from which() is Git's.
+BASH = shutil.which("bash")
+
+
+def bash_works() -> bool:
+    if BASH is None:
+        return False
+    probe = subprocess.run([BASH, "-c", "echo ok"], capture_output=True, text=True)
+    return probe.returncode == 0 and probe.stdout.strip() == "ok"
+
+
+needs_bash = pytest.mark.skipif(not bash_works(), reason="no working bash here")
 
 
 def run_the_check(record: str, pulled: dict[str, str], tag: str = "v9.9.9"):
@@ -48,7 +62,7 @@ digests_recorded_for() {{ printf '%s\\n' "$RECORD"; }}
 verify_the_pull "{tag}"
 """
     return subprocess.run(
-        ["bash", "-c", program],
+        [BASH, "-c", program],
         capture_output=True,
         text=True,
         env={**os.environ, "RECORD": record},
@@ -103,10 +117,11 @@ def test_a_release_with_no_record_is_said_so_and_goes_on():
     assert "--build" in done.stdout
 
 
+@needs_bash
 def test_the_script_parses():
-    if shutil.which("bash") is None:
-        pytest.skip("no bash here")
-    done = subprocess.run(["bash", "-n", str(SCRIPT)], capture_output=True, text=True)
+    done = subprocess.run(
+        [BASH, "-n", SCRIPT.as_posix()], capture_output=True, text=True
+    )
     assert done.returncode == 0, done.stderr
 
 
