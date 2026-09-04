@@ -29,16 +29,26 @@ SERVABLE = ("playback.mp4", "playback.m4a", "waveform.json")
 CLIPS = "clips/"
 
 
-def _wanted(request: HttpRequest) -> tuple[str, str] | None:
-    """The user and recording ids out of the path Caddy was asked for."""
+def _wanted(request: HttpRequest) -> tuple[str, str, str] | None:
+    """The user and recording ids out of the path Caddy was asked for.
+
+    The path arrives either as `/media/<user>/<recording>/<file>` or with the
+    `/media` already stripped, because Caddy sorts the directives in a route
+    and may run the strip before it asks. Both are read, so that the order of
+    two lines in a Caddyfile cannot silently refuse every recording in the
+    office.
+    """
     path = request.headers.get("X-Forwarded-Uri") or request.META.get("PATH_INFO", "")
     path = unquote(urlparse(path).path)
 
     parts = [piece for piece in path.split("/") if piece]
-    # media / <user id> / <recording id> / <file>
-    if len(parts) < 4 or parts[0] != "media":
+    if parts and parts[0] == "media":
+        parts = parts[1:]
+
+    # <user id> / <recording id> / <file>
+    if len(parts) < 3:
         return None
-    return parts[1], parts[2], "/".join(parts[3:])
+    return parts[0], parts[1], "/".join(parts[2:])
 
 
 def may_serve(request: HttpRequest) -> HttpResponse:

@@ -87,6 +87,52 @@ jobs:
           docker compose config --quiet
           rm -rf .env secrets whisperx-service/.env whisperx-service/secrets
 
+      - name: The Caddyfile asks before it serves
+        if: hashFiles('caddy/Caddyfile') != ''
+        # A Caddyfile is not run in the order it is written: Caddy sorts the
+        # directives inside a handle block into its own order. That once put
+        # the strip_prefix ahead of the forward_auth, so the app was asked
+        # about a path it did not recognise and every recording in the office
+        # was refused, silently. This adapts the file the way Caddy does and
+        # fails if the media route ever serves a file before it has asked.
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE/caddy:/etc/caddy:ro"             -e APP_HOSTNAME=example.internal -e ALLOWED_CLIENT_CIDRS=10.0.0.0/8             caddy:2.11-alpine caddy adapt --config /etc/caddy/Caddyfile             > /tmp/caddy.json
+          python3 - <<'CHECK'
+          import json
+          import sys
+
+          config = json.load(open("/tmp/caddy.json"))
+          routes = config["apps"]["http"]["servers"]["srv0"]["routes"]
+
+          def handlers(routes, found):
+              for route in routes:
+                  media = any(
+                      "/media/*" in one.get("path", [])
+                      for one in route.get("match", [])
+                  )
+                  for handler in route.get("handle", []):
+                      if handler.get("handler") == "subroute":
+                          handlers(handler["routes"], found or media)
+                      elif found or media:
+                          yield handler
+                  if False:
+                      yield None
+
+          order = [one.get("handler") for one in handlers(routes, False)]
+          print("the media route runs:", order)
+
+          if "file_server" not in order:
+              sys.exit("the media route serves no files at all")
+          asks = order.index("reverse_proxy") if "reverse_proxy" in order else -1
+          serves = order.index("file_server")
+          if asks < 0 or asks > serves:
+              sys.exit(
+                  "the media route serves files before it asks the app: "
+                  f"{order}"
+              )
+          print("the media route asks before it serves.")
+          CHECK
+
       - name: Secret scan (gitleaks)
         # The gitleaks command-line tool is MIT and needs no licence key. The
         # gitleaks GitHub Action is not used: since its version 2 it needs a

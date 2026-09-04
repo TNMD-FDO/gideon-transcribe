@@ -58,12 +58,21 @@ https://{$APP_HOSTNAME}:443 {
 	# have the file: Caddy asks the app first and serves nothing until it
 	# says yes.
 	handle /media/* {
-		forward_auth app:8000 {
-			uri /media-auth
+		# `route` and not a bare `handle`, and that matters for the same
+		# reason the allow-list above is a `handle` block. Inside a plain
+		# handle, Caddy sorts these directives into its own canonical order,
+		# which puts the strip_prefix before the forward_auth: the app is
+		# then asked about `/<user>/<recording>/<file>` with the `/media`
+		# already gone, does not recognise it, and refuses every file.
+		# `route` keeps the order written here.
+		route {
+			forward_auth app:8000 {
+				uri /media-auth
+			}
+			root * /srv/scratch
+			uri strip_prefix /media
+			file_server
 		}
-		root * /srv/scratch
-		uri strip_prefix /media
-		file_server
 	}
 
 	handle {
