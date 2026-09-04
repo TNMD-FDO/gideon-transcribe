@@ -102,6 +102,72 @@ def holes(path, most: int = 10) -> tuple[list, float]:
     return found, round(total, 3)
 
 
+def keyframes(path, most: int = 6) -> tuple[int, float, list]:
+    """How many places a player can jump to, and the longest gap between them.
+
+    A browser jumps to a keyframe and decodes forward from there. A video with
+    keyframes every couple of seconds seeks instantly; one with a handful in
+    half an hour seeks badly or not at all, and a copied stream carries
+    whatever its camera wrote.
+    """
+    finished = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "packet=pts_time,flags",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if finished.returncode != 0:
+        return 0, 0.0, []
+
+    at = []
+    for line in finished.stdout.splitlines():
+        parts = line.split(",")
+        if len(parts) < 2 or "K" not in parts[1]:
+            continue
+        when = number(parts[0])
+        if when is not None:
+            at.append(when)
+
+    at.sort()
+    widest = 0.0
+    for one, following in zip(at, at[1:], strict=False):
+        widest = max(widest, following - one)
+    return len(at), round(widest, 2), [round(one, 1) for one in at[:most]]
+
+
+def index_is_at_the_front(path) -> bool | None:
+    """Whether the mp4's index comes before its data.
+
+    A player that has to read to the end of a file before it can jump about
+    will not do it well over a network. ffmpeg writes this with +faststart,
+    and the app asks for that; this says whether the file actually has it.
+    """
+    try:
+        head = path.read_bytes()[:4_000_000]
+    except OSError:
+        return None
+    moov = head.find(b"moov")
+    mdat = head.find(b"mdat")
+    if moov < 0 and mdat < 0:
+        return None
+    if moov < 0:
+        return False
+    if mdat < 0:
+        return True
+    return moov < mdat
+
+
 def number(value) -> float | None:
     try:
         return float(value)
@@ -178,6 +244,36 @@ class Command(BaseCommand):
             playback = say(
                 f"The playback copy ({playback_path.name})", probe(playback_path)
             )
+
+        if playback_path is not None and playback_path.suffix == ".mp4":
+            print("\nCan the playback copy be jumped about in?")
+            how_many, widest, first_few = keyframes(playback_path)
+            front = index_is_at_the_front(playback_path)
+            print(f"  keyframes   {how_many}")
+            if how_many:
+                print(f"  widest gap  {widest}s between them")
+                print(f"  first few   {first_few}")
+            print(
+                "  index       "
+                + (
+                    "at the front, as it should be"
+                    if front
+                    else (
+                        "after the data, which seeks badly"
+                        if front is False
+                        else "could not be read"
+                    )
+                )
+            )
+            if how_many < 2:
+                print("  -> nothing to jump to: a player cannot seek in this")
+            elif widest > 20:
+                print(
+                    f"  -> {widest}s between keyframes: a jump lands up to that "
+                    "far from where it was asked for, and may not land at all"
+                )
+            elif front:
+                print("  -> nothing here stops a player jumping about")
 
         heard = {}
         for side in recording.sides.all():
