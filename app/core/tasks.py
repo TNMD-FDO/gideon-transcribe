@@ -219,3 +219,26 @@ def check_the_directory(timestamp: int) -> None:
     if datetime.now().hour != settings_store.get("directory_check_hour"):
         return
     directory.check_accounts()
+
+
+@app.task(queue="media", name="render_clip")
+def render_clip(clip_id: str) -> None:
+    """Cut one Clip from the Playback copy.
+
+    On the media queue, so a Clip render never waits behind a transcription
+    and never holds one up. It is not a Job: it does not keep a Workspace
+    alive and it takes no place in the line.
+    """
+    from core import clip_work
+    from core.clips import Clip
+
+    clip = (
+        Clip.objects.filter(pk=clip_id).select_related("recording").first()
+    )
+    if clip is None:
+        # The Recording went while this waited its turn, and the half-made
+        # file went with its folder. There is nothing to do.
+        log.info("clip %s is gone; nothing to render", clip_id)
+        return
+
+    clip_work.render(clip)

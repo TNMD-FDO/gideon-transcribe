@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Your clips{% endblock %}
+
+{% block content %}
+  <p class="notice">{{ standing_line }}</p>
+
+  <h1>Your clips</h1>
+  <p class="quiet">
+    {{ total }} in all. A clip is a span of a recording, rendered as a file
+    you can play outside the app.
+  </p>
+
+  {% if any_ready %}
+    <p>
+      <a href="{% url 'download-clips' %}"><button type="button">Download all</button></a>
+    </p>
+  {% endif %}
+
+  {% for group in groups %}
+    <h2 class="small">{{ group.recording.title }}</h2>
+    <table class="rows">
+      <thead>
+        <tr>
+          <th>Title</th><th>Span</th><th>Length</th><th>Options</th>
+          <th>Status</th><th>Size</th><th>Saved</th><th>Downloaded</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for clip in group.clips %}
+          <tr data-clip="{{ clip.pk }}">
+            <td>{{ clip.title }}</td>
+            <td>{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
+            <td>{{ clip.seconds|floatformat:0 }}s</td>
+            <td class="quiet">
+              {% if clip.burn_captions %}captions burned{% endif %}
+              {% if clip.include_excerpt %}{% if clip.burn_captions %}, {% endif %}excerpt{% endif %}
+            </td>
+            <td>{{ clip.shown_state }}</td>
+            <td>{{ clip.size_bytes|filesizeformat }}</td>
+            <td>{{ clip.created|date:"d M H:i" }}</td>
+            <td>{% if clip.first_downloaded %}Downloaded {{ clip.first_downloaded|date:"d M H:i" }}{% else %}Not yet{% endif %}</td>
+            <td>
+              {% if clip.state == "ready" %}
+                <a href="{% url 'download-clip' clip.pk %}"><button type="button" class="plain">Download</button></a>
+              {% endif %}
+              <a href="{% url 'viewer' clip.recording.pk %}?clip={{ clip.pk }}"><button type="button" class="plain">Open in viewer</button></a>
+              {% if clip.state == "failed" or clip.captions_are_stale %}
+                <button type="button" class="plain rerender" data-clip="{{ clip.pk }}">
+                  {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
+                </button>
+              {% endif %}
+              <button type="button" class="plain delete-clip"
+                      data-clip="{{ clip.pk }}" data-title="{{ clip.title }}">Delete</button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% empty %}
+    <p class="notice">
+      No clips yet. Open a recording and mark a span to make one.
+    </p>
+  {% endfor %}
+
+  <script src="{% static 'clips.js' %}"></script>
+{% endblock %}

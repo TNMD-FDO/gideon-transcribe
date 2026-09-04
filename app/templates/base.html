@@ -211,6 +211,10 @@
     .filters { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
       align-items: end; margin: 1rem 0; }
     .filters label { display: flex; flex-direction: column; }
+    .clip-tool { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: end;
+      margin: 0.5rem 0; }
+    #clip-form label { display: block; margin: 0.4rem 0; }
+    #clip-form textarea, #clip-form input[type=text] { width: 100%; }
   </style>
 </head>
 <body>
@@ -220,6 +224,7 @@
       <span class="who">
         <a href="{% url 'home' %}">Recordings</a>
         &middot; <a href="{% url 'upload' %}">Upload</a>
+        {% if clips_available %}&middot; <a href="{% url 'clips' %}">Clips</a>{% endif %}
         {% if user.is_admin %}&middot; <a href="{% url 'panel' %}">Panel</a>{% endif %}
         &middot; {{ user.shown_name }}{% if user.is_admin %} (Admin){% endif %}
         &middot; <a href="{% url 'sign-out' %}">Sign out</a>

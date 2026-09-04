@@ -1,0 +1,38 @@
+// The clips page: retry a failed render, bring stale captions up to date, and
+// delete a clip. Everything else on the page is a link.
+
+(function () {
+  "use strict";
+
+  function cookie(name) {
+    var found = document.cookie.match("(^|;)\s*" + name + "\s*=\s*([^;]+)");
+    return found ? found.pop() : "";
+  }
+
+  function post(url) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "X-CSRFToken": cookie("csrftoken") }
+    });
+  }
+
+  document.addEventListener("click", function (event) {
+    var again = event.target.closest(".rerender");
+    if (again) {
+      again.disabled = true;
+      post("/clip/" + again.dataset.clip + "/rerender")
+        .then(function () { window.location.reload(); });
+      return;
+    }
+
+    var gone = event.target.closest(".delete-clip");
+    if (gone) {
+      if (!window.confirm(
+        "Delete " + gone.dataset.title + "? The file goes with it, and " +
+        "anything you have not downloaded cannot be got back."
+      )) { return; }
+      post("/clip/" + gone.dataset.clip + "/delete")
+        .then(function () { window.location.reload(); });
+    }
+  });
+})();

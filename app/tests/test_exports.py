@@ -9,7 +9,6 @@ file names a Windows machine has to accept.
 from datetime import datetime
 
 import pytest
-
 from core import exports, settings_store
 
 

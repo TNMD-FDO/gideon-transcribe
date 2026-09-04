@@ -17,6 +17,11 @@
 
   <form method="post" class="dialog">
     {% csrf_token %}
+    {% if counts.clips_not_downloaded %}
+      <a href="{% url 'download-clips' %}">
+        <button type="button">Download clips</button>
+      </a>
+    {% endif %}
     {% if counts.transcripts %}
       <a href="{% url 'workspace-download' 'transcripts' %}">
         <button type="button">Download all transcripts</button>

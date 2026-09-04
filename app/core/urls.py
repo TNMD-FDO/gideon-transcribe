@@ -3,6 +3,7 @@
 from django.urls import path
 
 from core import (
+    clip_pages,
     exports,
     media_access,
     pages,
@@ -61,6 +62,31 @@ urlpatterns = [
         "download/<str:shape>",
         exports.workspace_download,
         name="workspace-download",
+    ),
+    # Clips: a chosen span of a Recording, as a file for outside the app.
+    path("clips", clip_pages.clips_page, name="clips"),
+    path("clips/download", clip_pages.download_all_clips, name="download-clips"),
+    path(
+        "recording/<uuid:recording_id>/clips",
+        clip_pages.clips_of,
+        name="clips-of",
+    ),
+    path(
+        "recording/<uuid:recording_id>/clips/save",
+        clip_pages.save_clip,
+        name="save-clip",
+    ),
+    path("clip/<uuid:clip_id>", clip_pages.change_clip, name="change-clip"),
+    path(
+        "clip/<uuid:clip_id>/rerender",
+        clip_pages.rerender_clip,
+        name="rerender-clip",
+    ),
+    path("clip/<uuid:clip_id>/delete", clip_pages.delete_clip, name="delete-clip"),
+    path(
+        "clip/<uuid:clip_id>/download",
+        clip_pages.download_clip,
+        name="download-clip",
     ),
     # Caddy asks this before it serves a Playback copy, a waveform, or a Clip.
     path("media-auth", media_access.may_serve, name="media-auth"),

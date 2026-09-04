@@ -611,3 +611,79 @@ def make_waveform(source: Path, target: Path) -> None:
         raise MediaError(
             "The waveform for this recording could not be made", "media_failed"
         )
+
+
+# Clips ------------------------------------------------------------------------
+
+# White with a dark outline at the bottom of the picture, one cue per Segment.
+# Fixed in code, with no setting: a caption style is a thing to get right once.
+CAPTION_STYLE = (
+    "FontName=DejaVu Sans,Fontsize=22,PrimaryColour=&H00FFFFFF,"
+    "OutlineColour=&H80000000,BorderStyle=1,Outline=2,Shadow=0,"
+    "Alignment=2,MarginV=28"
+)
+
+
+def cut_clip(
+    source: Path,
+    target: Path,
+    start: float,
+    end: float,
+    captions: Path | None = None,
+    timeout: int = 600,
+) -> None:
+    """A span of the Playback copy as its own file, cut frame-accurately.
+
+    Seeking is done after the input rather than before it, which is slower and
+    exact: a Clip that starts half a second late is no use to somebody playing
+    it at a hearing. The picture is re-encoded for the same reason, and
+    because captions burned in cannot be copied through.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    video = target.suffix == ".mp4"
+
+    arguments = [
+        "ffmpeg",
+        "-nostdin",
+        "-y",
+        "-v",
+        "error",
+        "-i",
+        str(source),
+        "-ss",
+        f"{max(0.0, start):.3f}",
+        "-to",
+        f"{max(0.0, end):.3f}",
+    ]
+
+    if video:
+        if captions is not None:
+            # The caption file's times already start at zero, and the trim
+            # above makes the output start at zero too, so they line up.
+            escaped = str(captions).replace("\\", "/").replace(":", r"\:")
+            arguments += ["-vf", f"subtitles='{escaped}':force_style='{CAPTION_STYLE}'"]
+        arguments += [
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            PLAYBACK_BITRATE_STEREO,
+            "-movflags",
+            "+faststart",
+        ]
+    else:
+        arguments += ["-vn", "-c:a", "libmp3lame", "-q:a", "2"]
+
+    arguments.append(str(target))
+    finished = _run(arguments, timeout=timeout)
+    if finished.returncode != 0 or not target.exists():
+        raise MediaError(
+            "This clip could not be made from the recording", "clip_render_failed"
+        )
