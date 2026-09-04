@@ -37,6 +37,7 @@ RAIL = [
             ("Status", "panel-status"),
             ("Queue", "panel-queue"),
             ("Users", "panel-users"),
+            ("Audit log", "panel-audit"),
         ],
     ),
     (

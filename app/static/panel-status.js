@@ -102,5 +102,29 @@
       .then(function () { window.setTimeout(ask, EVERY); });
   }
 
+  function cookie(name) {
+    var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+    return found ? found.pop() : "";
+  }
+
+  // The integrity check walks the whole chain, so it is a button rather
+  // than something the page does again every five seconds.
+  var check = document.getElementById("integrity");
+  var said = document.getElementById("integrity-said");
+  check.addEventListener("click", function () {
+    check.disabled = true;
+    said.textContent = "Walking the chain...";
+    fetch("/panel/audit/check", {
+      method: "POST",
+      headers: { "X-CSRFToken": cookie("csrftoken") }
+    })
+      .then(function (answer) { return answer.json(); })
+      .then(function (result) {
+        said.textContent = result.message + " (" + result.rows + " rows checked)";
+      })
+      .catch(function () { said.textContent = "The check could not be run."; })
+      .then(function () { check.disabled = false; });
+  });
+
   ask();
 })();

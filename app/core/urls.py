@@ -92,6 +92,8 @@ urlpatterns = [
         panel_pages.create_local_admin,
         name="panel-create-local-admin",
     ),
+    path("panel/audit", panel_pages.audit_log, name="panel-audit"),
+    path("panel/audit/check", panel_pages.integrity_check, name="panel-integrity"),
     path("panel/installation", panel_pages.installation, name="panel-installation"),
     path("panel/settings/<str:page>", panel.settings_page, name="panel-settings"),
     path("panel/settings/<str:page>/edit", panel.edit, name="panel-edit"),
