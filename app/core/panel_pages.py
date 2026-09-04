@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
 from pathlib import Path
 
 from django.conf import settings as django_settings
@@ -64,32 +63,94 @@ def status_lines(request: HttpRequest) -> JsonResponse:
 
 
 def _services() -> list[dict]:
-    """A health row per container, from Docker's own health state.
+    """A health row per service, by asking each one rather than asking Docker.
 
-    Read from the socket the app is given read-only. Without it the page says
-    so rather than pretending everything is well.
+    Reading Docker's own health state means giving the app the Docker socket,
+    which is root on the server: too much to hand an app that holds
+    privileged material so that a page can print a word (ADR 0009). Each
+    service that answers on the network is asked directly, and the two
+    workers, which listen on nothing, are read from the work they have done.
     """
-    try:
-        seen = subprocess.run(
-            [
-                "docker",
-                "ps",
-                "--format",
-                "{{.Names}}\t{{.State}}\t{{.Status}}",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return []
+    return [
+        {"name": "app", "state": "healthy", "says": "answering this page"},
+        _reachable("caddy", "http://caddy:8080/healthz"),
+        _reachable("tusd", os.environ.get("TUSD_URL", "http://tusd:1080") + "/metrics"),
+        _database(),
+        _service_health(),
+        _worker("default"),
+        _worker("media"),
+    ]
 
-    rows = []
-    for line in seen.stdout.splitlines():
-        parts = line.split("\t")
-        if len(parts) == 3:
-            rows.append({"name": parts[0], "state": parts[1], "says": parts[2]})
-    return sorted(rows, key=lambda one: one["name"])
+
+def _reachable(name: str, url: str) -> dict:
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=3) as answer:
+            said = answer.status
+        return {"name": name, "state": "healthy", "says": f"answered {said}"}
+    except urllib.error.HTTPError as answer:
+        # An answer of any kind means the service is up; what it thought of
+        # the request is not this page's business.
+        return {"name": name, "state": "healthy", "says": f"answered {answer.code}"}
+    except Exception as problem:  # noqa: BLE001 - anything else is not reachable
+        return {"name": name, "state": "unreachable", "says": str(problem)[:80]}
+
+
+def _database() -> dict:
+    from django.db import connection
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        return {"name": "postgres", "state": "healthy", "says": "answering"}
+    except Exception as problem:  # noqa: BLE001
+        return {"name": "postgres", "state": "unreachable", "says": str(problem)[:80]}
+
+
+def _service_health() -> dict:
+    if whisperx.is_alive():
+        return {"name": "whisperx", "state": "healthy", "says": "answering"}
+    return {"name": "whisperx", "state": "unreachable", "says": "no answer"}
+
+
+def _worker(queue: str) -> dict:
+    """A worker is alive if its queue has run something lately.
+
+    Neither worker listens on anything, so this is what there is to read: the
+    last job on that queue to succeed. The `default` queue runs something
+    every minute, so silence there means the worker is gone. The `media`
+    queue runs only when there is media to work on, so silence there means
+    nothing more than a quiet afternoon.
+    """
+    from django.db import connection
+    from django.utils import timezone
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT max(scheduled_at) FROM procrastinate_jobs "
+            "WHERE queue_name = %s AND status = 'succeeded'",
+            [queue],
+        )
+        row = cursor.fetchone()
+
+    last = row[0] if row else None
+    name = "worker" if queue == "default" else "media-worker"
+
+    if queue == "default":
+        alive = last is not None and (timezone.now() - last).total_seconds() < 300
+        return {
+            "name": name,
+            "state": "healthy" if alive else "not running",
+            "says": f"last ran {last:%H:%M}" if last else "nothing has run yet",
+        }
+    return {
+        "name": name,
+        "state": "healthy",
+        "says": f"last media job {last:%d %b %H:%M}" if last else "no media job yet",
+    }
 
 
 def _whisperx() -> dict:
@@ -144,10 +205,11 @@ def _versions() -> dict:
         .first()
     )
     service = _whisperx()
+    versions = service.get("versions") or {}
     return {
         "release": os.environ.get("RELEASE_TAG", "not tagged"),
         "migration": last.name if last else "none",
-        "service": service.get("version", "not reachable"),
+        "service": versions.get("service", "not reachable"),
     }
 
 

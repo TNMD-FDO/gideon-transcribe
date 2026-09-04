@@ -23,8 +23,8 @@
     var services = document.getElementById("services");
     if (!state.services.length) {
       services.innerHTML =
-        "<li class='card quiet'>The container states cannot be read from " +
-        "inside the app on this server.</li>";
+        "<li class='card quiet'>No service answered. Something is very " +
+        "wrong, or this page could not reach the network.</li>";
     } else {
       services.innerHTML = state.services.map(function (one) {
         return "<li class='card'><strong>" + escape(one.name) + "</strong> " +
@@ -38,22 +38,37 @@
       facts("service", [["Reachable", "no: " + (service.says || "")]]);
     } else {
       var gpu = service.gpu || {};
-      var line = service.line || {};
+      var line = service.queue || {};
+      var loaded = service.model_loaded || {};
+      var running = service.current_job;
+      var versions = service.versions || {};
+      var speeds = Object.keys(service.speed || {}).map(function (name) {
+        var one = service.speed[name];
+        return name + ": " + (one.with_diarization || "?") + "x with speakers, " +
+          (one.without_diarization || "?") + "x without";
+      });
+
       facts("service", [
-        ["Model loaded", service.model_loaded || "none"],
+        ["Model loaded", loaded.model
+          ? loaded.model + " (" + String(loaded.revision).slice(0, 12) + ")"
+          : "none"],
         ["GPU", (gpu.name || "") + " " + (gpu.uuid || "")],
-        ["VRAM", (gpu.vram_used_mb || "?") + " MB used, " +
-          (gpu.vram_free_mb || "?") + " MB free"],
-        ["In line", (line.queued === undefined ? "?" : line.queued) + " job(s), " +
+        ["VRAM", gpu.vram_used_mb === undefined ? "" :
+          gpu.vram_used_mb + " MB used, " + gpu.vram_free_mb + " MB free"],
+        ["In line", (line.length === undefined ? "?" : line.length) + " job(s), " +
           (line.audio_minutes === undefined ? "?" : line.audio_minutes) +
           " audio minutes"],
-        ["Running now", (service.current && service.current.consumer
-          ? service.current.consumer + ", " + service.current.stage : "nothing")],
-        ["Version", service.version || ""],
+        ["Running now", running
+          ? (running.consumer || "another consumer") + ", " + running.stage
+          : "nothing"],
+        ["Measured speed", speeds.join("; ") || "not measured yet"],
+        ["Version", (versions.service || "") + ", api " + (versions.api || "")],
         ["Uptime", service.uptime_seconds
           ? Math.round(service.uptime_seconds / 3600) + " h" : ""],
-        ["Last failure", (service.last_failure && service.last_failure.reason_class)
-          || "none"]
+        ["Last failure", service.last_failure
+          ? service.last_failure.reason_class + " at " + service.last_failure.time
+          : "none"],
+        ["Consumers", (service.tokens || []).join(", ")]
       ]);
     }
 
