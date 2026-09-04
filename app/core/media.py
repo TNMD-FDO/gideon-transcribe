@@ -425,6 +425,13 @@ def make_asr_audio(
 PLAYBACK_VIDEO_CODEC = "h264"
 PLAYBACK_MAX_HEIGHT = 720
 
+# The Playback copy's audio is pinned to 48 kHz, and pinning it is not a
+# detail. The loudness filter resamples to 192 kHz inside itself, and with no
+# rate asked for, the AAC encoder settles on 96 kHz: a rate browsers refuse to
+# decode in an MP4, which fails the whole file rather than only its sound. The
+# source is 48 kHz or below in every recording this app accepts.
+PLAYBACK_SAMPLE_RATE = 48000
+
 # What a voice recording needs and no more. Anything above this is spent on
 # room noise.
 PLAYBACK_BITRATE_MONO = "96k"
@@ -514,6 +521,8 @@ def make_playback_copy(
         PLAYBACK_BITRATE_STEREO if channels == 2 else PLAYBACK_BITRATE_MONO,
         "-ac",
         str(channels),
+        "-ar",
+        str(PLAYBACK_SAMPLE_RATE),
         "-movflags",
         "+faststart",
     ]
