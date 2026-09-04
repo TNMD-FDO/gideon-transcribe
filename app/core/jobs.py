@@ -215,6 +215,11 @@ class Transcript(models.Model):
     word_timestamps = models.BooleanField(default=False)
     word_timestamps_reason = models.CharField(max_length=30, blank=True, default="")
 
+    # How many Segments the two Sides of a call said together, which the app
+    # shows once rather than twice. Said out loud in the viewer and on every
+    # export, because the app never quietly decides what a transcript shows.
+    shared_segments = models.IntegerField(default=0)
+
     # Every setting the service echoed, its version, and its pins.
     provenance = models.JSONField(default=dict, blank=True)
 
@@ -252,6 +257,13 @@ class Segment(models.Model):
     # Somebody changed the text. The viewer marks it and exports say so, so
     # that machine text and human text are never confused for one another.
     corrected = models.BooleanField(default=False)
+
+    # The other Side said the same words at the same moment, which is what a
+    # phone system's recorded announcement does: both parties hear it, so both
+    # Sides transcribe it. This one is the second copy. It is kept, and left
+    # out of the reading, the exports, and the search, while its twin is named
+    # for both Sides. Nothing is deleted and the transcript says how many.
+    same_as_other_side = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["start", "id"]

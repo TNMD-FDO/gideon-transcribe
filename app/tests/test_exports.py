@@ -32,23 +32,50 @@ class Fake:
 
 
 class Segments:
-    """Stands in for the related manager the exports walk."""
+    """Stands in for the related manager the exports walk.
+
+    It answers filter() as well, because the exports leave out the second
+    copy of what both Sides of a call heard, and a stand-in that could not be
+    filtered would have hidden that rather than checked it.
+    """
 
     def __init__(self, rows):
         self.rows = rows
 
     def all(self):
-        return self.rows
+        return self
 
     def select_related(self, *_):
-        return self.rows
+        return self
+
+    def filter(self, **wanted):
+        return Segments(
+            [
+                one
+                for one in self.rows
+                if all(getattr(one, name) == value for name, value in wanted.items())
+            ]
+        )
 
     def __iter__(self):
         return iter(self.rows)
 
+    def __len__(self):
+        return len(self.rows)
 
-def segment(start, end, text, speaker="", label="", corrected=False, side=None):
+
+def segment(
+    start,
+    end,
+    text,
+    speaker="",
+    label="",
+    corrected=False,
+    side=None,
+    same_as_other_side=False,
+):
     return Fake(
+        same_as_other_side=same_as_other_side,
         start=start,
         end=end,
         text=text,
@@ -72,6 +99,8 @@ def transcript(**fields):
         "provenance", {"one": {"settings_used": {"model": "large-v3-turbo"}}}
     )
     fields.setdefault("segments", Segments([]))
+    # What both Sides of a call said together: none, unless a check says so.
+    fields.setdefault("shared_segments", 0)
     return Fake(**fields)
 
 
@@ -279,3 +308,55 @@ def test_the_clock_always_shows_hours():
     assert exports.clock(0) == "00:00:00"
     assert exports.clock(59.9) == "00:00:59"
     assert exports.clock(3600) == "01:00:00"
+
+
+# What both sides of a call heard ------------------------------------------------
+
+
+def test_the_second_copy_is_not_printed_and_the_export_says_why():
+    one = recording(is_two_channel_call=True)
+    one.transcript.shared_segments = 2
+    one.transcript.segments = Segments(
+        [
+            segment(0, 4, "This call may be recorded.", "Side 1 and Side 2"),
+            segment(
+                0, 4, "This call may be recorded.", "Side 2", same_as_other_side=True
+            ),
+            segment(6, 9, "To accept, press one.", "Side 1 and Side 2"),
+            segment(6, 9, "To accept, press one.", "Side 2", same_as_other_side=True),
+            segment(20, 24, "Hey, it is me.", "Side 1"),
+        ]
+    )
+    text = exports.plain_text(one)
+
+    # Once each, and never as Side 2's own words.
+    assert text.count("This call may be recorded.") == 1
+    assert text.count("To accept, press one.") == 1
+    # Named for both, and never as Side 2's own words. Checked on the whole
+    # line, because "Side 1 and Side 2:" holds "Side 2:" inside it.
+    lines = text.splitlines()
+    assert "[00:00:00] Side 1 and Side 2: This call may be recorded." in lines
+    assert "[00:00:00] Side 2: This call may be recorded." not in lines
+    assert "Side 1: Hey, it is me." in text
+
+    # And it says what it did, because that is not the app's to decide quietly.
+    assert "2 passages at the same moment on both sides" in text
+    assert "printed once and named Side 1 and Side 2" in text
+    assert "Both copies are kept." in text
+
+
+def test_a_transcript_with_nothing_shared_says_nothing_about_it():
+    one = recording()
+    one.transcript.segments = Segments([segment(0, 4, "Hello.", "Speaker 1")])
+    assert "on both sides" not in exports.plain_text(one)
+
+
+def test_one_shared_passage_reads_in_the_singular():
+    one = recording(is_two_channel_call=True)
+    one.transcript.shared_segments = 1
+    one.transcript.segments = Segments(
+        [segment(0, 4, "This call may be recorded.", "Side 1 and Side 2")]
+    )
+    assert "1 passage at the same moment on both sides, which a phone" in (
+        exports.plain_text(one)
+    )

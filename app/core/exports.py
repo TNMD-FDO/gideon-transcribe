@@ -37,6 +37,27 @@ log = logging.getLogger("transcribe.exports")
 CORRECTED_LEGEND_TEXT = "Lines marked (corrected) were corrected by staff."
 CORRECTED_LEGEND_WORD = "Segments marked * were corrected by staff."
 
+# What both parties of a call heard: the recorded announcement before it
+# connects is on both channels, so both Sides transcribe it. The app prints it
+# once, named for both, and says here that it did. It is never the app's to
+# decide quietly what a transcript shows.
+BOTH_SIDES_LEGEND = (
+    "{count} passage{s} at the same moment on both sides, which a phone "
+    "system's recorded announcement is, {is_or_are} printed once and named "
+    "Side 1 and Side 2. Both copies are kept."
+)
+
+
+def both_sides_legend(transcript) -> str:
+    count = transcript.shared_segments
+    if not count:
+        return ""
+    one = count == 1
+    return BOTH_SIDES_LEGEND.format(
+        count=count, s="" if one else "s", is_or_are="is" if one else "are"
+    )
+
+
 # Dates read the same way everywhere an export prints one.
 DAY = "%d %B %Y"
 DAY_AND_TIME = "%d %B %Y %H:%M"
@@ -244,7 +265,9 @@ def plain_text(recording: Recording) -> str:
     excerpt uses, so it stays one thing rather than three that drift apart.
     """
     transcript = recording.transcript
-    segments = list(transcript.segments.select_related("side"))
+    segments = list(
+        transcript.segments.filter(same_as_other_side=False).select_related("side")
+    )
     who = appearances(segments)
 
     head = [
@@ -267,6 +290,9 @@ def plain_text(recording: Recording) -> str:
     notice = notice_for(transcript)
     if any(segment.corrected for segment in segments):
         notice += " " + CORRECTED_LEGEND_TEXT
+    shared = both_sides_legend(transcript)
+    if shared:
+        notice += " " + shared
     head.append(notice)
     head.append("")
 
@@ -292,7 +318,8 @@ def plain_text(recording: Recording) -> str:
 def srt(recording: Recording, offset: float = 0.0) -> str:
     """One cue per Segment, `Speaker: text`, and no notice."""
     cues = []
-    for number, segment in enumerate(recording.transcript.segments.all(), start=1):
+    wanted = recording.transcript.segments.filter(same_as_other_side=False)
+    for number, segment in enumerate(wanted, start=1):
         text = f"{segment.speaker}: {segment.text}" if segment.speaker else segment.text
         cues.append(
             f"{number}\r\n"
@@ -330,7 +357,9 @@ def word(recording: Recording, exported_by: str) -> bytes:
     from docx.shared import Inches, Pt, RGBColor
 
     transcript = recording.transcript
-    segments = list(transcript.segments.select_related("side"))
+    segments = list(
+        transcript.segments.filter(same_as_other_side=False).select_related("side")
+    )
     who = appearances(segments)
     corrections = sum(1 for segment in segments if segment.corrected)
     title = title_of(recording)
@@ -391,6 +420,10 @@ def word(recording: Recording, exported_by: str) -> bytes:
     if corrections:
         legend = document.add_paragraph(CORRECTED_LEGEND_WORD)
         legend.runs[0].italic = True
+    shared = both_sides_legend(transcript)
+    if shared:
+        both = document.add_paragraph(shared)
+        both.runs[0].italic = True
 
     if who:
         document.add_paragraph()

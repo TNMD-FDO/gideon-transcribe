@@ -277,6 +277,10 @@ def _store(job: Job, results: dict) -> Transcript:
             )
 
     segments.sort(key=lambda one: one.start)
+    shared = _the_stretch_on_both_sides(segments, job.recording)
+    if shared:
+        transcript.shared_segments = shared
+        transcript.save(update_fields=["shared_segments"])
     Segment.objects.bulk_create(segments, batch_size=500)
 
     for run_id, result in results.items():
@@ -288,6 +292,79 @@ def _store(job: Job, results: dict) -> Transcript:
         run.save()
 
     return transcript
+
+
+# What both parties hear before a call connects: the recorded announcement,
+# the ringing, the operator. A phone system puts that on both channels, so
+# both Sides transcribe it and the first minutes of a call read twice over.
+# Nothing is wrong with the recording or with the transcription; it is what
+# the file holds.
+#
+# Two Segments are the same thing heard twice when they say the same words at
+# the same moment. The guards are against coincidence, not against noise: two
+# people can both say "yeah" at once, so a match needs real words, and one
+# match is not a stretch, so a run of them is needed before any of it counts.
+SAME_MOMENT_SECONDS = 1.0
+LONG_ENOUGH = 12
+A_STRETCH = 3
+
+BOTH_SIDES = "Side 1 and Side 2"
+
+
+def _plainly(text: str) -> str:
+    """The words alone, so punctuation and capitals cannot part a pair."""
+    kept = [one.lower() if one.isalnum() else " " for one in text]
+    return " ".join("".join(kept).split())
+
+
+def _the_stretch_on_both_sides(segments: list, recording) -> int:
+    """Find what both Sides heard, name it for both, and mark the second copy.
+
+    Nothing is removed. The Segment that is kept is renamed to say it was on
+    both Sides; its twin is marked and stays in the database, out of the
+    reading, the exports, and the search, so the announcement at the head of a
+    call is read once rather than twice.
+
+    Returns how many pairs were found, which the viewer and the exports say
+    out loud: the app does not quietly decide what a transcript shows.
+    """
+    if not recording.is_two_channel_call:
+        return 0
+
+    by_side: dict = {}
+    for one in segments:
+        by_side.setdefault(one.side_id, []).append(one)
+    if len(by_side) != 2:
+        return 0
+
+    # Sorted as numbers, not as text: Side ids are database ids, and as
+    # text "10" sorts before "9".
+    first, second = (by_side[key] for key in sorted(by_side))
+
+    pairs = []
+    taken = set()
+    for one in first:
+        words = _plainly(one.text)
+        if len(words) < LONG_ENOUGH:
+            continue
+        for other in second:
+            if id(other) in taken:
+                continue
+            if abs(other.start - one.start) > SAME_MOMENT_SECONDS:
+                continue
+            if _plainly(other.text) != words:
+                continue
+            pairs.append((one, other))
+            taken.add(id(other))
+            break
+
+    if len(pairs) < A_STRETCH:
+        return 0
+
+    for kept, copy in pairs:
+        kept.speaker = BOTH_SIDES
+        copy.same_as_other_side = True
+    return len(pairs)
 
 
 def _speaker_names(
