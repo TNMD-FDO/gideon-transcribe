@@ -56,8 +56,8 @@ starts with what the build answers to:
 
 ## Installing (the short version)
 
-The full guide will be `docs/install.md`, written for an IT generalist. In
-outline, on a server with an NVIDIA GPU, Ubuntu Server 24.04 or newer, the
+The full guide is [`docs/install.md`](docs/install.md), written for an IT
+generalist. In outline, on a server with an NVIDIA GPU, Ubuntu Server 24.04 or newer, the
 NVIDIA driver, the container toolkit with CDI, and Docker with the Compose
 plugin:
 

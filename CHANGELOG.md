@@ -19,7 +19,33 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Added
+
+- **The three guides.** The user guide is served at `/help/`, behind a Help
+  link on every page, and the admin guide behind the Help link in the Admin
+  panel's rail. Both are the repository's own Markdown in `docs/`, rendered to
+  HTML when the image is built, so what the app shows is exactly the running
+  release's text and nobody who uses the app needs GitHub to read it. The
+  install guide, `docs/install.md`, is read from the repository: what you
+  need, the directory checklist with both the clicking and the PowerShell
+  path, the certificate request, the Hugging Face token, the server
+  preparation commands, install, check, first sign-in, a table of what can go
+  wrong, upgrade, roll back, uninstall, and every environment key with its
+  meaning.
+
+### Changed
+
+- **The app image is built from the repository root** rather than from
+  `app/`, so the build can reach the guides (ADR 0012). The root
+  `.dockerignore` keeps the office's `.env`, secrets, certificate and CA root
+  out of the build context, and a test fails if any of them is dropped from
+  it. Nothing changes for an office: `./transcribe upgrade` builds and pulls
+  exactly as before.
 
 ## v0.3.0, 2026-09-04
 

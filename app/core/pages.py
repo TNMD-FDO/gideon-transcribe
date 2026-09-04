@@ -21,6 +21,7 @@ from core import (
     audit,
     cases,
     exports,
+    guides,
     lifecycle,
     settings_store,
     tasks,
@@ -79,6 +80,20 @@ def _with_their_state(recordings):
         one.length = exports.clock(one.duration_seconds or 0)
         rows.append(one)
     return rows
+
+
+@login_required
+def user_guide(request: HttpRequest) -> HttpResponse:
+    """The user guide, at /help/, rendered from the repository's own Markdown.
+
+    Behind the Help link on every page, so that nobody who uses the app needs
+    GitHub to read how it works, and always this Release's text (ADR 0012).
+    """
+    return render(
+        request,
+        "guide.html",
+        {"page": "help", "guide": guides.load(guides.USER)},
+    )
 
 
 def greeting() -> str:

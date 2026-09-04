@@ -1,6 +1,0 @@
-# The build context is this folder. Nothing local belongs in an image.
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.ruff_cache/
-tests/

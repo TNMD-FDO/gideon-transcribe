@@ -1,0 +1,165 @@
+# Using Gideon Transcribe
+
+This guide is for everybody who uses the app. It follows the order you will meet things in: signing in, uploading a batch of recordings, waiting for the transcripts, downloading them, and reading or correcting one in the viewer. Admins have a guide of their own, reached from the Admin panel.
+
+Nothing you upload leaves the building. The app runs on the office's own server, the transcription happens on that server's own graphics card, and nothing is sent to any outside service.
+
+## Signing in
+
+Sign in with your office username and password, the same ones you use for your computer. You can sign in if you are in the office's sign-in group. If you are not and think you should be, ask IT.
+
+You land on the Upload page. Along the top of every page are your recordings, Cases (if your office has turned them on), Clips, and this guide under Help.
+
+You have one login session at a time. Signing in from a second browser ends the first.
+
+## Uploading a batch
+
+A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts.
+
+### 1. Choose files
+
+Drop the files on the Upload page, or click **choose files**. Most recordings work: mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv, avi, flac, amr and 3gp among them. Zip files do not; unzip them first.
+
+The page tells you the limits your Admin has set: how many files a batch may hold, how big one file may be, and how long one recording may run. A file over a limit is refused when you try to start, with the reason beside it, and the rest of the batch goes ahead.
+
+### 2. Settings
+
+The settings apply to the whole batch. Click a file in the list on the left to give that one file different settings; every other file keeps the batch's.
+
+- **Speakers.** Whether to separate the voices. Leave it on unless the recording is one person. If you know how many people are talking, saying so helps: **Exactly** two for a phone call, for instance, or **Between** two and four for an interview. **Let the app decide** is right when you do not know.
+- **Translate to English.** For a recording in another language, or with more than one. The transcript comes back in English and the original-language text is not kept. A translated transcript is marked in the viewer and carries a notice on every export.
+- **Spoken language.** Leave it on **Automatic** unless the app has guessed wrong before on this kind of recording.
+- **Vocabulary.** Names and terms the recording is likely to contain, one per line: people, places, case-specific words. The app tries these spellings first. Your Admin may have set an office-wide list; yours is added to it.
+- **Context.** One line about what the recording is, in plain words. It helps the model choose between words that sound alike.
+- **Audio clean-up.** Which preparation the sound gets before transcription. The default suits most recordings; **Phone** is for calls where it is offered.
+- **Add to case** and **Recording type** appear when your office uses Cases. A recording added to a case is kept after you sign out; one without a case goes when you do.
+
+### 3. Check and start
+
+The last step shows what will be uploaded and with what settings. **Upload and transcribe** starts it.
+
+## While it runs
+
+Starting a batch takes you to its Batch page. Each recording shows what is happening to it: uploading, being checked, having its audio prepared, in line, transcribing, done, failed, or refused. Above the list is a count of each, and an estimate of when everything will be done.
+
+One transcription runs at a time for the whole office, in the order recordings arrive, with no priority for anybody. Your place in the line is shown. You can leave the page and come back; the batch carries on without you.
+
+**Cancel batch** stops everything in it that has not finished. A recording that has already finished keeps its transcript.
+
+You have one unfinished batch at a time. The Upload page takes you back to it until it has finished.
+
+## Getting the transcripts out
+
+When the batch has finished, the page says how many transcripts are ready and offers **Download all transcripts**: one zip, one plain-text transcript per recording, each carrying the office's notice. Recordings that failed or were refused are simply left out.
+
+Then two choices:
+
+- **Done with these** removes the batch's recordings and their transcripts and takes you back to the Upload page for the next lot. It asks first, and says exactly what is going and how much space it takes. It cannot be undone, so download anything you want to keep before you agree.
+- **Upload more** leaves this batch where it is and starts another.
+
+Every recording counts against your quota until it goes, so an office running batches all day works in a loop: upload, download, done with these, upload again.
+
+## Your recordings
+
+The Recordings page lists everything you have uploaded and not yet removed, newest first. For each one: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Details**, and **Delete**.
+
+**Clear my recordings** removes all of them at once, after telling you what would go. **Upload recordings** starts a new batch.
+
+A recording in a case is not listed here. It is on its case's page.
+
+## Reading a transcript
+
+Open a recording and the viewer shows the recording on the left and the transcript on the right, at reading width. Playing the recording highlights the words being spoken, and the transcript scrolls to keep up.
+
+### Playing
+
+**Play** and the seek buttons are under the picture or the waveform. Click anywhere on the waveform to jump there. **Speed** slows the recording down for a difficult passage or speeds it up for a long one. **Boost** turns the volume above normal, for a quiet jail call. On a two-channel call there is also a control to shift the sound towards one side.
+
+**Follow** keeps the current segment in view as the recording plays. It pauses when you scroll the transcript yourself, and **Resume** or the F key puts it back.
+
+A video can be popped out into its own window, so the transcript can have the whole screen.
+
+### Searching
+
+**Search** finds a word or phrase in the transcript and jumps between the matches. Enter goes to the next one and Shift and Enter to the one before.
+
+### Speakers
+
+Each speaker has a colour, used for their name, their lines, and their lane on the waveform. Click a speaker's name in the **Speakers** list to give them a real one; every segment they spoke is renamed.
+
+### Correcting
+
+Click a segment, or press E on the one that is playing, to correct its text. **Save** keeps the correction and marks the segment as corrected; **Cancel** or Esc leaves it. Corrections go into every export. The fact that a correction was made is recorded, but what it said is not: transcript text never goes into any log.
+
+### Exporting
+
+On the right are the exports: **Export to Word** for a document with the speakers and times laid out, **Export as text** for the plain words, and **Captions** for a subtitle file (.srt) that plays with the video in a media player. Each carries the office's notice about machine transcription, and a translated transcript carries its translation notice too.
+
+**Process again** sends the recording back through transcription with new settings, replacing the transcript. **Delete** removes the recording and everything about it.
+
+### Keyboard shortcuts
+
+Shortcuts work whenever you are not typing in a box, so a corrector or an interpreter can stay on the keyboard. **?** shows this list in the viewer.
+
+| Key | What it does |
+|---|---|
+| Space | Play or pause |
+| B | Back three seconds and keep playing |
+| Left and Right | Back or forward five seconds |
+| Shift and Left or Right | One second |
+| Ctrl and Left or Right | Thirty seconds |
+| , and . | One frame back or forward |
+| Up and Down | Previous or next segment |
+| [ and ] | Slower or faster |
+| 0 | Normal speed |
+| F | Follow mode |
+| E | Correct the current segment |
+| Ctrl and Enter | Save the correction |
+| Esc | Cancel, or close what is open |
+| / | Search |
+| Enter | Next match; Shift and Enter for the one before |
+| I and O | Clip start or end at the playhead |
+| S | Snap the clip to this segment |
+| P | Preview the clip |
+| D | Details |
+| ? | This list |
+
+## Clips
+
+A clip is a chosen stretch of a recording, saved as its own small file for use outside the app: a passage to play in court, or to send to a colleague. Your office may have clips turned off; if so, none of this appears.
+
+In the viewer, **New clip** opens the clip tool. Mark the start and the end by dragging on the waveform, or with I and O at the playhead, or with S to snap to the segment you are on. **Preview** plays just that stretch. Give it a title and, if you like, a note, and **Save clip**. The file is made in the background and appears under the **Clips** tab, and on the Clips page, where every clip you have made is listed and can be downloaded one at a time or all at once.
+
+A clip is part of the recording it came from. Deleting the recording deletes its clips, and so does signing out, unless the recording is in a case.
+
+## Cases
+
+Your office may have Cases turned on. A case is a named page of recordings for one matter, and a recording in a case is kept after you sign out, for as long as the office's retention policy says.
+
+The Cases page lists your cases. **New case** makes one; there is nothing to type but its name. Clicking a case opens its newest transcript in the viewer, with the rest of the case beside it; a case with nothing to play yet opens its own page, which is where **Add recordings** is. Each row also has a quiet **Case page** link, for renaming, deleting, searching the case's transcripts, and **Download all transcripts** for the whole case.
+
+A recording goes into a case either at upload, with **Add to case**, or afterwards with **Move to case**, from the Recordings page, from the viewer's Details, or from the sign-out dialog. Moving is instant whatever the size, and it takes the transcript, the clips and the corrections along. Nothing ever moves back out of a case; the only way a recording leaves one is **Delete**.
+
+Deleting a case asks first and names what it is taking. It cannot be undone.
+
+## Signing out, and what happens to your recordings
+
+Everything that is not in a case belongs to your login session and goes when it ends: the recordings, their transcripts, and their clips. That is by design. Nothing of yours lingers on the server for somebody else to find.
+
+**Sign out** shows what is about to go, and offers **Download all transcripts**, **Download everything**, and **Download clips** first. If your office uses Cases, it also lists the recordings that are not yet in one, with **Move to case** beside each. Take what you want to keep before you press Sign out; there is no way back afterwards.
+
+You are also signed out after a period without activity, eight hours unless your Admin has set it differently. The app warns you before that happens and offers to keep you signed in. A batch that is still running is allowed to finish before anything is removed.
+
+Your recordings count against a quota, fifty gigabytes unless your Admin has set it differently. The Upload page tells you when you are near it. **Done with these** and **Clear my recordings** are how you make room without signing out.
+
+## When something goes wrong
+
+- **Refused.** The file was over a limit, or the app has already got an identical copy of it. The reason is shown beside it. Nothing else in the batch is affected.
+- **Failed.** Something went wrong in transcription. **Retry** sends it again. If it fails a second time, tell IT which recording it was.
+- **The transcript is wrong.** Correct the segments, or **Process again** with different settings: a speaker count, a vocabulary, the right language.
+- **The page says transcription is not available.** The transcription service is down or the server is low on space. Your recordings are safe; try again later, or tell IT.
+- **You cannot sign in.** Your account may not be in the sign-in group, or your password may have changed. Ask IT.
+
+## What the app records about you
+
+The app keeps a log of what happened: who signed in, who uploaded what and when, who downloaded, corrected, or deleted. It never records what a recording says, what a correction changed, what you searched for, or the names you gave speakers. Admins can see the log, and an Admin who opens your recordings is recorded doing so.

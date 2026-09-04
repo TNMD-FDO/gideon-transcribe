@@ -1,0 +1,28 @@
+# The app image's build context is this folder, the repository root, and not
+# app/ (ADR 0012): the two guides the app serves live in docs/, and a build
+# can only copy what is inside its context.
+#
+# On a server this folder is the Install home, which holds the office's .env,
+# its secrets, its certificate and its CA root. None of them is ever copied
+# into the image, but everything in the context is sent to the Docker daemon
+# unless it is named here, so they are named here first. The WhisperX
+# service's build has its own context and its own ignore file.
+
+.env
+secrets/
+tls/
+ca/
+whisperx-service/
+
+.git/
+.github/
+caddy/
+docs/spec/
+docs/research/
+docs/adr/
+
+app/tests/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/

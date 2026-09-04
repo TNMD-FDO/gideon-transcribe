@@ -51,11 +51,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The app's context is the repository root, so that the guides in
+          # docs/ reach the image (ADR 0012); the service's is its own folder.
           - name: app
-            context: ./app
+            context: .
+            dockerfile: app/Dockerfile
             image: ghcr.io/tnmd-fdo/gideon-transcribe-app
           - name: whisperx
             context: ./whisperx-service
+            dockerfile: whisperx-service/Dockerfile
             image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx
 
     steps:
@@ -85,6 +89,7 @@ jobs:
           # even under the missing pull policy, which would quietly replace a
           # pinned image on somebody's server.
           docker build \
+            --file "${{ matrix.dockerfile }}" \
             --tag "${{ matrix.image }}:${{ github.ref_name }}" \
             --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \

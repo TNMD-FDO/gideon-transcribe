@@ -110,7 +110,11 @@ services:
     # to pull and building from source is the only right answer.
     image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
     build:
-      context: ./app
+      # The repository root, not app/, so the build can reach the guides in
+      # docs/ (ADR 0012). The root .dockerignore keeps the office's .env and
+      # secrets out of the context.
+      context: .
+      dockerfile: app/Dockerfile
     restart: unless-stopped
     user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
     depends_on:
@@ -238,7 +242,11 @@ services:
     # container built from the app image ever sees a GPU.
     image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
     build:
-      context: ./app
+      # The repository root, not app/, so the build can reach the guides in
+      # docs/ (ADR 0012). The root .dockerignore keeps the office's .env and
+      # secrets out of the context.
+      context: .
+      dockerfile: app/Dockerfile
     command: ["media-worker"]
     restart: unless-stopped
     user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
@@ -278,7 +286,11 @@ services:
     # polling it, merging results, and the nightly sweeps.
     image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
     build:
-      context: ./app
+      # The repository root, not app/, so the build can reach the guides in
+      # docs/ (ADR 0012). The root .dockerignore keeps the office's .env and
+      # secrets out of the context.
+      context: .
+      dockerfile: app/Dockerfile
     command: ["worker"]
     restart: unless-stopped
     user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
