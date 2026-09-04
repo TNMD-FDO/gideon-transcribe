@@ -66,8 +66,47 @@
   window.VIEWER.currentSegment = function () {
     return here >= 0 ? segments[here] : null;
   };
+  // A media element that will not jump about says nothing about it: the
+  // assignment to currentTime is accepted and ignored, and a person clicking
+  // the timeline is left to guess. Every seek is watched, and one that does
+  // not take is reported in the same line the player's other troubles use.
+  var seekWatch = null;
+
+  function withinSeekable(seconds) {
+    // A media element that cannot be jumped about in does not report no
+    // ranges: it reports one range of nothing, from zero to zero. Asking
+    // whether the wanted moment is inside a range covers both, and covers a
+    // file only partly answered for as well.
+    var ranges = player ? player.seekable : null;
+    if (!ranges || !ranges.length) { return false; }
+    for (var n = 0; n < ranges.length; n += 1) {
+      if (seconds >= ranges.start(n) && seconds <= ranges.end(n)) { return true; }
+    }
+    return false;
+  }
+
   window.VIEWER.seek = function (seconds) {
-    if (player) { player.currentTime = Math.max(0, seconds); }
+    if (!player) { return; }
+    var wanted = Math.max(0, seconds);
+
+    if (window.clearTimeout && seekWatch) { window.clearTimeout(seekWatch); }
+    player.currentTime = wanted;
+    seekWatch = window.setTimeout(function () {
+      seekWatch = null;
+      if (Math.abs(player.currentTime - wanted) < 1.5) { return; }
+      if (!withinSeekable(wanted)) {
+        window.VIEWER.sayTrouble(
+          "This recording cannot be jumped about in: the server is not " +
+          "answering for parts of the file. It still plays from the start."
+        );
+        return;
+      }
+      window.VIEWER.sayTrouble(
+        "This recording did not jump to that point. It still plays from " +
+        "where it is."
+      );
+    }, 3000);
+
     // Going somewhere on purpose is asking to watch from there, so a follow
     // that was paused for reading comes back rather than leaving the
     // transcript behind at the place that was just left.
@@ -429,7 +468,15 @@
     var A_CLICK = 4;
 
     timeline.addEventListener("mousedown", function (event) {
-      if (!duration) { return; }
+      if (!duration) {
+        // Nothing can be worked out from an x position without a length, and
+        // doing nothing at all leaves a person clicking and wondering.
+        window.VIEWER.sayTrouble(
+          "The player does not know how long this recording is yet, so the " +
+          "timeline cannot be used. Press Play once, or reload the page."
+        );
+        return;
+      }
       dragging = true;
       dragFrom = timeAt(event);
       dragFromX = event.clientX;
@@ -483,6 +530,7 @@
     trouble.textContent = words;
     trouble.hidden = false;
   }
+  window.VIEWER.sayTrouble = sayTrouble;
 
   if (player) {
     // A media element that fails does it silently: no message, no exception,
