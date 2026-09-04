@@ -1,0 +1,370 @@
+#!/usr/bin/env bash
+#
+# The one command an Admin runs on the server.
+#
+# Run it from the Install home, the folder this file is in. Every subcommand
+# is meant to be safe to run twice, and none of them ever prints a secret.
+#
+#   ./transcribe status       what is running, and whether it is healthy
+#   ./transcribe check        the smoke checks, as a plain report
+#   ./transcribe directory    ask the office's directory facts and write them
+#   ./transcribe logs [name]  follow the logs of one service, or of all of them
+#
+# `install`, `upgrade`, and `rollback` are not written yet; when they are,
+# `install` asks the same directory questions `directory` asks here.
+
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$HERE"
+
+ENV_FILE="$HERE/.env"
+SECRETS="$HERE/secrets"
+CA_DIR="$HERE/ca"
+
+# The app's own account, which is what has to be able to read a secret file.
+APP_USER="${APP_USER:-transcribe}"
+
+green() { printf '\033[32m%s\033[0m\n' "$1"; }
+amber() { printf '\033[33m%s\033[0m\n' "$1"; }
+red() { printf '\033[31m%s\033[0m\n' "$1"; }
+
+pass() { green "  pass  $1"; }
+note() { amber "  note  $1"; }
+fail() { red "  FAIL  $1"; FAILURES=$((FAILURES + 1)); }
+
+FAILURES=0
+
+need_env() {
+  if [ ! -f "$ENV_FILE" ]; then
+    red "There is no .env here. Run this from the Install home."
+    exit 1
+  fi
+}
+
+env_value() {
+  # One value out of .env, without sourcing the file: a value with a space or
+  # a comma in it is common in a directory DN and must not be word-split.
+  sed -n "s/^$1=//p" "$ENV_FILE" | tail -1
+}
+
+set_env() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    # A DN holds commas, equals signs, and spaces, so the replacement is done
+    # in python rather than in sed, where every one of those is punctuation.
+    python3 - "$ENV_FILE" "$key" "$value" <<'PY'
+import sys
+from pathlib import Path
+
+path, key, value = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+lines = path.read_text(encoding="utf-8").splitlines()
+out = []
+done = False
+for line in lines:
+    if line.startswith(f"{key}=") and not done:
+        out.append(f"{key}={value}")
+        done = True
+    else:
+        out.append(line)
+path.write_text("\n".join(out) + "\n", encoding="utf-8")
+PY
+  else
+    printf '%s=%s\n' "$key" "$value" >>"$ENV_FILE"
+  fi
+}
+
+ask() {
+  # A question with what is there now as the default. Prints to stderr so the
+  # answer alone comes back on stdout.
+  local question="$1" now="$2" answer=""
+  if [ -n "$now" ]; then
+    printf '%s\n  [%s]: ' "$question" "$now" >&2
+  else
+    printf '%s\n  : ' "$question" >&2
+  fi
+  read -r answer
+  printf '%s' "${answer:-$now}"
+}
+
+compose() {
+  docker compose "$@"
+}
+
+# status -----------------------------------------------------------------------
+
+cmd_status() {
+  need_env
+  echo "Gideon Transcribe at $(env_value APP_HOSTNAME)"
+  echo
+  compose ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}'
+}
+
+# logs -------------------------------------------------------------------------
+
+cmd_logs() {
+  need_env
+  if [ $# -gt 0 ]; then
+    compose logs -f --tail 200 "$1"
+  else
+    compose logs -f --tail 100
+  fi
+}
+
+# directory --------------------------------------------------------------------
+
+cmd_directory() {
+  need_env
+  cat <<'WORDS'
+The office directory
+--------------------
+Sign-in is against the office's Active Directory over LDAPS on port 636.
+Nothing you type here leaves this server, and none of it is ever committed to
+the repository: it is written to .env and to a secret file beside it.
+
+Press Enter to keep what is shown in brackets.
+
+WORDS
+
+  local enabled uri bind base signin admin
+  enabled="$(ask "Is directory sign-in on? (yes or no; no means local admins only)" "$(env_value LDAP_ENABLED)")"
+
+  case "$enabled" in
+    y | yes | true | on | 1) enabled=true ;;
+    *) enabled=false ;;
+  esac
+  set_env LDAP_ENABLED "$enabled"
+
+  if [ "$enabled" != "true" ]; then
+    echo
+    amber "Directory sign-in is off. Only local admins can sign in."
+    return 0
+  fi
+
+  echo
+  uri="$(ask "The directory, by domain name and never one controller
+  (for example ldaps://example.internal:636)" "$(env_value LDAP_SERVER_URI)")"
+  set_env LDAP_SERVER_URI "$uri"
+
+  echo
+  bind="$(ask "The read-only bind account, as its User logon name
+  (for example svc-transcribe@example.internal)" "$(env_value LDAP_BIND_USER)")"
+  set_env LDAP_BIND_USER "$bind"
+
+  echo
+  base="$(ask "The domain's base DN, under which people are found
+  (for example DC=example,DC=internal)" "$(env_value LDAP_SEARCH_BASE)")"
+  set_env LDAP_SEARCH_BASE "$base"
+
+  echo
+  signin="$(ask "The sign-in group's full DN
+  (for example CN=Transcribe Users,OU=Groups,DC=example,DC=internal)" "$(env_value LDAP_SIGNIN_GROUP)")"
+  set_env LDAP_SIGNIN_GROUP "$signin"
+
+  echo
+  admin="$(ask "The admin group's full DN, or blank for no group-held admins" "$(env_value LDAP_ADMIN_GROUP)")"
+  set_env LDAP_ADMIN_GROUP "$admin"
+
+  set_env LDAP_CA_FILE "$(env_value LDAP_CA_FILE)"
+  set_env LDAP_BIND_PASSWORD_FILE "./secrets/ldap_bind_password"
+
+  # The CA root ----------------------------------------------------------------
+  echo
+  mkdir -p "$CA_DIR"
+  local ca_file="$CA_DIR/office-root.pem"
+  if [ -s "$ca_file" ]; then
+    green "The office CA root is in place ($(wc -c <"$ca_file") bytes)."
+  else
+    amber "There is no office CA root at $ca_file."
+    echo "  Put the PEM there and run this again. Leave it empty only if the"
+    echo "  domain controllers' certificates come from a public authority."
+    : >"$ca_file"
+  fi
+
+  # The bind password ----------------------------------------------------------
+  echo
+  mkdir -p "$SECRETS"
+  chmod 700 "$SECRETS"
+  local password="" again=""
+  printf 'The bind account'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
+  read -rs password
+  echo >&2
+
+  if [ -n "$password" ]; then
+    printf 'And again: ' >&2
+    read -rs again
+    echo >&2
+    if [ "$password" != "$again" ]; then
+      red "Those did not match. Nothing was written."
+      return 1
+    fi
+    printf '%s' "$password" >"$SECRETS/ldap_bind_password"
+    chmod 600 "$SECRETS/ldap_bind_password"
+    if id "$APP_USER" >/dev/null 2>&1; then
+      # The app runs as its own account and has to be able to read the file.
+      sudo chown "$APP_USER:$APP_USER" "$SECRETS/ldap_bind_password" 2>/dev/null ||
+        amber "Could not give the file to $APP_USER; run: sudo chown $APP_USER:$APP_USER $SECRETS/ldap_bind_password"
+      sudo chmod 400 "$SECRETS/ldap_bind_password" 2>/dev/null || true
+    fi
+    green "The bind password was written to secrets/ldap_bind_password."
+  elif [ -s "$SECRETS/ldap_bind_password" ]; then
+    green "The stored bind password was kept."
+  else
+    amber "There is no bind password stored. The directory will refuse every sign-in."
+  fi
+
+  echo
+  echo "Written. Now restart the app and the workers so they read it:"
+  echo
+  echo "  docker compose up -d --force-recreate app worker media-worker"
+  echo
+  echo "Then prove it:"
+  echo
+  echo "  ./transcribe check"
+}
+
+# check ------------------------------------------------------------------------
+
+cmd_check() {
+  need_env
+  FAILURES=0
+  local hostname
+  hostname="$(env_value APP_HOSTNAME)"
+
+  echo "Gideon Transcribe: checks"
+  echo
+
+  echo "The server"
+  if id "$APP_USER" >/dev/null 2>&1; then
+    if id -nG "$APP_USER" | tr ' ' '\n' | grep -qx docker; then
+      fail "the $APP_USER account is in the docker group, which is root on this server"
+    else
+      pass "the $APP_USER account exists and is not in the docker group"
+    fi
+  else
+    fail "there is no $APP_USER account"
+  fi
+
+  local data
+  data="$(env_value APP_DATA_DIR)"
+  if [ -d "$data" ]; then
+    local owner mode
+    owner="$(stat -c '%U' "$data")"
+    mode="$(stat -c '%a' "$data")"
+    if [ "$owner" = "$APP_USER" ] && [ "$mode" = "750" ]; then
+      pass "the app data folder is $owner's, mode $mode"
+    else
+      note "the app data folder is $owner's, mode $mode (expected $APP_USER, 750)"
+    fi
+  else
+    fail "there is no app data folder at $data"
+  fi
+
+  local tag
+  tag="$(git -C "$HERE" describe --exact-match --tags 2>/dev/null || true)"
+  if [ -n "$tag" ]; then
+    pass "the checkout is at the release tag $tag"
+  else
+    note "the checkout is not at a release tag (ADR 0007 allows this until v1.0.0)"
+  fi
+
+  local free
+  free="$(df -BG --output=avail "$data" 2>/dev/null | tail -1 | tr -dc '0-9')"
+  if [ -n "$free" ] && [ "$free" -gt 200 ]; then
+    pass "the disk has ${free} GB free"
+  else
+    fail "the disk has only ${free:-?} GB free"
+  fi
+
+  echo
+  echo "The name and the certificate"
+  if getent hosts "$hostname" >/dev/null 2>&1; then
+    pass "$hostname resolves"
+  else
+    note "$hostname does not resolve on this server (it may resolve on the workstations)"
+  fi
+
+  if [ -s "$HERE/tls/cert.pem" ]; then
+    local ends
+    ends="$(openssl x509 -in "$HERE/tls/cert.pem" -noout -enddate 2>/dev/null | cut -d= -f2)"
+    if openssl x509 -in "$HERE/tls/cert.pem" -noout -checkend 2592000 >/dev/null 2>&1; then
+      pass "the certificate is good until $ends"
+    else
+      fail "the certificate expires within 30 days ($ends)"
+    fi
+    if openssl x509 -in "$HERE/tls/cert.pem" -noout -text |
+      grep -q "$hostname"; then
+      pass "the certificate names $hostname"
+    else
+      fail "the certificate does not name $hostname"
+    fi
+  else
+    fail "there is no certificate at tls/cert.pem"
+  fi
+
+  echo
+  echo "The containers"
+  local unhealthy
+  unhealthy="$(compose ps --format '{{.Service}} {{.State}} {{.Status}}' 2>/dev/null |
+    grep -v 'running' || true)"
+  if [ -z "$unhealthy" ]; then
+    pass "every container is running"
+  else
+    fail "not every container is running:"
+    printf '%s\n' "$unhealthy" | sed 's/^/        /'
+  fi
+
+  echo
+  echo "The directory"
+  if [ "$(env_value LDAP_ENABLED)" != "true" ]; then
+    note "directory sign-in is off: local admins only"
+  else
+    # The same four checks the panel's button runs, so an office is never told
+    # two different things about one directory.
+    compose exec -T app python -c "
+from core import directory
+for one in directory.test_connection():
+    mark = 'note' if one['warning'] else ('pass' if one['ok'] else 'FAIL')
+    print(f\"  {mark}  {one['name']}: {one['says']}\")
+" 2>/dev/null || fail "the checks could not be run (is the app up?)"
+  fi
+
+  echo
+  echo "The WhisperX service"
+  if compose exec -T app python -c "
+from core import whisperx
+raise SystemExit(0 if whisperx.is_alive() else 1)
+" >/dev/null 2>&1; then
+    pass "the service answers"
+  else
+    fail "the service does not answer"
+  fi
+
+  echo
+  if [ "$FAILURES" -eq 0 ]; then
+    green "Everything checked passed."
+  else
+    red "$FAILURES check(s) failed."
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------
+
+usage() {
+  sed -n '3,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
+
+case "${1:-}" in
+status) shift && cmd_status "$@" ;;
+check) shift && cmd_check "$@" ;;
+directory) shift && cmd_directory "$@" ;;
+logs) shift && cmd_logs "$@" ;;
+"" | -h | --help | help) usage ;;
+*)
+  red "There is no subcommand called '$1'."
+  echo
+  usage
+  exit 1
+  ;;
+esac
