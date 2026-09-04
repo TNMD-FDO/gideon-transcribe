@@ -37,15 +37,23 @@
     {% if cases %}
       <table class="tbl">
         <thead>
-          <tr><th>Name</th><th>Recordings</th><th>Size</th><th>Last activity</th></tr>
+          <tr><th>Name</th><th>Recordings</th><th>Size</th><th>Last activity</th><th></th></tr>
         </thead>
         <tbody>
           {% for row in cases %}
             <tr>
-              <td><a href="{% url 'case' row.case.pk %}"><b>{{ row.case.name }}</b></a></td>
+              {% comment %}
+                The name opens the newest recording that has a transcript,
+                with the rest of the case beside it. A case with nothing to
+                play yet opens its own page, which is where Add recordings is.
+              {% endcomment %}
+              <td><a href="{{ row.opens_at }}"><b>{{ row.case.name }}</b></a></td>
               <td>{{ row.recordings }}</td>
               <td class="muted">{{ row.size }}</td>
               <td class="muted">{{ row.case.last_activity|date:"d M Y H:i" }}</td>
+              <td class="muted small">
+                <a href="{% url 'case' row.case.pk %}">Case page</a>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -64,16 +72,19 @@
       </p>
       <table class="tbl">
         <thead>
-          <tr><th>Name</th><th>Owner</th><th>Recordings</th><th>Size</th><th>Last activity</th></tr>
+          <tr><th>Name</th><th>Owner</th><th>Recordings</th><th>Size</th><th>Last activity</th><th></th></tr>
         </thead>
         <tbody>
           {% for row in others %}
             <tr>
-              <td><a href="{% url 'case' row.case.pk %}">{{ row.case.name }}</a></td>
+              <td><a href="{{ row.opens_at }}">{{ row.case.name }}</a></td>
               <td class="muted">{{ row.case.owner.shown_name }}</td>
               <td>{{ row.recordings }}</td>
               <td class="muted">{{ row.size }}</td>
               <td class="muted">{{ row.case.last_activity|date:"d M Y H:i" }}</td>
+              <td class="muted small">
+                <a href="{% url 'case' row.case.pk %}">Case page</a>
+              </td>
             </tr>
           {% endfor %}
         </tbody>

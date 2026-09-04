@@ -779,7 +779,7 @@ def _may_open(request, recording_id):
     return None
 
 
-def _record(request, recording, kind) -> None:
+def record_export(request, recording, kind) -> None:
     """One "export made" row per file, naming the kind and never any text."""
     from core import audit
 
@@ -816,7 +816,7 @@ def _record_clip(request, clip) -> None:
     clip_work.mark_downloaded(clip, clip.recording.user_id == request.user.pk)
 
 
-def _hand_over(body, filename: str, content_type: str) -> HttpResponse:
+def hand_over(body, filename: str, content_type: str) -> HttpResponse:
     """A download, named so that the browser keeps the name the app chose."""
     answer = HttpResponse(body, content_type=content_type)
     answer["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
@@ -842,21 +842,21 @@ def export(request: HttpRequest, recording_id, shape: str) -> HttpResponse:
 
     if shape == "word":
         body = word(recording, request.user.username)
-        _record(request, recording, "transcript word")
-        return _hand_over(body, export_name(recording, "transcript.docx"), WORD_TYPE)
+        record_export(request, recording, "transcript word")
+        return hand_over(body, export_name(recording, "transcript.docx"), WORD_TYPE)
 
     if shape == "text":
         body = plain_text(recording).encode("utf-8")
-        _record(request, recording, "transcript text")
-        return _hand_over(
+        record_export(request, recording, "transcript text")
+        return hand_over(
             body,
             export_name(recording, "transcript.txt"),
             "text/plain; charset=utf-8",
         )
 
     body = srt(recording).encode("utf-8")
-    _record(request, recording, "captions")
-    return _hand_over(
+    record_export(request, recording, "captions")
+    return hand_over(
         body, export_name(recording, "captions.srt"), "application/x-subrip"
     )
 
@@ -884,9 +884,9 @@ def batch_download(request: HttpRequest, batch_id) -> HttpResponse:
 
     body, included = transcripts_zip(wanted)
     for recording in included:
-        _record(request, recording, "transcript text")
+        record_export(request, recording, "transcript text")
 
-    return _hand_over(body, zip_name(), "application/zip")
+    return hand_over(body, zip_name(), "application/zip")
 
 
 @login_required
@@ -907,12 +907,12 @@ def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
     if shape == "everything":
         body, made, clips = everything_zip(recordings, request.user.username)
         for recording, kind in made:
-            _record(request, recording, kind)
+            record_export(request, recording, kind)
         for clip in clips:
             _record_clip(request, clip)
-        return _hand_over(body, zip_name("Everything"), "application/zip")
+        return hand_over(body, zip_name("Everything"), "application/zip")
 
     body, included = transcripts_zip(recordings)
     for recording in included:
-        _record(request, recording, "transcript text")
-    return _hand_over(body, zip_name(), "application/zip")
+        record_export(request, recording, "transcript text")
+    return hand_over(body, zip_name(), "application/zip")

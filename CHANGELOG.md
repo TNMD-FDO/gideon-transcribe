@@ -41,6 +41,15 @@ Database: migrates
   batch with a per-file override, and **Move to case** from the recordings
   list, from a case page, and from the sign-out dialog. On disk a move is a
   folder rename, so it is instant whatever the size.
+- **A case opens into the player.** Clicking a case on the Cases page opens
+  its newest recording that has a transcript, with the rest of the case
+  beside it, rather than a list to click through. A case with nothing to play
+  yet opens its own page, which is where Add recordings is, and every row
+  carries a quiet "Case page" link for renaming, deleting, and the rest.
+- **Download all transcripts** for a whole case, from the case page and from
+  the rail. Transcripts only and not the media: a workspace is bounded by a
+  login session and a case is not, so "everything" for a case could be
+  hundreds of gigabytes.
 - A **case rail** in the viewer: a recording opened from a case gets a third
   column listing the rest of the case, so somebody working through a matter
   moves between its recordings without going back to the case page. The
