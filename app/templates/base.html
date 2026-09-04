@@ -14,8 +14,15 @@
       --quiet: #5c5a55;
       --wrong: #8a1f11;
     }
+    :root[data-theme="dark"] {
+      --ink: #e8e6e1;
+      --paper: #17181a;
+      --line: #34363a;
+      --quiet: #a6a29a;
+      --wrong: #ef8b7c;
+    }
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-theme="light"]) {
         --ink: #e8e6e1;
         --paper: #17181a;
         --line: #34363a;
@@ -211,11 +218,53 @@
     .filters { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
       align-items: end; margin: 1rem 0; }
     .filters label { display: flex; flex-direction: column; }
-    .clip-tool { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: end;
-      margin: 0.5rem 0; }
-    #clip-form label { display: block; margin: 0.4rem 0; }
+    .clip-tool { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: end;
+      margin: 0.5rem 0 1rem; }
+    .clip-tool label { display: flex; flex-direction: column; margin: 0; }
+    #clip-form label { display: block; margin: 0.4rem 0; font-weight: 400; }
     #clip-form textarea, #clip-form input[type=text] { width: 100%; }
+    button.tiny { margin: 0 0 0 0.4rem; padding: 0.05rem 0.4rem;
+      font-size: 0.75rem; }
+    .timeline { position: relative; margin: 0.75rem 0 1rem;
+      border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+      cursor: crosshair; user-select: none; }
+    .timeline canvas { display: block; width: 100%; }
+    #range { position: absolute; top: 0; bottom: 0;
+      background: color-mix(in srgb, var(--ink) 18%, transparent);
+      border-left: 2px solid var(--ink); border-right: 2px solid var(--ink);
+      pointer-events: none; }
+    #playhead { position: absolute; top: 0; bottom: 0; width: 2px; left: 0;
+      background: var(--ink); pointer-events: none; }
+    .segment.in-range { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+    .segment.match-here { outline: 2px solid var(--ink); outline-offset: 2px; }
+    .segment .at { display: block; margin: 0; padding: 0; text-align: left; }
+    .row-tools { float: right; visibility: hidden; }
+    .segment:hover .row-tools, .segment.here .row-tools { visibility: visible; }
+    body.no-speakers .segment .who { display: none; }
+    .wide-pill { display: block; margin: 0.5rem 0; }
+    .sheet { position: sticky; bottom: 0; z-index: 5;
+      border-top: 2px solid var(--ink); background: var(--paper);
+      padding: 0.75rem 1.25rem 1rem; max-height: 60vh; overflow: auto; }
+    .sheet-tabs { display: flex; gap: 1rem; align-items: baseline;
+      border-bottom: 1px solid var(--line); padding-bottom: 0.4rem;
+      margin-bottom: 0.75rem; }
+    .sheet-tab.here { font-weight: 600; text-decoration: underline; }
+    .sheet-close { margin-left: auto; }
+    .overlay { position: fixed; inset: 0; z-index: 10; display: grid;
+      place-items: center; background: rgba(0, 0, 0, 0.45); }
+    .overlay-card { background: var(--paper); color: var(--ink);
+      border-radius: 8px; padding: 1.5rem; max-width: 34rem;
+      max-height: 80vh; overflow: auto; }
+    .stage .preparing { border: 1px dashed var(--line); border-radius: 4px;
+      padding: 1rem; }
   </style>
+  <script>
+    // Before anything paints, so a chosen theme does not flash the other one.
+    try {
+      var chosen = window.localStorage.getItem("theme");
+      if (chosen) { document.documentElement.setAttribute("data-theme", chosen); }
+    } catch (ignored) { /* a browser that forbids storage keeps the system theme */ }
+  </script>
 </head>
 <body>
   <header>

@@ -104,6 +104,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             for number, name in enumerate(sorted(names))
         ]
 
+    job = recording.jobs.order_by("-created").first()
+
     return render(
         request,
         "viewer.html",
@@ -111,6 +113,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             "recording": recording,
             "transcript": transcript,
             "speakers": speakers,
+            "sides": list(recording.sides.all()),
+            "job": job,
             "is_someone_elses": recording.user_id != request.user.pk,
             "media_url": (
                 f"/media/{recording.user_id}/{recording.pk}/{playback.name}"
@@ -123,6 +127,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
                 if recording.waveform_path.exists()
                 else ""
             ),
+            "frame_rate": frame_rate(recording),
         },
     )
 
@@ -251,3 +256,132 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
         segments_changed=changed,
     )
     return JsonResponse({"changed": changed, "merged": merging})
+
+
+@login_required
+def details(request: HttpRequest, recording_id) -> JsonResponse:
+    """The Provenance: where a Recording came from and how it was processed.
+
+    The same facts the Word export prints on its last pages, as name and value
+    pairs, and never a word of the Transcript.
+    """
+    from core import exports
+
+    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
+    if recording is None or (
+        recording.user_id != request.user.pk and not request.user.is_admin
+    ):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    transcript = getattr(recording, "transcript", None)
+    probe = recording.probe or {}
+
+    rows = [
+        ("Original name", recording.original_filename),
+        ("Size", f"{recording.size_bytes / 1024 / 1024:.1f} MB"),
+        ("SHA-256", recording.sha256),
+        (
+            "Uploaded by",
+            f"{recording.user.username} on {recording.created:%d %B %Y %H:%M}",
+        ),
+        ("Length", exports.clock(recording.duration_seconds or 0)),
+        ("Container", probe.get("format_name", "")),
+        (
+            "Frame rate",
+            f"{frame_rate(recording):g} per second" if _has_video(recording) else "",
+        ),
+        ("Sound sources found", str(recording.tracks_found)),
+        ("Distinct sources", str(recording.tracks_distinct)),
+        (
+            "Two-channel call",
+            "yes, one side per party" if recording.is_two_channel_call else "no",
+        ),
+        (
+            "Sides",
+            ", ".join(str(one) for one in recording.sides.all()) or "1",
+        ),
+        (
+            "Preprocessing",
+            f"{recording.preprocessing.title()}, loudness normalised "
+            "(linear, -16 LUFS)",
+        ),
+    ]
+
+    if transcript is not None:
+        runs = list((transcript.provenance or {}).values())
+        used = (runs[0].get("settings_used") if runs else {}) or {}
+        service = (runs[0].get("service") if runs else {}) or {}
+        timings = (runs[0].get("timings_seconds") if runs else {}) or {}
+        rows += [
+            ("Model", used.get("model", "")),
+            ("Model revision", used.get("model_revision", "")),
+            ("Task", f"{used.get('task_run', '')} ({used.get('task_reason', '')})"),
+            ("Language", exports.language_name(transcript.language)),
+            (
+                "Word timing",
+                "yes"
+                if transcript.word_timestamps
+                else f"no ({transcript.word_timestamps_reason or 'not available'})",
+            ),
+            ("Diarization", "yes" if used.get("diarize") else "no"),
+            (
+                "Speaker hint",
+                str(recording.speakers_exactly or recording.speakers_between or "none"),
+            ),
+            (
+                "Vocabulary",
+                f"{used.get('vocabulary_terms_used', 0)} of "
+                f"{used.get('vocabulary_terms_given', 0)} terms used"
+                if used.get("vocabulary_terms_given")
+                else "none given",
+            ),
+            ("Service version", (service.get("versions") or {}).get("service", "")
+             or service.get("version", "")),
+            (
+                "Processing time",
+                f"{timings.get('total', 0):.0f} seconds" if timings else "",
+            ),
+            ("Processed", f"{transcript.created:%d %B %Y %H:%M}"),
+            ("Segments", str(transcript.segments.count())),
+        ]
+
+    # One line per Clip that exists now; a deleted Clip simply drops out.
+    for clip in recording.clips.all():
+        rows.append(
+            (
+                f"Clip: {clip.title}",
+                f"{exports.clock(clip.start)} to {exports.clock(clip.end)}, "
+                f"{'captions burned, ' if clip.burn_captions else ''}"
+                f"{'excerpt' if clip.include_excerpt else 'no excerpt'}"
+                + (f", rendered {clip.rendered:%d %b %H:%M}" if clip.rendered else ""),
+            )
+        )
+
+    return JsonResponse(
+        {"rows": [[name, value] for name, value in rows if str(value).strip()]}
+    )
+
+
+def _has_video(recording) -> bool:
+    playback = recording.playback_path()
+    return bool(playback and playback.suffix == ".mp4")
+
+
+def frame_rate(recording) -> float:
+    """The frame rate the viewer steps by, from the Provenance.
+
+    An audio-only Recording has none, and the viewer steps a tenth of a second
+    instead.
+    """
+    for stream in (recording.probe or {}).get("streams", []):
+        if stream.get("codec_type") != "video":
+            continue
+        rate = stream.get("avg_frame_rate") or stream.get("r_frame_rate") or ""
+        if "/" in rate:
+            over, under = rate.split("/", 1)
+            try:
+                if float(under):
+                    return float(over) / float(under)
+            except ValueError:
+                pass
+    return 0.0

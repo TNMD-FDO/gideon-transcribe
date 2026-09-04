@@ -9,12 +9,18 @@
   {% endif %}
 
   <div class="desk">
+    {# The sidebar: the tools, out of the way until they are wanted. #}
     <aside class="sidebar">
       <label for="search" class="quiet">Search</label>
       <input type="text" id="search" placeholder="Find in transcript">
       <p id="matches" class="quiet"></p>
 
-      <h2 class="small">Speakers</h2>
+      <h2 class="small">
+        Speakers
+        {% if speakers %}
+          <button type="button" id="speakers-toggle" class="plain tiny">hide</button>
+        {% endif %}
+      </h2>
       {% if transcript %}
         {% if speakers %}
           <p class="quiet">
@@ -31,42 +37,8 @@
         {% else %}
           <p class="pill">Not diarized</p>
         {% endif %}
-      {% endif %}
-
-      {% if clips_available %}
-        <h2 class="small">Clips</h2>
-        <p class="quiet">
-          Mark a span with I and O while it plays, or type the times. A clip
-          is a file you can play outside the app.
-        </p>
-        <div class="clip-tool">
-          <label class="quiet">From
-            <input type="text" id="clip-from" placeholder="0:00" size="8">
-          </label>
-          <label class="quiet">To
-            <input type="text" id="clip-to" placeholder="0:00" size="8">
-          </label>
-          <button type="button" id="clip-preview" class="plain">Preview</button>
-          <button type="button" id="clip-new">New clip</button>
-        </div>
-
-        <form id="clip-form" hidden>
-          <label class="quiet">Title <input type="text" id="clip-title" maxlength="120"></label>
-          <label class="quiet">Note <textarea id="clip-note" rows="2" maxlength="1000"></textarea></label>
-          <label class="quiet">
-            <input type="checkbox" id="clip-excerpt" checked> Include the transcript excerpt
-          </label>
-          <label class="quiet" id="clip-burn-line"{% if not is_video %} hidden{% endif %}>
-            <input type="checkbox" id="clip-burn"> Burn captions into the video
-          </label>
-          <div class="dialog">
-            <button type="submit">Save clip</button>
-            <button type="button" id="clip-cancel" class="plain">Cancel</button>
-          </div>
-          <p id="clip-problem" class="problem" hidden></p>
-        </form>
-
-        <ul id="clip-list" class="cards"></ul>
+      {% else %}
+        <p class="quiet">The speakers appear with the transcript.</p>
       {% endif %}
 
       {% if transcript %}
@@ -82,37 +54,27 @@
         </ul>
       {% endif %}
 
-      <h2 class="small">Delete</h2>
-      <p class="quiet">
-        Removes this recording and its transcript. Export anything you want
-        to keep first.
-      </p>
-      <button type="button" class="plain delete"
-              data-recording="{{ recording.pk }}"
-              data-title="{{ recording.title }}"
-                    data-clips="{{ recording.clips.count }}">Delete this recording</button>
-
-      <h2 class="small">Keyboard</h2>
-      <dl class="keys">
-        <dt>Space</dt><dd>Play or pause</dd>
-        <dt>B</dt><dd>Back three seconds, keep playing</dd>
-        <dt>J K</dt><dd>Back and forward five seconds</dd>
-        <dt>[ ]</dt><dd>Slower and faster</dd>
-        <dt>0</dt><dd>Normal speed</dd>
-        <dt>F</dt><dd>Follow mode</dd>
-        <dt>E</dt><dd>Correct the current segment</dd>
-        <dt>/</dt><dd>Search</dd>
-        <dt>I O</dt><dd>Mark the start and the end of a clip</dd>
-      </dl>
+      <h2 class="small">This recording</h2>
+      <ul class="exports">
+        <li><button type="button" id="open-details" class="plain">Details (D)</button></li>
+        <li><button type="button" id="open-shortcuts" class="plain">Keyboard (?)</button></li>
+        <li>
+          <button type="button" class="plain delete"
+                  data-recording="{{ recording.pk }}"
+                  data-title="{{ recording.title }}"
+                  data-clips="{{ recording.clips.count }}">Delete this recording</button>
+        </li>
+      </ul>
     </aside>
 
+    {# The reading column: the transcript first, the media above it. #}
     <main class="reading">
       <header class="viewer-head">
         <a href="{% url 'home' %}" class="quiet">Back to your recordings</a>
         <h1>{{ recording.title }}</h1>
         <p class="marks">
           {% if recording.is_two_channel_call %}
-            <span class="pill">Two-channel call: {{ recording.sides.count }} sides</span>
+            <span class="pill">Two-channel call: {{ sides|length }} sides</span>
           {% endif %}
           {% if transcript.task_run == "translate" %}
             <span class="pill" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ transcript.language }}</span>
@@ -120,64 +82,199 @@
           {% if transcript and not transcript.word_timestamps %}
             <span class="pill">No word timing</span>
           {% endif %}
+          {% if is_video and media_url %}
+            <button type="button" id="pop-out" class="plain tiny">Pop out video</button>
+          {% endif %}
+          <button type="button" id="theme" class="plain tiny">Theme</button>
         </p>
       </header>
 
-      {% if media_url %}
-        <div class="dock">
-          {% if is_video %}
-            <video id="player" src="{{ media_url }}" preload="metadata"></video>
+      <div class="dock">
+        <div class="stage">
+          {% if media_url %}
+            {% if is_video %}
+              <video id="player" src="{{ media_url }}" preload="metadata"></video>
+              <p id="popped" class="quiet" hidden>Video popped out</p>
+            {% else %}
+              <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
+            {% endif %}
           {% else %}
-            <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
-            <canvas id="waveform" height="72"></canvas>
+            <div class="preparing">
+              <strong>Preparing {% if is_video %}video{% else %}audio{% endif %}</strong>
+              <p class="quiet">
+                {% if transcript %}
+                  The transcript is ready; you can read, search, and correct it
+                  now. Playback starts when the playback copy is done (a few
+                  minutes for long video).
+                {% else %}
+                  The player appears when it is ready.
+                {% endif %}
+              </p>
+            </div>
           {% endif %}
-
-          <div class="transport">
-            <button type="button" id="play">Play</button>
-            <button type="button" data-seek="-3" title="Back three seconds (B)">-3s</button>
-            <button type="button" data-seek="-5">-5s</button>
-            <button type="button" data-seek="5">+5s</button>
-            <span id="clock" class="quiet">0:00</span>
-            <label class="quiet">Speed
-              <select id="speed">
-                <option>0.5</option><option>0.75</option>
-                <option selected>1</option><option>1.25</option>
-                <option>1.5</option><option>1.75</option>
-                <option>2</option><option>2.5</option>
-              </select>
-            </label>
-            <label class="quiet">Boost
-              <input type="range" id="boost" min="100" max="400" step="25" value="100">
-              <span id="boost-figure">100%</span>
-            </label>
-            <label class="quiet">
-              <input type="checkbox" id="follow" checked> Follow
-            </label>
-          </div>
         </div>
-      {% else %}
-        <p class="notice">Preparing {% if is_video %}video{% else %}audio{% endif %}. The player appears when it is ready.</p>
-      {% endif %}
+
+        <div class="transport">
+          <button type="button" id="play">Play</button>
+          <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">-3s</button>
+          <button type="button" data-seek="-5" title="Back five seconds (Left)">-5s</button>
+          <button type="button" data-seek="5" title="Forward five seconds (Right)">+5s</button>
+          <button type="button" id="frame-back" title="One frame back (,)">&#9664;|</button>
+          <button type="button" id="frame-on" title="One frame forward (.)">|&#9654;</button>
+          <span id="clock" class="quiet">0:00</span>
+          <label class="quiet">Speed
+            <select id="speed">
+              <option>0.5</option><option>0.75</option>
+              <option selected>1</option><option>1.25</option>
+              <option>1.5</option><option>1.75</option>
+              <option>2</option><option>2.5</option>
+            </select>
+          </label>
+          <label class="quiet">Boost
+            <input type="range" id="boost" min="100" max="400" step="25" value="100">
+            <span id="boost-figure">100%</span>
+          </label>
+          {% if recording.is_two_channel_call %}
+            <label class="quiet" title="Shift the sound towards one side of the call">
+              {{ sides.0 }}
+              <input type="range" id="balance" min="-100" max="100" step="10" value="0">
+              {{ sides.1 }}
+            </label>
+          {% endif %}
+          <label class="quiet">
+            <input type="checkbox" id="follow" checked> Follow
+          </label>
+          {% if clips_available %}
+            <button type="button" id="new-clip">New clip</button>
+          {% endif %}
+        </div>
+      </div>
+
+      {# The timeline: the waveform, with one lane per speaker under it. #}
+      <div class="timeline" id="timeline">
+        <canvas id="waveform" height="72"></canvas>
+        <canvas id="lanes" height="12"></canvas>
+        <div id="range" hidden></div>
+        <div id="playhead"></div>
+      </div>
 
       {% if transcript %}
+        <p id="follow-pill" class="pill wide-pill" hidden>
+          Following paused while you read.
+          <button type="button" id="resume-follow" class="plain">Resume (F)</button>
+        </p>
         <ol id="transcript" class="transcript"></ol>
       {% else %}
-        <p class="notice">
-          There is no transcript yet. This page shows it as soon as the
-          recording has been through the queue.
-        </p>
+        <div id="waiting" class="notice">
+          <strong id="waiting-what">Waiting for the transcript</strong>
+          <p class="quiet" id="waiting-where">
+            This page shows it as soon as the recording has been through the
+            queue. You can leave this page.
+          </p>
+          {% if job %}
+            <button type="button" id="cancel-job" class="plain">Cancel this recording</button>
+          {% endif %}
+        </div>
       {% endif %}
     </main>
+  </div>
+
+  {# The bottom sheet: clips and details. #}
+  <section id="sheet" class="sheet" hidden>
+    <nav class="sheet-tabs">
+      {% if clips_available %}
+        <button type="button" class="plain sheet-tab" data-panel="clips">Clips</button>
+      {% endif %}
+      <button type="button" class="plain sheet-tab" data-panel="details">Details</button>
+      <button type="button" class="plain sheet-close" id="close-sheet">Close (Esc)</button>
+    </nav>
+
+    {% if clips_available %}
+      <div class="sheet-panel" data-panel="clips">
+        <div class="clip-tool">
+          <label class="quiet">From
+            <input type="text" id="clip-from" placeholder="0:00" size="8">
+          </label>
+          <label class="quiet">To
+            <input type="text" id="clip-to" placeholder="0:00" size="8">
+          </label>
+          <span id="clip-range" class="quiet">No range yet</span>
+          <button type="button" id="clip-clear" class="plain">Clear</button>
+          <button type="button" id="clip-preview" class="plain">Preview (P)</button>
+        </div>
+
+        <form id="clip-form">
+          <label class="quiet">Title <input type="text" id="clip-title" maxlength="120"></label>
+          <label class="quiet">Note <textarea id="clip-note" rows="2" maxlength="1000"></textarea></label>
+          <label class="quiet">
+            <input type="checkbox" id="clip-excerpt" checked
+                   {% if not transcript %}disabled{% endif %}>
+            Include the transcript excerpt{% if not transcript %} <span class="quiet">available once the transcript is ready</span>{% endif %}
+          </label>
+          {% if is_video %}
+            <label class="quiet">
+              <input type="checkbox" id="clip-burn" {% if not transcript %}disabled{% endif %}>
+              Burn captions into the video{% if not transcript %} <span class="quiet">available once the transcript is ready</span>{% endif %}
+            </label>
+          {% endif %}
+          <div class="dialog">
+            <button type="submit">Save clip</button>
+          </div>
+          <p id="clip-problem" class="problem" hidden></p>
+        </form>
+
+        <ul id="clip-list" class="cards"></ul>
+      </div>
+    {% endif %}
+
+    <div class="sheet-panel" data-panel="details" hidden>
+      <dl id="details" class="facts"></dl>
+    </div>
+  </section>
+
+  {# The shortcuts overlay. #}
+  <div id="shortcuts" class="overlay" hidden>
+    <div class="overlay-card">
+      <h2 class="small">Keyboard</h2>
+      <dl class="keys">
+        <dt>Space</dt><dd>Play or pause</dd>
+        <dt>B</dt><dd>Back three seconds, keep playing</dd>
+        <dt>Left Right</dt><dd>Back or forward five seconds</dd>
+        <dt>Shift + arrows</dt><dd>One second</dd>
+        <dt>Ctrl + arrows</dt><dd>Thirty seconds</dd>
+        <dt>, .</dt><dd>One frame back or forward</dd>
+        <dt>Up Down</dt><dd>Previous or next segment</dd>
+        <dt>[ ]</dt><dd>Slower or faster</dd>
+        <dt>0</dt><dd>Normal speed</dd>
+        <dt>F</dt><dd>Follow mode on, off, or resumed</dd>
+        <dt>E</dt><dd>Correct the current segment</dd>
+        <dt>Ctrl + Enter</dt><dd>Save the correction</dd>
+        <dt>Esc</dt><dd>Cancel, or close what is open</dd>
+        <dt>/</dt><dd>Search</dd>
+        <dt>Enter</dt><dd>Next match (Shift for the previous)</dd>
+        <dt>I O</dt><dd>Clip start or end at the playhead</dd>
+        <dt>S</dt><dd>Snap the clip to the current segment</dd>
+        <dt>P</dt><dd>Preview the clip</dd>
+        <dt>D</dt><dd>Details</dd>
+        <dt>?</dt><dd>This list</dd>
+      </dl>
+      <div class="dialog"><button type="button" id="close-shortcuts">Close</button></div>
+    </div>
   </div>
 
   {{ speakers|json_script:"speaker-colours" }}
   <script>
     window.VIEWER = {
       recording: "{{ recording.pk }}",
-      waveform: "{{ waveform_url }}"
+      waveform: "{{ waveform_url }}",
+      frameRate: {{ frame_rate|default:0 }},
+      hasTranscript: {% if transcript %}true{% else %}false{% endif %},
+      canPlay: {% if media_url %}true{% else %}false{% endif %},
+      clips: {% if clips_available %}true{% else %}false{% endif %},
+      batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %}
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>
-  {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
   <script src="{% static 'viewer.js' %}"></script>
+  {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
 {% endblock %}
