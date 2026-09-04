@@ -50,6 +50,15 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **Clicking the waveform seeks again.** A click and a drag were told apart by
+  how much time was between them, and on a twenty-five minute recording one
+  pixel of timeline is over a second, so every click, which always jitters a
+  pixel or two, counted as a drag and marked a clip instead of seeking. It is
+  measured in pixels now, which is the same however long the recording is.
+- **Following stops only when you have read away from the line**, and comes
+  back when you scroll to the line being spoken, or seek anywhere on purpose.
+  Any nudge of the wheel used to stop it for good unless the amber notice was
+  spotted.
 - **A marked clip can be dropped.** A selection made and then thought better
   of stayed tinted across the transcript and the timeline with no obvious way
   to be rid of it. There is a **clear** beside where the selection is shown,
