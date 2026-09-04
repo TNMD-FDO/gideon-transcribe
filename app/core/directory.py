@@ -387,6 +387,28 @@ def test_connection() -> list[dict]:
                 f"{person.get('sAMAccountName', '')} "
                 f"({person.get('userPrincipalName', '')})",
             )
+
+            # And find them the way a sign-in finds them: by sign-in name,
+            # under the configured search base. A group can hold somebody who
+            # sits outside that base, and then every one of their sign-ins is
+            # refused with "no such account" while every check above passes.
+            username = person.get("sAMAccountName", "")
+            try:
+                under_base = find_person(held, username) if username else None
+            except Unreachable as problem:
+                under_base = None
+                log.warning("the search base could not be read: %s", problem)
+            note(
+                "Find that member under the search base",
+                under_base is not None,
+                f"found under {where['search_base']}"
+                if under_base is not None
+                else (
+                    f"NOT under {where['search_base']}: this account is in the "
+                    "group but outside the search base, so every sign-in of "
+                    "theirs would be refused"
+                ),
+            )
             try:
                 found = groups_of(held, members[0])
             except Unreachable as problem:
