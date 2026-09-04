@@ -147,6 +147,15 @@ jobs:
               print(wanted, "asks before it serves.")
           CHECK
 
+      # Adapting the file proves the order of the directives. It does not
+      # prove that a browser can jump about in a recording, which needs the
+      # route actually run: a server that answers the whole file to a request
+      # for a hundred bytes plays a video and cannot scrub it, and looks from
+      # the page like a broken page.
+      - name: A browser can jump about in a recording
+        if: hashFiles('caddy/Caddyfile') != ''
+        run: ./caddy/check-ranges.sh
+
       - name: Secret scan (gitleaks)
         # The gitleaks command-line tool is MIT and needs no licence key. The
         # gitleaks GitHub Action is not used: since its version 2 it needs a
