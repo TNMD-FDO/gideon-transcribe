@@ -85,6 +85,22 @@ def as_gb(figure: int) -> str:
     return f"{figure / 1024**3:.0f} GB"
 
 
+def as_size(figure: int) -> str:
+    """A size in the unit that suits it, for a sentence somebody must trust.
+
+    The quota is in whole gigabytes and says so, but a confirmation asking
+    somebody to agree to losing three jail calls cannot tell them it is
+    removing "0 GB" and expect to be believed.
+    """
+    if figure >= 1024**3:
+        return f"{figure / 1024**3:.1f} GB"
+    if figure >= 1024**2:
+        return f"{figure / 1024**2:.0f} MB"
+    if figure >= 1024:
+        return f"{figure / 1024:.0f} KB"
+    return f"{figure} bytes"
+
+
 def check_before_upload(
     user: User, batch: Batch, size_bytes: int, files_in_batch: int
 ) -> Refused | None:
