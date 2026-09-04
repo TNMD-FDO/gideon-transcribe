@@ -19,10 +19,21 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v0.3.0, 2026-09-04
+
 ```
 Models: unchanged
 Database: migrates
 ```
+
+### Upgrading to this one
+
+The database migrates when the app starts, dropping a column that v0.2.0
+added the same day and nothing reads any more. The models are unchanged. This
+is the first upgrade that pulls the images from the registry instead of
+building them, so it should take a minute or two rather than twenty.
 
 ### Changed
 
