@@ -300,14 +300,22 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
     # the line is needed to say who is directly ahead of whom.
     speed = _service_speed()
     in_line = _runs_in_line()
+    cases_are_on = cases.folder_management_on()
 
     rows = []
     for recording in found.recordings.order_by("created"):
         job = recording.jobs.order_by("-created").first()
+        # A Recording in a Case is the Batch's, so the Batch still shows it,
+        # and it is still reachable while Cases are on. While they are off it
+        # says where it went and offers no way in, because a hidden Case is
+        # out of reach for everyone.
+        out_of_reach = bool(recording.case_id) and not cases_are_on
         rows.append(
             {
                 "id": str(recording.pk),
                 "title": recording.title,
+                "in_a_case": bool(recording.case_id),
+                "out_of_reach": out_of_reach,
                 "state": recording.media_state,
                 "playback_ready": recording.playback_ready,
                 "minutes": round((recording.duration_seconds or 0) / 60, 1),
@@ -317,12 +325,15 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "reason": recording.refusal_class,
                 "received": arriving.get(str(recording.pk), (0, 0))[0],
                 "job": _job_state(job, speed, in_line, request.user),
-                "has_transcript": hasattr(recording, "transcript"),
-                "can_retry": _can_retry(recording, job),
+                "has_transcript": (
+                    hasattr(recording, "transcript") and not out_of_reach
+                ),
+                "can_retry": _can_retry(recording, job) and not out_of_reach,
                 "can_process_again": (
                     hasattr(recording, "transcript")
                     and job is not None
                     and not job.is_live
+                    and not out_of_reach
                 ),
                 "reprocessing": found.is_reprocessing,
             }

@@ -198,3 +198,55 @@ def test_nothing_is_deleted_while_it_is_off(person, a_case):
     # The sweeper still runs, and still removes only what no row claims.
     assert sweeping.folders_without_a_recording() == 0
     assert recording.folder.exists()
+
+
+# What is still the Workspace's, and what has stopped being it -------------------
+
+
+def a_transcript(recording):
+    from core.jobs import Segment, Transcript
+
+    transcript = Transcript.objects.create(recording=recording, language="en")
+    Segment.objects.create(
+        transcript=transcript, start=0, end=4, text="Good morning.", speaker="Rowe"
+    )
+    return transcript
+
+
+def test_the_sign_out_download_leaves_a_case_alone(person, a_case, client):
+    import io
+    import zipfile
+
+    workspace = a_recording(person, size=8)
+    a_transcript(workspace)
+    in_a_case = a_recording(person, case=a_case, size=8)
+    a_transcript(in_a_case)
+
+    signed_in(client, person)
+    answer = client.get("/download/transcripts")
+    assert answer.status_code == 200
+
+    inside = zipfile.ZipFile(io.BytesIO(answer.getvalue())).namelist()
+    # One transcript in the zip, and it is the one still in the Workspace: what
+    # is in a case is kept, so it is not among the things a person is offered
+    # before they lose them.
+    assert len([one for one in inside if one.endswith(".txt")]) == 1
+    assert in_a_case is not None
+
+
+def test_the_clips_page_is_the_workspaces_own(person, a_case, client):
+    from core.clips import Clip
+
+    in_a_case = a_recording(person, case=a_case)
+    Clip.objects.create(
+        recording=in_a_case, user=person, title="Clip in a case", start=0, end=5
+    )
+    workspace = a_recording(person)
+    Clip.objects.create(
+        recording=workspace, user=person, title="Clip in the session", start=0, end=5
+    )
+
+    signed_in(client, person)
+    page = client.get("/clips").content.decode()
+    assert "Clip in the session" in page
+    assert "Clip in a case" not in page

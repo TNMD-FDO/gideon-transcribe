@@ -59,6 +59,10 @@
 
       var about = [];
       if (one.minutes) { about.push(one.minutes + " minutes"); }
+      // A recording kept in a case that is out of reach says where it went
+      // and offers no way in, because a hidden case is hidden from everyone.
+      if (one.out_of_reach) { about.push("in a case (cases are off)"); }
+      else if (one.in_a_case) { about.push("in a case"); }
       if (one.two_channel_call) {
         about.push("Two-channel call: " + one.sides + " sides, each transcribed on its own");
       }
