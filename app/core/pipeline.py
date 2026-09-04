@@ -81,10 +81,17 @@ def _check(recording: Recording) -> None:
 
     recording.sha256 = media.hash_file(path)
 
-    # The same file twice by the same person. Other people's files are never
-    # looked at, so nobody learns what anybody else has uploaded.
+    # The same file twice in the same place. Other people's files are never
+    # looked at, so nobody learns what anybody else has uploaded, and the
+    # refusal applies per destination: the same file in another Case is
+    # allowed, because a Case is a different place to keep it.
+    same_place = (
+        Recording.objects.filter(case=recording.case)
+        if recording.case_id
+        else Recording.objects.filter(user=recording.user, case__isnull=True)
+    )
     already = (
-        Recording.objects.filter(user=recording.user, sha256=recording.sha256)
+        same_place.filter(sha256=recording.sha256)
         .exclude(pk=recording.pk)
         .exclude(media_state=MediaState.REJECTED)
         .first()

@@ -358,10 +358,17 @@ def word(recording: Recording, exported_by: str) -> bytes:
     said.runs[0].font.size = Pt(13)
     document.add_paragraph()
 
+    # The Case, when there is one. The upload date stays the only date on the
+    # cover; a Case has no date of its own that belongs here.
+    in_a_case = (
+        [("Case", recording.case.name)] if getattr(recording, "case", None) else []
+    )
+
     _facts(
         document,
         [
             ("Recording", recording.original_filename),
+            *in_a_case,
             ("Length", length_of(recording)),
             ("Uploaded", f"{recording.created:{DAY}} by {recording.user.username}"),
             (

@@ -38,3 +38,13 @@ os.environ.setdefault("POSTGRES_DB", "postgres")
 os.environ.setdefault("APP_DATA_DIR", tempfile.mkdtemp(prefix="transcribe-test-data-"))
 
 from transcribe.settings import *  # noqa: E402, F403
+
+# Whitenoise's manifest storage looks every static file up in a manifest that
+# `collectstatic` writes, and a test run has not run it, so every page that
+# loads a stylesheet would fail on the file rather than on what it is testing.
+# The plain storage serves the same files without the manifest. Nothing else
+# about the settings changes.
+STORAGES = {  # noqa: F405
+    **STORAGES,  # noqa: F405
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}

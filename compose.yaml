@@ -45,6 +45,7 @@ services:
       # and Clips straight off it. The uploaded bytes are in the same tree and
       # are never served, which the app's own answer enforces.
       - "${APP_DATA_DIR}/scratch:/srv/scratch:ro"
+      - "${APP_DATA_DIR}/cases:/srv/cases:ro"
       # Caddy keeps nothing that matters, but it wants somewhere to write.
       - caddy-data:/data
       - caddy-config:/config

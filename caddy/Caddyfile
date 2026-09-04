@@ -75,6 +75,22 @@ https://{$APP_HOSTNAME}:443 {
 		}
 	}
 
+	# The same thing for a Recording kept in a Case, which lives under
+	# `cases/` and not under `scratch/`. Two roots and not one, because a
+	# single root over the whole App data folder would put `postgres/` and
+	# `uploads/` inside a file_server's reach; Caddy is given the two folders
+	# it must serve and nothing else.
+	handle /case-media/* {
+		route {
+			forward_auth app:8000 {
+				uri /media-auth
+			}
+			root * /srv/cases
+			uri strip_prefix /case-media
+			file_server
+		}
+	}
+
 	handle {
 		request_body {
 			max_size 64MB

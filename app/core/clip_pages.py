@@ -22,6 +22,7 @@ from django.views.decorators.http import require_POST
 
 from core import audit, clip_work, settings_store
 from core.clips import SHORTEST_SECONDS, Clip, RenderState, next_title
+from core.media_access import media_root
 from core.recordings import Recording
 
 log = logging.getLogger("transcribe.clips")
@@ -75,8 +76,7 @@ def _row(clip: Clip) -> dict:
             else "Not yet"
         ),
         "is_video": clip.is_video,
-        "url": f"/media/{clip.recording.user_id}/{clip.recording_id}/clips/"
-        f"{clip.pk}{clip.suffix}",
+        "url": f"{media_root(clip.recording)}/clips/{clip.pk}{clip.suffix}",
     }
 
 

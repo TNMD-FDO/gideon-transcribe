@@ -115,33 +115,36 @@ jobs:
           config = json.load(open("/tmp/caddy.json"))
           routes = config["apps"]["http"]["servers"]["srv0"]["routes"]
 
-          def handlers(routes, found):
+          # Both roots: the Workspace's under scratch/ and a Case's under
+          # cases/. Each has to ask before it serves, and a route that stops
+          # existing has to be noticed, so both are required to be found.
+          WANTED = ["/media/*", "/case-media/*"]
+
+          def handlers(routes, wanted, found=False):
               for route in routes:
-                  media = any(
-                      "/media/*" in one.get("path", [])
+                  mine = any(
+                      wanted in one.get("path", [])
                       for one in route.get("match", [])
                   )
                   for handler in route.get("handle", []):
                       if handler.get("handler") == "subroute":
-                          handlers(handler["routes"], found or media)
-                      elif found or media:
+                          yield from handlers(
+                              handler["routes"], wanted, found or mine
+                          )
+                      elif found or mine:
                           yield handler
-                  if False:
-                      yield None
 
-          order = [one.get("handler") for one in handlers(routes, False)]
-          print("the media route runs:", order)
+          for wanted in WANTED:
+              order = [one.get("handler") for one in handlers(routes, wanted)]
+              print(wanted, "runs:", order)
 
-          if "file_server" not in order:
-              sys.exit("the media route serves no files at all")
-          asks = order.index("reverse_proxy") if "reverse_proxy" in order else -1
-          serves = order.index("file_server")
-          if asks < 0 or asks > serves:
-              sys.exit(
-                  "the media route serves files before it asks the app: "
-                  f"{order}"
-              )
-          print("the media route asks before it serves.")
+              if "file_server" not in order:
+                  sys.exit(f"{wanted} serves no files at all")
+              asks = order.index("reverse_proxy") if "reverse_proxy" in order else -1
+              serves = order.index("file_server")
+              if asks < 0 or asks > serves:
+                  sys.exit(f"{wanted} serves files before it asks the app: {order}")
+              print(wanted, "asks before it serves.")
           CHECK
 
       - name: Secret scan (gitleaks)
