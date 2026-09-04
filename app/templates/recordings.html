@@ -1,58 +1,78 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Your recordings  <script src="{% static 'recordings.js' %}"></script>
-{% endblock %}
+{% block title %}{% if someone_elses %}{{ someone_elses.username }}'s recordings{% else %}Your recordings{% endif %}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
 {% block content %}
-  <p class="notice">{{ standing_line }}</p>
-  {% if storage_warning %}<p class="notice">{{ storage_warning }}</p>{% endif %}
-
   {% if someone_elses %}
-    <p class="banner">Viewing {{ someone_elses.username }}'s Workspace as an Admin</p>
-  {% endif %}
-
-  <h1>{% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}Your recordings{% endif %}</h1>
-
-  {% if not someone_elses %}
-    <p><a href="{% url 'upload' %}"><button type="button">Upload recordings</button></a></p>
-  {% endif %}
-
-  {% if recordings %}
-    <ul class="cards">
-      {% for recording in recordings %}
-        <li class="card">
-          <strong>{{ recording.title }}</strong>
-          <p class="quiet">
-            {{ recording.original_filename }}
-            {% if recording.duration_seconds %}
-              · {{ recording.duration_seconds|floatformat:0 }} seconds
-            {% endif %}
-            {% if recording.is_two_channel_call %}
-              · Two-channel call: {{ recording.sides.count }} sides, each transcribed on its own
-            {% endif %}
-          </p>
-          <p class="quiet">
-            {% if recording.transcript %}
-              <a href="{% url 'viewer' recording.pk %}">Open</a>
-            {% elif recording.media_state == "rejected" %}
-              Refused: {{ recording.failure_message }}
-            {% elif recording.media_state == "failed" %}
-              Failed: {{ recording.failure_message }}
-            {% else %}
-              {{ recording.get_media_state_display }}
-            {% endif %}
-            &middot;
-            <button type="button" class="plain delete"
-                    data-recording="{{ recording.pk }}"
-                    data-title="{{ recording.title }}"
-                    data-clips="{{ recording.clips.count }}">Delete</button>
-          </p>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="notice">
-      Nothing here yet. Uploaded recordings appear here while you are signed in.
+    <p class="banner">
+      Viewing <b>{{ someone_elses.username }}</b>'s Workspace as an Admin.
+      This access is recorded in the audit log.
     </p>
   {% endif %}
+
+  <div style="max-width: 60rem">
+    <div class="row">
+      <h1 class="grow">
+        {% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}Your recordings{% endif %}
+      </h1>
+      {% if not someone_elses %}
+        <a href="{% url 'upload' %}"><button type="button" class="primary">Upload recordings</button></a>
+      {% endif %}
+    </div>
+
+    <p class="notice">{{ standing_line }}</p>
+    {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
+
+    {% if recordings %}
+      <ul class="cards">
+        {% for recording in recordings %}
+          <li>
+            <div class="row">
+              <b class="grow">{{ recording.title }}</b>
+              {% if recording.transcript %}
+                <a href="{% url 'viewer' recording.pk %}">
+                  <button type="button" class="primary small">Open</button>
+                </a>
+              {% elif recording.media_state == "rejected" %}
+                <span class="pill danger">Refused</span>
+              {% elif recording.media_state == "failed" %}
+                <span class="pill danger">Failed</span>
+              {% else %}
+                <span class="pill">{{ recording.get_media_state_display }}</span>
+              {% endif %}
+              <button type="button" class="ghost small danger delete"
+                      data-recording="{{ recording.pk }}"
+                      data-title="{{ recording.title }}"
+                      data-clips="{{ recording.clips.count }}">Delete</button>
+            </div>
+            <p class="muted small" style="margin: 4px 0 0">
+              {{ recording.original_filename }}
+              {% if recording.duration_seconds %}
+                &middot; {{ recording.duration_seconds|floatformat:0 }} seconds
+              {% endif %}
+              {% if recording.is_two_channel_call %}
+                &middot; two-channel call, {{ recording.sides.count }} sides, each transcribed on its own
+              {% endif %}
+              {% if recording.clips.count %}
+                &middot; {{ recording.clips.count }} clip{{ recording.clips.count|pluralize }}
+              {% endif %}
+            </p>
+            {% if recording.failure_message %}
+              <p class="small" style="margin: 4px 0 0">{{ recording.failure_message }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="card">
+        <b>Nothing here yet.</b>
+        <p class="muted small" style="margin: 4px 0 0">
+          Uploaded recordings appear here while you are signed in.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+
   <script src="{% static 'recordings.js' %}"></script>
 {% endblock %}

@@ -42,6 +42,7 @@ def recordings(request: HttpRequest) -> HttpResponse:
         request,
         "recordings.html",
         {
+            "page": "recordings",
             "recordings": request.user.recordings.order_by("-created"),
             "standing_line": standing_line(),
             "storage_warning": uploads.storage_warning(request.user),
@@ -60,6 +61,7 @@ def upload(request: HttpRequest) -> HttpResponse:
         request,
         "upload.html",
         {
+            "page": "upload",
             "standing_line": standing_line(),
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
@@ -199,6 +201,7 @@ def batch(request: HttpRequest, batch_id) -> HttpResponse:
         request,
         "batch.html",
         {
+            "page": "upload",
             "batch": found,
             "standing_line": standing_line(),
         },

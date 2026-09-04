@@ -23,14 +23,16 @@
     var services = document.getElementById("services");
     if (!state.services.length) {
       services.innerHTML =
-        "<li class='card quiet'>No service answered. Something is very " +
-        "wrong, or this page could not reach the network.</li>";
+        "<p class='muted small'>No service answered. Something is very wrong, " +
+        "or this page could not reach the network.</p>";
     } else {
-      services.innerHTML = state.services.map(function (one) {
-        return "<li class='card'><strong>" + escape(one.name) + "</strong> " +
-          escape(one.state) + " <span class='quiet'>" + escape(one.says) +
-          "</span></li>";
-      }).join("");
+      services.innerHTML = "<dl class='kv'>" + state.services.map(function (one) {
+        var mark = one.state === "healthy"
+          ? "<span class='pill ok'>healthy</span>"
+          : "<span class='pill danger'>" + escape(one.state) + "</span>";
+        return "<dt>" + escape(one.name) + "</dt><dd>" + mark +
+          " <span class='muted small'>" + escape(one.says) + "</span></dd>";
+      }).join("") + "</dl>";
     }
 
     var service = state.service;
@@ -76,7 +78,8 @@
     storage.textContent = state.storage.free + " free (the floor is " +
       state.storage.floor + ")";
     storage.className = state.storage.colour === "plain"
-      ? "" : "notice " + state.storage.colour;
+      ? ""
+      : "notice " + (state.storage.colour === "red" ? "danger" : "warn");
 
     document.getElementById("workspaces").textContent =
       "Workspaces: " + state.workspaces.open + " open, " +
@@ -95,7 +98,7 @@
         : (told.reachable
             ? "Reachable. Last check: " + told.last_check
             : "Unreachable: " + told.says);
-      directory.className = told.on && !told.reachable ? "notice" : "";
+      directory.className = told.on && !told.reachable ? "notice danger" : "";
     }
 
     facts("versions", [

@@ -3,27 +3,39 @@
 
 {% block panel %}
   <h1>Installation</h1>
-  <p class="quiet">
+  <p class="lead">
     What this server was installed with, for checking. None of it can be
     changed here: change the environment file on the server and restart.
   </p>
 
-  <dl class="facts">
-    {% for name, value in facts %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}
-    <dt>Free disk space</dt><dd>{{ free_disk }}</dd>
-  </dl>
+  <div class="grid2">
+    <div class="card">
+      <h2>This server</h2>
+      <dl class="kv">
+        {% for name, value in facts %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}
+        <dt>Free disk space</dt><dd>{{ free_disk }}</dd>
+      </dl>
+    </div>
 
-  <h2 class="small">Secrets</h2>
-  <p class="quiet">Shown as set or missing. No value is ever shown here.</p>
-  <dl class="facts">
-    {% for name, state in secrets %}<dt>{{ name }}</dt><dd>{{ state }}</dd>{% endfor %}
-  </dl>
+    <div class="card">
+      <h2>Secrets</h2>
+      <p class="muted small">Shown as set or missing. No value is ever shown here.</p>
+      <dl class="kv">
+        {% for name, state in secrets %}
+          <dt>{{ name }}</dt>
+          <dd>{% if state == "set" %}<span class="pill ok">set</span>{% else %}<span class="pill danger">missing</span>{% endif %}</dd>
+        {% endfor %}
+      </dl>
+    </div>
 
-  <h2 class="small">How this office gets releases</h2>
-  <p class="quiet">
-    From the repository TNMD-FDO/gideon-transcribe on GitHub, by fetch and
-    checkout at a release tag during an upgrade, run by an Admin on this
-    server. The app never checks for updates and never reaches any service
-    outside this office while it runs.
-  </p>
+    <div class="card">
+      <h2>How this office gets releases</h2>
+      <p class="muted small">
+        From the repository <code>TNMD-FDO/gideon-transcribe</code> on GitHub,
+        by fetch and checkout at a release tag during an upgrade, run by an
+        Admin on this server. The app never checks for updates and never
+        reaches any service outside this office while it runs.
+      </p>
+    </div>
+  </div>
 {% endblock %}

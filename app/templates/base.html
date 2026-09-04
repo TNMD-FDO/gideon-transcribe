@@ -5,259 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Gideon Transcribe{% endblock %}</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      --ink: #1a1a1a;
-      --paper: #fbfbfa;
-      --line: #d8d6d1;
-      --quiet: #5c5a55;
-      --wrong: #8a1f11;
-    }
-    :root[data-theme="dark"] {
-      --ink: #e8e6e1;
-      --paper: #17181a;
-      --line: #34363a;
-      --quiet: #a6a29a;
-      --wrong: #ef8b7c;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --ink: #e8e6e1;
-        --paper: #17181a;
-        --line: #34363a;
-        --quiet: #a6a29a;
-        --wrong: #ef8b7c;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--paper);
-      color: var(--ink);
-      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    header {
-      border-bottom: 1px solid var(--line);
-      padding: 0.9rem 1.25rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 1rem;
-    }
-    header .name { font-weight: 600; }
-    header .who { color: var(--quiet); font-size: 0.9rem; }
-    main { max-width: 40rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-    h1 { font-size: 1.4rem; margin: 0 0 1.25rem; }
-    label { display: block; margin: 1rem 0 0.3rem; font-weight: 500; }
-    input[type="text"], input[type="password"] {
-      width: 100%;
-      padding: 0.55rem 0.65rem;
-      font: inherit;
-      color: var(--ink);
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-    }
-    button {
-      margin-top: 1.5rem;
-      padding: 0.55rem 1.1rem;
-      font: inherit;
-      font-weight: 500;
-      color: var(--paper);
-      background: var(--ink);
-      border: 0;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .problem {
-      margin: 1rem 0 0;
-      padding: 0.7rem 0.85rem;
-      border-left: 3px solid var(--wrong);
-      color: var(--wrong);
-    }
-    .notice {
-      margin: 0 0 1.5rem;
-      padding: 0.7rem 0.85rem;
-      border-left: 3px solid var(--line);
-      color: var(--quiet);
-    }
-    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.25rem; }
-    dt { color: var(--quiet); }
-    dd { margin: 0; }
-    a { color: inherit; }
-    .quiet { color: var(--quiet); font-size: 0.9rem; margin: 0.25rem 0; }
-    .link { text-decoration: underline; cursor: pointer; }
-    button.plain {
-      background: none;
-      color: var(--quiet);
-      border: 1px solid var(--line);
-      margin-left: 0.5rem;
-    }
-    .steps { list-style: none; margin: 0; padding: 0; }
-    .steps h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
-    .drop {
-      border: 2px dashed var(--line);
-      border-radius: 6px;
-      padding: 1.5rem;
-      text-align: center;
-    }
-    .drop.over { border-color: var(--ink); }
-    .cards { list-style: none; margin: 1.25rem 0; padding: 0; }
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 0.85rem 1rem;
-      margin-bottom: 0.6rem;
-    }
-    .card.refused { border-color: var(--wrong); }
-    .card input[type="text"] { margin-bottom: 0.35rem; }
-    .tick { display: block; margin: 1.25rem 0 0.25rem; font-weight: 500; }
-    .tick input { margin-right: 0.4rem; }
-    .indent { margin-left: 1.5rem; }
-    select, textarea {
-      width: 100%;
-      padding: 0.5rem 0.6rem;
-      font: inherit;
-      color: var(--ink);
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-    }
-    input[type="number"] { width: 5rem; padding: 0.4rem; font: inherit; }
-    table { width: 100%; border-collapse: collapse; }
-    td { padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid var(--line); }
-    summary { cursor: pointer; margin-top: 1.25rem; font-weight: 500; }
-    main.wide { max-width: none; padding: 1rem 1.25rem 3rem; }
-    .banner {
-      margin: 0 0 1rem;
-      padding: 0.6rem 0.9rem;
-      background: var(--line);
-      border-radius: 4px;
-      font-weight: 500;
-    }
-    .desk { display: grid; grid-template-columns: 15rem 1fr; gap: 1.5rem; }
-    .sidebar { border-right: 1px solid var(--line); padding-right: 1.25rem; }
-    .sidebar h2.small { font-size: 0.85rem; text-transform: uppercase;
-      letter-spacing: 0.04em; color: var(--quiet); margin: 1.5rem 0 0.5rem; }
-    .reading { max-width: 44rem; }
-    .viewer-head h1 { margin: 0.35rem 0; }
-    .marks { margin: 0 0 1rem; }
-    .pill {
-      display: inline-block;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 0.1rem 0.6rem;
-      font-size: 0.85rem;
-      color: var(--quiet);
-      margin-right: 0.35rem;
-    }
-    .dock { border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem;
-      margin-bottom: 1.5rem; }
-    .dock video { width: 100%; max-height: 22rem; background: #000; }
-    .dock audio { width: 100%; }
-    #waveform { width: 100%; display: block; margin-top: 0.5rem; }
-    .transport { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
-      margin-top: 0.6rem; }
-    .transport button { margin: 0; padding: 0.35rem 0.7rem; }
-    .transport select, .transport input[type="range"] { width: auto; }
-    .transcript { list-style: none; margin: 0; padding: 0; }
-    .segment { display: grid; grid-template-columns: 4rem 1fr; gap: 0.75rem;
-      padding: 0.5rem 0.6rem; border-left: 3px solid transparent; cursor: pointer; }
-    .segment:hover { background: color-mix(in srgb, var(--line) 35%, transparent); }
-    .segment.here { border-left-color: var(--speaker, var(--ink));
-      background: color-mix(in srgb, var(--line) 55%, transparent); }
-    .segment .at { color: var(--quiet); font-variant-numeric: tabular-nums;
-      font-size: 0.85rem; }
-    .segment .who { color: var(--speaker, var(--ink)); font-weight: 600;
-      font-size: 0.85rem; }
-    .segment .said { margin: 0.1rem 0 0; }
-    .segment .said .word.now { text-decoration: underline; }
-    .segment mark { background: color-mix(in srgb, var(--speaker, #999) 30%, transparent);
-      color: inherit; }
-    .segment textarea { width: 100%; }
-    .chips { list-style: none; margin: 0.5rem 0; padding: 0; }
-    .chip { display: inline-block; border: 1px solid var(--speaker, var(--line));
-      color: var(--speaker, var(--ink)); border-radius: 999px;
-      padding: 0.1rem 0.65rem; margin: 0 0.3rem 0.3rem 0; cursor: pointer;
-      font-size: 0.9rem; }
-    .chip.over { background: var(--speaker); color: var(--paper); }
-    .keys { grid-template-columns: 4.5rem 1fr; font-size: 0.85rem; }
-    .exports { list-style: none; margin: 0.4rem 0; padding: 0;
-      font-size: 0.9rem; }
-    .exports li { margin: 0.2rem 0; }
-    .dialog { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-    #idle-warning { display: flex; align-items: center; gap: 0.75rem;
-      margin: 0 1rem; }
-    .panel { display: grid; grid-template-columns: 14rem 1fr; gap: 2rem; }
-    .rail h2 { margin: 1rem 0 0.3rem; }
-    .rail ul { list-style: none; margin: 0; padding: 0; }
-    .rail li { padding: 0.15rem 0; }
-    .rail li.here > a { font-weight: 600; }
-    .rail .waiting { display: inline-block; min-width: 1.2rem; text-align: center;
-      border-radius: 999px; background: var(--line); font-size: 0.75rem; }
-    .panel-page { min-width: 0; }
-    .settings { display: grid; grid-template-columns: 20rem 1fr; gap: 1rem 1.5rem;
-      align-items: start; }
-    .settings dt { padding-top: 0.2rem; }
-    .settings dt .quiet { display: block; font-weight: 400; font-size: 0.85rem; }
-    .settings dd { margin: 0; }
-    .settings textarea { width: 100%; }
-    .facts { display: grid; grid-template-columns: 16rem 1fr; gap: 0.2rem 1rem; }
-    .facts dt { font-weight: 600; }
-    .facts dd { margin: 0; }
-    .fixed { font-size: 0.85rem; }
-    .tray { position: sticky; bottom: 0; border-top: 2px solid var(--ink);
-      background: var(--paper); padding: 0.75rem 1rem; margin-top: 2rem; }
-    .tray ul { list-style: none; margin: 0.3rem 0; padding: 0; font-size: 0.9rem; }
-    .rows { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .rows th, .rows td { text-align: left; padding: 0.3rem 0.5rem;
-      border-bottom: 1px solid var(--line); vertical-align: top; }
-    .rows tr.actions td { border-bottom: 2px solid var(--line);
-      padding-bottom: 0.75rem; }
-    .filters { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
-      align-items: end; margin: 1rem 0; }
-    .filters label { display: flex; flex-direction: column; }
-    .clip-tool { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: end;
-      margin: 0.5rem 0 1rem; }
-    .clip-tool label { display: flex; flex-direction: column; margin: 0; }
-    #clip-form label { display: block; margin: 0.4rem 0; font-weight: 400; }
-    #clip-form textarea, #clip-form input[type=text] { width: 100%; }
-    button.tiny { margin: 0 0 0 0.4rem; padding: 0.05rem 0.4rem;
-      font-size: 0.75rem; }
-    .timeline { position: relative; margin: 0.75rem 0 1rem;
-      border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
-      cursor: crosshair; user-select: none; }
-    .timeline canvas { display: block; width: 100%; }
-    #range { position: absolute; top: 0; bottom: 0;
-      background: color-mix(in srgb, var(--ink) 18%, transparent);
-      border-left: 2px solid var(--ink); border-right: 2px solid var(--ink);
-      pointer-events: none; }
-    #playhead { position: absolute; top: 0; bottom: 0; width: 2px; left: 0;
-      background: var(--ink); pointer-events: none; }
-    .segment.in-range { background: color-mix(in srgb, var(--ink) 7%, transparent); }
-    .segment.match-here { outline: 2px solid var(--ink); outline-offset: 2px; }
-    .segment .at { display: block; margin: 0; padding: 0; text-align: left; }
-    .row-tools { float: right; visibility: hidden; }
-    .segment:hover .row-tools, .segment.here .row-tools { visibility: visible; }
-    body.no-speakers .segment .who { display: none; }
-    .wide-pill { display: block; margin: 0.5rem 0; }
-    .sheet { position: sticky; bottom: 0; z-index: 5;
-      border-top: 2px solid var(--ink); background: var(--paper);
-      padding: 0.75rem 1.25rem 1rem; max-height: 60vh; overflow: auto; }
-    .sheet-tabs { display: flex; gap: 1rem; align-items: baseline;
-      border-bottom: 1px solid var(--line); padding-bottom: 0.4rem;
-      margin-bottom: 0.75rem; }
-    .sheet-tab.here { font-weight: 600; text-decoration: underline; }
-    .sheet-close { margin-left: auto; }
-    .overlay { position: fixed; inset: 0; z-index: 10; display: grid;
-      place-items: center; background: rgba(0, 0, 0, 0.45); }
-    .overlay-card { background: var(--paper); color: var(--ink);
-      border-radius: 8px; padding: 1.5rem; max-width: 34rem;
-      max-height: 80vh; overflow: auto; }
-    .stage .preparing { border: 1px dashed var(--line); border-radius: 4px;
-      padding: 1rem; }
-  </style>
+  <link rel="stylesheet" href="{% static 'app.css' %}">
   <script>
     // Before anything paints, so a chosen theme does not flash the other one.
     try {
@@ -266,35 +14,46 @@
     } catch (ignored) { /* a browser that forbids storage keeps the system theme */ }
   </script>
 </head>
-<body>
-  <header>
-    <span class="name">Gideon Transcribe</span>
+<body class="{% block body_class %}{% endblock %}">
+  <nav class="nav">
+    <span class="brand"><i></i> Gideon Transcribe</span>
     {% if user.is_authenticated %}
+      <span class="links">
+        <a href="{% url 'home' %}"{% if page == "recordings" %} class="on"{% endif %}>Recordings</a>
+        <a href="{% url 'upload' %}"{% if page == "upload" %} class="on"{% endif %}>Upload</a>
+        {% if clips_available %}
+          <a href="{% url 'clips' %}"{% if page == "clips" %} class="on"{% endif %}>Clips</a>
+        {% endif %}
+        {% if user.is_admin %}
+          <a href="{% url 'panel' %}"{% if page == "panel" %} class="on"{% endif %}>Panel</a>
+        {% endif %}
+      </span>
       <span class="who">
-        <a href="{% url 'home' %}">Recordings</a>
-        &middot; <a href="{% url 'upload' %}">Upload</a>
-        {% if clips_available %}&middot; <a href="{% url 'clips' %}">Clips</a>{% endif %}
-        {% if user.is_admin %}&middot; <a href="{% url 'panel' %}">Panel</a>{% endif %}
-        &middot; {{ user.shown_name }}{% if user.is_admin %} (Admin){% endif %}
+        {{ user.shown_name }}{% if user.is_admin %} &middot; Admin{% endif %}
         &middot; <a href="{% url 'sign-out' %}">Sign out</a>
+        <button type="button" class="ghost tiny" id="theme" title="Light or dark">&#9789;</button>
       </span>
     {% endif %}
-  </header>
+  </nav>
+
   {% if user.is_authenticated %}
-    <div id="idle-warning" class="notice" hidden>
+    <div id="idle-warning" class="banner" hidden>
       <span id="idle-words">You will be signed out in 15 minutes and your recordings and transcripts removed.</span>
-      <button type="button" id="stay">Stay signed in</button>
+      <button type="button" class="tiny" id="stay">Stay signed in</button>
     </div>
     <script>
       window.IDLE_SECONDS = {{ idle_timeout_seconds|default:0 }};
     </script>
     <script src="{% static 'idle.js' %}"></script>
   {% endif %}
-  <main class="{% block main_class %}{% endblock %}">
+
+  <main class="{% block main_class %}narrow{% endblock %}">
     {% if messages %}
       {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
     {% endif %}
     {% block content %}{% endblock %}
   </main>
+
+  <script src="{% static 'theme.js' %}"></script>
 </body>
 </html>

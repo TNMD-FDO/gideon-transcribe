@@ -350,6 +350,7 @@ def clips_page(request: HttpRequest) -> HttpResponse:
         request,
         "clips.html",
         {
+            "page": "clips",
             "groups": groups,
             "total": f"{total / 1024 / 1024:.1f} MB",
             "any_ready": any(

@@ -4,33 +4,34 @@
 {% block content %}
   <h1>Sign out</h1>
 
-  {% for line in lines %}
-    <p{% if forloop.first %} class="notice"{% else %} class="quiet"{% endif %}>{{ line }}</p>
-  {% endfor %}
+  <div class="card">
+    {% for line in lines %}
+      <p{% if forloop.first %} class="lead" style="margin-bottom: 6px"{% else %} class="muted small"{% endif %}>{{ line }}</p>
+    {% endfor %}
 
-  {% if counts.recordings %}
-    <p class="quiet">
-      A download is built when you ask for it. Take what you want to keep
-      before you sign out.
-    </p>
-  {% endif %}
+    {% if counts.recordings %}
+      <p class="muted small">
+        A download is built when you ask for it. Take what you want to keep
+        before you sign out; there is no way back afterwards.
+      </p>
+    {% endif %}
 
-  <form method="post" class="dialog">
-    {% csrf_token %}
-    {% if counts.clips_not_downloaded %}
-      <a href="{% url 'download-clips' %}">
-        <button type="button">Download clips</button>
-      </a>
-    {% endif %}
-    {% if counts.transcripts %}
-      <a href="{% url 'workspace-download' 'transcripts' %}">
-        <button type="button">Download all transcripts</button>
-      </a>
-      <a href="{% url 'workspace-download' 'everything' %}">
-        <button type="button">Download everything</button>
-      </a>
-    {% endif %}
-    <a href="{% url 'home' %}"><button type="button" class="plain">Cancel</button></a>
-    <button type="submit">Sign out</button>
-  </form>
+    <form method="post" class="dialog">
+      {% csrf_token %}
+      {% if counts.clips_not_downloaded %}
+        <a href="{% url 'download-clips' %}"><button type="button">Download clips</button></a>
+      {% endif %}
+      {% if counts.transcripts %}
+        <a href="{% url 'workspace-download' 'transcripts' %}">
+          <button type="button">Download all transcripts</button>
+        </a>
+        <a href="{% url 'workspace-download' 'everything' %}">
+          <button type="button">Download everything</button>
+        </a>
+      {% endif %}
+      <span class="grow"></span>
+      <a href="{% url 'home' %}"><button type="button" class="ghost">Cancel</button></a>
+      <button type="submit" class="primary">Sign out</button>
+    </form>
+  </div>
 {% endblock %}
