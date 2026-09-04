@@ -154,7 +154,7 @@ jobs:
       # the page like a broken page.
       - name: A browser can jump about in a recording
         if: hashFiles('caddy/Caddyfile') != ''
-        run: ./caddy/check-ranges.sh
+        run: bash ./caddy/check-ranges.sh
 
       - name: Secret scan (gitleaks)
         # The gitleaks command-line tool is MIT and needs no licence key. The
