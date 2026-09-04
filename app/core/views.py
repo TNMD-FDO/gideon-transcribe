@@ -9,7 +9,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from core import signin
+from core import lifecycle, signin
 
 log = logging.getLogger("transcribe.health")
 
@@ -64,5 +64,21 @@ def sign_in(request: HttpRequest) -> HttpResponse:
 
 
 def sign_out(request: HttpRequest) -> HttpResponse:
+    """Say what signing out removes, and offer the two downloads first.
+
+    Signing out is the moment everything goes, so it asks rather than acts:
+    the page names the counts, offers the downloads, and only the button
+    signs the person out.
+    """
+    if request.method != "POST":
+        return render(
+            request,
+            "sign-out.html",
+            {
+                "lines": lifecycle.sign_out_lines(request.user),
+                "counts": lifecycle.counts(request.user),
+            },
+        )
+
     signin.sign_out(request)
     return redirect(reverse("sign-in"))
