@@ -1,0 +1,164 @@
+name: Release
+
+# What turns a tag into something another office can install.
+#
+# Two images are built here and pushed to ghcr.io, and the tag becomes a
+# GitHub Release whose notes are that version's section of CHANGELOG.md. A
+# Release is the only thing an installer ever installs or upgrades to.
+#
+# Nothing here is required for the app to run. An office that cannot reach
+# ghcr.io builds both images on its own server, because compose.yaml carries
+# `image:` and `build:` for both and no pull policy: Compose pulls first and
+# builds from source when the pull finds nothing. That is the fallback, and it
+# is the path this office used before it published anything.
+#
+# No third-party actions. Only actions/checkout, which is GitHub's own;
+# everything else is docker and gh, both already on the runner. This workflow
+# holds a token that can write packages and releases, and every action it used
+# would be another party holding it.
+#
+# The runner's constraints, each of which has cost somebody a day:
+#
+#   - The disk clean-up comes first. A standard hosted runner guarantees only
+#     14 GB free, and the WhisperX image with CUDA and PyTorch does not fit in
+#     that. Ten to thirty gigabytes come back from deleting preinstalled tools
+#     nothing here uses.
+#   - The CUDA and PyTorch layer is kept apart from the WhisperX layer in the
+#     service's Dockerfile. No single layer may exceed 10 GB; there is no
+#     documented limit on a whole image, only on one layer of it.
+#   - The push has its own timeout, so one that hangs fails in minutes rather
+#     than holding a runner for six hours.
+#
+# Larger runners need the Team plan and are billed by the minute, so they are
+# not available to this organisation.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    strategy:
+      # One at a time. Two of these on one runner would race for the same
+      # disk, and the disk is the thing in short supply.
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        include:
+          - name: app
+            context: ./app
+            image: ghcr.io/tnmd-fdo/gideon-transcribe-app
+          - name: whisperx
+            context: ./whisperx-service
+            image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      # First, before anything is pulled or built.
+      - name: Make room on the runner
+        run: |
+          echo "Before:"
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost \
+            /usr/local/lib/android "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}"
+          docker image prune --all --force >/dev/null 2>&1 || true
+          echo "After:"
+          df -h / | tail -1
+
+      - name: Sign in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build ${{ matrix.name }}
+        timeout-minutes: 90
+        run: |
+          # The Release tag, never `latest`. Compose always pulls `latest`,
+          # even under the missing pull policy, which would quietly replace a
+          # pinned image on somebody's server.
+          docker build \
+            --tag "${{ matrix.image }}:${{ github.ref_name }}" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.version=${{ github.ref_name }}" \
+            "${{ matrix.context }}"
+
+      - name: Push ${{ matrix.name }}
+        timeout-minutes: 30
+        run: docker push "${{ matrix.image }}:${{ github.ref_name }}"
+
+      - name: Say what to pin
+        run: |
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' \
+            "${{ matrix.image }}:${{ github.ref_name }}" | cut -d@ -f2)"
+          line="image: ${{ matrix.image }}:${{ github.ref_name }}@${digest}"
+          echo "::notice title=${{ matrix.name }}::${line}"
+          {
+            echo "### ${{ matrix.name }}"
+            echo
+            echo "Pin this in \`compose.yaml\`:"
+            echo
+            echo '```yaml'
+            echo "    ${line}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      # The notes are this version's section of CHANGELOG.md and nothing else.
+      # Two fixed lines open every section, saying whether the models change
+      # and whether the database migrates, and ./transcribe upgrade reads them
+      # out before it does anything. A Release without them would leave an
+      # installing office guessing.
+      - name: Take the notes out of the changelog
+        run: |
+          tag="${{ github.ref_name }}"
+          awk -v tag="## $tag" '
+            index($0, tag) == 1 { taking = 1; next }
+            taking && /^## / { exit }
+            taking { print }
+          ' CHANGELOG.md > /tmp/notes.md
+
+          if [ ! -s /tmp/notes.md ]; then
+            echo "CHANGELOG.md has no section for $tag." >&2
+            echo "A Release's notes are its section of the changelog, so there" >&2
+            echo "is nothing to publish. Write the section and tag again." >&2
+            exit 1
+          fi
+
+          if ! grep -q '^Models:' /tmp/notes.md \
+            || ! grep -q '^Database:' /tmp/notes.md; then
+            echo "The section for $tag does not carry both fixed lines." >&2
+            echo "Every version says whether the models changed and whether" >&2
+            echo "the database migrates; ./transcribe upgrade reads them out" >&2
+            echo "before it touches anything." >&2
+            exit 1
+          fi
+
+      - name: Publish the Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A pre-release until v1.0.0, which is the first one another office
+          # installs.
+          case "${{ github.ref_name }}" in
+            v1.*|v2.*|v3.*) mark="" ;;
+            *) mark="--prerelease" ;;
+          esac
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file /tmp/notes.md \
+            $mark
