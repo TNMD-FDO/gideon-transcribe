@@ -240,6 +240,11 @@ class Segment(models.Model):
     # The name a person reads, already renamed from the engine's own labels.
     speaker = models.CharField(max_length=60, blank=True, default="")
 
+    # What the engine called this voice, kept beside the name because an
+    # export's Appearances table prints both and a rename must not lose the
+    # label the Provenance refers to.
+    speaker_label = models.CharField(max_length=60, blank=True, default="")
+
     # Word timings, when the language could be aligned. A word the aligner
     # could not place keeps its word and loses its times.
     words = models.JSONField(default=list, blank=True)

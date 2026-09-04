@@ -256,6 +256,7 @@ def _store(job: Job, results: dict) -> Transcript:
                     end=segment.get("end") or 0.0,
                     text=(segment.get("text") or "").strip(),
                     speaker=names.get(segment.get("speaker", ""), names.get("", "")),
+                    speaker_label=segment.get("speaker", "") or "",
                     words=segment.get("words") or [],
                 )
             )
