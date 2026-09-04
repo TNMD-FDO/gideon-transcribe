@@ -1478,27 +1478,35 @@
   }
 
   if (grip && thumb) {
-    var dragging = false;
-    var startedAt = 0;
-    var wasWide = 0;
+    // Named for the picture, and not `dragging`, which is the timeline's.
+    // This whole file is one function, so a second `var dragging` here was
+    // not a second variable: it was the same one. This block listens for
+    // pointerup on the window, and a browser sends pointerup before
+    // mouseup, so every click on the timeline of a video had its drag
+    // cancelled here before the timeline could act on it, and the video
+    // never moved. A recording with no picture has no grip and none of
+    // this exists for it, which is why audio scrubbed and video did not.
+    var sizingPicture = false;
+    var pictureFromX = 0;
+    var pictureWas = 0;
 
     grip.addEventListener("pointerdown", function (event) {
-      dragging = true;
-      startedAt = event.clientX;
-      wasWide = thumb.getBoundingClientRect().width;
+      sizingPicture = true;
+      pictureFromX = event.clientX;
+      pictureWas = thumb.getBoundingClientRect().width;
       grip.setPointerCapture(event.pointerId);
       document.querySelector(".dock").classList.add("resizing");
       event.preventDefault();
     });
 
     grip.addEventListener("pointermove", function (event) {
-      if (!dragging) { return; }
-      setWidth(wasWide + (event.clientX - startedAt));
+      if (!sizingPicture) { return; }
+      setWidth(pictureWas + (event.clientX - pictureFromX));
     });
 
     function letGo() {
-      if (!dragging) { return; }
-      dragging = false;
+      if (!sizingPicture) { return; }
+      sizingPicture = false;
       document.querySelector(".dock").classList.remove("resizing");
       remember(Math.round(thumb.getBoundingClientRect().width));
       trimToFit();
