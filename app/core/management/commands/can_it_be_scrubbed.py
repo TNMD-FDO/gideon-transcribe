@@ -34,7 +34,14 @@ HOW_MANY = 100
 
 
 def address_of(recording) -> str:
+    # The port matters. The app is not on 443: another reverse proxy on the
+    # server may already own that, and the address the office uses carries the
+    # port. Asking 443 reaches whatever else is there, which is what happened
+    # the first time this was run.
     host = os.environ.get("APP_HOSTNAME", "")
+    port = os.environ.get("HTTPS_PORT", "8443")
+    if port and port != "443":
+        host = f"{host}:{port}"
     if recording.case_id:
         where = f"case-media/{recording.case_id}/{recording.pk}"
     else:

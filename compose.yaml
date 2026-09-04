@@ -108,6 +108,10 @@ services:
         condition: service_healthy
     environment: &app-environment
       APP_HOSTNAME: "${APP_HOSTNAME:?set APP_HOSTNAME in .env}"
+      # The port the office reaches the app on, so the app can ask itself the
+      # questions a browser asks. It is not 443: another reverse proxy on the
+      # server may already own that, and the app's address carries the port.
+      HTTPS_PORT: "${HTTPS_PORT:-8443}"
       APP_DATA_DIR: /srv/data
       POSTGRES_HOST: postgres
       POSTGRES_DB: "${POSTGRES_DB:-transcribe}"
