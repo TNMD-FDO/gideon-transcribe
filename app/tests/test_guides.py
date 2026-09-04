@@ -122,7 +122,7 @@ def test_the_two_served_guides_render():
         guide = guides.render(guides.source_of(name).read_text(encoding="utf-8"))
         assert guide.title
         assert "<h2" in guide.body
-        assert "<ul>" in guide.contents and "<a href=\"#" in guide.contents
+        assert "<ul>" in guide.contents and '<a href="#' in guide.contents
 
 
 def test_rendering_gives_headings_ids_the_contents_point_at():
