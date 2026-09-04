@@ -12,6 +12,12 @@
     </p>
   {% endif %}
 
+  {% if being_replaced %}
+    <p class="banner">
+      A new transcription is in progress; this transcript will be replaced.
+    </p>
+  {% endif %}
+
   <div class="desk">
     {# The dock: the picture or the waveform, the title, the transport. #}
     <div class="dock">
@@ -155,6 +161,11 @@
             <a href="{% url 'export' recording.pk 'captions' %}" class="btn" style="width: 100%">Captions (.srt)</a>
           {% endif %}
           <button type="button" class="ghost small" id="open-shortcuts">Keyboard shortcuts ?</button>
+          {% if transcript and not being_replaced %}
+            <button type="button" class="ghost small process-again"
+                    data-recording="{{ recording.pk }}"
+                    data-title="{{ recording.title }}">Process again</button>
+          {% endif %}
           <button type="button" class="ghost small danger delete"
                   data-recording="{{ recording.pk }}"
                   data-title="{{ recording.title }}"
@@ -332,6 +343,7 @@
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>
+  <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
 {% endblock %}

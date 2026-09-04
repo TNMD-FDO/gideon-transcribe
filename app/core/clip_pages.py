@@ -144,6 +144,17 @@ def save_clip(request: HttpRequest, recording_id) -> JsonResponse:
             {"error": "this recording cannot be played yet"}, status=400
         )
 
+    from core.viewer import being_replaced
+
+    if being_replaced(recording):
+        return JsonResponse(
+            {
+                "error": "This recording is being transcribed again, so a new "
+                "clip cannot be saved until it lands."
+            },
+            status=409,
+        )
+
     try:
         wanted = json.loads(request.body or b"{}")
     except json.JSONDecodeError:
