@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from django.contrib import messages
 from django.shortcuts import redirect
@@ -18,6 +19,16 @@ log = logging.getLogger("transcribe.signin")
 # Paths that do not belong to a person, so they neither need a session nor
 # move anyone's idle clock.
 NOT_A_PERSON = ("/healthz",)
+
+# How stale the idle clock may get before it is written again. The clock's own
+# timeout is hours, so a clock that is up to a minute behind ends a session at
+# the same minute it would have anyway.
+#
+# It is throttled because of what a browser does with a video. Every range of
+# bytes it asks for is a question to this app, and a person jumping about in a
+# recording asks several at once; without this, each one wrote a row to the
+# database before a single byte was served.
+CLOCK_STEP = timedelta(minutes=1)
 
 
 class LoginSessionMiddleware:
@@ -80,8 +91,10 @@ class LoginSessionMiddleware:
 
         # Only a person's own request moves their clock. An Admin looking at
         # somebody else's Workspace is not that person being here.
-        session.last_request = timezone.now()
-        session.save(update_fields=["last_request"])
+        now = timezone.now()
+        if now - session.last_request >= CLOCK_STEP:
+            session.last_request = now
+            session.save(update_fields=["last_request"])
         request.login_session = session
 
         return self.get_response(request)
