@@ -1,4 +1,4 @@
-# ADR 0013: Our two images are pinned by tag, and their digests are checked another way
+# ADR 0013: Our two images are pinned by tag, and their digests are checked at upgrade
 
 Date: 2026-09-04
 Status: accepted
@@ -40,16 +40,31 @@ The third. For the two images this repository builds:
   `./transcribe upgrade` writes into `.env` before it pulls or builds.
 - The workflow never pushes `latest`, and no tag is ever moved or reused,
   so a tag names one build and one build only.
-- The workflow records each image's digest in the run's summary at every
-  Release.
+- After both images are pushed, the workflow asks the registry what each tag
+  resolves to and records it, one line per image as `name:tag@sha256:...`,
+  in three places: appended to the Release's notes for a person to read,
+  attached to the Release as `digests.txt`, and **as a git note on the
+  tagged commit under `refs/notes/digests`**.
+- `./transcribe upgrade`, when it has pulled rather than built, fetches that
+  note and compares each pulled image's digest with the record. A mismatch
+  stops the upgrade before anything is started, names the image, prints
+  both digests, and offers `--build` as the way that trusts the source and
+  not the registry. A Release with no record is said so and the upgrade
+  goes on: a Release has none before its workflow has finished publishing,
+  and none from before v1.0.0 has one, and the upgrade cannot tell the two
+  apart. An office that wants certainty waits for the Release to appear on
+  GitHub, or builds.
 
-The digest check that completes the design is **proposed and not yet
-built**: the workflow uploads the two digests as an asset of the GitHub
-Release, and `./transcribe upgrade`, after `compose pull`, compares what
-arrived with what the Release says was built, and refuses to start on a
-mismatch. That turns a registry that served the wrong bytes under the right
-tag from an invisible failure into a stopped upgrade. It belongs before the
-public flip, because after it the registry is reachable by anyone.
+## Why a git note and not only the attached file
+
+The record has to reach the server, and the server reaches GitHub in one way:
+`git fetch` over SSH with a read-only deploy key. It holds no token. A
+private repository hands out its release assets only to a token, so the
+attached `digests.txt` is unreachable from the server while the repository
+is private, and it is private until the public flip. A git note travels by
+the same fetch and the same key as the code, whether the repository is
+private or public, so it is the copy the server reads. The attached file and
+the notes section are for people.
 
 ## What this departs from
 
@@ -59,14 +74,19 @@ that wording cannot be met by any tag about its own image, and this record
 is the maintainer's notice of it. The upstream images meet it exactly. The
 rule in `CLAUDE.md`, "images by tag and digest", is read as: by digest where
 the digest can be known when the file is written, and by tag with a
-published digest to check against where it cannot.
+published digest checked at upgrade where it cannot.
 
 ## What guards it
 
 - `test_environment.py` fails if either of our images is named with a fixed
   tag instead of `${RELEASE_TAG}`.
-- The release workflow is the only thing that pushes to the registry, and it
-  runs only on a tag.
+- `test_transcribe.py` runs the comparison against a fake docker: a match
+  passes, a mismatch stops with both digests printed, a missing image is a
+  mismatch and not a pass, and a missing record is said so. It also fails if
+  the workflow and the script stop agreeing on the ref the record lives
+  under, or on the shape of its lines.
+- The release workflow is the only thing that pushes to the registry or
+  writes the note, and it runs only on a tag.
 - An upgrade that finds nothing in the registry builds from the tag's own
   source on the server, which is the other way of getting exactly the tag's
   bytes.

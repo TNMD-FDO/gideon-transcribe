@@ -40,10 +40,22 @@ Database: unchanged
 - **Why our two images are pinned by tag** is written down as ADR 0013: a
   tag cannot carry the digest of the image built from it, because the image
   is built after the tag exists. The upstream images are pinned by digest as
-  before; ours are pinned by an immutable tag, and the workflow records each
-  digest at every Release. An upgrade-time check against that record is
-  proposed there and not yet built. The release workflow's summary no longer
-  tells a reader to pin the digest in `compose.yaml`.
+  before; ours are pinned by an immutable tag and checked at upgrade, below.
+  The release workflow's summary no longer tells a reader to pin the digest
+  in `compose.yaml`.
+
+### Added
+
+- **The upgrade checks what it pulled.** The release workflow now asks the
+  registry what each tag resolves to and records it beside the Release: in
+  the notes, as an attached `digests.txt`, and as a git note on the tagged
+  commit, which is the copy a server can fetch with the same key it fetches
+  the code with. `./transcribe upgrade`, when it pulled rather than built,
+  compares each image against that record and stops before starting anything
+  if they differ, naming the image and both digests, and offering `--build`
+  as the way that trusts the source and not the registry. A release with no
+  record, which is every one before v1.0.0, is said so and the upgrade goes
+  on.
 
 ## v0.4.0, 2026-09-04
 

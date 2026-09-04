@@ -289,6 +289,8 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `The registry had nothing to give, so the images are built here.` | As above, during an upgrade. Not an error. | Wait. Ten to twenty minutes the first time. |
 | `The build failed, so the upgrade stops here.` | Building an image on the server failed. The old containers are still running. | Read the message above it. Usually the server cannot reach one of the appendix's hosts. `./transcribe rollback <the tag you were on>` puts the checkout back. |
 | `There is no release called vX.Y.Z.` | The tag does not exist, or the server cannot reach GitHub. | Check the tag on the Releases page, and that `github.com` is reachable from the server. |
+| `... is not the build the release recorded` | The registry served an image whose identity differs from the one the Release was built as. Nothing was started. | Do not ignore it. `./transcribe upgrade <tag> --build` builds from the Release's own source instead. Tell whoever looks after the repository. |
+| `This release carries no digest record` | The Release's workflow has not finished publishing yet, or the Release is from before v1.0.0. | Not an error. Wait for the Release to appear on GitHub and upgrade again, or go on if you are content with the pull. |
 | `A job is running. An upgrade restarts the app, so wait for it.` | Somebody's transcription is in progress. | Wait for it. The Queue page in the panel shows what is running. |
 | `There are local edits to tracked files here.` | Somebody changed a file in the install home by hand. | `git status` in the install home shows which. Nothing office-specific belongs in a tracked file; it belongs in `.env`. Put the edit somewhere else, then upgrade again. |
 | Compose says `is a directory` and nothing else | `COMPOSE_FILE=` is in `.env` with nothing after it. | Delete that line, or put a `#` in front of it. It must be left out entirely, not set empty. |
@@ -319,6 +321,8 @@ Then, from the install home, with nobody's transcription running:
 ```
 
 It refuses if a job is running or if a tracked file has been edited by hand. Then it takes a dump of the database and a copy of your configuration into the backup folder under the App data folder, fetches the tag and checks it out, reads the two lines out to you, pulls the images (or builds them if the registry has nothing), starts everything, restarts the web server so it re-reads its configuration, fetches models if the Release said to, and ends with `./transcribe check`.
+
+When it pulls, it also checks that what arrived is what the Release was built as. Every Release from v1.0.0 records the exact identity of its two images, and the upgrade compares the pulled images against that record before it starts anything. A mismatch stops the upgrade and prints both identities; the way on is `./transcribe upgrade <tag> --build`, which builds from the Release's own source instead of trusting the registry. A Release with no record, which is every one before v1.0.0, is said so, and the upgrade goes on.
 
 **Nothing is ever pushed from a workstation to the server, and nothing is ever copied over the install folder.** This command is the only way code reaches the server.
 

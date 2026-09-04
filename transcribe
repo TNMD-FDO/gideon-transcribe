@@ -707,6 +707,65 @@ cmd_backup_db() {
 
 # upgrade ----------------------------------------------------------------------
 
+# The digest record ------------------------------------------------------------
+#
+# A tag cannot carry the digest of the image built from it, because the image
+# is built after the tag exists (ADR 0013). So the release workflow records
+# what each tag resolves to in the registry, one line per image as
+# `name:tag@sha256:...`, and leaves the record as a git note on the tagged
+# commit under refs/notes/digests. A note travels by the same fetch and the
+# same key as the code, which is why it is a note and not a file on GitHub: a
+# private repository hands out its release assets only to a token, and this
+# server has none.
+
+DIGESTS_REF="refs/notes/digests"
+
+digests_recorded_for() {
+  local tag="$1"
+  git -C "$HERE" fetch --quiet origin "+$DIGESTS_REF:$DIGESTS_REF" 2>/dev/null || return 1
+  git -C "$HERE" notes --ref="$DIGESTS_REF" show "$tag^{commit}" 2>/dev/null
+}
+
+# What the pulled images are, against what the release recorded them as. A
+# registry that served other bytes under the right tag becomes a stopped
+# upgrade here instead of a silent one.
+verify_the_pull() {
+  local tag="$1" recorded="" line image name want have ok=yes
+
+  if ! recorded="$(digests_recorded_for "$tag")" || [ -z "$recorded" ]; then
+    echo
+    amber "This release carries no digest record, so the pulled images cannot be checked."
+    echo "  A release has none before its workflow has finished publishing, and"
+    echo "  none from before v1.0.0 has one. To trust the source and not the"
+    echo "  registry:  ./transcribe upgrade $tag --build"
+    return 0
+  fi
+
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    image="${line%%@*}"
+    want="${line#*@}"
+    name="${image%:*}"
+    have="$(docker image inspect --format '{{join .RepoDigests "\n"}}' "$image" 2>/dev/null || true)"
+    if printf '%s\n' "$have" | grep -qx "$name@$want"; then
+      pass "$image is the build the release recorded"
+    else
+      red "  FAIL  $image is not the build the release recorded"
+      echo "        recorded: $want"
+      echo "        pulled:   ${have:-nothing by that name}"
+      ok=no
+    fi
+  done <<<"$recorded"
+
+  if [ "$ok" != yes ]; then
+    echo
+    red "The registry served an image that is not the one this release was built as."
+    echo "  Nothing has been started and the old containers are still running."
+    echo "  If you trust the source and not the registry:  ./transcribe upgrade $tag --build"
+    exit 1
+  fi
+}
+
 cmd_upgrade() {
   need_env
   local tag="" build=no
@@ -773,6 +832,7 @@ cmd_upgrade() {
     compose build
   elif compose pull --quiet; then
     pass "the images came from the registry"
+    verify_the_pull "$tag"
   else
     # Nothing may be published yet, or the registry may be out of reach, and
     # both are fine: compose.yaml carries build: beside image: for both of
