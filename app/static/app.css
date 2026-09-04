@@ -522,6 +522,15 @@ main.wide { max-width: none; }
 .guide .contents a { text-decoration: none; }
 .guide .contents a:hover { text-decoration: underline; }
 
+/* The Retention warning: a case's row in its last days ---------------------- */
+
+.tbl tr.expiring td { background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.tbl tr.expiring .deletes { color: var(--warn); font-weight: 600; margin-right: 6px; }
+
+/* A settings row greyed under a toggle that is off. The value is kept. */
+.arow.greyed { opacity: 0.6; }
+.arow.greyed input, .arow.greyed select, .arow.greyed textarea { cursor: not-allowed; }
+
 /* The pages that are documents ---------------------------------------------- */
 
 .cards { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 10px; }

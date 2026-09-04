@@ -98,6 +98,12 @@ def may_serve(request: HttpRequest) -> HttpResponse:
     if recording is None or holder_of(recording) != owner_id:
         return HttpResponse(status=404)
 
+    # Nothing in a Case that is in the Recycle bin is served to anybody.
+    from core import cases
+
+    if not cases.reachable(recording):
+        return HttpResponse(status=404)
+
     if recording.user_id == request.user.pk:
         return HttpResponse(status=200)
 

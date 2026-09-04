@@ -40,7 +40,7 @@ Every setting has a table in the settings catalogue in the repository (`docs/spe
 - **Notices**: the four fixed texts. The **Transcription notice** goes on every export. The **Translation notice** goes on every export of a translated transcript. The **AI notice** goes with anything the assistant writes. The **Sign-in page notice** is the line under the sign-in form: an authorised-use statement, or where to ring for help. Empty hides it.
 - **Sign-in and directory**: the idle timeout, eight hours by default, after which a login session ends and the person's recordings go; and the hour of the nightly directory check. The directory's own facts are shown read-only here, because they are set at install and not in the panel.
 - **Audit log**: how many months of audit rows are kept, three by default. See the audit log below for what that means.
-- **Cases**: the **Folder management** toggle that turns Cases on for the whole office, and the list of **Recording types** a person may label a recording with. Off hides every case from everyone, Admins included, and deletes nothing; on brings them all back as they were.
+- **Cases**: the **Folder management** toggle that turns Cases on for the whole office, and the list of **Recording types** a person may label a recording with. Off hides every case from everyone, Admins included, and deletes nothing; on brings them all back as they were. Beside them, greyed while Folder management is off, the Retention policy's three numbers: the **Retention period**, thirty days by default; the **Warning before deletion**, seven days and always shorter than the period; and the **Recycle bin**, thirty days. See the Retention policy below.
 
 ## The Status page
 
@@ -92,6 +92,28 @@ The Audit log page shows the rows newest first and filters them by date, person,
 **Retention.** Rows older than the **Audit log retention** setting are removed by a nightly sweep. Three months is the default. The record of an Admin opening somebody's recordings is a row like any other, so the retention period is also how long that record lasts: an office that wants a longer memory of Admin access sets a longer retention.
 
 **Integrity.** Every row carries a hash of itself and of the row before it, so a row that is changed or removed afterwards breaks the chain. **Integrity check** on the Status page walks the chain and says whether it holds. Rows are written through a database role that can only insert, and removed only by the sweep's own role; the app's ordinary role can do neither.
+
+## The Retention policy and the Recycle bin
+
+Once Folder management is on, the app deletes cases by itself, on one rule for the whole office, with a Recycle bin behind it. Nothing in a Workspace is touched by this; a Workspace keeps nothing past its session anyway.
+
+**The clock.** Every case has one: whole days since it was last used. Use is anything its owner does in it, opening it included; looking at the list of cases is not, and neither is your own audited opening of somebody else's case. Days while Folder management is off are left out of every count, so a case with ten days left when you turn it off still has ten days left when you turn it back on.
+
+**The three settings**, on the Cases page and greyed while Folder management is off:
+
+- **Retention period**, 30 days by default (7 to 3650): how long a case may go unused. Shortening it takes effect at the next sweep, and **every case already past the new number goes to the Recycle bin that night**. The bin is the safety net; there is no fresh warning first.
+- **Warning before deletion**, 7 days by default (1 to 30, and always shorter than the period; the tray refuses a pair that is not): during a case's last days its row on the Cases page turns amber, reads "Deletes in N days unless used", and carries a **Keep** button. You see the same mark on every case in the office, and the **Expiring** filter shows only those. Your Keep on somebody else's case is audited with them as the affected user, and it does start their clock over: it is the one thing you can do to a case that counts as use.
+- **Recycle bin**, 30 days by default (1 to 365): how long a deleted case waits before it is wiped.
+
+**The nightly sweep** runs at half past three. While Folder management is off it does nothing at all and writes nothing. While on, in order: it marks the warning on every case newly inside its window, writing one "retention warning" row each; it moves every case that is due into the Recycle bin, whole, writing "case deleted (cause: retention)" with the counts; it wipes every binned case past the bin period, writing "case permanently deleted" and one "recording deleted" row per recording; and it writes one "retention sweep ran" row with the counts of what it did.
+
+**The Recycle bin page**, reached from the Cases page, shows every deleted case in the office to you, with an owner filter and the "Owner deactivated" mark; an owner sees only their own. **Restore** puts a case back exactly as it was and starts its clock over, and never fails for a full quota, because the case never left the disk. **Delete permanently** wipes one case at once, behind a confirmation that names the counts. **Empty recycle bin** wipes your own binned cases; somebody else's you wipe one at a time, so that a leaver's cases never go in one unconsidered click. A binned case counts against its owner's quota until it is wiped.
+
+**What the bin does not hold.** A person's own Delete of a case or a recording is final and does not come here. Only the clock's deletions do.
+
+**Leavers.** A deactivated person's cases stay under the policy untouched until you act. Reassign hands them to a named colleague without starting the clock over; with no use, they run down and go to the bin like any other, showing under "Owner deactivated" and "Expiring" on your Cases page. Delete data on the Users page wipes a leaver's binned cases along with the rest.
+
+**No exceptions.** Nothing in the app can exempt a case from the clock, and no owner or Admin can set a longer period for one case. The way to keep a case is to use it, or press Keep.
 
 ## The Installation page
 

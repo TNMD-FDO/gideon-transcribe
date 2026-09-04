@@ -160,6 +160,83 @@
     });
   }
 
+  // The Retention policy: Keep on a warned row, and the Recycle bin's Restore,
+  // Delete permanently, and Empty --------------------------------------------
+
+  function plural(count, word) {
+    return count + " " + word + (count === 1 ? "" : "s");
+  }
+
+  document.addEventListener("click", function (event) {
+    var keep = event.target.closest(".keep");
+    if (keep) {
+      keep.disabled = true;
+      post("/case/" + keep.dataset.case + "/keep").then(function (answer) {
+        if (answer.ok) { window.location.reload(); return; }
+        keep.disabled = false;
+        window.alert("That case could not be kept.");
+      });
+      return;
+    }
+
+    var restore = event.target.closest(".restore");
+    if (restore) {
+      restore.disabled = true;
+      post("/case/" + restore.dataset.case + "/restore").then(function (answer) {
+        if (answer.ok) { window.location = answer.said.where; return; }
+        restore.disabled = false;
+        window.alert("That case could not be restored.");
+      });
+      return;
+    }
+
+    var wipe = event.target.closest(".wipe");
+    if (wipe) {
+      // Named before anybody agrees to it. There is nothing after this.
+      fetch("/case/" + wipe.dataset.case + "/what-would-go")
+        .then(function (answer) { return answer.json(); })
+        .then(function (counts) {
+          var words =
+            "Delete the case “" + counts.name + "” permanently?\n\n" +
+            "This removes " + plural(counts.recordings, "recording") + ", " +
+            plural(counts.transcripts, "transcript") + ", and " +
+            plural(counts.clips, "clip") + ", " + counts.size + " in all.\n\n" +
+            "Nothing can bring it back.";
+          if (!window.confirm(words)) { return; }
+          wipe.disabled = true;
+          post("/case/" + wipe.dataset.case + "/wipe").then(function (answer) {
+            if (answer.ok) { window.location.reload(); return; }
+            wipe.disabled = false;
+            window.alert("That case could not be deleted.");
+          });
+        });
+    }
+  });
+
+  var emptyBin = document.getElementById("empty-bin");
+  if (emptyBin) {
+    emptyBin.addEventListener("click", function () {
+      fetch("/cases/bin/what-would-go")
+        .then(function (answer) { return answer.json(); })
+        .then(function (counts) {
+          if (!counts.cases) { window.alert("Your recycle bin is empty."); return; }
+          var words =
+            "Empty the recycle bin?\n\n" +
+            "This permanently removes " + plural(counts.cases, "case") +
+            " holding " + plural(counts.recordings, "recording") + ", " +
+            counts.size + " in all.\n\n" +
+            "Nothing can bring them back.";
+          if (!window.confirm(words)) { return; }
+          emptyBin.disabled = true;
+          post("/cases/bin/empty").then(function (answer) {
+            if (answer.ok) { window.location.reload(); return; }
+            emptyBin.disabled = false;
+            window.alert("The recycle bin could not be emptied.");
+          });
+        });
+    });
+  }
+
   // The type and the description, on a case page's rows ----------------------
 
   document.addEventListener("click", function (event) {

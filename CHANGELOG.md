@@ -19,7 +19,41 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+```
+Models: unchanged
+Database: migrates
+```
+
+### Added
+
+- **The Retention policy and the Recycle bin**, Phase 2's third chapter. A
+  case is kept for as long as somebody uses it: every use starts its clock
+  over, looking at the list does not, and an Admin's audited opening does not.
+  Three settings on the panel's Cases page, greyed while Folder management is
+  off: the **Retention period** (30 days), the **Warning before deletion**
+  (7 days, always shorter than the period; the tray refuses a pair that is
+  not), and the **Recycle bin** (30 days). During a case's last days its row
+  turns amber, reads "Deletes in N days unless used", and carries **Keep**,
+  which starts the clock over without opening anything; an **Expiring**
+  filter shows only those, and Admins also get "Owner deactivated". The
+  nightly sweep at half past three marks the warning once, moves due cases
+  whole into the Recycle bin, wipes what has sat there past the bin period,
+  and writes one row with the counts; it does nothing at all while Folder
+  management is off, and every count leaves the days it was off out. A case
+  in the bin is out of every list and unusable by anybody, an Admin included,
+  and counts against its owner's quota; the **Recycle bin** page, reached from
+  the Cases page, offers **Restore**, which starts the clock over, **Delete
+  permanently** behind a confirmation that names the counts, and **Empty
+  recycle bin**. A person's own Delete is unchanged and final. Six audit rows,
+  as the chapter fixes them. The digest by email waits for the Email chapter;
+  the sweep already gathers what it would say.
+
+### Changed
+
+- **Delete data on the Users page** wipes a leaver's binned cases too, with
+  the Admin as the cause.
+- **The Status page's Cases line** now reads "Cases: N, X GB; M expiring; K in
+  the recycle bin, Y GB".
 
 ## v1.0.0, 2026-09-04
 

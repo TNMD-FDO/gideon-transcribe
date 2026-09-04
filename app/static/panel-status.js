@@ -90,9 +90,14 @@
     // can see what is parked and for how long it has been out of reach.
     var cases = document.getElementById("cases");
     if (cases) {
+      // The panel chapter's line: live cases, then the ones in their last
+      // days, then what waits in the recycle bin and how much disk it holds.
       cases.textContent =
         "Cases: " + state.workspaces.cases + ", " +
-        state.workspaces.cases_gigabytes + " GB" +
+        state.workspaces.cases_gigabytes + " GB; " +
+        state.workspaces.expiring + " expiring; " +
+        state.workspaces.binned + " in the recycle bin, " +
+        state.workspaces.binned_gigabytes + " GB" +
         (state.workspaces.cases_off_since
           ? ". Folder management has been off since " +
             state.workspaces.cases_off_since

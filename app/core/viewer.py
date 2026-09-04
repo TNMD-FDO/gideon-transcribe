@@ -54,6 +54,13 @@ def open_recording(request: HttpRequest, recording_id) -> Recording | None:
     if recording is None:
         return None
 
+    # A Recording in a Case the Retention policy has put in the Recycle bin is
+    # nobody's to open, an Admin's included, until the Case is restored.
+    from core import cases
+
+    if not cases.reachable(recording):
+        return None
+
     if recording.user_id == request.user.pk:
         audit.write(
             audit.Category.RECORDINGS,

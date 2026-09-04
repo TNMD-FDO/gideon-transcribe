@@ -172,6 +172,12 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
                     else (known.default or "(empty)")
                 ),
                 "changed": not settings_store.is_at_default(known.key),
+                # Greyed under a toggle that is off: the value is kept and
+                # shown, the control is closed, and the row says why.
+                "greyed": bool(known.needs) and not settings_store.get(known.needs),
+                "needs_name": (
+                    settings_store.definition(known.needs).name if known.needs else ""
+                ),
             }
         )
 
@@ -228,6 +234,15 @@ def apply(request: HttpRequest) -> HttpResponse:
     """Write every waiting change in one step, one audit row each."""
     tray = tray_of(request)
     note = request.POST.get("note", request.session.get(TRAY_NOTE, ""))
+
+    # The one rule that spans two settings is judged on the whole tray before
+    # anything is written, so a pair that is wrong together is refused
+    # together and nothing is half applied.
+    try:
+        settings_store.check_together(tray)
+    except ValueError as problem:
+        _tell(request, f"Nothing was applied. {problem}")
+        return redirect(request.POST.get("back") or reverse("panel"))
 
     for key, wanted in tray.items():
         known = settings_store.definition(key)

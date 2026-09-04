@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, exports, settings_store, uploads
+from core import audit, cases, exports, retention, settings_store, uploads
 from core.cases import Case
 from core.jobs import Segment
 from core.recordings import Recording
@@ -75,26 +75,79 @@ def cases_page(request: HttpRequest) -> HttpResponse:
         mine = mine.filter(name__icontains=filter_text)
         others = others.filter(name__icontains=filter_text)
 
+    # The Admin's two filters from the panel chapter. "Owner deactivated" is a
+    # database question; "Expiring" is a count of days with the Off spells
+    # left out, so it is asked of each row after it is built.
+    owner_deactivated = bool(request.GET.get("owner_deactivated"))
+    expiring = bool(request.GET.get("expiring"))
+    if owner_deactivated:
+        others = others.filter(owner__deactivated_at__isnull=False)
+
+    rows = [_as_row(one) for one in mine]
+    other_rows = [_as_row(one) for one in others]
+    if expiring:
+        rows = [one for one in rows if one["warned"]]
+        other_rows = [one for one in other_rows if one["warned"]]
+
+    if request.user.is_admin:
+        binned = Case.objects.filter(deleted_on__isnull=False).count()
+    else:
+        binned = cases.binned_for(request.user).count()
+
     return render(
         request,
         "cases.html",
         {
             "page": "cases",
-            "cases": [_as_row(one) for one in mine],
-            "others": [_as_row(one) for one in others],
+            "cases": rows,
+            "others": other_rows,
             "name_filter": filter_text,
+            "expiring": expiring,
+            "owner_deactivated": owner_deactivated,
+            "binned": binned,
             "storage_warning": uploads.storage_warning(request.user),
         },
     )
 
 
 def _as_row(case: Case) -> dict:
+    left = retention.days_left(case)
     return {
         "case": case,
         "recordings": case.recordings.count(),
         "size": uploads.as_gb(case.disk_bytes()),
         "opens_at": opens_at(case),
+        # The Retention warning: the amber mark and its line, computed at
+        # every page load so the Warning setting takes effect at once, and
+        # matching what the digest will say.
+        "days_left": left,
+        "warned": retention.is_warned(left),
+        "deletes_line": retention.deletes_line(left),
+        "owner_deactivated": case.owner.deactivated_at is not None,
     }
+
+
+def _bin_row(case: Case) -> dict:
+    return {
+        "case": case,
+        "recordings": case.recordings.count(),
+        "size": uploads.as_gb(case.disk_bytes()),
+        "days_left": max(0, retention.bin_days_left(case)),
+        "owner_deactivated": case.owner.deactivated_at is not None,
+    }
+
+
+def _their_binned_case(request, case_id) -> Case:
+    """A Case in the Recycle bin, if this person may act on it there.
+
+    The owner and Admins. Collaborators see nothing of the bin. No Admin
+    access row: nothing in a binned Case can be opened from here, only
+    restored or wiped, and both write their own rows.
+    """
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=False)
+    if case.owner_id != request.user.pk and not request.user.is_admin:
+        raise Http404("not this person's case")
+    return case
 
 
 def opens_at(case: Case) -> str:
@@ -298,19 +351,142 @@ def delete_case(request: HttpRequest, case_id) -> JsonResponse:
 
 @login_required
 def what_would_go(request: HttpRequest, case_id) -> JsonResponse:
-    """The counts the Delete confirmation names, so it says what it is taking."""
+    """The counts a Delete or Delete permanently confirmation names.
+
+    For a live Case and for one in the Recycle bin alike, so both
+    confirmations say what they are taking.
+    """
     _on_or_404()
-    case = _their_case(request, case_id)
+    if Case.objects.filter(pk=case_id, deleted_on__isnull=False).exists():
+        case = _their_binned_case(request, case_id)
+    else:
+        case = _their_case(request, case_id)
+    return JsonResponse(_counts_of(case))
+
+
+def _counts_of(case: Case) -> dict:
     recordings = case.recordings.all()
+    return {
+        "name": case.name,
+        "recordings": recordings.count(),
+        "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
+        "clips": sum(one.clips.count() for one in recordings),
+        "size": uploads.as_gb(case.disk_bytes()),
+    }
+
+
+# The Retention policy: Keep, and the Recycle bin ---------------------------------
+
+
+@login_required
+@require_POST
+def keep_case(request: HttpRequest, case_id) -> JsonResponse:
+    """Keep: start the clock over without opening anything.
+
+    Whoever sees the amber mark may press it, an Admin included; an Admin's
+    Keep is audited with the owner as the affected user.
+    """
+    _on_or_404()
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
+    if case.owner_id != request.user.pk and not request.user.is_admin:
+        raise Http404("not this person's case")
+    cases.keep(case, actor=request.user, request=request)
+    return JsonResponse({"ok": True, "days_left": retention.days_left(case)})
+
+
+@login_required
+def recycle_bin(request: HttpRequest) -> HttpResponse:
+    """Where a Case the clock deleted waits, restorable, until it is wiped.
+
+    The owner sees their own; an Admin sees everybody's, with an owner filter
+    and the "Owner deactivated" mark. Hidden while Folder management is off,
+    like every other Cases page.
+    """
+    _on_or_404()
+    owner_filter = request.GET.get("owner", "").strip()
+    if request.user.is_admin:
+        binned = Case.objects.filter(deleted_on__isnull=False).select_related("owner")
+        if owner_filter:
+            binned = binned.filter(owner__username=owner_filter)
+    else:
+        binned = cases.binned_for(request.user).select_related("owner")
+
+    rows = [_bin_row(one) for one in binned.order_by("deleted_on", "name")]
+    return render(
+        request,
+        "recycle-bin.html",
+        {
+            "page": "cases",
+            "rows": rows,
+            "owner_filter": owner_filter,
+            "owners": (
+                sorted({one["case"].owner.username for one in rows})
+                if request.user.is_admin and not owner_filter
+                else []
+            ),
+            "bin_days": retention.recycle_bin_days(),
+            "mine": sum(1 for one in rows if one["case"].owner_id == request.user.pk),
+        },
+    )
+
+
+@login_required
+@require_POST
+def restore_case(request: HttpRequest, case_id) -> JsonResponse:
+    _on_or_404()
+    case = _their_binned_case(request, case_id)
+    cases.restore(case, actor=request.user, request=request)
+    return JsonResponse({"ok": True, "where": reverse("case", args=[case.pk])})
+
+
+@login_required
+@require_POST
+def wipe_case(request: HttpRequest, case_id) -> JsonResponse:
+    """Delete permanently: gone for good, files and rows."""
+    _on_or_404()
+    case = _their_binned_case(request, case_id)
+    cause = (
+        cases.WIPED_BY_OWNER
+        if case.owner_id == request.user.pk
+        else cases.WIPED_BY_ADMIN
+    )
+    count, gigabytes = cases.wipe(
+        case, cause=cause, actor=request.user, request=request
+    )
+    return JsonResponse({"ok": True, "recordings": count, "gigabytes": gigabytes})
+
+
+@login_required
+def bin_what_would_go(request: HttpRequest) -> JsonResponse:
+    """What Empty recycle bin would take: this person's own binned Cases."""
+    _on_or_404()
+    mine = list(cases.binned_for(request.user))
     return JsonResponse(
         {
-            "name": case.name,
-            "recordings": recordings.count(),
-            "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
-            "clips": sum(one.clips.count() for one in recordings),
-            "size": uploads.as_gb(case.disk_bytes()),
+            "cases": len(mine),
+            "recordings": sum(one.recordings.count() for one in mine),
+            "size": uploads.as_gb(sum(one.disk_bytes() for one in mine)),
         }
     )
+
+
+@login_required
+@require_POST
+def empty_bin(request: HttpRequest) -> JsonResponse:
+    """Empty recycle bin: every binned Case of this person's, wiped at once.
+
+    A person's own, Admin or not: an Admin empties their own bin here and
+    wipes somebody else's Cases one at a time, so nothing of a leaver's goes
+    in one unconsidered click.
+    """
+    _on_or_404()
+    gone = 0
+    for case in list(cases.binned_for(request.user)):
+        cases.wipe(
+            case, cause=cases.WIPED_BY_OWNER, actor=request.user, request=request
+        )
+        gone += 1
+    return JsonResponse({"ok": True, "cases": gone})
 
 
 # Moving a Recording in --------------------------------------------------------

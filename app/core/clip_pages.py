@@ -34,7 +34,8 @@ def clips_are_on() -> bool:
 
 def _their_recording(request, recording_id) -> Recording | None:
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
-    if recording is None:
+    if recording is None or not cases.reachable(recording):
+        # A Recording in a binned Case is nobody's until the Case is restored.
         return None
     if recording.user_id == request.user.pk or request.user.is_admin:
         return recording
@@ -47,7 +48,7 @@ def _their_clip(request, clip_id) -> Clip | None:
         .select_related("recording", "recording__user", "user")
         .first()
     )
-    if clip is None:
+    if clip is None or not cases.reachable(clip.recording):
         return None
     if clip.recording.user_id == request.user.pk or request.user.is_admin:
         return clip

@@ -142,6 +142,18 @@ A recording goes into a case either at upload, with **Add to case**, or afterwar
 
 Deleting a case asks first and names what it is taking. It cannot be undone.
 
+### How long a case is kept
+
+A case is kept for as long as somebody uses it. Every use starts its clock over: opening the case or a recording in it, adding or moving a recording in, correcting, naming a speaker, exporting, saving or downloading a clip, renaming. Looking at the list of cases does not count, and neither does an Admin looking in.
+
+The office sets how long a case may go unused, thirty days unless your Admin has changed it. During the last days before that, seven by default, the case's row on the Cases page turns amber and reads **Deletes in N days unless used**, with a **Keep** button beside it. Keep starts the clock over without opening anything; so does opening the case. The **Expiring** button above the list shows only the cases in their last days.
+
+The night a case reaches the limit, it goes whole to the **Recycle bin**: its recordings, transcripts, corrections and clips together. Nothing in it can be opened until it comes back. From the bin, reached from the Cases page, you can **Restore** it exactly as it was, which starts its clock over, or **Delete permanently**. A case left in the bin is wiped for good after another thirty days, unless your Admin has set it differently. A case in the bin still counts against your quota, because it is still on the disk; **Empty recycle bin** is how you make that room at once.
+
+Your own **Delete** of a case does not go to the bin. It is final, as the confirmation says. The bin is for what the clock takes, so that nothing is lost to neglect that somebody still wanted.
+
+Days while the office has cases turned off do not count against any case.
+
 ## Signing out, and what happens to your recordings
 
 Everything that is not in a case belongs to your login session and goes when it ends: the recordings, their transcripts, and their clips. That is by design. Nothing of yours lingers on the server for somebody else to find.

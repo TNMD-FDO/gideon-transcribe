@@ -87,6 +87,18 @@ urlpatterns = [
     path("cases", case_pages.cases_page, name="cases"),
     path("cases/new", case_pages.new_case, name="new-case"),
     path("cases/where", case_pages.where_it_could_go, name="where-it-could-go"),
+    # The Retention policy: Keep on a warned Case, and the Recycle bin where
+    # the clock's deletions wait.
+    path("cases/bin", case_pages.recycle_bin, name="recycle-bin"),
+    path(
+        "cases/bin/what-would-go",
+        case_pages.bin_what_would_go,
+        name="bin-what-would-go",
+    ),
+    path("cases/bin/empty", case_pages.empty_bin, name="empty-bin"),
+    path("case/<uuid:case_id>/keep", case_pages.keep_case, name="keep-case"),
+    path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),
+    path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
     path("case/<uuid:case_id>/delete", case_pages.delete_case, name="delete-case"),
