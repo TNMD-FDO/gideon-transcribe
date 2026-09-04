@@ -156,6 +156,50 @@ jobs:
             exit 1
           fi
 
+      - name: Sign in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # What each tag resolves to in the registry, which is what a server sees
+      # when it pulls. A tag cannot carry the digest of the image built from
+      # it, so the record lives beside the Release instead (ADR 0013): in the
+      # notes for a person to read, attached as a file, and as a git note on
+      # the tagged commit under refs/notes/digests. The last is the one a
+      # server fetches, with the same key it fetches the code with; a private
+      # repository hands out its release assets only to a token, and a server
+      # has none.
+      - name: Record what the tags resolve to
+        run: |
+          tag="${{ github.ref_name }}"
+          : > digests.txt
+          for image in ghcr.io/tnmd-fdo/gideon-transcribe-app \
+                       ghcr.io/tnmd-fdo/gideon-transcribe-whisperx; do
+            digest="$(docker buildx imagetools inspect "$image:$tag" \
+              --format '{{.Manifest.Digest}}')"
+            echo "$image:$tag@$digest" >> digests.txt
+          done
+          cat digests.txt
+          {
+            echo
+            echo "### Images"
+            echo
+            echo "What each tag resolves to in the registry. \`./transcribe upgrade\`"
+            echo "checks what it pulled against these and refuses on a mismatch."
+            echo
+            echo '```'
+            cat digests.txt
+            echo '```'
+          } >> /tmp/notes.md
+
+      - name: Leave the record where a server can fetch it
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin "+refs/notes/digests:refs/notes/digests" 2>/dev/null || true
+          git notes --ref=refs/notes/digests add -f -F digests.txt HEAD
+          git push origin refs/notes/digests
+
       - name: Publish the Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,4 +213,5 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --notes-file /tmp/notes.md \
-            $mark
+            $mark \
+            digests.txt
