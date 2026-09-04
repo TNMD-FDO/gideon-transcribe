@@ -163,6 +163,10 @@ _Avoid_: session (that is the login), scratch (that is the disk location)
 The removal of everything in a Workspace once its user's Login session has ended and no Job is running: Recordings, Transcripts, Summaries, Chats, and Clips alike.
 _Avoid_: cleanup, purge, sweep (the sweep is the mechanism that carries it out)
 
+**Clear**:
+A user removing Recordings from their own Workspace while still signed in, either one Batch of them ("Done with these") or all of them ("Clear my recordings"). Same removal as a Discard and equally final, but asked for by the user rather than done by the app when a Login session ends, and it never touches a Recording in a Case. It exists because an office running batches works in a loop of upload, download, clear, upload again, and every Recording counts against the user's quota until it goes.
+_Avoid_: clean up, reset, empty, start over
+
 **Folder management**:
 The admin toggle that enables Cases. Off: Workspaces only; every Case is hidden from everyone and kept, its Retention policy clock paused, nothing deleted. On: users may keep Recordings in Cases, and everything Off hid comes back as it was.
 

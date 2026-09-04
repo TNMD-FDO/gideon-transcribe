@@ -111,6 +111,17 @@ class User(AbstractBaseUser):
     # Workspace quota. Empty means the default, whatever it is at the time.
     quota_gb = models.IntegerField(null=True, blank=True)
 
+    # Which of the two front pages this person actually works on, so that
+    # signing in opens the one they use. An office's larger use is batches of
+    # recordings that belong to no Case, and landing those people on Cases
+    # every morning charges them a page for a feature they never open.
+    # Nothing is remembered until they show which it is, and the specified
+    # landing page stands until then.
+    LANDS_UNDECIDED = ""
+    LANDS_CASES = "cases"
+    LANDS_RECORDINGS = "recordings"
+    lands_on = models.CharField(max_length=20, blank=True, default=LANDS_UNDECIDED)
+
     created = models.DateTimeField(auto_now_add=True)
     last_sign_in = models.DateTimeField(null=True, blank=True)
 

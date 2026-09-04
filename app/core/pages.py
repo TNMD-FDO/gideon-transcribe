@@ -25,9 +25,11 @@ from core import (
     settings_store,
     tasks,
     uploads,
+    views,
     whisperx,
 )
 from core.jobs import JobState
+from core.models import User
 from core.recordings import Batch, MediaState, Recording, Refusal
 
 log = logging.getLogger("transcribe.pages")
@@ -47,6 +49,8 @@ def standing_line() -> str:
 @login_required
 def recordings(request: HttpRequest) -> HttpResponse:
     """Where a person lands: everything they have uploaded this session."""
+    if request.user.is_authenticated:
+        views.note_where_they_work(request.user, User.LANDS_RECORDINGS)
     return render(
         request,
         "recordings.html",
@@ -425,6 +429,54 @@ def _job_state(job, speed=None, in_line=None, user=None) -> dict | None:
         "message": job.failure_message,
         "reason": job.failure_class,
     }
+
+
+@login_required
+def what_would_be_cleared(request: HttpRequest) -> JsonResponse:
+    """What "Done with these" or "Clear my recordings" would remove.
+
+    Asked before anything happens, so the person is told the counts and the
+    size before they agree to it rather than after.
+    """
+    batch_id = request.GET.get("batch", "")
+    wanted = lifecycle.in_the_workspace(request.user)
+    if batch_id:
+        wanted = wanted.filter(batch_id=batch_id)
+
+    recordings = list(wanted)
+    return JsonResponse(
+        {
+            "recordings": len(recordings),
+            "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
+            "clips": sum(one.clips.count() for one in recordings),
+            "size": uploads.as_gb(sum(one.disk_bytes() for one in recordings)),
+        }
+    )
+
+
+@login_required
+@require_POST
+def clear_recordings(request: HttpRequest) -> JsonResponse:
+    """Remove what this person is finished with, without signing them out.
+
+    With a batch named, that batch only: the loop an office running batches
+    actually works in is upload, download, clear, upload again, and until now
+    the clearing step meant signing out.
+    """
+    batch_id = request.POST.get("batch", "")
+    wanted = lifecycle.in_the_workspace(request.user)
+    if batch_id:
+        wanted = wanted.filter(batch_id=batch_id)
+
+    gone, freed = lifecycle.clear_out(list(wanted), actor=request.user, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "recordings": gone,
+            "freed": uploads.as_gb(freed),
+            "where": reverse("upload") if batch_id else reverse("home"),
+        }
+    )
 
 
 @login_required

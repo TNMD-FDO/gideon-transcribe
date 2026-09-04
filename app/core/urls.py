@@ -23,6 +23,10 @@ urlpatterns = [
     path("batch/<uuid:batch_id>", pages.batch, name="batch"),
     path("batch/<uuid:batch_id>/state", pages.batch_state, name="batch-state"),
     path("batch/<uuid:batch_id>/cancel", pages.cancel_batch, name="cancel-batch"),
+    # Finishing with recordings without signing out, which is the loop an
+    # office running batches actually works in.
+    path("recordings/what-would-go", pages.what_would_be_cleared, name="what-would-go"),
+    path("recordings/clear", pages.clear_recordings, name="clear-recordings"),
     path(
         "batch/<uuid:batch_id>/download",
         exports.batch_download,
