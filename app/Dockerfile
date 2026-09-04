@@ -36,7 +36,7 @@ RUN apt-get update \
       libboost-program-options1.83.0 \
       libboost-filesystem1.83.0 \
       libboost-regex1.83.0 \
-      libldap-2.5-0 \
+      libldap2 \
       libsasl2-2 \
  && rm -rf /var/lib/apt/lists/*
 
@@ -70,10 +70,10 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       build-essential \
       python3-dev \
-      libldap2-dev \
+      libldap-dev \
       libsasl2-dev \
  && pip install --no-cache-dir -r /tmp/requirements.txt \
- && apt-get purge -y --auto-remove build-essential python3-dev libldap2-dev \
+ && apt-get purge -y --auto-remove build-essential python3-dev libldap-dev \
       libsasl2-dev \
  && rm -rf /var/lib/apt/lists/*
 
