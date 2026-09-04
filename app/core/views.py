@@ -10,6 +10,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from core import lifecycle, settings_store, signin
+from core.models import User
 
 log = logging.getLogger("transcribe.health")
 
@@ -34,22 +35,44 @@ def healthz(request: HttpRequest) -> HttpResponse:
     return HttpResponse("ok\n", content_type="text/plain")
 
 
-def where_they_land() -> str:
-    """The Cases page when Cases are on, and the Recordings page when they are not.
+def where_they_land(user=None) -> str:
+    """The page this person works on, or the Cases page until they show which.
 
     Both pages carry a link to the other, so this decides only what opens
-    first. Turning the setting off puts everybody back on the Phase 1 landing
-    page at their next sign-in.
+    first. With Cases off there is only one page and this cannot choose.
+
+    The specification lands everybody on Cases. That is right for the office
+    that works in Cases and wrong for the one that does not: an office's
+    larger use is batches of recordings that belong to no Case, and those
+    people were landing every morning on a page about a feature they never
+    open. So the specified page stands until somebody shows otherwise, and
+    after that they land where they were working.
     """
     from core import cases
 
-    return reverse("cases") if cases.folder_management_on() else reverse("home")
+    if not cases.folder_management_on():
+        return reverse("home")
+    if user is not None and getattr(user, "lands_on", "") == User.LANDS_RECORDINGS:
+        return reverse("home")
+    return reverse("cases")
+
+
+def note_where_they_work(user, page: str) -> None:
+    """Remember which of the two front pages this person opened.
+
+    Written only when it changes, because it is on the way in to a page
+    somebody opens all day.
+    """
+    if getattr(user, "lands_on", None) == page:
+        return
+    User.objects.filter(pk=user.pk).update(lands_on=page)
+    user.lands_on = page
 
 
 def sign_in(request: HttpRequest) -> HttpResponse:
     """One form for everybody: directory users and Local admins alike."""
     if request.user.is_authenticated:
-        return redirect(where_they_land())
+        return redirect(where_they_land(request.user))
 
     problem = None
     username = ""
@@ -63,7 +86,7 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         else:
             try:
                 signin.sign_in(request, username, password)
-                return redirect(where_they_land())
+                return redirect(where_they_land(request.user))
             except signin.Refused as refusal:
                 problem = refusal.message
 

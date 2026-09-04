@@ -7,7 +7,15 @@
   <div style="max-width: 70rem">
     <div class="row">
       <h1 class="grow">Cases</h1>
+      {% comment %}
+        Not everybody who lands here is here for a Case. An office's larger
+        use is batches of recordings that belong to nobody's case, and until
+        this button existed those people arrived on a page about a feature
+        they never use with no way onward but a link named after somewhere
+        else.
+      {% endcomment %}
       <a href="{% url 'home' %}" class="btn">Your recordings</a>
+      <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
     </div>
 
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}

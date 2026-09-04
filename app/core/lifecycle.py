@@ -261,6 +261,49 @@ def remove_recording(recording: Recording, cause: str, actor=None, request=None)
     return size
 
 
+def clear_out(recordings, actor, request=None) -> tuple[int, int]:
+    """Remove Recordings a person says they are finished with.
+
+    The Discard does this when a Login session ends, on the app's own
+    initiative. This is the same removal asked for by the person whose
+    Recordings they are: somebody who has taken what they wanted from a batch
+    and needs the room back before the next one.
+
+    It matters more than tidiness. Every Recording counts against its owner's
+    quota until it goes, so an office running large batches would otherwise
+    reach the quota by lunchtime with no remedy but signing out or deleting
+    sixty things one at a time.
+    """
+    recordings = [one for one in recordings if one.case_id is None]
+    if not recordings:
+        return 0, 0
+
+    Recording.objects.filter(pk__in=[one.pk for one in recordings]).update(
+        discarding_since=timezone.now()
+    )
+
+    gone = 0
+    for recording in recordings:
+        gone += remove_recording(recording, cause="owner", actor=actor, request=request)
+
+    audit.write(
+        audit.Category.RECORDINGS,
+        "recordings cleared",
+        actor=actor,
+        request=request,
+        affected_user=actor,
+        recordings=len(recordings),
+        gigabytes=round(gone / (1024**3), 2),
+    )
+    log.info(
+        "%s cleared %d recording(s), %.1f GB",
+        actor.username,
+        len(recordings),
+        gone / (1024**3),
+    )
+    return len(recordings), gone
+
+
 def discard(user) -> tuple[int, int]:
     """Remove everything in one Workspace, and say what went.
 

@@ -20,6 +20,9 @@
         {% if folder_management %}
           <a href="{% url 'cases' %}" class="btn">Cases</a>
         {% endif %}
+        {% if recordings %}
+          <button type="button" class="btn ghost danger clear-recordings">Clear my recordings</button>
+        {% endif %}
         <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
       {% endif %}
     </div>
@@ -92,6 +95,7 @@
   </div>
 
   <script src="{% static 'recordings.js' %}"></script>
+  <script src="{% static 'clearing.js' %}"></script>
   <script src="{% static 'again.js' %}"></script>
   {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
 {% endblock %}

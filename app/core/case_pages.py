@@ -18,9 +18,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, exports, settings_store, uploads
+from core import audit, cases, exports, settings_store, uploads, views
 from core.cases import Case
 from core.jobs import Segment
+from core.models import User
 from core.recordings import Recording
 
 # How many hits one search shows. A person looking for a phrase wants the
@@ -62,6 +63,7 @@ def cases_page(request: HttpRequest) -> HttpResponse:
     The Cases shared with a person are the Sharing chapter's and are not here.
     """
     _on_or_404()
+    views.note_where_they_work(request.user, User.LANDS_CASES)
 
     mine = cases.cases_for(request.user)
     others = Case.objects.none()

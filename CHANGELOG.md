@@ -26,6 +26,26 @@ Database: migrates
 
 ### Added
 
+- **Finishing with a batch.** An office running batches works in a loop:
+  upload, wait, download, clear, upload the next lot. The clearing step did
+  not exist. The only ways to remove twelve recordings were Delete twelve
+  times or signing out, and signing out takes everything, so somebody keeping
+  one recording from last week had to choose between it and the room for
+  tomorrow's batch. This is not tidiness: every recording counts against its
+  owner's quota until it goes, so a morning of large files reached the quota
+  with no remedy that kept the person signed in. A finished batch now offers
+  **Done with these**, which removes that batch and takes you to Upload, and
+  the recordings page offers **Clear my recordings** for all of them. Both
+  say the counts and the size and tell you to download first, because both
+  are final. Neither touches a recording in a case.
+- **Upload recordings on the Cases page.** Not everybody who lands there is
+  there for a case, and the page offered no way to start one.
+- **Signing in opens the page you work on.** With folder management on
+  everybody landed on Cases, which is right for the office that works in
+  cases and a detour for the office whose larger use is batches that belong
+  to no case. The specified landing page stands until somebody opens the
+  other one, and after that they land where they were working. Turning folder
+  management off puts everybody back on the recordings page, as before.
 - **Cases**, the Phase 2 feature that lets a recording outlive the session
   that uploaded it. A case is a named page with one owner; a recording moved
   into one lives under `cases/<case id>/<recording id>/` and the sign-out
