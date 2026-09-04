@@ -22,7 +22,7 @@
     {% csrf_token %}
 
     {% for row in rows %}
-      <div class="arow{% if row.waiting %} dirty{% endif %}">
+      <div class="arow{% if row.waiting %} dirty{% endif %}{% if row.greyed %} greyed{% endif %}">
         <div class="lbl">
           <label for="{{ row.key }}"><b>{{ row.name }}</b></label>
           <div class="help">{{ row.help }}</div>
@@ -31,12 +31,12 @@
           {% if row.kind == "toggle" %}
             <label class="switch">
               <input type="checkbox" id="{{ row.key }}" name="{{ row.key }}"
-                     {% if row.value %}checked{% endif %}>
+                     {% if row.value %}checked{% endif %}{% if row.greyed %} disabled{% endif %}>
               <span class="knob"></span>
               <span class="state"><span class="on-word">On</span><span class="off-word">Off</span></span>
             </label>
           {% elif row.kind == "choice" %}
-            <select id="{{ row.key }}" name="{{ row.key }}">
+            <select id="{{ row.key }}" name="{{ row.key }}"{% if row.greyed %} disabled{% endif %}>
               {% for choice in row.choices %}
                 <option value="{{ choice }}"{% if choice == row.value %} selected{% endif %}>{{ choice }}</option>
               {% endfor %}
@@ -44,14 +44,18 @@
           {% elif row.kind == "number" %}
             <span class="row">
               <input type="number" id="{{ row.key }}" name="{{ row.key }}"
-                     value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}">
+                     value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}"{% if row.greyed %} disabled{% endif %}>
               <span class="muted small">{{ row.unit }}</span>
             </span>
           {% else %}
-            <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}">{{ row.value }}</textarea>
+            <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}"{% if row.greyed %} disabled{% endif %}>{{ row.value }}</textarea>
           {% endif %}
 
           <div>
+            {% if row.greyed %}
+              <span class="changedmark">Greyed while {{ row.needs_name }} is off; the value is kept.</span>
+              &middot;
+            {% endif %}
             <span class="defmark">Default: {{ row.default }}</span>
             {% if row.changed %}
               <span class="changedmark">&middot; changed from default</span>

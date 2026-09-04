@@ -807,6 +807,12 @@ def _may_open(request, recording_id):
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
     if recording is None:
         return None
+
+    # Nothing in a Case that is in the Recycle bin is exported by anybody.
+    from core import cases
+
+    if not cases.reachable(recording):
+        return None
     if recording.user_id == request.user.pk or request.user.is_admin:
         return recording
     return None

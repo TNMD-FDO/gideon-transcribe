@@ -213,15 +213,26 @@ def _workspaces() -> dict:
     size = 0
     if scratch.is_dir():
         size = sum(path.stat().st_size for path in scratch.rglob("*") if path.is_file())
-    every_case = Case.objects.all()
-    cases_size = sum(one.disk_bytes() for one in every_case)
+    # The panel chapter's Cases line: "Cases: N, X GB; M expiring; K in the
+    # recycle bin, Y GB". The live ones and the binned ones are counted apart,
+    # because the bin is disk an owner can free at once.
+    from core import retention
+
+    live = Case.objects.filter(deleted_on__isnull=True)
+    binned = Case.objects.filter(deleted_on__isnull=False)
+    cases_size = sum(one.disk_bytes() for one in live)
+    binned_size = sum(one.disk_bytes() for one in binned)
+    expiring = sum(1 for one in live if retention.is_warned(retention.days_left(one)))
     since = cases.off_since()
     return {
         "open": open_now,
         "busy": busy,
         "gigabytes": f"{size / 1024**3:.1f}",
-        "cases": every_case.count(),
+        "cases": live.count(),
         "cases_gigabytes": f"{cases_size / 1024**3:.1f}",
+        "expiring": expiring,
+        "binned": binned.count(),
+        "binned_gigabytes": f"{binned_size / 1024**3:.1f}",
         # Kept while Folder management is off, so IT can see what is parked
         # and for how long it has been out of reach.
         "cases_off_since": f"{since:%d %B %Y}" if since else "",
@@ -508,9 +519,19 @@ def user_action(request: HttpRequest, username: str) -> HttpResponse:
         if not cases.folder_management_on():
             _tell(request, "Cases are turned off.")
         else:
+            # A leaver's binned Cases go too, as the Retention chapter fixes,
+            # with an Admin as the cause of the wipe.
             gone = 0
             for case in list(Case.objects.filter(owner=person)):
-                cases.delete(case, actor=request.user, request=request)
+                if case.is_binned:
+                    cases.wipe(
+                        case,
+                        cause=cases.WIPED_BY_ADMIN,
+                        actor=request.user,
+                        request=request,
+                    )
+                else:
+                    cases.delete(case, actor=request.user, request=request)
                 gone += 1
             _tell(
                 request,

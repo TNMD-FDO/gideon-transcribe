@@ -202,6 +202,23 @@ def mind_the_workspaces(timestamp: int) -> None:
 
 
 @app.periodic(cron="30 3 * * *")
+@app.task(queue="default", name="retention_sweep")
+def retention_sweep(timestamp: int) -> None:
+    """The Retention policy's nightly pass, at half past three.
+
+    Marks the warning, moves due Cases to the Recycle bin, wipes what has sat
+    there past the bin period, and writes one row with the counts. Nothing at
+    all while Folder management is off. The chapter puts it before the disk
+    sweeper and the audit sweep; here they share the minute, and the order does
+    not matter, because a binned Case keeps every row and the disk sweeper
+    removes only what no row claims.
+    """
+    from core import retention
+
+    retention.sweep()
+
+
+@app.periodic(cron="30 3 * * *")
 @app.task(queue="default", name="sweep_audit_log")
 def sweep_audit_log(timestamp: int) -> None:
     """Remove audit rows past the retention setting, nightly at half past three.

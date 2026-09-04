@@ -15,6 +15,7 @@
         else.
       {% endcomment %}
       <a href="{% url 'home' %}" class="btn">Your recordings</a>
+      <a href="{% url 'recycle-bin' %}" class="btn">Recycle bin{% if binned %} ({{ binned }}){% endif %}</a>
       <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
     </div>
 
@@ -25,8 +26,18 @@
         <input type="search" name="name" value="{{ name_filter }}"
                placeholder="Filter by name" style="max-width: 18rem">
         <button type="submit" class="btn">Filter</button>
-        {% if name_filter %}<a href="{% url 'cases' %}" class="btn ghost">Clear</a>{% endif %}
+        {% if name_filter or expiring or owner_deactivated %}<a href="{% url 'cases' %}" class="btn ghost">Clear</a>{% endif %}
       </form>
+      {% comment %}
+        The two filters the panel chapter gives an Admin's Cases page. Anybody
+        may narrow to Expiring, since anybody may have a case in its last days.
+      {% endcomment %}
+      <a href="{% url 'cases' %}?expiring=1{% if name_filter %}&amp;name={{ name_filter|urlencode }}{% endif %}"
+         class="btn{% if expiring %} primary{% endif %}">Expiring</a>
+      {% if user.is_admin %}
+        <a href="{% url 'cases' %}?owner_deactivated=1{% if name_filter %}&amp;name={{ name_filter|urlencode }}{% endif %}"
+           class="btn{% if owner_deactivated %} primary{% endif %}">Owner deactivated</a>
+      {% endif %}
       <button type="button" class="btn primary" id="open-new">New case</button>
     </div>
 
@@ -49,7 +60,7 @@
         </thead>
         <tbody>
           {% for row in cases %}
-            <tr>
+            <tr{% if row.warned %} class="expiring"{% endif %}>
               {% comment %}
                 The name opens the newest recording that has a transcript,
                 with the rest of the case beside it. A case with nothing to
@@ -60,12 +71,18 @@
               <td class="muted">{{ row.size }}</td>
               <td class="muted">{{ row.case.last_activity|date:"d M Y H:i" }}</td>
               <td class="muted small">
+                {% if row.warned %}
+                  <span class="deletes">{{ row.deletes_line }}</span>
+                  <button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>
+                {% endif %}
                 <a href="{% url 'case' row.case.pk %}">Case page</a>
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
+    {% elif expiring %}
+      <p class="lead">None of your cases is in its last days.</p>
     {% elif name_filter %}
       <p class="lead">No case of yours has that in its name.</p>
     {% else %}
@@ -84,13 +101,20 @@
         </thead>
         <tbody>
           {% for row in others %}
-            <tr>
+            <tr{% if row.warned %} class="expiring"{% endif %}>
               <td><a href="{{ row.opens_at }}">{{ row.case.name }}</a></td>
-              <td class="muted">{{ row.case.owner.shown_name }}</td>
+              <td class="muted">
+                {{ row.case.owner.shown_name }}
+                {% if row.owner_deactivated %}<span class="pill warn">Owner deactivated</span>{% endif %}
+              </td>
               <td>{{ row.recordings }}</td>
               <td class="muted">{{ row.size }}</td>
               <td class="muted">{{ row.case.last_activity|date:"d M Y H:i" }}</td>
               <td class="muted small">
+                {% if row.warned %}
+                  <span class="deletes">{{ row.deletes_line }}</span>
+                  <button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>
+                {% endif %}
                 <a href="{% url 'case' row.case.pk %}">Case page</a>
               </td>
             </tr>

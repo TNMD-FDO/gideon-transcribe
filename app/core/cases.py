@@ -8,6 +8,11 @@ one in a Case.
 Everything here is invisible until the Folder management setting is on. Off
 hides and never deletes: the rows stay, the files under `cases/` stay, and
 turning it on again brings back exactly what was hidden.
+
+Two words are used with one meaning throughout, as the Retention chapter
+fixes them: **deleted** means moved to the Recycle bin, where a Case can
+still be restored; **wiped** means gone for good, files and rows. A person's
+own Delete is a wipe under the older name, and is final.
 """
 
 from __future__ import annotations
@@ -23,6 +28,11 @@ from django.utils import timezone
 from core import audit, settings_store
 
 CATEGORY = audit.Category.CASES
+
+# The three causes a "case permanently deleted" row may carry.
+WIPED_BY_THE_BIN = "recycle bin period"
+WIPED_BY_OWNER = "owner"
+WIPED_BY_ADMIN = "admin"
 
 
 def cases_root() -> Path:
@@ -54,8 +64,14 @@ class Case(models.Model):
     # specification counts, never by an Admin looking in.
     last_activity = models.DateTimeField(default=timezone.now)
 
-    # Filled when a Case goes to the Recycle bin. Empty in every case here,
-    # because the bin is the Retention policy chapter's and is not built yet.
+    # The day the retention sweep first found this Case inside its warning
+    # window and wrote the "retention warning" row. Cleared by any activity,
+    # so the row is written once per approach to the edge and not nightly.
+    warned_on = models.DateField(null=True, blank=True)
+
+    # Filled the night the retention sweep deletes the Case into the Recycle
+    # bin. A Case with a date here is out of every list and unusable until it
+    # is restored or wiped; its files and rows stay meanwhile.
     deleted_on = models.DateField(null=True, blank=True)
 
     class Meta:
@@ -70,6 +86,10 @@ class Case(models.Model):
         """Ids only, never the name, so a rename moves nothing on disk."""
         return cases_root() / str(self.id)
 
+    @property
+    def is_binned(self) -> bool:
+        return self.deleted_on is not None
+
     def disk_bytes(self) -> int:
         if not self.folder.exists():
             return 0
@@ -82,11 +102,24 @@ class Case(models.Model):
 
         The owner, and an Admin under the Admin access rule (ADR 0004), which
         writes its own row and does not count as activity. Collaborators are
-        the Sharing chapter's and are not built.
+        the Sharing chapter's and are not built. Nobody may open a Case in the
+        Recycle bin: it is restored first, or it is gone.
         """
+        if self.is_binned:
+            return False
         if self.owner_id == user.pk:
             return True
         return bool(getattr(user, "is_admin", False))
+
+
+def reachable(recording) -> bool:
+    """Whether a Recording's Case, if it has one, is out of the Recycle bin.
+
+    Asked by every gate that hands out a Recording's bytes or pages: the
+    viewer, the media gate, the exports, and the Clips. A Recording in a
+    binned Case is nobody's until the Case is restored, an Admin's included.
+    """
+    return not recording.case_id or not recording.case.is_binned
 
 
 class OffSpell(models.Model):
@@ -139,17 +172,23 @@ def off_since():
     return running.started if running else None
 
 
+def _start_the_clock_over(case: Case) -> None:
+    case.last_activity = timezone.now()
+    case.warned_on = None
+    case.save(update_fields=["last_activity", "warned_on"])
+
+
 def note_activity(case: Case, by=None) -> None:
     """Move the Retention clock, for the acts the specification counts.
 
     An Admin looking into somebody else's Case is not use, so it does not
     count, matching the Workspace rule. Nothing else here decides: every caller
-    is a place the chapter names.
+    is a place the chapter names. Any activity also lifts the warning, so the
+    next approach to the edge is warned about afresh.
     """
     if by is not None and case.owner_id != by.pk:
         return
-    case.last_activity = timezone.now()
-    case.save(update_fields=["last_activity"])
+    _start_the_clock_over(case)
 
 
 def used(recording, by) -> None:
@@ -164,6 +203,28 @@ def used(recording, by) -> None:
         note_activity(recording.case, by=by)
 
 
+def keep(case: Case, actor, request=None) -> None:
+    """Keep: one click that starts the clock over, as opening the Case would.
+
+    It exists so a person who has seen the warning and knows they still need
+    the Case does not have to open a Recording to prove it. Anybody who sees
+    the mark may press it, an Admin included, and that is the one way an
+    Admin's act moves a clock, so it is audited with the owner as the
+    affected user.
+    """
+    _start_the_clock_over(case)
+    audit.write(
+        CATEGORY,
+        "case kept",
+        actor=actor,
+        affected_user=case.owner if case.owner_id != actor.pk else None,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        request=request,
+    )
+
+
 def recording_types() -> list[str]:
     """The labels a person may put on a Recording."""
     lines = settings_store.get("recording_types") or []
@@ -175,9 +236,15 @@ def recording_types() -> list[str]:
 def cases_for(user):
     """The Cases this person may put a Recording into.
 
-    Their own today. The Sharing chapter adds the Cases shared with them.
+    Their own today, and none that is in the Recycle bin. The Sharing chapter
+    adds the Cases shared with them.
     """
     return Case.objects.filter(owner=user, deleted_on__isnull=True)
+
+
+def binned_for(user):
+    """This person's Cases in the Recycle bin."""
+    return Case.objects.filter(owner=user, deleted_on__isnull=False)
 
 
 def name_already_used(user, name: str, besides=None) -> bool:
@@ -272,23 +339,35 @@ def move_recording(recording, case: Case, actor, description="", request=None) -
     note_activity(case, by=actor)
 
 
-def delete(case: Case, actor, request=None) -> tuple[int, int]:
-    """Delete a Case and everything in it. Final: there is no way back.
+# Ways out of a Case -----------------------------------------------------------
+
+
+def _remove_everything(case: Case, actor, request, recording_cause: str):
+    """Take every Recording and the folder off the disk and out of the database.
 
     One audit row per Recording, as the Discard writes one per Recording it
-    removes, and then one for the Case with the counts on it.
+    removes. The Case's own row is the caller's to write, because the three
+    callers say three different things about why.
     """
     from core import lifecycle
 
     recordings = list(case.recordings.all())
     gigabytes = round(case.disk_bytes() / (1024**3), 1)
-
-    cause = "owner" if case.owner_id == actor.pk else "admin"
     for recording in recordings:
-        lifecycle.remove_recording(recording, cause=cause, actor=actor, request=request)
-
+        lifecycle.remove_recording(
+            recording, cause=recording_cause, actor=actor, request=request
+        )
     shutil.rmtree(case.folder, ignore_errors=True)
+    return len(recordings), gigabytes
 
+
+def delete(case: Case, actor, request=None) -> tuple[int, int]:
+    """A person's own Delete of a Case. Final: there is no way back.
+
+    The Recycle bin is for what the clock takes, never for this.
+    """
+    cause = WIPED_BY_OWNER if case.owner_id == actor.pk else WIPED_BY_ADMIN
+    count, gigabytes = _remove_everything(case, actor, request, cause)
     audit.write(
         CATEGORY,
         "case deleted",
@@ -298,8 +377,86 @@ def delete(case: Case, actor, request=None) -> tuple[int, int]:
         object_id=case.pk,
         object_label=case.name,
         request=request,
-        recordings=len(recordings),
+        recordings=count,
         gigabytes=gigabytes,
     )
     case.delete()
-    return len(recordings), gigabytes
+    return count, gigabytes
+
+
+def put_in_the_bin(case: Case, on=None) -> tuple[int, float]:
+    """The retention sweep's deletion: into the Recycle bin, whole.
+
+    Nothing leaves the disk and no row is removed. The Case gets its deleted-on
+    date, which takes it out of every list and every picker and makes every
+    Recording in it unreachable, and the bin's own clock starts from that date.
+    """
+    count = case.recordings.count()
+    gigabytes = round(case.disk_bytes() / (1024**3), 1)
+    case.deleted_on = on or timezone.localdate()
+    case.save(update_fields=["deleted_on"])
+    audit.write(
+        CATEGORY,
+        "case deleted",
+        system="retention",
+        affected_user=case.owner,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        cause="retention",
+        recordings=count,
+        gigabytes=gigabytes,
+    )
+    return count, gigabytes
+
+
+def restore(case: Case, actor, request=None) -> None:
+    """Put a binned Case back exactly as it was, and start its clock over.
+
+    Over, because otherwise the clock that put it in the bin would put it
+    straight back the same night. Nothing moved on disk, so a full quota never
+    blocks this: the Case never left.
+    """
+    case.deleted_on = None
+    case.warned_on = None
+    case.last_activity = timezone.now()
+    case.save(update_fields=["deleted_on", "warned_on", "last_activity"])
+    audit.write(
+        CATEGORY,
+        "case restored",
+        actor=actor,
+        affected_user=case.owner if case.owner_id != actor.pk else None,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        request=request,
+    )
+
+
+def wipe(case: Case, cause: str, actor=None, request=None) -> tuple[int, float]:
+    """Gone for good: files and rows, nothing left, no recovery.
+
+    Three causes: the bin's period, by the sweep with no actor; the owner
+    emptying their bin or deleting one Case from it; an Admin doing either, or
+    wiping a leaver's binned Cases from the Users page. The per-Recording rows
+    say "retention" whichever it was, as the chapter fixes.
+    """
+    count, gigabytes = _remove_everything(case, actor, request, "retention")
+    audit.write(
+        CATEGORY,
+        "case permanently deleted",
+        actor=actor,
+        system=None if actor is not None else "retention",
+        affected_user=(
+            case.owner if actor is None or actor.pk != case.owner_id else None
+        ),
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        request=request,
+        cause=cause,
+        recordings=count,
+        gigabytes=gigabytes,
+    )
+    case.delete()
+    return count, gigabytes

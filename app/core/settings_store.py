@@ -70,6 +70,9 @@ class Definition:
     lines: int = 3
     # Vocabulary is content, so its audit row says only that it changed.
     content: bool = False
+    # A toggle this setting is greyed under while that toggle is off. The
+    # value is kept; only the control is closed, and the page says so.
+    needs: str = ""
     aliases: tuple = field(default=(), repr=False)
 
 
@@ -138,6 +141,67 @@ def _rows() -> list[Definition]:
                 "clocks resume. Off: every Case is hidden from everyone, "
                 "Admins included, and kept; its Retention clock pauses; "
                 "nothing is deleted."
+            ),
+        ),
+        # The Retention policy's three, greyed while Folder management is off.
+        # One office-wide number each: there is no per-Case value anywhere.
+        Definition(
+            key="retention_days",
+            page=CASES,
+            name="Retention period",
+            kind=NUMBER,
+            default=30,
+            least=7,
+            most=3650,
+            unit="days",
+            needs="folder_management",
+            what_it_does=(
+                "The days without activity after which the Retention policy "
+                "moves a Case to the Recycle bin. Any use of a Case starts its "
+                "clock over; days while Folder management is off do not count."
+            ),
+            when_changed=(
+                "The next sweep, at half past three. A Case already past the "
+                "new number goes to the Recycle bin that night."
+            ),
+        ),
+        Definition(
+            key="warning_days",
+            page=CASES,
+            name="Warning before deletion",
+            kind=NUMBER,
+            default=7,
+            least=1,
+            most=30,
+            unit="days",
+            needs="folder_management",
+            what_it_does=(
+                "The days before deletion during which a Case carries the "
+                "amber Retention warning and its Keep button. Always shorter "
+                "than the Retention period."
+            ),
+            when_changed=(
+                "The next page load for the amber mark; the next sweep for the "
+                "Retention digest."
+            ),
+        ),
+        Definition(
+            key="recycle_bin_days",
+            page=CASES,
+            name="Recycle bin",
+            kind=NUMBER,
+            default=30,
+            least=1,
+            most=365,
+            unit="days",
+            needs="folder_management",
+            what_it_does=(
+                "The days a Case the clock deleted waits in the Recycle bin, "
+                "restorable, before it is wiped for good."
+            ),
+            when_changed=(
+                "The next sweep. Anything in the bin longer than the new "
+                "number is wiped that night."
             ),
         ),
         Definition(
@@ -621,6 +685,26 @@ def check(key: str, value):
         return wanted
 
     return str(value)
+
+
+def check_together(pending: dict) -> None:
+    """The one rule that spans two settings, checked before a tray is applied.
+
+    The warning window must be shorter than the Retention period, or a Case
+    would be warned from the day it was made. Each value is the pending one
+    when the tray holds it and the stored one when it does not, so lowering
+    the period and the warning together is judged as the pair it is.
+    """
+
+    def value_of(key: str) -> int:
+        return int(pending.get(key, get(key)))
+
+    if value_of("warning_days") >= value_of("retention_days"):
+        raise ValueError(
+            "Warning before deletion must be shorter than the Retention period: "
+            f"{value_of('warning_days')} days is not shorter than "
+            f"{value_of('retention_days')}."
+        )
 
 
 def set_to(key: str, value) -> None:

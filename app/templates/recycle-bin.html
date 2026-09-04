@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Recycle bin{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  <div class="page roomy">
+    <div class="row">
+      <h1 class="grow">Recycle bin</h1>
+      <a href="{% url 'cases' %}" class="btn">Cases</a>
+      {% if mine %}
+        <button type="button" class="btn ghost danger" id="empty-bin">Empty recycle bin</button>
+      {% endif %}
+    </div>
+
+    <p class="lead">
+      Cases the retention policy has deleted wait here for {{ bin_days }} days,
+      then are wiped for good. Restore puts one back exactly as it was and
+      starts its clock over. A case you delete yourself does not come here: that
+      is final.
+    </p>
+
+    {% if owners %}
+      <p class="muted small">
+        Filter by owner:
+        {% for owner in owners %}
+          <a href="{% url 'recycle-bin' %}?owner={{ owner|urlencode }}">{{ owner }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </p>
+    {% elif owner_filter %}
+      <p class="muted small">
+        Showing {{ owner_filter }}'s. <a href="{% url 'recycle-bin' %}">Everyone's</a>
+      </p>
+    {% endif %}
+
+    {% if rows %}
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Name</th>
+            {% if user.is_admin %}<th>Owner</th>{% endif %}
+            <th>Recordings</th><th>Size</th><th>Deleted on</th><th>Days left</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr data-case="{{ row.case.pk }}">
+              <td><b>{{ row.case.name }}</b></td>
+              {% if user.is_admin %}
+                <td class="muted">
+                  {{ row.case.owner.shown_name }}
+                  {% if row.owner_deactivated %}<span class="pill warn">Owner deactivated</span>{% endif %}
+                </td>
+              {% endif %}
+              <td>{{ row.recordings }}</td>
+              <td class="muted">{{ row.size }}</td>
+              <td class="muted">{{ row.case.deleted_on|date:"d M Y" }}</td>
+              <td class="muted">{{ row.days_left }}</td>
+              <td class="small">
+                <button type="button" class="small primary restore" data-case="{{ row.case.pk }}">Restore</button>
+                <button type="button" class="small ghost danger wipe" data-case="{{ row.case.pk }}">Delete permanently</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="lead">The recycle bin is empty.</p>
+    {% endif %}
+  </div>
+
+  <script src="{% static 'cases.js' %}"></script>
+{% endblock %}
