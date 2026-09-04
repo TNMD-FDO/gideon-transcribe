@@ -306,3 +306,37 @@ def test_a_directory_account_is_updated_at_every_sign_in(db):
     user = User.objects.from_directory("jsmith", display_name="Jane Smith")
     assert User.objects.filter(username="jsmith").count() == 1
     assert user.display_name == "Jane Smith"
+
+
+def test_the_idle_clock_is_not_written_on_every_request(client, admin):
+    """A browser asks for a video in ranges, and each one is a request here.
+
+    Somebody jumping about in a recording asks for several at once. Writing a
+    row for each before a byte is served made the app the slowest part of
+    watching a video, which is the last thing it should be.
+    """
+    sign_in(client)
+    session = LoginSession.objects.get(user=admin)
+    was = session.last_request
+
+    for _ in range(5):
+        client.get("/")
+
+    session.refresh_from_db()
+    assert session.last_request == was
+
+
+def test_the_idle_clock_still_moves(client, admin):
+    from core.middleware import CLOCK_STEP
+
+    sign_in(client)
+    session = LoginSession.objects.get(user=admin)
+    # As it would be after a minute of watching.
+    LoginSession.objects.filter(pk=session.pk).update(
+        last_request=timezone.now() - CLOCK_STEP - timedelta(seconds=1)
+    )
+
+    client.get("/")
+
+    session.refresh_from_db()
+    assert timezone.now() - session.last_request < timedelta(seconds=5)
