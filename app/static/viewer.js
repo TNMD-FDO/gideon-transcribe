@@ -1014,5 +1014,97 @@
     openWhereAsked();
   }
 
+  // Resizing the picture ------------------------------------------------------
+  //
+  // The width is the only thing chosen; the height follows it, so the picture
+  // keeps its shape and the transport beside it does not jump about. The
+  // choice is remembered, because somebody who wants a big picture wants it
+  // on the next recording too.
+
+  var SMALLEST = 160;
+  var USUAL = 220;
+
+  function widest() {
+    // Never more than half the window: the transcript is the point of the
+    // page, and a picture that pushed it off the screen would be a worse
+    // page, not a bigger picture.
+    return Math.max(SMALLEST, Math.round(window.innerWidth * 0.5));
+  }
+
+  function setWidth(pixels) {
+    var wanted = Math.round(Math.min(widest(), Math.max(SMALLEST, pixels)));
+    document.documentElement.style.setProperty("--thumb-width", wanted + "px");
+    return wanted;
+  }
+
+  var grip = document.getElementById("thumb-grip");
+  var thumb = document.getElementById("thumb");
+
+  var remembered = null;
+  try {
+    remembered = window.localStorage.getItem("thumb-width");
+  } catch (ignored) { /* a browser that forbids storage keeps the usual size */ }
+  if (remembered) { setWidth(parseInt(remembered, 10) || USUAL); }
+
+  function remember(pixels) {
+    try {
+      window.localStorage.setItem("thumb-width", String(pixels));
+    } catch (ignored) { /* the same, and the size lasts this page only */ }
+  }
+
+  if (grip && thumb) {
+    var dragging = false;
+    var startedAt = 0;
+    var wasWide = 0;
+
+    grip.addEventListener("pointerdown", function (event) {
+      dragging = true;
+      startedAt = event.clientX;
+      wasWide = thumb.getBoundingClientRect().width;
+      grip.setPointerCapture(event.pointerId);
+      document.querySelector(".dock").classList.add("resizing");
+      event.preventDefault();
+    });
+
+    grip.addEventListener("pointermove", function (event) {
+      if (!dragging) { return; }
+      setWidth(wasWide + (event.clientX - startedAt));
+    });
+
+    function letGo() {
+      if (!dragging) { return; }
+      dragging = false;
+      document.querySelector(".dock").classList.remove("resizing");
+      remember(Math.round(thumb.getBoundingClientRect().width));
+      drawTimeline();
+    }
+    grip.addEventListener("pointerup", letGo);
+    grip.addEventListener("pointercancel", letGo);
+
+    grip.addEventListener("dblclick", function () {
+      remember(setWidth(USUAL));
+      drawTimeline();
+    });
+
+    // The keyboard reaches it too: the handle takes focus, and the arrows
+    // move it in steps a person can predict.
+    grip.addEventListener("keydown", function (event) {
+      var step = event.shiftKey ? 60 : 20;
+      if (event.key === "ArrowLeft") { step = -step; }
+      else if (event.key !== "ArrowRight") { return; }
+      event.preventDefault();
+      remember(setWidth(thumb.getBoundingClientRect().width + step));
+      drawTimeline();
+    });
+
+    // A window that shrinks below what was chosen takes the picture with it,
+    // and the choice is left alone so it comes back on a wider window.
+    window.addEventListener("resize", function () {
+      var now = thumb.getBoundingClientRect().width;
+      if (now > widest()) { setWidth(widest()); }
+      drawTimeline();
+    });
+  }
+
   drawTimeline();
 })();

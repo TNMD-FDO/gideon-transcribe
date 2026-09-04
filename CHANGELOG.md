@@ -50,6 +50,11 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **The video window resizes.** Drag the right edge of the picture, and the
+  height follows so it keeps its shape. Double-click the handle to put it
+  back, or focus it and use the arrows. The size is remembered across
+  recordings, and never grows past half the window, because the transcript is
+  the point of the page.
 - A **case rail** in the viewer: a recording opened from a case gets a third
   column listing the rest of the case, so somebody working through a matter
   moves between its recordings without going back to the case page. The
