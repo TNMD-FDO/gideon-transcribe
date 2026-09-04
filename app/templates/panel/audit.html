@@ -1,0 +1,88 @@
+{% extends "panel/base.html" %}
+{% block title %}Audit log{% endblock %}
+
+{% block panel %}
+  <h1>Audit log</h1>
+  <p class="quiet">
+    Metadata only. No transcript text, no correction, no question or answer,
+    no summary, no vocabulary, no search term, no password, no token, no
+    speaker name, and no clip title or note is ever written here. Opening or
+    filtering this page is not itself logged.
+  </p>
+
+  <form method="get" class="filters">
+    <label class="quiet">From <input type="date" name="since" value="{{ asked.since }}"></label>
+    <label class="quiet">To <input type="date" name="until" value="{{ asked.until }}"></label>
+    <label class="quiet">Actor <input type="text" name="actor" value="{{ asked.actor }}"></label>
+    <label class="quiet">Affected user <input type="text" name="affected" value="{{ asked.affected }}"></label>
+    <label class="quiet">Category
+      <select name="category">
+        <option value="">any</option>
+        {% for one in categories %}
+          <option value="{{ one }}"{% if one == asked.category %} selected{% endif %}>{{ one }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="quiet">Event <input type="text" name="event" value="{{ asked.event }}"></label>
+    <label class="quiet">Outcome
+      <select name="outcome">
+        <option value="">any</option>
+        <option value="success"{% if asked.outcome == "success" %} selected{% endif %}>success</option>
+        <option value="failure"{% if asked.outcome == "failure" %} selected{% endif %}>failure</option>
+      </select>
+    </label>
+    <label class="quiet">Object <input type="text" name="object" value="{{ asked.object }}" placeholder="an id or part of a file name"></label>
+    <label class="quiet">Client address <input type="text" name="client" value="{{ asked.client }}"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'panel-audit' %}"><button type="button" class="plain">Clear</button></a>
+  </form>
+
+  <p class="quiet">
+    {{ found }} row{{ found|pluralize }}, newest first. Page {{ page }} of {{ pages }}.
+  </p>
+
+  <table class="rows">
+    <thead>
+      <tr>
+        <th>Time</th><th>Actor</th><th>Category</th><th>Event</th>
+        <th>Outcome</th><th>Affected user</th><th>Object</th><th>Client</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.at|date:"Y-m-d H:i:s" }}</td>
+          <td>{% if row.actor_kind == "system" %}system ({{ row.actor_username }}){% else %}{{ row.actor_username }}{% endif %}</td>
+          <td>{{ row.category }}</td>
+          <td>{{ row.event }}</td>
+          <td>{{ row.outcome }}{% if row.reason_class %}: {{ row.reason_class }}{% endif %}</td>
+          <td>{{ row.affected_username }}</td>
+          <td>{{ row.object_label }}</td>
+          <td>{{ row.client_address|default:"" }} {{ row.client_browser }}</td>
+        </tr>
+        {% if row.details %}
+          <tr><td colspan="8">
+            <details><summary class="quiet">details</summary>
+              <dl class="facts">
+                {% for name, value in row.details.items %}
+                  <dt>{{ name }}</dt><dd>{{ value }}</dd>
+                {% endfor %}
+              </dl>
+            </details>
+          </td></tr>
+        {% endif %}
+      {% empty %}
+        <tr><td colspan="8" class="quiet">Nothing matches that.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="dialog">
+    {% if page > 1 %}
+      <a href="?{{ carried }}&page={{ page|add:'-1' }}"><button type="button" class="plain">Newer</button></a>
+    {% endif %}
+    {% if page < pages %}
+      <a href="?{{ carried }}&page={{ page|add:'1' }}"><button type="button" class="plain">Older</button></a>
+    {% endif %}
+  </p>
+{% endblock %}

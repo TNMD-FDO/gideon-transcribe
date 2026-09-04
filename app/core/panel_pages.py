@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 from django.conf import settings as django_settings
+from django.db import models
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -592,3 +593,97 @@ def _tell(request, message: str) -> None:
     from django.contrib import messages
 
     messages.info(request, message)
+
+
+# The audit log ----------------------------------------------------------------
+
+# A page is 100 rows, newest first, as the specification fixes.
+A_PAGE = 100
+
+
+@admins_only
+def audit_log(request: HttpRequest) -> HttpResponse:
+    """The audit viewer. Opening or filtering it is not itself logged."""
+    from core.audit import Category, Row
+
+    rows = Row.objects.order_by("-at", "-id")
+    asked = {
+        "since": request.GET.get("since", ""),
+        "until": request.GET.get("until", ""),
+        "actor": request.GET.get("actor", ""),
+        "affected": request.GET.get("affected", ""),
+        "category": request.GET.get("category", ""),
+        "event": request.GET.get("event", ""),
+        "outcome": request.GET.get("outcome", ""),
+        "object": request.GET.get("object", ""),
+        "client": request.GET.get("client", ""),
+    }
+
+    if asked["since"]:
+        rows = rows.filter(at__date__gte=asked["since"])
+    if asked["until"]:
+        rows = rows.filter(at__date__lte=asked["until"])
+    if asked["actor"]:
+        rows = rows.filter(actor_username__icontains=asked["actor"])
+    if asked["affected"]:
+        rows = rows.filter(affected_username__icontains=asked["affected"])
+    if asked["category"]:
+        rows = rows.filter(category=asked["category"])
+    if asked["event"]:
+        rows = rows.filter(event__icontains=asked["event"])
+    if asked["outcome"]:
+        rows = rows.filter(outcome=asked["outcome"])
+    if asked["object"]:
+        rows = rows.filter(
+            models.Q(object_id__icontains=asked["object"])
+            | models.Q(object_label__icontains=asked["object"])
+        )
+    if asked["client"]:
+        rows = rows.filter(client_address=asked["client"])
+
+    found = rows.count()
+    page = max(1, int(request.GET.get("page", "1") or 1))
+    start = (page - 1) * A_PAGE
+
+    query = request.GET.copy()
+    query.pop("page", None)
+
+    return render(
+        request,
+        "panel/audit.html",
+        {
+            **furniture(request, "panel-audit"),
+            "rows": rows[start : start + A_PAGE],
+            "found": found,
+            "page": page,
+            "pages": max(1, (found + A_PAGE - 1) // A_PAGE),
+            "asked": asked,
+            "carried": query.urlencode(),
+            "categories": [
+                value
+                for name, value in vars(Category).items()
+                if not name.startswith("_")
+            ],
+        },
+    )
+
+
+@admins_only
+@require_POST
+def integrity_check(request: HttpRequest) -> JsonResponse:
+    """Walk the chain, say what it found, and write that as a row of its own."""
+    from core import audit as audit_log_module
+
+    result = audit_log_module.check_integrity()
+    audit.write(
+        audit.Category.ADMIN,
+        "Integrity check run",
+        actor=request.user,
+        request=request,
+        outcome=(
+            audit.Outcome.SUCCESS if result["unbroken"] else audit.Outcome.FAILURE
+        ),
+        rows=result["rows"],
+        message=result["message"],
+    )
+    return JsonResponse(result)
