@@ -291,4 +291,39 @@
     if (!move) { return; }
     picker(move.dataset.recording, move.dataset.title, caseId);
   });
+
+  // The case rail in the viewer -----------------------------------------------
+
+  var rail = document.getElementById("caserail");
+  if (rail) {
+    var body = rail.closest(".body");
+    var hide = document.getElementById("hide-case");
+    var reopen = document.getElementById("show-case");
+
+    // Two classes rather than one, because the width alone decides what the
+    // rail does by default and a person's choice has to be able to say either
+    // thing: case-hidden closes it on a wide screen, case-shown opens it on a
+    // narrow one, where it lies over the page rather than squeezing it.
+    function draw(shut) {
+      body.classList.toggle("case-hidden", shut);
+      body.classList.toggle("case-shown", !shut);
+      try {
+        window.localStorage.setItem("case-rail", shut ? "hidden" : "shown");
+      } catch (ignored) { /* a browser that forbids storage forgets it */ }
+    }
+
+    function open() {
+      return !body.classList.contains("case-hidden")
+        && window.getComputedStyle(rail).display !== "none";
+    }
+
+    try {
+      if (window.localStorage.getItem("case-rail") === "hidden") { draw(true); }
+    } catch (ignored) { /* the same, and the rail follows the screen's width */ }
+
+    hide.addEventListener("click", function () { draw(true); });
+    // Shut it when it is open and open it when it is not: draw() takes
+    // "shut", so the button hands it the state it is in now.
+    reopen.addEventListener("click", function () { draw(open()); });
+  }
 }());

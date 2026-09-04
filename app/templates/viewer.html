@@ -58,6 +58,10 @@
             <span class="pill">No word timing</span>
           {% endif %}
           <span class="grow"></span>
+          {% if in_case %}
+            <button type="button" class="tiny" id="show-case"
+                    title="Show or hide the rest of the case">&#9776; Case</button>
+          {% endif %}
           {% if clips_available and media_url %}
             <button type="button" class="primary" id="new-clip"
                     title="Mark a start and an end with I and O while playing, by dragging on the timeline, or with + clip on a segment, then save">&#9986; New clip</button>
@@ -114,7 +118,43 @@
     </div>
 
     {# The body: tools on the left, the transcript in the middle. #}
-    <div class="body">
+    <div class="body{% if in_case %} with-case{% endif %}">
+      {% if in_case %}
+        <aside class="caserail" id="caserail">
+          <div class="panel">
+            <div class="row">
+              <a href="{% url 'case' recording.case_id %}" class="grow"
+                 title="Back to the case">{{ recording.case.name }}</a>
+              <button type="button" class="ghost tiny" id="hide-case"
+                      title="Hide this panel">hide</button>
+            </div>
+            <p class="muted small" style="margin: 2px 0 0">
+              {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case
+            </p>
+          </div>
+          <ul class="caselist">
+            {% for one in in_case %}
+              <li{% if one.here %} class="here"{% endif %}>
+                {% if one.ready %}
+                  <a href="{% url 'viewer' one.recording.pk %}">
+                    <b>{{ one.recording.title }}</b>
+                    <span class="muted small">
+                      {% if one.recording.recording_type %}{{ one.recording.recording_type }} &middot; {% endif %}{{ one.length }}
+                    </span>
+                  </a>
+                {% else %}
+                  <span class="notyet">
+                    <b>{{ one.recording.title }}</b>
+                    <span class="muted small">
+                      {% if one.failed %}no transcript{% elif one.in_the_queue %}in the queue{% else %}not ready{% endif %}
+                    </span>
+                  </span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </aside>
+      {% endif %}
       <aside class="side">
         <div class="panel">
           <div class="field">
