@@ -133,6 +133,71 @@ def for_run(run, service_speed: dict | None, runs_ahead: int = 0) -> str | None:
     return in_words(minutes, measured)
 
 
+def ordinal(number: int) -> str:
+    """1st, 2nd, 3rd, 4th. The teens are the exception every time."""
+    if 11 <= number % 100 <= 13:
+        return f"{number}th"
+    ending = ["th", "st", "nd", "rd"][number % 10] if number % 10 < 4 else "th"
+    return f"{number}{ending}"
+
+
+def ahead_of(run, live_runs, user) -> str:
+    """Who is directly ahead, in the three shapes the specification fixes.
+
+    A person sees the sign-in name of whoever is directly ahead and nothing
+    else of theirs: never a title, never a file name. When the line ahead is
+    their own work it is counted rather than named, and when the app cannot
+    see what is ahead at all, it belongs to another Consumer of the same
+    service and is called that.
+    """
+    if not run.position or run.position <= 1:
+        return ""
+
+    by_position = {one.position: one for one in live_runs if one.position}
+    directly = by_position.get(run.position - 1)
+    if directly is None:
+        return "behind another system"
+
+    if directly.job.recording.user_id == user.pk:
+        # How many of their own sit directly ahead, so that somebody waiting
+        # on their own batch is told that rather than a stranger's name.
+        theirs = 0
+        at = run.position - 1
+        while at >= 1:
+            one = by_position.get(at)
+            if one is None or one.job.recording.user_id != user.pk:
+                break
+            theirs += 1
+            at -= 1
+        return f"behind {theirs} of your own recording{'' if theirs == 1 else 's'}"
+
+    return f"behind {directly.job.recording.user.username}"
+
+
+def queued_line(run, live_runs, user, service_speed) -> str | None:
+    """The whole sentence a waiting person reads.
+
+        4th in line, behind jsmith. About 35 minutes.
+        4th in line, behind 2 of your own recordings.
+        4th in line, behind another system.
+    """
+    if run is None or run.state not in ("pending", "queued"):
+        return None
+
+    place = (
+        "Next in line"
+        if (run.position or 1) <= 1
+        else f"{ordinal(run.position)} in line"
+    )
+    behind = ahead_of(run, live_runs, user)
+    wait = for_run(run, service_speed)
+
+    said = place + (f", {behind}" if behind else "")
+    if wait:
+        said += f". {wait[0].upper()}{wait[1:]}"
+    return said + "."
+
+
 def everything_done_by(recordings, service_speed: dict | None, now=None) -> str | None:
     """The Batch page's one overall line.
 

@@ -43,11 +43,30 @@ def recordings(request: HttpRequest) -> HttpResponse:
         "recordings.html",
         {
             "page": "recordings",
-            "recordings": request.user.recordings.order_by("-created"),
+            "recordings": _with_their_state(
+                request.user.recordings.order_by("-created")
+            ),
             "standing_line": standing_line(),
             "storage_warning": uploads.storage_warning(request.user),
         },
     )
+
+
+def _with_their_state(recordings):
+    """Each Recording with the one word its row shows.
+
+    A Recording being transcribed again says so, rather than looking done
+    while its transcript is about to be replaced.
+    """
+    rows = []
+    for one in recordings:
+        job = one.jobs.order_by("-created").first()
+        one.being_replaced = bool(
+            job is not None and job.is_live and job.batch.is_reprocessing
+        )
+        one.in_the_queue = bool(job is not None and job.is_live)
+        rows.append(one)
+    return rows
 
 
 @login_required
@@ -223,8 +242,10 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
     arriving = uploads.in_flight()
 
     # One call for the whole page rather than one per Recording: the speed the
-    # service publishes is the same figure for all of them.
+    # service publishes is the same figure for all of them, and every Run in
+    # the line is needed to say who is directly ahead of whom.
     speed = _service_speed()
+    in_line = _runs_in_line()
 
     rows = []
     for recording in found.recordings.order_by("created"):
@@ -241,7 +262,7 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "message": recording.failure_message,
                 "reason": recording.refusal_class,
                 "received": arriving.get(str(recording.pk), (0, 0))[0],
-                "job": _job_state(job, speed),
+                "job": _job_state(job, speed, in_line, request.user),
                 "has_transcript": hasattr(recording, "transcript"),
                 "can_retry": _can_retry(recording, job),
                 "can_process_again": (
@@ -302,7 +323,21 @@ def _everything_done_by(batch, speed) -> str | None:
     return waiting.everything_done_by(unfinished, speed)
 
 
-def _job_state(job, speed=None) -> dict | None:
+def _runs_in_line():
+    """Every Run the app has at the service now, with whose it is.
+
+    Needed to name the person directly ahead. Only the sign-in name of that
+    one person is ever shown, and never a title or a file name of theirs.
+    """
+    from core.jobs import Run
+
+    return list(
+        Run.objects.filter(job__state__in=JobState.LIVE)
+        .select_related("job__recording__user")
+    )
+
+
+def _job_state(job, speed=None, in_line=None, user=None) -> dict | None:
     from core import waiting
 
     if job is None:
@@ -311,9 +346,15 @@ def _job_state(job, speed=None) -> dict | None:
     return {
         "state": job.state,
         "step": job.step,
+        "percent": run.percent if run else None,
         "position": run.position if run else None,
         "audio_minutes_ahead": run.audio_minutes_ahead if run else None,
         "wait": waiting.for_run(run, speed) if run else None,
+        "line": (
+            waiting.queued_line(run, in_line or [], user, speed)
+            if run is not None and user is not None
+            else None
+        ),
         "message": job.failure_message,
         "reason": job.failure_class,
     }

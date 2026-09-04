@@ -94,3 +94,80 @@ def test_the_overall_line_covers_the_last_recording_and_its_own_audio():
 
 def test_the_overall_line_is_nothing_when_nothing_is_running():
     assert waiting.everything_done_by([], MEASURED) is None
+
+
+class Owner:
+    def __init__(self, pk, username):
+        self.pk = pk
+        self.username = username
+
+
+class Job:
+    def __init__(self, owner):
+        self.recording = type("R", (), {"user_id": owner.pk, "user": owner})()
+
+
+class Placed:
+    """A Run at a place in the service's line, belonging to somebody."""
+
+    def __init__(self, position, owner, state="queued"):
+        self.position = position
+        self.state = state
+        self.audio_minutes_ahead = 0
+        self.job = Job(owner)
+
+
+ME = Owner(1, "dmeehan")
+THEM = Owner(2, "jsmith")
+
+
+def test_the_person_directly_ahead_is_named():
+    mine = Placed(4, ME)
+    line = [Placed(3, THEM), mine]
+    assert waiting.ahead_of(mine, line, ME) == "behind jsmith"
+
+
+def test_your_own_recordings_ahead_are_counted_not_named():
+    mine = Placed(4, ME)
+    line = [Placed(2, ME), Placed(3, ME), mine]
+    assert waiting.ahead_of(mine, line, ME) == "behind 2 of your own recordings"
+
+
+def test_one_of_your_own_is_not_plural():
+    mine = Placed(3, ME)
+    line = [Placed(2, ME), mine]
+    assert waiting.ahead_of(mine, line, ME) == "behind 1 of your own recording"
+
+
+def test_a_job_the_app_cannot_see_is_another_system():
+    # Another Consumer of the same service holds the place ahead, and a
+    # regular token never sees whose it is.
+    mine = Placed(4, ME)
+    assert waiting.ahead_of(mine, [mine], ME) == "behind another system"
+
+
+def test_nobody_is_ahead_of_the_first_in_line():
+    assert waiting.ahead_of(Placed(1, ME), [], ME) == ""
+
+
+def test_the_whole_sentence_reads_as_the_specification_writes_it():
+    mine = Placed(4, ME)
+    mine.audio_minutes_ahead = 1050  # 35 minutes at thirty a minute
+    line = [Placed(3, THEM), mine]
+    mine.job.recording.model = "large-v3-turbo"
+    mine.job.recording.diarize = True
+    said = waiting.queued_line(mine, line, ME, MEASURED)
+    assert said.startswith("4th in line, behind jsmith. About 3")
+    assert said.endswith(".")
+
+
+def test_the_ordinals_are_right_including_the_teens():
+    assert waiting.ordinal(1) == "1st"
+    assert waiting.ordinal(2) == "2nd"
+    assert waiting.ordinal(3) == "3rd"
+    assert waiting.ordinal(4) == "4th"
+    assert waiting.ordinal(11) == "11th"
+    assert waiting.ordinal(12) == "12th"
+    assert waiting.ordinal(13) == "13th"
+    assert waiting.ordinal(21) == "21st"
+    assert waiting.ordinal(112) == "112th"
