@@ -5,13 +5,18 @@
 # Run it from the Install home, the folder this file is in. Every subcommand
 # is meant to be safe to run twice, and none of them ever prints a secret.
 #
+#   ./transcribe install      ask the office facts and write both .env files
 #   ./transcribe status       what is running, and whether it is healthy
 #   ./transcribe check        the smoke checks, as a plain report
 #   ./transcribe directory    ask the office's directory facts and write them
+#   ./transcribe backup-db    a dump of the database into the app data folder
+#   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
+#   ./transcribe rollback TAG go back to a release, restoring the dump if need be
 #   ./transcribe logs [name]  follow the logs of one service, or of all of them
 #
-# `install`, `upgrade`, and `rollback` are not written yet; when they are,
-# `install` asks the same directory questions `directory` asks here.
+# install refuses to overwrite an existing .env, secrets/, or tls/ unless it is
+# given --reconfigure. install and upgrade pull the two images; --build builds
+# them on the server instead, for an office that cannot reach the registry.
 
 set -euo pipefail
 
@@ -349,16 +354,459 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
   fi
 }
 
+
+# install ----------------------------------------------------------------------
+
+SERVICE_ENV="$HERE/whisperx-service/.env"
+SERVICE_SECRETS="$HERE/whisperx-service/secrets"
+
+cmd_install() {
+  local reconfigure=no build=no
+  for one in "$@"; do
+    case "$one" in
+    --reconfigure) reconfigure=yes ;;
+    --build) build=yes ;;
+    *)
+      red "install takes --reconfigure and --build and nothing else."
+      exit 1
+      ;;
+    esac
+  done
+
+  if [ -f "$ENV_FILE" ] && [ "$reconfigure" = "no" ]; then
+    red "There is already a .env here."
+    echo "  install will not overwrite it, a secret, or a certificate."
+    echo "  To change the office facts, run:  ./transcribe install --reconfigure"
+    echo "  To change only the directory:     ./transcribe directory"
+    exit 1
+  fi
+
+  echo "Gideon Transcribe: install"
+  echo
+  echo "This asks for the facts about this office and writes them to two"
+  echo "environment files beside this script. Nothing you type here leaves"
+  echo "this server, and none of it is ever committed to the repository."
+  echo
+
+  prerequisites || exit 1
+
+  [ -f "$ENV_FILE" ] || cp "$HERE/.env.example" "$ENV_FILE"
+  [ -f "$SERVICE_ENV" ] || cp "$HERE/whisperx-service/.env.example" "$SERVICE_ENV"
+
+  ask_the_office_facts
+  ask_the_gpu
+  make_the_secrets
+  cmd_directory
+  ask_the_hugging_face_token
+
+  echo
+  echo "Written. What is left, in order:"
+  echo
+  echo "  1. Put the certificate and its key in tls/ (cert.pem and key.pem,"
+  echo "     the key mode 0600), and the office CA root in ca/office-root.pem."
+  if [ "$build" = "yes" ]; then
+    echo "  2. docker compose build"
+  else
+    echo "  2. docker compose pull        (or run install --build to build here)"
+  fi
+  echo "  3. docker compose run --rm whisperx pull"
+  echo "  4. docker compose up -d"
+  echo "  5. docker compose run --rm app create-local-admin"
+  echo "  6. ./transcribe check"
+}
+
+prerequisites() {
+  echo "Checking what this server has:"
+  local ok=yes
+
+  if command -v docker >/dev/null 2>&1; then
+    pass "docker $(docker --version | sed 's/Docker version //; s/,.*//')"
+  else
+    fail "there is no docker on this server"
+    ok=no
+  fi
+
+  if docker compose version >/dev/null 2>&1; then
+    pass "the compose plugin $(docker compose version --short)"
+  else
+    fail "the docker compose plugin is not installed"
+    ok=no
+  fi
+
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    pass "the nvidia driver $(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)"
+  else
+    fail "nvidia-smi is not on this server, so no GPU can be reserved"
+    ok=no
+  fi
+
+  if id "$APP_USER" >/dev/null 2>&1; then
+    pass "the $APP_USER account exists"
+  else
+    fail "there is no $APP_USER account; the install guide's server preparation makes it"
+    ok=no
+  fi
+
+  echo
+  [ "$ok" = "yes" ]
+}
+
+ask_the_office_facts() {
+  local value
+
+  echo
+  value="$(ask "The address people will use, without https://
+  (for example transcribe.example.internal)" "$(env_value APP_HOSTNAME)")"
+  set_env APP_HOSTNAME "$value"
+
+  echo
+  value="$(ask "The port it answers on" "$(env_value HTTPS_PORT)")"
+  set_env HTTPS_PORT "${value:-8443}"
+
+  echo
+  value="$(ask "The server's own LAN address to listen on, so this is off
+  every other interface the machine has" "$(env_value BIND_ADDRESS)")"
+  set_env BIND_ADDRESS "$value"
+
+  echo
+  value="$(ask "Who may connect, as networks separated by spaces
+  (for example 10.0.0.0/8 192.168.0.0/16)" "$(env_value ALLOWED_CLIENT_CIDRS)")"
+  set_env ALLOWED_CLIENT_CIDRS "$value"
+
+  echo
+  value="$(ask "The app data folder, on the largest drive and not the OS drive" "$(env_value APP_DATA_DIR)")"
+  set_env APP_DATA_DIR "$value"
+
+  echo
+  value="$(ask "The time zone" "$(env_value TZ)")"
+  set_env TZ "${value:-UTC}"
+  set_service_env TZ "${value:-UTC}"
+
+  # The app runs as its own account, and compose needs its numbers.
+  if id "$APP_USER" >/dev/null 2>&1; then
+    set_env APP_UID "$(id -u "$APP_USER")"
+    set_env APP_GID "$(id -g "$APP_USER")"
+    set_service_env APP_UID "$(id -u "$APP_USER")"
+    set_service_env APP_GID "$(id -g "$APP_USER")"
+    green "The app will run as $APP_USER ($(id -u "$APP_USER"):$(id -g "$APP_USER"))."
+  fi
+}
+
+ask_the_gpu() {
+  echo
+  echo "The GPUs on this server:"
+  nvidia-smi -L | sed 's/^/  /'
+  echo
+  echo "The WhisperX service reserves one card by its UUID, never by its"
+  echo "number, so that adding a card cannot move it onto somebody else's."
+  local value
+  value="$(ask "Paste the UUID of the card the service should use
+  (the GPU-... part above)" "$(service_env_value WHISPERX_GPU_UUID)")"
+  set_service_env WHISPERX_GPU_UUID "$value"
+}
+
+make_the_secrets() {
+  echo
+  mkdir -p "$SECRETS" "$SERVICE_SECRETS"
+  chmod 700 "$SECRETS" "$SERVICE_SECRETS"
+
+  # The random ones are made here and never typed by anybody.
+  random_secret "$SECRETS/django_secret_key" "the Django key"
+  random_secret "$SECRETS/postgres_password" "the database password"
+
+  if [ -s "$SECRETS/whisperx_consumer_token" ]; then
+    green "The WhisperX consumer token was already made."
+  else
+    local token
+    token="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+    printf '%s' "$token" >"$SECRETS/whisperx_consumer_token"
+    chmod 600 "$SECRETS/whisperx_consumer_token"
+    # The service reads its consumers from a file of its own, one per line.
+    printf 'transcribe      %s\n' "$token" >>"$SERVICE_SECRETS/tokens"
+    chmod 600 "$SERVICE_SECRETS/tokens"
+    green "The WhisperX consumer token was made and added to the service's tokens file."
+  fi
+
+  own_the_secrets
+}
+
+random_secret() {
+  local path="$1" what="$2"
+  if [ -s "$path" ]; then
+    green "$what was already made."
+    return
+  fi
+  head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$path"
+  chmod 600 "$path"
+  green "$what was made."
+}
+
+own_the_secrets() {
+  # Every secret is read inside a container that runs as the app's account.
+  if id "$APP_USER" >/dev/null 2>&1; then
+    sudo chown -R "$APP_USER:$APP_USER" "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null ||
+      amber "Could not give the secrets to $APP_USER; run: sudo chown -R $APP_USER:$APP_USER secrets whisperx-service/secrets"
+    sudo chmod 400 "$SECRETS"/* "$SERVICE_SECRETS"/* 2>/dev/null || true
+    sudo chmod 700 "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null || true
+  fi
+}
+
+ask_the_hugging_face_token() {
+  echo
+  echo "The diarization model is fetched once from Hugging Face, with a token"
+  echo "belonging to an account that has accepted the model's conditions."
+  echo "It is used at install and at upgrade and never while the app runs."
+  local token again
+  printf 'The Hugging Face token (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
+  read -rs token
+  echo >&2
+
+  if [ -n "$token" ]; then
+    printf 'And again: ' >&2
+    read -rs again
+    echo >&2
+    if [ "$token" != "$again" ]; then
+      red "Those did not match. Nothing was written."
+      return 1
+    fi
+    printf '%s' "$token" >"$SERVICE_SECRETS/hf_token"
+    chmod 600 "$SERVICE_SECRETS/hf_token"
+    own_the_secrets
+    green "The Hugging Face token was written."
+  elif [ -s "$SERVICE_SECRETS/hf_token" ]; then
+    green "The stored Hugging Face token was kept."
+  else
+    amber "There is no Hugging Face token stored; the model pull will refuse."
+  fi
+}
+
+service_env_value() {
+  [ -f "$SERVICE_ENV" ] || return 0
+  sed -n "s/^$1=//p" "$SERVICE_ENV" | tail -1
+}
+
+set_service_env() {
+  [ -f "$SERVICE_ENV" ] || return 0
+  local key="$1" value="$2"
+  if grep -q "^${key}=" "$SERVICE_ENV"; then
+    python3 - "$SERVICE_ENV" "$key" "$value" <<'PY'
+import sys
+from pathlib import Path
+
+path, key, value = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+lines = path.read_text(encoding="utf-8").splitlines()
+out = []
+done = False
+for line in lines:
+    if line.startswith(f"{key}=") and not done:
+        out.append(f"{key}={value}")
+        done = True
+    else:
+        out.append(line)
+path.write_text("\n".join(out) + "\n", encoding="utf-8")
+PY
+  else
+    printf '%s=%s\n' "$key" "$value" >>"$SERVICE_ENV"
+  fi
+}
+
+# backup-db --------------------------------------------------------------------
+
+cmd_backup_db() {
+  need_env
+  local name="${1:-manual-$(date +%Y%m%d-%H%M%S)}"
+  local folder
+  folder="$(env_value APP_DATA_DIR)/backup"
+
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
+
+  echo "Taking a dump into $folder/$name.dump"
+  compose exec -T postgres pg_dump \
+    -U "$(env_value POSTGRES_USER)" \
+    -d "$(env_value POSTGRES_DB)" \
+    --format=custom >"/tmp/$name.dump"
+
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "/tmp/$name.dump" "$folder/$name.dump"
+  rm -f "/tmp/$name.dump"
+  green "Done: $(sudo du -h "$folder/$name.dump" | cut -f1)"
+}
+
+# upgrade ----------------------------------------------------------------------
+
+cmd_upgrade() {
+  need_env
+  local tag="" build=no
+  for one in "$@"; do
+    case "$one" in
+    --build) build=yes ;;
+    *) tag="$one" ;;
+    esac
+  done
+
+  if [ -z "$tag" ]; then
+    red "Which release? For example: ./transcribe upgrade v1.0.0"
+    exit 1
+  fi
+
+  echo "Upgrading to $tag"
+  echo
+
+  # 1. Never over running work.
+  if running_jobs; then
+    red "A job is running. An upgrade restarts the app, so wait for it."
+    echo "  The queue page in the admin panel says what is running."
+    exit 1
+  fi
+  pass "nothing is running"
+
+  # 2. Never over somebody's local edits.
+  if ! git -C "$HERE" diff --quiet || ! git -C "$HERE" diff --cached --quiet; then
+    red "There are local edits to tracked files here."
+    git -C "$HERE" status --short | sed 's/^/    /'
+    echo "  An upgrade would lose them. Put them somewhere, then try again."
+    exit 1
+  fi
+  pass "no local edits"
+
+  # 3 and 4. The dump and the configuration, before anything changes.
+  cmd_backup_db "pre-$tag"
+  keep_the_configuration "$tag"
+
+  # 5. The code, by fetch and checkout, which never touches an ignored file.
+  echo
+  echo "Fetching $tag"
+  git -C "$HERE" fetch --tags --quiet
+  if ! git -C "$HERE" rev-parse "$tag" >/dev/null 2>&1; then
+    red "There is no release called $tag."
+    exit 1
+  fi
+  read_the_release_lines "$tag"
+  git -C "$HERE" checkout --quiet "$tag"
+  pass "the checkout is at $tag"
+
+  # 6 and 7. The images, then up.
+  echo
+  if [ "$build" = "yes" ]; then
+    compose build
+  else
+    compose pull --quiet || amber "The registry could not be reached; building instead."
+    [ "$build" = "yes" ] || compose build 2>/dev/null || true
+  fi
+  compose up -d
+
+  # 8. The models, when the release says they changed.
+  if models_changed "$tag"; then
+    echo
+    amber "This release changes the models, so they are fetched now."
+    compose run --rm whisperx pull
+  fi
+
+  echo
+  cmd_check
+}
+
+keep_the_configuration() {
+  local tag="$1"
+  local folder
+  folder="$(env_value APP_DATA_DIR)/backup"
+  echo "Keeping this office's configuration in $folder/config-pre-$tag.tar"
+  tar -cf "/tmp/config-pre-$tag.tar" -C "$HERE" \
+    .env secrets tls ca whisperx-service/.env whisperx-service/secrets 2>/dev/null || true
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 \
+    "/tmp/config-pre-$tag.tar" "$folder/config-pre-$tag.tar"
+  rm -f "/tmp/config-pre-$tag.tar"
+}
+
+read_the_release_lines() {
+  # Every release's notes begin with two fixed lines: whether the models
+  # changed and whether the database migrates. They are read out before
+  # anything is done, because they are what decides whether this upgrade is
+  # a quiet one.
+  local tag="$1"
+  echo
+  echo "What $tag says about itself:"
+  git -C "$HERE" show "$tag:CHANGELOG.md" 2>/dev/null |
+    sed -n "/^## $tag/,/^## /p" | grep -E '^(Models|Database):' | sed 's/^/  /' ||
+    amber "  its changelog says nothing about models or the database"
+  echo
+}
+
+models_changed() {
+  git -C "$HERE" show "$1:CHANGELOG.md" 2>/dev/null |
+    sed -n "/^## $1/,/^## /p" | grep -qE '^Models: *changed'
+}
+
+running_jobs() {
+  compose exec -T app python -c "
+from core.jobs import Job, JobState
+raise SystemExit(0 if Job.objects.filter(state__in=JobState.LIVE).exists() else 1)
+" >/dev/null 2>&1
+}
+
+# rollback ---------------------------------------------------------------------
+
+cmd_rollback() {
+  need_env
+  local tag="${1:-}"
+  if [ -z "$tag" ]; then
+    red "Which release? For example: ./transcribe rollback v0.9.0"
+    echo
+    echo "  The releases this checkout knows about:"
+    git -C "$HERE" tag --sort=-creatordate | head -10 | sed 's/^/    /'
+    exit 1
+  fi
+
+  echo "Rolling back to $tag"
+  git -C "$HERE" checkout --quiet "$tag"
+  compose up -d
+
+  echo
+  amber "If the app will not start because a migration cannot be reversed,"
+  echo "  restore the dump taken before the upgrade:"
+  echo
+  echo "    ./transcribe restore-dump $(env_value APP_DATA_DIR)/backup/pre-<the tag you left>.dump"
+  echo
+  cmd_check
+}
+
+cmd_restore_dump() {
+  need_env
+  local dump="${1:-}"
+  if [ ! -f "$dump" ]; then
+    red "There is no dump at ${dump:-<nothing given>}."
+    exit 1
+  fi
+
+  red "This replaces everything in the database with what is in that file."
+  printf '  Type the word yes to go on: ' >&2
+  local said
+  read -r said
+  [ "$said" = "yes" ] || { echo "Nothing was done."; return 0; }
+
+  compose stop app worker media-worker
+  sudo cat "$dump" | compose exec -T postgres pg_restore \
+    -U "$(env_value POSTGRES_USER)" \
+    -d "$(env_value POSTGRES_DB)" \
+    --clean --if-exists --no-owner
+  compose up -d
+  green "Restored."
+}
+
 # ------------------------------------------------------------------------------
 
 usage() {
-  sed -n '3,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '3,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in
+install) shift && cmd_install "$@" ;;
 status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
 directory) shift && cmd_directory "$@" ;;
+backup-db) shift && cmd_backup_db "$@" ;;
+upgrade) shift && cmd_upgrade "$@" ;;
+rollback) shift && cmd_rollback "$@" ;;
+restore-dump) shift && cmd_restore_dump "$@" ;;
 logs) shift && cmd_logs "$@" ;;
 "" | -h | --help | help) usage ;;
 *)
