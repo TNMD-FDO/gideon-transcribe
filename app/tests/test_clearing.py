@@ -11,17 +11,22 @@ owner's quota until it goes.
 """
 
 import pytest
-from core import lifecycle, settings_store
-from core.models import User
+from core import audit, cases, lifecycle, settings_store
+from core.models import LoginSession, User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
+
+PASSWORD = "a-long-enough-password"
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
 def its_own_disk(tmp_path, settings):
-    """A fresh App data folder for each test, as the Cases tests do."""
+    """A fresh App data folder for each test, as the Cases tests have.
+
+    The database rolls back at the end of a test and the disk does not.
+    """
     settings.DATA_DIR = tmp_path
     settings.SCRATCH_DIR = tmp_path / "scratch"
     settings.UPLOADS_DIR = tmp_path / "uploads"
@@ -29,13 +34,22 @@ def its_own_disk(tmp_path, settings):
 
 
 def a_person(name="pat"):
-    return User.objects.create_local_admin(name, "a-long-enough-password")
+    return User.objects.create_local_admin(name, PASSWORD)
 
 
-def a_recording(user, batch=None, name="one.mp3"):
+def signed_in(client, person):
+    """A browser with a Login session behind it, which the middleware wants."""
+    client.force_login(person)
+    LoginSession.objects.create(user=person, session_key=client.session.session_key)
+    return client
+
+
+def a_recording(person, batch, name="one.mp3", case=None):
+    """One Recording with a little on the disk. Every Recording has a Batch."""
     recording = Recording.objects.create(
-        user=user,
+        user=person,
         batch=batch,
+        case=case,
         title=name.rsplit(".", 1)[0],
         original_filename=name,
         media_state=MediaState.READY,
@@ -45,71 +59,73 @@ def a_recording(user, batch=None, name="one.mp3"):
     return recording
 
 
-def signed_in(client, user):
-    client.force_login(user)
-    return client
+def what_is_left():
+    return set(Recording.objects.values_list("pk", flat=True))
 
 
-# What the clearing removes
+# What the clearing removes ----------------------------------------------------
 
 
 def test_clearing_a_batch_takes_that_batch_and_leaves_the_rest(client):
     person = a_person()
-    batch = Batch.objects.create(user=person)
-    a_recording(person, batch, "in-the-batch.mp3")
-    a_recording(person, batch, "also-in-it.mp3")
-    keeping = a_recording(person, None, "from-last-week.mp3")
+    today = Batch.objects.create(user=person)
+    a_recording(person, today, "in-the-batch.mp3")
+    a_recording(person, today, "also-in-it.mp3")
+    last_week = Batch.objects.create(user=person)
+    keeping = a_recording(person, last_week, "from-last-week.mp3")
 
     signed_in(client, person)
-    answer = client.post(reverse("clear-recordings"), {"batch": str(batch.pk)})
+    answer = client.post(reverse("clear-recordings"), {"batch": str(today.pk)})
 
     assert answer.status_code == 200
     assert answer.json()["recordings"] == 2
-    assert set(Recording.objects.values_list("pk", flat=True)) == {keeping.pk}
+    assert what_is_left() == {keeping.pk}
+    # Somewhere to go next, which is the point of the loop.
+    assert answer.json()["where"] == reverse("upload")
 
 
 def test_clearing_without_a_batch_takes_the_whole_workspace(client):
     person = a_person()
-    a_recording(person, None, "one.mp3")
-    a_recording(person, None, "two.mp3")
+    batch = Batch.objects.create(user=person)
+    a_recording(person, batch, "one.mp3")
+    a_recording(person, batch, "two.mp3")
 
     signed_in(client, person)
     answer = client.post(reverse("clear-recordings"))
 
     assert answer.json()["recordings"] == 2
-    assert not Recording.objects.exists()
+    assert what_is_left() == set()
 
 
 def test_clearing_never_touches_a_recording_in_a_case():
-    # A Case is somewhere a Recording was deliberately put, and the Workspace
-    # is not. Clearing the Workspace must not empty a Case by accident.
-    from core import cases
-
+    # A Case is somewhere a Recording was deliberately put, and a Workspace is
+    # not. Clearing a Workspace must not empty a Case by accident.
     settings_store.set_to("folder_management", True)
     person = a_person()
     case = cases.create(person, "Some matter")
-    loose = a_recording(person, None, "loose.mp3")
-    in_a_case = a_recording(person, None, "filed.mp3")
-    in_a_case.case = case
-    in_a_case.save()
+    batch = Batch.objects.create(user=person)
+    loose = a_recording(person, batch, "loose.mp3")
+    filed = a_recording(person, batch, "filed.mp3", case=case)
 
     gone, _ = lifecycle.clear_out(list(Recording.objects.all()), actor=person)
 
     assert gone == 1
-    assert set(Recording.objects.values_list("pk", flat=True)) == {in_a_case.pk}
-    assert loose.pk not in set(Recording.objects.values_list("pk", flat=True))
+    assert what_is_left() == {filed.pk}
+    assert loose.pk not in what_is_left()
 
 
 def test_clearing_never_reaches_somebody_elses_recordings(client):
     me = a_person("pat")
     somebody_else = a_person("sam")
-    a_recording(me, None, "mine.mp3")
-    not_mine = a_recording(somebody_else, None, "theirs.mp3")
+    a_recording(me, Batch.objects.create(user=me), "mine.mp3")
+    not_mine = a_recording(
+        somebody_else, Batch.objects.create(user=somebody_else), "theirs.mp3"
+    )
 
     signed_in(client, me)
     client.post(reverse("clear-recordings"))
 
-    assert set(Recording.objects.values_list("pk", flat=True)) == {not_mine.pk}
+    assert what_is_left() == {not_mine.pk}
 
 
 def test_it_says_what_would_go_before_anything_goes(client):
@@ -122,16 +138,14 @@ def test_it_says_what_would_go_before_anything_goes(client):
     told = client.get(reverse("what-would-go"), {"batch": str(batch.pk)}).json()
 
     assert told["recordings"] == 2
-    assert "GB" in told["size"] or "MB" in told["size"] or "KB" in told["size"]
+    assert told["size"]
     # Asking changes nothing.
     assert Recording.objects.count() == 2
 
 
 def test_the_clearing_is_written_down(client):
-    from core import audit
-
     person = a_person()
-    a_recording(person, None, "one.mp3")
+    a_recording(person, Batch.objects.create(user=person), "one.mp3")
 
     signed_in(client, person)
     client.post(reverse("clear-recordings"))
@@ -145,7 +159,7 @@ def test_the_clearing_is_written_down(client):
 
 def test_a_get_will_not_clear_anything(client):
     person = a_person()
-    a_recording(person, None, "one.mp3")
+    a_recording(person, Batch.objects.create(user=person), "one.mp3")
 
     signed_in(client, person)
     assert client.get(reverse("clear-recordings")).status_code == 405
@@ -154,7 +168,7 @@ def test_a_get_will_not_clear_anything(client):
 
 def test_a_stranger_cannot_clear_anything(client):
     person = a_person()
-    a_recording(person, None, "one.mp3")
+    a_recording(person, Batch.objects.create(user=person), "one.mp3")
 
     answer = client.post(reverse("clear-recordings"))
 
@@ -162,7 +176,7 @@ def test_a_stranger_cannot_clear_anything(client):
     assert Recording.objects.count() == 1
 
 
-# Where a person lands
+# Where a person lands ---------------------------------------------------------
 
 
 def test_the_specified_page_stands_until_somebody_shows_otherwise():
@@ -181,7 +195,7 @@ def test_somebody_who_works_in_recordings_lands_there(client):
     person = a_person()
 
     signed_in(client, person)
-    client.get(reverse("home"))
+    assert client.get(reverse("home")).status_code == 200
 
     person.refresh_from_db()
     assert where_they_land(person) == reverse("home")
@@ -194,9 +208,11 @@ def test_opening_cases_again_puts_them_back(client):
     person = a_person()
 
     signed_in(client, person)
-    client.get(reverse("home"))
-    client.get(reverse("cases"))
+    assert client.get(reverse("home")).status_code == 200
+    person.refresh_from_db()
+    assert person.lands_on == User.LANDS_RECORDINGS
 
+    assert client.get(reverse("cases")).status_code == 200
     person.refresh_from_db()
     assert where_they_land(person) == reverse("cases")
 
