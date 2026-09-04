@@ -298,7 +298,10 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
         ),
         (
             "Sides",
-            ", ".join(str(one) for one in recording.sides.all()) or "1",
+            # A Recording with one side has nobody to name, so it reads as a
+            # count rather than as "side 1".
+            ", ".join(one.name for one in recording.sides.all() if one.name)
+            or str(recording.sides.count() or 1),
         ),
         (
             "Preprocessing",
@@ -339,7 +342,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
              or service.get("version", "")),
             (
                 "Processing time",
-                f"{timings.get('total', 0):.0f} seconds" if timings else "",
+                _plainly(timings.get("total", 0)) if timings else "",
             ),
             ("Processed", f"{transcript.created:%d %B %Y %H:%M}"),
             ("Segments", str(transcript.segments.count())),
@@ -360,6 +363,17 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     return JsonResponse(
         {"rows": [[name, value] for name, value in rows if str(value).strip()]}
     )
+
+
+def _plainly(seconds: float) -> str:
+    """A duration a person reads, in the units that suit its size."""
+    seconds = float(seconds or 0)
+    if seconds < 1:
+        return "under a second"
+    if seconds < 90:
+        return f"{seconds:.0f} second{'' if round(seconds) == 1 else 's'}"
+    minutes = seconds / 60
+    return f"{minutes:.0f} minute{'' if round(minutes) == 1 else 's'}"
 
 
 def _has_video(recording) -> bool:
