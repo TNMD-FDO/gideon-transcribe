@@ -19,6 +19,15 @@ from django.urls import reverse
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def its_own_disk(tmp_path, settings):
+    """A fresh App data folder for each test, as the Cases tests do."""
+    settings.DATA_DIR = tmp_path
+    settings.SCRATCH_DIR = tmp_path / "scratch"
+    settings.UPLOADS_DIR = tmp_path / "uploads"
+    return tmp_path
+
+
 def a_person(name="pat"):
     return User.objects.create_local_admin(name, "a-long-enough-password")
 
@@ -28,11 +37,10 @@ def a_recording(user, batch=None, name="one.mp3"):
         user=user,
         batch=batch,
         original_filename=name,
-        stored_filename=name,
-        size_bytes=1024,
         media_state=MediaState.READY,
     )
     recording.folder.mkdir(parents=True, exist_ok=True)
+    (recording.folder / "original.mp3").write_bytes(b"x" * 1024)
     return recording
 
 
@@ -56,7 +64,7 @@ def test_clearing_a_batch_takes_that_batch_and_leaves_the_rest(client):
 
     assert answer.status_code == 200
     assert answer.json()["recordings"] == 2
-    assert list(Recording.objects.values_list("pk", flat=True)) == [keeping.pk]
+    assert set(Recording.objects.values_list("pk", flat=True)) == {keeping.pk}
 
 
 def test_clearing_without_a_batch_takes_the_whole_workspace(client):
@@ -76,7 +84,7 @@ def test_clearing_never_touches_a_recording_in_a_case():
     # is not. Clearing the Workspace must not empty a Case by accident.
     from core import cases
 
-    settings_store.set("folder_management", True)
+    settings_store.set_to("folder_management", True)
     person = a_person()
     case = cases.create(person, "Some matter")
     loose = a_recording(person, None, "loose.mp3")
@@ -87,20 +95,20 @@ def test_clearing_never_touches_a_recording_in_a_case():
     gone, _ = lifecycle.clear_out(list(Recording.objects.all()), actor=person)
 
     assert gone == 1
-    assert list(Recording.objects.values_list("pk", flat=True)) == [in_a_case.pk]
+    assert set(Recording.objects.values_list("pk", flat=True)) == {in_a_case.pk}
     assert loose.pk not in set(Recording.objects.values_list("pk", flat=True))
 
 
 def test_clearing_never_reaches_somebody_elses_recordings(client):
-    mine = a_person("pat")
-    theirs = a_person("sam")
-    a_recording(mine, None, "mine.mp3")
-    hers = a_recording(theirs, None, "theirs.mp3")
+    me = a_person("pat")
+    somebody_else = a_person("sam")
+    a_recording(me, None, "mine.mp3")
+    not_mine = a_recording(somebody_else, None, "theirs.mp3")
 
-    signed_in(client, mine)
+    signed_in(client, me)
     client.post(reverse("clear-recordings"))
 
-    assert list(Recording.objects.values_list("pk", flat=True)) == [hers.pk]
+    assert set(Recording.objects.values_list("pk", flat=True)) == {not_mine.pk}
 
 
 def test_it_says_what_would_go_before_anything_goes(client):
@@ -119,7 +127,7 @@ def test_it_says_what_would_go_before_anything_goes(client):
 
 
 def test_the_clearing_is_written_down(client):
-    from core.models import AuditEntry
+    from core import audit
 
     person = a_person()
     a_recording(person, None, "one.mp3")
@@ -127,10 +135,11 @@ def test_the_clearing_is_written_down(client):
     signed_in(client, person)
     client.post(reverse("clear-recordings"))
 
-    rows = AuditEntry.objects.filter(action="recordings cleared")
+    rows = audit.Row.objects.filter(event="recordings cleared")
     assert rows.count() == 1
     # The person did it, not the sweeper.
-    assert rows.first().actor_id == person.pk
+    assert rows.first().actor_user_id == person.pk
+    assert rows.first().actor_kind == "user"
 
 
 def test_a_get_will_not_clear_anything(client):
@@ -158,7 +167,7 @@ def test_a_stranger_cannot_clear_anything(client):
 def test_the_specified_page_stands_until_somebody_shows_otherwise():
     from core.views import where_they_land
 
-    settings_store.set("folder_management", True)
+    settings_store.set_to("folder_management", True)
     person = a_person()
 
     assert where_they_land(person) == reverse("cases")
@@ -167,7 +176,7 @@ def test_the_specified_page_stands_until_somebody_shows_otherwise():
 def test_somebody_who_works_in_recordings_lands_there(client):
     from core.views import where_they_land
 
-    settings_store.set("folder_management", True)
+    settings_store.set_to("folder_management", True)
     person = a_person()
 
     signed_in(client, person)
@@ -180,7 +189,7 @@ def test_somebody_who_works_in_recordings_lands_there(client):
 def test_opening_cases_again_puts_them_back(client):
     from core.views import where_they_land
 
-    settings_store.set("folder_management", True)
+    settings_store.set_to("folder_management", True)
     person = a_person()
 
     signed_in(client, person)
@@ -194,7 +203,7 @@ def test_opening_cases_again_puts_them_back(client):
 def test_with_cases_off_there_is_only_one_page():
     from core.views import where_they_land
 
-    settings_store.set("folder_management", False)
+    settings_store.set_to("folder_management", False)
     person = a_person()
     person.lands_on = User.LANDS_CASES
     person.save()

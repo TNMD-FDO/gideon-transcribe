@@ -291,7 +291,6 @@ def clear_out(recordings, actor, request=None) -> tuple[int, int]:
         "recordings cleared",
         actor=actor,
         request=request,
-        affected_user=actor,
         recordings=len(recordings),
         gigabytes=round(gone / (1024**3), 2),
     )
