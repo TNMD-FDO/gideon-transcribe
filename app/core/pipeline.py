@@ -173,6 +173,29 @@ def _make_asr_audio(recording: Recording) -> None:
         )
 
 
+def prepare_audio_again(recording: Recording) -> Recording:
+    """Remake the audio the model hears, from the uploaded bytes.
+
+    Process again used to hand the audio prepared at upload straight back to
+    the service, so a Recording could never be improved by a change to how
+    audio is prepared: a fix reached new uploads and nothing already on the
+    disk, and the only way to mend one was to delete it and put it up again.
+    Remaking it is what the uploaded bytes are kept for.
+
+    The Sides are left as they are. What splits a Recording into Sides is a
+    fact about the file, and Sides that changed under a Recording would leave
+    a Transcript whose Speakers no longer meant anything.
+    """
+    try:
+        _make_asr_audio(recording)
+    except media.MediaError as problem:
+        return _failed(recording, problem)
+
+    recording.media_state = MediaState.READY
+    recording.save(update_fields=["media_state"])
+    return recording
+
+
 def make_playback(recording: Recording) -> Recording:
     """The Playback copy and the waveform, after the Recording is Ready.
 

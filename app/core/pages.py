@@ -602,12 +602,14 @@ def process_again(request: HttpRequest, recording_id) -> JsonResponse:
 
     batch = Batch.objects.create(user=request.user, is_reprocessing=True)
     recording.batch = batch
+    # Preparing, because the audio the model hears is made again first. Handing
+    # back the file prepared at upload would mean a Recording could never be
+    # improved by a change to how audio is prepared, which is exactly what a
+    # person pressing this button is often trying to do.
+    recording.media_state = MediaState.PREPARING
     recording.save()
 
-    from core import queue
-
-    again = queue.make_job(recording)
-    tasks.hand_over_job.defer(job_id=str(again.pk))
+    tasks.prepare_audio_again.defer(recording_id=str(recording.pk))
 
     audit.write(
         audit.Category.JOBS,
