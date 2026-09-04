@@ -97,6 +97,7 @@ def _check(recording: Recording) -> None:
 
     probed = media.probe(path)
     recording.probe = probed.raw
+    _keep_the_probe(recording, probed.raw)
     recording.duration_seconds = probed.duration_seconds
     recording.tracks_found = len(probed.tracks)
 
@@ -194,6 +195,30 @@ def make_playback(recording: Recording) -> Recording:
     recording.save(update_fields=["playback_ready"])
     log.info("recording %s can be played", recording.id)
     return recording
+
+
+def _keep_the_probe(recording: Recording, raw: dict) -> None:
+    """Write the raw ffprobe output beside the Recording's own bytes.
+
+    It is on the database row as well, which is what the Details panel reads.
+    It is on disk because the file set a Recording carries is fixed: original,
+    probe.json, the ASR audio per Side, the playback copy, the waveform, and
+    clips. In Phase 2 that set is what a Case keeps, and a file that was never
+    written cannot be kept.
+    """
+    import json
+
+    try:
+        recording.folder.mkdir(parents=True, exist_ok=True)
+        (recording.folder / "probe.json").write_text(
+            json.dumps(raw, indent=2), encoding="utf-8"
+        )
+    except OSError:
+        # The Recording is transcribable without it, and the same facts are on
+        # its row, so this is worth a line in the journal and nothing more.
+        log.warning(
+            "the probe output of recording %s could not be written", recording.id
+        )
 
 
 def _failed(recording: Recording, problem: media.MediaError) -> Recording:
