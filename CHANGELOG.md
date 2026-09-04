@@ -50,6 +50,13 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **Process again remakes the audio the model hears.** It handed the file
+  prepared at upload straight back to the service, so a recording could never
+  be improved by a change to how audio is prepared: a fix reached new uploads
+  and nothing already on the disk, and the only way to mend a recording was to
+  delete it and put it up again. It is remade from the uploaded bytes now,
+  which is what those bytes are kept for. This is what makes the fix for
+  dropped audio on a body-worn camera reach a recording already transcribed.
 - **Clicking the waveform seeks again.** A click and a drag were told apart by
   how much time was between them, and on a twenty-five minute recording one
   pixel of timeline is over a second, so every click, which always jitters a

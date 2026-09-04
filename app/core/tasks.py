@@ -53,6 +53,33 @@ def prepare_recording(recording_id: str) -> None:
         make_playback_copy.defer(recording_id=str(recording.pk))
 
 
+@app.task(queue="media", name="prepare_audio_again")
+def prepare_audio_again(recording_id: str) -> None:
+    """Remake a Recording's prepared audio, then put it in the line.
+
+    Process again's first step. It runs on the media queue because it is
+    ffmpeg work, and the Job is made only once the audio is there, so the
+    service is never handed a file that is being rewritten under it.
+    """
+    from core import pipeline, queue
+    from core.recordings import MediaState, Recording
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None:
+        log.info("recording %s is gone; nothing to process again", recording_id)
+        return
+
+    recording = pipeline.prepare_audio_again(recording)
+    if recording.media_state != MediaState.READY:
+        # The audio could not be prepared, so the Recording is Failed and says
+        # why. There is nothing to hand the service.
+        log.warning("recording %s could not be prepared again", recording_id)
+        return
+
+    job = queue.make_job(recording)
+    hand_over_job.defer(job_id=str(job.pk))
+
+
 @app.task(queue="media", name="make_playback_copy")
 def make_playback_copy(recording_id: str) -> None:
     """The copy the browser plays, and the peaks it draws."""
