@@ -172,6 +172,12 @@ def save_clip(request: HttpRequest, recording_id) -> JsonResponse:
     )
     _record(request, clip, "Clip created")
     _start_render(clip)
+
+    from core import cases
+
+    # Saving a Clip is use of the Case the Recording is in.
+    cases.used(recording, by=request.user)
+
     return JsonResponse({"clip": _row(clip)})
 
 

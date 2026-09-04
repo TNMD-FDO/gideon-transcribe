@@ -250,3 +250,44 @@ def test_the_clips_page_is_the_workspaces_own(person, a_case, client):
     page = client.get("/clips").content.decode()
     assert "Clip in the session" in page
     assert "Clip in a case" not in page
+
+
+# The Retention clock -----------------------------------------------------------
+
+
+def test_opening_a_recording_in_a_case_counts_as_use(person, a_case, client):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    recording = a_recording(person, case=a_case)
+    a_transcript(recording)
+
+    long_ago = timezone.now() - timedelta(days=40)
+    Case.objects.filter(pk=a_case.pk).update(last_activity=long_ago)
+
+    signed_in(client, person)
+    settings_store.set_to("folder_management", True)
+    client.get(f"/recording/{recording.pk}")
+
+    a_case.refresh_from_db()
+    assert a_case.last_activity > long_ago
+
+
+def test_an_admin_looking_in_is_not_use(person, a_case, client):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    an_admin = User.objects.create_local_admin("someone-else", PASSWORD)
+    long_ago = timezone.now() - timedelta(days=40)
+    Case.objects.filter(pk=a_case.pk).update(last_activity=long_ago)
+
+    signed_in(client, an_admin)
+    settings_store.set_to("folder_management", True)
+    assert client.get(f"/case/{a_case.pk}").status_code == 200
+
+    a_case.refresh_from_db()
+    # Down to the second, because the update above set it and nothing since
+    # should have moved it.
+    assert abs((a_case.last_activity - long_ago).total_seconds()) < 1

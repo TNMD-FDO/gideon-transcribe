@@ -90,7 +90,11 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     if recording is None:
         return redirect(reverse("home"))
 
-    from core import exports
+    from core import cases, exports
+
+    # Opening a Recording in a Case is use of that Case, so its Retention
+    # clock moves. An Admin looking into somebody else's does not count.
+    cases.used(recording, by=request.user)
 
     transcript = getattr(recording, "transcript", None)
     playback = recording.playback_path()
@@ -207,6 +211,10 @@ def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
     ):
         return JsonResponse({"error": "no such recording"}, status=404)
 
+    from core import cases
+
+    cases.used(recording, by=request.user)
+
     if being_replaced(recording):
         return JsonResponse(
             {
@@ -260,6 +268,10 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
         recording.user_id != request.user.pk and not request.user.is_admin
     ):
         return JsonResponse({"error": "no such recording"}, status=404)
+
+    from core import cases
+
+    cases.used(recording, by=request.user)
 
     transcript = getattr(recording, "transcript", None)
     if transcript is None:
