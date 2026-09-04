@@ -92,6 +92,21 @@ https://{$APP_HOSTNAME}:443 {
 	# does pass through Python is the question of whether this session may
 	# have the file: Caddy asks the app first and serves nothing until it
 	# says yes.
+	#
+	# `no-store` on both media routes, for two reasons.
+	#
+	# The first is the point of this app. Without it these answers carry no
+	# Cache-Control at all, so a browser keeps privileged recordings on the
+	# disk of whatever machine played them, for as long as it likes, long
+	# after the Login session that was allowed to see them has ended. Nothing
+	# in a Workspace is meant to outlive its session and nothing is meant to
+	# leave the building; a copy sitting in a browser profile does both.
+	#
+	# The second is that it was also breaking playback. A browser that had
+	# cached part of a large recording kept being told 304 Not Modified and
+	# never fetched the rest, so it played what it held and would not jump
+	# anywhere else. A small recording fits whole and scrubs perfectly, which
+	# is what made it look like a fault in the player.
 	handle /media/* {
 		# `route` and not a bare `handle`, and that matters for the same
 		# reason the allow-list above is a `handle` block. Inside a plain
@@ -104,6 +119,7 @@ https://{$APP_HOSTNAME}:443 {
 			forward_auth app:8000 {
 				uri /media-auth
 			}
+			header Cache-Control "private, no-store"
 			root * /srv/scratch
 			uri strip_prefix /media
 			file_server
@@ -120,6 +136,7 @@ https://{$APP_HOSTNAME}:443 {
 			forward_auth app:8000 {
 				uri /media-auth
 			}
+			header Cache-Control "private, no-store"
 			root * /srv/cases
 			uri strip_prefix /case-media
 			file_server

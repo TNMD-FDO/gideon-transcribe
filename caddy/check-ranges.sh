@@ -125,7 +125,19 @@ print(open(sys.argv[1], 'rb').read(1)[0])
   [ "$first" = "$((1000 % 256))" ] ||
     fail "$what: the bytes that came back are not the bytes that were asked for"
 
-  pass "$what serves 206 Partial Content, of the right bytes"
+  # And that a browser is not told it may keep it. Without this a browser
+  # holds privileged recordings on its own disk after the session that was
+  # allowed to see them has ended, and a part-held large one is never
+  # completed, so it plays and will not scrub.
+  local keeping
+  keeping="$(curl -skI "$url" | grep -i "^cache-control:" || true)"
+  case "$keeping" in
+    *no-store*) : ;;
+    "") fail "$what: says nothing about caching, so a browser keeps the file" ;;
+    *) fail "$what: says '$keeping', which lets a browser keep the file" ;;
+  esac
+
+  pass "$what serves 206 Partial Content of the right bytes, and is not kept"
 }
 
 check_one "the Workspace media route" \
