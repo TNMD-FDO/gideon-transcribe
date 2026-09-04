@@ -120,9 +120,10 @@
 
       // The name line is always there, because it carries the row's own
       // controls even when there is no speaker to name.
-      who.appendChild(document.createTextNode(
-        (segment.speaker || "") + (segment.corrected ? " ✎" : "")
-      ));
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = (segment.speaker || "") + (segment.corrected ? " ✎" : "");
+      who.appendChild(name);
       who.appendChild(actions);
       body.appendChild(who);
 
@@ -375,9 +376,11 @@
       dragging = false;
       var now = timeAt(event);
       if (Math.abs(now - dragFrom) < 0.4) {
-        // A click, not a drag: seek there.
+        // A click, not a drag: seek there, and put back whatever range the
+        // clip tool still holds rather than wiping it off the timeline.
         window.VIEWER.seek(now);
-        showRange(null, null);
+        var held = window.CLIPS ? window.CLIPS.range() : null;
+        showRange(held ? held.from : null, held ? held.to : null);
         return;
       }
       if (window.CLIPS) {
@@ -547,15 +550,33 @@
             "X-CSRFToken": cookie("csrftoken")
           },
           body: JSON.stringify({ text: text })
-        }).then(function () {
+        }).then(function (answer) {
+          // A correction is only saved when the app says so. A session that
+          // ended while this page sat open is turned away here, and showing
+          // the new words as though they were kept would be a lie about a
+          // transcript.
+          if (!answer.ok) { return Promise.reject(answer.status); }
+          return answer.json();
+        }).then(function (said) {
+          if (!said.corrected) { return Promise.reject("refused"); }
           segment.text = text;
           segment.corrected = true;
           // The words are the machine's; once a person has changed the text,
           // the old word timings no longer describe it.
           segment.words = [];
           draw();
+          // draw() built the rows again, so the highlight and any search
+          // have to be put back.
+          here = -1;
           follow();
+          if (search && search.value.trim()) { look(); }
           if (window.CLIPS) { window.CLIPS.load(); }
+        }).catch(function () {
+          box.disabled = false;
+          window.alert(
+            "That correction was not saved. You may have been signed out; " +
+            "open the page again and check before retyping it."
+          );
         });
       }
     });

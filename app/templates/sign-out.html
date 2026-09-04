@@ -19,18 +19,14 @@
     <form method="post" class="dialog">
       {% csrf_token %}
       {% if counts.clips_not_downloaded %}
-        <a href="{% url 'download-clips' %}"><button type="button">Download clips</button></a>
+        <a href="{% url 'download-clips' %}" class="btn">Download clips</a>
       {% endif %}
       {% if counts.transcripts %}
-        <a href="{% url 'workspace-download' 'transcripts' %}">
-          <button type="button">Download all transcripts</button>
-        </a>
-        <a href="{% url 'workspace-download' 'everything' %}">
-          <button type="button">Download everything</button>
-        </a>
+        <a href="{% url 'workspace-download' 'transcripts' %}" class="btn">Download all transcripts</a>
+        <a href="{% url 'workspace-download' 'everything' %}" class="btn">Download everything</a>
       {% endif %}
       <span class="grow"></span>
-      <a href="{% url 'home' %}"><button type="button" class="ghost">Cancel</button></a>
+      <a href="{% url 'home' %}" class="btn ghost">Cancel</a>
       <button type="submit" class="primary">Sign out</button>
     </form>
   </div>

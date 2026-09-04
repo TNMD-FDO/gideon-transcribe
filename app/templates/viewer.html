@@ -40,15 +40,13 @@
 
       <div>
         <div class="head">
-          <a href="{% url 'home' %}" title="Back to your recordings">
-            <button type="button" class="ghost">&larr;</button>
-          </a>
+          <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost">&larr;</a>
           <h1>{{ recording.title }}</h1>
           {% if recording.is_two_channel_call %}
             <span class="pill side">Two-channel call: {{ sides|length }} sides</span>
           {% endif %}
           {% if transcript.task_run == "translate" %}
-            <span class="pill translate" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ transcript.language }}</span>
+            <span class="pill translate" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ language_name }}</span>
           {% endif %}
           {% if transcript and not transcript.word_timestamps %}
             <span class="pill">No word timing</span>
@@ -150,15 +148,9 @@
 
         <div class="foot">
           {% if transcript %}
-            <a href="{% url 'export' recording.pk 'word' %}">
-              <button type="button" class="primary" style="width: 100%">Export to Word</button>
-            </a>
-            <a href="{% url 'export' recording.pk 'text' %}">
-              <button type="button" style="width: 100%">Export as text (.txt)</button>
-            </a>
-            <a href="{% url 'export' recording.pk 'captions' %}">
-              <button type="button" style="width: 100%">Captions (.srt)</button>
-            </a>
+            <a href="{% url 'export' recording.pk 'word' %}" class="btn primary" style="width: 100%">Export to Word</a>
+            <a href="{% url 'export' recording.pk 'text' %}" class="btn" style="width: 100%">Export as text (.txt)</a>
+            <a href="{% url 'export' recording.pk 'captions' %}" class="btn" style="width: 100%">Captions (.srt)</a>
           {% endif %}
           <button type="button" class="ghost small" id="open-shortcuts">Keyboard shortcuts ?</button>
           <button type="button" class="ghost small danger delete"

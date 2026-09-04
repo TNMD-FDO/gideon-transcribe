@@ -166,7 +166,13 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
                 "lines": known.lines,
                 "value": tray[known.key] if waiting else settings_store.get(known.key),
                 "waiting": waiting,
-                "default": settings_store.shown(known.key, known.default),
+                # Not through shown(): that redacts a content setting to
+                # "(changed)", which says nothing about what it starts as.
+                "default": (
+                    settings_store.shown(known.key, known.default)
+                    if not known.content
+                    else (known.default or "(empty)")
+                ),
                 "changed": not settings_store.is_at_default(known.key),
             }
         )

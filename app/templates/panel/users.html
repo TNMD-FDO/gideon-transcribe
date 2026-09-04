@@ -40,15 +40,9 @@
             <td colspan="10" style="padding-bottom: 14px">
               <form method="post" action="{% url 'panel-user' row.user.username %}" class="row">
                 {% csrf_token %}
-                <a href="{% url 'panel-workspace' row.user.username %}">
-                  <button type="button" class="small">Open their Workspace</button>
-                </a>
-                <a href="{% url 'panel-audit' %}?actor={{ row.user.username }}">
-                  <button type="button" class="small">Activity</button>
-                </a>
-                <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}">
-                  <button type="button" class="small">Access to their material</button>
-                </a>
+                <a href="{% url 'panel-workspace' row.user.username %}" class="btn small">Open their Workspace</a>
+                <a href="{% url 'panel-audit' %}?actor={{ row.user.username }}" class="btn small">Activity</a>
+                <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}" class="btn small">Access to their material</a>
 
                 <button type="submit" name="action" value="end-sessions" class="small"
                         onclick="return confirm('This signs {{ row.user.username }} out and removes {{ row.counts.recordings }} recordings and their transcripts.')">End sessions</button>
@@ -61,24 +55,31 @@
                 {% endif %}
 
                 <button type="submit" name="action" value="admin-flag" class="small"
-                        {% if row.admin_source == "Admin group" or row.admin_source == "Local" %}disabled title="Held through the directory group, so it cannot be changed here"{% endif %}>
+                        {% if row.admin_source == "Admin group" %}disabled title="Held through the directory group, so it cannot be changed here"{% elif row.admin_source == "Local" %}disabled title="Every Local admin is an Admin, so this cannot be changed here"{% endif %}>
                   {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
                 </button>
+              </form>
 
-                <span class="row small">
-                  <label class="muted">Quota</label>
-                  <input type="number" name="quota_gb" min="1" max="5000" style="width: 6rem"
-                         value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="default">
-                  <button type="submit" name="action" value="quota" class="small">Set</button>
-                </span>
+              {# The quota has a form of its own, so that pressing Enter in the
+                 box sets a quota rather than firing this row's first button,
+                 which signs the person out and discards their recordings. #}
+              <form method="post" action="{% url 'panel-user' row.user.username %}"
+                    class="row small" style="margin-top: 6px">
+                {% csrf_token %}
+                <label class="muted" for="quota-{{ row.user.username }}">Quota</label>
+                <input type="number" id="quota-{{ row.user.username }}" name="quota_gb"
+                       min="1" max="5000" style="width: 6rem"
+                       value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="default">
+                <button type="submit" name="action" value="quota" class="small">Set</button>
               </form>
 
               {% if row.user.is_local %}
                 <form method="post" action="{% url 'panel-local-admin' row.user.username %}"
                       class="row small" style="margin-top: 6px">
                   {% csrf_token %}
-                  <label class="muted">New password</label>
-                  <input type="password" name="password" autocomplete="new-password">
+                  <label class="muted" for="password-{{ row.user.username }}">New password</label>
+                  <input type="password" id="password-{{ row.user.username }}"
+                         name="password" autocomplete="new-password">
                   <button type="submit" name="action" value="password" class="small">Change password</button>
                   <button type="submit" name="action" value="delete" class="small ghost danger"
                           onclick="return confirm('Delete the local admin {{ row.user.username }}?')">Delete</button>
@@ -99,12 +100,12 @@
   </p>
   <form method="post" action="{% url 'panel-create-local-admin' %}" class="card row">
     {% csrf_token %}
-    <span class="field"><label>Username</label>
-      <input type="text" name="username" autocomplete="off"></span>
-    <span class="field"><label>Display name</label>
-      <input type="text" name="display_name" autocomplete="off"></span>
-    <span class="field"><label>Password</label>
-      <input type="password" name="password" autocomplete="new-password"></span>
+    <label class="field"><span>Username</span>
+      <input type="text" name="username" autocomplete="off"></label>
+    <label class="field"><span>Display name</span>
+      <input type="text" name="display_name" autocomplete="off"></label>
+    <label class="field"><span>Password</span>
+      <input type="password" name="password" autocomplete="new-password"></label>
     <button type="submit" class="primary">Create</button>
   </form>
 {% endblock %}

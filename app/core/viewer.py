@@ -89,6 +89,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     if recording is None:
         return redirect(reverse("home"))
 
+    from core import exports
+
     transcript = getattr(recording, "transcript", None)
     playback = recording.playback_path()
 
@@ -113,6 +115,11 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             "recording": recording,
             "transcript": transcript,
             "speakers": speakers,
+            "language_name": (
+                exports.language_name(transcript.language)
+                if transcript is not None
+                else ""
+            ),
             "sides": list(recording.sides.all()),
             "job": job,
             "is_someone_elses": recording.user_id != request.user.pk,

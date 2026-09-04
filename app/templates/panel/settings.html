@@ -24,7 +24,7 @@
     {% for row in rows %}
       <div class="arow{% if row.waiting %} dirty{% endif %}">
         <div class="lbl">
-          <b>{{ row.name }}</b>
+          <label for="{{ row.key }}"><b>{{ row.name }}</b></label>
           <div class="help">{{ row.help }}</div>
         </div>
         <div>
@@ -33,7 +33,7 @@
               <input type="checkbox" id="{{ row.key }}" name="{{ row.key }}"
                      {% if row.value %}checked{% endif %}>
               <span class="knob"></span>
-              <span>{% if row.value %}On{% else %}Off{% endif %}</span>
+              <span class="state"><span class="on-word">On</span><span class="off-word">Off</span></span>
             </label>
           {% elif row.kind == "choice" %}
             <select id="{{ row.key }}" name="{{ row.key }}">

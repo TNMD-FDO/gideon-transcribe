@@ -15,6 +15,7 @@ from pathlib import Path
 
 from django.conf import settings as django_settings
 from django.db import models
+from django.db.models.functions import Cast
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -677,7 +678,13 @@ def audit_log(request: HttpRequest) -> HttpResponse:
             | models.Q(object_label__icontains=asked["object"])
         )
     if asked["client"]:
-        rows = rows.filter(client_address=asked["client"])
+        # The column is an inet, and anything that is not a whole address
+        # would raise rather than simply match nothing. Compared as text, a
+        # partial address finds a subnet, which is what somebody typing one
+        # wants.
+        rows = rows.annotate(
+            client_text=Cast("client_address", models.CharField())
+        ).filter(client_text__icontains=asked["client"])
 
     found = rows.count()
     page = max(1, int(request.GET.get("page", "1") or 1))

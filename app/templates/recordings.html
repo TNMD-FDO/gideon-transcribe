@@ -17,7 +17,7 @@
         {% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}Your recordings{% endif %}
       </h1>
       {% if not someone_elses %}
-        <a href="{% url 'upload' %}"><button type="button" class="primary">Upload recordings</button></a>
+        <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
       {% endif %}
     </div>
 
@@ -31,9 +31,7 @@
             <div class="row">
               <b class="grow">{{ recording.title }}</b>
               {% if recording.transcript %}
-                <a href="{% url 'viewer' recording.pk %}">
-                  <button type="button" class="primary small">Open</button>
-                </a>
+                <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
               {% elif recording.media_state == "rejected" %}
                 <span class="pill danger">Refused</span>
               {% elif recording.media_state == "failed" %}
