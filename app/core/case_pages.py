@@ -1,0 +1,361 @@
+"""The Cases page, one Case's page, and the ways in and out of a Case.
+
+Every page here answers "not found" while Folder management is off, so that
+turning the setting off makes the app look like Phase 1 again rather than
+leaving a link that half works. Nothing is deleted by that: the rows and the
+files stay, and turning it back on brings the pages back over them.
+"""
+
+from __future__ import annotations
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
+from core import audit, cases, uploads
+from core.cases import Case
+from core.jobs import Segment
+from core.recordings import Recording
+
+# How many hits one search shows. A person looking for a phrase wants the
+# first few; a thousand rows would be a worse answer, not a fuller one.
+MOST_HITS = 200
+
+
+def _on_or_404() -> None:
+    if not cases.folder_management_on():
+        raise Http404("Folder management is off")
+
+
+def _their_case(request, case_id) -> Case:
+    """The Case, if this person may open it, and the Admin access row if not theirs."""
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
+    if not case.may_be_opened_by(request.user):
+        raise Http404("not this person's case")
+    if case.owner_id != request.user.pk:
+        # ADR 0004: an Admin opening somebody else's work is recorded, and it
+        # is not use, so the Retention clock does not move.
+        audit.write(
+            audit.Category.ADMIN,
+            "admin access",
+            actor=request.user,
+            affected_user=case.owner,
+            object_type="case",
+            object_id=case.pk,
+            object_label=case.name,
+            request=request,
+        )
+    return case
+
+
+@login_required
+def cases_page(request: HttpRequest) -> HttpResponse:
+    """Where a person lands when Cases are on: their own, and nothing else.
+
+    Admins see every Case, because they must be able to act on a leaver's.
+    The Cases shared with a person are the Sharing chapter's and are not here.
+    """
+    _on_or_404()
+
+    mine = cases.cases_for(request.user)
+    others = Case.objects.none()
+    if request.user.is_admin:
+        others = Case.objects.filter(deleted_on__isnull=True).exclude(
+            owner=request.user
+        )
+
+    filter_text = request.GET.get("name", "").strip()
+    if filter_text:
+        mine = mine.filter(name__icontains=filter_text)
+        others = others.filter(name__icontains=filter_text)
+
+    return render(
+        request,
+        "cases.html",
+        {
+            "page": "cases",
+            "cases": [_as_row(one) for one in mine],
+            "others": [_as_row(one) for one in others],
+            "name_filter": filter_text,
+            "storage_warning": uploads.storage_warning(request.user),
+        },
+    )
+
+
+def _as_row(case: Case) -> dict:
+    return {
+        "case": case,
+        "recordings": case.recordings.count(),
+        "size": uploads.as_gb(case.disk_bytes()),
+    }
+
+
+@login_required
+def case_page(request: HttpRequest, case_id) -> HttpResponse:
+    """One Case: its Recordings, and one box that searches them.
+
+    The chapter gives this page four tabs. Three of them are other chapters'
+    (Speakers, Clips in cases, and Case Chat) and are not built, so this page
+    shows the one tab that is.
+    """
+    _on_or_404()
+    case = _their_case(request, case_id)
+    cases.note_activity(case, by=request.user)
+
+    asked = request.GET.get("q", "").strip()
+    return render(
+        request,
+        "case.html",
+        {
+            "page": "cases",
+            "case": case,
+            "is_owner": case.owner_id == request.user.pk,
+            "recordings": _rows_for(case),
+            "asked": asked,
+            "hits": _search(case, asked) if asked else None,
+            "types": cases.recording_types(),
+            "size": uploads.as_gb(case.disk_bytes()),
+        },
+    )
+
+
+def _rows_for(case: Case) -> list:
+    """Each Recording with the words its row shows about its Speakers and state."""
+    rows = []
+    for one in case.recordings.order_by("-created"):
+        job = one.jobs.order_by("-created").first()
+        one.being_replaced = bool(
+            job is not None and job.is_live and job.batch.is_reprocessing
+        )
+        one.in_the_queue = bool(job is not None and job.is_live)
+        one.speakers_in_words = _speakers_in_words(one)
+        rows.append(one)
+    return rows
+
+
+def _speakers_in_words(recording: Recording) -> str:
+    """Reads "2 named, 1 unnamed", and says nothing at all when there are none."""
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return ""
+    labels = set(
+        Segment.objects.filter(transcript=transcript)
+        .exclude(speaker="")
+        .order_by("speaker")
+        .values_list("speaker", flat=True)
+        .distinct()
+    )
+    if not labels:
+        return ""
+    named = {one for one in labels if not one.upper().startswith("SPEAKER_")}
+    unnamed = len(labels) - len(named)
+    parts = []
+    if named:
+        parts.append(f"{len(named)} named")
+    if unnamed:
+        parts.append(f"{unnamed} unnamed")
+    return ", ".join(parts)
+
+
+def _search(case: Case, asked: str) -> list:
+    """Transcript text and Speaker names across one Case.
+
+    Every hit is a Segment, and opening it opens the viewer at that time. The
+    term is never written to the audit log, here or anywhere.
+    """
+    found = (
+        Segment.objects.filter(transcript__recording__case=case)
+        .filter(Q(text__icontains=asked) | Q(speaker__icontains=asked))
+        .select_related("transcript__recording")
+        .order_by("transcript__recording__created", "start")[:MOST_HITS]
+    )
+    return [
+        {
+            "recording": one.transcript.recording,
+            "start": one.start,
+            "speaker": one.speaker,
+            "text": one.text,
+        }
+        for one in found
+    ]
+
+
+# Making, renaming, and deleting -----------------------------------------------
+
+
+@login_required
+@require_POST
+def new_case(request: HttpRequest) -> JsonResponse:
+    _on_or_404()
+    name = request.POST.get("name", "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "why": "A case needs a name."}, status=400)
+
+    warn = cases.name_already_used(request.user, name)
+    case = cases.create(request.user, name, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "id": str(case.pk),
+            "name": case.name,
+            "where": f"/case/{case.pk}",
+            # A warning, never a refusal: two cases may carry the same name.
+            "warning": (
+                f'You already have a case called "{case.name}".' if warn else ""
+            ),
+        }
+    )
+
+
+@login_required
+@require_POST
+def rename_case(request: HttpRequest, case_id) -> JsonResponse:
+    _on_or_404()
+    case = _their_case(request, case_id)
+    name = request.POST.get("name", "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "why": "A case needs a name."}, status=400)
+
+    warn = cases.name_already_used(request.user, name, besides=case)
+    cases.rename(case, name, actor=request.user, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "name": case.name,
+            "warning": (
+                f'You already have a case called "{case.name}".' if warn else ""
+            ),
+        }
+    )
+
+
+@login_required
+@require_POST
+def delete_case(request: HttpRequest, case_id) -> JsonResponse:
+    """Final. There is no recycle bin for a person's own delete."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    recordings, gigabytes = cases.delete(case, actor=request.user, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "recordings": recordings,
+            "gigabytes": gigabytes,
+            "where": "/cases",
+        }
+    )
+
+
+@login_required
+def what_would_go(request: HttpRequest, case_id) -> JsonResponse:
+    """The counts the Delete confirmation names, so it says what it is taking."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    recordings = case.recordings.all()
+    return JsonResponse(
+        {
+            "name": case.name,
+            "recordings": recordings.count(),
+            "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
+            "clips": sum(one.clips.count() for one in recordings),
+            "size": uploads.as_gb(case.disk_bytes()),
+        }
+    )
+
+
+# Moving a Recording in --------------------------------------------------------
+
+
+@login_required
+def where_it_could_go(request: HttpRequest) -> JsonResponse:
+    """The picker's list: the Cases this person may put a Recording into."""
+    _on_or_404()
+    return JsonResponse(
+        {
+            "cases": [
+                {"id": str(one.pk), "name": one.name}
+                for one in cases.cases_for(request.user)
+            ],
+            "types": cases.recording_types(),
+        }
+    )
+
+
+@login_required
+@require_POST
+def move_to_case(request: HttpRequest, recording_id) -> JsonResponse:
+    """Move a Done Recording into a Case, or from one Case to another.
+
+    Only a Done Recording is offered: a Queued, Running or Failed one is
+    retried or deleted first, because a move renames the folder its Job is
+    writing into.
+    """
+    _on_or_404()
+    recording = get_object_or_404(Recording, pk=recording_id)
+
+    may_move = recording.user_id == request.user.pk or (
+        recording.case is not None and recording.case.owner_id == request.user.pk
+    )
+    if not may_move and not request.user.is_admin:
+        raise Http404("not this person's recording")
+
+    if not hasattr(recording, "transcript"):
+        return JsonResponse(
+            {
+                "ok": False,
+                "why": (
+                    "Only a recording with a transcript can be moved. Retry or "
+                    "delete this one first."
+                ),
+            },
+            status=400,
+        )
+
+    case = get_object_or_404(
+        Case, pk=request.POST.get("case", ""), deleted_on__isnull=True
+    )
+    if not case.may_be_opened_by(request.user):
+        raise Http404("not this person's case")
+
+    cases.move_recording(
+        recording,
+        case,
+        actor=request.user,
+        description=request.POST.get("description", "").strip(),
+        request=request,
+    )
+
+    wanted_type = request.POST.get("recording_type", "").strip()
+    if wanted_type:
+        recording.recording_type = wanted_type[:60]
+        recording.save(update_fields=["recording_type"])
+
+    return JsonResponse({"ok": True, "case": case.name, "where": f"/case/{case.pk}"})
+
+
+@login_required
+@require_POST
+def set_details(request: HttpRequest, recording_id) -> JsonResponse:
+    """The Recording type and the Description, edited in the Details panel."""
+    _on_or_404()
+    recording = get_object_or_404(Recording, pk=recording_id)
+    if recording.case is None:
+        raise Http404("not in a case")
+    if not recording.case.may_be_opened_by(request.user):
+        raise Http404("not this person's case")
+
+    recording.recording_type = request.POST.get("recording_type", "").strip()[:60]
+    recording.description = request.POST.get("description", "").strip()[:2000]
+    recording.save(update_fields=["recording_type", "description"])
+    cases.note_activity(recording.case, by=request.user)
+    return JsonResponse({"ok": True})
+
+
+@login_required
+def add_recordings(request: HttpRequest, case_id) -> HttpResponse:
+    """The Case page's "Add recordings": the Upload page with the Case chosen."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    return redirect(f"/upload?case={case.pk}")

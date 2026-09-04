@@ -3,6 +3,7 @@
 from django.urls import path
 
 from core import (
+    case_pages,
     clip_pages,
     exports,
     media_access,
@@ -74,6 +75,30 @@ urlpatterns = [
         "download/<str:shape>",
         exports.workspace_download,
         name="workspace-download",
+    ),
+    # Cases: where a Recording lives once somebody means to keep it. Every one
+    # of these answers "not found" while Folder management is off.
+    path("cases", case_pages.cases_page, name="cases"),
+    path("cases/new", case_pages.new_case, name="new-case"),
+    path("cases/where", case_pages.where_it_could_go, name="where-it-could-go"),
+    path("case/<uuid:case_id>", case_pages.case_page, name="case"),
+    path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
+    path("case/<uuid:case_id>/delete", case_pages.delete_case, name="delete-case"),
+    path(
+        "case/<uuid:case_id>/what-would-go",
+        case_pages.what_would_go,
+        name="what-would-go",
+    ),
+    path("case/<uuid:case_id>/add", case_pages.add_recordings, name="add-recordings"),
+    path(
+        "recording/<uuid:recording_id>/move",
+        case_pages.move_to_case,
+        name="move-to-case",
+    ),
+    path(
+        "recording/<uuid:recording_id>/case-details",
+        case_pages.set_details,
+        name="case-details",
     ),
     # Clips: a chosen span of a Recording, as a file for outside the app.
     path("clips", clip_pages.clips_page, name="clips"),

@@ -5,8 +5,8 @@ Side is one distinct sound source of a Recording that is transcribed on its
 own, which for most recordings is the whole of it, and for a two-party phone
 call is each channel.
 
-None of this outlives the Login session that made it. What a person wants to
-keep, they export.
+None of this outlives the Login session that made it, unless it is in a Case.
+What a person wants to keep, they put in a Case or they export.
 """
 
 from __future__ import annotations
@@ -171,6 +171,23 @@ class Recording(models.Model):
         "core.User", on_delete=models.CASCADE, related_name="recordings"
     )
 
+    # Empty means the Workspace, which is where every Recording is in Phase 1
+    # and where most are afterwards. A Recording with a Case survives the
+    # sign-out that would have discarded it.
+    case = models.ForeignKey(
+        "core.Case",
+        on_delete=models.PROTECT,
+        related_name="recordings",
+        null=True,
+        blank=True,
+    )
+
+    # Both are Case fields, and both stay empty in the Workspace: a Recording
+    # is given a type and a description when it is added to a Case or moved
+    # into one, and either may be skipped.
+    recording_type = models.CharField(max_length=60, blank=True, default="")
+    description = models.TextField(blank=True, default="")
+
     # The title starts as the file name without its extension and can be
     # changed. The original name stays, because it is the only way to
     # recognise a recording after it is discarded.
@@ -226,7 +243,19 @@ class Recording(models.Model):
 
     @property
     def folder(self) -> Path:
-        """Where this Recording's bytes live. Ids only, never a name."""
+        """Where this Recording's bytes live. Ids only, never a name.
+
+        A Recording in a Case sits under that Case, so moving one into a Case
+        is a folder rename and nothing more. Renaming the Case moves nothing,
+        because the path carries the Case's id and not its name.
+        """
+        if self.case_id:
+            return (
+                Path(django_settings.DATA_DIR)
+                / "cases"
+                / str(self.case_id)
+                / str(self.id)
+            )
         return django_settings.SCRATCH_DIR / str(self.user_id) / str(self.id)
 
     @property

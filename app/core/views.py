@@ -34,10 +34,22 @@ def healthz(request: HttpRequest) -> HttpResponse:
     return HttpResponse("ok\n", content_type="text/plain")
 
 
+def where_they_land() -> str:
+    """The Cases page when Cases are on, and the Recordings page when they are not.
+
+    Both pages carry a link to the other, so this decides only what opens
+    first. Turning the setting off puts everybody back on the Phase 1 landing
+    page at their next sign-in.
+    """
+    from core import cases
+
+    return reverse("cases") if cases.folder_management_on() else reverse("home")
+
+
 def sign_in(request: HttpRequest) -> HttpResponse:
     """One form for everybody: directory users and Local admins alike."""
     if request.user.is_authenticated:
-        return redirect(reverse("home"))
+        return redirect(where_they_land())
 
     problem = None
     username = ""
@@ -51,7 +63,7 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         else:
             try:
                 signin.sign_in(request, username, password)
-                return redirect(reverse("home"))
+                return redirect(where_they_land())
             except signin.Refused as refusal:
                 problem = refusal.message
 
@@ -69,6 +81,23 @@ def sign_in(request: HttpRequest) -> HttpResponse:
     )
 
 
+def _still_movable(user) -> list:
+    """Done Recordings not yet in a Case.
+
+    Only a Done one is offered: a Queued, Running or Failed Recording cannot
+    be moved, because a move renames the folder its Job is writing into.
+    """
+    from core import cases
+
+    if not cases.folder_management_on():
+        return []
+    return [
+        one
+        for one in lifecycle.in_the_workspace(user).order_by("-created")
+        if hasattr(one, "transcript")
+    ]
+
+
 def sign_out(request: HttpRequest) -> HttpResponse:
     """Say what signing out removes, and offer the two downloads first.
 
@@ -83,6 +112,10 @@ def sign_out(request: HttpRequest) -> HttpResponse:
             {
                 "lines": lifecycle.sign_out_lines(request.user),
                 "counts": lifecycle.counts(request.user),
+                # The Done Recordings still in the Workspace, so that the last
+                # page a person sees offers to keep them rather than only to
+                # download them.
+                "movable": _still_movable(request.user),
             },
         )
 

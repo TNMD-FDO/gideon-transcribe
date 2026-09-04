@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import uuid
 from datetime import timedelta
 from pathlib import Path
 
@@ -68,30 +69,56 @@ def old_upload_pieces() -> int:
 
 
 def folders_without_a_recording() -> int:
-    """A folder under scratch/ whose Recording row has gone.
+    """A folder under scratch/ or cases/ whose Recording row has gone.
 
     Ids only, never names, so nothing about what is inside is read to decide
     this: a folder is kept if a Recording with that id exists and removed if
-    one does not.
+    one does not. cases/ is treated exactly as scratch/ is, and the toggle
+    makes no difference: this runs whether Folder management is on or off,
+    because it removes only what no row claims.
     """
-    scratch = Path(settings.SCRATCH_DIR)
-    if not scratch.is_dir():
-        return 0
-
     gone = 0
-    for owner in scratch.iterdir():
-        if not owner.is_dir():
+    for above in (Path(settings.SCRATCH_DIR), Path(settings.DATA_DIR) / "cases"):
+        if above.is_dir():
+            gone += _under(above)
+    return gone
+
+
+def _under(above: Path) -> int:
+    """One level of holders, each holding Recording folders by id.
+
+    Under scratch/ a holder is a person; under cases/ it is a Case. Both are
+    named by an id, and both go once the last Recording folder in them has.
+    """
+    gone = 0
+    for holder in above.iterdir():
+        if not holder.is_dir():
             continue
-        for folder in owner.iterdir():
+        for folder in holder.iterdir():
             if not folder.is_dir():
+                continue
+            if not _is_a_recording_id(folder.name):
                 continue
             if not Recording.objects.filter(pk=folder.name).exists():
                 shutil.rmtree(folder, ignore_errors=True)
                 gone += 1
-        # A person's own folder goes once the last Recording in it has.
-        if not any(owner.iterdir()):
-            shutil.rmtree(owner, ignore_errors=True)
+        if not any(holder.iterdir()):
+            shutil.rmtree(holder, ignore_errors=True)
     return gone
+
+
+def _is_a_recording_id(name: str) -> bool:
+    """A folder the app made, rather than something a person left there.
+
+    Every Recording folder is named by a uuid. Anything else is left where it
+    is: the sweeper removes what the app is responsible for, not what it
+    cannot account for.
+    """
+    try:
+        uuid.UUID(name)
+    except ValueError:
+        return False
+    return True
 
 
 def unfinished_discards() -> int:

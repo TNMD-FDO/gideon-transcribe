@@ -19,4 +19,7 @@ def workspace(request) -> dict:
         "idle_timeout_seconds": int(settings_store.idle_timeout().total_seconds()),
         # Off hides the Clips page and every way to reach it.
         "clips_available": settings_store.get("clips_available"),
+        # Off hides every Case from everyone, Admins included, and keeps them:
+        # the pages go, the rows and the files stay.
+        "folder_management": settings_store.get("folder_management"),
     }
