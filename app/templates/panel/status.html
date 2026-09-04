@@ -21,6 +21,14 @@
   <h2 class="small">Media</h2>
   <p id="media"></p>
 
+  <h2 class="small">Directory</h2>
+  <p id="directory"></p>
+  <p class="dialog">
+    <button type="button" id="test-directory">Test directory connection</button>
+    <button type="button" id="check-directory" class="plain">Check directory now</button>
+  </p>
+  <div id="directory-said"></div>
+
   <h2 class="small">Audit log</h2>
   <p class="dialog">
     <button type="button" id="integrity">Integrity check</button>
@@ -31,4 +39,5 @@
   <dl id="versions" class="facts"></dl>
 
   <script src="{% static 'panel-status.js' %}"></script>
+  <script src="{% static 'panel-directory.js' %}"></script>
 {% endblock %}

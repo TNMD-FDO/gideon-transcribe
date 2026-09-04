@@ -36,6 +36,8 @@ RUN apt-get update \
       libboost-program-options1.83.0 \
       libboost-filesystem1.83.0 \
       libboost-regex1.83.0 \
+      libldap-2.5-0 \
+      libsasl2-2 \
  && rm -rf /var/lib/apt/lists/*
 
 # audiowaveform draws the waveform under the player. It is not in the Debian
@@ -60,8 +62,24 @@ ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
 RUN python3 -m venv "${VIRTUAL_ENV}"
 
+# python-ldap is built from source against OpenLDAP's headers, so the
+# compiler and those headers are installed for the one pip layer and taken out
+# again in the same step; the shared libraries above are what stays.
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential \
+      python3-dev \
+      libldap2-dev \
+      libsasl2-dev \
+ && pip install --no-cache-dir -r /tmp/requirements.txt \
+ && apt-get purge -y --auto-remove build-essential python3-dev libldap2-dev \
+      libsasl2-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# The directory library must import in the finished image, so that a missing
+# shared library is a build failure rather than a sign-in failure.
+RUN python -c "import ldap; print(ldap.__version__)"
 
 # The container runs as the office's own account, which has no home folder on
 # the server, so HOME points somewhere writable.

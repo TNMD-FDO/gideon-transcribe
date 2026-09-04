@@ -200,3 +200,22 @@ def sweep_the_disk(timestamp: int) -> None:
     from core import sweeping
 
     sweeping.sweep()
+
+
+@app.periodic(cron="0 * * * *")
+@app.task(queue="default", name="check_the_directory")
+def check_the_directory(timestamp: int) -> None:
+    """Compare the accounts against the directory, at the hour the panel sets.
+
+    Procrastinate's schedule is fixed when the worker starts and the hour is
+    an admin setting, so this wakes every hour and does its work only at the
+    hour that is set. Changing the setting therefore takes effect the same
+    night, without a restart.
+    """
+    from datetime import datetime
+
+    from core import directory, settings_store
+
+    if datetime.now().hour != settings_store.get("directory_check_hour"):
+        return
+    directory.check_accounts()

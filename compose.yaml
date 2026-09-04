@@ -119,10 +119,23 @@ services:
       WHISPERX_TOKEN_FILE: /run/secrets/whisperx_consumer_token
       TZ: "${TZ:-UTC}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      # The office directory. Every value is this office's own and lives in
+      # .env; the bind password is a secret file and the CA root is mounted
+      # read-only, so neither is ever an environment value.
+      LDAP_ENABLED: "${LDAP_ENABLED:-true}"
+      LDAP_SERVER_URI: "${LDAP_SERVER_URI:-}"
+      LDAP_CA_FILE: /run/secrets/ldap_ca_root
+      LDAP_BIND_USER: "${LDAP_BIND_USER:-}"
+      LDAP_BIND_PASSWORD_FILE: /run/secrets/ldap_bind_password
+      LDAP_SEARCH_BASE: "${LDAP_SEARCH_BASE:-}"
+      LDAP_SIGNIN_GROUP: "${LDAP_SIGNIN_GROUP:-}"
+      LDAP_ADMIN_GROUP: "${LDAP_ADMIN_GROUP:-}"
     secrets:
       - postgres_password
       - django_secret_key
       - whisperx_consumer_token
+      - ldap_bind_password
+      - ldap_ca_root
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
     expose:
@@ -198,6 +211,8 @@ services:
       - postgres_password
       - django_secret_key
       - whisperx_consumer_token
+      - ldap_bind_password
+      - ldap_ca_root
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
     healthcheck:
@@ -236,6 +251,8 @@ services:
       - postgres_password
       - django_secret_key
       - whisperx_consumer_token
+      - ldap_bind_password
+      - ldap_ca_root
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
     healthcheck:
@@ -261,6 +278,15 @@ secrets:
     file: "${DJANGO_SECRET_KEY_FILE:-./secrets/django_secret_key}"
   whisperx_consumer_token:
     file: "${WHISPERX_TOKEN_FILE:-./secrets/whisperx_consumer_token}"
+  ldap_bind_password:
+    file: "${LDAP_BIND_PASSWORD_FILE:-./secrets/ldap_bind_password}"
+  # The office CA root, as a secret rather than a mounted file: a secret whose
+  # file is missing stops the stack with a clear message, where a missing bind
+  # mount would quietly become an empty folder and fail at the first sign-in.
+  # An empty file means the system trust store, which is what an office with a
+  # public certificate authority has.
+  ldap_ca_root:
+    file: "${LDAP_CA_FILE:-./ca/office-root.pem}"
 
 volumes:
   caddy-data:
