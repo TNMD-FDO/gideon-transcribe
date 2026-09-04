@@ -835,6 +835,11 @@ def export(request: HttpRequest, recording_id, shape: str) -> HttpResponse:
     if not hasattr(recording, "transcript"):
         return redirect(reverse("viewer", args=[recording.pk]))
 
+    from core import cases
+
+    # Exporting is use of the Case the Recording is in.
+    cases.used(recording, by=request.user)
+
     if shape == "word":
         body = word(recording, request.user.username)
         _record(request, recording, "transcript word")

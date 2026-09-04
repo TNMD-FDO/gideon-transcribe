@@ -152,6 +152,18 @@ def note_activity(case: Case, by=None) -> None:
     case.save(update_fields=["last_activity"])
 
 
+def used(recording, by) -> None:
+    """The Retention clock, moved by an act on a Recording in a Case.
+
+    Called from the places the chapter counts: opening a Recording, correcting
+    a Segment, naming a Speaker, exporting, and saving a Clip. A Recording in
+    no Case does nothing here, so every caller can call it without asking
+    first.
+    """
+    if recording.case_id:
+        note_activity(recording.case, by=by)
+
+
 def recording_types() -> list[str]:
     """The labels a person may put on a Recording."""
     lines = settings_store.get("recording_types") or []
