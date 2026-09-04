@@ -124,6 +124,30 @@ services:
       WHISPERX_TOKEN_FILE: /run/secrets/whisperx_consumer_token
       TZ: "${TZ:-UTC}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      # How much of the server the media work may take. Both were in
+      # .env.example's shape and in the specification and neither reached a
+      # container: the entrypoint read MEDIA_CONCURRENT_JOBS and always found
+      # nothing, so an office setting it got the default and no warning, and
+      # nothing read MEDIA_THREADS_PER_JOB at all, so every ffmpeg took every
+      # core on the machine.
+      MEDIA_THREADS_PER_JOB: "${MEDIA_THREADS_PER_JOB:-8}"
+      MEDIA_CONCURRENT_JOBS: "${MEDIA_CONCURRENT_JOBS:-4}"
+      # The engine's token file, for llm-worker. Named here so the status page
+      # can say which file it is; the file itself is a Compose secret.
+      LLM_API_TOKEN_FILE: "${LLM_API_TOKEN_FILE:-./secrets/llm_api_token}"
+      # What the Admin panel's installation page reports back. An office fills
+      # these in and expects to see them there; without them the page says
+      # "not set" to a correctly configured server.
+      BIND_ADDRESS: "${BIND_ADDRESS:-0.0.0.0}"
+      ALLOWED_CLIENT_CIDRS: "${ALLOWED_CLIENT_CIDRS:-}"
+      LLM_NETWORK: "${LLM_NETWORK:-transcribe-llm}"
+      COMPOSE_PROFILES: "${COMPOSE_PROFILES:-}"
+      # The upload sidecar, which the status page asks whether it is alive.
+      # A fixed address on this stack's own network, not an office fact.
+      TUSD_URL: "http://tusd:1080"
+      # The Release this is running, so the panel and the audit log can say so
+      # rather than guessing. Written by ./transcribe upgrade.
+      RELEASE_TAG: "${RELEASE_TAG:-}"
       # The office directory. Every value is this office's own and lives in
       # .env; the bind password is a secret file and the CA root is mounted
       # read-only, so neither is ever an environment value.

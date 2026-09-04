@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -122,7 +123,29 @@ class Probe:
         return max(self.tracks, key=lambda track: track.channels, default=None)
 
 
+def threads_per_job() -> int:
+    """How many threads one ffmpeg may take.
+
+    The media worker runs several jobs at once and shares the server with the
+    web process, the queue, and Postgres. Left alone, each ffmpeg takes every
+    core it can see, so four transcodes make the rest of the app wait behind
+    them. The office sets this in .env; the specification's default is eight.
+    """
+    try:
+        wanted = int(os.environ.get("MEDIA_THREADS_PER_JOB", "8"))
+    except ValueError:
+        return 8
+    return wanted if wanted > 0 else 8
+
+
 def _run(arguments: list[str], timeout: int) -> subprocess.CompletedProcess:
+    # Every ffmpeg and ffprobe this app runs goes through here, so the cap is
+    # applied here rather than at each of the dozen call sites, where it would
+    # be forgotten at the thirteenth. It goes before the input, which is where
+    # ffmpeg reads a global option.
+    if arguments and Path(arguments[0]).name.startswith(("ffmpeg", "ffprobe")):
+        arguments = [arguments[0], "-threads", str(threads_per_job()), *arguments[1:]]
+
     return subprocess.run(
         arguments, capture_output=True, text=True, timeout=timeout, check=False
     )
