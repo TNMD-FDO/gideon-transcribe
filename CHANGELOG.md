@@ -50,6 +50,13 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **Marking a clip from the transcript is two steps that say so.** The button
+  on a segment reads **clip start**; press it and every button reads **clip
+  end** until the second is pressed, with the starting segment marked
+  meanwhile. Escape gives up on a half-marked clip. Marking a start no longer
+  throws the clips panel open over the transcript: it appears on the second
+  press, when there is something finished to name and save. The I key behaves
+  the same way, and O still brings the panel up.
 - **The bottom panel stays put and resizes.** Whichever panel was open, clips
   or details, comes back on the next recording, so moving through a case no
   longer closes it every time. Drag the strip above its tabs to make it taller

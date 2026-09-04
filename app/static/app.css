@@ -687,6 +687,18 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   background: var(--clip-soft);
 }
 .seg.match-here { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Marking a clip from the transcript is two steps, and the button says which
+   one it is on. One class on the list swaps every label at once, which a
+   transcript of several hundred rows needs. */
+.transcript .step-end { display: none; }
+.transcript.marking .step-start { display: none; }
+.transcript.marking .step-end { display: inline; }
+.seg.clipstart {
+  box-shadow: inset 3px 0 0 0 var(--clip);
+  background: var(--clip-soft);
+}
+.transcript.marking .clip-row { color: var(--clip); font-weight: 600; }
 .seg .t {
   font-family: var(--mono);
   font-size: 0.82em;
