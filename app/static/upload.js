@@ -39,6 +39,7 @@
         refused = "The file is empty";
       }
       chosen.push({
+        own: null,
         file: file,
         title: withoutExtension(file.name),
         refused: refused
@@ -114,6 +115,8 @@
   }
 
   document.getElementById("to-settings").addEventListener("click", function () {
+    if (batchSettings === null) { batchSettings = readRail(); }
+    showBatch();
     show(2);
   });
   document.getElementById("to-check").addEventListener("click", function () {
@@ -127,12 +130,18 @@
   });
 
   var hint = document.getElementById("hint");
-  hint.addEventListener("change", function () {
-    document.getElementById("hint-a").hidden = hint.value === "";
-    document.getElementById("hint-b").hidden = hint.value !== "between";
-  });
 
-  function settings() {
+  // The rail shows one set of settings at a time: the batch's, or one file's
+  // own. A file's own start as null, meaning "same as the batch", and a copy
+  // is taken only when somebody unticks the box, so a file that follows the
+  // batch keeps following it when the batch changes.
+  var batchSettings = null;
+  var railFor = null;
+
+  var useBatch = document.getElementById("use-batch");
+  var fileTitle = document.getElementById("file-title");
+
+  function readRail() {
     var speakers = null;
     if (hint.value === "exactly") {
       speakers = { exactly: parseInt(document.getElementById("hint-a").value, 10) };
@@ -154,21 +163,179 @@
     };
   }
 
+  function writeRail(values) {
+    document.getElementById("diarize").checked = !!values.diarize;
+    document.getElementById("translate").checked = !!values.translate;
+    document.getElementById("language").value = values.language || "";
+    document.getElementById("vocabulary").value =
+      (values.vocabulary || []).join("\n");
+    document.getElementById("context").value = values.context || "";
+
+    var speakers = values.speakers;
+    if (speakers && speakers.exactly) {
+      hint.value = "exactly";
+      document.getElementById("hint-a").value = speakers.exactly;
+    } else if (speakers && speakers.between) {
+      hint.value = "between";
+      document.getElementById("hint-a").value = speakers.between[0];
+      document.getElementById("hint-b").value = speakers.between[1];
+    } else {
+      hint.value = "";
+    }
+    showHintBoxes();
+  }
+
+  function showHintBoxes() {
+    document.getElementById("hint-a").hidden = hint.value === "";
+    document.getElementById("hint-b").hidden = hint.value !== "between";
+  }
+
+  function copyOf(values) {
+    return JSON.parse(JSON.stringify(values));
+  }
+
+  // Whatever the rail is showing, keep it in the right place.
+  function remember() {
+    if (railFor === null) {
+      batchSettings = readRail();
+    } else if (chosen[railFor] && chosen[railFor].own) {
+      chosen[railFor].own = readRail();
+    }
+    drawExceptions();
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#the-settings input, #the-settings select, " +
+      "#the-settings textarea"),
+    function (control) {
+      control.addEventListener("change", remember);
+      control.addEventListener("input", remember);
+    }
+  );
+  hint.addEventListener("change", showHintBoxes);
+
+  function settings() {
+    // The batch's own, read from the rail when the rail is showing them.
+    if (railFor === null) { batchSettings = readRail(); }
+    return batchSettings || readRail();
+  }
+
+  function settingsFor(one) {
+    return one.own || settings();
+  }
+
+  // Switching the rail --------------------------------------------------------
+
+  function showBatch() {
+    railFor = null;
+    document.getElementById("rail-heading").textContent = "Batch settings";
+    document.getElementById("back-to-batch").hidden = true;
+    document.getElementById("use-batch-line").hidden = true;
+    document.getElementById("file-title-line").hidden = true;
+    enableSettings(true);
+    writeRail(batchSettings || readRail());
+    drawExceptions();
+  }
+
+  function showFile(index) {
+    railFor = index;
+    var one = chosen[index];
+    document.getElementById("rail-heading").textContent = one.title;
+    document.getElementById("back-to-batch").hidden = false;
+    document.getElementById("use-batch-line").hidden = false;
+    document.getElementById("file-title-line").hidden = false;
+    fileTitle.value = one.title;
+    useBatch.checked = !one.own;
+    enableSettings(!!one.own);
+    writeRail(one.own || settings());
+    drawExceptions();
+  }
+
+  function enableSettings(on) {
+    Array.prototype.forEach.call(
+      document.querySelectorAll("#the-settings input, #the-settings select, " +
+        "#the-settings textarea"),
+      function (control) { control.disabled = !on; }
+    );
+  }
+
+  document.getElementById("back-to-batch").addEventListener("click", showBatch);
+
+  useBatch.addEventListener("change", function () {
+    var one = chosen[railFor];
+    if (!one) { return; }
+    // Unticking takes a copy of the batch settings, which then edit on their
+    // own; ticking gives the file back to the batch and drops the copy.
+    one.own = this.checked ? null : copyOf(settings());
+    enableSettings(!this.checked);
+    writeRail(one.own || settings());
+    drawExceptions();
+  });
+
+  fileTitle.addEventListener("input", function () {
+    var one = chosen[railFor];
+    if (!one) { return; }
+    one.title = this.value;
+    document.getElementById("rail-heading").textContent = this.value;
+    draw();
+    drawExceptions();
+  });
+
+  // The exceptions table ------------------------------------------------------
+
+  function speakersInWords(values) {
+    var speakers = values.speakers;
+    if (!values.diarize) { return "not separated"; }
+    if (speakers && speakers.exactly) { return "exactly " + speakers.exactly; }
+    if (speakers && speakers.between) {
+      return "between " + speakers.between[0] + " and " + speakers.between[1];
+    }
+    return "the app decides";
+  }
+
+  function drawExceptions() {
+    var body = document.querySelector("#exceptions tbody");
+    if (!body) { return; }
+    body.innerHTML = "";
+
+    usable().forEach(function (one) {
+      var index = chosen.indexOf(one);
+      var values = settingsFor(one);
+      var row = document.createElement("tr");
+      row.innerHTML =
+        "<td><b>" + escape(one.title) + "</b></td>" +
+        "<td class='muted'>" + escape(speakersInWords(values)) + "</td>" +
+        "<td class='muted'>" + (values.translate ? "yes" : "no") + "</td>" +
+        "<td class='muted'>" + escape(values.language || "automatic") + "</td>" +
+        "<td><button type='button' class='pill chip-for'" +
+        (railFor === index ? " style='border-color:var(--accent);color:var(--accent)'" : "") +
+        ">" + (one.own ? "Custom" : "Same as batch") + "</button></td>";
+      row.querySelector(".chip-for").addEventListener("click", function () {
+        showFile(index);
+      });
+      body.appendChild(row);
+    });
+  }
+
   function review() {
     var body = document.querySelector("#review tbody");
-    var chosenSettings = settings();
     body.innerHTML = "";
     usable().forEach(function (one) {
+      var values = settingsFor(one);
       var row = document.createElement("tr");
       var marks = [];
-      if (chosenSettings.diarize) { marks.push("diarize"); }
-      if (chosenSettings.translate) { marks.push("to English"); }
-      if (chosenSettings.language) { marks.push(chosenSettings.language); }
+      if (values.diarize) { marks.push("diarize"); }
+      if (values.translate) { marks.push("to English"); }
+      if (values.language) { marks.push(values.language); }
+      if (values.vocabulary && values.vocabulary.join("").trim()) {
+        marks.push("vocabulary");
+      }
       row.innerHTML =
-        "<td>" + escape(one.title) + "</td>" +
-        "<td class='quiet'>" + escape(one.file.name) + "</td>" +
-        "<td class='quiet'>" + bytes(one.file.size) + "</td>" +
-        "<td class='quiet'>" + (marks.join(", ") || "plain transcription") + "</td>";
+        "<td>" + escape(one.title) +
+        (one.own ? " <span class='pill'>custom</span>" : "") + "</td>" +
+        "<td class='muted'>" + escape(one.file.name) + "</td>" +
+        "<td class='muted'>" + bytes(one.file.size) + "</td>" +
+        "<td class='muted'>" + (marks.join(", ") || "plain transcription") + "</td>";
       body.appendChild(row);
     });
     document.getElementById("start").textContent =
@@ -205,7 +372,15 @@
       body: JSON.stringify({
         batch: settings(),
         files: files.map(function (one) {
-          return { name: one.file.name, title: one.title, size: one.file.size };
+          var sent = {
+            name: one.file.name,
+            title: one.title,
+            size: one.file.size
+          };
+          // Only a file with its own settings sends any: the rest follow the
+          // batch, and the app applies the batch's to them.
+          if (one.own) { sent.settings = one.own; }
+          return sent;
         })
       })
     }).then(function (answer) {
