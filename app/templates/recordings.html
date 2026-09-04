@@ -67,9 +67,7 @@
             </div>
             <p class="muted small" style="margin: 4px 0 0">
               {{ recording.original_filename }}
-              {% if recording.duration_seconds %}
-                &middot; {{ recording.duration_seconds|floatformat:0 }} seconds
-              {% endif %}
+              {% if recording.duration_seconds %}&middot; {{ recording.length }}{% endif %}
               {% if recording.is_two_channel_call %}
                 &middot; two-channel call, {{ recording.sides.count }} sides, each transcribed on its own
               {% endif %}

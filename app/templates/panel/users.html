@@ -64,10 +64,12 @@
                   {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
                 </button>
 
-                {# Both act on Cases, so both are greyed while Folder
-                   management is off: there is nothing in a Workspace for
-                   either of them to act on, and End sessions is how an Admin
-                   frees somebody's space. #}
+                {% comment %}
+                  Both act on Cases, so both are greyed while Folder
+                  management is off: there is nothing in a Workspace for
+                  either of them to act on, and End sessions is how an Admin
+                  frees somebody's space.
+                {% endcomment %}
                 {% if folder_management %}
                   <input type="text" name="to" class="small" style="max-width: 10rem"
                          placeholder="Give cases to (username)">
@@ -83,9 +85,11 @@
                 {% endif %}
               </form>
 
-              {# The quota has a form of its own, so that pressing Enter in the
-                 box sets a quota rather than firing this row's first button,
-                 which signs the person out and discards their recordings. #}
+              {% comment %}
+                The quota has a form of its own, so that pressing Enter in the
+                box sets a quota rather than firing this row's first button,
+                which signs the person out and discards their recordings.
+              {% endcomment %}
               <form method="post" action="{% url 'panel-user' row.user.username %}"
                     class="row small" style="margin-top: 6px">
                 {% csrf_token %}

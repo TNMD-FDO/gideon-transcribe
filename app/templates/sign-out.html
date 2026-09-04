@@ -17,6 +17,29 @@
       </p>
     {% endif %}
 
+    {% if movable %}
+      {% comment %}
+        Above the buttons, not below them: the last thing a person should
+        reach is the one that removes their work.
+      {% endcomment %}
+      <div class="card" style="margin: 10px 0 14px">
+        <b>Not yet in a case</b>
+        <p class="muted small" style="margin: 4px 0 10px">
+          These go when you sign out. Move one into a case to keep it.
+        </p>
+        <ul class="cards">
+          {% for recording in movable %}
+            <li class="row">
+              <span class="grow">{{ recording.title }}</span>
+              <button type="button" class="small move"
+                      data-recording="{{ recording.pk }}"
+                      data-title="{{ recording.title }}">Move to case</button>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
     <form method="post" class="dialog">
       {% csrf_token %}
       {% if counts.clips_not_downloaded %}
@@ -32,23 +55,5 @@
     </form>
   </div>
 
-  {% if movable %}
-    <div class="card" style="margin-top: 14px">
-      <b>Not yet in a case</b>
-      <p class="muted small" style="margin: 4px 0 10px">
-        These are removed when you sign out. Move one into a case to keep it.
-      </p>
-      <ul class="cards">
-        {% for recording in movable %}
-          <li class="row">
-            <span class="grow">{{ recording.title }}</span>
-            <button type="button" class="small move"
-                    data-recording="{{ recording.pk }}"
-                    data-title="{{ recording.title }}">Move to case</button>
-          </li>
-        {% endfor %}
-      </ul>
-    </div>
-    <script src="{% static 'cases.js' %}"></script>
-  {% endif %}
+  {% if movable %}<script src="{% static 'cases.js' %}"></script>{% endif %}
 {% endblock %}

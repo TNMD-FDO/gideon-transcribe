@@ -232,6 +232,16 @@
   );
   hint.addEventListener("change", showHintBoxes);
 
+  // A recording type belongs to a case, so the box appears only once one is
+  // chosen. writeRail() does this when the rail is switched; this does it
+  // when somebody picks a case without switching anything.
+  var chooseCase = document.getElementById("add-to-case");
+  if (chooseCase) {
+    chooseCase.addEventListener("change", function () {
+      document.getElementById("type-field").hidden = !this.value;
+    });
+  }
+
   function settings() {
     // The batch's own, read from the rail when the rail is showing them.
     if (railFor === null) { batchSettings = readRail(); }
