@@ -391,15 +391,17 @@ def test_the_expiring_filter_shows_only_the_warned(a_case, person, client):
 def test_the_owner_sees_their_own_bin_and_nobody_elses(
     a_case, person, somebody_else, client
 ):
+    # The bystander is the one non-admin here: the person fixture is a Local
+    # admin, and an Admin sees everybody's bin by design.
     binned_for(a_case, 3)
     theirs = Case.objects.create(owner=somebody_else, name="Not mine")
     binned_for(theirs, 3)
 
-    signed_in(client, person)
+    signed_in(client, somebody_else)
     page = client.get(reverse("recycle-bin")).content.decode()
 
-    assert "Ramirez" in page
-    assert "Not mine" not in page
+    assert "Not mine" in page
+    assert "Ramirez" not in page
     assert "Empty recycle bin" in page
 
 
