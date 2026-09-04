@@ -113,8 +113,15 @@
         var clipButton = document.createElement("button");
         clipButton.type = "button";
         clipButton.className = "ghost tiny clip-row";
-        clipButton.title = "Add this segment to the clip";
-        clipButton.textContent = "+ clip";
+        clipButton.title = "Mark where a clip starts, then where it ends";
+        var first = document.createElement("span");
+        first.className = "step-start";
+        first.textContent = "clip start";
+        var second = document.createElement("span");
+        second.className = "step-end";
+        second.textContent = "clip end";
+        clipButton.appendChild(first);
+        clipButton.appendChild(second);
         actions.appendChild(clipButton);
       }
 
@@ -137,6 +144,9 @@
       column.appendChild(row);
     });
     tintRange();
+    // A redraw builds every row again, so a start marked before it has to be
+    // put back on the row it belongs to.
+    if (clipStartsAt !== null) { showsStart(clipStartsAt); }
   }
 
   function wordsOf(segment) {
@@ -553,10 +563,7 @@
       var index = parseInt(row.dataset.index, 10);
 
       if (event.target.closest(".edit-row")) { edit(index); return; }
-      if (event.target.closest(".clip-row")) {
-        if (window.CLIPS) { window.CLIPS.addSegment(segments[index]); }
-        return;
-      }
+      if (event.target.closest(".clip-row")) { markFrom(index); return; }
       if (row.querySelector("textarea")) { return; }
       window.VIEWER.seek(segments[index].start);
     });
@@ -566,6 +573,60 @@
       if (row) { edit(parseInt(row.dataset.index, 10)); }
     });
   }
+
+  // Marking a clip from the transcript -----------------------------------------
+  //
+  // Two steps, because one is not enough to say what is wanted and the button
+  // has to say which step it is on. The first click marks where the clip
+  // starts; the second marks where it ends and brings the panel up to name it
+  // and save it. The panel stays out of the way until there is something in
+  // it worth saving.
+
+  var clipStartsAt = null;
+
+  function markFrom(index) {
+    if (!window.CLIPS || !segments[index]) { return; }
+    var segment = segments[index];
+
+    if (clipStartsAt === null) {
+      clipStartsAt = index;
+      if (column) { column.classList.add("marking"); }
+      showsStart(index);
+      // No panel yet: nothing is finished, and flinging it open over the
+      // transcript at this point is in the way rather than helpful.
+      window.CLIPS.mark(segment.start, segment.end, false);
+      return;
+    }
+
+    // The earlier of the two is the start, whichever was clicked first, so
+    // marking upwards through the transcript works as well as downwards.
+    var other = segments[clipStartsAt];
+    var start = Math.min(other.start, segment.start);
+    var end = Math.max(other.end, segment.end);
+    stopMarking();
+    window.CLIPS.mark(start, end, true);
+  }
+
+  function showsStart(index) {
+    if (!column) { return; }
+    Array.prototype.forEach.call(
+      column.querySelectorAll(".seg.clipstart"),
+      function (row) { row.classList.remove("clipstart"); }
+    );
+    var row = column.children[index];
+    if (row) { row.classList.add("clipstart"); }
+  }
+
+  function stopMarking() {
+    clipStartsAt = null;
+    if (!column) { return; }
+    column.classList.remove("marking");
+    Array.prototype.forEach.call(
+      column.querySelectorAll(".seg.clipstart"),
+      function (row) { row.classList.remove("clipstart"); }
+    );
+  }
+  window.VIEWER.stopMarking = stopMarking;
 
   // Correcting ----------------------------------------------------------------
 
@@ -1003,6 +1064,7 @@
     if (event.key === "?") { shortcuts(overlay.hidden); return; }
     if (event.key === "Escape") {
       if (!overlay.hidden) { shortcuts(false); return; }
+      if (clipStartsAt !== null) { stopMarking(); return; }
       if (!sheet.hidden) { hideSheet(); }
       return;
     }

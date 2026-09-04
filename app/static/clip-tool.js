@@ -69,15 +69,18 @@
   window.CLIPS = {
     range: range,
     load: load,
-    mark: function (start, end) {
+    mark: function (start, end, andOpen) {
       from.value = clock(start);
       to.value = clock(end);
-      window.VIEWER.openSheet("clips");
+      // Only when there is something finished to name and save. Marking a
+      // start is not that, and opening the panel over the transcript then is
+      // in the way.
+      if (andOpen !== false) { window.VIEWER.openSheet("clips"); }
       say();
     },
     addSegment: function (segment) {
-      // "+ clip" extends the range to include that segment rather than
-      // replacing it, so a person can build a range segment by segment.
+      // Extends the range to include that segment rather than replacing it.
+      // Kept for I and O while playing, which build a range as they go.
       var span = range();
       var start = span ? Math.min(span.from, segment.start) : segment.start;
       var end = span ? Math.max(span.to, segment.end) : segment.end;
@@ -91,6 +94,7 @@
   document.getElementById("clip-clear").addEventListener("click", function () {
     from.value = "";
     to.value = "";
+    if (window.VIEWER.stopMarking) { window.VIEWER.stopMarking(); }
     say();
   });
 
@@ -129,7 +133,8 @@
 
     if (event.key === "i" || event.key === "I") {
       from.value = clock(window.VIEWER.at());
-      window.VIEWER.openSheet("clips");
+      // The start alone is not something to save, so the panel stays out of
+      // the way, as it does when a start is marked in the transcript.
       say();
     } else if (event.key === "o" || event.key === "O") {
       to.value = clock(window.VIEWER.at());
