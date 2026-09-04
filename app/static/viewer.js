@@ -264,18 +264,30 @@
     pen.setTransform(ratio, 0, 0, ratio, 0, 0);
     pen.clearRect(0, 0, width, height);
 
-    pen.fillStyle = ink("--surface-2");
+    // Read the theme's colours once. Asking for a computed style forces the
+    // browser to work out the styles of the whole page, and the loop below
+    // runs once per pixel across the width: on a transcript of nine hundred
+    // rows that was over a thousand full style passes every redraw.
+    var surface = ink("--surface-2");
+    var played = ink("--accent");
+    var unplayed = ink("--muted");
+
+    pen.fillStyle = surface;
     pen.fillRect(0, 0, width, height);
 
     var time = player ? player.currentTime : 0;
 
     // The speaker lanes, behind everything, so the waveform stays readable.
     if (duration && segments.length) {
+      var laneInk = {};
+      Object.keys(colours).forEach(function (name) {
+        laneInk[name] = ink(colours[name]);
+      });
       pen.globalAlpha = 0.35;
       segments.forEach(function (segment) {
-        var colour = colours[segment.speaker];
+        var colour = laneInk[segment.speaker];
         if (!colour) { return; }
-        pen.fillStyle = ink(colour);
+        pen.fillStyle = colour;
         var from = (segment.start / duration) * width;
         var to = (segment.end / duration) * width;
         pen.fillRect(from, 0, Math.max(1, to - from), height);
@@ -296,8 +308,8 @@
           var high = peaks.data[(index * channels + channel) * 2 + 1] / scale;
           var middle = channels === 2 ? lane * channel + lane / 2 : height / 2;
           pen.fillStyle = duration && (x / width) * duration <= time
-            ? ink("--accent")
-            : ink("--muted");
+            ? played
+            : unplayed;
           var top = middle - Math.max(1, high * (lane / 2 - 1));
           pen.fillRect(x, top, 1, Math.max(1, (high - low) * (lane / 2 - 1)));
         }
@@ -405,7 +417,39 @@
     step(forward ? one : -one);
   }
 
+  var trouble = document.getElementById("player-trouble");
+
+  function sayTrouble(words) {
+    if (!trouble) { return; }
+    trouble.textContent = words;
+    trouble.hidden = false;
+  }
+
   if (player) {
+    // A media element that fails does it silently: no message, no exception,
+    // the Play button simply does nothing. Whatever went wrong is worth
+    // saying, because the person watching cannot see the network.
+    var WHY = {
+      1: "the download was stopped",
+      2: "the download failed part way through",
+      3: "this browser could not decode the file",
+      4: "this browser will not play this file, or it could not be fetched"
+    };
+    player.addEventListener("error", function () {
+      var code = player.error ? player.error.code : 0;
+      sayTrouble(
+        "This recording will not play: " + (WHY[code] || "an unknown fault") +
+        " (error " + code + "). The transcript below still works."
+      );
+      if (window.console) {
+        window.console.error("playback failed", code,
+          player.error && player.error.message, player.currentSrc);
+      }
+    });
+    player.addEventListener("playing", function () {
+      if (trouble) { trouble.hidden = true; }
+    });
+
     player.addEventListener("timeupdate", follow);
     player.addEventListener("loadedmetadata", function () {
       duration = player.duration || duration;
@@ -413,7 +457,19 @@
     });
 
     document.getElementById("play").addEventListener("click", function () {
-      if (player.paused) { player.play(); } else { player.pause(); }
+      if (!player.paused) { player.pause(); return; }
+      var started = player.play();
+      if (started && started.catch) {
+        started.catch(function (problem) {
+          sayTrouble(
+            "This recording did not start: " + problem.name + ". " +
+            (problem.name === "NotAllowedError"
+              ? "The browser blocked it; click the picture itself."
+              : "The transcript below still works.")
+          );
+          if (window.console) { window.console.error("play() refused", problem); }
+        });
+      }
     });
     player.addEventListener("play", function () {
       document.getElementById("play").textContent = "Pause";

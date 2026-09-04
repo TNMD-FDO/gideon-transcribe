@@ -96,14 +96,20 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
 
     speakers = []
     if transcript is not None:
-        names = [
-            name
-            for name in transcript.segments.values_list("speaker", flat=True).distinct()
-            if name
-        ]
+        # order_by("speaker") is not for the order: it clears the Segment's own
+        # ordering, which is by start and id. Without that, Django puts those
+        # two columns in the SELECT to order by them, DISTINCT then sees every
+        # row as different, and the panel shows one chip per segment instead of
+        # one per speaker.
+        names = list(
+            transcript.segments.exclude(speaker="")
+            .order_by("speaker")
+            .values_list("speaker", flat=True)
+            .distinct()
+        )
         speakers = [
             {"name": name, "colour": colour_for(number)}
-            for number, name in enumerate(sorted(names))
+            for number, name in enumerate(names)
         ]
 
     job = recording.jobs.order_by("-created").first()
