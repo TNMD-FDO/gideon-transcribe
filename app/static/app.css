@@ -731,6 +731,23 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   font-weight: 600;
 }
 .seg textarea { width: 100%; min-height: 3.5em; }
+
+/* A correction being typed. The row is marked so it is obvious which one is
+   open, and marked again when somebody clicks away from a box they have
+   already typed in: that one is left alone rather than saved or thrown away,
+   because a transcript is not the place to guess what was meant. */
+.correcting { display: flex; flex-direction: column; gap: 6px; }
+.correcting .row { gap: 6px; align-items: center; }
+.seg.editing {
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--surface-2);
+}
+.seg.unfinished { box-shadow: inset 0 0 0 2px var(--warn); }
+.seg.unfinished .correcting::after {
+  content: "Not saved yet. Save the correction, or cancel it.";
+  color: var(--warn);
+  font-size: 0.85em;
+}
 .seg .actions { float: right; visibility: hidden; }
 .seg:hover .actions, .seg.here .actions { visibility: visible; }
 body.no-speakers .seg .name { display: none; }
