@@ -114,6 +114,15 @@ html[data-theme="dark"] {
 
 * { box-sizing: border-box; }
 
+/* The browser's own rule for the hidden attribute is [hidden]{display:none},
+ * and any rule here that sets a display beats it, because an author rule
+ * beats the browser's whatever the specificity. That is not a subtlety worth
+ * remembering at every rule below: an element the page has hidden is hidden,
+ * full stop. Without this the shortcuts overlay sits over the viewer
+ * permanently, swallowing every click.
+ */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; margin: 0; }
 
 body {
