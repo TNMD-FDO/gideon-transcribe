@@ -45,78 +45,123 @@
 
       <li id="step-2" class="card" hidden>
         <h2>2. Settings</h2>
-        <p class="muted small">These apply to every file in the batch.</p>
 
-        <label class="row">
-          <input type="checkbox" id="diarize"> <b>Diarize</b>
-        </label>
-        <p class="muted small">
-          Labels who is talking. Automatic speaker separation is sometimes
-          wrong: one person can be split into two speakers, or two merged into
-          one. Check the names against the audio.
-        </p>
+        <div class="two-panes">
+          {# Left: every file, and whether it follows the batch or not. #}
+          <div>
+            <h3 class="small">Exceptions for single files</h3>
+            <p class="muted small">
+              Every file follows the batch settings unless you give it its
+              own. Click a file to change just that one.
+            </p>
+            <table class="tbl" id="exceptions">
+              <thead>
+                <tr>
+                  <th>File</th><th>Speakers</th><th>To English</th>
+                  <th>Language</th><th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
 
-        <div id="hint-wrap" style="margin-left: 24px">
-          <div class="field">
-            <label for="hint">Speakers</label>
-            <span class="row">
-              <select id="hint">
-                <option value="">Let the app decide</option>
-                <option value="exactly">Exactly</option>
-                <option value="between">Between</option>
-              </select>
-              <input type="number" id="hint-a" min="1" max="20" value="2" hidden>
-              <input type="number" id="hint-b" min="1" max="20" value="4" hidden>
-            </span>
+          {# Right: the settings themselves, for the batch or for one file. #}
+          <div class="rail-settings">
+            <div class="row">
+              <h3 class="small grow" id="rail-heading">Batch settings</h3>
+              <button type="button" id="back-to-batch" class="ghost tiny" hidden>
+                Back to batch settings
+              </button>
+            </div>
+
+            <label class="row small" id="use-batch-line" hidden>
+              <input type="checkbox" id="use-batch" checked>
+              Use the batch settings for this file
+            </label>
+
+            <div class="field" id="file-title-line" hidden>
+              <label for="file-title">Title</label>
+              <input type="text" id="file-title" maxlength="300">
+            </div>
+
+            <div id="the-settings">
+              <label class="row">
+                <input type="checkbox" id="diarize"> <b>Diarize</b>
+              </label>
+              <p class="muted small">
+                Labels who is talking. Automatic speaker separation is
+                sometimes wrong: one person can be split into two speakers, or
+                two merged into one. Check the names against the audio.
+              </p>
+
+              <div id="hint-wrap" style="margin-left: 24px">
+                <div class="field">
+                  <label for="hint">Speakers</label>
+                  <span class="row">
+                    <select id="hint">
+                      <option value="">Let the app decide</option>
+                      <option value="exactly">Exactly</option>
+                      <option value="between">Between</option>
+                    </select>
+                    <input type="number" id="hint-a" min="1" max="20" value="2" hidden>
+                    <input type="number" id="hint-b" min="1" max="20" value="4" hidden>
+                  </span>
+                </div>
+              </div>
+
+              <label class="row">
+                <input type="checkbox" id="translate"> <b>Translate to English</b>
+              </label>
+              <p class="muted small">
+                A recording holding more than one language is translated to
+                English whether or not this is ticked. Translation loses word
+                timing.
+              </p>
+
+              <details id="more" style="margin-top: 10px">
+                <summary>More options</summary>
+
+                <div class="field" style="margin-top: 10px">
+                  <label for="language">Spoken language</label>
+                  <select id="language">
+                    <option value="">Automatic</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                  </select>
+                </div>
+                <p class="muted small">
+                  Choosing a language switches detection off for that
+                  recording.
+                </p>
+
+                <div class="field">
+                  <label for="vocabulary">Vocabulary</label>
+                  <textarea id="vocabulary" rows="4"
+                            placeholder="One name or term per line"></textarea>
+                </div>
+                <p class="muted small">
+                  Office names are added automatically. The engine's prompt is
+                  short, so a long list is cut from the end.
+                </p>
+
+                <div class="field">
+                  <label for="context">Context (one line)</label>
+                  <input type="text" id="context" maxlength="500"
+                         placeholder="Interview of a witness by an investigator about a robbery">
+                </div>
+                <p class="muted small">
+                  Write it in the spoken language, or in English when
+                  translating.
+                </p>
+
+                <div class="field">
+                  <label>Audio clean-up</label>
+                  <span class="muted small">Standard (set by IT)</span>
+                </div>
+              </details>
+            </div>
           </div>
         </div>
-
-        <label class="row">
-          <input type="checkbox" id="translate"> <b>Translate to English</b>
-        </label>
-        <p class="muted small">
-          A recording holding more than one language is translated to English
-          whether or not this is ticked. Translation loses word timing.
-        </p>
-
-        <details id="more" style="margin-top: 10px">
-          <summary>More options</summary>
-
-          <div class="field" style="margin-top: 10px">
-            <label for="language">Spoken language</label>
-            <select id="language">
-              <option value="">Automatic</option>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-            </select>
-          </div>
-          <p class="muted small">
-            Choosing a language switches detection off for these recordings.
-          </p>
-
-          <div class="field">
-            <label for="vocabulary">Vocabulary</label>
-            <textarea id="vocabulary" rows="4" placeholder="One name or term per line"></textarea>
-          </div>
-          <p class="muted small">
-            Office names are added automatically. The engine's prompt is short,
-            so a long list is cut from the end.
-          </p>
-
-          <div class="field">
-            <label for="context">Context (one line)</label>
-            <input type="text" id="context" maxlength="500"
-                   placeholder="Interview of a witness by an investigator about a robbery">
-          </div>
-          <p class="muted small">
-            Write it in the spoken language, or in English when translating.
-          </p>
-
-          <div class="field">
-            <label>Audio clean-up</label>
-            <span class="muted small">Standard (set by IT)</span>
-          </div>
-        </details>
 
         <div class="dialog">
           <button type="button" id="to-check" class="primary">Next</button>
