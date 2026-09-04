@@ -66,6 +66,7 @@ class Category:
     EDITS = "edits"
     EXPORTS = "exports"
     CLIPS = "clips"
+    CASES = "cases"
     LLM = "llm"
     ADMIN = "admin"
     SYSTEM = "system"

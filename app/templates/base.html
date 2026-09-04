@@ -19,6 +19,9 @@
     <span class="brand"><i></i> Gideon Transcribe</span>
     {% if user.is_authenticated %}
       <span class="links">
+        {% if folder_management %}
+          <a href="{% url 'cases' %}"{% if page == "cases" %} class="on"{% endif %}>Cases</a>
+        {% endif %}
         <a href="{% url 'home' %}"{% if page == "recordings" %} class="on"{% endif %}>Recordings</a>
         <a href="{% url 'upload' %}"{% if page == "upload" %} class="on"{% endif %}>Upload</a>
         {% if clips_available %}

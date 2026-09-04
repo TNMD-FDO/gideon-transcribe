@@ -32,6 +32,13 @@ ASSISTANT = "assistant"
 NOTICES = "notices"
 SIGN_IN = "sign-in"
 AUDIT = "audit"
+CASES = "cases"
+
+# The Recording types the app ships with, one per line. A type an office
+# removes stays on the Recordings that already hold it.
+SHIPPED_RECORDING_TYPES = "\n".join(
+    ["Body camera", "Jail call", "Interview", "Phone call", "Hearing", "Other"]
+)
 
 PAGES = [
     (FEATURES, "Features"),
@@ -41,6 +48,7 @@ PAGES = [
     (NOTICES, "Notices"),
     (SIGN_IN, "Sign-in and directory"),
     (AUDIT, "Audit log"),
+    (CASES, "Cases"),
 ]
 
 
@@ -112,6 +120,39 @@ def _rows() -> list[Definition]:
                 "in the navigation, and drops Clips from the sign-out dialog "
                 'and "Download everything". Clip files already made stay '
                 "until their Recording goes."
+            ),
+        ),
+        # Cases ----------------------------------------------------------------
+        Definition(
+            key="folder_management",
+            page=CASES,
+            name="Folder management",
+            kind=TOGGLE,
+            default=False,
+            what_it_does=(
+                "Users may keep Recordings in Cases past sign-out. The app "
+                "says cases to users, never folders."
+            ),
+            when_changed=(
+                "At once. On: the Cases pages appear and paused Retention "
+                "clocks resume. Off: every Case is hidden from everyone, "
+                "Admins included, and kept; its Retention clock pauses; "
+                "nothing is deleted."
+            ),
+        ),
+        Definition(
+            key="recording_types",
+            page=CASES,
+            name="Recording types",
+            kind=TEXT,
+            default=SHIPPED_RECORDING_TYPES,
+            lines=8,
+            what_it_does=(
+                "The labels a user may pick for a Recording at upload or "
+                "later, one per line."
+            ),
+            when_changed=(
+                "A type removed from the list stays on the Recordings that hold it."
             ),
         ),
         # Limits ---------------------------------------------------------------
@@ -221,8 +262,7 @@ def _rows() -> list[Definition]:
                 "Upload page does not show it."
             ),
             when_changed=(
-                "The next Run. The service swaps models once, in under a "
-                "minute."
+                "The next Run. The service swaps models once, in under a minute."
             ),
         ),
         Definition(
@@ -240,9 +280,7 @@ def _rows() -> list[Definition]:
             name='"Translate to English" ticked by default',
             kind=TOGGLE,
             default=False,
-            what_it_does=(
-                "For an office whose Recordings are mostly not in English."
-            ),
+            what_it_does=("For an office whose Recordings are mostly not in English."),
             when_changed="The next Upload page opened.",
         ),
         Definition(
@@ -286,9 +324,7 @@ def _rows() -> list[Definition]:
             default="standard",
             choices=("standard", "off"),
             what_it_does="The audio clean-up before recognition.",
-            when_changed=(
-                "The next media job. It is recorded in every Provenance."
-            ),
+            when_changed=("The next media job. It is recorded in every Provenance."),
         ),
         # AI assistant ---------------------------------------------------------
         Definition(
@@ -297,9 +333,7 @@ def _rows() -> list[Definition]:
             name="AI assistant",
             kind=TOGGLE,
             default=False,
-            what_it_does=(
-                "The master switch. It starts Off until an engine answers."
-            ),
+            what_it_does=("The master switch. It starts Off until an engine answers."),
             when_changed=(
                 "Off hides Summary, Chat, and Suggest names everywhere. "
                 "Existing Summaries and Chats are hidden, not deleted."
@@ -380,8 +414,7 @@ def _rows() -> list[Definition]:
             default="",
             lines=1,
             what_it_does=(
-                "What {model} prints in the AI notice. Empty means the served "
-                "name."
+                "What {model} prints in the AI notice. Empty means the served name."
             ),
             when_changed="The next Summary or Chat shown or exported.",
         ),
@@ -498,9 +531,7 @@ def _rows() -> list[Definition]:
                 "who opened whose material raises it, and the admin guide "
                 "says plainly that an Admin access is forgotten after this."
             ),
-            when_changed=(
-                "The next sweep. Shortening it removes rows the same night."
-            ),
+            when_changed=("The next sweep. Shortening it removes rows the same night."),
         ),
     ]
 
@@ -605,6 +636,13 @@ def set_to(key: str, value) -> None:
         Setting.objects.update_or_create(
             key=key, defaults={"value": None, "text": wanted}
         )
+
+    if key == "folder_management":
+        # The days nobody could reach a Case are recorded as they pass,
+        # because they cannot be worked out afterwards.
+        from core.cases import note_the_toggle
+
+        note_the_toggle(bool(wanted))
 
 
 def shown(key: str, value=None) -> str:

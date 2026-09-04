@@ -17,6 +17,7 @@ import logging
 import shutil
 from datetime import datetime
 
+from django.conf import settings
 from django.utils import timezone
 
 from core import audit, settings_store
@@ -53,17 +54,21 @@ def is_busy(user) -> bool:
     not picked it up but will within the minute. A Clip render never counts:
     the rule is the last Job, and a Clip is not one.
     """
-    if Recording.objects.filter(user=user, media_state__in=BUSY_MEDIA).exists():
+    if in_the_workspace(user).filter(media_state__in=BUSY_MEDIA).exists():
         return True
-    if Job.objects.filter(recording__user=user, state__in=JobState.LIVE).exists():
+    if Job.objects.filter(
+        recording__user=user, recording__case__isnull=True, state__in=JobState.LIVE
+    ).exists():
         return True
-    return Recording.objects.filter(
-        user=user, media_state=MediaState.READY, jobs__isnull=True
-    ).exists()
+    return (
+        in_the_workspace(user)
+        .filter(media_state=MediaState.READY, jobs__isnull=True)
+        .exists()
+    )
 
 
 def is_empty(user) -> bool:
-    return not Recording.objects.filter(user=user).exists()
+    return not in_the_workspace(user).exists()
 
 
 def last_job_ended(user) -> datetime | None:
@@ -84,6 +89,16 @@ def session_ended_at(user) -> datetime | None:
         .first()
     )
     return session.ended if session else None
+
+
+def in_the_workspace(user):
+    """This person's Recordings that no Case is keeping.
+
+    A Recording with a Case is not in the Workspace: it is not counted at
+    sign-out, it does not hold a session open, and the Discard leaves it
+    alone. Phase 1 carried this skip with nothing to skip.
+    """
+    return Recording.objects.filter(user=user, case__isnull=True)
 
 
 def discard_due_at(user) -> datetime | None:
@@ -131,7 +146,7 @@ def counts(user) -> dict:
     """
     from core.clips import Clip
 
-    recordings = Recording.objects.filter(user=user)
+    recordings = in_the_workspace(user)
     done = [one for one in recordings if hasattr(one, "transcript")]
     clips = Clip.objects.filter(recording__user=user)
     return {
@@ -146,9 +161,7 @@ def counts(user) -> dict:
         "running": Job.objects.filter(
             recording__user=user, state__in=JobState.LIVE
         ).count(),
-        "gigabytes": round(
-            sum(one.disk_bytes() for one in recordings) / (1024**3), 1
-        ),
+        "gigabytes": round(sum(one.disk_bytes() for one in recordings) / (1024**3), 1),
     }
 
 
@@ -227,7 +240,8 @@ def remove_recording(recording: Recording, cause: str, actor=None, request=None)
         system="sweeper" if actor is None else None,
         request=request,
         affected_user=(
-            recording.user if actor is not None and actor.pk != recording.user_id
+            recording.user
+            if actor is not None and actor.pk != recording.user_id
             else None
         ),
         object_type="recording",
@@ -254,11 +268,11 @@ def discard(user) -> tuple[int, int]:
     the mark: the next minute finishes it, and the daily sweeper finishes
     anything that has been marked for more than an hour.
     """
-    recordings = list(Recording.objects.filter(user=user))
+    recordings = list(in_the_workspace(user))
     if not recordings:
         return 0, 0
 
-    Recording.objects.filter(user=user).update(discarding_since=timezone.now())
+    in_the_workspace(user).update(discarding_since=timezone.now())
 
     gone = 0
     for recording in recordings:
@@ -280,9 +294,9 @@ def discard(user) -> tuple[int, int]:
     )
 
     # The person's own folder goes too, so that nothing is left standing
-    # under scratch/ with their id on it.
-    if recordings:
-        shutil.rmtree(recordings[0].folder.parent, ignore_errors=True)
+    # under scratch/ with their id on it. Named from the setting rather than
+    # from a Recording, because a Recording in a Case points elsewhere.
+    shutil.rmtree(settings.SCRATCH_DIR / str(user.pk), ignore_errors=True)
 
     return len(recordings), gone
 

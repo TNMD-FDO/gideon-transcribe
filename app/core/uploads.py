@@ -50,8 +50,22 @@ class Refused:
 
 
 def used_bytes(user: User) -> int:
-    """Everything on disk for this person's recordings, which is their quota."""
-    return sum(recording.disk_bytes() for recording in user.recordings.all())
+    """Everything on disk that counts against this person, which is their quota.
+
+    Their Workspace, and their Cases whoever uploaded into them. A Case counts
+    against its owner even while Folder management is off, because it is still
+    on the disk.
+    """
+    from core.cases import Case
+
+    # Workspace only here: a Recording in a Case is counted with the Case,
+    # once, against whoever owns it rather than whoever uploaded it.
+    mine = sum(
+        recording.disk_bytes()
+        for recording in user.recordings.filter(case__isnull=True)
+    )
+    theirs = sum(case.disk_bytes() for case in Case.objects.filter(owner=user))
+    return mine + theirs
 
 
 def quota_bytes(user: User) -> int:

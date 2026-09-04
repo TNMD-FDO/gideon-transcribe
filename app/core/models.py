@@ -266,6 +266,7 @@ class SignInAttempt(models.Model):
 # whether Django knows about them does not depend on which other module
 # happened to be loaded first.
 from core.audit import Row  # noqa: E402, F401
+from core.cases import Case, OffSpell  # noqa: E402, F401
 from core.clips import Clip  # noqa: E402, F401
 from core.jobs import Job, Run, Segment, Transcript  # noqa: E402, F401
 from core.recordings import Batch, Recording, Side  # noqa: E402, F401
