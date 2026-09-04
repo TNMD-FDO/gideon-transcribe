@@ -39,6 +39,14 @@ pass() { green "  pass  $1"; }
 note() { amber "  note  $1"; }
 fail() { red "  FAIL  $1"; FAILURES=$((FAILURES + 1)); }
 
+# The app data folder belongs to the app account and is mode 750, so the
+# person running this cannot traverse into it: `test -d` on anything inside
+# says no whether it is there or not. Every look inside goes through this.
+# `sudo -n` never prompts, so a report does not stop to demand a password;
+# what it cannot see, it says it cannot see.
+look() { sudo -n "$@" >/dev/null 2>&1; }
+looked() { sudo -n "$@" 2>/dev/null; }
+
 FAILURES=0
 
 need_env() {
@@ -267,16 +275,18 @@ cmd_check() {
   fi
 
   for folder in scratch cases uploads; do
-    if [ -d "$data/$folder" ]; then
+    if look test -d "$data/$folder"; then
       local sub_owner
-      sub_owner="$(stat -c '%U' "$data/$folder")"
+      sub_owner="$(looked stat -c '%U' "$data/$folder")"
       if [ "$sub_owner" = "$APP_USER" ]; then
         pass "$folder/ is $sub_owner's"
       else
-        fail "$data/$folder is $sub_owner's, not $APP_USER's; the app cannot write there. Fix: sudo chown -R $APP_USER:$APP_USER $data/$folder"
+        fail "$data/$folder is $sub_owner's, not $APP_USER's; the app cannot write there. Fix: ./transcribe folders"
       fi
+    elif look test -e "$data"; then
+      note "there is no $folder/ yet under $data; ./transcribe folders makes it"
     else
-      note "there is no $folder/ yet under $data; it is made when it is first needed"
+      note "could not look inside $data without sudo; run: sudo ./transcribe check"
     fi
   done
 
@@ -664,8 +674,10 @@ cmd_folders() {
   local data
   data="$(env_value APP_DATA_DIR)"
   for folder in scratch cases uploads; do
-    if [ -d "$data/$folder" ]; then
-      pass "$folder/ is $(stat -c '%U' "$data/$folder")'s, mode $(stat -c '%a' "$data/$folder")"
+    # Plain sudo here, not the report's `sudo -n`: this subcommand has already
+    # asked for a password, so it may ask again if the timestamp has gone.
+    if sudo test -d "$data/$folder"; then
+      pass "$folder/ is $(sudo stat -c '%U' "$data/$folder")'s, mode $(sudo stat -c '%a' "$data/$folder")"
     else
       fail "$data/$folder could not be made"
     fi
