@@ -19,10 +19,56 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.0.0, 2026-09-04
+
 ```
 Models: unchanged
 Database: unchanged
 ```
+
+### What this release is
+
+The first release meant for another office to install. Phase 1, the
+Workspace, is complete: directory sign-in, batches and the queue,
+transcription with translation and speaker separation, the viewer with
+correction, search and clips, the exports, the Admin panel with its audit
+log, and the three guides. Of Phase 2, Cases themselves are built, behind the
+Folder management toggle and off by default.
+
+Not built, and said so rather than implied: the AI assistant, and the rest of
+Cases, which is sharing, the retention policy and recycle bin, the speakers
+tab, chat across a case, email notifications, and backups. Those arrive in
+later releases, and v2.0.0 is the one that completes Cases.
+
+### Upgrading to this one
+
+Nothing migrates and no model changes.
+
+This is the first release that records the identity of its two images
+(ADR 0013), so it is the first whose upgrade can check what it pulled against
+what was built. The check runs only when the images are pulled rather than
+built, and a server can pull only once the packages are public. So:
+
+1. Wait for the release to appear on GitHub before upgrading. Its workflow
+   takes about twenty minutes and writes the record last.
+2. Either make the repository and both packages public first (below), so the
+   upgrade pulls and checks; or upgrade now and accept that it builds from
+   source as every upgrade has so far, which is the other way of getting
+   exactly this release's bytes.
+
+**The public flip**, for the maintainer, on GitHub, once and in this order:
+
+1. The repository public: Settings, General, Danger Zone.
+2. Each of the two packages public: the package's own settings, Danger Zone.
+   This cannot be undone.
+3. A ruleset on `main` forbidding force-push and deletion: Settings, Rules.
+4. Issues on, Discussions off, Wiki off: Settings, General, Features.
+5. Private vulnerability reporting on: Settings, Advanced Security.
+   `SECURITY.md` already points at it.
+
+The README's as-is line is already in place.
 
 ### Changed
 

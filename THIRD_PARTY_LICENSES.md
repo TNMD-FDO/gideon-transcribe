@@ -66,10 +66,10 @@ below, with a pointer to Debian's source packages for them.**
 
 | Release | Image | ffmpeg package | codec packages | Source |
 |---|---|---|---|---|
-| v0.2.0, v0.3.0, v0.4.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
-| v0.2.0, v0.3.0, v0.4.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
+| v0.2.0, v0.3.0, v0.4.0, v1.0.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
+| v0.2.0, v0.3.0, v0.4.0, v1.0.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
 
-The three Releases of 2026-09-04 share a row each because their images are
+The four Releases of 2026-09-04 share a row each because their images are
 the same builds: the base image digest is pinned in both Dockerfiles, and
 nothing in either image's package list changed between the tags. The versions
 were read from the running images with `dpkg-query` on that day. A later
