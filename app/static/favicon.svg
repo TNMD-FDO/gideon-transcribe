@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The brand mark: a rounded square in the accent colour with a waveform
+       across it. Drawn rather than fetched, so it costs one small file and no
+       licence. -->
+  <rect width="32" height="32" rx="7" fill="#0b6e99"/>
+  <g stroke="#ffffff" stroke-width="2.4" stroke-linecap="round">
+    <line x1="8" y1="12" x2="8" y2="20"/>
+    <line x1="13" y1="8" x2="13" y2="24"/>
+    <line x1="18" y1="11" x2="18" y2="21"/>
+    <line x1="23" y1="14" x2="23" y2="18"/>
+  </g>
+</svg>
