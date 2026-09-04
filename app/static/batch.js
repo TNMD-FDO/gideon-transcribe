@@ -14,6 +14,8 @@
   var counts = document.getElementById("counts");
   var after = document.getElementById("after");
   var cancel = document.getElementById("cancel");
+  var downloadLine = document.getElementById("download-line");
+  var download = document.getElementById("download");
 
   var STATES = {
     uploading: "Waiting to upload",
@@ -86,6 +88,15 @@
       tally.done + " done · " +
       tally.failed + " failed · " +
       tally.refused + " refused";
+
+    // The download is a zip of the transcripts that are done. Recordings
+    // still on their way are simply left out, so the button says how many.
+    var waiting = tally.waiting + tally.inLine + tally.running;
+    downloadLine.hidden = tally.done === 0;
+    download.querySelector("button").textContent =
+      "Download " + tally.done +
+      (tally.done === 1 ? " transcript" : " transcripts") +
+      (waiting ? " (" + waiting + " not ready)" : "");
 
     after.hidden = !state.finished;
     cancel.hidden = state.finished;

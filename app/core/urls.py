@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from core import media_access, pages, uploads, viewer, views
+from core import exports, media_access, pages, uploads, viewer, views
 
 urlpatterns = [
     path("healthz", views.healthz, name="healthz"),
@@ -12,6 +12,11 @@ urlpatterns = [
     path("batch/<uuid:batch_id>", pages.batch, name="batch"),
     path("batch/<uuid:batch_id>/state", pages.batch_state, name="batch-state"),
     path("batch/<uuid:batch_id>/cancel", pages.cancel_batch, name="cancel-batch"),
+    path(
+        "batch/<uuid:batch_id>/download",
+        exports.batch_download,
+        name="batch-download",
+    ),
     # The upload sidecar's two questions. Reachable only from inside the
     # project's own network.
     path("upload-hook/", uploads.hook, name="upload-hook"),
@@ -30,6 +35,12 @@ urlpatterns = [
         "recording/<uuid:recording_id>/speakers",
         viewer.speakers,
         name="speakers",
+    ),
+    # The three exports: Word, plain text, and Captions.
+    path(
+        "recording/<uuid:recording_id>/export/<str:shape>",
+        exports.export,
+        name="export",
     ),
     # Caddy asks this before it serves a Playback copy, a waveform, or a Clip.
     path("media-auth", media_access.may_serve, name="media-auth"),

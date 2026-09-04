@@ -13,6 +13,10 @@
 
   <p id="when-done" class="quiet"></p>
 
+  <p id="download-line" hidden>
+    <a id="download" href="{% url 'batch-download' batch.pk %}"><button type="button">Download transcripts</button></a>
+  </p>
+
   <div id="after" hidden>
     <a href="{% url 'upload' %}"><button type="button">Upload more</button></a>
   </div>

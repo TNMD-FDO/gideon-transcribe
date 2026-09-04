@@ -33,6 +33,19 @@
         {% endif %}
       {% endif %}
 
+      {% if transcript %}
+        <h2 class="small">Export</h2>
+        <p class="quiet">
+          A download is built when you ask for it and is never kept on the
+          server.
+        </p>
+        <ul class="exports">
+          <li><a href="{% url 'export' recording.pk 'word' %}">Word document</a></li>
+          <li><a href="{% url 'export' recording.pk 'text' %}">Plain text</a></li>
+          <li><a href="{% url 'export' recording.pk 'captions' %}">Captions (SRT)</a></li>
+        </ul>
+      {% endif %}
+
       <h2 class="small">Keyboard</h2>
       <dl class="keys">
         <dt>Space</dt><dd>Play or pause</dd>
