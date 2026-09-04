@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, lifecycle, settings_store, uploads, whisperx
+from core import audit, lifecycle, settings_store, tasks, uploads, whisperx
 from core.jobs import JobState
 from core.recordings import Batch, MediaState, Recording, Refusal
 
@@ -222,6 +222,10 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
 
     arriving = uploads.in_flight()
 
+    # One call for the whole page rather than one per Recording: the speed the
+    # service publishes is the same figure for all of them.
+    speed = _service_speed()
+
     rows = []
     for recording in found.recordings.order_by("created"):
         job = recording.jobs.order_by("-created").first()
@@ -237,8 +241,14 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "message": recording.failure_message,
                 "reason": recording.refusal_class,
                 "received": arriving.get(str(recording.pk), (0, 0))[0],
-                "job": _job_state(job),
+                "job": _job_state(job, speed),
                 "has_transcript": hasattr(recording, "transcript"),
+                "can_retry": _can_retry(recording, job),
+                "can_process_again": (
+                    hasattr(recording, "transcript") and job is not None
+                    and not job.is_live
+                ),
+                "reprocessing": found.is_reprocessing,
             }
         )
 
@@ -246,12 +256,55 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
         {
             "finished": found.is_finished,
             "started": found.created.isoformat(),
+            "reprocessing": found.is_reprocessing,
+            "everything_done_by": _everything_done_by(found, speed),
             "recordings": rows,
         }
     )
 
 
-def _job_state(job) -> dict | None:
+def _service_speed() -> dict | None:
+    """The speed the service publishes, or nothing when it cannot be asked."""
+    try:
+        return (whisperx.status() or {}).get("speed")
+    except Exception:  # noqa: BLE001 - a wait is not worth failing a page for
+        return None
+
+
+def _can_retry(recording, job) -> bool:
+    """Whether this Recording is one a person can try again.
+
+    A failed media step and a failed Job are both offered a Retry; nothing is
+    thrown away by either failure, so the work that already succeeded is
+    reused.
+    """
+    if recording.media_state == MediaState.FAILED:
+        return True
+    return job is not None and job.state == JobState.FAILED
+
+
+def _everything_done_by(batch, speed) -> str | None:
+    from core import waiting
+
+    unfinished = []
+    for recording in batch.recordings.all():
+        job = recording.jobs.order_by("-created").first()
+        if job is None or not job.is_live:
+            continue
+        unfinished.append(
+            {
+                "run": job.runs.order_by("side__number").first(),
+                "model": recording.model or settings_store.get("model"),
+                "diarize": recording.diarize,
+                "minutes": (recording.duration_seconds or 0) / 60,
+            }
+        )
+    return waiting.everything_done_by(unfinished, speed)
+
+
+def _job_state(job, speed=None) -> dict | None:
+    from core import waiting
+
     if job is None:
         return None
     run = job.runs.order_by("side__number").first()
@@ -260,6 +313,7 @@ def _job_state(job) -> dict | None:
         "step": job.step,
         "position": run.position if run else None,
         "audio_minutes_ahead": run.audio_minutes_ahead if run else None,
+        "wait": waiting.for_run(run, speed) if run else None,
         "message": job.failure_message,
         "reason": job.failure_class,
     }
@@ -304,6 +358,162 @@ def _remove(request, recording: Recording, cause: str) -> None:
     lifecycle.remove_recording(
         recording, cause=cause, actor=request.user, request=request
     )
+
+
+@login_required
+@require_POST
+def retry(request: HttpRequest, recording_id) -> JsonResponse:
+    """Try a Failed Recording again, in a Batch of its own.
+
+    Nothing was thrown away by the failure, so the media work that already
+    succeeded is not repeated: a Recording that reached Ready goes straight
+    back into the line, and one that failed earlier goes through the media
+    steps again from where it stopped.
+    """
+    recording = Recording.objects.filter(pk=recording_id, user=request.user).first()
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    job = recording.jobs.order_by("-created").first()
+    if not _can_retry(recording, job):
+        return JsonResponse(
+            {"error": "there is nothing to try again on this recording"}, status=400
+        )
+
+    unfinished = Batch.unfinished_for(request.user)
+    if unfinished is not None:
+        return JsonResponse(
+            {
+                "error": Refusal.MESSAGES[Refusal.BATCH_IN_PROGRESS],
+                "reason_class": Refusal.BATCH_IN_PROGRESS,
+                "batch": str(unfinished.pk),
+            },
+            status=409,
+        )
+
+    if not whisperx.is_alive():
+        return JsonResponse(
+            {
+                "error": "Transcription is not available right now. Try again later.",
+                "reason_class": Refusal.SERVICE_UNREACHABLE,
+            },
+            status=503,
+        )
+
+    batch = Batch.objects.create(user=request.user)
+    recording.batch = batch
+    recording.failure_message = ""
+    recording.refusal_class = ""
+
+    if recording.media_state == MediaState.FAILED:
+        # The media work stopped part way. It starts again, and the steps that
+        # already produced a file are not repeated.
+        recording.media_state = MediaState.CHECKING
+        recording.save()
+        tasks.prepare_recording.defer(recording_id=str(recording.pk))
+    else:
+        recording.save()
+        from core import queue
+
+        again = queue.make_job(recording)
+        tasks.hand_over_job.defer(job_id=str(again.pk))
+
+    audit.write(
+        audit.Category.JOBS,
+        "Batch submitted",
+        actor=request.user,
+        request=request,
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        why="retry",
+    )
+    return JsonResponse({"batch": str(batch.pk)})
+
+
+@login_required
+@require_POST
+def process_again(request: HttpRequest, recording_id) -> JsonResponse:
+    """Transcribe a Done Recording again, with settings a person may change.
+
+    The old Transcript stays readable while the new one is made, and is locked
+    meanwhile: a Correction to text that is about to be replaced would be lost
+    without anybody being told. Cancelling unlocks it untouched.
+    """
+    recording = Recording.objects.filter(pk=recording_id, user=request.user).first()
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if not hasattr(recording, "transcript"):
+        return JsonResponse(
+            {"error": "this recording has no transcript to replace"}, status=400
+        )
+
+    unfinished = Batch.unfinished_for(request.user)
+    if unfinished is not None:
+        return JsonResponse(
+            {
+                "error": Refusal.MESSAGES[Refusal.BATCH_IN_PROGRESS],
+                "reason_class": Refusal.BATCH_IN_PROGRESS,
+                "batch": str(unfinished.pk),
+            },
+            status=409,
+        )
+
+    if not whisperx.is_alive():
+        return JsonResponse(
+            {
+                "error": "Transcription is not available right now. Try again later.",
+                "reason_class": Refusal.SERVICE_UNREACHABLE,
+            },
+            status=503,
+        )
+
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        wanted = {}
+
+    # The settings come pre-filled from the Recording and a person may change
+    # any of them before submitting.
+    for field, key in (
+        ("spoken_language", "language"),
+        ("context", "context"),
+    ):
+        if key in wanted:
+            setattr(recording, field, (wanted.get(key) or "")[:500])
+    if "diarize" in wanted:
+        recording.diarize = bool(wanted["diarize"])
+    if "translate" in wanted:
+        recording.translate = bool(wanted["translate"])
+    if "vocabulary" in wanted:
+        recording.vocabulary = [
+            line.strip()
+            for line in str(wanted.get("vocabulary") or "").splitlines()
+            if line.strip()
+        ]
+
+    batch = Batch.objects.create(user=request.user, is_reprocessing=True)
+    recording.batch = batch
+    recording.save()
+
+    from core import queue
+
+    again = queue.make_job(recording)
+    tasks.hand_over_job.defer(job_id=str(again.pk))
+
+    audit.write(
+        audit.Category.JOBS,
+        "Batch submitted",
+        actor=request.user,
+        request=request,
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        why="process again",
+        diarize=recording.diarize,
+        translate=recording.translate,
+    )
+    return JsonResponse({"batch": str(batch.pk)})
 
 
 @login_required

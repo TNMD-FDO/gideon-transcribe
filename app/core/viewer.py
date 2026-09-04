@@ -129,6 +129,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             "sides": list(recording.sides.all()),
             "job": job,
             "is_someone_elses": recording.user_id != request.user.pk,
+            "being_replaced": being_replaced(recording),
             "media_url": (
                 f"/media/{recording.user_id}/{recording.pk}/{playback.name}"
                 if playback
@@ -178,6 +179,20 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
     )
 
 
+def being_replaced(recording) -> bool:
+    """Whether a Process again is running against this Recording.
+
+    While it is, the old Transcript is readable and nothing else: a correction
+    to text that is about to be replaced would be lost without anybody being
+    told.
+    """
+    from core.jobs import JobState
+
+    return recording.jobs.filter(
+        state__in=JobState.LIVE, batch__is_reprocessing=True
+    ).exists()
+
+
 @login_required
 @require_POST
 def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
@@ -192,6 +207,15 @@ def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
         recording.user_id != request.user.pk and not request.user.is_admin
     ):
         return JsonResponse({"error": "no such recording"}, status=404)
+
+    if being_replaced(recording):
+        return JsonResponse(
+            {
+                "error": "This transcript is being replaced, so it cannot be "
+                "corrected until the new one lands."
+            },
+            status=409,
+        )
 
     segment = Segment.objects.filter(
         pk=segment_id, transcript__recording=recording
@@ -241,6 +265,14 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     transcript = getattr(recording, "transcript", None)
     if transcript is None:
         return JsonResponse({"error": "there is no transcript yet"}, status=404)
+    if being_replaced(recording):
+        return JsonResponse(
+            {
+                "error": "This transcript is being replaced, so its speakers "
+                "cannot be changed until the new one lands."
+            },
+            status=409,
+        )
 
     try:
         wanted = json.loads(request.body or b"{}")

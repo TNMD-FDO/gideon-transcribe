@@ -62,6 +62,13 @@ urlpatterns = [
         pages.delete_recording,
         name="delete-recording",
     ),
+    # Trying again, and processing again: each a Batch of one Recording.
+    path("recording/<uuid:recording_id>/retry", pages.retry, name="retry"),
+    path(
+        "recording/<uuid:recording_id>/process-again",
+        pages.process_again,
+        name="process-again",
+    ),
     # The sign-out dialog's two downloads, across the whole Workspace.
     path(
         "download/<str:shape>",

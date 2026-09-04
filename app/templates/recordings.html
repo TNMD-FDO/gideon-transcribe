@@ -39,6 +39,14 @@
               {% else %}
                 <span class="pill">{{ recording.get_media_state_display }}</span>
               {% endif %}
+              {% if recording.transcript %}
+                <button type="button" class="small process-again"
+                        data-recording="{{ recording.pk }}"
+                        data-title="{{ recording.title }}">Process again</button>
+              {% elif recording.media_state == "failed" %}
+                <button type="button" class="small retry"
+                        data-recording="{{ recording.pk }}">Retry</button>
+              {% endif %}
               <button type="button" class="ghost small danger delete"
                       data-recording="{{ recording.pk }}"
                       data-title="{{ recording.title }}"
@@ -73,4 +81,5 @@
   </div>
 
   <script src="{% static 'recordings.js' %}"></script>
+  <script src="{% static 'again.js' %}"></script>
 {% endblock %}

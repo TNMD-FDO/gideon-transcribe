@@ -45,10 +45,20 @@
     if (job.step) { return escape(job.step); }
 
     if (job.position) {
-      var ahead = job.position === 1 ? "1 job ahead" : job.position + " jobs ahead";
-      return "In line, " + ahead;
+      var place = job.position === 1
+        ? "Next in line"
+        : ordinal(job.position) + " in line";
+      return escape(place) + (job.wait ? ", " + escape(job.wait) : "");
     }
     return "In line";
+  }
+
+  function ordinal(number) {
+    // 1st, 2nd, 3rd, 4th. The teens are the exception every time.
+    var tens = number % 100;
+    if (tens >= 11 && tens <= 13) { return number + "th"; }
+    var suffix = ["th", "st", "nd", "rd"][number % 10];
+    return number + (suffix || "th");
   }
 
   function draw(state) {
@@ -64,9 +74,23 @@
         about.push("Two-channel call: " + one.sides + " sides, each transcribed on its own");
       }
 
+      var tools = "";
+      if (one.can_retry) {
+        tools = " <button type='button' class='small retry' data-recording='" +
+          one.id + "'>Retry</button>";
+      } else if (one.can_process_again) {
+        tools = " <button type='button' class='small process-again' " +
+          "data-recording='" + one.id + "' data-title='" + escape(one.title) +
+          "'>Process again</button>";
+      }
+      if (one.has_transcript) {
+        tools = "<a href='/recording/" + one.id +
+          "' class='btn primary small'>Open</a>" + tools;
+      }
+
       card.innerHTML =
         "<div class='row'><b class='grow'>" + escape(one.title) + "</b>" +
-        "<span>" + line(one) + "</span></div>" +
+        "<span>" + line(one) + "</span>" + tools + "</div>" +
         "<p class='muted small' style='margin:4px 0 0'>" + about.join(" &middot; ") +
         (one.playback_ready ? "" : " &middot; preparing audio") + "</p>";
       rows.appendChild(card);
@@ -96,6 +120,14 @@
       "Download " + tally.done +
       (tally.done === 1 ? " transcript" : " transcripts") +
       (waiting ? " (" + waiting + " not ready)" : "");
+
+    // The one overall line, while anything is still on its way.
+    var done = document.getElementById("when-done");
+    done.textContent = state.finished ? "" : (state.everything_done_by || "");
+
+    if (state.reprocessing) {
+      document.getElementById("heading").textContent = "Processing again";
+    }
 
     after.hidden = !state.finished;
     cancel.hidden = state.finished;
