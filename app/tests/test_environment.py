@@ -89,3 +89,42 @@ def test_every_key_an_office_may_set_is_offered_by_the_example():
         "compose takes these from .env and .env.example does not name them, "
         "so an office has no way to know they exist:\n  " + "\n  ".join(missing)
     )
+
+
+# The two images this repository builds ----------------------------------------
+
+OURS = "ghcr.io/tnmd-fdo/gideon-transcribe-"
+
+SERVICE_COMPOSE = HERE / "whisperx-service" / "compose.yaml"
+
+
+def our_image_lines() -> list[str]:
+    lines = []
+    for where in (COMPOSE, SERVICE_COMPOSE):
+        if not where.is_file():
+            continue
+        for line in where.read_text(encoding="utf-8").splitlines():
+            if OURS in line and line.strip().startswith("image:"):
+                lines.append(f"{where.name}: {line.strip()}")
+    return lines
+
+
+def test_both_of_our_images_are_named_after_the_release():
+    """A fixed tag here means every Release builds an image of another name.
+
+    It read `:v0.1.0` in four places while the checkout was at v0.2.0, so
+    every Release built and looked for a v0.1.0 image whatever it held.
+    Nothing was published, so the pull failed, the fallback built from source,
+    and it worked by accident. The day a v0.1.0 image reached the registry,
+    every upgrade after it would have pulled that image and run old code under
+    a new checkout, and said nothing.
+    """
+    lines = our_image_lines()
+    assert lines, "no image line for either of the images built here"
+
+    fixed = [one for one in lines if "${RELEASE_TAG" not in one]
+    assert not fixed, (
+        "these name one of our own images with a fixed tag, so every Release "
+        "would build and pull the same name whatever it contains:\n  "
+        + "\n  ".join(fixed)
+    )
