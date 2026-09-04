@@ -17,6 +17,22 @@
 	# open admin socket inside the network is a way in that buys nothing.
 	admin off
 
+	# No HTTP/3, and this is not about speed.
+	#
+	# Caddy listens on 443 inside its container and is published on another
+	# port, because another reverse proxy on the server may already own 443.
+	# It cannot know that, so with HTTP/3 on it puts `Alt-Svc: h3=":443"` on
+	# every answer: an instruction to every browser that this same app can be
+	# reached over HTTP/3 on port 443 of this host. It cannot. Port 443 is
+	# whatever else is there, and a browser told to go and talk to it is being
+	# pointed at a different service and told it is this one.
+	#
+	# Only TCP is published in any case, so the alternative was never reachable
+	# and never anything but a wrong direction to send a browser in.
+	servers {
+		protocols h1 h2
+	}
+
 	log {
 		output stdout
 		format json
