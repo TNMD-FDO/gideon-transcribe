@@ -19,10 +19,20 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v0.4.0, 2026-09-04
+
 ```
 Models: unchanged
 Database: unchanged
 ```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. The images are pulled from the
+registry, so the upgrade takes a minute or two. Afterwards, Help at the top
+of any page opens the user guide, and the Admin panel's rail has the admin guide.
 
 ### Added
 
