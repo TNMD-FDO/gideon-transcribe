@@ -50,6 +50,12 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **The correction box closes, and it has buttons.** It could only be
+  finished with Ctrl+Enter or Escape, neither of which was written anywhere,
+  so a box opened by mistake stayed open. It now carries Save correction and
+  Cancel. Clicking away from a box nothing was typed into closes it; one that
+  has been typed in stays open and says so, rather than being saved or thrown
+  away on a guess. Only one box is ever open at a time.
 - **What both sides of a call heard is read once.** A phone system plays its
   recorded announcement to both parties before the call connects, so both
   channels carry it and both sides transcribe it: the first minutes of a jail

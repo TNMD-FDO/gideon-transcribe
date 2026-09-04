@@ -636,66 +636,149 @@
   }
   window.VIEWER.cookie = cookie;
 
+  // One correction box at a time. Two would be a way to lose work: saving
+  // one draws the transcript again, and the other would go with it.
+  var editing = null;
+
+  function tidyUp() {
+    // Clicking away from an untouched box closes it: there is nothing to
+    // lose and leaving it open is only clutter. A box that has been typed in
+    // is left alone and says so, because this is a transcript: saving what
+    // somebody was still thinking about would be as wrong as throwing it
+    // away.
+    if (!editing) { return; }
+    if (editing.box.value === editing.was) {
+      editing.stop();
+      return;
+    }
+    editing.row.classList.add("unfinished");
+  }
+
+  document.addEventListener("mousedown", function (event) {
+    if (!editing) { return; }
+    if (event.target.closest(".seg.editing")) { return; }
+    tidyUp();
+  });
+
   function edit(index) {
     var segment = segments[index];
     var row = column ? column.children[index] : null;
     if (!segment || !row || row.querySelector("textarea")) { return; }
 
+    // Opening another one closes this one first, under the same rule. If it
+    // will not close, because it has been typed in, this one does not open:
+    // saving a correction draws the transcript again, which would take an
+    // unfinished box down with it and lose what was in it. One box, always.
+    tidyUp();
+    if (editing) {
+      editing.row.scrollIntoView({ block: "center" });
+      editing.box.focus();
+      return;
+    }
+
+    var said = row.querySelector(".txt");
+    if (!said) { return; }
+
+    var holder = document.createElement("div");
+    holder.className = "correcting";
+
     var box = document.createElement("textarea");
     box.rows = 3;
     box.value = segment.text;
-    var said = row.querySelector(".txt");
-    said.replaceWith(box);
+    holder.appendChild(box);
+
+    var tools = document.createElement("div");
+    tools.className = "row small";
+
+    var save = document.createElement("button");
+    save.type = "button";
+    save.className = "primary small";
+    save.textContent = "Save correction";
+
+    var cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "ghost small";
+    cancel.textContent = "Cancel";
+
+    var hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = "Ctrl + Enter saves, Esc cancels";
+
+    tools.appendChild(save);
+    tools.appendChild(cancel);
+    tools.appendChild(hint);
+    holder.appendChild(tools);
+
+    said.replaceWith(holder);
+    row.classList.add("editing");
     box.focus();
 
     function stop() {
       var back = document.createElement("p");
       back.className = "txt";
       back.innerHTML = wordsOf(segment);
-      box.replaceWith(back);
+      holder.replaceWith(back);
+      row.classList.remove("editing", "unfinished");
+      if (editing && editing.box === box) { editing = null; }
     }
+
+    editing = { row: row, box: box, was: segment.text, stop: stop };
+
+    function keep() {
+      var text = box.value.trim();
+      if (text === segment.text) { stop(); return; }
+      box.disabled = true;
+      save.disabled = true;
+      fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": cookie("csrftoken")
+        },
+        body: JSON.stringify({ text: text })
+      }).then(function (answer) {
+        // A correction is only saved when the app says so. A session that
+        // ended while this page sat open is turned away here, and showing
+        // the new words as though they were kept would be a lie about a
+        // transcript.
+        if (!answer.ok) { return Promise.reject(answer.status); }
+        return answer.json();
+      }).then(function (told) {
+        if (!told.corrected) { return Promise.reject("refused"); }
+        segment.text = text;
+        segment.corrected = true;
+        // The words are the machine's; once a person has changed the text,
+        // the old word timings no longer describe it.
+        segment.words = [];
+        editing = null;
+        draw();
+        // draw() built the rows again, so the highlight and any search
+        // have to be put back.
+        here = -1;
+        follow();
+        if (search && search.value.trim()) { look(); }
+        if (window.CLIPS) { window.CLIPS.load(); }
+      }).catch(function () {
+        box.disabled = false;
+        save.disabled = false;
+        window.alert(
+          "That correction was not saved. You may have been signed out; " +
+          "open the page again and check before retyping it."
+        );
+      });
+    }
+
+    save.addEventListener("click", keep);
+    cancel.addEventListener("click", stop);
+
+    box.addEventListener("input", function () {
+      row.classList.toggle("unfinished", false);
+    });
 
     box.addEventListener("keydown", function (event) {
       event.stopPropagation();
-      if (event.key === "Escape") { stop(); }
-      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-        var text = box.value.trim();
-        fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": cookie("csrftoken")
-          },
-          body: JSON.stringify({ text: text })
-        }).then(function (answer) {
-          // A correction is only saved when the app says so. A session that
-          // ended while this page sat open is turned away here, and showing
-          // the new words as though they were kept would be a lie about a
-          // transcript.
-          if (!answer.ok) { return Promise.reject(answer.status); }
-          return answer.json();
-        }).then(function (said) {
-          if (!said.corrected) { return Promise.reject("refused"); }
-          segment.text = text;
-          segment.corrected = true;
-          // The words are the machine's; once a person has changed the text,
-          // the old word timings no longer describe it.
-          segment.words = [];
-          draw();
-          // draw() built the rows again, so the highlight and any search
-          // have to be put back.
-          here = -1;
-          follow();
-          if (search && search.value.trim()) { look(); }
-          if (window.CLIPS) { window.CLIPS.load(); }
-        }).catch(function () {
-          box.disabled = false;
-          window.alert(
-            "That correction was not saved. You may have been signed out; " +
-            "open the page again and check before retyping it."
-          );
-        });
-      }
+      if (event.key === "Escape") { stop(); return; }
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { keep(); }
     });
   }
 
