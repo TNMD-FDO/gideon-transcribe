@@ -57,6 +57,12 @@ Database: migrates
   delete it and put it up again. It is remade from the uploaded bytes now,
   which is what those bytes are kept for. This is what makes the fix for
   dropped audio on a body-worn camera reach a recording already transcribed.
+- **A seek that will not take says so.** A media element that cannot be
+  jumped about in accepts the instruction and ignores it, so clicking the
+  timeline did nothing and said nothing. Every seek is now watched, and one
+  that does not land reports it in the same line the player's other troubles
+  use, saying whether the server is not answering for parts of the file or
+  the player simply refused.
 - **Clicking the waveform seeks again.** A click and a drag were told apart by
   how much time was between them, and on a twenty-five minute recording one
   pixel of timeline is over a second, so every click, which always jitters a
