@@ -238,6 +238,26 @@ def test_the_local_engine_is_off_by_default_and_pinned():
     assert "llm_api_token" in vllm["secrets"]
 
 
+def test_the_database_is_reached_by_a_name_no_other_project_uses():
+    """llm-worker sits on two networks, and the other one may have a postgres.
+
+    It did: the office's platform project runs a service called postgres on
+    the engine's network, Docker's DNS answered a bare `postgres` with that
+    one, and llm-worker signed in to the wrong database ten times and never
+    started. So the app reaches its database by an alias of its own, declared
+    on the postgres service and used by every container.
+    """
+    text = COMPOSE.read_text(encoding="utf-8")
+    whole = yaml.safe_load(text)
+    postgres = whole["services"]["postgres"]
+    aliases = postgres["networks"]["transcribe"]["aliases"]
+    assert "transcribe-postgres" in aliases
+
+    host = re.search(r"^\s+POSTGRES_HOST:\s*(\S+)", text, re.M).group(1)
+    assert host == "transcribe-postgres"
+    assert host != "postgres", "a bare service name resolves on any joined network"
+
+
 def test_the_script_has_the_engine_step():
     text = SCRIPT.read_text(encoding="utf-8")
     assert "cmd_engine()" in text

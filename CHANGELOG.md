@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.2.1, 2026-09-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **`llm-worker` connected to the wrong database on a shared engine's
+  network.** Joining that network for the engine, as v1.2.0 does, also puts
+  the worker where the other project's names resolve. Docker's DNS answers a
+  bare `postgres` from either network, and the office's platform project
+  runs a service called `postgres`, so the worker signed in to the platform's
+  database, failed, restarted ten times, and never consumed its queue. Test
+  connection therefore never ran and the page waited for ever. The app now
+  reaches its own database as `transcribe-postgres`, an alias declared on the
+  service and used by every container, never as the bare service name. ADR
+  0003 records the consequence. Nothing else changes; the upgrade restarts
+  the containers with the new name.
+
 ## v1.2.0, 2026-09-04
 
 ```
