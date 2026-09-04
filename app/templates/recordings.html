@@ -43,7 +43,8 @@
             &middot;
             <button type="button" class="plain delete"
                     data-recording="{{ recording.pk }}"
-                    data-title="{{ recording.title }}">Delete</button>
+                    data-title="{{ recording.title }}"
+                    data-clips="{{ recording.clips.count }}">Delete</button>
           </p>
         </li>
       {% endfor %}

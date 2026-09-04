@@ -696,18 +696,21 @@ def transcripts_zip(recordings) -> tuple[bytes, list]:
     return holder.getvalue(), included
 
 
-def everything_zip(recordings, exported_by: str) -> tuple[bytes, list]:
+def everything_zip(recordings, exported_by: str) -> tuple[bytes, list, list]:
     """For every Done Recording, its Word document and its plain-text file.
 
-    In Phase 1 the Word document is the Word Transcript: the combined document
-    gains the Summaries and Chats when those are built, and every Ready Clip
-    joins this zip when Clips are. The shape inside is flat, one pair of files
-    per Recording, because a Workspace is a holding area rather than a filing
-    system and folders would only add a level to click through.
+    In Phase 1 the Word document is the Word Transcript; the combined document
+    gains the Summaries and Chats when those are built. Every Ready Clip goes
+    in beside its Recording's two files, with its excerpt and captions. The
+    shape inside is flat, because a Workspace is a holding area rather than a
+    filing system and folders would only add a level to click through.
     """
+    from core import clip_work
+
     holder = io.BytesIO()
     taken: set[str] = set()
     made = []
+    clips = []
     with zipfile.ZipFile(holder, "w", zipfile.ZIP_DEFLATED) as bundle:
         for recording in recordings:
             if not hasattr(recording, "transcript"):
@@ -721,7 +724,25 @@ def everything_zip(recordings, exported_by: str) -> tuple[bytes, list]:
             text = without_clashes(taken, export_name(recording, "transcript.txt"))
             bundle.writestr(text, plain_text(recording).encode("utf-8"))
             made.append((recording, "transcript text"))
-    return holder.getvalue(), made
+
+            # Every Ready Clip of this Recording, beside its two files.
+            for clip in _clips_of(recording):
+                clip_work.add_to_zip(bundle, clip, taken)
+                clips.append(clip)
+    return holder.getvalue(), made, clips
+
+
+def _clips_of(recording):
+    """The Ready Clips of one Recording, or none while Clips are switched off."""
+    from core import settings_store
+
+    if not settings_store.get("clips_available"):
+        return []
+    return [
+        one
+        for one in recording.clips.all()
+        if one.state == "ready" and one.path.exists()
+    ]
 
 
 # Handing them over ------------------------------------------------------------
@@ -757,6 +778,24 @@ def _record(request, recording, kind) -> None:
         object_label=recording.original_filename,
         kind=kind,
     )
+
+
+def _record_clip(request, clip) -> None:
+    """One "Clip downloaded" row per Clip inside any zip."""
+    from core import audit, clip_work
+
+    audit.write(
+        audit.Category.CLIPS,
+        "Clip downloaded",
+        actor=request.user,
+        request=request,
+        object_type="clip",
+        object_id=clip.pk,
+        object_label=f"{clip.start:.1f}-{clip.end:.1f}",
+        burn_captions=clip.burn_captions,
+        include_excerpt=clip.include_excerpt,
+    )
+    clip_work.mark_downloaded(clip, clip.recording.user_id == request.user.pk)
 
 
 def _hand_over(body, filename: str, content_type: str) -> HttpResponse:
@@ -839,9 +878,11 @@ def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
     )
 
     if shape == "everything":
-        body, made = everything_zip(recordings, request.user.username)
+        body, made, clips = everything_zip(recordings, request.user.username)
         for recording, kind in made:
             _record(request, recording, kind)
+        for clip in clips:
+            _record_clip(request, clip)
         return _hand_over(body, zip_name("Everything"), "application/zip")
 
     body, included = transcripts_zip(recordings)

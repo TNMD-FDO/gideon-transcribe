@@ -17,4 +17,6 @@ def workspace(request) -> dict:
         return {}
     return {
         "idle_timeout_seconds": int(settings_store.idle_timeout().total_seconds()),
+        # Off hides the Clips page and every way to reach it.
+        "clips_available": settings_store.get("clips_available"),
     }

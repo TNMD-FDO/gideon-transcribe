@@ -125,19 +125,24 @@ def condition(user) -> str:
 def counts(user) -> dict:
     """What the sign-out dialog and the Delete confirmations say.
 
-    Summaries, Chats, and Clips are counted here as zero until those chapters
-    are built, so that the wording is written once and starts telling the
-    truth on the day they arrive.
+    Summaries and Chats are counted here as zero until the AI assistant is
+    built, so that the wording is written once and starts telling the truth on
+    the day they arrive.
     """
+    from core.clips import Clip
+
     recordings = Recording.objects.filter(user=user)
     done = [one for one in recordings if hasattr(one, "transcript")]
+    clips = Clip.objects.filter(recording__user=user)
     return {
         "recordings": recordings.count(),
         "transcripts": len(done),
         "summaries": 0,
         "chats": 0,
-        "clips": 0,
-        "clips_not_downloaded": 0,
+        "clips": clips.count(),
+        "clips_not_downloaded": clips.filter(
+            first_downloaded__isnull=True, state="ready"
+        ).count(),
         "running": Job.objects.filter(
             recording__user=user, state__in=JobState.LIVE
         ).count(),
@@ -173,6 +178,13 @@ def sign_out_lines(user) -> list[str]:
         lines.append(f"Signing out removes {_list_of(parts)}.")
     else:
         lines.append("There is nothing here to remove.")
+
+    if tally["clips_not_downloaded"]:
+        one = tally["clips_not_downloaded"] == 1
+        lines.append(
+            f"{tally['clips_not_downloaded']} clip{'' if one else 's'} "
+            f"{'has' if one else 'have'} not been downloaded."
+        )
 
     if tally["running"]:
         hours = settings_store.get("idle_timeout_minutes") / 60

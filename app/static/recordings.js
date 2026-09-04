@@ -13,9 +13,13 @@
     var button = event.target.closest(".delete");
     if (!button) { return; }
 
+    var also = button.dataset.clips && button.dataset.clips !== "0"
+      ? " and its " + button.dataset.clips + " clip" +
+        (button.dataset.clips === "1" ? "" : "s")
+      : "";
     if (!window.confirm(
-      "Delete " + button.dataset.title + "? This removes the recording, its " +
-      "transcript, and everything else about it. It cannot be undone, and " +
+      "Delete " + button.dataset.title + also + "? This removes the recording, " +
+      "its transcript, and everything else about it. It cannot be undone, and " +
       "anything you want to keep has to be exported first."
     )) { return; }
 

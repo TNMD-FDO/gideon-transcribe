@@ -33,6 +33,42 @@
         {% endif %}
       {% endif %}
 
+      {% if clips_available %}
+        <h2 class="small">Clips</h2>
+        <p class="quiet">
+          Mark a span with I and O while it plays, or type the times. A clip
+          is a file you can play outside the app.
+        </p>
+        <div class="clip-tool">
+          <label class="quiet">From
+            <input type="text" id="clip-from" placeholder="0:00" size="8">
+          </label>
+          <label class="quiet">To
+            <input type="text" id="clip-to" placeholder="0:00" size="8">
+          </label>
+          <button type="button" id="clip-preview" class="plain">Preview</button>
+          <button type="button" id="clip-new">New clip</button>
+        </div>
+
+        <form id="clip-form" hidden>
+          <label class="quiet">Title <input type="text" id="clip-title" maxlength="120"></label>
+          <label class="quiet">Note <textarea id="clip-note" rows="2" maxlength="1000"></textarea></label>
+          <label class="quiet">
+            <input type="checkbox" id="clip-excerpt" checked> Include the transcript excerpt
+          </label>
+          <label class="quiet" id="clip-burn-line"{% if not is_video %} hidden{% endif %}>
+            <input type="checkbox" id="clip-burn"> Burn captions into the video
+          </label>
+          <div class="dialog">
+            <button type="submit">Save clip</button>
+            <button type="button" id="clip-cancel" class="plain">Cancel</button>
+          </div>
+          <p id="clip-problem" class="problem" hidden></p>
+        </form>
+
+        <ul id="clip-list" class="cards"></ul>
+      {% endif %}
+
       {% if transcript %}
         <h2 class="small">Export</h2>
         <p class="quiet">
@@ -53,7 +89,8 @@
       </p>
       <button type="button" class="plain delete"
               data-recording="{{ recording.pk }}"
-              data-title="{{ recording.title }}">Delete this recording</button>
+              data-title="{{ recording.title }}"
+                    data-clips="{{ recording.clips.count }}">Delete this recording</button>
 
       <h2 class="small">Keyboard</h2>
       <dl class="keys">
@@ -65,6 +102,7 @@
         <dt>F</dt><dd>Follow mode</dd>
         <dt>E</dt><dd>Correct the current segment</dd>
         <dt>/</dt><dd>Search</dd>
+        <dt>I O</dt><dd>Mark the start and the end of a clip</dd>
       </dl>
     </aside>
 
@@ -140,5 +178,6 @@
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>
+  {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
   <script src="{% static 'viewer.js' %}"></script>
 {% endblock %}
