@@ -50,6 +50,13 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **Clips in a case.** The viewer's clips sheet now holds every clip in the
+  case, this recording's own first and the rest under "Elsewhere in this
+  case", each saying which recording it came from and who saved it. The case
+  page gains its **Clips tab** with the columns the chapter names, a "Saved
+  by" column, no "Downloaded" column because nothing is lost at sign-out
+  there, and a Download all for the case. The Clips page in the navigation
+  stays the workspace's own list, so a clip is listed in one place.
 - **The video window resizes.** Drag the right edge of the picture, and the
   height follows so it keeps its shape. Double-click the handle to put it
   back, or focus it and use the arrows. The size is remembered across

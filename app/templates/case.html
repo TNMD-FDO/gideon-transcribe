@@ -40,6 +40,21 @@
       <p class="notice warn" id="rename-warning" hidden></p>
     </div>
 
+    {% comment %}
+      Two of the four tabs the chapter gives this page. Speakers and Chat
+      belong to chapters that are not built, so the space is left rather than
+      filled with a guess.
+    {% endcomment %}
+    <div class="tabs">
+      <a href="{% url 'case' case.pk %}"
+         class="tab{% if tab == 'recordings' %} on{% endif %}">Recordings</a>
+      {% if clips_available %}
+        <a href="{% url 'case' case.pk %}?tab=clips"
+           class="tab{% if tab == 'clips' %} on{% endif %}">Clips</a>
+      {% endif %}
+    </div>
+
+    {% if tab == "recordings" %}
     <form method="get" class="row" style="gap: 6px; margin: 14px 0">
       <input type="search" name="q" value="{{ asked }}" class="grow"
              style="max-width: 26rem"
@@ -49,6 +64,7 @@
         <a href="{% url 'case' case.pk %}" class="btn ghost">Clear</a>
       {% endif %}
     </form>
+    {% endif %}
 
     {% if hits is not None %}
       <h2>{{ hits|length }} hit{{ hits|length|pluralize }} for &ldquo;{{ asked }}&rdquo;</h2>
@@ -75,7 +91,82 @@
       <h2 style="margin-top: 26px">Recordings</h2>
     {% endif %}
 
-    {% if recordings %}
+    {% if tab == "clips" %}
+      <div class="row" style="margin-bottom: 10px">
+        <span class="grow">
+          {{ clips_here|length }} clip{{ clips_here|length|pluralize }} in this case
+        </span>
+        {% if clips_here %}
+          <a href="{% url 'case-clips-download' case.pk %}" class="btn">Download all clips</a>
+        {% endif %}
+      </div>
+
+      {% if clips_here %}
+        <div style="overflow-x: auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Title</th><th>Recording</th><th>Span</th><th>Length</th>
+                <th>Options</th><th>Status</th><th>Size</th>
+                <th>Saved</th><th>Saved by</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for clip in clips_here %}
+                <tr>
+                  <td><b>{{ clip.title }}</b></td>
+                  <td class="muted">{{ clip.recording_title }}</td>
+                  <td class="mono muted">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
+                  <td>{{ clip.seconds|floatformat:0 }}s</td>
+                  <td class="muted">{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}</td>
+                  <td>
+                    {% if clip.state == "ready" and not clip.stale %}
+                      <span class="pill ok">Ready</span>
+                    {% elif clip.stale %}
+                      <span class="pill warn">Captions out of date</span>
+                    {% elif clip.state == "failed" %}
+                      <span class="pill danger">Failed</span>
+                    {% else %}
+                      <span class="pill translate">Rendering</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ clip.size|filesizeformat }}</td>
+                  <td class="muted">{{ clip.saved }}</td>
+                  <td class="muted">{{ clip.saved_by }}</td>
+                  <td>
+                    <span class="row">
+                      {% if clip.state == "ready" %}
+                        <a href="/clip/{{ clip.id }}/download" class="btn primary small">Download</a>
+                      {% endif %}
+                      <a href="{% url 'viewer' clip.recording %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.id }}"
+                         class="btn small">Open in viewer</a>
+                      {% if clip.may_change %}
+                        {% if clip.state == "failed" or clip.stale %}
+                          <button type="button" class="small rerender" data-clip="{{ clip.id }}">
+                            {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
+                          </button>
+                        {% endif %}
+                        <button type="button" class="small ghost danger delete-clip"
+                                data-clip="{{ clip.id }}" data-title="{{ clip.title }}">Delete</button>
+                      {% endif %}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="card">
+          <b>No clips in this case yet.</b>
+          <p class="muted small" style="margin: 4px 0 0">
+            Open a recording, mark a span, and save it. A clip made on a
+            recording in a case is listed here and never on the Clips page.
+          </p>
+        </div>
+      {% endif %}
+
+    {% elif recordings %}
       <ul class="cards">
         {% for recording in recordings %}
           <li data-recording="{{ recording.pk }}">
@@ -155,4 +246,5 @@
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
+  {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
 {% endblock %}

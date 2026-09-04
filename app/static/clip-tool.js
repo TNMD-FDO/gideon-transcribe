@@ -215,7 +215,18 @@
       return;
     }
 
+    // In a case the sheet holds every clip in the case, this recording's
+    // first. A heading goes in where the second group starts, so nobody
+    // mistakes another recording's clip for one of these.
+    var elsewhere = false;
+
     list.innerHTML = clips.map(function (one) {
+      var heading = "";
+      if (one.here === false && !elsewhere) {
+        elsewhere = true;
+        heading = "<h3 class='small muted' style='margin:12px 0 4px'>" +
+          "Elsewhere in this case</h3>";
+      }
       var doing = one.state === "rendering";
       var state = doing
         ? "<span class='pill translate'>Rendering...</span>"
@@ -226,34 +237,53 @@
           : "<span class='pill danger'>Failed</span>");
 
       var tools = "";
+      // A clip of another recording is opened where it lives: adjusting or
+      // playing it here would mean the wrong media in the player. An admin
+      // who does not own the recording may play and download and no more.
+      var mine = one.here !== false;
+      var change = one.may_change !== false;
       if (!doing && one.state === "ready") {
         tools =
           "<a href='/clip/" + one.id + "/download' class='btn primary small'>" +
-          "Download</a>" +
-          "<button type='button' class='small clip-play'>Play</button>" +
-          (one.stale
-            ? "<button type='button' class='small clip-rerender'>Re-render</button>"
-            : "") +
-          "<button type='button' class='small clip-adjust'>Adjust</button>" +
-          "<button type='button' class='small clip-rename'>Rename</button>" +
-          "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
-      } else if (!doing) {
+          "Download</a>";
+        if (mine) {
+          tools += "<button type='button' class='small clip-play'>Play</button>";
+        } else {
+          tools += "<a href='/recording/" + one.recording +
+            "?clip=" + one.id + "' class='btn small'>Open in viewer</a>";
+        }
+        if (mine && change) {
+          tools +=
+            (one.stale
+              ? "<button type='button' class='small clip-rerender'>Re-render</button>"
+              : "") +
+            "<button type='button' class='small clip-adjust'>Adjust</button>" +
+            "<button type='button' class='small clip-rename'>Rename</button>" +
+            "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
+        }
+      } else if (!doing && mine && change) {
         tools =
           "<button type='button' class='small clip-rerender'>Retry</button>" +
           "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
       }
 
-      return "<div class='clipcard' data-clip='" + one.id +
+      return heading + "<div class='clipcard' data-clip='" + one.id +
         "' data-start='" + one.start + "' data-end='" + one.end +
         "' data-title='" + escape(one.title) + "'>" +
         "<div class='row'><span class='title grow'>" + escape(one.title) +
         "</span>" + state + "</div>" +
+        (mine ? "" : "<div class='small muted'>from " +
+          escape(one.recording_title) + "</div>") +
         "<div class='small muted'>" + clock(one.start) + " to " + clock(one.end) +
         " (" + clock(one.seconds) + ")" +
         (one.burn_captions ? " &middot; captions burned in" : "") +
         (one.include_excerpt ? " &middot; with excerpt" : "") +
         (one.size ? " &middot; " + Math.round(one.size / 1024 / 1024 * 10) / 10 + " MB" : "") +
-        " &middot; " + escape(one.downloaded) + "</div>" +
+        // A case says who saved a clip, because collaborators exist; it never
+        // says whether it has been downloaded, because nothing is lost there.
+        (one.in_a_case
+          ? " &middot; saved by " + escape(one.saved_by)
+          : " &middot; " + escape(one.downloaded)) + "</div>" +
         (one.note ? "<div class='small'>" + escape(one.note) + "</div>" : "") +
         (tools ? "<div class='row small' style='margin-top:6px'>" + tools + "</div>" : "") +
         "</div>";
@@ -320,6 +350,14 @@
       .then(function (body) {
         if (!body.available) { return; }
         longest = body.longest_seconds || longest;
+        // In a case the sheet holds the whole case, so it says so rather
+        // than claiming to be this recording's own list.
+        var heading = document.getElementById("clips-heading");
+        if (heading) {
+          heading.textContent = body.in_case
+            ? "Clips in this case"
+            : "Clips of this recording";
+        }
         var title = document.getElementById("clip-title");
         if (!title.value || title.dataset.auto === "yes") {
           title.value = body.next_title;

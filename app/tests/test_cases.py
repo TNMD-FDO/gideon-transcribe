@@ -350,3 +350,67 @@ def test_the_case_download_is_gone_while_folder_management_is_off(
     signed_in(client, person)
     settings_store.set_to("folder_management", False)
     assert client.get(f"/case/{a_case.pk}/download").status_code == 404
+
+
+# Clips in a case ---------------------------------------------------------------
+
+
+def a_clip(recording, person, title="Clip 1"):
+    from core.clips import Clip
+
+    return Clip.objects.create(
+        recording=recording, user=person, title=title, start=0, end=5
+    )
+
+
+def test_the_sheet_shows_the_whole_case_with_this_recording_first(
+    person, a_case, client
+):
+    here = a_recording(person, case=a_case)
+    a_transcript(here)
+    a_clip(here, person, "Mine")
+    elsewhere = a_recording(person, case=a_case)
+    a_clip(elsewhere, person, "Theirs")
+
+    signed_in(client, person)
+    settings_store.set_to("folder_management", True)
+    said = client.get(f"/recording/{here.pk}/clips").json()
+
+    assert said["in_case"] is True
+    assert [one["title"] for one in said["clips"]] == ["Mine", "Theirs"]
+    assert [one["here"] for one in said["clips"]] == [True, False]
+    # A case says who saved a clip and never whether it has been downloaded,
+    # because nothing is lost at sign-out there.
+    assert said["clips"][0]["saved_by"]
+    assert said["clips"][0]["downloaded"] == ""
+
+
+def test_the_sheet_is_one_recordings_own_in_the_workspace(person, client):
+    here = a_recording(person)
+    a_transcript(here)
+    a_clip(here, person, "Mine")
+    a_clip(a_recording(person), person, "Another recording's")
+
+    signed_in(client, person)
+    said = client.get(f"/recording/{here.pk}/clips").json()
+
+    assert said["in_case"] is False
+    assert [one["title"] for one in said["clips"]] == ["Mine"]
+    assert said["clips"][0]["downloaded"] == "Not yet"
+
+
+def test_a_case_clip_is_not_on_the_workspace_sheet_while_cases_are_off(
+    person, a_case, client
+):
+    here = a_recording(person, case=a_case)
+    a_transcript(here)
+    a_clip(here, person, "Mine")
+    a_clip(a_recording(person, case=a_case), person, "Theirs")
+
+    signed_in(client, person)
+    settings_store.set_to("folder_management", False)
+    said = client.get(f"/recording/{here.pk}/clips").json()
+
+    # Off hides the case, so the sheet is this recording's own again.
+    assert said["in_case"] is False
+    assert [one["title"] for one in said["clips"]] == ["Mine"]

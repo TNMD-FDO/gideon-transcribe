@@ -8,6 +8,9 @@ files stay, and turning it back on brings the pages back over them.
 
 from __future__ import annotations
 
+import io
+import zipfile
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
@@ -15,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, exports, uploads
+from core import audit, cases, exports, settings_store, uploads
 from core.cases import Case
 from core.jobs import Segment
 from core.recordings import Recording
@@ -120,12 +123,18 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     cases.note_activity(case, by=request.user)
 
     asked = request.GET.get("q", "").strip()
+    # One of the four tabs the chapter gives this page. Speakers and Chat
+    # belong to chapters that are not built.
+    tab = "clips" if request.GET.get("tab") == "clips" else "recordings"
+
     return render(
         request,
         "case.html",
         {
             "page": "cases",
             "case": case,
+            "tab": tab,
+            "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             "is_owner": case.owner_id == request.user.pk,
             "recordings": _rows_for(case),
             "asked": asked,
@@ -134,6 +143,26 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "size": uploads.as_gb(case.disk_bytes()),
         },
     )
+
+
+def _clips_in(case: Case, asker) -> list:
+    """Every Clip of every Recording in the Case, oldest Recording first.
+
+    The Clips page in the navigation stays the Workspace's own list, so a Clip
+    is listed in one place and not two.
+    """
+    from core.clip_pages import _row
+    from core.clips import Clip
+
+    if not settings_store.get("clips_available"):
+        return []
+
+    return [
+        _row(one, asker=asker)
+        for one in Clip.objects.filter(recording__case=case)
+        .select_related("recording", "user")
+        .order_by("recording__created", "created")
+    ]
 
 
 def _rows_for(case: Case) -> list:
@@ -393,6 +422,41 @@ def download_case(request: HttpRequest, case_id) -> HttpResponse:
     cases.note_activity(case, by=request.user)
     return exports.hand_over(
         body, exports.zip_name(f"{case.name} transcripts"), "application/zip"
+    )
+
+
+@login_required
+def download_case_clips(request: HttpRequest, case_id) -> HttpResponse:
+    """Every Ready Clip in one Case, flat, as the Clips page's zip is."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    if not settings_store.get("clips_available"):
+        raise Http404("clips are off")
+
+    from core import clip_work
+    from core.clip_pages import _record
+    from core.clips import Clip, RenderState
+
+    clips = [
+        one
+        for one in Clip.objects.filter(recording__case=case).select_related(
+            "recording", "recording__user"
+        )
+        if one.state == RenderState.READY and one.path.exists()
+    ]
+
+    holder = io.BytesIO()
+    taken: set[str] = set()
+    with zipfile.ZipFile(holder, "w", zipfile.ZIP_DEFLATED) as bundle:
+        for clip in clips:
+            clip_work.add_to_zip(bundle, clip, taken)
+            _record(request, clip, "Clip downloaded")
+
+    cases.note_activity(case, by=request.user)
+    return exports.hand_over(
+        holder.getvalue(),
+        exports.zip_name(f"{case.name} clips"),
+        "application/zip",
     )
 
 

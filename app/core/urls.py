@@ -96,6 +96,11 @@ urlpatterns = [
         name="case-download",
     ),
     path(
+        "case/<uuid:case_id>/download-clips",
+        case_pages.download_case_clips,
+        name="case-clips-download",
+    ),
+    path(
         "recording/<uuid:recording_id>/move",
         case_pages.move_to_case,
         name="move-to-case",

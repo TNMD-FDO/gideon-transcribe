@@ -20,7 +20,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, clip_work, settings_store
+from core import audit, cases, clip_work, settings_store
 from core.clips import SHORTEST_SECONDS, Clip, RenderState, next_title
 from core.media_access import media_root
 from core.recordings import Recording
@@ -54,8 +54,23 @@ def _their_clip(request, clip_id) -> Clip | None:
     return None
 
 
-def _row(clip: Clip) -> dict:
+def _row(clip: Clip, here=None, asker=None) -> dict:
+    """One Clip, as the sheet and the Case's Clips tab both draw it.
+
+    `here` is the Recording whose page this is, so a Clip from elsewhere in
+    the Case can say where it came from. `asker` decides what may be changed:
+    an Admin who does not own the Recording may play and download and nothing
+    else, in a Case as in a Workspace.
+    """
+    in_a_case = bool(clip.recording.case_id)
+    may_change = asker is None or clip.recording.user_id == asker.pk
     return {
+        "here": here is None or clip.recording_id == here.pk,
+        "in_a_case": in_a_case,
+        "may_change": may_change,
+        # Who saved it, which a Case shows because Collaborators exist. In a
+        # Workspace it is always the one person, so it is not drawn.
+        "saved_by": clip.user.shown_name or clip.user.username,
         "id": str(clip.pk),
         "recording": str(clip.recording_id),
         "recording_title": clip.recording.title,
@@ -70,11 +85,18 @@ def _row(clip: Clip) -> dict:
         "shown_state": clip.shown_state,
         "stale": clip.captions_are_stale,
         "size": clip.size_bytes,
+        # Nothing is lost at sign-out in a Case, so a Case never says
+        # whether a Clip has been downloaded.
         "downloaded": (
-            f"Downloaded {clip.first_downloaded:%d %b %H:%M}"
-            if clip.first_downloaded
-            else "Not yet"
+            ""
+            if clip.recording.case_id
+            else (
+                f"Downloaded {clip.first_downloaded:%d %b %H:%M}"
+                if clip.first_downloaded
+                else "Not yet"
+            )
         ),
+        "saved": f"{clip.created:%d %b %H:%M}",
         "is_video": clip.is_video,
         "url": f"{media_root(clip.recording)}/clips/{clip.pk}{clip.suffix}",
     }
@@ -109,7 +131,13 @@ def _start_render(clip: Clip) -> None:
 
 @login_required
 def clips_of(request: HttpRequest, recording_id) -> JsonResponse:
-    """The Clips sheet's list, for one Recording."""
+    """The Clips sheet's list.
+
+    One Recording's Clips in the Workspace. In a Case, every Clip of every
+    Recording in that Case, with this Recording's own first, because somebody
+    working through a matter wants the Clips they have already taken from it
+    to hand rather than a page away.
+    """
     recording = _their_recording(request, recording_id)
     if recording is None:
         return JsonResponse({"error": "no such recording"}, status=404)
@@ -121,9 +149,28 @@ def clips_of(request: HttpRequest, recording_id) -> JsonResponse:
             "available": True,
             "next_title": next_title(recording),
             "longest_seconds": settings_store.longest_clip_seconds(),
-            "clips": [_row(one) for one in recording.clips.all()],
+            "in_case": bool(recording.case_id) and cases.folder_management_on(),
+            "clips": [
+                _row(one, here=recording, asker=request.user)
+                for one in _the_ones_to_show(recording)
+            ],
         }
     )
+
+
+def _the_ones_to_show(recording):
+    """This Recording's Clips, or the whole Case's with these first."""
+    if not recording.case_id or not cases.folder_management_on():
+        return list(recording.clips.all())
+
+    mine = list(recording.clips.all())
+    others = list(
+        Clip.objects.filter(recording__case_id=recording.case_id)
+        .exclude(recording_id=recording.pk)
+        .select_related("recording", "user")
+        .order_by("recording__created", "created")
+    )
+    return mine + others
 
 
 @login_required
