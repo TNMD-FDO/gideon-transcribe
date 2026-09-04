@@ -107,7 +107,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
         # row as different, and the panel shows one chip per segment instead of
         # one per speaker.
         names = list(
-            transcript.segments.exclude(speaker="")
+            transcript.segments.filter(same_as_other_side=False)
+            .exclude(speaker="")
             .order_by("speaker")
             .values_list("speaker", flat=True)
             .distinct()
@@ -169,6 +170,9 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
         {
             "word_timestamps": transcript.word_timestamps,
             "word_timestamps_reason": transcript.word_timestamps_reason,
+            # What both Sides of a call said together: shown once, named for
+            # both, and counted here so the page can say so plainly.
+            "shared_segments": transcript.shared_segments,
             "segments": [
                 {
                     "id": segment.pk,
@@ -179,7 +183,10 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
                     "corrected": segment.corrected,
                     "words": segment.words or [],
                 }
-                for segment in transcript.segments.all()
+                # The second copy of what both Sides heard is kept in the
+                # database and left out of the reading, so the announcement at
+                # the head of a call is read once rather than twice.
+                for segment in transcript.segments.filter(same_as_other_side=False)
             ],
         }
     )

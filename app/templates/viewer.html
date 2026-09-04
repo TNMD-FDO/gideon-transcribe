@@ -61,6 +61,10 @@
           {% if transcript and not transcript.word_timestamps %}
             <span class="pill">No word timing</span>
           {% endif %}
+          {% if transcript.shared_segments %}
+            <span class="pill" id="both-sides"
+                  title="A phone system plays its recorded announcement to both parties, so both sides transcribe it. Those passages are shown once and named Side 1 and Side 2. Both copies are kept and both are in the record.">{{ transcript.shared_segments }} passage{{ transcript.shared_segments|pluralize }} on both sides</span>
+          {% endif %}
           <span class="grow"></span>
           {% if in_case %}
             <button type="button" class="tiny" id="show-case"

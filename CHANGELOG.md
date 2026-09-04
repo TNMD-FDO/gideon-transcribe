@@ -50,6 +50,13 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **What both sides of a call heard is read once.** A phone system plays its
+  recorded announcement to both parties before the call connects, so both
+  channels carry it and both sides transcribe it: the first minutes of a jail
+  call read twice over. Those passages are now printed once, named "Side 1 and
+  Side 2", and both copies are kept in the database. The viewer and every
+  export say how many there were. Recordings already transcribed keep their
+  doubled text until Process again.
 - **Marking a clip from the transcript is two steps that say so.** The button
   on a segment reads **clip start**; press it and every button reads **clip
   end** until the second is pressed, with the starting segment marked
