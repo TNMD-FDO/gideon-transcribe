@@ -771,9 +771,29 @@ cmd_upgrade() {
   echo
   if [ "$build" = "yes" ]; then
     compose build
+  elif compose pull --quiet; then
+    pass "the images came from the registry"
   else
-    compose pull --quiet || amber "The registry could not be reached; building instead."
-    [ "$build" = "yes" ] || compose build 2>/dev/null || true
+    # Nothing may be published yet, or the registry may be out of reach, and
+    # both are fine: compose.yaml carries build: beside image: for both of
+    # this repository's images, so they are built here instead.
+    #
+    # A build that fails has to stop the upgrade. This line used to read
+    # `compose build 2>/dev/null || true`, which threw away the reason and
+    # the failure both, and carried on to `up -d`. That starts the old image
+    # over a database the new code has already migrated, and says nothing.
+    echo
+    amber "The registry had nothing to give, so the images are built here."
+    echo "  The WhisperX one takes ten to twenty minutes the first time."
+    echo
+    if ! compose build; then
+      echo
+      red "The build failed, so the upgrade stops here."
+      echo "  The old containers are still running and nothing was replaced."
+      echo "  The message above says what went wrong."
+      echo "  To put the checkout back: ./transcribe rollback"
+      exit 1
+    fi
   fi
   compose up -d
 

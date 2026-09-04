@@ -19,10 +19,24 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v0.2.0, 2026-09-04
+
 ```
 Models: unchanged
 Database: migrates
 ```
+
+### Upgrading to this one
+
+The database migrates when the app starts, so the upgrade is one command and
+there is no separate step to remember. The models are unchanged, so nothing
+is fetched.
+
+Nothing is published to the registry yet, so `./transcribe upgrade v0.2.0`
+builds both images on the server. The WhisperX one takes ten to twenty
+minutes the first time and is mostly waiting.
 
 ### Added
 
