@@ -34,8 +34,7 @@
               <td class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
               <td>{{ clip.seconds|floatformat:0 }}s</td>
               <td class="muted">
-                {% if clip.burn_captions %}captions burned{% endif %}
-                {% if clip.include_excerpt %}{% if clip.burn_captions %}, {% endif %}excerpt{% endif %}
+                {% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}
               </td>
               <td>
                 {% if clip.state == "ready" and not clip.captions_are_stale %}
