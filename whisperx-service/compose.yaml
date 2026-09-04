@@ -20,7 +20,17 @@ services:
     # finds nothing, because both image: and build: are set and no pull policy
     # is. The digest is added to the image line at the first publish to
     # ghcr.io; until then an office builds it on its own server.
-    image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx:v0.1.0
+    # The tag follows the Release this checkout is at, which ./transcribe
+    # upgrade writes into .env before it builds or pulls. It used to be a
+    # fixed v0.1.0, so every Release built an image called v0.1.0 whatever it
+    # actually contained. Nothing had been published, so the pull failed and
+    # it built from source and worked by accident; but the day a v0.1.0 image
+    # reached the registry, every upgrade after it would have pulled that and
+    # run last year's code under this year's checkout, silently.
+    #
+    # "dev" is for a checkout that is not at a Release, where there is nothing
+    # to pull and building from source is the only right answer.
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx:${RELEASE_TAG:-dev}
     build:
       context: .
     restart: unless-stopped

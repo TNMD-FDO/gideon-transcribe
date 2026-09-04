@@ -98,7 +98,17 @@ services:
       driver: journald
 
   app:
-    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:v0.1.0
+    # The tag follows the Release this checkout is at, which ./transcribe
+    # upgrade writes into .env before it builds or pulls. It used to be a
+    # fixed v0.1.0, so every Release built an image called v0.1.0 whatever it
+    # actually contained. Nothing had been published, so the pull failed and
+    # it built from source and worked by accident; but the day a v0.1.0 image
+    # reached the registry, every upgrade after it would have pulled that and
+    # run last year's code under this year's checkout, silently.
+    #
+    # "dev" is for a checkout that is not at a Release, where there is nothing
+    # to pull and building from source is the only right answer.
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
     build:
       context: ./app
     restart: unless-stopped
@@ -226,7 +236,7 @@ services:
     # ffmpeg and audiowaveform: hashing, probing, Sides, the audio the service
     # is sent, the Playback copy, the waveform, and Clip renders. CPU only; no
     # container built from the app image ever sees a GPU.
-    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:v0.1.0
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
     build:
       context: ./app
     command: ["media-worker"]
@@ -266,7 +276,7 @@ services:
   worker:
     # The queue and the schedules: handing Runs to the WhisperX service,
     # polling it, merging results, and the nightly sweeps.
-    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:v0.1.0
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
     build:
       context: ./app
     command: ["worker"]
