@@ -770,9 +770,21 @@
       });
   }
 
-  function openSheet(which) {
+  // The sheet stays where it was put. Somebody working through a case moves
+  // from one recording to the next all day, and a panel that closed itself
+  // every time would have to be reopened every time.
+  var sheetGrip = document.getElementById("sheet-grip");
+
+  function rememberSheet(what) {
+    try {
+      window.localStorage.setItem("sheet", what);
+    } catch (ignored) { /* a browser that forbids storage forgets it */ }
+  }
+
+  function openSheet(which, keep) {
     sheet.hidden = false;
     closeSheet.hidden = false;
+    if (sheetGrip) { sheetGrip.hidden = false; }
     Array.prototype.forEach.call(
       sheet.querySelectorAll(".panel"),
       function (panel) { panel.hidden = panel.dataset.panel !== which; }
@@ -782,6 +794,9 @@
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
+    // `keep` is for restoring what was already chosen, which is not itself a
+    // choice and must not overwrite one.
+    if (!keep) { rememberSheet(which); }
   }
   window.VIEWER.openSheet = openSheet;
 
@@ -798,15 +813,148 @@
     }
   );
 
-  function hideSheet() {
+  function hideSheet(keep) {
     sheet.hidden = true;
     closeSheet.hidden = true;
+    if (sheetGrip) { sheetGrip.hidden = true; }
     Array.prototype.forEach.call(
       document.querySelectorAll(".sheet-tab"),
       function (tab) { tab.classList.remove("on"); }
     );
+    if (!keep) { rememberSheet("closed"); }
   }
-  closeSheet.addEventListener("click", hideSheet);
+  closeSheet.addEventListener("click", function () { hideSheet(); });
+
+  // Resizing it ----------------------------------------------------------------
+
+  var SHORTEST = 120;
+  // What the transcript and the panels beside it must keep, whatever the
+  // sheet is dragged to. A fraction of the window is not enough of a rule:
+  // the dock above is as tall as the picture, which is itself resizable, so
+  // the room left over has to be measured rather than assumed.
+  //
+  // A floor rather than a comfortable minimum, on purpose. This figure also
+  // trims a remembered height on load, and a comfortable one would snap the
+  // sheet smaller every time the page opened, which is the jerkiness this is
+  // meant to be rid of. It only has to stop the transcript disappearing.
+  var LEAST_ROOM_ABOVE = 160;
+
+  function tallest() {
+    var above = document.querySelector(".body");
+    // Measured only when the sheet is actually in the layout. Asked while it
+    // is hidden, the body has the room the sheet would take, and the answer
+    // would be far too small: that is what shrank a remembered height every
+    // time the page loaded.
+    if (!above || sheet.hidden) {
+      return Math.max(SHORTEST, Math.round(window.innerHeight * 0.7));
+    }
+    // The sheet and the part above it share what is left of the window, so
+    // the most the sheet can take is the pair of them less that minimum.
+    var shared = sheet.getBoundingClientRect().height
+      + above.getBoundingClientRect().height;
+    return Math.max(SHORTEST, Math.round(shared - LEAST_ROOM_ABOVE));
+  }
+
+  function setSheetHeight(pixels) {
+    var wanted = Math.round(Math.min(tallest(), Math.max(SHORTEST, pixels)));
+    document.documentElement.style.setProperty("--sheet-height", wanted + "px");
+    return wanted;
+  }
+
+  function trimToFit() {
+    // Once the sheet is really there, a remembered height that no longer fits
+    // is brought down to one that does. The stored figure is left alone, so a
+    // bigger window gets it back.
+    if (sheet.hidden) { return; }
+    if (sheet.getBoundingClientRect().height > tallest()) {
+      setSheetHeight(tallest());
+    }
+  }
+
+  function rememberHeight(pixels) {
+    try {
+      window.localStorage.setItem("sheet-height", String(pixels));
+    } catch (ignored) { /* the size then lasts this page only */ }
+  }
+
+  var storedHeight = null;
+  try {
+    storedHeight = window.localStorage.getItem("sheet-height");
+  } catch (ignored) { /* the sheet keeps the usual height */ }
+  if (storedHeight) { setSheetHeight(parseInt(storedHeight, 10)); }
+
+  if (sheetGrip) {
+    var sizing = false;
+    var startedY = 0;
+    var wasTall = 0;
+
+    sheetGrip.addEventListener("pointerdown", function (event) {
+      sizing = true;
+      startedY = event.clientY;
+      wasTall = sheet.getBoundingClientRect().height;
+      sheetGrip.setPointerCapture(event.pointerId);
+      document.querySelector(".desk").classList.add("sizing");
+      event.preventDefault();
+    });
+
+    sheetGrip.addEventListener("pointermove", function (event) {
+      if (!sizing) { return; }
+      // Dragging the strip upwards makes the sheet taller, so the sign is
+      // the other way round from the pointer's own movement.
+      setSheetHeight(wasTall - (event.clientY - startedY));
+    });
+
+    function doneSizing() {
+      if (!sizing) { return; }
+      sizing = false;
+      document.querySelector(".desk").classList.remove("sizing");
+      rememberHeight(Math.round(sheet.getBoundingClientRect().height));
+      drawTimeline();
+    }
+    sheetGrip.addEventListener("pointerup", doneSizing);
+    sheetGrip.addEventListener("pointercancel", doneSizing);
+    // Backstops. A pointer capture is not always given back to the element
+    // that took it, and when the up is missed the drag never ends: the size
+    // is not remembered and the resize cursor stays on the whole page.
+    sheetGrip.addEventListener("lostpointercapture", doneSizing);
+    window.addEventListener("pointerup", doneSizing);
+    window.addEventListener("blur", doneSizing);
+
+    sheetGrip.addEventListener("dblclick", function () {
+      rememberHeight(setSheetHeight(Math.round(window.innerHeight * 0.4)));
+      drawTimeline();
+    });
+
+    // A window that shrinks takes the sheet with it rather than leaving the
+    // transcript with nothing. The choice is left alone, so the sheet comes
+    // back at its full height on a taller window.
+    window.addEventListener("resize", trimToFit);
+
+    sheetGrip.addEventListener("keydown", function (event) {
+      var step = event.shiftKey ? 60 : 20;
+      if (event.key === "ArrowDown") { step = -step; }
+      else if (event.key !== "ArrowUp") { return; }
+      event.preventDefault();
+      rememberHeight(setSheetHeight(sheet.getBoundingClientRect().height + step));
+      drawTimeline();
+    });
+  }
+
+  // The sheet comes back as it was left, now rather than when the transcript
+  // arrives, so the page settles once instead of jumping. A link that names a
+  // panel wins, and openWhereAsked() opens that one when it runs. Restoring is
+  // not a choice, so it does not overwrite the one that was made.
+  (function () {
+    var asked = new URLSearchParams(window.location.search);
+    if (asked.get("clip") || asked.get("panel")) { return; }
+    var was = null;
+    try {
+      was = window.localStorage.getItem("sheet");
+    } catch (ignored) { /* the sheet then starts closed, as it always did */ }
+    if (was === "clips" && window.VIEWER.clips) { openSheet("clips", true); }
+    else if (was === "details") { openSheet("details", true); }
+    window.requestAnimationFrame(trimToFit);
+  }());
 
   var overlay = document.getElementById("shortcuts");
   function shortcuts(show) { overlay.hidden = !show; }
@@ -975,9 +1123,13 @@
 
     if (asked.get("clip") || asked.get("panel") === "clips") {
       if (window.VIEWER.clips) { openSheet("clips"); }
-    } else if (asked.get("panel") === "details") {
-      openSheet("details");
+      return;
     }
+    if (asked.get("panel") === "details") {
+      openSheet("details");
+      return;
+    }
+
   }
 
   // Loading -------------------------------------------------------------------
@@ -1076,10 +1228,14 @@
       dragging = false;
       document.querySelector(".dock").classList.remove("resizing");
       remember(Math.round(thumb.getBoundingClientRect().width));
+      trimToFit();
       drawTimeline();
     }
     grip.addEventListener("pointerup", letGo);
     grip.addEventListener("pointercancel", letGo);
+    grip.addEventListener("lostpointercapture", letGo);
+    window.addEventListener("pointerup", letGo);
+    window.addEventListener("blur", letGo);
 
     grip.addEventListener("dblclick", function () {
       remember(setWidth(USUAL));
