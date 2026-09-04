@@ -42,6 +42,11 @@ urlpatterns = [
         name="correct",
     ),
     path(
+        "recording/<uuid:recording_id>/details",
+        viewer.details,
+        name="details",
+    ),
+    path(
         "recording/<uuid:recording_id>/speakers",
         viewer.speakers,
         name="speakers",
