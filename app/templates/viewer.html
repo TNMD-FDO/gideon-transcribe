@@ -46,6 +46,15 @@
         </ul>
       {% endif %}
 
+      <h2 class="small">Delete</h2>
+      <p class="quiet">
+        Removes this recording and its transcript. Export anything you want
+        to keep first.
+      </p>
+      <button type="button" class="plain delete"
+              data-recording="{{ recording.pk }}"
+              data-title="{{ recording.title }}">Delete this recording</button>
+
       <h2 class="small">Keyboard</h2>
       <dl class="keys">
         <dt>Space</dt><dd>Play or pause</dd>
@@ -130,5 +139,6 @@
       waveform: "{{ waveform_url }}"
     };
   </script>
+  <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
 {% endblock %}

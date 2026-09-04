@@ -105,7 +105,9 @@ def test_a_mixed_recording_names_every_language_heard():
         language_mixed=True,
         detection={"combined": {"es": 9, "en": 4}},
     )
-    assert exports.kind_line(mixed) == "Translated to English (Spanish and English detected)"
+    assert exports.kind_line(mixed) == (
+        "Translated to English (Spanish and English detected)"
+    )
 
 
 # The one notice ---------------------------------------------------------------

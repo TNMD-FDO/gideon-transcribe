@@ -210,6 +210,12 @@ class Recording(models.Model):
     tracks_found = models.IntegerField(default=0)
     tracks_distinct = models.IntegerField(default=0)
 
+    # When the Discard marked this Recording, set before anything is
+    # removed, so that a crash half way through leaves the mark: the next
+    # minute finishes it, and the daily sweeper finishes anything that has
+    # been marked for more than an hour.
+    discarding_since = models.DateTimeField(null=True, blank=True)
+
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

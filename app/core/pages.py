@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, settings_store, uploads, whisperx
+from core import audit, lifecycle, settings_store, uploads, whisperx
 from core.jobs import JobState
 from core.recordings import Batch, MediaState, Recording, Refusal
 
@@ -298,19 +298,50 @@ def cancel_batch(request: HttpRequest, batch_id) -> JsonResponse:
 
 def _remove(request, recording: Recording, cause: str) -> None:
     """Take a Recording and everything it made off the disk and the database."""
-    import shutil
-
-    audit.write(
-        audit.Category.RECORDINGS,
-        "Recording deleted",
-        actor=request.user if cause != "discard" else None,
-        system="sweeper" if cause == "discard" else None,
-        request=request if cause != "discard" else None,
-        object_type="recording",
-        object_id=recording.pk,
-        object_label=recording.original_filename,
-        cause=cause,
+    lifecycle.remove_recording(
+        recording, cause=cause, actor=request.user, request=request
     )
-    folder = recording.folder
-    recording.delete()
-    shutil.rmtree(folder, ignore_errors=True)
+
+
+@login_required
+@require_POST
+def delete_recording(request: HttpRequest, recording_id) -> JsonResponse:
+    """Remove one Recording and everything about it.
+
+    There is one Delete rather than a "remove the files, keep the text" pair:
+    with nothing kept past the session the two would be the same thing.
+    On a Recording whose Job has not ended this is the Cancel, because
+    stopping the work and keeping the half of it that arrived is not
+    something anybody wants.
+    """
+    recording = (
+        Recording.objects.filter(pk=recording_id).select_related("user").first()
+    )
+    if recording is None or (
+        recording.user_id != request.user.pk and not request.user.is_admin
+    ):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    cause = "owner" if recording.user_id == request.user.pk else "admin"
+
+    live = list(recording.jobs.filter(state__in=JobState.LIVE))
+    for job in live:
+        for run in job.runs.exclude(service_job_id=""):
+            whisperx.delete(run.service_job_id)
+        job.state = JobState.CANCELLED
+        job.finished = timezone.now()
+        job.save()
+        audit.write(
+            audit.Category.JOBS,
+            "Job cancelled",
+            actor=request.user,
+            request=request,
+            object_type="recording",
+            object_id=recording.pk,
+            object_label=recording.original_filename,
+        )
+    if live:
+        cause = "cancel"
+
+    _remove(request, recording, cause=cause)
+    return JsonResponse({"deleted": True})

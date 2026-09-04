@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Your recordings{% endblock %}
+{% load static %}
+{% block title %}Your recordings  <script src="{% static 'recordings.js' %}"></script>
+{% endblock %}
 {% block content %}
   <p class="notice">{{ standing_line }}</p>
   {% if storage_warning %}<p class="notice">{{ storage_warning }}</p>{% endif %}
@@ -32,6 +34,10 @@
             {% else %}
               {{ recording.get_media_state_display }}
             {% endif %}
+            &middot;
+            <button type="button" class="plain delete"
+                    data-recording="{{ recording.pk }}"
+                    data-title="{{ recording.title }}">Delete</button>
           </p>
         </li>
       {% endfor %}
@@ -41,4 +47,5 @@
       Nothing here yet. Uploaded recordings appear here while you are signed in.
     </p>
   {% endif %}
+  <script src="{% static 'recordings.js' %}"></script>
 {% endblock %}

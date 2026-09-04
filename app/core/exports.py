@@ -692,6 +692,34 @@ def transcripts_zip(recordings) -> tuple[bytes, list]:
     return holder.getvalue(), included
 
 
+def everything_zip(recordings, exported_by: str) -> tuple[bytes, list]:
+    """For every Done Recording, its Word document and its plain-text file.
+
+    In Phase 1 the Word document is the Word Transcript: the combined document
+    gains the Summaries and Chats when those are built, and every Ready Clip
+    joins this zip when Clips are. The shape inside is flat, one pair of files
+    per Recording, because a Workspace is a holding area rather than a filing
+    system and folders would only add a level to click through.
+    """
+    holder = io.BytesIO()
+    taken: set[str] = set()
+    made = []
+    with zipfile.ZipFile(holder, "w", zipfile.ZIP_DEFLATED) as bundle:
+        for recording in recordings:
+            if not hasattr(recording, "transcript"):
+                continue
+            document = without_clashes(
+                taken, export_name(recording, "transcript.docx")
+            )
+            bundle.writestr(document, word(recording, exported_by))
+            made.append((recording, "transcript word"))
+
+            text = without_clashes(taken, export_name(recording, "transcript.txt"))
+            bundle.writestr(text, plain_text(recording).encode("utf-8"))
+            made.append((recording, "transcript text"))
+    return holder.getvalue(), made
+
+
 # Handing them over ------------------------------------------------------------
 
 
@@ -790,4 +818,29 @@ def batch_download(request: HttpRequest, batch_id) -> HttpResponse:
     for recording in included:
         _record(request, recording, "transcript text")
 
+    return _hand_over(body, zip_name(), "application/zip")
+
+
+@login_required
+def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
+    """The sign-out dialog's downloads: every Done Recording in the Workspace.
+
+    Not offered on the Batch page, which has its own download of its own
+    Recordings only.
+    """
+    recordings = (
+        Recording.objects.filter(user=request.user)
+        .select_related("transcript", "user")
+        .order_by("created")
+    )
+
+    if shape == "everything":
+        body, made = everything_zip(recordings, request.user.username)
+        for recording, kind in made:
+            _record(request, recording, kind)
+        return _hand_over(body, zip_name("Everything"), "application/zip")
+
+    body, included = transcripts_zip(recordings)
+    for recording in included:
+        _record(request, recording, "transcript text")
     return _hand_over(body, zip_name(), "application/zip")

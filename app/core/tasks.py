@@ -154,6 +154,26 @@ def keep_the_queue_moving(timestamp: int) -> None:
         _poll_again(1)
 
 
+@app.periodic(cron="* * * * *")
+@app.task(queue="default", name="mind_the_workspaces")
+def mind_the_workspaces(timestamp: int) -> None:
+    """Every minute: end sessions that have sat idle, and run the Discards.
+
+    This is what makes the standing line on every page true. A Workspace that
+    is neither Open, nor Busy, nor inside its grace period is removed within
+    the minute, and there is no undo: what somebody wanted to keep, they
+    exported before they left.
+    """
+    from core import lifecycle
+
+    ended = lifecycle.end_idle_sessions()
+    if ended:
+        log.info("%d login session(s) ended after sitting idle", ended)
+
+    for user in lifecycle.workspaces_to_discard():
+        lifecycle.discard(user)
+
+
 @app.periodic(cron="30 3 * * *")
 @app.task(queue="default", name="sweep_audit_log")
 def sweep_audit_log(timestamp: int) -> None:
@@ -166,3 +186,17 @@ def sweep_audit_log(timestamp: int) -> None:
     from core import audit, settings_store
 
     audit.sweep(settings_store.audit_retention_months())
+
+
+@app.periodic(cron="30 3 * * *")
+@app.task(queue="media", name="sweep_the_disk")
+def sweep_the_disk(timestamp: int) -> None:
+    """The daily tidy, at the same quiet hour as the audit sweep.
+
+    Three things that should never be there and occasionally are: upload
+    pieces nobody finished, a folder under scratch/ whose Recording is gone,
+    and a Recording left marked Discarding by a crash.
+    """
+    from core import sweeping
+
+    sweeping.sweep()

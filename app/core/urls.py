@@ -42,6 +42,17 @@ urlpatterns = [
         exports.export,
         name="export",
     ),
+    path(
+        "recording/<uuid:recording_id>/delete",
+        pages.delete_recording,
+        name="delete-recording",
+    ),
+    # The sign-out dialog's two downloads, across the whole Workspace.
+    path(
+        "download/<str:shape>",
+        exports.workspace_download,
+        name="workspace-download",
+    ),
     # Caddy asks this before it serves a Playback copy, a waveform, or a Clip.
     path("media-auth", media_access.may_serve, name="media-auth"),
     path("sign-in", views.sign_in, name="sign-in"),
