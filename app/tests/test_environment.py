@@ -128,3 +128,49 @@ def test_both_of_our_images_are_named_after_the_release():
         "would build and pull the same name whatever it contains:\n  "
         + "\n  ".join(fixed)
     )
+
+
+# The two package lists --------------------------------------------------------
+
+REQUIREMENTS = HERE / "app" / "requirements.txt"
+DEV_REQUIREMENTS = HERE / "app" / "requirements-dev.txt"
+
+# What the image needs and the tests never import.
+ONLY_THE_IMAGE_NEEDS = {"gunicorn"}
+
+A_PIN = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*(?:\[[^\]]+\])?)==(\S+)", re.M)
+
+
+def pins_in(path: Path) -> dict[str, str]:
+    text = path.read_text(encoding="utf-8")
+    return {name.lower(): version for name, version in A_PIN.findall(text)}
+
+
+def test_the_tests_install_what_the_app_imports():
+    """requirements-dev.txt is a second copy of the pins, and nothing kept them in step.
+
+    CI installs the dev list alone. A package added to requirements.txt and
+    not here is in the image and missing on the runner, so the first test to
+    import it fails at collection, and the failure names the package rather
+    than the list. The Markdown package did exactly that on 2026-09-04.
+    """
+    image = pins_in(REQUIREMENTS)
+    dev = pins_in(DEV_REQUIREMENTS)
+
+    missing = sorted(
+        name for name in image if name not in dev and name not in ONLY_THE_IMAGE_NEEDS
+    )
+    assert not missing, (
+        "the image installs these and the tests do not, so the runner cannot "
+        "import them:\n  " + "\n  ".join(missing)
+    )
+
+    differ = sorted(
+        f"{name}: {image[name]} in the image, {dev[name]} for the tests"
+        for name in image
+        if name in dev and image[name] != dev[name]
+    )
+    assert not differ, (
+        "the tests run against a different version from the one the image "
+        "ships:\n  " + "\n  ".join(differ)
+    )
