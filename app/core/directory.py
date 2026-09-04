@@ -189,9 +189,7 @@ def groups_of(held, person_dn: str) -> set[str]:
     import ldap
 
     where = facts()
-    wanted = [
-        one for one in (where["signin_group"], where["admin_group"]) if one
-    ]
+    wanted = [one for one in (where["signin_group"], where["admin_group"]) if one]
     found = set()
     for group_dn in wanted:
         try:
@@ -506,9 +504,7 @@ def check_accounts(actor=None) -> dict:
                     where["admin_group"] and where["admin_group"] in groups
                 )
 
-            changes += _bring_into_line(
-                person, found, allowed, in_admin_group, actor
-            )
+            changes += _bring_into_line(person, found, allowed, in_admin_group, actor)
 
         audit.write(
             audit.Category.ACCOUNTS,
@@ -587,8 +583,12 @@ def _bring_into_line(person, found, allowed, in_admin_group, actor) -> list[str]
         person.in_admin_group = in_admin_group
         person.save(update_fields=["in_admin_group"])
         changes.append(
-            f"{person.username} " + ("became an Admin" if in_admin_group else
-                                     "is no longer an Admin by group")
+            f"{person.username} "
+            + (
+                "became an Admin"
+                if in_admin_group
+                else "is no longer an Admin by group"
+            )
         )
         audit.write(
             audit.Category.ACCOUNTS,
@@ -605,7 +605,8 @@ def _bring_into_line(person, found, allowed, in_admin_group, actor) -> list[str]
         fresh = {
             "directory_address": found.get("userPrincipalName", ""),
             "display_name": " ".join(
-                part for part in (found.get("givenName", ""), found.get("sn", ""))
+                part
+                for part in (found.get("givenName", ""), found.get("sn", ""))
                 if part
             ),
             "email": found.get("mail", ""),

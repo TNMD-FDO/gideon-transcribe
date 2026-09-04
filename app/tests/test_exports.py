@@ -98,10 +98,7 @@ def test_an_english_transcript_is_just_a_transcript():
 
 
 def test_a_transcript_left_in_its_own_language_says_so():
-    assert (
-        exports.kind_line(transcript(language="es"))
-        == "Transcript in Spanish"
-    )
+    assert exports.kind_line(transcript(language="es")) == "Transcript in Spanish"
 
 
 def test_a_translation_names_the_language_it_came_from():

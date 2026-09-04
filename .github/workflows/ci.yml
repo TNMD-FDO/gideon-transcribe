@@ -46,6 +46,17 @@ jobs:
         with:
           python-version: "3.13"
 
+      # python-ldap has no wheel: it is built here, and its build needs the
+      # OpenLDAP and Cyrus SASL headers. The package that carries the OpenLDAP
+      # ones was renamed, so both names are offered and whichever the runner
+      # knows is taken.
+      - name: Install the headers python-ldap builds against
+        if: hashFiles('app/requirements-dev.txt') != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsasl2-dev
+          sudo apt-get install -y libldap-dev || sudo apt-get install -y libldap2-dev
+
       - name: Install what the checks need
         run: |
           for file in whisperx-service/requirements-dev.txt app/requirements-dev.txt; do

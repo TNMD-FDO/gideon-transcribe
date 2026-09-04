@@ -383,8 +383,11 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
                 if used.get("vocabulary_terms_given")
                 else "none given",
             ),
-            ("Service version", (service.get("versions") or {}).get("service", "")
-             or service.get("version", "")),
+            (
+                "Service version",
+                (service.get("versions") or {}).get("service", "")
+                or service.get("version", ""),
+            ),
             (
                 "Processing time",
                 _plainly(timings.get("total", 0)) if timings else "",

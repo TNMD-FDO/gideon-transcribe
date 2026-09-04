@@ -104,10 +104,15 @@ class Command(BaseCommand):
     def _sample_rate(self, path) -> int | None:
         finished = subprocess.run(
             [
-                "ffprobe", "-v", "error",
-                "-select_streams", "a:0",
-                "-show_entries", "stream=sample_rate",
-                "-of", "default=nw=1:nk=1",
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=sample_rate",
+                "-of",
+                "default=nw=1:nk=1",
                 str(path),
             ],
             capture_output=True,

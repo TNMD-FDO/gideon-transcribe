@@ -606,7 +606,7 @@ def _running_head(section, title, kind, sha256, Pt, RGBColor) -> None:
 
 
 def _page_of_pages(paragraph, sha256, Pt, RGBColor) -> None:
-    """"<fingerprint>  Page X of Y  Gideon Transcribe, exported <date>".
+    """ "<fingerprint>  Page X of Y  Gideon Transcribe, exported <date>".
 
     X and Y are Word fields rather than numbers, because only Word knows how
     many pages a transcript came to once it laid the text out.
@@ -728,9 +728,7 @@ def everything_zip(recordings, exported_by: str) -> tuple[bytes, list, list]:
         for recording in recordings:
             if not hasattr(recording, "transcript"):
                 continue
-            document = without_clashes(
-                taken, export_name(recording, "transcript.docx")
-            )
+            document = without_clashes(taken, export_name(recording, "transcript.docx"))
             bundle.writestr(document, word(recording, exported_by))
             made.append((recording, "transcript word"))
 
@@ -818,9 +816,7 @@ def _hand_over(body, filename: str, content_type: str) -> HttpResponse:
     return answer
 
 
-WORD_TYPE = (
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-)
+WORD_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 @login_required

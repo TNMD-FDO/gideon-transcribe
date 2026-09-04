@@ -232,9 +232,7 @@ def render_clip(clip_id: str) -> None:
     from core import clip_work
     from core.clips import Clip
 
-    clip = (
-        Clip.objects.filter(pk=clip_id).select_related("recording").first()
-    )
+    clip = Clip.objects.filter(pk=clip_id).select_related("recording").first()
     if clip is None:
         # The Recording went while this waited its turn, and the half-made
         # file went with its folder. There is nothing to do.

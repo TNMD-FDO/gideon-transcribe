@@ -19,9 +19,7 @@ class Request:
 
 
 def test_the_path_with_the_media_prefix_is_read():
-    asked = media_access._wanted(
-        Request("/media/6/095f0352-63a3-4ef9/playback.mp4")
-    )
+    asked = media_access._wanted(Request("/media/6/095f0352-63a3-4ef9/playback.mp4"))
     assert asked == ("6", "095f0352-63a3-4ef9", "playback.mp4")
 
 
@@ -38,9 +36,7 @@ def test_a_clip_keeps_its_folder():
 
 
 def test_a_query_string_and_escapes_are_read_past():
-    asked = media_access._wanted(
-        Request("/media/6/095f0352/playback.mp4?t=12")
-    )
+    asked = media_access._wanted(Request("/media/6/095f0352/playback.mp4?t=12"))
     assert asked == ("6", "095f0352", "playback.mp4")
 
 
