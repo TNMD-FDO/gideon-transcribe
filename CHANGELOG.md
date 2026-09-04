@@ -50,6 +50,11 @@ Database: migrates
   the rail. Transcripts only and not the media: a workspace is bounded by a
   login session and a case is not, so "everything" for a case could be
   hundreds of gigabytes.
+- **A marked clip can be dropped.** A selection made and then thought better
+  of stayed tinted across the transcript and the timeline with no obvious way
+  to be rid of it. There is a **clear** beside where the selection is shown,
+  Escape drops it, and saving a clip clears it, since the span it was cut from
+  has stopped being a pending selection.
 - **The correction box closes, and it has buttons.** It could only be
   finished with Ctrl+Enter or Escape, neither of which was written anywhere,
   so a box opened by mistake stayed open. It now carries Save correction and
