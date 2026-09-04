@@ -30,6 +30,11 @@
           <li>
             <div class="row">
               <b class="grow">{{ recording.title }}</b>
+              {% if recording.being_replaced %}
+                <span class="pill warn">Processing again</span>
+              {% elif recording.in_the_queue %}
+                <span class="pill">In the queue</span>
+              {% endif %}
               {% if recording.transcript %}
                 <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
               {% elif recording.media_state == "rejected" %}
@@ -39,7 +44,7 @@
               {% else %}
                 <span class="pill">{{ recording.get_media_state_display }}</span>
               {% endif %}
-              {% if recording.transcript %}
+              {% if recording.transcript and not recording.being_replaced %}
                 <button type="button" class="small process-again"
                         data-recording="{{ recording.pk }}"
                         data-title="{{ recording.title }}">Process again</button>

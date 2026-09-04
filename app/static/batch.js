@@ -44,21 +44,10 @@
     if (job.state === "cancelled") { return "Cancelled"; }
     if (job.step) { return escape(job.step); }
 
-    if (job.position) {
-      var place = job.position === 1
-        ? "Next in line"
-        : ordinal(job.position) + " in line";
-      return escape(place) + (job.wait ? ", " + escape(job.wait) : "");
-    }
+    // The whole sentence is built by the app, so that the wording lives in
+    // one place rather than half here and half there.
+    if (job.line) { return escape(job.line); }
     return "In line";
-  }
-
-  function ordinal(number) {
-    // 1st, 2nd, 3rd, 4th. The teens are the exception every time.
-    var tens = number % 100;
-    if (tens >= 11 && tens <= 13) { return number + "th"; }
-    var suffix = ["th", "st", "nd", "rd"][number % 10];
-    return number + (suffix || "th");
   }
 
   function draw(state) {
@@ -88,9 +77,15 @@
           "' class='btn primary small'>Open</a>" + tools;
       }
 
+      var bar = "";
+      if (one.job && one.job.percent) {
+        bar = "<div class='bar' style='margin:6px 0 0'><i style='width:" +
+          Math.max(2, Math.min(100, one.job.percent)) + "%'></i></div>";
+      }
+
       card.innerHTML =
         "<div class='row'><b class='grow'>" + escape(one.title) + "</b>" +
-        "<span>" + line(one) + "</span>" + tools + "</div>" +
+        "<span>" + line(one) + "</span>" + tools + "</div>" + bar +
         "<p class='muted small' style='margin:4px 0 0'>" + about.join(" &middot; ") +
         (one.playback_ready ? "" : " &middot; preparing audio") + "</p>";
       rows.appendChild(card);
