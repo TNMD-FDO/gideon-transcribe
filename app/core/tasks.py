@@ -242,3 +242,28 @@ def render_clip(clip_id: str) -> None:
         return
 
     clip_work.render(clip)
+
+
+@app.periodic(cron="*/10 * * * *")
+@app.task(
+    queue="default",
+    name="retry_stalled_jobs",
+    queueing_lock="retry_stalled_jobs",
+)
+async def retry_stalled_jobs(timestamp: int) -> None:
+    """Give back the background work of a worker that died holding it.
+
+    Not the transcription queue: that is the service's line, and a Run lost
+    there fails with its own reason class and offers Retry. This is the app's
+    own background jobs, the media work and the polls and the schedules. A
+    worker writes a heartbeat every ten seconds, and one whose heartbeat is
+    over thirty seconds old is considered stalled; its jobs are still marked
+    as being done and would sit there for ever.
+
+    The queueing lock means two workers cannot both be putting the same jobs
+    back at once.
+    """
+    stalled = await app.job_manager.get_stalled_jobs()
+    for job in stalled:
+        log.warning("job %s was left by a worker that stopped; queued again", job.id)
+        await app.job_manager.retry_job(job)

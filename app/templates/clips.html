@@ -58,7 +58,8 @@
                   {% if clip.state == "ready" %}
                     <a href="{% url 'download-clip' clip.pk %}" class="btn primary small">Download</a>
                   {% endif %}
-                  <a href="{% url 'viewer' clip.recording.pk %}" class="btn small">Open in viewer</a>
+                  <a href="{% url 'viewer' clip.recording.pk %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.pk }}"
+                     class="btn small">Open in viewer</a>
                   {% if clip.state == "failed" or clip.captions_are_stale %}
                     <button type="button" class="small rerender" data-clip="{{ clip.pk }}">
                       {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}

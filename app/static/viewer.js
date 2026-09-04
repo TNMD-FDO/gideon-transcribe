@@ -952,6 +952,34 @@
     });
   }
 
+  // Opening at a place ---------------------------------------------------------
+
+  function openWhereAsked() {
+    // A link can name a time and a panel: the Clips page opens a recording at
+    // its clip's start with the clips sheet open, and a citation will reach a
+    // segment the same way.
+    var asked = new URLSearchParams(window.location.search);
+
+    // Not named "at": that is the binary search over the segments, which is
+    // exactly what finds the row to bring into view.
+    var when = parseFloat(asked.get("t"));
+    if (!isNaN(when) && when >= 0) {
+      window.VIEWER.seek(when);
+      var index = at(when);
+      var row = index >= 0 && column ? column.children[index] : null;
+      if (row) {
+        row.classList.add("here");
+        row.scrollIntoView({ block: "center" });
+      }
+    }
+
+    if (asked.get("clip") || asked.get("panel") === "clips") {
+      if (window.VIEWER.clips) { openSheet("clips"); }
+    } else if (asked.get("panel") === "details") {
+      openSheet("details");
+    }
+  }
+
   // Loading -------------------------------------------------------------------
 
   if (window.VIEWER.waveform) {
@@ -979,9 +1007,11 @@
         draw();
         drawTimeline();
         if (player) { follow(); }
+        openWhereAsked();
       });
   } else {
     watchTheQueue();
+    openWhereAsked();
   }
 
   drawTimeline();
