@@ -2,7 +2,16 @@
 
 from django.urls import path
 
-from core import exports, media_access, pages, uploads, viewer, views
+from core import (
+    exports,
+    media_access,
+    pages,
+    panel,
+    panel_pages,
+    uploads,
+    viewer,
+    views,
+)
 
 urlpatterns = [
     path("healthz", views.healthz, name="healthz"),
@@ -55,6 +64,39 @@ urlpatterns = [
     ),
     # Caddy asks this before it serves a Playback copy, a waveform, or a Clip.
     path("media-auth", media_access.may_serve, name="media-auth"),
+    # The Admin panel. Users never see any of it.
+    path("panel/", panel.panel, name="panel"),
+    path("panel/status", panel_pages.status, name="panel-status"),
+    path("panel/status/lines", panel_pages.status_lines, name="panel-status-lines"),
+    path("panel/queue", panel_pages.queue_page, name="panel-queue"),
+    path("panel/queue/state", panel_pages.queue_state, name="panel-queue-state"),
+    path(
+        "panel/queue/<uuid:job_id>/cancel",
+        panel_pages.cancel_job,
+        name="panel-cancel-job",
+    ),
+    path("panel/users", panel_pages.users, name="panel-users"),
+    path("panel/users/<str:username>", panel_pages.user_action, name="panel-user"),
+    path(
+        "panel/users/<str:username>/workspace",
+        panel_pages.workspace,
+        name="panel-workspace",
+    ),
+    path(
+        "panel/users/<str:username>/local",
+        panel_pages.local_admin_action,
+        name="panel-local-admin",
+    ),
+    path(
+        "panel/local-admin",
+        panel_pages.create_local_admin,
+        name="panel-create-local-admin",
+    ),
+    path("panel/installation", panel_pages.installation, name="panel-installation"),
+    path("panel/settings/<str:page>", panel.settings_page, name="panel-settings"),
+    path("panel/settings/<str:page>/edit", panel.edit, name="panel-edit"),
+    path("panel/apply", panel.apply, name="panel-apply"),
+    path("panel/cancel", panel.cancel_all, name="panel-cancel"),
     path("sign-in", views.sign_in, name="sign-in"),
     path("sign-out", views.sign_out, name="sign-out"),
 ]

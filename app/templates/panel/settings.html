@@ -1,0 +1,73 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block panel %}
+  <h1>{{ title }}</h1>
+
+  {% if limits_cross_reference %}
+    <p class="quiet">
+      The idle timeout is on the Sign-in and directory page, because it is
+      also the Workspace's lifetime.
+    </p>
+  {% endif %}
+
+  <form method="post" action="{% url 'panel-edit' page %}">
+    {% csrf_token %}
+    <dl class="settings">
+      {% for row in rows %}
+        <dt>
+          <label for="{{ row.key }}">{{ row.name }}</label>
+          <span class="quiet">{{ row.help }}</span>
+        </dt>
+        <dd>
+          {% if row.kind == "toggle" %}
+            <label><input type="checkbox" id="{{ row.key }}" name="{{ row.key }}"
+                          {% if row.value %}checked{% endif %}> On</label>
+          {% elif row.kind == "choice" %}
+            <select id="{{ row.key }}" name="{{ row.key }}">
+              {% for choice in row.choices %}
+                <option value="{{ choice }}"{% if choice == row.value %} selected{% endif %}>{{ choice }}</option>
+              {% endfor %}
+            </select>
+          {% elif row.kind == "number" %}
+            <input type="number" id="{{ row.key }}" name="{{ row.key }}"
+                   value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}">
+            <span class="quiet">{{ row.unit }}</span>
+          {% else %}
+            <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}">{{ row.value }}</textarea>
+          {% endif %}
+
+          <p class="quiet">
+            Default: {{ row.default }}
+            {% if row.changed %}<span class="pill">changed from default</span>{% endif %}
+            {% if row.waiting %}<span class="pill">waiting in the tray</span>{% endif %}
+          </p>
+          <p class="quiet">When changed: {{ row.when_changed }}</p>
+        </dd>
+      {% endfor %}
+    </dl>
+
+    <div class="dialog">
+      <button type="submit">Put changes in the tray</button>
+    </div>
+  </form>
+
+  {% if directory %}
+    <h2 class="small">Directory connection</h2>
+    <p class="quiet">
+      Read-only, from the server's environment file. To change any of it,
+      change the file on the server and restart.
+    </p>
+    <dl class="facts">
+      {% for key, value in directory %}
+        <dt>{{ key }}</dt><dd>{{ value }}</dd>
+      {% endfor %}
+    </dl>
+  {% endif %}
+
+  <h2 class="small">Fixed rules, not settings</h2>
+  <p class="quiet">These are fixed in the app, so nobody looks for them here.</p>
+  <ul class="quiet fixed">
+    {% for rule in fixed_rules %}<li>{{ rule }}</li>{% endfor %}
+  </ul>
+{% endblock %}

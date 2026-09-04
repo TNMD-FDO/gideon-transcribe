@@ -8,7 +8,21 @@ file names a Windows machine has to accept.
 
 from datetime import datetime
 
-from core import exports
+import pytest
+
+from core import exports, settings_store
+
+
+@pytest.fixture(autouse=True)
+def settings_at_their_defaults(monkeypatch):
+    """The notices are admin settings now, and these checks have no database.
+
+    Read at their defaults, which is what an office that has not changed them
+    has, and what the catalogue's wording says they say.
+    """
+    monkeypatch.setattr(
+        settings_store, "get", lambda key: settings_store.definition(key).default
+    )
 
 
 class Fake:

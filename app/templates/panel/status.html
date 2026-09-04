@@ -1,0 +1,28 @@
+{% extends "panel/base.html" %}
+{% load static %}
+{% block title %}Status{% endblock %}
+
+{% block panel %}
+  <h1>Status</h1>
+  <p class="quiet">Everything here is read again every five seconds.</p>
+
+  <h2 class="small">Services</h2>
+  <ul id="services" class="cards"></ul>
+
+  <h2 class="small">WhisperX service</h2>
+  <dl id="service" class="facts"></dl>
+
+  <h2 class="small">Storage</h2>
+  <p id="storage"></p>
+
+  <h2 class="small">Workspaces</h2>
+  <p id="workspaces"></p>
+
+  <h2 class="small">Media</h2>
+  <p id="media"></p>
+
+  <h2 class="small">Versions</h2>
+  <dl id="versions" class="facts"></dl>
+
+  <script src="{% static 'panel-status.js' %}"></script>
+{% endblock %}

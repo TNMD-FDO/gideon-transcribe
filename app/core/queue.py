@@ -17,7 +17,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
-from core import audit, whisperx
+from core import audit, settings_store, whisperx
 from core.jobs import Job, JobState, Reason, Run, Segment, Transcript
 from core.recordings import MediaState, Recording, Side
 
@@ -34,6 +34,15 @@ def make_job(recording: Recording) -> Job:
     for side in recording.sides.all().order_by("number"):
         Run.objects.create(job=job, side=side)
     return job
+
+
+def _office_vocabulary() -> list[str]:
+    """The Admin's list, one term per line, blank lines dropped."""
+    return [
+        line.strip()
+        for line in settings_store.get("office_vocabulary").splitlines()
+        if line.strip()
+    ]
 
 
 def request_for(run: Run) -> dict:
@@ -53,9 +62,12 @@ def request_for(run: Run) -> dict:
     request: dict = {
         "task": task,
         "language": recording.spoken_language or "",
-        "model": recording.model or "large-v3-turbo",
+        "model": recording.model or settings_store.get("model"),
         "diarize": recording.diarize,
-        "vocabulary": list(recording.vocabulary or []),
+        # The office's own list goes ahead of the Batch's, and the service
+        # cuts from the end of a prompt that is too long, so the Batch's own
+        # terms are the ones that survive.
+        "vocabulary": _office_vocabulary() + list(recording.vocabulary or []),
         "context": recording.context or "",
         "return_speaker_embeddings": False,
         # The Run's own id, which is the service's duplicate protection: a
@@ -64,9 +76,12 @@ def request_for(run: Run) -> dict:
     }
 
     if not recording.translate and not recording.spoken_language:
-        # Only meaningful on a detected transcribe, and the admin setting
-        # decides it. Until the panel exists, the specification's default.
-        request["translate_if_mixed"] = True
+        # Only meaningful on a detected transcribe. With the setting off, or
+        # with translation turned off altogether, such a Recording is
+        # transcribed in its winning language and the viewer says so.
+        request["translate_if_mixed"] = settings_store.get(
+            "translate_mixed"
+        ) and settings_store.get("translation_available")
 
     if recording.diarize and not recording.is_two_channel_call:
         if recording.speakers_exactly:
