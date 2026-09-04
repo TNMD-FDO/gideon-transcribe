@@ -19,10 +19,38 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.2.0, 2026-09-04
+
 ```
 Models: unchanged
 Database: migrates
 ```
+
+### Upgrading to this one
+
+The database migrates when the app starts: one table, the engine's status
+row. The models are unchanged. The upgrade creates `secrets/llm_api_token`
+empty if it is not there, so the stack starts exactly as before, with a new
+`llm-worker` container that has nothing to talk to yet. Nothing changes for
+users: the AI assistant toggle stays off and no feature appears.
+
+To connect the office's engine, three steps, in the install folder and then
+the panel:
+
+1. `./transcribe engine`: the Docker network the engine listens on, and its
+   bearer token, typed hidden and twice. Then `docker compose up -d`, so
+   `llm-worker` joins that network.
+2. Panel, Settings, AI assistant: the **Engine address** on that network
+   (`http://<its name>:8000/v1`) and the **Model name** it serves, through
+   the tray as every setting is.
+3. Panel, Status: **Test connection**. Green means the engine lists its
+   models and answered a question with the token. `./transcribe check` proves
+   the same from the server.
+
+Leave the AI assistant toggle off until the next release brings the
+features; turning it on now shows nothing.
 
 ### Added
 
