@@ -91,12 +91,15 @@
   from.addEventListener("input", say);
   to.addEventListener("input", say);
 
-  document.getElementById("clip-clear").addEventListener("click", function () {
+  function clear() {
     from.value = "";
     to.value = "";
     if (window.VIEWER.stopMarking) { window.VIEWER.stopMarking(); }
     say();
-  });
+  }
+  window.CLIPS.clear = clear;
+
+  document.getElementById("clip-clear").addEventListener("click", clear);
 
   var newClip = document.getElementById("new-clip");
   if (newClip) {
@@ -195,6 +198,15 @@
       }
       problem.hidden = true;
       document.getElementById("clip-note").value = "";
+      // The clip is made, so the span it was cut from stops being a pending
+      // selection: the tint comes off the transcript and the timeline, and
+      // the next mark starts from nothing rather than from a stale range.
+      clear();
+      // The title goes back to the app's own next one, so the clip just saved
+      // does not name the next.
+      var title = document.getElementById("clip-title");
+      title.value = "";
+      title.dataset.auto = "yes";
       load();
     });
   });

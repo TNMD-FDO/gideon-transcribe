@@ -349,10 +349,12 @@
   function showRange(from, to) {
     var box = document.getElementById("range");
     var said = document.getElementById("clip-said");
+    var drop = document.getElementById("drop-clip");
     if (!box) { return; }
     if (from === null || from === undefined || !duration) {
       box.hidden = true;
       if (said) { said.textContent = ""; }
+      if (drop) { drop.hidden = true; }
       return;
     }
     box.hidden = false;
@@ -362,6 +364,15 @@
       said.textContent = "Clip " + clock(from) + " to " + clock(to);
       said.style.color = ink("--clip");
     }
+    // The selection is shown here, so the way to be rid of it is here.
+    if (drop) { drop.hidden = false; }
+  }
+
+  var dropClip = document.getElementById("drop-clip");
+  if (dropClip) {
+    dropClip.addEventListener("click", function () {
+      if (window.CLIPS) { window.CLIPS.clear(); }
+    });
   }
   window.VIEWER.showRange = showRange;
 
@@ -1148,6 +1159,7 @@
     if (event.key === "Escape") {
       if (!overlay.hidden) { shortcuts(false); return; }
       if (clipStartsAt !== null) { stopMarking(); return; }
+      if (window.CLIPS && window.CLIPS.range()) { window.CLIPS.clear(); return; }
       if (!sheet.hidden) { hideSheet(); }
       return;
     }
