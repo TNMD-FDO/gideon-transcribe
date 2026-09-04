@@ -19,10 +19,24 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.1.0, 2026-09-04
+
 ```
 Models: unchanged
 Database: migrates
 ```
+
+### Upgrading to this one
+
+The database migrates when the app starts: one column. The models are
+unchanged. The three retention settings arrive at their defaults, 30 days,
+7 days and 30 days, greyed until Folder management is on. With the defaults
+and Folder management on, the first sweep at half past three warns nothing
+for 23 days from a case's last use, bins nothing for 30, and wipes nothing
+for 60. Set the Retention period for your office before then, or leave it:
+lengthening later is free, shortening later deletes that night.
 
 ### Added
 
