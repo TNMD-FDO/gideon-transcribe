@@ -265,6 +265,20 @@ cmd_check() {
     fail "there is no app data folder at $data"
   fi
 
+  for folder in scratch cases uploads; do
+    if [ -d "$data/$folder" ]; then
+      local sub_owner
+      sub_owner="$(stat -c '%U' "$data/$folder")"
+      if [ "$sub_owner" = "$APP_USER" ]; then
+        pass "$folder/ is $sub_owner's"
+      else
+        fail "$data/$folder is $sub_owner's, not $APP_USER's; the app cannot write there. Fix: sudo chown -R $APP_USER:$APP_USER $data/$folder"
+      fi
+    else
+      note "there is no $folder/ yet under $data; it is made when it is first needed"
+    fi
+  done
+
   local tag
   tag="$(git -C "$HERE" describe --exact-match --tags 2>/dev/null || true)"
   if [ -n "$tag" ]; then
@@ -398,6 +412,7 @@ cmd_install() {
   make_the_secrets
   cmd_directory
   ask_the_hugging_face_token
+  make_the_data_folders
 
   echo
   echo "Written. What is left, in order:"
@@ -489,6 +504,31 @@ ask_the_office_facts() {
     set_service_env APP_UID "$(id -u "$APP_USER")"
     set_service_env APP_GID "$(id -g "$APP_USER")"
     green "The app will run as $APP_USER ($(id -u "$APP_USER"):$(id -g "$APP_USER"))."
+  fi
+}
+
+make_the_data_folders() {
+  # Caddy is given scratch/ and cases/ as read-only mounts. Docker creates a
+  # missing mount source as root, and the app would then never be able to
+  # write into it, so both are made here with the right owner before anything
+  # starts. Made and not asked about: the app decides its own layout inside
+  # the folder the office chose.
+  local data
+  data="$(env_value APP_DATA_DIR)"
+  [ -n "$data" ] || return 0
+
+  local made=""
+  for folder in scratch cases uploads; do
+    if [ ! -d "$data/$folder" ]; then
+      sudo mkdir -p "$data/$folder" || return 0
+      made="$made $folder"
+    fi
+    sudo chown "$APP_USER:$APP_USER" "$data/$folder" 2>/dev/null || true
+    sudo chmod 750 "$data/$folder" 2>/dev/null || true
+  done
+
+  if [ -n "$made" ]; then
+    green "Made$made under $data, owned by $APP_USER."
   fi
 }
 
@@ -684,7 +724,11 @@ cmd_upgrade() {
   git -C "$HERE" checkout --quiet "$tag"
   pass "the checkout is at $tag"
 
-  # 6 and 7. The images, then up.
+  # 6 and 7. The images, then up. The folders first: a release can add one
+  # Caddy mounts, and Docker would create a missing mount source as root,
+  # which the app could then never write into.
+  make_the_data_folders
+
   echo
   if [ "$build" = "yes" ]; then
     compose build

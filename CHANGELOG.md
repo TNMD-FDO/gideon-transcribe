@@ -21,10 +21,48 @@ installs or upgrades to.
 
 ```
 Models: unchanged
-Database: unchanged
+Database: migrates
 ```
 
-Nothing yet.
+### Added
+
+- **Cases**, the Phase 2 feature that lets a recording outlive the session
+  that uploaded it. A case is a named page with one owner; a recording moved
+  into one lives under `cases/<case id>/<recording id>/` and the sign-out
+  discard leaves it alone. The Cases page, the case page with a search across
+  its transcripts, New case, Rename, and a Delete that names what it is taking
+  and cannot be undone.
+- **Folder management**, the admin toggle that enables cases, default off, on
+  a new Cases page of the settings rail with **Recording types** beside it.
+  Off hides every case from everyone, Admins included, and deletes nothing;
+  the days it is off are recorded as they pass, because the retention policy
+  will subtract them and cannot work them out afterwards.
+- **Add to case** and **Recording type** on the Upload page, set once per
+  batch with a per-file override, and **Move to case** from the recordings
+  list, from a case page, and from the sign-out dialog. On disk a move is a
+  folder rename, so it is instant whatever the size.
+- The users list reads "3 in session, 41 in cases", and its **Reassign** and
+  **Delete data** actions, greyed since the first release, now act. The status
+  page gains a Cases line and, while the toggle is off, the date it went off.
+- `./transcribe install` and `./transcribe upgrade` now make `scratch/`,
+  `cases/` and `uploads/` under the app data folder with the right owner,
+  because Docker creates a missing mount source as root and the app could
+  then never write into it. `./transcribe check` says so if one is wrong.
+
+### Fixed
+
+- CI had not run a single check since directory sign-in landed: `python-ldap`
+  builds from source and the runner had none of the headers it needs, so the
+  install step failed and the lint, the tests, the compose validation and the
+  secret scan were all skipped. Four commits went in on a red build.
+- Twenty tests had been failing on a missing static files manifest, which hid
+  two more: signing out with a GET has shown the confirmation dialog rather
+  than signing anybody out since the dialog was built, and nothing noticed.
+- The check that proves Caddy asks the app before it serves a byte was not
+  looking inside nested routes at all.
+
+Three tabs of the four a case page is meant to have are absent on purpose:
+Speakers, Clips, and Chat belong to chapters not yet built.
 
 ## v0.1.0, 2026-09-03
 
