@@ -42,6 +42,33 @@ def status(request: HttpRequest) -> HttpResponse:
 
 
 @admins_only
+@require_POST
+def test_engine(request: HttpRequest) -> JsonResponse:
+    """Test connection: list the engine's models, then one tiny completion.
+
+    Handed to llm-worker, because only it can reach the engine. The result
+    lands on the status row a few seconds later and the page shows it on its
+    next poll. Testing writes an audit row, because an Admin reaching out to
+    an engine is an act, and its outcome is worth knowing later.
+    """
+    from core import tasks
+
+    tasks.test_the_engine.defer()
+    audit.write(
+        audit.Category.ADMIN,
+        "engine tested",
+        actor=request.user,
+        request=request,
+        object_type="setting",
+        object_id="engine_address",
+        object_label=str(settings_store.get("engine_address") or ""),
+    )
+    return JsonResponse(
+        {"ok": True, "says": "Testing. The answer appears here in a moment."}
+    )
+
+
+@admins_only
 def admin_guide(request: HttpRequest) -> HttpResponse:
     """The admin guide, inside the panel, rendered from docs/admin-guide.md.
 
@@ -62,10 +89,16 @@ def status_lines(request: HttpRequest) -> JsonResponse:
     free = uploads.free_disk_bytes()
     floor = settings_store.minimum_free_disk_bytes()
 
+    from core import engine
+
     return JsonResponse(
         {
             "services": _services(),
             "service": _whisperx(),
+            # The AI assistant's line: what llm-worker's last check found,
+            # and the last Test connection. Read from the status row; this
+            # container is not on the engine's network and never asks it.
+            "assistant": engine.status_for_the_panel(),
             "storage": {
                 "free": uploads.as_gb(free),
                 "colour": "red"

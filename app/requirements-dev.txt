@@ -22,3 +22,6 @@ python-ldap==3.4.7
 # test_environment.py fails if the two lists disagree.
 Markdown==3.10.3
 
+# The AI assistant's client. Same pin as the image's.
+openai==3.8.0
+

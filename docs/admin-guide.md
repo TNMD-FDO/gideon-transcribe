@@ -115,6 +115,21 @@ Once Folder management is on, the app deletes cases by itself, on one rule for t
 
 **No exceptions.** Nothing in the app can exempt a case from the clock, and no owner or Admin can set a longer period for one case. The way to keep a case is to use it, or press Keep.
 
+## The AI assistant's engine
+
+The AI assistant, Summary, Chat and Speaker suggestions, talks to a language-model engine through the engine's own API. The app never runs a model itself. Which engine is yours to say, on the panel's **AI assistant** settings page:
+
+- **Engine address**: the engine's base URL, for example `http://gideon-generator:8000/v1`. The defaults are the Local engine's.
+- **Model name**: the served name the engine expects, exactly as it lists it.
+- **Model display name**: optional; what the AI notice prints instead of the served name.
+- **Token**: shown as set or missing and never editable here. It lives in a file on the server, `secrets/llm_api_token`, written by `./transcribe engine`.
+
+**Two kinds of engine.** An office that already runs a vLLM, on this server or elsewhere on the LAN, uses it as a **shared engine**: `./transcribe engine` asks for the Docker network it listens on and its token, and the app's `llm-worker` joins that network. Nothing else in the app touches a network outside its own. An office with no engine can start the **Local engine** shipped with the app (`COMPOSE_PROFILES=llm` in `.env`, with a card named by UUID) or leave the assistant off; everything else works without it.
+
+**Test connection**, on the Status page, lists the engine's models with the token and asks it one tiny question. It runs on the worker that can reach the engine, so the answer appears a few seconds later on the same page. Turn the **AI assistant** toggle on only once it succeeds. The Status page's AI assistant line stays live afterwards: green with the model and the time of the last check, or red with "unreachable since". The check runs once a minute, and while it fails the Summary, Chat and Suggest names buttons are disabled everywhere and any call already queued fails at once.
+
+**When it fails**, the app says one of six things and records which: not available (the engine cannot be reached), took too long, refused the connection (the token is wrong or missing: "Ask IT" means you), too long a transcript, an answer the app could not read, or a problem. It never records what was asked or answered.
+
 ## The Installation page
 
 What this server is, read from its environment and shown so that an Admin can check an installation without opening a terminal: the address and port, the bind address, the client networks allowed in, the time zone, the app data folder, the WhisperX service's address and the card it reserved, the engine network and profile, and the media worker's thread and job limits.

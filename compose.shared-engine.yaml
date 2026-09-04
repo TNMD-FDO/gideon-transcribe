@@ -1,0 +1,28 @@
+# The Shared engine: an office that already runs a language-model engine
+# outside this app points the AI assistant at it instead of starting one.
+#
+# This file does one thing. It joins `llm-worker` to that engine's Docker
+# network as an external network, so the worker can reach the engine by its
+# name on that network. Nothing else in the stack touches a network outside
+# the project (ADR 0003): the web app, the other workers, and Caddy stay
+# where they are.
+#
+# It is read only when .env says so:
+#
+#     COMPOSE_FILE=compose.yaml:compose.shared-engine.yaml
+#     LLM_NETWORK=<the engine's network>
+#
+# and ./transcribe engine writes both lines. The engine's address and served
+# model name are Admin panel settings; its bearer token is copied into
+# secrets/llm_api_token. Switching engines is a panel change plus a copied
+# token, never a change to this file.
+
+services:
+  llm-worker:
+    networks:
+      - engine
+
+networks:
+  engine:
+    external: true
+    name: "${LLM_NETWORK:?set LLM_NETWORK in .env to the Shared engine's network}"

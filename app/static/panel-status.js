@@ -119,6 +119,33 @@
       directory.className = told.on && !told.reachable ? "notice danger" : "";
     }
 
+    // The AI assistant's line: what llm-worker's last check found. Green with
+    // the model, red with "unreachable since", or plain while no engine is
+    // configured. Under it, the last Test connection, if one has been run.
+    // Names here are the assistant's own: `told` is already the directory
+    // line's variable in this function, and `var` is function-scoped.
+    var assistant = document.getElementById("assistant");
+    if (assistant && state.assistant) {
+      var engineTold = state.assistant;
+      assistant.textContent = "AI assistant: " + engineTold.says;
+      assistant.className = engineTold.state === "unreachable" ? "notice danger"
+        : engineTold.state === "reachable" ? "notice" : "muted";
+      var testLine = document.getElementById("assistant-test");
+      var lastTest = engineTold.test || {};
+      if (!lastTest.at) {
+        testLine.textContent = "";
+      } else if (lastTest.ok) {
+        testLine.textContent = "Test connection at " + lastTest.at.slice(11, 16) +
+          ": the engine lists " + (lastTest.models || []).join(", ") +
+          " and answered “" + (lastTest.answered || "") + "” in " + lastTest.seconds +
+          " s." + (lastTest.warning ? " " + lastTest.warning : "");
+      } else {
+        testLine.textContent = "Test connection at " + lastTest.at.slice(11, 16) +
+          " failed: " + (lastTest.says || lastTest.reason || "") +
+          (lastTest.models ? " (the engine lists " + lastTest.models.join(", ") + ")" : "");
+      }
+    }
+
     facts("versions", [
       ["Release", state.versions.release],
       ["Database migration", state.versions.migration],
@@ -157,6 +184,24 @@
       .catch(function () { said.textContent = "The check could not be run."; })
       .then(function () { check.disabled = false; });
   });
+
+  // Test connection is handed to llm-worker, the one container on the
+  // engine's network; the answer lands on the status row and the next poll
+  // shows it, so this only starts it and says so.
+  var testEngine = document.getElementById("test-engine");
+  if (testEngine) {
+    testEngine.addEventListener("click", function () {
+      testEngine.disabled = true;
+      var saying = document.getElementById("assistant-test");
+      saying.textContent = "Testing. The answer appears here in a moment.";
+      fetch("/panel/assistant/test", {
+        method: "POST",
+        headers: { "X-CSRFToken": cookie("csrftoken") }
+      })
+        .catch(function () { saying.textContent = "The test could not be started."; })
+        .then(function () { window.setTimeout(function () { testEngine.disabled = false; }, 8000); });
+    });
+  }
 
   ask();
 })();

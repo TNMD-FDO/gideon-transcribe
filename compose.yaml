@@ -179,6 +179,9 @@ services:
       - whisperx_consumer_token
       - ldap_bind_password
       - ldap_ca_root
+      # Read here only to say "set" or "missing" on the panel. The web
+      # container never talks to the engine; llm-worker does.
+      - llm_api_token
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
     expose:
@@ -322,7 +325,130 @@ services:
     logging:
       driver: journald
 
+  llm-worker:
+    # The AI assistant: Summary, Chat, and Speaker suggestions, and the once a
+    # minute check of the engine. Its own queue so that a call to the engine
+    # never delays the three-second poll on `worker`. It is the only container
+    # that may touch a network outside this project: compose.shared-engine.yaml
+    # adds the Shared engine's network to it and to nothing else.
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    command: ["llm-worker"]
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment: *app-environment
+    secrets:
+      - postgres_password
+      - django_secret_key
+      - whisperx_consumer_token
+      - ldap_bind_password
+      - ldap_ca_root
+      - llm_api_token
+    volumes:
+      - "${APP_DATA_DIR}:/srv/data"
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "procrastinate", "healthchecks"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
+  vllm:
+    # The Local engine, for an office with no Shared engine of its own. Off by
+    # default: it starts only with `COMPOSE_PROFILES=llm` in .env. vLLM serving
+    # the model .env names under the served name `local-engine`, which is what
+    # the panel's Engine address and Model name default to.
+    #
+    # It shares the WhisperX service's card, so its memory fraction is the
+    # ceiling that keeps the two apart; the service's README says how much
+    # the service needs. VLLM_USE_DEEP_GEMM=0 is mandatory for FP8 on the
+    # current GPU generation. The window is 131,072 tokens, enough for the
+    # longest Recording with room to spare, and half the Shared engine's.
+    profiles: ["llm"]
+    image: vllm/vllm-openai:v0.27.1@sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967
+    restart: unless-stopped
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    # The bearer token is read from the secret file into the variable vLLM
+    # takes it from, and the engine refuses to start without one: an engine
+    # that answered anybody on the project network would be an engine that
+    # answered any container that ever joined it.
+    entrypoint:
+      - "sh"
+      - "-c"
+      - >-
+        set -eu;
+        if [ ! -s /run/secrets/llm_api_token ]; then
+          echo "the engine token file is empty: ./transcribe engine writes it" >&2; exit 1;
+        fi;
+        VLLM_API_KEY=$(cat /run/secrets/llm_api_token); export VLLM_API_KEY;
+        exec vllm serve "$@"
+      - "local-engine"
+    command:
+      - "${LLM_LOCAL_MODEL:-Qwen/Qwen3.8-27B-FP8}"
+      - "--served-model-name"
+      - "local-engine"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--max-model-len"
+      - "131072"
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--gpu-memory-utilization"
+      - "${LLM_LOCAL_GPU_FRACTION:-0.55}"
+    environment:
+      VLLM_USE_DEEP_GEMM: "0"
+      VLLM_NO_USAGE_STATS: "1"
+      DO_NOT_TRACK: "1"
+      HF_HOME: /models
+      TZ: "${TZ:-UTC}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: cdi
+              capabilities: ["gpu"]
+              device_ids:
+                - "nvidia.com/gpu=${LLM_LOCAL_GPU_UUID:-unset}"
+    volumes:
+      # The model weights, fetched once into the App data folder. Re-pullable,
+      # so never backed up.
+      - "${APP_DATA_DIR}/models/vllm:/models"
+    secrets:
+      - llm_api_token
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      # Loading a 27B model takes minutes, and the first start also fetches it.
+      start_period: 900s
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
 secrets:
+  # The engine's bearer token: a copy of the Shared engine's, or the one the
+  # Local engine serves with. The file always exists, empty when there is no
+  # engine, because a secret whose file is missing stops the whole stack;
+  # ./transcribe install and upgrade both make sure of it.
+  llm_api_token:
+    file: "${LLM_API_TOKEN_FILE:-./secrets/llm_api_token}"
   postgres_password:
     file: "${POSTGRES_PASSWORD_FILE:-./secrets/postgres_password}"
   django_secret_key:

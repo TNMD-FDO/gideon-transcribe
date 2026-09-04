@@ -268,6 +268,7 @@ class SignInAttempt(models.Model):
 from core.audit import Row  # noqa: E402, F401
 from core.cases import Case, OffSpell  # noqa: E402, F401
 from core.clips import Clip  # noqa: E402, F401
+from core.engine import EngineStatus  # noqa: E402, F401
 from core.jobs import Job, Run, Segment, Transcript  # noqa: E402, F401
 from core.recordings import Batch, Recording, Side  # noqa: E402, F401
 from core.settings_store import Setting  # noqa: E402, F401

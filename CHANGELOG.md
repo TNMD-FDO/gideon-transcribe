@@ -19,7 +19,36 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+```
+Models: unchanged
+Database: migrates
+```
+
+### Added
+
+- **The AI assistant's engine, wired up.** The first half of the AI assistant
+  chapter: the plumbing that lets an office point the app at a language-model
+  engine and prove the connection, before any feature uses it. A fourth
+  worker, `llm-worker`, on its own queue, the only container that may join a
+  network outside the project; `./transcribe engine`, which asks for a shared
+  engine's Docker network and token, writes the token file, and turns the
+  shared-engine compose file on; `compose.shared-engine.yaml`, which joins
+  `llm-worker` to that network and nothing else; the optional Local engine as
+  Compose profile `llm`, pinned by digest, off by default; a once a minute
+  check of the engine from `llm-worker`, whose result the Status page shows
+  as an AI assistant line, green with the model or red with "unreachable
+  since"; **Test connection** on the Status page, which lists the engine's
+  models with the token and asks it one tiny question; the token shown as
+  set or missing on the AI assistant settings page; and the six reason
+  classes the chapter fixes. Summary, Chat and Speaker suggestions follow in
+  the next release.
+
+### Changed
+
+- **Every install and upgrade makes sure `secrets/llm_api_token` exists**,
+  empty when there is no engine, because a secret whose file is missing stops
+  the whole stack. An install from before the AI assistant existed comes up
+  as before.
 
 ## v1.1.0, 2026-09-04
 

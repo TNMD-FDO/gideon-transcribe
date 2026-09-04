@@ -14,6 +14,10 @@ whitenoise==6.12.0
 # Pure Python, no compiled part.
 Markdown==3.10.3
 
+# The AI assistant talks to its engine through the engine's OpenAI-compatible
+# API, chat completions only, with this client and nothing else.
+openai==3.8.0
+
 # The Word export. lxml is python-docx's own dependency, pinned here so
 # that the image builds the same way every time.
 lxml==6.1.3

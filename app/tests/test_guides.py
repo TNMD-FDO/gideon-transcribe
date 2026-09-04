@@ -165,7 +165,8 @@ def test_the_command_fails_the_build_when_a_guide_is_missing(tmp_path, settings)
 def test_the_build_context_is_the_repository_root():
     compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
     assert "context: ./app" not in compose
-    assert compose.count("dockerfile: app/Dockerfile") == 3
+    # One image, four services: app, media-worker, worker, llm-worker.
+    assert compose.count("dockerfile: app/Dockerfile") == 4
 
     dockerfile = (HERE / "app" / "Dockerfile").read_text(encoding="utf-8")
     assert "COPY app/ /opt/app/" in dockerfile
