@@ -693,7 +693,9 @@ def audit_log(request: HttpRequest) -> HttpResponse:
             **furniture(request, "panel-audit"),
             "rows": rows[start : start + A_PAGE],
             "found": found,
-            "page": page,
+            # Not "page": the nav uses that word for which page of the app
+            # this is.
+            "page_number": page,
             "pages": max(1, (found + A_PAGE - 1) // A_PAGE),
             "asked": asked,
             "carried": query.urlencode(),

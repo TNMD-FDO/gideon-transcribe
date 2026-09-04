@@ -2,45 +2,45 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="panel">
+  <div class="panel-shell">
     <nav class="rail">
       {% for group, pages in rail %}
-        <h2 class="small">{{ group }}</h2>
-        <ul>
-          {% for one in pages %}
-            <li{% if one.here %} class="here"{% endif %}>
-              <a href="{{ one.url }}">{{ one.name }}</a>
-              {% if one.waiting %}<span class="waiting">{{ one.waiting }}</span>{% endif %}
-            </li>
-          {% endfor %}
-        </ul>
+        <div class="grp">{{ group }}</div>
+        {% for one in pages %}
+          <a href="{{ one.url }}"{% if one.here %} class="on"{% endif %}>
+            {{ one.name }}
+            {% if one.waiting %}<span class="cnt">{{ one.waiting }}</span>{% endif %}
+          </a>
+        {% endfor %}
       {% endfor %}
-      <p class="quiet"><a href="{% url 'home' %}">Back to your recordings</a></p>
+      <div class="grp">Help</div>
+      <a href="{% url 'home' %}">Back to your recordings</a>
     </nav>
 
     <section class="panel-page">
       {% block panel %}{% endblock %}
+
+      {% if tray %}
+        <form method="post" action="{% url 'panel-apply' %}" class="savebar">
+          {% csrf_token %}
+          <input type="hidden" name="back" value="{{ request.path }}">
+          <div class="grow">
+            <b>{{ tray|length }} change{{ tray|length|pluralize }} waiting</b>
+            <ul>
+              {% for row in tray %}
+                <li>{{ row.name }}: {{ row.was }} &rarr; <b>{{ row.now }}</b></li>
+              {% endfor %}
+            </ul>
+          </div>
+          <label class="field" style="min-width: 16rem">
+            <span>Note for the audit log (optional)</span>
+            <input type="text" name="note" value="{{ tray_note }}"
+                   placeholder="A ticket number, or why">
+          </label>
+          <button type="submit" class="primary">Apply</button>
+          <button type="submit" class="ghost" formaction="{% url 'panel-cancel' %}">Cancel all</button>
+        </form>
+      {% endif %}
     </section>
   </div>
-
-  {% if tray %}
-    <form method="post" action="{% url 'panel-apply' %}" class="tray">
-      {% csrf_token %}
-      <input type="hidden" name="back" value="{{ request.path }}">
-      <h2 class="small">Waiting to be applied</h2>
-      <ul>
-        {% for row in tray %}
-          <li><strong>{{ row.name }}</strong>: {{ row.was }} &rarr; {{ row.now }}</li>
-        {% endfor %}
-      </ul>
-      <label class="quiet">Note for the audit log (optional)
-        <input type="text" name="note" value="{{ tray_note }}"
-               placeholder="A ticket number, or why">
-      </label>
-      <div class="dialog">
-        <button type="submit">Apply</button>
-        <button type="submit" formaction="{% url 'panel-cancel' %}" class="plain">Cancel all</button>
-      </div>
-    </form>
-  {% endif %}
 {% endblock %}

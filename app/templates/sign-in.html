@@ -1,22 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
+{% block main_class %}wide{% endblock %}
+
 {% block content %}
-  <h1>Sign in</h1>
+  <div class="gate">
+    <form method="post" action="{% url 'sign-in' %}" autocomplete="off" class="card">
+      {% csrf_token %}
+      <h1>Gideon Transcribe</h1>
+      <p class="muted small" style="text-align: center">
+        Transcription, translation, and speaker separation, on this office's
+        own server.
+      </p>
 
-  <form method="post" action="{% url 'sign-in' %}" autocomplete="off">
-    {% csrf_token %}
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{ username }}"
+             autocapitalize="none" autocorrect="off" autofocus required>
 
-    <label for="username">Username</label>
-    <input type="text" id="username" name="username" value="{{ username }}"
-           autocapitalize="none" autocorrect="off" autofocus required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
 
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" required>
+      {% if problem %}<p class="problem">{{ problem }}</p>{% endif %}
 
-    {% if problem %}<p class="problem">{{ problem }}</p>{% endif %}
+      <button type="submit" class="primary">Sign in</button>
 
-    <button type="submit">Sign in</button>
-  </form>
-
-  {% if notice %}<p class="quiet notice">{{ notice }}</p>{% endif %}
+      {% if notice %}<p class="muted small" style="margin-top: 14px">{{ notice }}</p>{% endif %}
+    </form>
+  </div>
 {% endblock %}

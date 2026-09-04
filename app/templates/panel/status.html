@@ -4,39 +4,57 @@
 
 {% block panel %}
   <h1>Status</h1>
-  <p class="quiet">Everything here is read again every five seconds.</p>
+  <p class="lead">Everything here is read again every five seconds.</p>
 
-  <h2 class="small">Services</h2>
-  <ul id="services" class="cards"></ul>
+  <div class="grid2">
+    <div class="card">
+      <h2>Services</h2>
+      <p class="muted small">
+        Each one asked directly. The app is never given the Docker socket,
+        which is root on this server (ADR 0009).
+      </p>
+      <div id="services"></div>
+    </div>
 
-  <h2 class="small">WhisperX service</h2>
-  <dl id="service" class="facts"></dl>
+    <div class="card">
+      <h2>WhisperX service</h2>
+      <dl id="service" class="kv"></dl>
+    </div>
 
-  <h2 class="small">Storage</h2>
-  <p id="storage"></p>
+    <div class="card">
+      <h2>Storage and workspaces</h2>
+      <p id="storage"></p>
+      <p id="workspaces" class="muted small"></p>
+      <p id="media" class="muted small"></p>
+    </div>
 
-  <h2 class="small">Workspaces</h2>
-  <p id="workspaces"></p>
+    <div class="card">
+      <h2>Directory</h2>
+      <p id="directory"></p>
+      <div class="dialog">
+        <button type="button" class="primary" id="test-directory">Test directory connection</button>
+        <button type="button" id="check-directory">Check directory now</button>
+      </div>
+      <div id="directory-said"></div>
+    </div>
 
-  <h2 class="small">Media</h2>
-  <p id="media"></p>
+    <div class="card">
+      <h2>Audit log</h2>
+      <p class="muted small">
+        Every row is hashed onto the one before it. The check walks the whole
+        chain and writes its own result as a row.
+      </p>
+      <div class="dialog">
+        <button type="button" class="primary" id="integrity">Integrity check</button>
+      </div>
+      <p id="integrity-said" class="muted small"></p>
+    </div>
 
-  <h2 class="small">Directory</h2>
-  <p id="directory"></p>
-  <p class="dialog">
-    <button type="button" id="test-directory">Test directory connection</button>
-    <button type="button" id="check-directory" class="plain">Check directory now</button>
-  </p>
-  <div id="directory-said"></div>
-
-  <h2 class="small">Audit log</h2>
-  <p class="dialog">
-    <button type="button" id="integrity">Integrity check</button>
-    <span id="integrity-said" class="quiet"></span>
-  </p>
-
-  <h2 class="small">Versions</h2>
-  <dl id="versions" class="facts"></dl>
+    <div class="card">
+      <h2>Versions</h2>
+      <dl id="versions" class="kv"></dl>
+    </div>
+  </div>
 
   <script src="{% static 'panel-status.js' %}"></script>
   <script src="{% static 'panel-directory.js' %}"></script>

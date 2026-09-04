@@ -22,19 +22,19 @@ from core.recordings import Recording
 
 log = logging.getLogger("transcribe.viewer")
 
-# One colour per Speaker, used for the name, the colour bar beside the row, and
-# the Timeline lane, so that the same person is the same colour everywhere.
-# Chosen to stay apart on both themes and to survive the commonest colour
-# blindness, which red and green together do not.
+# One colour per Speaker, used for the name, the bar beside the row, and the
+# Timeline lane, so that the same person is the same colour everywhere. They
+# are the stylesheet's own tokens rather than fixed colours, because each one
+# has a light and a dark value and a person may be reading in either.
 SPEAKER_COLOURS = [
-    "#2f6fb0",
-    "#b06a2f",
-    "#4a8a5c",
-    "#8a4a7c",
-    "#6a6a2f",
-    "#2f8a8a",
-    "#9a4a4a",
-    "#5a5a9a",
+    "var(--sp1)",
+    "var(--sp2)",
+    "var(--sp3)",
+    "var(--sp4)",
+    "var(--sp5)",
+    "var(--sp6)",
+    "var(--sp7)",
+    "var(--sp8)",
 ]
 
 

@@ -3,92 +3,108 @@
 
 {% block panel %}
   <h1>Users</h1>
-  <p class="quiet">
-    Every action here applies at once. Ending somebody's sessions removes
-    their recordings within the minute unless work is still running, which is
-    the way to free their space.
+  <p class="lead">
+    Every action here applies at once, outside the tray. Ending somebody's
+    sessions removes their recordings within the minute unless work is still
+    running, which is the way to free their space.
   </p>
 
-  <table class="rows">
-    <thead>
-      <tr>
-        <th>Username</th><th>Display name</th><th>Address</th>
-        <th>Role</th><th>Admin source</th><th>Status</th>
-        <th>Workspace</th><th>Recordings</th><th>Quota</th><th>Last sign-in</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in rows %}
+  <div class="card">
+    <table class="tbl">
+      <thead>
         <tr>
-          <td>{{ row.user.username }}</td>
-          <td>{{ row.user.display_name }}</td>
-          <td>{{ row.user.directory_address }}</td>
-          <td>{% if row.user.is_admin %}Admin{% else %}User{% endif %}</td>
-          <td>{{ row.admin_source }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.condition }}</td>
-          <td>{{ row.recordings }}, {{ row.gigabytes }} GB</td>
-          <td>{{ row.quota }}</td>
-          <td>{{ row.user.last_sign_in|default:"never" }}</td>
+          <th>Username</th><th>Display name</th><th>Directory address</th>
+          <th>Role</th><th>Admin source</th><th>Status</th>
+          <th>Workspace</th><th>Recordings</th><th>Quota</th><th>Last sign-in</th>
         </tr>
-        <tr class="actions">
-          <td colspan="10">
-            <form method="post" action="{% url 'panel-user' row.user.username %}" class="dialog">
-              {% csrf_token %}
-              <a href="{% url 'panel-workspace' row.user.username %}"><button type="button" class="plain">Open their Workspace</button></a>
-              <a href="{% url 'panel-audit' %}?actor={{ row.user.username }}"><button type="button" class="plain">Activity</button></a>
-              <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}"><button type="button" class="plain">Access to their material</button></a>
-
-              <button type="submit" name="action" value="end-sessions" class="plain"
-                      onclick="return confirm('This signs {{ row.user.username }} out and removes {{ row.counts.recordings }} recordings and their transcripts.')">End sessions</button>
-
-              {% if row.user.status == "blocked" %}
-                <button type="submit" name="action" value="unblock" class="plain">Unblock</button>
-              {% else %}
-                <button type="submit" name="action" value="block" class="plain"
-                        onclick="return confirm('Block {{ row.user.username }}? Only an Admin can lift it.')">Block</button>
-              {% endif %}
-
-              <button type="submit" name="action" value="admin-flag" class="plain"
-                      {% if row.admin_source == "Admin group" or row.admin_source == "Local" %}disabled{% endif %}>
-                {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
-              </button>
-
-              <label class="quiet">Quota
-                <input type="number" name="quota_gb" min="1" max="5000" style="width: 6rem"
-                       value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="default">
-              </label>
-              <button type="submit" name="action" value="quota" class="plain">Set quota</button>
-            </form>
-
-            {% if row.user.is_local %}
-              <form method="post" action="{% url 'panel-local-admin' row.user.username %}" class="dialog">
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><b>{{ row.user.username }}</b></td>
+            <td>{{ row.user.display_name }}</td>
+            <td class="muted">{{ row.user.directory_address }}</td>
+            <td>{% if row.user.is_admin %}<span class="pill">Admin</span>{% else %}User{% endif %}</td>
+            <td class="muted">{{ row.admin_source }}</td>
+            <td>
+              {% if row.status == "Blocked" %}<span class="pill danger">Blocked</span>
+              {% elif row.status == "Deactivated" %}<span class="pill warn">Deactivated</span>
+              {% else %}<span class="pill ok">Active</span>{% endif %}
+            </td>
+            <td>{{ row.condition }}</td>
+            <td>{{ row.recordings }}, {{ row.gigabytes }} GB</td>
+            <td class="muted">{{ row.quota }}</td>
+            <td class="muted">{{ row.user.last_sign_in|default:"never" }}</td>
+          </tr>
+          <tr>
+            <td colspan="10" style="padding-bottom: 14px">
+              <form method="post" action="{% url 'panel-user' row.user.username %}" class="row">
                 {% csrf_token %}
-                <label class="quiet">New password
-                  <input type="password" name="password" autocomplete="new-password">
-                </label>
-                <button type="submit" name="action" value="password" class="plain">Change password</button>
-                <button type="submit" name="action" value="delete" class="plain"
-                        onclick="return confirm('Delete the local admin {{ row.user.username }}?')">Delete</button>
-              </form>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+                <a href="{% url 'panel-workspace' row.user.username %}">
+                  <button type="button" class="small">Open their Workspace</button>
+                </a>
+                <a href="{% url 'panel-audit' %}?actor={{ row.user.username }}">
+                  <button type="button" class="small">Activity</button>
+                </a>
+                <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}">
+                  <button type="button" class="small">Access to their material</button>
+                </a>
 
-  <h2 class="small">Create Local admin</h2>
-  <p class="quiet">
-    An account kept inside the app, for signing in when the directory cannot
-    be reached. Every local account is an Admin, and the last one cannot be
+                <button type="submit" name="action" value="end-sessions" class="small"
+                        onclick="return confirm('This signs {{ row.user.username }} out and removes {{ row.counts.recordings }} recordings and their transcripts.')">End sessions</button>
+
+                {% if row.status == "Blocked" %}
+                  <button type="submit" name="action" value="unblock" class="small">Unblock</button>
+                {% else %}
+                  <button type="submit" name="action" value="block" class="small ghost danger"
+                          onclick="return confirm('Block {{ row.user.username }}? Only an Admin can lift it.')">Block</button>
+                {% endif %}
+
+                <button type="submit" name="action" value="admin-flag" class="small"
+                        {% if row.admin_source == "Admin group" or row.admin_source == "Local" %}disabled title="Held through the directory group, so it cannot be changed here"{% endif %}>
+                  {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
+                </button>
+
+                <span class="row small">
+                  <label class="muted">Quota</label>
+                  <input type="number" name="quota_gb" min="1" max="5000" style="width: 6rem"
+                         value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="default">
+                  <button type="submit" name="action" value="quota" class="small">Set</button>
+                </span>
+              </form>
+
+              {% if row.user.is_local %}
+                <form method="post" action="{% url 'panel-local-admin' row.user.username %}"
+                      class="row small" style="margin-top: 6px">
+                  {% csrf_token %}
+                  <label class="muted">New password</label>
+                  <input type="password" name="password" autocomplete="new-password">
+                  <button type="submit" name="action" value="password" class="small">Change password</button>
+                  <button type="submit" name="action" value="delete" class="small ghost danger"
+                          onclick="return confirm('Delete the local admin {{ row.user.username }}?')">Delete</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 style="margin-top: 24px">Create Local admin</h2>
+  <p class="muted small">
+    An account kept inside the app, for signing in when the directory cannot be
+    reached. Every local account is an Admin, and the last one cannot be
     deleted.
   </p>
-  <form method="post" action="{% url 'panel-create-local-admin' %}" class="dialog">
+  <form method="post" action="{% url 'panel-create-local-admin' %}" class="card row">
     {% csrf_token %}
-    <label class="quiet">Username <input type="text" name="username" autocomplete="off"></label>
-    <label class="quiet">Display name <input type="text" name="display_name" autocomplete="off"></label>
-    <label class="quiet">Password <input type="password" name="password" autocomplete="new-password"></label>
-    <button type="submit">Create</button>
+    <span class="field"><label>Username</label>
+      <input type="text" name="username" autocomplete="off"></span>
+    <span class="field"><label>Display name</label>
+      <input type="text" name="display_name" autocomplete="off"></span>
+    <span class="field"><label>Password</label>
+      <input type="password" name="password" autocomplete="new-password"></span>
+    <button type="submit" class="primary">Create</button>
   </form>
 {% endblock %}

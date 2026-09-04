@@ -57,7 +57,6 @@
 
     state.recordings.forEach(function (one) {
       var card = document.createElement("li");
-      card.className = "card";
 
       var about = [];
       if (one.minutes) { about.push(one.minutes + " minutes"); }
@@ -66,10 +65,10 @@
       }
 
       card.innerHTML =
-        "<strong>" + escape(one.title) + "</strong>" +
-        "<p class='quiet'>" + about.join(" · ") + "</p>" +
-        "<p>" + line(one) + "</p>" +
-        (one.playback_ready ? "" : "<p class='quiet'>Preparing audio</p>");
+        "<div class='row'><b class='grow'>" + escape(one.title) + "</b>" +
+        "<span>" + line(one) + "</span></div>" +
+        "<p class='muted small' style='margin:4px 0 0'>" + about.join(" &middot; ") +
+        (one.playback_ready ? "" : " &middot; preparing audio") + "</p>";
       rows.appendChild(card);
 
       if (one.state === "rejected") { tally.refused += 1; }

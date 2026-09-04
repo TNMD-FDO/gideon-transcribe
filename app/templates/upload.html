@@ -1,122 +1,151 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Upload recordings{% endblock %}
+{% block main_class %}wide{% endblock %}
+
 {% block content %}
-  <p class="notice">{{ standing_line }}</p>
+  <div style="max-width: 52rem">
+    <h1>Upload recordings</h1>
+    <p class="notice">{{ standing_line }}</p>
 
-  <h1>Upload recordings</h1>
-
-  {% if disk_is_low %}
-    <p class="problem">Uploading is paused because the server is low on space. Ask IT.</p>
-  {% elif not service_is_up %}
-    <p class="problem">Transcription is not available right now. Try again later.</p>
-  {% else %}
-
-  {% if storage_warning %}<p class="notice">{{ storage_warning }}</p>{% endif %}
-
-  <ol class="steps">
-    <li id="step-1" class="here">
-      <h2>1. Choose files</h2>
-
-      <div id="drop" class="drop">
-        <p>Drop recordings here, or <label class="link" for="picker">choose files</label>.</p>
-        <input type="file" id="picker" multiple hidden>
-        <p class="quiet">
-          Files that usually work: mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv,
-          avi, flac, amr, 3gp. No zip files.
-        </p>
-        <p class="quiet">
-          Up to {{ limits.files_per_batch }} files in a batch,
-          {{ limits.largest_file }} and {{ limits.longest_hours }} hours each.
-        </p>
-      </div>
-
-      <ul id="chosen" class="cards"></ul>
-      <button type="button" id="to-settings" disabled>Next</button>
-    </li>
-
-    <li id="step-2" hidden>
-      <h2>2. Settings</h2>
-      <p class="quiet">These apply to every file in the batch.</p>
-
-      <label class="tick">
-        <input type="checkbox" id="diarize"> Diarize
-      </label>
-      <p class="quiet">
-        Labels who is talking. Automatic speaker separation is sometimes wrong:
-        one person can be split into two speakers, or two merged into one. Check
-        the names against the audio.
+    {% if disk_is_low %}
+      <p class="notice danger">
+        Uploading is paused because the server is low on space. Ask IT.
       </p>
-
-      <div id="hint-wrap" class="indent">
-        <label for="hint">Speakers</label>
-        <select id="hint">
-          <option value="">Let the app decide</option>
-          <option value="exactly">Exactly</option>
-          <option value="between">Between</option>
-        </select>
-        <input type="number" id="hint-a" min="1" max="20" value="2" hidden>
-        <input type="number" id="hint-b" min="1" max="20" value="4" hidden>
-      </div>
-
-      <label class="tick">
-        <input type="checkbox" id="translate"> Translate to English
-      </label>
-      <p class="quiet">
-        A recording holding more than one language is translated to English
-        whether or not this is ticked. Translation loses word timing.
+    {% elif not service_is_up %}
+      <p class="notice danger">
+        Transcription is not available right now. Try again later.
       </p>
+    {% else %}
 
-      <details id="more">
-        <summary>More options</summary>
+    {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
-        <label for="language">Spoken language</label>
-        <select id="language">
-          <option value="">Automatic</option>
-          <option value="en">English</option>
-          <option value="es">Spanish</option>
-        </select>
-        <p class="quiet">Choosing a language switches detection off for these recordings.</p>
+    <ol class="steps">
+      <li id="step-1" class="card here">
+        <h2>1. Choose files</h2>
 
-        <label for="vocabulary">Vocabulary</label>
-        <textarea id="vocabulary" rows="4" placeholder="One name or term per line"></textarea>
-        <p class="quiet">
-          Office names are added automatically. The engine's prompt is short, so
-          a long list is cut from the end.
+        <div id="drop" class="drop">
+          <p><b>Drop recordings here</b>, or <label class="link" for="picker">choose files</label>.</p>
+          <input type="file" id="picker" multiple hidden>
+          <p class="muted small">
+            Files that usually work: mp4, mov, m4a, mp3, wav, wma, ogg, webm,
+            mkv, avi, flac, amr, 3gp. No zip files.
+          </p>
+          <p class="muted small">
+            Up to {{ limits.files_per_batch }} files in a batch,
+            {{ limits.largest_file }} and {{ limits.longest_hours }} hours each.
+          </p>
+        </div>
+
+        <ul id="chosen" class="cards"></ul>
+        <div class="dialog">
+          <button type="button" id="to-settings" class="primary" disabled>Next</button>
+        </div>
+      </li>
+
+      <li id="step-2" class="card" hidden>
+        <h2>2. Settings</h2>
+        <p class="muted small">These apply to every file in the batch.</p>
+
+        <label class="row">
+          <input type="checkbox" id="diarize"> <b>Diarize</b>
+        </label>
+        <p class="muted small">
+          Labels who is talking. Automatic speaker separation is sometimes
+          wrong: one person can be split into two speakers, or two merged into
+          one. Check the names against the audio.
         </p>
 
-        <label for="context">Context (one line)</label>
-        <input type="text" id="context" maxlength="500"
-               placeholder="Interview of a witness by an investigator about a robbery">
-        <p class="quiet">Write it in the spoken language, or in English when translating.</p>
+        <div id="hint-wrap" style="margin-left: 24px">
+          <div class="field">
+            <label for="hint">Speakers</label>
+            <span class="row">
+              <select id="hint">
+                <option value="">Let the app decide</option>
+                <option value="exactly">Exactly</option>
+                <option value="between">Between</option>
+              </select>
+              <input type="number" id="hint-a" min="1" max="20" value="2" hidden>
+              <input type="number" id="hint-b" min="1" max="20" value="4" hidden>
+            </span>
+          </div>
+        </div>
 
-        <label>Audio clean-up</label>
-        <p class="quiet">Standard (set by IT)</p>
-      </details>
+        <label class="row">
+          <input type="checkbox" id="translate"> <b>Translate to English</b>
+        </label>
+        <p class="muted small">
+          A recording holding more than one language is translated to English
+          whether or not this is ticked. Translation loses word timing.
+        </p>
 
-      <button type="button" id="to-check">Next</button>
-      <button type="button" class="plain" data-back="1">Back</button>
-    </li>
+        <details id="more" style="margin-top: 10px">
+          <summary>More options</summary>
 
-    <li id="step-3" hidden>
-      <h2>3. Check and start</h2>
-      <table id="review"><tbody></tbody></table>
-      <p class="quiet">
-        Uploads start when you press the button, three at a time. Keep this page
-        open until they finish.
-      </p>
-      <p id="submit-problem" class="problem" hidden></p>
-      <button type="button" id="start">Upload and transcribe</button>
-      <button type="button" class="plain" data-back="2">Back</button>
+          <div class="field" style="margin-top: 10px">
+            <label for="language">Spoken language</label>
+            <select id="language">
+              <option value="">Automatic</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+            </select>
+          </div>
+          <p class="muted small">
+            Choosing a language switches detection off for these recordings.
+          </p>
 
-      <ul id="progress" class="cards" hidden></ul>
-      <p id="to-batch" hidden>
-        Some files did not upload. The ones that did are being transcribed:
-        <a href="#" id="to-batch-link">see the batch</a>.
-      </p>
-    </li>
-  </ol>
-  {% endif %}
+          <div class="field">
+            <label for="vocabulary">Vocabulary</label>
+            <textarea id="vocabulary" rows="4" placeholder="One name or term per line"></textarea>
+          </div>
+          <p class="muted small">
+            Office names are added automatically. The engine's prompt is short,
+            so a long list is cut from the end.
+          </p>
+
+          <div class="field">
+            <label for="context">Context (one line)</label>
+            <input type="text" id="context" maxlength="500"
+                   placeholder="Interview of a witness by an investigator about a robbery">
+          </div>
+          <p class="muted small">
+            Write it in the spoken language, or in English when translating.
+          </p>
+
+          <div class="field">
+            <label>Audio clean-up</label>
+            <span class="muted small">Standard (set by IT)</span>
+          </div>
+        </details>
+
+        <div class="dialog">
+          <button type="button" id="to-check" class="primary">Next</button>
+          <button type="button" class="ghost" data-back="1">Back</button>
+        </div>
+      </li>
+
+      <li id="step-3" class="card" hidden>
+        <h2>3. Check and start</h2>
+        <table class="tbl" id="review"><tbody></tbody></table>
+        <p class="muted small">
+          Uploads start when you press the button, three at a time. Keep this
+          page open until they finish.
+        </p>
+        <p id="submit-problem" class="problem" hidden></p>
+        <div class="dialog">
+          <button type="button" id="start" class="primary big">Upload and transcribe</button>
+          <button type="button" class="ghost" data-back="2">Back</button>
+        </div>
+
+        <ul id="progress" class="cards" hidden></ul>
+        <p id="to-batch" hidden>
+          Some files did not upload. The ones that did are being transcribed:
+          <a href="#" id="to-batch-link">see the batch</a>.
+        </p>
+      </li>
+    </ol>
+    {% endif %}
+  </div>
 
   <script src="{% static 'vendor/tus.min.js' %}"></script>
   <script src="{% static 'upload.js' %}"></script>

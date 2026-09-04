@@ -208,33 +208,55 @@
   // The list ------------------------------------------------------------------
 
   function draw(clips) {
+    if (!clips.length) {
+      list.innerHTML = "<p class='muted small'>No clips of this recording yet. " +
+        "Mark a span with I and O, by typing the times, or by dragging on the " +
+        "timeline, then save it.</p>";
+      return;
+    }
+
     list.innerHTML = clips.map(function (one) {
       var doing = one.state === "rendering";
+      var state = doing
+        ? "<span class='pill translate'>Rendering...</span>"
+        : (one.state === "ready"
+          ? (one.stale
+            ? "<span class='pill warn'>Captions out of date</span>"
+            : "<span class='pill ok'>Ready</span>")
+          : "<span class='pill danger'>Failed</span>");
+
       var tools = "";
       if (!doing && one.state === "ready") {
-        tools = "<a href='/clip/" + one.id + "/download'>Download</a>" +
-          " &middot; <button type='button' class='plain clip-play'>Play</button>" +
+        tools =
+          "<a href='/clip/" + one.id + "/download'>" +
+          "<button type='button' class='primary small'>Download</button></a>" +
+          "<button type='button' class='small clip-play'>Play</button>" +
           (one.stale
-            ? " &middot; <button type='button' class='plain clip-rerender'>Re-render</button>"
+            ? "<button type='button' class='small clip-rerender'>Re-render</button>"
             : "") +
-          " &middot; <button type='button' class='plain clip-adjust'>Adjust</button>" +
-          " &middot; <button type='button' class='plain clip-rename'>Rename</button>" +
-          " &middot; <button type='button' class='plain clip-delete'>Delete</button>";
+          "<button type='button' class='small clip-adjust'>Adjust</button>" +
+          "<button type='button' class='small clip-rename'>Rename</button>" +
+          "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
       } else if (!doing) {
-        tools = "<button type='button' class='plain clip-rerender'>Retry</button>" +
-          " &middot; <button type='button' class='plain clip-delete'>Delete</button>";
+        tools =
+          "<button type='button' class='small clip-rerender'>Retry</button>" +
+          "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
       }
-      return "<li class='card' data-clip='" + one.id +
+
+      return "<div class='clipcard' data-clip='" + one.id +
         "' data-start='" + one.start + "' data-end='" + one.end +
         "' data-title='" + escape(one.title) + "'>" +
-        "<strong>" + escape(one.title) + "</strong>" +
-        "<p class='quiet'>" + clock(one.start) + " to " + clock(one.end) +
-        " &middot; " + clock(one.seconds) + " long &middot; " +
-        escape(one.shown_state) +
+        "<div class='row'><span class='title grow'>" + escape(one.title) +
+        "</span>" + state + "</div>" +
+        "<div class='small muted'>" + clock(one.start) + " to " + clock(one.end) +
+        " (" + clock(one.seconds) + ")" +
+        (one.burn_captions ? " &middot; captions burned in" : "") +
+        (one.include_excerpt ? " &middot; with excerpt" : "") +
         (one.size ? " &middot; " + Math.round(one.size / 1024 / 1024 * 10) / 10 + " MB" : "") +
-        " &middot; " + escape(one.downloaded) + "</p>" +
-        (tools ? "<p>" + tools + "</p>" : "") +
-        "</li>";
+        " &middot; " + escape(one.downloaded) + "</div>" +
+        (one.note ? "<div class='small'>" + escape(one.note) + "</div>" : "") +
+        (tools ? "<div class='row small' style='margin-top:6px'>" + tools + "</div>" : "") +
+        "</div>";
     }).join("");
 
     window.clearTimeout(waiting);

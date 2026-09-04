@@ -109,7 +109,8 @@ def furniture(request, page: str = "") -> dict:
         ],
         "tray": tray_rows(tray),
         "tray_note": request.session.get(TRAY_NOTE, ""),
-        "page": page,
+        "here": page,
+        "page": "panel",
     }
 
 

@@ -25,7 +25,7 @@
         "</td><td>" + escape(one.batch) + "</td><td>" + one.minutes +
         " min</td><td>" + escape(one.state) + "</td><td>" + escape(step) +
         "</td><td>" + (one.live
-          ? "<button type='button' class='plain cancel' data-job='" + one.id +
+          ? "<button type='button' class='small ghost danger cancel' data-job='" + one.id +
             "' data-title='" + escape(one.title) + "'>Cancel</button>"
           : "") + "</td></tr>";
     }).join("");

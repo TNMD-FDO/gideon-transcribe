@@ -4,26 +4,37 @@
 
 {% block panel %}
   <h1>{{ title }}</h1>
+  <p class="lead">
+    A setting never applies as it is edited. Changes collect in the tray at the
+    foot of the panel and are applied together, and each one is recorded in the
+    audit log with the note you type there.
+  </p>
 
   {% if limits_cross_reference %}
-    <p class="quiet">
-      The idle timeout is on the Sign-in and directory page, because it is
-      also the Workspace's lifetime.
+    <p class="notice">
+      The idle timeout is on the <b>Sign-in and directory</b> page, because it
+      is also the Workspace's lifetime: recordings and transcripts are removed
+      when a session ends.
     </p>
   {% endif %}
 
-  <form method="post" action="{% url 'panel-edit' page %}">
+  <form method="post" action="{% url 'panel-edit' here %}">
     {% csrf_token %}
-    <dl class="settings">
-      {% for row in rows %}
-        <dt>
-          <label for="{{ row.key }}">{{ row.name }}</label>
-          <span class="quiet">{{ row.help }}</span>
-        </dt>
-        <dd>
+
+    {% for row in rows %}
+      <div class="arow{% if row.waiting %} dirty{% endif %}">
+        <div class="lbl">
+          <b>{{ row.name }}</b>
+          <div class="help">{{ row.help }}</div>
+        </div>
+        <div>
           {% if row.kind == "toggle" %}
-            <label><input type="checkbox" id="{{ row.key }}" name="{{ row.key }}"
-                          {% if row.value %}checked{% endif %}> On</label>
+            <label class="switch">
+              <input type="checkbox" id="{{ row.key }}" name="{{ row.key }}"
+                     {% if row.value %}checked{% endif %}>
+              <span class="knob"></span>
+              <span>{% if row.value %}On{% else %}Off{% endif %}</span>
+            </label>
           {% elif row.kind == "choice" %}
             <select id="{{ row.key }}" name="{{ row.key }}">
               {% for choice in row.choices %}
@@ -31,51 +42,61 @@
               {% endfor %}
             </select>
           {% elif row.kind == "number" %}
-            <input type="number" id="{{ row.key }}" name="{{ row.key }}"
-                   value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}">
-            <span class="quiet">{{ row.unit }}</span>
+            <span class="row">
+              <input type="number" id="{{ row.key }}" name="{{ row.key }}"
+                     value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}">
+              <span class="muted small">{{ row.unit }}</span>
+            </span>
           {% else %}
             <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}">{{ row.value }}</textarea>
           {% endif %}
 
-          <p class="quiet">
-            Default: {{ row.default }}
-            {% if row.changed %}<span class="pill">changed from default</span>{% endif %}
-            {% if row.waiting %}<span class="pill">waiting in the tray</span>{% endif %}
-          </p>
-          <p class="quiet">When changed: {{ row.when_changed }}</p>
-        </dd>
-      {% endfor %}
-    </dl>
+          <div>
+            <span class="defmark">Default: {{ row.default }}</span>
+            {% if row.changed %}
+              <span class="changedmark">&middot; changed from default</span>
+            {% endif %}
+            {% if row.waiting %}
+              <span class="changedmark">&middot; waiting in the tray</span>
+            {% endif %}
+          </div>
+          <div class="effect">{{ row.when_changed }}</div>
+        </div>
+      </div>
+    {% endfor %}
 
     <div class="dialog">
-      <button type="submit">Put changes in the tray</button>
+      <button type="submit" class="primary">Put changes in the tray</button>
     </div>
   </form>
 
   {% if directory %}
-    <h2 class="small">Directory connection</h2>
-    <p class="quiet">
+    <h2 style="margin-top: 28px">Directory connection</h2>
+    <p class="muted small">
       Read-only, from the server's environment file. To change any of it,
-      change the file on the server and restart.
+      change the file on the server and restart. No password is ever shown
+      here.
     </p>
-    <dl class="facts">
-      {% for key, value in directory %}
-        <dt>{{ key }}</dt><dd>{{ value }}</dd>
-      {% endfor %}
-    </dl>
-
-    <p class="dialog">
-      <button type="button" id="test-directory">Test directory connection</button>
-      <button type="button" id="check-directory" class="plain">Check directory now</button>
-    </p>
-    <div id="directory-said"></div>
+    <div class="card">
+      <dl class="kv">
+        {% for key, value in directory %}
+          <dt><code>{{ key }}</code></dt><dd>{{ value }}</dd>
+        {% endfor %}
+      </dl>
+      <div class="dialog">
+        <button type="button" class="primary" id="test-directory">Test directory connection</button>
+        <button type="button" id="check-directory">Check directory now</button>
+      </div>
+      <div id="directory-said"></div>
+    </div>
     <script src="{% static 'panel-directory.js' %}"></script>
   {% endif %}
 
-  <h2 class="small">Fixed rules, not settings</h2>
-  <p class="quiet">These are fixed in the app, so nobody looks for them here.</p>
-  <ul class="quiet fixed">
+  <h2 style="margin-top: 28px">Fixed rules, not settings</h2>
+  <p class="muted small">
+    These are fixed in the app, so that nobody looks for them here.
+  </p>
+  <ul class="muted small">
     {% for rule in fixed_rules %}<li>{{ rule }}</li>{% endfor %}
   </ul>
 {% endblock %}

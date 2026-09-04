@@ -14,8 +14,7 @@
 
   var player = document.getElementById("player");
   var column = document.getElementById("transcript");
-  var waveCanvas = document.getElementById("waveform");
-  var laneCanvas = document.getElementById("lanes");
+  var canvas = document.getElementById("waveform");
   var timeline = document.getElementById("timeline");
 
   var segments = [];
@@ -54,6 +53,13 @@
     return holder.innerHTML;
   }
 
+  function ink(name) {
+    // A token, or a "var(--token)" as the page writes a speaker's colour.
+    var token = String(name).replace("var(", "").replace(")", "").trim();
+    return window.getComputedStyle(document.documentElement)
+      .getPropertyValue(token).trim();
+  }
+
   // What the rest of the page may ask this one for.
   window.VIEWER.clock = clock;
   window.VIEWER.at = function () { return player ? player.currentTime : 0; };
@@ -67,6 +73,7 @@
   window.VIEWER.pause = function () { if (player) { player.pause(); } };
   window.VIEWER.segments = function () { return segments; };
   window.VIEWER.length = function () { return duration; };
+  window.VIEWER.redraw = function () { drawTimeline(); };
 
   // The transcript ------------------------------------------------------------
 
@@ -75,53 +82,56 @@
     column.innerHTML = "";
     segments.forEach(function (segment, index) {
       var row = document.createElement("li");
-      row.className = "segment";
+      row.className = "seg";
       row.dataset.index = index;
       if (segment.speaker) {
         row.style.setProperty("--speaker", colours[segment.speaker] || "");
+        row.style.borderLeftColor = colours[segment.speaker] || "transparent";
       }
 
-      var at = document.createElement("button");
-      at.type = "button";
-      at.className = "at plain";
-      at.textContent = clock(segment.start);
-      at.title = "Play from here";
+      var when = document.createElement("button");
+      when.type = "button";
+      when.className = "t";
+      when.textContent = clock(segment.start);
+      when.title = "Play from here";
 
       var body = document.createElement("div");
-      var line = document.createElement("div");
-      line.className = "who";
-      if (segment.speaker) {
-        line.textContent = segment.speaker + (segment.corrected ? " ✎" : "");
-      } else if (segment.corrected) {
-        line.textContent = "✎";
-      }
 
-      var tools = document.createElement("span");
-      tools.className = "row-tools";
+      var who = document.createElement("div");
+      who.className = "who";
+      var actions = document.createElement("span");
+      actions.className = "actions";
+
       var editButton = document.createElement("button");
       editButton.type = "button";
-      editButton.className = "plain tiny edit-row";
+      editButton.className = "ghost tiny edit-row";
       editButton.title = "Correct this segment (E)";
       editButton.textContent = "✎ edit";
-      tools.appendChild(editButton);
+      actions.appendChild(editButton);
 
       if (window.VIEWER.clips) {
         var clipButton = document.createElement("button");
         clipButton.type = "button";
-        clipButton.className = "plain tiny clip-row";
+        clipButton.className = "ghost tiny clip-row";
         clipButton.title = "Add this segment to the clip";
         clipButton.textContent = "+ clip";
-        tools.appendChild(clipButton);
+        actions.appendChild(clipButton);
       }
-      line.appendChild(tools);
-      body.appendChild(line);
+
+      // The name line is always there, because it carries the row's own
+      // controls even when there is no speaker to name.
+      who.appendChild(document.createTextNode(
+        (segment.speaker || "") + (segment.corrected ? " ✎" : "")
+      ));
+      who.appendChild(actions);
+      body.appendChild(who);
 
       var said = document.createElement("p");
-      said.className = "said";
+      said.className = "txt";
       said.innerHTML = wordsOf(segment);
       body.appendChild(said);
 
-      row.appendChild(at);
+      row.appendChild(when);
       row.appendChild(body);
       column.appendChild(row);
     });
@@ -162,6 +172,7 @@
 
   var pill = document.getElementById("follow-pill");
   var followBox = document.getElementById("follow");
+  var reading = document.querySelector(".read");
 
   function follow() {
     if (!player) { return; }
@@ -170,7 +181,7 @@
 
     var index = at(time);
     if (index !== here) {
-      var was = column ? column.querySelector(".segment.here") : null;
+      var was = column ? column.querySelector(".seg.here") : null;
       if (was) { was.classList.remove("here"); }
       var now = column ? column.children[index] : null;
       if (now) {
@@ -196,32 +207,24 @@
       clock(time) + " / " + clock(player.duration || duration);
   }
 
-  function label(text) {
-    if (followBox && followBox.parentNode) {
-      followBox.parentNode.lastChild.textContent = text;
-    }
-  }
-
   function pauseFollowing() {
     if (!following || paused) { return; }
     paused = true;
     if (pill) { pill.hidden = false; }
-    label(" Follow (paused)");
   }
 
   function resumeFollowing() {
     paused = false;
     following = true;
     if (followBox) { followBox.checked = true; }
-    label(" Follow");
     if (pill) { pill.hidden = true; }
     var row = column ? column.children[here] : null;
     if (row) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
 
-  if (column) {
+  if (reading) {
     window.addEventListener("wheel", function (event) {
-      if (event.target.closest && event.target.closest(".transcript")) {
+      if (event.target.closest && event.target.closest(".read")) {
         pauseFollowing();
       }
     }, { passive: true });
@@ -234,79 +237,84 @@
       following = this.checked;
       paused = false;
       if (pill) { pill.hidden = true; }
-      label(" Follow");
     });
   }
 
   // The timeline --------------------------------------------------------------
+  //
+  // One canvas, drawn in layers the way the prototype draws it: the surface,
+  // then the speaker lanes as translucent bands, then the peaks, with the
+  // part already played in the accent colour and the rest in the muted one.
 
-  function sizeCanvases() {
-    if (!waveCanvas || !timeline) { return; }
+  function drawTimeline() {
+    if (!canvas || !timeline) { return; }
     var width = timeline.clientWidth;
     if (!width) { return; }
-    [waveCanvas, laneCanvas].forEach(function (canvas) {
-      canvas.width = width;
-      canvas.style.width = width + "px";
-    });
-    drawWave();
-    drawLanes();
-  }
 
-  function drawWave() {
-    if (!waveCanvas || !peaks || !peaks.data) { return; }
-    var pen = waveCanvas.getContext("2d");
-    var width = waveCanvas.width;
-    var height = waveCanvas.height;
+    var height = 56;
+    var ratio = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.floor(width * ratio)) {
+      canvas.width = Math.floor(width * ratio);
+      canvas.height = Math.floor(height * ratio);
+      canvas.style.height = height + "px";
+    }
+
+    var pen = canvas.getContext("2d");
+    pen.setTransform(ratio, 0, 0, ratio, 0, 0);
     pen.clearRect(0, 0, width, height);
 
-    var style = window.getComputedStyle(document.body);
-    pen.fillStyle = (style.getPropertyValue("--quiet") || "#777").trim();
+    pen.fillStyle = ink("--surface-2");
+    pen.fillRect(0, 0, width, height);
 
-    var data = peaks.data;
-    var pairs = Math.floor(data.length / 2);
-    var scale = Math.pow(2, (peaks.bits || 8) - 1);
-    var middle = height / 2;
+    var time = player ? player.currentTime : 0;
 
-    for (var x = 0; x < width; x += 1) {
-      var fromPair = Math.floor((x / width) * pairs);
-      var toPair = Math.max(fromPair + 1, Math.floor(((x + 1) / width) * pairs));
-      var low = 0;
-      var high = 0;
-      for (var i = fromPair; i < toPair && i < pairs; i += 1) {
-        low = Math.min(low, data[i * 2]);
-        high = Math.max(high, data[i * 2 + 1]);
-      }
-      var top = middle - (high / scale) * middle;
-      var bottom = middle - (low / scale) * middle;
-      pen.fillRect(x, top, 1, Math.max(1, bottom - top));
+    // The speaker lanes, behind everything, so the waveform stays readable.
+    if (duration && segments.length) {
+      pen.globalAlpha = 0.35;
+      segments.forEach(function (segment) {
+        var colour = colours[segment.speaker];
+        if (!colour) { return; }
+        pen.fillStyle = ink(colour);
+        var from = (segment.start / duration) * width;
+        var to = (segment.end / duration) * width;
+        pen.fillRect(from, 0, Math.max(1, to - from), height);
+      });
+      pen.globalAlpha = 1;
     }
-  }
 
-  function drawLanes() {
-    if (!laneCanvas) { return; }
-    var pen = laneCanvas.getContext("2d");
-    var width = laneCanvas.width;
-    pen.clearRect(0, 0, width, laneCanvas.height);
-    if (!segments.length || !duration) { return; }
+    if (peaks && peaks.data) {
+      var channels = peaks.channels || 1;
+      var pairs = Math.floor(peaks.data.length / (2 * channels));
+      var scale = Math.pow(2, (peaks.bits || 8) - 1);
+      var lane = channels === 2 ? height / 2 : height;
 
-    var names = Object.keys(colours);
-    if (!names.length) { return; }
-
-    var lane = laneCanvas.height / names.length;
-    segments.forEach(function (segment) {
-      var which = names.indexOf(segment.speaker);
-      if (which < 0) { return; }
-      pen.fillStyle = colours[segment.speaker];
-      var from = (segment.start / duration) * width;
-      var to = (segment.end / duration) * width;
-      pen.fillRect(from, which * lane, Math.max(1, to - from), Math.max(1, lane - 1));
-    });
+      for (var x = 0; x < width; x += 1) {
+        var index = Math.floor((x / width) * pairs);
+        for (var channel = 0; channel < channels; channel += 1) {
+          var low = peaks.data[(index * channels + channel) * 2] / scale;
+          var high = peaks.data[(index * channels + channel) * 2 + 1] / scale;
+          var middle = channels === 2 ? lane * channel + lane / 2 : height / 2;
+          pen.fillStyle = duration && (x / width) * duration <= time
+            ? ink("--accent")
+            : ink("--muted");
+          var top = middle - Math.max(1, high * (lane / 2 - 1));
+          pen.fillRect(x, top, 1, Math.max(1, (high - low) * (lane / 2 - 1)));
+        }
+      }
+    }
   }
 
   function movePlayhead(time) {
     var head = document.getElementById("playhead");
     if (!head || !duration) { return; }
     head.style.left = ((time / duration) * 100) + "%";
+    // The played part of the waveform is drawn in the accent colour, so the
+    // canvas follows the playhead. Once a second is enough for that.
+    var second = Math.floor(time);
+    if (second !== movePlayhead.last) {
+      movePlayhead.last = second;
+      drawTimeline();
+    }
   }
 
   function timeAt(event) {
@@ -317,14 +325,20 @@
 
   function showRange(from, to) {
     var box = document.getElementById("range");
+    var said = document.getElementById("clip-said");
     if (!box) { return; }
     if (from === null || from === undefined || !duration) {
       box.hidden = true;
+      if (said) { said.textContent = ""; }
       return;
     }
     box.hidden = false;
     box.style.left = ((from / duration) * 100) + "%";
     box.style.width = (((to - from) / duration) * 100) + "%";
+    if (said) {
+      said.textContent = "Clip " + clock(from) + " to " + clock(to);
+      said.style.color = ink("--clip");
+    }
   }
   window.VIEWER.showRange = showRange;
 
@@ -334,7 +348,7 @@
     Array.prototype.forEach.call(column.children, function (row, index) {
       var segment = segments[index];
       var inside = range && segment.start < range.to && segment.end > range.from;
-      row.classList.toggle("in-range", !!inside);
+      row.classList.toggle("inclip", !!inside);
     });
   }
   window.VIEWER.tintRange = tintRange;
@@ -371,7 +385,7 @@
       }
     });
 
-    window.addEventListener("resize", sizeCanvases);
+    window.addEventListener("resize", drawTimeline);
   }
 
   // The transport -------------------------------------------------------------
@@ -392,7 +406,7 @@
     player.addEventListener("timeupdate", follow);
     player.addEventListener("loadedmetadata", function () {
       duration = player.duration || duration;
-      sizeCanvases();
+      drawTimeline();
     });
 
     document.getElementById("play").addEventListener("click", function () {
@@ -466,12 +480,8 @@
   } else {
     // No playback copy yet: the transport does nothing until there is one.
     Array.prototype.forEach.call(
-      document.querySelectorAll(
-        ".transport button, .transport select, .transport input[type=range]"
-      ),
-      function (control) {
-        if (control.id !== "new-clip") { control.disabled = true; }
-      }
+      document.querySelectorAll(".transport button, .transport select, .transport input"),
+      function (control) { control.disabled = true; }
     );
   }
 
@@ -479,7 +489,7 @@
 
   if (column) {
     column.addEventListener("click", function (event) {
-      var row = event.target.closest(".segment");
+      var row = event.target.closest(".seg");
       if (!row) { return; }
       var index = parseInt(row.dataset.index, 10);
 
@@ -493,7 +503,7 @@
     });
 
     column.addEventListener("dblclick", function (event) {
-      var row = event.target.closest(".segment");
+      var row = event.target.closest(".seg");
       if (row) { edit(parseInt(row.dataset.index, 10)); }
     });
   }
@@ -514,13 +524,13 @@
     var box = document.createElement("textarea");
     box.rows = 3;
     box.value = segment.text;
-    var said = row.querySelector(".said");
+    var said = row.querySelector(".txt");
     said.replaceWith(box);
     box.focus();
 
     function stop() {
       var back = document.createElement("p");
-      back.className = "said";
+      back.className = "txt";
       back.innerHTML = wordsOf(segment);
       box.replaceWith(back);
     }
@@ -556,7 +566,7 @@
   var chips = document.getElementById("speakers");
   if (chips) {
     chips.addEventListener("click", function (event) {
-      var chip = event.target.closest(".chip");
+      var chip = event.target.closest(".speakerchip");
       if (!chip) { return; }
       var now = window.prompt("Rename " + chip.dataset.name + " to:", chip.dataset.name);
       if (!now || now === chip.dataset.name) { return; }
@@ -569,16 +579,16 @@
     });
     chips.addEventListener("dragover", function (event) {
       event.preventDefault();
-      var chip = event.target.closest(".chip");
+      var chip = event.target.closest(".speakerchip");
       if (chip) { chip.classList.add("over"); }
     });
     chips.addEventListener("dragleave", function (event) {
-      var chip = event.target.closest(".chip");
+      var chip = event.target.closest(".speakerchip");
       if (chip) { chip.classList.remove("over"); }
     });
     chips.addEventListener("drop", function (event) {
       event.preventDefault();
-      var onto = event.target.closest(".chip");
+      var onto = event.target.closest(".speakerchip");
       if (!onto) { return; }
       onto.classList.remove("over");
       if (!dragged || dragged === onto.dataset.name) { return; }
@@ -620,12 +630,11 @@
 
     Array.prototype.forEach.call(column ? column.children : [], function (row, index) {
       var segment = segments[index];
-      var text = segment.text.toLowerCase();
-      var hit = wanted && text.indexOf(wanted) !== -1;
+      var hit = wanted && segment.text.toLowerCase().indexOf(wanted) !== -1;
       row.hidden = wanted !== "" && !hit;
       row.classList.remove("match-here");
 
-      var said = row.querySelector(".said");
+      var said = row.querySelector(".txt");
       if (!said) { return; }
       if (hit) {
         matches.push(index);
@@ -664,9 +673,10 @@
     });
   }
 
-  // The sheet, the overlay, the theme, the pop-out -----------------------------
+  // The sheet and the overlay --------------------------------------------------
 
   var sheet = document.getElementById("sheet");
+  var closeSheet = document.getElementById("close-sheet");
   var detailsLoaded = false;
 
   function loadDetails() {
@@ -685,30 +695,41 @@
 
   function openSheet(which) {
     sheet.hidden = false;
+    closeSheet.hidden = false;
     Array.prototype.forEach.call(
-      sheet.querySelectorAll(".sheet-panel"),
+      sheet.querySelectorAll(".panel"),
       function (panel) { panel.hidden = panel.dataset.panel !== which; }
     );
     Array.prototype.forEach.call(
-      sheet.querySelectorAll(".sheet-tab"),
-      function (tab) { tab.classList.toggle("here", tab.dataset.panel === which); }
+      document.querySelectorAll(".sheet-tab"),
+      function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
   }
   window.VIEWER.openSheet = openSheet;
 
   Array.prototype.forEach.call(
-    sheet.querySelectorAll(".sheet-tab"),
+    document.querySelectorAll(".sheet-tab"),
     function (tab) {
-      tab.addEventListener("click", function () { openSheet(tab.dataset.panel); });
+      tab.addEventListener("click", function () {
+        if (!sheet.hidden && tab.classList.contains("on")) {
+          hideSheet();
+        } else {
+          openSheet(tab.dataset.panel);
+        }
+      });
     }
   );
-  document.getElementById("close-sheet").addEventListener("click", function () {
+
+  function hideSheet() {
     sheet.hidden = true;
-  });
-  document.getElementById("open-details").addEventListener("click", function () {
-    openSheet("details");
-  });
+    closeSheet.hidden = true;
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".sheet-tab"),
+      function (tab) { tab.classList.remove("on"); }
+    );
+  }
+  closeSheet.addEventListener("click", hideSheet);
 
   var overlay = document.getElementById("shortcuts");
   function shortcuts(show) { overlay.hidden = !show; }
@@ -718,15 +739,8 @@
   document.getElementById("close-shortcuts").addEventListener("click", function () {
     shortcuts(false);
   });
-
-  document.getElementById("theme").addEventListener("click", function () {
-    var root = document.documentElement;
-    var now = root.getAttribute("data-theme");
-    var next = now === "dark" ? "light" : (now === "light" ? "" : "dark");
-    if (next) { root.setAttribute("data-theme", next); }
-    else { root.removeAttribute("data-theme"); }
-    try { window.localStorage.setItem("theme", next); } catch (ignored) { /* fine */ }
-    drawWave();
+  overlay.addEventListener("click", function (event) {
+    if (event.target === overlay) { shortcuts(false); }
   });
 
   var popOut = document.getElementById("pop-out");
@@ -764,7 +778,7 @@
     if (event.key === "?") { shortcuts(overlay.hidden); return; }
     if (event.key === "Escape") {
       if (!overlay.hidden) { shortcuts(false); return; }
-      if (!sheet.hidden) { sheet.hidden = true; }
+      if (!sheet.hidden) { hideSheet(); }
       return;
     }
     if (event.key === "d" || event.key === "D") { openSheet("details"); return; }
@@ -871,7 +885,7 @@
         if (!duration && body.length && body.samples_per_pixel && body.sample_rate) {
           duration = (body.length * body.samples_per_pixel) / body.sample_rate;
         }
-        sizeCanvases();
+        drawTimeline();
       })
       .catch(function () { /* no waveform is not a failure of the page */ });
   }
@@ -886,12 +900,12 @@
           duration = segments[segments.length - 1].end;
         }
         draw();
-        drawLanes();
+        drawTimeline();
         if (player) { follow(); }
       });
   } else {
     watchTheQueue();
   }
 
-  sizeCanvases();
+  drawTimeline();
 })();
