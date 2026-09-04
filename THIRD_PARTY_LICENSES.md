@@ -26,15 +26,22 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | every other component pinned on the WhisperX stack | as pinned | `docs/research/whisperx-pinned-stack.md` is the list |
 | Django | BSD-3-Clause | |
 | Procrastinate | MIT | the app's background worker, on PostgreSQL; the stack ships no Redis or Valkey, so there is no licence note for either |
+| psycopg | LGPL-3.0 | the app's PostgreSQL driver, used as a library and unmodified |
+| gunicorn | MIT | |
+| whitenoise | MIT | |
 | python-docx | MIT | |
+| lxml | BSD-3-Clause | python-docx's own dependency |
+| python-ldap | Python-style (its own permissive licence) | directory sign-in; see ADR 0010 |
+| Markdown (Python-Markdown) | BSD-3-Clause | renders the two guides at build time; see ADR 0012 |
+| audiowaveform | GPL-3.0-or-later | in the app image, fetched as a `.deb` by version and hash and called as a separate program; source at `github.com/bbc/audiowaveform`; see note 1 |
 | Caddy | Apache-2.0 | upstream image |
 | PostgreSQL | the PostgreSQL Licence | upstream image |
 | tusd | MIT | upstream image |
-| vLLM | Apache-2.0 | upstream image, the Local engine (profile `llm`) |
-| Qwen3 weights | Apache-2.0 | the Local engine's model; not gated |
-| restic | BSD-2-Clause | upstream image, Phase 2 (profile `backup`) |
+| vLLM | Apache-2.0 | the Local engine's upstream image, for when the AI assistant is built; not yet shipped |
+| Qwen3 weights | Apache-2.0 | the Local engine's model, not gated; not yet shipped |
+| restic | BSD-2-Clause | the Backup chapter's upstream image; not yet shipped |
 | `nvidia/cuda` base image | NVIDIA Deep Learning Container Licence (proprietary) | the WhisperX service's base; see note 2 |
-| ffmpeg as Debian builds it, with its codec packages | GPL v2 or later | see note 1 |
+| ffmpeg as Debian and Ubuntu build it, with its codec packages | GPL v2 or later | see note 1 |
 
 ## 1. ffmpeg and the GPL
 
@@ -42,7 +49,9 @@ The ffmpeg in both images is a GPL build, because it links libx264 (with
 libx265 and libxvid), which the app needs for the H.264 Playback copies and
 Clips. Calling ffmpeg as a separate program leaves the app's own terms
 untouched: running a program through pipes and command-line arguments does not
-combine the two works.
+combine the two works. The same is true of audiowaveform, which draws the
+waveform under the player and is GPL-3.0-or-later: the app runs it as a
+program and reads the file it writes.
 
 The two images take it from different distributions, because they are built on
 different bases: the app image from Debian 13, and the WhisperX service image
@@ -57,13 +66,16 @@ below, with a pointer to Debian's source packages for them.**
 
 | Release | Image | ffmpeg package | codec packages | Source |
 |---|---|---|---|---|
-| *(none published yet)* | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
-| *(none published yet)* | app | — | — | Debian 13 source packages |
+| v0.2.0, v0.3.0, v0.4.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
+| v0.2.0, v0.3.0, v0.4.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
 
-The service image's versions above are what it builds with today, during the
-Phase 1 build and before any Release. They are recorded here from the first
-build so that the obligation is met from the start rather than remembered at
-the end; each Release replaces them with the versions it actually ships.
+The three Releases of 2026-09-04 share a row each because their images are
+the same builds: the base image digest is pinned in both Dockerfiles, and
+nothing in either image's package list changed between the tags. The versions
+were read from the running images with `dpkg-query` on that day. A later
+Release adds a row of its own when a version changes, and repeats the row
+when none does. The same rule covers audiowaveform in the app image, whose
+version and hash are fixed in the Dockerfile itself (`1.10.2`).
 
 ## 2. The WhisperX image
 
