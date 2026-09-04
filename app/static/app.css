@@ -426,6 +426,46 @@ main { padding: 20px 24px 60px; }
 main.narrow { max-width: 40rem; margin: 0 auto; }
 main.wide { max-width: none; }
 
+/* Every page's own column, centred.
+ *
+ * main.wide takes the whole window on purpose, because the viewer and the
+ * admin panel use all of it. The document pages inside it each set their own
+ * width, and seven of them did it with an inline max-width and no margin, so
+ * every one of them sat against the left edge with a third of a wide monitor
+ * empty beside it. Three widths cover all seven.
+ */
+.page { max-width: 52rem; margin: 0 auto; }
+.page.list { max-width: 60rem; }
+.page.roomy { max-width: 70rem; }
+
+.centre { text-align: center; }
+.dialog.centre { justify-content: center; }
+
+/* The first thing somebody sees after signing in ---------------------------- */
+
+.welcome { text-align: center; margin: 8px 0 22px; }
+.welcome h1 { font-size: 1.9em; margin-bottom: 6px; }
+.welcome .lead {
+  color: var(--muted);
+  font-size: 1.05em;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+/* The drop zone is the page, not a box inside step one of three. */
+.drop.hero { padding: 46px 24px; }
+.drop.hero .big { font-size: 1.25em; margin-bottom: 8px; }
+.drop.hero .or { margin-bottom: 14px; }
+
+/* A finished Batch is about getting the transcripts out, so the download is
+ * the page and everything else is quieter and underneath it. */
+.done-hero { text-align: center; padding: 26px 18px 22px; }
+.done-hero .tick { font-size: 2.2em; line-height: 1; color: var(--ok); }
+.done-hero h1 { font-size: 1.55em; margin: 10px 0 4px; }
+.done-hero .lead { color: var(--muted); margin-bottom: 16px; }
+.done-hero button.primary { font-size: 1.05em; padding: 10px 22px; }
+.quiet-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+
 /* The pages that are documents ---------------------------------------------- */
 
 .cards { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 10px; }

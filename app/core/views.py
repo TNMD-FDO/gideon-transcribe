@@ -10,7 +10,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from core import lifecycle, settings_store, signin
-from core.models import User
 
 log = logging.getLogger("transcribe.health")
 
@@ -36,37 +35,20 @@ def healthz(request: HttpRequest) -> HttpResponse:
 
 
 def where_they_land(user=None) -> str:
-    """The page this person works on, or the Cases page until they show which.
+    """The Upload page, whoever it is and whatever the settings say.
 
-    Both pages carry a link to the other, so this decides only what opens
-    first. With Cases off there is only one page and this cannot choose.
+    The specification lands people on Cases when Folder management is on. It
+    is right for the office that works in Cases and wrong for the one that
+    does not: an office's larger use is batches of recordings that belong to
+    no Case, so those people arrived every morning on a page about a feature
+    they never open. Landing on Upload is right for both, because it is what
+    everybody came to do, and Cases and Recordings are one click away in the
+    navigation.
 
-    The specification lands everybody on Cases. That is right for the office
-    that works in Cases and wrong for the one that does not: an office's
-    larger use is batches of recordings that belong to no Case, and those
-    people were landing every morning on a page about a feature they never
-    open. So the specified page stands until somebody shows otherwise, and
-    after that they land where they were working.
+    The argument is kept because the callers pass it and a future rule may
+    want it.
     """
-    from core import cases
-
-    if not cases.folder_management_on():
-        return reverse("home")
-    if user is not None and getattr(user, "lands_on", "") == User.LANDS_RECORDINGS:
-        return reverse("home")
-    return reverse("cases")
-
-
-def note_where_they_work(user, page: str) -> None:
-    """Remember which of the two front pages this person opened.
-
-    Written only when it changes, because it is on the way in to a page
-    somebody opens all day.
-    """
-    if getattr(user, "lands_on", None) == page:
-        return
-    User.objects.filter(pk=user.pk).update(lands_on=page)
-    user.lands_on = page
+    return reverse("upload")
 
 
 def sign_in(request: HttpRequest) -> HttpResponse:
