@@ -772,6 +772,15 @@ cmd_upgrade() {
   fi
   compose up -d
 
+  # Caddy's configuration is a file mounted into it, not part of its image,
+  # so `up -d` leaves it running with whatever it read at startup: a changed
+  # Caddyfile takes effect at the next restart and not before. That is a quiet
+  # way to run one thing while believing another, and the allow-list lives in
+  # that file. It is restarted every upgrade, which costs a second.
+  echo
+  echo "Restarting Caddy so it reads its configuration again"
+  compose restart caddy
+
   # 8. The models, when the release says they changed.
   if models_changed "$tag"; then
     echo
