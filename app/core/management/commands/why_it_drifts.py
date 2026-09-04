@@ -54,6 +54,54 @@ def probe(path) -> dict:
         return {}
 
 
+def holes(path, most: int = 10) -> tuple[list, float]:
+    """Where the audio stops and starts again, and how much is missing.
+
+    Walks the audio packets and reports every place the next one begins later
+    than the last one ended. This is what decides whether the transcript is
+    out by a constant amount or by a growing one: one hole early in a file
+    shifts everything after it by the same amount, while holes spread through
+    it push each part further out than the last.
+    """
+    finished = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "packet=pts_time,duration_time",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if finished.returncode != 0:
+        return [], 0.0
+
+    found = []
+    total = 0.0
+    expected = None
+    for line in finished.stdout.splitlines():
+        parts = line.split(",")
+        if len(parts) < 2:
+            continue
+        at, lasting = number(parts[0]), number(parts[1])
+        if at is None or lasting is None:
+            continue
+        if expected is not None and at - expected > max(0.05, lasting * 1.5):
+            gap = at - expected
+            total += gap
+            if len(found) < most:
+                found.append((round(expected, 3), round(gap, 3)))
+        expected = at + lasting
+    return found, round(total, 3)
+
+
 def number(value) -> float | None:
     try:
         return float(value)
@@ -153,10 +201,27 @@ class Command(BaseCommand):
                 print(f"  first at    {first.start}")
                 print(f"  last ends   {last.end}")
 
-        print("\nWhat that looks like")
-        self.verdict(original, playback, heard, last_word)
+        # Only worth walking the packets when something is already missing:
+        # it reads every packet in the file, which is slow on a long one.
+        gaps, lost = [], 0.0
+        long_file = original.get("duration")
+        long_heard = heard.get("duration")
+        if long_file and long_heard and abs(long_file - long_heard) > 1.0:
+            source = recording.original_path
+            if source.exists():
+                print("\nWhere the audio stops and starts again")
+                gaps, lost = holes(source)
+                for at, gap in gaps:
+                    print(f"  {gap}s missing at {at}s")
+                if not gaps:
+                    print("  none: the audio runs without a break")
+                else:
+                    print(f"  {lost}s missing in all")
 
-    def verdict(self, original, playback, heard, last_word):
+        print("\nWhat that looks like")
+        self.verdict(original, playback, heard, last_word, gaps, lost)
+
+    def verdict(self, original, playback, heard, last_word, gaps=(), lost=0.0):
         offsets = [
             ("the uploaded file's container", original.get("start")),
             ("its video stream", original.get("video_start")),
@@ -191,8 +256,24 @@ class Command(BaseCommand):
                 )
                 if 0.98 < ratio < 1.02:
                     print(
-                        "  -> a growing gap: holes in the audio, closed by re-encoding"
+                        "  -> holes in the audio, closed by re-encoding "
+                        "because a WAV cannot hold a hole"
                     )
+                    # Where the holes are decides what a person sees. One
+                    # early hole moves everything after it by the same
+                    # amount; holes throughout push each part further out
+                    # than the last.
+                    if len(gaps) == 1:
+                        print(
+                            f"     one hole, at {gaps[0][0]}s: everything "
+                            f"after it is {gaps[0][1]}s early, the same "
+                            "amount all the way through"
+                        )
+                    elif gaps:
+                        print(
+                            f"     {len(gaps)} holes: each part is further "
+                            f"out than the last, up to {lost}s by the end"
+                        )
                 else:
                     print(
                         "  -> a stretch: the durations are out by a "

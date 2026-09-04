@@ -131,3 +131,65 @@ def test_the_playback_copy_pins_its_sample_rate():
     arguments = seen["arguments"]
     assert "-ar" in arguments
     assert arguments[arguments.index("-ar") + 1] == "48000"
+
+
+def test_the_asr_audio_keeps_wall_clock_time():
+    """A hole in the audio is filled, not closed.
+
+    This is a real failure: a body-worn camera dropped 5.26s of audio across a
+    25-minute file. The mp4 playback copy kept the hole, because it carries a
+    timestamp per frame; the WAV could not, so ffmpeg wrote the samples end to
+    end and every word after the hole was 5.26s early against the video.
+    """
+    from core import media
+
+    assert media.KEEP_THE_CLOCK.startswith("aresample=async=1")
+    assert "first_pts=0" in media.KEEP_THE_CLOCK
+
+
+def test_both_copies_start_with_the_same_filter(tmp_path, monkeypatch):
+    """The playback copy and the ASR audio must agree about time.
+
+    They are made by two separate ffmpeg runs, so nothing but this keeps them
+    in step. The commands are captured rather than run: what is being checked
+    is what ffmpeg is asked to do.
+    """
+    from core import media
+
+    asked = []
+
+    def remember(arguments, **rest):
+        asked.append(arguments)
+
+        class Finished:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        target = arguments[-1]
+        if not str(target).startswith("-"):
+            Path(target).parent.mkdir(parents=True, exist_ok=True)
+            Path(target).write_bytes(b"x")
+        return Finished()
+
+    monkeypatch.setattr(media, "_run", remember)
+
+    source = tmp_path / "original.mp4"
+    source.write_bytes(b"x")
+
+    media.make_asr_audio(source, tmp_path / "asr-side1.wav", None, profile="none")
+    media.make_playback_copy(
+        source,
+        tmp_path / "playback.mp4",
+        media.Probe(raw={"streams": [], "format": {}}, duration_seconds=1.0, tracks=()),
+        profile="none",
+    )
+
+    filters = [
+        arguments[arguments.index("-af") + 1]
+        for arguments in asked
+        if "-af" in arguments
+    ]
+    assert len(filters) == 2
+    for one in filters:
+        assert one.startswith(media.KEEP_THE_CLOCK), one
