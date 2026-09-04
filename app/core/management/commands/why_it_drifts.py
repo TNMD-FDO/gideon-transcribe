@@ -175,6 +175,18 @@ def number(value) -> float | None:
         return None
 
 
+def where(recording) -> str:
+    """The path Caddy serves this Recording's files from.
+
+    Printed so it can be opened on its own, in a browser tab, away from the
+    app's page. The browser's own player will scrub it or refuse to, and that
+    says whether the fault is in this app's viewer or below it.
+    """
+    if recording.case_id:
+        return f"case-media/{recording.case_id}/{recording.pk}"
+    return f"media/{recording.user_id}/{recording.pk}"
+
+
 def streams_of(raw: dict, kind: str) -> list:
     return [one for one in raw.get("streams", []) if one.get("codec_type") == kind]
 
@@ -244,6 +256,13 @@ class Command(BaseCommand):
             playback = say(
                 f"The playback copy ({playback_path.name})", probe(playback_path)
             )
+            # Size decides whether a browser ever has to ask for part of the
+            # file: one it can hold whole is jumped about in without asking
+            # the server anything, which is why a short audio recording can
+            # scrub while a long video cannot.
+            big = playback_path.stat().st_size
+            print(f"  size        {big / 1024 / 1024:.0f} MB")
+            print(f"  its address /{where(recording)}/{playback_path.name}")
 
         if playback_path is not None and playback_path.suffix == ".mp4":
             print("\nCan the playback copy be jumped about in?")
