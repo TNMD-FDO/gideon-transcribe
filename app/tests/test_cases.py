@@ -291,3 +291,62 @@ def test_an_admin_looking_in_is_not_use(person, a_case, client):
     # Down to the second, because the update above set it and nothing since
     # should have moved it.
     assert abs((a_case.last_activity - long_ago).total_seconds()) < 1
+
+
+# Opening a case, and taking its transcripts away ---------------------------------
+
+
+def test_a_case_opens_on_its_newest_recording_with_a_transcript(person, a_case):
+    from core.case_pages import opens_at
+
+    older = a_recording(person, case=a_case)
+    a_transcript(older)
+    newer = a_recording(person, case=a_case)
+    a_transcript(newer)
+    # Newest first, and one still processing is passed over.
+    a_recording(person, case=a_case)
+
+    assert opens_at(a_case) == f"/recording/{newer.pk}"
+
+
+def test_a_case_with_nothing_to_play_opens_its_own_page(person, a_case):
+    from core.case_pages import opens_at
+
+    # Nothing in it at all, and then something not yet transcribed: both open
+    # the case page, which is where Add recordings is.
+    assert opens_at(a_case) == f"/case/{a_case.pk}"
+    a_recording(person, case=a_case)
+    assert opens_at(a_case) == f"/case/{a_case.pk}"
+
+
+def test_the_case_download_holds_every_transcript_in_it(person, a_case, client):
+    import io
+    import zipfile
+
+    first = a_recording(person, case=a_case, size=8)
+    a_transcript(first)
+    second = a_recording(person, case=a_case, size=8)
+    a_transcript(second)
+    # Not yet transcribed, so it is simply left out.
+    a_recording(person, case=a_case, size=8)
+    # And another case's recording is nothing to do with this zip.
+    elsewhere = Case.objects.create(owner=person, name="Delgado")
+    a_transcript(a_recording(person, case=elsewhere, size=8))
+
+    signed_in(client, person)
+    settings_store.set_to("folder_management", True)
+    answer = client.get(f"/case/{a_case.pk}/download")
+
+    assert answer.status_code == 200
+    inside = zipfile.ZipFile(io.BytesIO(answer.getvalue())).namelist()
+    assert len(inside) == 2
+    assert first is not None and second is not None
+
+
+def test_the_case_download_is_gone_while_folder_management_is_off(
+    person, a_case, client
+):
+    a_transcript(a_recording(person, case=a_case, size=8))
+    signed_in(client, person)
+    settings_store.set_to("folder_management", False)
+    assert client.get(f"/case/{a_case.pk}/download").status_code == 404

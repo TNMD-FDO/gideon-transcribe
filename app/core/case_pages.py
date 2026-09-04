@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import audit, cases, exports, uploads
@@ -89,7 +90,21 @@ def _as_row(case: Case) -> dict:
         "case": case,
         "recordings": case.recordings.count(),
         "size": uploads.as_gb(case.disk_bytes()),
+        "opens_at": opens_at(case),
     }
+
+
+def opens_at(case: Case) -> str:
+    """Where clicking a Case takes somebody.
+
+    Straight into the player, on the newest Recording with a Transcript, with
+    the rest of the Case beside it. A Case with nothing to play yet opens its
+    own page instead, which is where Add recordings is.
+    """
+    for one in case.recordings.order_by("-created"):
+        if hasattr(one, "transcript"):
+            return reverse("viewer", args=[one.pk])
+    return reverse("case", args=[case.pk])
 
 
 @login_required
@@ -355,6 +370,30 @@ def set_details(request: HttpRequest, recording_id) -> JsonResponse:
     recording.save(update_fields=["recording_type", "description"])
     cases.note_activity(recording.case, by=request.user)
     return JsonResponse({"ok": True})
+
+
+@login_required
+def download_case(request: HttpRequest, case_id) -> HttpResponse:
+    """Every Transcript in one Case, as plain text, in one zip.
+
+    Transcripts only, and not the media: a Workspace is bounded by a Login
+    session and a Case is not, so "everything" for a Case could be hundreds of
+    gigabytes. What a person wants the recordings themselves for, they take as
+    Clips.
+    """
+    _on_or_404()
+    case = _their_case(request, case_id)
+
+    body, included = exports.transcripts_zip(
+        case.recordings.select_related("transcript", "user").order_by("created")
+    )
+    for one in included:
+        exports.record_export(request, one, "transcript text")
+
+    cases.note_activity(case, by=request.user)
+    return exports.hand_over(
+        body, exports.zip_name(f"{case.name} transcripts"), "application/zip"
+    )
 
 
 @login_required

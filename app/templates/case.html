@@ -20,6 +20,7 @@
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
+      <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
       <button type="button" class="btn" id="rename">Rename</button>
       <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
     </div>

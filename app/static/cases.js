@@ -317,9 +317,15 @@
         && window.getComputedStyle(rail).display !== "none";
     }
 
+    // Both answers are applied, not just "hidden": a person who opened the
+    // rail on a narrow screen, where it starts closed, would otherwise lose
+    // it at the next page. With nothing stored the screen's width decides.
+    var chosen = null;
     try {
-      if (window.localStorage.getItem("case-rail") === "hidden") { draw(true); }
-    } catch (ignored) { /* the same, and the rail follows the screen's width */ }
+      chosen = window.localStorage.getItem("case-rail");
+    } catch (ignored) { /* the rail then follows the screen's width */ }
+    if (chosen === "hidden") { draw(true); }
+    else if (chosen === "shown") { draw(false); }
 
     hide.addEventListener("click", function () { draw(true); });
     // Shut it when it is open and open it when it is not: draw() takes

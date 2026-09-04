@@ -131,6 +131,10 @@
             <p class="muted small" style="margin: 2px 0 0">
               {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case
             </p>
+            <a href="{% url 'case-download' recording.case_id %}"
+               class="btn small" style="margin-top: 6px; display: block; text-align: center">
+              Download all transcripts
+            </a>
           </div>
           <ul class="caselist">
             {% for one in in_case %}
