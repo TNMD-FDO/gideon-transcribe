@@ -41,6 +41,18 @@ DECODE_TIMEOUT = 60 * 60
 # DC offset, resample, and normalise loudness in two linear passes so the
 # change is a pure volume scale. Off is the same without the loudness pass.
 HIGH_PASS = "highpass=f=20"
+
+# Keep wall-clock time. A body-worn camera drops audio, leaving holes in the
+# stream. An mp4 keeps a hole, because it carries a timestamp per frame; a WAV
+# cannot, so ffmpeg writes the samples end to end and the file comes out
+# shorter than the recording by the length of every hole. The transcript is
+# then in one timeline and the player in another, and every word after a hole
+# is early by the total of the holes before it.
+#
+# `async=1` fills each hole with silence instead of closing it, and
+# `first_pts=0` pads a stream that starts late so the file starts at zero.
+# On a file with no holes it does nothing.
+KEEP_THE_CLOCK = "aresample=async=1:first_pts=0"
 LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=20"
 
 # What tells a two-party call from an ordinary stereo recording. Build
@@ -324,7 +336,10 @@ def _measure_loudness(path: Path, track: Track | None, channel: int | None) -> d
             "-i",
             str(path),
             "-af",
-            f"{_channel_filter(channel)}{HIGH_PASS},{LOUDNORM}:print_format=json",
+            # The same chain the second pass runs, so the figures describe the
+            # signal that is actually written.
+            f"{KEEP_THE_CLOCK},{_channel_filter(channel)}{HIGH_PASS}"
+            f",{LOUDNORM}:print_format=json",
             "-f",
             "null",
             "-",
@@ -363,7 +378,7 @@ def make_asr_audio(
     that happens inside the service where it is recorded as a setting.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
-    filters = f"{_channel_filter(channel)}{HIGH_PASS}"
+    filters = f"{KEEP_THE_CLOCK},{_channel_filter(channel)}{HIGH_PASS}"
 
     if profile == "standard":
         measured = _measure_loudness(source, track, channel)
@@ -488,7 +503,11 @@ def make_playback_copy(
     track = probed.best_track
     video = video_stream(probed.raw)
 
-    filters = HIGH_PASS
+    # The same first filter the ASR audio gets, so both copies hold a hole the
+    # same way and both start at zero. Without it the two are in step only by
+    # luck: an mp4 keeps a hole as a jump in its timestamps and a WAV cannot,
+    # so they would agree on a clean file and disagree on a body-worn camera's.
+    filters = f"{KEEP_THE_CLOCK},{HIGH_PASS}"
     if profile == "standard":
         measured = _measure_loudness(source, track, None)
         if measured:
