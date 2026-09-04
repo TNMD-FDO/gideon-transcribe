@@ -9,6 +9,7 @@
 #   ./transcribe status       what is running, and whether it is healthy
 #   ./transcribe check        the smoke checks, as a plain report
 #   ./transcribe directory    ask the office's directory facts and write them
+#   ./transcribe folders      make the app data folders, owned by the app account
 #   ./transcribe backup-db    a dump of the database into the app data folder
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
 #   ./transcribe rollback TAG go back to a release, restoring the dump if need be
@@ -652,6 +653,27 @@ PY
 
 # backup-db --------------------------------------------------------------------
 
+cmd_folders() {
+  # Docker creates a missing bind-mount source as root, and the app could then
+  # never write into it. install and upgrade call this; it is a subcommand of
+  # its own as well, because until v1.0.0 this server tracks main (ADR 0007)
+  # and deploys by hand rather than through upgrade.
+  echo "The app data folders:"
+  make_the_data_folders
+
+  local data
+  data="$(env_value APP_DATA_DIR)"
+  for folder in scratch cases uploads; do
+    if [ -d "$data/$folder" ]; then
+      pass "$folder/ is $(stat -c '%U' "$data/$folder")'s, mode $(stat -c '%a' "$data/$folder")"
+    else
+      fail "$data/$folder could not be made"
+    fi
+  done
+
+  [ "$FAILURES" -eq 0 ] || exit 1
+}
+
 cmd_backup_db() {
   need_env
   local name="${1:-manual-$(date +%Y%m%d-%H%M%S)}"
@@ -847,6 +869,7 @@ install) shift && cmd_install "$@" ;;
 status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
 directory) shift && cmd_directory "$@" ;;
+folders) shift && cmd_folders "$@" ;;
 backup-db) shift && cmd_backup_db "$@" ;;
 upgrade) shift && cmd_upgrade "$@" ;;
 rollback) shift && cmd_rollback "$@" ;;
