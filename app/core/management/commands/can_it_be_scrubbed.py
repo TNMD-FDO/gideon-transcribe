@@ -16,10 +16,11 @@ would only ever be told no.
 
 from __future__ import annotations
 
+import contextlib
+import http.client
 import os
+import socket
 import ssl
-import urllib.error
-import urllib.request
 
 from django.contrib.sessions.backends.db import SessionStore
 from django.core.management.base import BaseCommand
@@ -33,20 +34,13 @@ FROM_BYTE = 400_000_000
 HOW_MANY = 100
 
 
-def address_of(recording) -> str:
-    # The port matters. The app is not on 443: another reverse proxy on the
-    # server may already own that, and the address the office uses carries the
-    # port. Asking 443 reaches whatever else is there, which is what happened
-    # the first time this was run.
-    host = os.environ.get("APP_HOSTNAME", "")
-    port = os.environ.get("HTTPS_PORT", "8443")
-    if port and port != "443":
-        host = f"{host}:{port}"
+def path_of(recording) -> str:
+    """The route Caddy serves this Recording's playback copy from."""
     if recording.case_id:
         where = f"case-media/{recording.case_id}/{recording.pk}"
     else:
         where = f"media/{recording.user_id}/{recording.pk}"
-    return f"https://{host}/{where}/playback.mp4"
+    return f"/{where}/playback.mp4"
 
 
 def as_that_person(user) -> tuple[str, LoginSession]:
@@ -64,35 +58,56 @@ def as_that_person(user) -> tuple[str, LoginSession]:
     return store.session_key, session
 
 
-def ask(url: str, cookie: str, byte_range: str | None) -> dict:
-    """One request, and what came back. The body is read but not kept."""
-    request = urllib.request.Request(url)
-    request.add_header("Cookie", f"sessionid={cookie}")
-    if byte_range:
-        request.add_header("Range", byte_range)
+def ask(path: str, cookie: str, byte_range: str | None) -> dict:
+    """One request to Caddy, and what came back. The body is read, not kept.
 
-    # The office's own certificate authority. What is being checked here is
-    # the range, not the trust, and the app is talking to itself.
-    loose = ssl.create_default_context()
+    Straight to the Caddy container over the network the two of them share,
+    rather than out to the address the office uses and back in. The office's
+    own firewall stands between a container and the host's published port,
+    which is right, and it also means the app cannot ask itself a question
+    that way.
+
+    The name the office uses is still what is presented, in the TLS handshake
+    and in the Host header, because that is what Caddy answers to.
+    """
+    host = os.environ.get("APP_HOSTNAME", "")
+
+    # What is checked here is what Caddy does with a range, not whether this
+    # certificate is trusted: the app is talking to the container beside it.
+    loose = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     loose.check_hostname = False
     loose.verify_mode = ssl.CERT_NONE
 
+    headers = {"Cookie": f"sessionid={cookie}", "Host": host}
+    if byte_range:
+        headers["Range"] = byte_range
+
+    raw = None
     try:
-        with urllib.request.urlopen(request, timeout=30, context=loose) as answer:
-            body = answer.read(HOW_MANY * 100)
-            return {
-                "status": answer.status,
-                "length": answer.headers.get("Content-Length"),
-                "range": answer.headers.get("Content-Range"),
-                "accepts": answer.headers.get("Accept-Ranges"),
-                "encoding": answer.headers.get("Content-Encoding"),
-                "type": answer.headers.get("Content-Type"),
-                "read": len(body),
-            }
-    except urllib.error.HTTPError as refused:
-        return {"status": refused.code, "why": refused.reason}
+        raw = socket.create_connection(("caddy", 443), timeout=30)
+        secured = loose.wrap_socket(raw, server_hostname=host)
+        talk = http.client.HTTPSConnection(host, 443, timeout=30, context=loose)
+        talk.sock = secured
+        talk.request("GET", path, headers=headers)
+        answer = talk.getresponse()
+        body = answer.read(HOW_MANY * 100)
+        told = {
+            "status": answer.status,
+            "length": answer.getheader("Content-Length"),
+            "range": answer.getheader("Content-Range"),
+            "accepts": answer.getheader("Accept-Ranges"),
+            "encoding": answer.getheader("Content-Encoding"),
+            "type": answer.getheader("Content-Type"),
+            "read": len(body),
+        }
+        talk.close()
+        return told
     except Exception as trouble:  # noqa: BLE001 - anything here is the answer
-        return {"status": None, "why": str(trouble)}
+        return {"status": None, "why": f"{type(trouble).__name__}: {trouble}"}
+    finally:
+        if raw is not None:
+            with contextlib.suppress(OSError):
+                raw.close()
 
 
 class Command(BaseCommand):
@@ -119,23 +134,24 @@ class Command(BaseCommand):
             self.stderr.write("That recording has no playback copy.")
             return
 
-        url = address_of(recording)
+        path = path_of(recording)
+        host = os.environ.get("APP_HOSTNAME", "")
         print(f"{recording.title}")
-        print(f"  asking      {url}")
+        print(f"  asking      caddy:443 as {host}{path}")
         print(f"  the file is {playback.stat().st_size} bytes on disk")
 
-        if not os.environ.get("APP_HOSTNAME"):
-            self.stderr.write("APP_HOSTNAME is not set, so there is no address to ask.")
+        if not host:
+            self.stderr.write("APP_HOSTNAME is not set, so there is no name to ask as.")
             return
 
         cookie, session = as_that_person(recording.user)
         try:
-            whole = ask(url, cookie, None)
+            whole = ask(path, cookie, None)
             print("\nAsking for the whole file, as a browser does to start playing")
             for name, value in whole.items():
                 print(f"  {name:<9} {value}")
 
-            part = ask(url, cookie, f"bytes={FROM_BYTE}-{FROM_BYTE + HOW_MANY - 1}")
+            part = ask(path, cookie, f"bytes={FROM_BYTE}-{FROM_BYTE + HOW_MANY - 1}")
             print(
                 f"\nAsking for {HOW_MANY} bytes from {FROM_BYTE}, "
                 "as a browser does to jump"
@@ -150,6 +166,15 @@ class Command(BaseCommand):
         self.verdict(whole, part)
 
     def verdict(self, whole, part):
+        if whole.get("status") == 403:
+            print(
+                "  Caddy refused this as coming from outside the office's own "
+                "networks, which is the client allow-list doing its job. The "
+                "app's own container is not on one of them, so this check "
+                "cannot run from here."
+            )
+            return
+
         if whole.get("status") != 200:
             print(
                 f"  the whole file came back as {whole.get('status')}"
