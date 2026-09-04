@@ -14,36 +14,78 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0010_user_quota'),
+        ("core", "0010_user_quota"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Clip',
+            name="Clip",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('title', models.CharField(max_length=120)),
-                ('note', models.TextField(blank=True, default='', max_length=1000)),
-                ('start', models.FloatField()),
-                ('end', models.FloatField()),
-                ('burn_captions', models.BooleanField(default=False)),
-                ('include_excerpt', models.BooleanField(default=True)),
-                ('state', models.CharField(choices=[('rendering', 'Rendering'), ('ready', 'Ready'), ('failed', 'Failed')], default='rendering', max_length=20)),
-                ('failure_class', models.CharField(blank=True, default='', max_length=40)),
-                ('rendered', models.DateTimeField(blank=True, null=True)),
-                ('size_bytes', models.BigIntegerField(default=0)),
-                ('captions_of', models.CharField(blank=True, default='', max_length=64)),
-                ('first_downloaded', models.DateTimeField(blank=True, null=True)),
-                ('downloads', models.IntegerField(default=0)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('recording', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='clips', to='core.recording')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='clips', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("title", models.CharField(max_length=120)),
+                ("note", models.TextField(blank=True, default="", max_length=1000)),
+                ("start", models.FloatField()),
+                ("end", models.FloatField()),
+                ("burn_captions", models.BooleanField(default=False)),
+                ("include_excerpt", models.BooleanField(default=True)),
+                (
+                    "state",
+                    models.CharField(
+                        choices=[
+                            ("rendering", "Rendering"),
+                            ("ready", "Ready"),
+                            ("failed", "Failed"),
+                        ],
+                        default="rendering",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "failure_class",
+                    models.CharField(blank=True, default="", max_length=40),
+                ),
+                ("rendered", models.DateTimeField(blank=True, null=True)),
+                ("size_bytes", models.BigIntegerField(default=0)),
+                (
+                    "captions_of",
+                    models.CharField(blank=True, default="", max_length=64),
+                ),
+                ("first_downloaded", models.DateTimeField(blank=True, null=True)),
+                ("downloads", models.IntegerField(default=0)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                (
+                    "recording",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="clips",
+                        to="core.recording",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="clips",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['recording', 'start'],
-                'indexes': [models.Index(fields=['user', 'created'], name='core_clip_user_id_41abf6_idx')],
+                "ordering": ["recording", "start"],
+                "indexes": [
+                    models.Index(
+                        fields=["user", "created"], name="core_clip_user_id_41abf6_idx"
+                    )
+                ],
             },
         ),
     ]

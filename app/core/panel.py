@@ -62,9 +62,7 @@ def tray_of(request) -> dict:
 
 def waiting_on(page: str, tray: dict) -> int:
     """How many edits are waiting for one settings page, for the rail."""
-    return sum(
-        1 for key in tray if settings_store.definition(key).page == page
-    )
+    return sum(1 for key in tray if settings_store.definition(key).page == page)
 
 
 def tray_rows(tray: dict) -> list[dict]:

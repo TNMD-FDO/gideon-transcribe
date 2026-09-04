@@ -266,7 +266,8 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "has_transcript": hasattr(recording, "transcript"),
                 "can_retry": _can_retry(recording, job),
                 "can_process_again": (
-                    hasattr(recording, "transcript") and job is not None
+                    hasattr(recording, "transcript")
+                    and job is not None
                     and not job.is_live
                 ),
                 "reprocessing": found.is_reprocessing,
@@ -332,8 +333,9 @@ def _runs_in_line():
     from core.jobs import Run
 
     return list(
-        Run.objects.filter(job__state__in=JobState.LIVE)
-        .select_related("job__recording__user")
+        Run.objects.filter(job__state__in=JobState.LIVE).select_related(
+            "job__recording__user"
+        )
     )
 
 
@@ -568,9 +570,7 @@ def delete_recording(request: HttpRequest, recording_id) -> JsonResponse:
     stopping the work and keeping the half of it that arrived is not
     something anybody wants.
     """
-    recording = (
-        Recording.objects.filter(pk=recording_id).select_related("user").first()
-    )
+    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
     if recording is None or (
         recording.user_id != request.user.pk and not request.user.is_admin
     ):

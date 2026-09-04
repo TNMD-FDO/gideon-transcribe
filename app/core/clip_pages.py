@@ -32,9 +32,7 @@ def clips_are_on() -> bool:
 
 
 def _their_recording(request, recording_id) -> Recording | None:
-    recording = (
-        Recording.objects.filter(pk=recording_id).select_related("user").first()
-    )
+    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
     if recording is None:
         return None
     if recording.user_id == request.user.pk or request.user.is_admin:
@@ -90,9 +88,7 @@ def _record(request, clip: Clip, event: str) -> None:
         actor=request.user,
         request=request,
         affected_user=(
-            clip.recording.user
-            if clip.recording.user_id != request.user.pk
-            else None
+            clip.recording.user if clip.recording.user_id != request.user.pk else None
         ),
         object_type="clip",
         object_id=clip.pk,

@@ -121,9 +121,11 @@ def test_the_playback_copy_pins_its_sample_rate():
         tracks=(media.Track(index=0, codec="aac", channels=2, sample_rate=48000),),
     )
 
-    with mock.patch.object(media, "_run", remember), mock.patch.object(
-        media, "_measure_loudness", return_value={}
-    ), mock.patch.object(Path, "exists", return_value=True):
+    with (
+        mock.patch.object(media, "_run", remember),
+        mock.patch.object(media, "_measure_loudness", return_value={}),
+        mock.patch.object(Path, "exists", return_value=True),
+    ):
         media.make_playback_copy(Path("in.mp4"), Path("out.m4a"), probed, "standard")
 
     arguments = seen["arguments"]

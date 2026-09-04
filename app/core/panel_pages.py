@@ -53,9 +53,9 @@ def status_lines(request: HttpRequest) -> JsonResponse:
             "service": _whisperx(),
             "storage": {
                 "free": uploads.as_gb(free),
-                "colour": "red" if free < floor else (
-                    "amber" if free < floor * 2 else "plain"
-                ),
+                "colour": "red"
+                if free < floor
+                else ("amber" if free < floor * 2 else "plain"),
                 "floor": uploads.as_gb(floor),
             },
             "workspaces": _workspaces(),
@@ -197,9 +197,7 @@ def _workspaces() -> dict:
     scratch = Path(django_settings.SCRATCH_DIR)
     size = 0
     if scratch.is_dir():
-        size = sum(
-            path.stat().st_size for path in scratch.rglob("*") if path.is_file()
-        )
+        size = sum(path.stat().st_size for path in scratch.rglob("*") if path.is_file())
     return {
         "open": open_now,
         "busy": busy,
@@ -260,9 +258,7 @@ def _versions() -> dict:
     from django.db.migrations.recorder import MigrationRecorder
 
     last = (
-        MigrationRecorder.Migration.objects.filter(app="core")
-        .order_by("-id")
-        .first()
+        MigrationRecorder.Migration.objects.filter(app="core").order_by("-id").first()
     )
     service = _whisperx()
     versions = service.get("versions") or {}
@@ -285,10 +281,9 @@ def queue_page(request: HttpRequest) -> HttpResponse:
 @admins_only
 def queue_state(request: HttpRequest) -> JsonResponse:
     rows = []
-    for job in (
-        Job.objects.select_related("recording", "recording__user", "batch")
-        .order_by("-created")[:100]
-    ):
+    for job in Job.objects.select_related(
+        "recording", "recording__user", "batch"
+    ).order_by("-created")[:100]:
         run = job.runs.order_by("side__number").first()
         rows.append(
             {

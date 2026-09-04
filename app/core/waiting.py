@@ -177,9 +177,9 @@ def ahead_of(run, live_runs, user) -> str:
 def queued_line(run, live_runs, user, service_speed) -> str | None:
     """The whole sentence a waiting person reads.
 
-        4th in line, behind jsmith. About 35 minutes.
-        4th in line, behind 2 of your own recordings.
-        4th in line, behind another system.
+    4th in line, behind jsmith. About 35 minutes.
+    4th in line, behind 2 of your own recordings.
+    4th in line, behind another system.
     """
     if run is None or run.state not in ("pending", "queued"):
         return None
