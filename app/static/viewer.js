@@ -89,23 +89,39 @@
     if (!player) { return; }
     var wanted = Math.max(0, seconds);
 
-    if (window.clearTimeout && seekWatch) { window.clearTimeout(seekWatch); }
+    if (seekWatch) { window.clearTimeout(seekWatch); }
     player.currentTime = wanted;
     seekWatch = window.setTimeout(function () {
       seekWatch = null;
       if (Math.abs(player.currentTime - wanted) < 1.5) { return; }
+
       if (!withinSeekable(wanted)) {
         window.VIEWER.sayTrouble(
-          "This recording cannot be jumped about in: the server is not " +
-          "answering for parts of the file. It still plays from the start."
+          "This recording cannot be jumped about in: the browser cannot " +
+          "reach that part of the file. It still plays from where it is."
+        );
+        return;
+      }
+
+      // The one bit that says where to look. Still seeking after five
+      // seconds means the browser asked and is waiting, so the file or the
+      // server is not answering for that part. Not seeking means it decided
+      // straight away that it could not, which is the file's own shape.
+      if (player.seeking) {
+        window.VIEWER.sayTrouble(
+          "This recording is taking a long time to jump to that point: the " +
+          "server has not answered for that part of the file. It still " +
+          "plays from where it is."
         );
         return;
       }
       window.VIEWER.sayTrouble(
-        "This recording did not jump to that point. It still plays from " +
-        "where it is."
+        "This recording will not jump to that point: the browser gave up at " +
+        "once, which means the file itself cannot be jumped about in. It " +
+        "still plays from where it is. Process again remakes the playback " +
+        "copy."
       );
-    }, 3000);
+    }, 5000);
 
     // Going somewhere on purpose is asking to watch from there, so a follow
     // that was paused for reading comes back rather than leaving the
@@ -465,7 +481,7 @@
     // over a second, so every click, which always jitters a pixel or two,
     // counted as a drag and marked a clip instead of seeking. How far a hand
     // moves is the same however long the recording is.
-    var A_CLICK = 4;
+    var A_CLICK = 6;
 
     timeline.addEventListener("mousedown", function (event) {
       if (!duration) {
@@ -557,9 +573,23 @@
       if (trouble) { trouble.hidden = true; }
     });
 
+    player.addEventListener("seeked", function () {
+      if (seekWatch) {
+        window.clearTimeout(seekWatch);
+        seekWatch = null;
+      }
+      // A jump that landed takes any complaint about jumping with it.
+      if (trouble && !trouble.hidden) { trouble.hidden = true; }
+    });
+
     player.addEventListener("timeupdate", follow);
     player.addEventListener("loadedmetadata", function () {
-      duration = player.duration || duration;
+      // Only a real number. Some files report their length as Infinity or
+      // as nothing at all, and either would make every position on the
+      // timeline meaningless while looking like a length.
+      if (isFinite(player.duration) && player.duration > 0) {
+        duration = player.duration;
+      }
       drawTimeline();
     });
 
