@@ -153,13 +153,21 @@
         ]
       };
     }
+    var intoCase = document.getElementById("add-to-case");
+    var whatKind = document.getElementById("recording-type");
     return {
       diarize: document.getElementById("diarize").checked,
       speakers: speakers,
       translate: document.getElementById("translate").checked,
       language: document.getElementById("language").value,
       vocabulary: document.getElementById("vocabulary").value.split("\n"),
-      context: document.getElementById("context").value
+      context: document.getElementById("context").value,
+      // Absent from the page altogether while Folder management is off.
+      case: intoCase ? intoCase.value : "",
+      case_name: intoCase && intoCase.value
+        ? intoCase.options[intoCase.selectedIndex].textContent
+        : "",
+      recording_type: whatKind ? whatKind.value : ""
     };
   }
 
@@ -170,6 +178,16 @@
     document.getElementById("vocabulary").value =
       (values.vocabulary || []).join("\n");
     document.getElementById("context").value = values.context || "";
+
+    var intoCase = document.getElementById("add-to-case");
+    if (intoCase) {
+      intoCase.value = values.case || "";
+      document.getElementById("recording-type").value =
+        values.recording_type || "";
+      // A recording type belongs to a case, so it is offered only once
+      // one is chosen.
+      document.getElementById("type-field").hidden = !intoCase.value;
+    }
 
     var speakers = values.speakers;
     if (speakers && speakers.exactly) {
@@ -304,6 +322,8 @@
       var row = document.createElement("tr");
       row.innerHTML =
         "<td><b>" + escape(one.title) + "</b></td>" +
+        "<td class='muted'>" +
+        escape(values.case_name || "this session only") + "</td>" +
         "<td class='muted'>" + escape(speakersInWords(values)) + "</td>" +
         "<td class='muted'>" + (values.translate ? "yes" : "no") + "</td>" +
         "<td class='muted'>" + escape(values.language || "automatic") + "</td>" +
@@ -324,6 +344,8 @@
       var values = settingsFor(one);
       var row = document.createElement("tr");
       var marks = [];
+      if (values.case_name) { marks.push("into " + values.case_name); }
+      if (values.recording_type) { marks.push(values.recording_type); }
       if (values.diarize) { marks.push("diarize"); }
       if (values.translate) { marks.push("to English"); }
       if (values.language) { marks.push(values.language); }

@@ -30,10 +30,13 @@ CLIPS = "clips/"
 
 
 def _wanted(request: HttpRequest) -> tuple[str, str, str] | None:
-    """The user and recording ids out of the path Caddy was asked for.
+    """The holder and recording ids out of the path Caddy was asked for.
 
-    The path arrives either as `/media/<user>/<recording>/<file>` or with the
-    `/media` already stripped, because Caddy sorts the directives in a route
+    The holder is the person whose Workspace it is, or the Case it is kept in,
+    which is exactly the folder the file sits in on disk.
+
+    The path arrives either as `/media/<holder>/<recording>/<file>` or with
+    the prefix already stripped, because Caddy sorts the directives in a route
     and may run the strip before it asks. Both are read, so that the order of
     two lines in a Caddyfile cannot silently refuse every recording in the
     office.
@@ -42,13 +45,34 @@ def _wanted(request: HttpRequest) -> tuple[str, str, str] | None:
     path = unquote(urlparse(path).path)
 
     parts = [piece for piece in path.split("/") if piece]
-    if parts and parts[0] == "media":
+    if parts and parts[0] in ("media", "case-media"):
         parts = parts[1:]
 
-    # <user id> / <recording id> / <file>
+    # <user id or case id> / <recording id> / <file>
     if len(parts) < 3:
         return None
     return parts[0], parts[1], "/".join(parts[2:])
+
+
+def media_root(recording) -> str:
+    """The URL a Recording's files hang off, which follows where they live.
+
+    Caddy is given two roots, `scratch/` and `cases/`, so the prefix says
+    which. A Recording that moves into a Case changes prefix with its files
+    and its old URL stops working, which is the intent.
+    """
+    if recording.case_id:
+        return f"/case-media/{recording.case_id}/{recording.pk}"
+    return f"/media/{recording.user_id}/{recording.pk}"
+
+
+def holder_of(recording) -> str:
+    """The folder a Recording's files sit in, named as the URL names it.
+
+    Checked rather than trusted: a path claiming the wrong holder is refused,
+    so a Recording moved into a Case cannot still be fetched by its old URL.
+    """
+    return str(recording.case_id) if recording.case_id else str(recording.user_id)
 
 
 def may_serve(request: HttpRequest) -> HttpResponse:
@@ -71,7 +95,7 @@ def may_serve(request: HttpRequest) -> HttpResponse:
         return HttpResponse(status=404)
 
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
-    if recording is None or str(recording.user_id) != owner_id:
+    if recording is None or holder_of(recording) != owner_id:
         return HttpResponse(status=404)
 
     if recording.user_id == request.user.pk:

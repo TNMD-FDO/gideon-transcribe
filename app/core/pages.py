@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, lifecycle, settings_store, tasks, uploads, whisperx
+from core import audit, cases, lifecycle, settings_store, tasks, uploads, whisperx
 from core.jobs import JobState
 from core.recordings import Batch, MediaState, Recording, Refusal
 
@@ -76,12 +76,26 @@ def upload(request: HttpRequest) -> HttpResponse:
     if batch is not None:
         return redirect(reverse("batch", args=[batch.pk]))
 
+    to_a_case = []
+    chosen_case = ""
+    if cases.folder_management_on():
+        to_a_case = [
+            {"id": str(one.pk), "name": one.name}
+            for one in cases.cases_for(request.user)
+        ]
+        asked = request.GET.get("case", "")
+        if any(one["id"] == asked for one in to_a_case):
+            chosen_case = asked
+
     return render(
         request,
         "upload.html",
         {
             "page": "upload",
             "standing_line": standing_line(),
+            "to_a_case": to_a_case,
+            "chosen_case": chosen_case,
+            "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
             "limits": {
@@ -149,9 +163,12 @@ def submit(request: HttpRequest) -> JsonResponse:
     made = []
     for one in files:
         settings_for_file = _settings_from(one, wanted.get("batch") or {})
+        into, its_type = _case_for(request.user, one, wanted.get("batch") or {})
         recording = Recording.objects.create(
             batch=batch,
             user=request.user,
+            case=into,
+            recording_type=its_type,
             title=(
                 (one.get("title") or "").strip()[:300] or one.get("name", "recording")
             ),
@@ -185,6 +202,31 @@ def submit(request: HttpRequest) -> JsonResponse:
     )
 
     return JsonResponse({"batch": str(batch.pk), "recordings": made})
+
+
+def _case_for(user, one: dict, batch_settings: dict):
+    """Which Case this file goes into, and what type it is called.
+
+    Set once per Batch with a per-Recording override, like every other Batch
+    setting. A Recording added this way belongs to its Case from the first
+    byte: its files land in the Case's folder and it is never in the Workspace.
+    """
+    if not cases.folder_management_on():
+        return None, ""
+
+    chosen = one.get("settings") or batch_settings
+    wanted = chosen.get("case") or batch_settings.get("case") or ""
+    if not wanted:
+        return None, ""
+
+    into = cases.cases_for(user).filter(pk=wanted).first()
+    if into is None:
+        # A Case that has gone since the page loaded. The Workspace is the
+        # safe answer: nothing is lost, and the person can move it in.
+        return None, ""
+
+    its_type = (chosen.get("recording_type") or "").strip()[:60]
+    return into, its_type
 
 
 def _settings_from(one: dict, batch_settings: dict) -> dict:

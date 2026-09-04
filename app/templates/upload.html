@@ -57,8 +57,8 @@
             <table class="tbl" id="exceptions">
               <thead>
                 <tr>
-                  <th>File</th><th>Speakers</th><th>To English</th>
-                  <th>Language</th><th></th>
+                  <th>File</th><th>Goes to</th><th>Speakers</th>
+                  <th>To English</th><th>Language</th><th></th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -85,6 +85,32 @@
             </div>
 
             <div id="the-settings">
+              {% if to_a_case %}
+                <div class="field">
+                  <label for="add-to-case">Add to case</label>
+                  <select id="add-to-case">
+                    <option value="">This session only</option>
+                    {% for one in to_a_case %}
+                      <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <p class="muted small" style="margin: 4px 0 0">
+                    A recording added to a case stays after you sign out. One
+                    left in this session does not.
+                  </p>
+                </div>
+
+                <div class="field" id="type-field" hidden>
+                  <label for="recording-type">Recording type</label>
+                  <select id="recording-type">
+                    <option value="">No type</option>
+                    {% for one in recording_types %}
+                      <option value="{{ one }}">{{ one }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% endif %}
+
               <label class="row">
                 <input type="checkbox" id="diarize"> <b>Diarize</b>
               </label>

@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 
 from core import audit
 from core.jobs import Segment
+from core.media_access import media_root
 from core.recordings import Recording
 
 log = logging.getLogger("transcribe.viewer")
@@ -131,13 +132,11 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             "is_someone_elses": recording.user_id != request.user.pk,
             "being_replaced": being_replaced(recording),
             "media_url": (
-                f"/media/{recording.user_id}/{recording.pk}/{playback.name}"
-                if playback
-                else ""
+                f"{media_root(recording)}/{playback.name}" if playback else ""
             ),
             "is_video": bool(playback and playback.suffix == ".mp4"),
             "waveform_url": (
-                f"/media/{recording.user_id}/{recording.pk}/waveform.json"
+                f"{media_root(recording)}/waveform.json"
                 if recording.waveform_path.exists()
                 else ""
             ),

@@ -17,6 +17,20 @@ from django.conf import settings
 PASSWORD = "a-long-enough-password"
 
 
+@pytest.fixture(autouse=True)
+def its_own_disk(tmp_path, settings):
+    """A fresh App data folder for each test.
+
+    The database rolls back at the end of a test and the disk does not, so
+    without this the folders one test writes are still there for the next one,
+    and a sweeper counting orphans counts everybody's.
+    """
+    settings.DATA_DIR = tmp_path
+    settings.SCRATCH_DIR = tmp_path / "scratch"
+    settings.UPLOADS_DIR = tmp_path / "uploads"
+    return tmp_path
+
+
 @pytest.fixture
 def person(db):
     return User.objects.create_local_admin("case-owner", PASSWORD)

@@ -54,3 +54,38 @@ def test_only_the_three_files_and_clips_may_be_served():
     assert "waveform.json" in media_access.SERVABLE
     assert "original.mp4" not in media_access.SERVABLE
     assert "asr-side1.wav" not in media_access.SERVABLE
+
+
+def test_a_case_path_is_read_with_and_without_its_prefix():
+    # A Recording in a Case hangs off /case-media/<case>/<recording>/, because
+    # Caddy is given cases/ as a second root and never one root over the whole
+    # App data folder.
+    case = "3f2a1b4c-0000-4000-8000-000000000001"
+    with_prefix = media_access._wanted(
+        Request(f"/case-media/{case}/rec-1/playback.mp4")
+    )
+    without = media_access._wanted(Request(f"/{case}/rec-1/playback.mp4"))
+    assert with_prefix == (case, "rec-1", "playback.mp4")
+    assert without == with_prefix
+
+
+class Standing:
+    """A Recording, as far as the URL builder is concerned."""
+
+    def __init__(self, case_id=None, user_id=6, pk="rec-1"):
+        self.case_id = case_id
+        self.user_id = user_id
+        self.pk = pk
+
+
+def test_a_workspace_recording_hangs_off_media():
+    assert media_access.media_root(Standing()) == "/media/6/rec-1"
+
+
+def test_a_recording_in_a_case_hangs_off_case_media():
+    assert media_access.media_root(Standing(case_id="c-9")) == "/case-media/c-9/rec-1"
+
+
+def test_the_holder_is_the_case_once_there_is_one():
+    assert media_access.holder_of(Standing()) == "6"
+    assert media_access.holder_of(Standing(case_id="c-9")) == "c-9"
