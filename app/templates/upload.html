@@ -220,12 +220,18 @@
         </p>
       </li>
     </ol>
+    {% endif %}
 
+    {% comment %}
+      Outside the branch above on purpose. It answers a question about the
+      app, not about whether transcription happens to be available, and
+      somebody who has just been told the service is down is exactly the
+      person wondering where their recordings went.
+    {% endcomment %}
     <p class="muted small centre" style="margin-top: 18px">
       Nothing leaves this building. Everything here is removed when you sign
       out.
     </p>
-    {% endif %}
   </div>
 
   <script src="{% static 'vendor/tus.min.js' %}"></script>
