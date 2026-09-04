@@ -9,6 +9,11 @@ psycopg[binary]==3.3.5
 procrastinate==3.9.0
 whitenoise==6.12.0
 
+# The two guides are Markdown in docs/, rendered to HTML when the image is
+# built so that what the app serves is the Release's own text (ADR 0012).
+# Pure Python, no compiled part.
+Markdown==3.10.3
+
 # The Word export. lxml is python-docx's own dependency, pinned here so
 # that the image builds the same way every time.
 lxml==6.1.3

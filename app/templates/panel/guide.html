@@ -1,0 +1,13 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ guide.title }}{% endblock %}
+
+{% block panel %}
+  {% comment %}
+    Rendered from this repository's own docs/admin-guide.md and from nothing
+    a user typed, so it is marked safe here. See core/guides.py.
+  {% endcomment %}
+  <article class="guide">
+    <nav class="contents" aria-label="Contents">{{ guide.contents|safe }}</nav>
+    {{ guide.body|safe }}
+  </article>
+{% endblock %}

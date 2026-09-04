@@ -65,7 +65,7 @@ RUN python3 -m venv "${VIRTUAL_ENV}"
 # python-ldap is built from source against OpenLDAP's headers, so the
 # compiler and those headers are installed for the one pip layer and taken out
 # again in the same step; the shared libraries above are what stays.
-COPY requirements.txt /tmp/requirements.txt
+COPY app/requirements.txt /tmp/requirements.txt
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       build-essential \
@@ -88,14 +88,24 @@ ENV HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_SETTINGS_MODULE=transcribe.settings
 
-COPY . /opt/app/
+# The build context is the repository root and not this folder (ADR 0012), so
+# that the two guides the app serves can come from docs/ where the
+# specification keeps them. The root .dockerignore keeps everything else out,
+# the office's .env and secrets first among them.
+COPY app/ /opt/app/
+COPY docs/user-guide.md docs/admin-guide.md /opt/app/guides/
 WORKDIR /opt/app
 
 # The static files are gathered when the image is built rather than when a
 # container starts, so every container serves the same bytes and none of them
 # writes to its own filesystem to do it. The settings need a secret to import,
 # and this one is thrown away with the layer.
+#
+# The guides are rendered here too, from Markdown to HTML, so that a guide
+# that will not render fails the build and never reaches a server, and so
+# that what the app serves is exactly the Release's own text.
 RUN DJANGO_SECRET_KEY_FILE=/dev/null python manage.py collectstatic --no-input \
+ && DJANGO_SECRET_KEY_FILE=/dev/null python manage.py render_guides \
  && rm -rf /opt/app/static
 
 EXPOSE 8000

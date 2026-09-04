@@ -31,6 +31,7 @@
         {% if user.is_admin %}
           <a href="{% url 'panel' %}"{% if page == "panel" %} class="on"{% endif %}>Panel</a>
         {% endif %}
+        <a href="{% url 'help' %}"{% if page == "help" %} class="on"{% endif %}>Help</a>
       </span>
       <span class="who">
         {{ user.shown_name }}{% if user.is_admin %} &middot; Admin{% endif %}

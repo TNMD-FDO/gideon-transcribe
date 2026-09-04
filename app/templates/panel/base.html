@@ -14,6 +14,8 @@
         {% endfor %}
       {% endfor %}
       <div class="grp">Help</div>
+      <a href="{% url 'panel-help' %}"{% if here == "panel-help" %} class="on"{% endif %}>Admin guide</a>
+      <a href="{% url 'help' %}">User guide</a>
       <a href="{% url 'home' %}">Back to your recordings</a>
     </nav>
 

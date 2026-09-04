@@ -19,6 +19,8 @@ urlpatterns = [
     path("healthz", views.healthz, name="healthz"),
     path("", pages.recordings, name="home"),
     path("upload", pages.upload, name="upload"),
+    # The user guide, rendered from docs/user-guide.md (ADR 0012).
+    path("help/", pages.user_guide, name="help"),
     path("upload/submit", pages.submit, name="submit"),
     path("batch/<uuid:batch_id>", pages.batch, name="batch"),
     path("batch/<uuid:batch_id>/state", pages.batch_state, name="batch-state"),
@@ -182,6 +184,7 @@ urlpatterns = [
     path("panel/audit", panel_pages.audit_log, name="panel-audit"),
     path("panel/audit/check", panel_pages.integrity_check, name="panel-integrity"),
     path("panel/installation", panel_pages.installation, name="panel-installation"),
+    path("panel/help", panel_pages.admin_guide, name="panel-help"),
     path("panel/settings/<str:page>", panel.settings_page, name="panel-settings"),
     path("panel/settings/<str:page>/edit", panel.edit, name="panel-edit"),
     path("panel/apply", panel.apply, name="panel-apply"),

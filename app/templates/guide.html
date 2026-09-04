@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ guide.title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The body and the contents list are HTML rendered from this repository's
+    own docs/user-guide.md, and from nothing a user typed, so they are marked
+    safe here. See core/guides.py.
+  {% endcomment %}
+  <article class="page guide">
+    <nav class="contents" aria-label="Contents">{{ guide.contents|safe }}</nav>
+    {{ guide.body|safe }}
+  </article>
+{% endblock %}

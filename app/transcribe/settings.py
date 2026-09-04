@@ -169,6 +169,13 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
+# The two guides the app serves. In the image they are copied beside the app
+# and rendered at build time (ADR 0012); on a workstation, where there is no
+# such folder, they are read from the repository's docs/ and rendered live.
+GUIDES_DIR = (
+    BASE_DIR / "guides" if (BASE_DIR / "guides").is_dir() else BASE_DIR.parent / "docs"
+)
+
 STATIC_ROOT = BASE_DIR / "static-collected"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {

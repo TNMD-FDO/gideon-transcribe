@@ -22,7 +22,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, lifecycle, settings_store, uploads, whisperx
+from core import audit, cases, guides, lifecycle, settings_store, uploads, whisperx
 from core.cases import Case
 from core.jobs import Job, JobState
 from core.models import LoginSession, User
@@ -39,6 +39,20 @@ log = logging.getLogger("transcribe.panel")
 def status(request: HttpRequest) -> HttpResponse:
     """One page of lines, asked for again every five seconds."""
     return render(request, "panel/status.html", furniture(request, "panel-status"))
+
+
+@admins_only
+def admin_guide(request: HttpRequest) -> HttpResponse:
+    """The admin guide, inside the panel, rendered from docs/admin-guide.md.
+
+    Behind the Help link in the rail, so an Admin reads about the panel from
+    inside it, and always this Release's text (ADR 0012).
+    """
+    return render(
+        request,
+        "panel/guide.html",
+        {**furniture(request, "panel-help"), "guide": guides.load(guides.ADMIN)},
+    )
 
 
 @admins_only
