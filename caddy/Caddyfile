@@ -26,6 +26,25 @@
 https://{$APP_HOSTNAME}:443 {
 	tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem
 
+	# The request record. The app's own audit log says what people did; this
+	# says what was asked of the server, and for a Playback copy it is the
+	# only record there is: those bytes come off the disk without passing
+	# through Python, so nothing else ever sees them. The app's entrypoint
+	# says "Caddy keeps the request record" and until now Caddy did not: the
+	# global log block above configures Caddy's own errors, not the requests
+	# it serves.
+	#
+	# Ids, never names. A URI here carries a Recording's id and the fixed
+	# name `playback.mp4`; the file somebody uploaded is never in it.
+	#
+	# The health check is left out. Four lines a minute, for ever, saying
+	# nothing.
+	log {
+		output stdout
+		format json
+	}
+	log_skip /healthz
+
 	# Only the office's own networks. A host firewall's default-deny protects
 	# the host, not the traffic Docker forwards, so this is where the app is
 	# held to the office network. Everyone else is told 403 and nothing else:
