@@ -55,7 +55,9 @@ def used_bytes(user: User) -> int:
 
 
 def quota_bytes(user: User) -> int:
-    """This person's space. A per-person override will sit on the users list."""
+    """This person's space: their own figure if an Admin set one, else the default."""
+    if user.quota_gb:
+        return user.quota_gb * settings_store.GB
     return settings_store.default_quota_bytes()
 
 

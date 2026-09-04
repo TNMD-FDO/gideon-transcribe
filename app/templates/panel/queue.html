@@ -1,0 +1,21 @@
+{% extends "panel/base.html" %}
+{% load static %}
+{% block title %}Queue{% endblock %}
+
+{% block panel %}
+  <h1>Queue</h1>
+  <p class="quiet">
+    Every Job, newest first. There is no priority and no pause: a Job is
+    either in the line, running, or ended.
+  </p>
+  <table class="rows">
+    <thead>
+      <tr>
+        <th>User</th><th>Recording</th><th>Batch</th><th>Length</th>
+        <th>State</th><th>Step</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="jobs"></tbody>
+  </table>
+  <script src="{% static 'panel-queue.js' %}"></script>
+{% endblock %}

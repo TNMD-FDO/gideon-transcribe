@@ -28,21 +28,11 @@ from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.urls import reverse
 
+from core import settings_store
 from core.jobs import Transcript
 from core.recordings import Recording
 
 log = logging.getLogger("transcribe.exports")
-
-# The two texts an Admin can edit in the panel, with their placeholders. Until
-# the panel exists these are the catalogue's defaults.
-TRANSLATION_NOTICE = (
-    "Machine translation to English from {language} by Whisper {model}. The "
-    "original-language text was not kept. This is not a certified translation."
-)
-TRANSCRIPTION_NOTICE = (
-    "Automatic transcription by Whisper {model}. Corrections made by staff are "
-    "marked. This is not a certified transcript."
-)
 
 CORRECTED_LEGEND_TEXT = "Lines marked (corrected) were corrected by staff."
 CORRECTED_LEGEND_WORD = "Segments marked * were corrected by staff."
@@ -145,8 +135,22 @@ def notice_for(transcript: Transcript) -> str:
             if transcript.language_mixed
             else language_name(transcript.language)
         )
-        return TRANSLATION_NOTICE.format(language=spoken, model=model)
-    return TRANSCRIPTION_NOTICE.format(model=model)
+        return _fill(
+            settings_store.get("translation_notice"), language=spoken, model=model
+        )
+    return _fill(settings_store.get("transcription_notice"), model=model)
+
+
+def _fill(notice: str, **filling) -> str:
+    """Put the Provenance into an Admin's wording, whatever they wrote.
+
+    An Admin writing a notice can leave a placeholder out or put one in that
+    the app does not fill, and neither should raise on an export: a notice
+    with an unknown placeholder prints as it was written.
+    """
+    for name, value in filling.items():
+        notice = notice.replace("{" + name + "}", str(value))
+    return notice
 
 
 def model_of(transcript: Transcript) -> str:

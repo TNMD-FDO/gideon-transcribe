@@ -6,9 +6,15 @@
   <p class="notice">{{ standing_line }}</p>
   {% if storage_warning %}<p class="notice">{{ storage_warning }}</p>{% endif %}
 
-  <h1>Your recordings</h1>
+  {% if someone_elses %}
+    <p class="banner">Viewing {{ someone_elses.username }}'s Workspace as an Admin</p>
+  {% endif %}
 
-  <p><a href="{% url 'upload' %}"><button type="button">Upload recordings</button></a></p>
+  <h1>{% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}Your recordings{% endif %}</h1>
+
+  {% if not someone_elses %}
+    <p><a href="{% url 'upload' %}"><button type="button">Upload recordings</button></a></p>
+  {% endif %}
 
   {% if recordings %}
     <ul class="cards">

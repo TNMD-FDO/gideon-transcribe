@@ -107,6 +107,10 @@ class User(AbstractBaseUser):
     deactivated_at = models.DateTimeField(null=True, blank=True)
     blocked_at = models.DateTimeField(null=True, blank=True)
 
+    # A per-person override on the Users page, which wins over the default
+    # Workspace quota. Empty means the default, whatever it is at the time.
+    quota_gb = models.IntegerField(null=True, blank=True)
+
     created = models.DateTimeField(auto_now_add=True)
     last_sign_in = models.DateTimeField(null=True, blank=True)
 
