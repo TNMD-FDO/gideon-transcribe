@@ -193,3 +193,48 @@ def test_both_copies_start_with_the_same_filter(tmp_path, monkeypatch):
     assert len(filters) == 2
     for one in filters:
         assert one.startswith(media.KEEP_THE_CLOCK), one
+
+
+# The thread cap ---------------------------------------------------------------
+
+
+def test_every_ffmpeg_is_capped(monkeypatch):
+    """The specification's cap, applied where it cannot be forgotten.
+
+    The media worker runs several jobs at once and shares the server with the
+    web process, the queue and Postgres. Without this each ffmpeg takes every
+    core it can see, and four transcodes make the rest of the app wait.
+    """
+    monkeypatch.setenv("MEDIA_THREADS_PER_JOB", "3")
+    asked = []
+
+    def remember(arguments, **rest):
+        asked.append(arguments)
+
+        class Finished:
+            returncode = 0
+            stdout = "{}"
+            stderr = ""
+
+        return Finished()
+
+    monkeypatch.setattr(subprocess, "run", remember)
+
+    media._run(["ffmpeg", "-i", "in.mp4", "out.wav"], timeout=5)
+    media._run(["ffprobe", "-v", "error", "in.mp4"], timeout=5)
+    media._run(["audiowaveform", "-i", "in.wav"], timeout=5)
+
+    assert asked[0][:3] == ["ffmpeg", "-threads", "3"]
+    assert asked[1][:3] == ["ffprobe", "-threads", "3"]
+    # Only ffmpeg's own tools take it; audiowaveform has no such option and
+    # would refuse to start.
+    assert asked[2] == ["audiowaveform", "-i", "in.wav"]
+
+
+def test_the_cap_falls_back_to_the_specifications_default(monkeypatch):
+    monkeypatch.delenv("MEDIA_THREADS_PER_JOB", raising=False)
+    assert media.threads_per_job() == 8
+    monkeypatch.setenv("MEDIA_THREADS_PER_JOB", "not a number")
+    assert media.threads_per_job() == 8
+    monkeypatch.setenv("MEDIA_THREADS_PER_JOB", "0")
+    assert media.threads_per_job() == 8

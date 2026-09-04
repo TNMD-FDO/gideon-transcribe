@@ -758,6 +758,11 @@ cmd_upgrade() {
   git -C "$HERE" checkout --quiet "$tag"
   pass "the checkout is at $tag"
 
+  # What the app says it is running. Written here rather than typed, because a
+  # figure somebody typed would be a guess about the checkout rather than a
+  # fact about it, and the Admin panel and the audit log both print it.
+  set_env RELEASE_TAG "$tag"
+
   # 6 and 7. The images, then up. The folders first: a release can add one
   # Caddy mounts, and Docker would create a missing mount source as root,
   # which the app could then never write into.

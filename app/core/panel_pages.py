@@ -653,22 +653,54 @@ def workspace(request: HttpRequest, username: str) -> HttpResponse:
 # Installation -----------------------------------------------------------------
 
 
+def _the_services_gpu() -> str:
+    """Which card the WhisperX service reserved, asked of the service itself.
+
+    It is set in the service's own .env, which this container does not read
+    and should not: the service is a separate thing with its own settings.
+    """
+    try:
+        told = whisperx.status()
+    except Exception:  # noqa: BLE001 - a service that will not answer says so
+        return "the service did not answer"
+    gpu = (told or {}).get("gpu") or {}
+    return gpu.get("uuid") or gpu.get("name") or "the service did not say"
+
+
 @admins_only
 def installation(request: HttpRequest) -> HttpResponse:
     """The read-only environment facts, for checking; never a secret's value."""
+    # The names here are the specification's own. Four of them were not:
+    # this page asked for APP_PORT, ALLOWED_CLIENTS, ENGINE_NETWORK and
+    # HF_TOKEN_FILE, and no such keys exist, so the one page an Admin opens to
+    # check an installation answered "not set" to half of it however carefully
+    # the office had filled in .env.
     facts = [
         ("Address", os.environ.get("APP_HOSTNAME", "not set")),
-        ("Port", os.environ.get("APP_PORT", "not set")),
+        ("Port", os.environ.get("HTTPS_PORT", "not set")),
         ("Bind address", os.environ.get("BIND_ADDRESS", "not set")),
-        ("Allowed client networks", os.environ.get("ALLOWED_CLIENTS", "not set")),
+        (
+            "Allowed client networks",
+            os.environ.get("ALLOWED_CLIENT_CIDRS", "not set"),
+        ),
         ("Time zone", os.environ.get("TZ", "not set")),
         ("App data folder", str(django_settings.DATA_DIR)),
         ("WhisperX service", os.environ.get("WHISPERX_URL", "not set")),
-        ("WhisperX GPU", os.environ.get("WHISPERX_GPU_UUID", "not set")),
-        ("Engine network", os.environ.get("ENGINE_NETWORK", "not set")),
-        ("Local engine profile", os.environ.get("COMPOSE_PROFILES", "off")),
+        ("Engine network", os.environ.get("LLM_NETWORK", "not set")),
+        (
+            "Local engine profile",
+            os.environ.get("COMPOSE_PROFILES") or "off (a shared engine)",
+        ),
         ("Media threads per job", os.environ.get("MEDIA_THREADS_PER_JOB", "not set")),
         ("Media jobs at once", os.environ.get("MEDIA_CONCURRENT_JOBS", "not set")),
+    ]
+
+    # The service's own facts, which are in the service's .env and not this
+    # app's, so they are asked of the service rather than guessed at from an
+    # environment this container cannot see. The HuggingFace token is the
+    # service's too, and this app has never had it.
+    facts += [
+        ("WhisperX GPU", _the_services_gpu()),
     ]
 
     secrets = [
@@ -676,7 +708,6 @@ def installation(request: HttpRequest) -> HttpResponse:
         ("Database password", os.environ.get("POSTGRES_PASSWORD_FILE", "")),
         ("WhisperX Consumer token", os.environ.get("WHISPERX_TOKEN_FILE", "")),
         ("Engine token", os.environ.get("LLM_API_TOKEN_FILE", "")),
-        ("HuggingFace token", os.environ.get("HF_TOKEN_FILE", "")),
     ]
 
     return render(
