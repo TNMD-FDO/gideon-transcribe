@@ -37,7 +37,7 @@
     <label>&nbsp;
       <span class="row">
         <button type="submit" class="primary">Filter</button>
-        <a href="{% url 'panel-audit' %}"><button type="button" class="ghost">Clear</button></a>
+        <a href="{% url 'panel-audit' %}" class="btn ghost">Clear</a>
       </span>
     </label>
   </form>
@@ -74,9 +74,7 @@
           </tr>
           {% if row.details %}
             <tr>
-              <td colspan="8" class="audit-details">
-                {% for name, value in row.details.items %}{{ name }}: {{ value }}   {% endfor %}
-              </td>
+              <td colspan="8" class="audit-details">{% for name, value in row.details.items %}{{ name }}: {{ value }}   {% endfor %}</td>
             </tr>
           {% endif %}
         {% empty %}
@@ -88,10 +86,10 @@
 
   <div class="dialog">
     {% if page_number > 1 %}
-      <a href="?{{ carried }}&page={{ page_number|add:'-1' }}"><button type="button">Newer</button></a>
+      <a href="?{{ carried }}&page={{ page_number|add:'-1' }}" class="btn">Newer</a>
     {% endif %}
     {% if page_number < pages %}
-      <a href="?{{ carried }}&page={{ page_number|add:'1' }}"><button type="button">Older</button></a>
+      <a href="?{{ carried }}&page={{ page_number|add:'1' }}" class="btn">Older</a>
     {% endif %}
   </div>
 {% endblock %}

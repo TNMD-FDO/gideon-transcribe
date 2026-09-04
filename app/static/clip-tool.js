@@ -228,8 +228,8 @@
       var tools = "";
       if (!doing && one.state === "ready") {
         tools =
-          "<a href='/clip/" + one.id + "/download'>" +
-          "<button type='button' class='primary small'>Download</button></a>" +
+          "<a href='/clip/" + one.id + "/download' class='btn primary small'>" +
+          "Download</a>" +
           "<button type='button' class='small clip-play'>Play</button>" +
           (one.stale
             ? "<button type='button' class='small clip-rerender'>Re-render</button>"

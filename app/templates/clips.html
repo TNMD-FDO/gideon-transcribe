@@ -8,9 +8,7 @@
     <div class="row">
       <h1 class="grow">Your clips</h1>
       {% if any_ready %}
-        <a href="{% url 'download-clips' %}">
-          <button type="button" class="primary">Download all</button>
-        </a>
+        <a href="{% url 'download-clips' %}" class="btn primary">Download all</a>
       {% endif %}
     </div>
     <p class="lead">
@@ -33,7 +31,7 @@
           {% for clip in group.clips %}
             <tr>
               <td><b>{{ clip.title }}</b></td>
-              <td class="mono">{{ clip.start|floatformat:1 }}s &ndash; {{ clip.end|floatformat:1 }}s</td>
+              <td class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
               <td>{{ clip.seconds|floatformat:0 }}s</td>
               <td class="muted">
                 {% if clip.burn_captions %}captions burned{% endif %}
@@ -58,13 +56,9 @@
               <td>
                 <span class="row">
                   {% if clip.state == "ready" %}
-                    <a href="{% url 'download-clip' clip.pk %}">
-                      <button type="button" class="primary small">Download</button>
-                    </a>
+                    <a href="{% url 'download-clip' clip.pk %}" class="btn primary small">Download</a>
                   {% endif %}
-                  <a href="{% url 'viewer' clip.recording.pk %}">
-                    <button type="button" class="small">Open in viewer</button>
-                  </a>
+                  <a href="{% url 'viewer' clip.recording.pk %}" class="btn small">Open in viewer</a>
                   {% if clip.state == "failed" or clip.captions_are_stale %}
                     <button type="button" class="small rerender" data-clip="{{ clip.pk }}">
                       {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}

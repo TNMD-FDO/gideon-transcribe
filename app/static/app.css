@@ -165,8 +165,52 @@ button.on {
   border-color: var(--accent);
 }
 button.danger { color: var(--danger); }
+
+/* Somebody driving this from the keyboard has to be able to see where they
+ * are. :focus-visible rather than :focus, so a mouse click does not ring
+ * every button it touches.
+ */
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.switch input:focus-visible + .knob {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 button.tiny { padding: 1px 7px; font-size: 0.82em; }
-button.big { padding: 8px 16px; font-size: 1.05em; }
+button.big, .btn.big { padding: 8px 16px; font-size: 1.05em; }
+
+/* A link that looks like a button. A <button> inside an <a> is invalid and
+ * gives one action two tab stops, so the anchor carries the look itself.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface-2); }
+.btn.danger { color: var(--danger); }
+.btn.small { font-size: 0.85em; padding: 3px 8px; }
+.btn.tiny { padding: 1px 7px; font-size: 0.82em; }
 
 input[type="text"], input[type="search"], input[type="number"],
 input[type="date"], input[type="time"], input[type="password"],
@@ -399,10 +443,17 @@ main.wide { max-width: none; }
 
 /* The viewer ----------------------------------------------------------------- */
 
-body.viewer { overflow: hidden; }
-body.viewer main { padding: 0; height: calc(100% - 44px); }
+/* The viewer fills the window and does not scroll: the transcript column
+ * scrolls inside it. The height is shared out rather than guessed, because
+ * the nav is not a fixed height and a banner (an Admin in somebody else's
+ * Workspace, or the idle warning) sits above the desk and would otherwise
+ * push the bottom sheet off a page that cannot scroll.
+ */
+body.viewer { display: flex; flex-direction: column; overflow: hidden; }
+body.viewer main { padding: 0; flex: 1; min-height: 0; }
 
-.desk { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+.desk { display: grid; grid-template-rows: auto 1fr auto; min-height: 0;
+  height: 100%; }
 
 .dock {
   display: grid;
@@ -470,7 +521,7 @@ body.viewer main { padding: 0; height: calc(100% - 44px); }
   user-select: none;
 }
 .timeline canvas { display: block; width: 100%; }
-.timeline .hint {
+.dock .hint {
   display: flex;
   gap: 8px;
   font-size: 0.8em;
@@ -578,7 +629,7 @@ body.viewer main { padding: 0; height: calc(100% - 44px); }
 .seg textarea { width: 100%; min-height: 3.5em; }
 .seg .actions { float: right; visibility: hidden; }
 .seg:hover .actions, .seg.here .actions { visibility: visible; }
-body.no-speakers .seg .who { display: none; }
+body.no-speakers .seg .name { display: none; }
 
 .speakerchips { list-style: none; margin: 6px 0; padding: 0; display: flex;
   flex-wrap: wrap; gap: 4px; }
@@ -645,7 +696,9 @@ body.no-speakers .seg .who { display: none; }
   grid-template-columns: 1fr 1fr;
 }
 .sheet .panel { padding: 12px 14px; }
-.sheet .panel + .panel { border-left: 1px solid var(--line); }
+.sheet .panel:not([hidden]) + .panel:not([hidden]) {
+  border-left: 1px solid var(--line);
+}
 
 .cliplist { display: flex; flex-direction: column; gap: 8px; }
 .clipcard {
@@ -740,6 +793,9 @@ body.no-speakers .seg .who { display: none; }
 .switch input:checked + .knob { background: var(--ok); }
 .switch input:checked + .knob::after { left: 20px; }
 .switch input:disabled + .knob { opacity: 0.4; }
+.switch .state .on-word { display: none; }
+.switch input:checked ~ .state .on-word { display: inline; }
+.switch input:checked ~ .state .off-word { display: none; }
 
 .savebar {
   position: sticky;
