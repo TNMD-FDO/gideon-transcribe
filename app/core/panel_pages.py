@@ -22,7 +22,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, lifecycle, settings_store, uploads, whisperx
+from core import audit, cases, lifecycle, settings_store, uploads, whisperx
+from core.cases import Case
 from core.jobs import Job, JobState
 from core.models import LoginSession, User
 from core.panel import admins_only, furniture
@@ -198,10 +199,18 @@ def _workspaces() -> dict:
     size = 0
     if scratch.is_dir():
         size = sum(path.stat().st_size for path in scratch.rglob("*") if path.is_file())
+    every_case = Case.objects.all()
+    cases_size = sum(one.disk_bytes() for one in every_case)
+    since = cases.off_since()
     return {
         "open": open_now,
         "busy": busy,
         "gigabytes": f"{size / 1024**3:.1f}",
+        "cases": every_case.count(),
+        "cases_gigabytes": f"{cases_size / 1024**3:.1f}",
+        # Kept while Folder management is off, so IT can see what is parked
+        # and for how long it has been out of reach.
+        "cases_off_since": f"{since:%d %B %Y}" if since else "",
     }
 
 
@@ -330,6 +339,32 @@ def cancel_job(request: HttpRequest, job_id) -> JsonResponse:
     return JsonResponse({"cancelled": True})
 
 
+def _reassign(person, to_whom, request) -> int:
+    """Give every Case one person owns to another, and say how many.
+
+    The audit row names the old owner as the affected user and the new one in
+    its details, because the person losing the Case is the one the row is
+    about.
+    """
+    moved = 0
+    for case in list(Case.objects.filter(owner=person)):
+        case.owner = to_whom
+        case.save(update_fields=["owner"])
+        audit.write(
+            cases.CATEGORY,
+            "case reassigned",
+            actor=request.user,
+            affected_user=person,
+            object_type="case",
+            object_id=case.pk,
+            object_label=case.name,
+            request=request,
+            to=to_whom.username,
+        )
+        moved += 1
+    return moved
+
+
 # Users ------------------------------------------------------------------------
 
 
@@ -338,13 +373,22 @@ def users(request: HttpRequest) -> HttpResponse:
     """One row per account, and every action on it applies at once."""
     rows = []
     for person in User.objects.order_by("username"):
-        theirs = Recording.objects.filter(user=person)
+        theirs = Recording.objects.filter(user=person, case__isnull=True)
         size = sum(one.disk_bytes() for one in theirs)
+        their_cases = Case.objects.filter(owner=person)
+        in_cases = sum(one.recordings.count() for one in their_cases)
+        cases_size = sum(one.disk_bytes() for one in their_cases)
         rows.append(
             {
                 "user": person,
                 "condition": lifecycle.condition(person),
                 "recordings": theirs.count(),
+                # Reads "3 in session, 41 in cases". The Cases half is kept
+                # even while Folder management is off, so IT can see what is
+                # parked.
+                "in_session": theirs.count(),
+                "in_cases": in_cases,
+                "cases_gigabytes": f"{cases_size / 1024**3:.1f}",
                 "gigabytes": f"{size / 1024**3:.1f}",
                 "quota": (
                     f"{person.quota_gb} GB"
@@ -424,6 +468,40 @@ def user_action(request: HttpRequest, username: str) -> HttpResponse:
                 request=request,
                 affected_user=person,
                 now=person.admin_flag,
+            )
+
+    elif doing == "reassign":
+        # Every Case this person owns, given to one named colleague. Nothing
+        # else changes: the Retention clock is not started over, and the new
+        # owner inherits the days left.
+        if not cases.folder_management_on():
+            _tell(request, "Cases are turned off.")
+        else:
+            to_whom = User.objects.filter(
+                username=request.POST.get("to", "").strip()
+            ).first()
+            if to_whom is None:
+                _tell(request, "No account by that name.")
+            else:
+                moved = _reassign(person, to_whom, request)
+                _tell(
+                    request,
+                    f"{moved} case{'' if moved == 1 else 's'} now belong to "
+                    f"{to_whom.username}.",
+                )
+
+    elif doing == "delete-data":
+        if not cases.folder_management_on():
+            _tell(request, "Cases are turned off.")
+        else:
+            gone = 0
+            for case in list(Case.objects.filter(owner=person)):
+                cases.delete(case, actor=request.user, request=request)
+                gone += 1
+            _tell(
+                request,
+                f"{gone} case{'' if gone == 1 else 's'} of "
+                f"{person.username}'s deleted. This cannot be undone.",
             )
 
     elif doing == "quota":

@@ -311,7 +311,9 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     """
     from core import exports
 
-    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
+    recording = (
+        Recording.objects.filter(pk=recording_id).select_related("user", "case").first()
+    )
     if recording is None or (
         recording.user_id != request.user.pk and not request.user.is_admin
     ):
@@ -320,7 +322,18 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     transcript = getattr(recording, "transcript", None)
     probe = recording.probe or {}
 
+    # A Recording in a Case says so first, because it is the fact that decides
+    # whether it survives the sign-out.
+    in_a_case = []
+    if recording.case_id:
+        in_a_case = [("Case", recording.case.name)]
+        if recording.recording_type:
+            in_a_case.append(("Recording type", recording.recording_type))
+        if recording.description:
+            in_a_case.append(("Description", recording.description))
+
     rows = [
+        *in_a_case,
         ("Original name", recording.original_filename),
         ("Size", f"{recording.size_bytes / 1024 / 1024:.1f} MB"),
         ("SHA-256", recording.sha256),

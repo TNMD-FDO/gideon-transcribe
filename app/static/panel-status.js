@@ -86,6 +86,19 @@
       state.workspaces.busy + " busy, " + state.workspaces.gigabytes +
       " GB in scratch";
 
+    // Kept while Folder management is off, with the date it went off, so IT
+    // can see what is parked and for how long it has been out of reach.
+    var cases = document.getElementById("cases");
+    if (cases) {
+      cases.textContent =
+        "Cases: " + state.workspaces.cases + ", " +
+        state.workspaces.cases_gigabytes + " GB" +
+        (state.workspaces.cases_off_since
+          ? ". Folder management has been off since " +
+            state.workspaces.cases_off_since
+          : "");
+    }
+
     document.getElementById("media").textContent =
       state.media.running + " media job(s) running, " +
       state.media.pieces + " upload piece(s) pending";

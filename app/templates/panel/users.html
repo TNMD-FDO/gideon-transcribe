@@ -32,7 +32,12 @@
               {% else %}<span class="pill ok">Active</span>{% endif %}
             </td>
             <td>{{ row.condition }}</td>
-            <td>{{ row.recordings }}, {{ row.gigabytes }} GB</td>
+            <td>
+              {{ row.in_session }} in session, {{ row.gigabytes }} GB
+              {% if row.in_cases %}
+                <br><span class="muted">{{ row.in_cases }} in cases, {{ row.cases_gigabytes }} GB</span>
+              {% endif %}
+            </td>
             <td class="muted">{{ row.quota }}</td>
             <td class="muted">{{ row.user.last_sign_in|default:"never" }}</td>
           </tr>
@@ -59,14 +64,23 @@
                   {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
                 </button>
 
-                {# Present and greyed until Phase 2, when both act on Cases.
-                   Nothing in a Workspace outlives its Login session, so in
-                   Phase 1 there is nothing for either of them to act on: End
-                   sessions is how an Admin frees somebody's space. #}
-                <button type="button" class="small" disabled
-                        title="Reassign acts on cases, which arrive in a later release. Nothing in a workspace outlives its session, so there is nothing to reassign.">Reassign to a named user</button>
-                <button type="button" class="small" disabled
-                        title="Delete data acts on cases, which arrive in a later release. To free this person's space now, use End sessions: their recordings go within the minute.">Delete data</button>
+                {# Both act on Cases, so both are greyed while Folder
+                   management is off: there is nothing in a Workspace for
+                   either of them to act on, and End sessions is how an Admin
+                   frees somebody's space. #}
+                {% if folder_management %}
+                  <input type="text" name="to" class="small" style="max-width: 10rem"
+                         placeholder="Give cases to (username)">
+                  <button type="submit" name="action" value="reassign" class="small"
+                          onclick="return confirm('Give every case {{ row.user.username }} owns to the named person? The days left on each case are kept.')">Reassign to a named user</button>
+                  <button type="submit" name="action" value="delete-data" class="small ghost danger"
+                          onclick="return confirm('Delete all {{ row.in_cases }} recording(s) in {{ row.user.username }}'s cases, {{ row.cases_gigabytes }} GB? This is final.')">Delete data</button>
+                {% else %}
+                  <button type="button" class="small" disabled
+                          title="Reassign acts on cases. Turn Folder management on to use it.">Reassign to a named user</button>
+                  <button type="button" class="small" disabled
+                          title="Delete data acts on cases. Turn Folder management on to use it. To free this person's space now, use End sessions: their recordings go within the minute.">Delete data</button>
+                {% endif %}
               </form>
 
               {# The quota has a form of its own, so that pressing Enter in the

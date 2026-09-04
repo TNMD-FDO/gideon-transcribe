@@ -164,7 +164,12 @@ def test_the_older_session_is_told_why_on_its_next_request(client, admin):
 
 def test_signing_out_ends_the_session(client, admin):
     sign_in(client)
+    # A GET shows the dialog and signs nobody out: the page names what
+    # is about to go and only the button acts.
     client.get("/sign-out")
+    assert LoginSession.objects.get(user=admin).end_reason == ""
+
+    client.post("/sign-out")
     assert LoginSession.objects.get(user=admin).end_reason == LoginSession.LOGOUT
 
 

@@ -135,7 +135,8 @@ def test_a_blocked_account_says_so(client, admin):
 
 def test_signing_out_writes_a_row(client, admin):
     sign_in(client)
-    client.get("/sign-out")
+    # The dialog asks; the button acts. Only the button writes the row.
+    client.post("/sign-out")
     row = rows("sign-out")[0]
     assert row.details["cause"] == LoginSession.LOGOUT
 
