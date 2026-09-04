@@ -186,6 +186,7 @@ class Appearance:
         count: int,
         talking: float,
         first: float,
+        role: str = "",
     ):
         self.name = name
         self.label = label
@@ -193,6 +194,10 @@ class Appearance:
         self.count = count
         self.talking = talking
         self.first = first
+        # Carried from Phase 1 and empty until a Recording is in a Case and
+        # the Person holds a Role. The column below is drawn only when
+        # something fills it, so Phase 2 fills a column rather than adding one.
+        self.role = role
 
     @property
     def speaking_time(self) -> str:
@@ -437,12 +442,18 @@ def _facts(document, rows, Inches) -> None:
 
 
 def _appearances_table(document, who, Pt) -> None:
-    """Name, label, Side, segments, speaking time, first heard.
+    """Name, Role, label, Side, segments, speaking time, first heard.
 
-    The Role column is carried hidden while empty: nothing fills it in Phase 1,
-    so it is not drawn at all.
+    The Role column is carried and hidden while empty, which is every Phase 1
+    export: nothing fills a Role until a Recording is in a Case. It is written
+    here rather than added later so that Phase 2 fills a column instead of
+    changing the shape of the table.
     """
-    columns = ["Name", "Label", "Side", "Segments", "Speaking time", "First heard"]
+    roles = any(one.role for one in who)
+    columns = ["Name"]
+    if roles:
+        columns.append("Role")
+    columns += ["Label", "Side", "Segments", "Speaking time", "First heard"]
     table = document.add_table(rows=1, cols=len(columns))
     table.style = "Table Grid"
     for index, heading in enumerate(columns):
@@ -454,8 +465,10 @@ def _appearances_table(document, who, Pt) -> None:
 
     for one in who:
         cells = table.add_row().cells
-        values = [
-            one.name,
+        values = [one.name]
+        if roles:
+            values.append(one.role)
+        values += [
             one.label,
             one.side,
             str(one.count),

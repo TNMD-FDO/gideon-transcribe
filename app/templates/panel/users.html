@@ -58,6 +58,15 @@
                         {% if row.admin_source == "Admin group" %}disabled title="Held through the directory group, so it cannot be changed here"{% elif row.admin_source == "Local" %}disabled title="Every Local admin is an Admin, so this cannot be changed here"{% endif %}>
                   {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
                 </button>
+
+                {# Present and greyed until Phase 2, when both act on Cases.
+                   Nothing in a Workspace outlives its Login session, so in
+                   Phase 1 there is nothing for either of them to act on: End
+                   sessions is how an Admin frees somebody's space. #}
+                <button type="button" class="small" disabled
+                        title="Reassign acts on cases, which arrive in a later release. Nothing in a workspace outlives its session, so there is nothing to reassign.">Reassign to a named user</button>
+                <button type="button" class="small" disabled
+                        title="Delete data acts on cases, which arrive in a later release. To free this person's space now, use End sessions: their recordings go within the minute.">Delete data</button>
               </form>
 
               {# The quota has a form of its own, so that pressing Enter in the
