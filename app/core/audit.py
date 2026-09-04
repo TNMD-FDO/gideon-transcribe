@@ -86,6 +86,14 @@ class Reason:
     BLOCKED = "blocked"
     DIRECTORY_UNREACHABLE = "directory_unreachable"
     THROTTLED = "throttled"
+    # The AI assistant's six, from the chapter's table. The engine module
+    # names the same strings; they are listed here so the catalogue is one.
+    LLM_UNREACHABLE = "llm_unreachable"
+    LLM_TIMEOUT = "llm_timeout"
+    LLM_REFUSED = "llm_refused"
+    LLM_TOO_LONG = "llm_too_long"
+    LLM_BAD_OUTPUT = "llm_bad_output"
+    LLM_ERROR = "llm_error"
 
 
 class Row(models.Model):

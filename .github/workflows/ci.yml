@@ -95,7 +95,14 @@ jobs:
           : > secrets/django_secret_key
           : > secrets/postgres_password
           : > secrets/whisperx_consumer_token
+          : > secrets/llm_api_token
           docker compose config --quiet
+          # The Shared engine file joins llm-worker to an external network the
+          # office names; and the Local engine profile, which nobody runs in
+          # CI, must at least be a valid service.
+          LLM_NETWORK=some-engine-network \
+            docker compose -f compose.yaml -f compose.shared-engine.yaml config --quiet
+          docker compose --profile llm config --quiet
           rm -rf .env secrets whisperx-service/.env whisperx-service/secrets
 
       - name: The Caddyfile asks before it serves

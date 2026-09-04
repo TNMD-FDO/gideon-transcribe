@@ -9,6 +9,7 @@
 #   ./transcribe status       what is running, and whether it is healthy
 #   ./transcribe check        the smoke checks, as a plain report
 #   ./transcribe directory    ask the office's directory facts and write them
+#   ./transcribe engine       point the AI assistant at the office's engine
 #   ./transcribe folders      make the app data folders, owned by the app account
 #   ./transcribe backup-db    a dump of the database into the app data folder
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
@@ -370,6 +371,47 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
     fail "the service does not answer"
   fi
 
+  # The AI assistant's engine: only llm-worker is on its network, so the one
+  # question that matters is asked from inside that container. An office with
+  # no engine has an empty token file and no network, and that is not a fault.
+  echo
+  echo "The AI assistant"
+  local network
+  network="$(env_value LLM_NETWORK)"
+  if ! looked -s "$SECRETS/llm_api_token"; then
+    note "no engine token is stored, so the AI assistant is off"
+  elif [ -z "$network" ] || [ "$network" = "transcribe-llm" ]; then
+    if grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"; then
+      pass "the Local engine profile is on"
+    else
+      note "a token is stored but no engine is named; ./transcribe engine"
+    fi
+  else
+    if docker network inspect "$network" >/dev/null 2>&1; then
+      pass "the engine's network '$network' exists"
+    else
+      fail "the engine's network '$network' does not exist; is the engine's stack running?"
+    fi
+    if compose ps --status running --services 2>/dev/null | grep -qx llm-worker; then
+      if docker inspect "$(compose ps -q llm-worker)"         --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null | grep -qw "$network"; then
+        pass "llm-worker is on '$network'"
+      else
+        fail "llm-worker is not on '$network'; is COMPOSE_FILE set? ./transcribe engine, then docker compose up -d"
+      fi
+      if compose exec -T llm-worker python -c "
+from core import engine
+served = engine.list_models()
+print(', '.join(served) or 'nothing')
+" 2>/dev/null | sed 's/^/        the engine serves: /'; then
+        pass "the engine answers with the token"
+      else
+        fail "the engine does not answer llm-worker with the token; Test connection on the Status page says why"
+      fi
+    else
+      fail "llm-worker is not running"
+    fi
+  fi
+
   echo
   if [ "$FAILURES" -eq 0 ]; then
     green "Everything checked passed."
@@ -423,6 +465,7 @@ cmd_install() {
   make_the_secrets
   cmd_directory
   ask_the_hugging_face_token
+  cmd_engine
   make_the_data_folders
 
   echo
@@ -663,6 +706,100 @@ PY
 
 # backup-db --------------------------------------------------------------------
 
+# engine -----------------------------------------------------------------------
+
+ensure_the_token_file() {
+  # The engine's token is a Compose secret, and a secret whose file is missing
+  # stops the whole stack with an error about the file. An office with no
+  # engine still has to start, so the file always exists: empty until
+  # ./transcribe engine fills it. Called by install and by every upgrade, so an
+  # install from before the AI assistant existed comes up as before.
+  mkdir -p "$SECRETS"
+  if [ ! -e "$SECRETS/llm_api_token" ]; then
+    : >"$SECRETS/llm_api_token"
+    chmod 600 "$SECRETS/llm_api_token"
+    own_the_secrets
+  fi
+}
+
+cmd_engine() {
+  need_env
+  cat <<'WORDS'
+The AI assistant's engine
+-------------------------
+The AI assistant talks to a language-model engine. An office that already runs
+one (a vLLM with an OpenAI-compatible API, on this server or on the LAN) points
+the app at it: the app joins that engine's Docker network and presents its
+token. An office with none can start the Local engine instead, or leave the
+assistant off; everything else works without it.
+
+Nothing you type here leaves this server, and none of it is ever committed to
+the repository. Press Enter to keep what is shown in brackets.
+
+WORDS
+
+  ensure_the_token_file
+
+  local network
+  network="$(ask "The Docker network the engine listens on, as 'docker network ls'
+  shows it. Blank means no shared engine (the Local engine, or none)" "$(env_value LLM_NETWORK)")"
+
+  if [ -n "$network" ] && [ "$network" != "transcribe-llm" ]; then
+    if ! docker network inspect "$network" >/dev/null 2>&1; then
+      amber "There is no Docker network called '$network' on this server."
+      echo "  'docker network ls' lists them. Nothing was written."
+      return 1
+    fi
+    set_env LLM_NETWORK "$network"
+    # Compose reads the second file only when .env names it. The line is
+    # written whole, never left empty: an empty COMPOSE_FILE is read as a path
+    # and Compose refuses to start.
+    set_env COMPOSE_FILE "compose.yaml:compose.shared-engine.yaml"
+    green "The app will join '$network' to reach the engine."
+    echo
+    echo "  Then, in the Admin panel under Settings, AI assistant, enter the"
+    echo "  engine's address on that network (for example http://<its name>:8000/v1)"
+    echo "  and the model name it serves, and press Test connection."
+  else
+    set_env LLM_NETWORK "transcribe-llm"
+    # Drop the shared-engine line if it was there; the default is compose.yaml
+    # alone. Commented rather than deleted, so the shape stays visible.
+    if grep -q '^COMPOSE_FILE=' "$ENV_FILE"; then
+      sed -i 's/^COMPOSE_FILE=/# COMPOSE_FILE=/' "$ENV_FILE"
+    fi
+    echo
+    echo "  No shared engine. To run the Local engine on this server instead,"
+    echo "  set COMPOSE_PROFILES=llm and LLM_LOCAL_GPU_UUID in .env and give it"
+    echo "  a token below; or leave the assistant off."
+  fi
+
+  # The token --------------------------------------------------------------------
+  echo
+  local token again
+  printf 'The engine'"'"'s bearer token (nothing is shown as you type;\n  press Enter alone to keep the one already stored, or to leave it empty): ' >&2
+  read -rs token
+  echo >&2
+  if [ -n "$token" ]; then
+    printf 'And again: ' >&2
+    read -rs again
+    echo >&2
+    if [ "$token" != "$again" ]; then
+      red "Those did not match. The token was not changed."
+      return 1
+    fi
+    printf '%s' "$token" >"$SECRETS/llm_api_token"
+    chmod 600 "$SECRETS/llm_api_token"
+    own_the_secrets
+    green "The engine token was written to secrets/llm_api_token."
+  elif looked -s "$SECRETS/llm_api_token"; then
+    green "The stored engine token was kept."
+  else
+    amber "No engine token is stored. The AI assistant stays off until there is one."
+  fi
+  echo
+  echo "  A change here reaches the workers at the next 'docker compose up -d'."
+}
+
 cmd_folders() {
   # Docker creates a missing bind-mount source as root, and the app could then
   # never write into it. install and upgrade call this; it is a subcommand of
@@ -826,6 +963,7 @@ cmd_upgrade() {
   # Caddy mounts, and Docker would create a missing mount source as root,
   # which the app could then never write into.
   make_the_data_folders
+  ensure_the_token_file
 
   echo
   if [ "$build" = "yes" ]; then
@@ -975,6 +1113,7 @@ install) shift && cmd_install "$@" ;;
 status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
 directory) shift && cmd_directory "$@" ;;
+engine) shift && cmd_engine "$@" ;;
 folders) shift && cmd_folders "$@" ;;
 backup-db) shift && cmd_backup_db "$@" ;;
 upgrade) shift && cmd_upgrade "$@" ;;

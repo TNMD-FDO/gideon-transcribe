@@ -172,7 +172,8 @@ Then it asks, in plain words, for the facts about your office, offering a sensib
 - the address people will type, the port, the server's LAN address to listen on, and which networks may connect;
 - the App data folder and the time zone;
 - which graphics card the transcription service should use, chosen from a list by its UUID rather than its number, because numbers move between reboots;
-- the Hugging Face token.
+- the Hugging Face token;
+- the AI assistant's engine, if your office runs one: the Docker network a vLLM listens on, and its token. Leave the network blank for none. The engine's address and served model name are entered in the Admin panel afterwards, where Test connection proves them. `./transcribe engine` asks these again on its own.
 
 Nothing you type leaves the server, and none of it is ever committed to the repository. The random secrets the app needs, the database password and the like, it makes itself; nobody types them.
 
@@ -285,6 +286,9 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `nvidia-smi is not on this server, so no GPU can be reserved` | The NVIDIA driver is not installed, or the machine has not been rebooted since. | Install the driver, reboot, and check `nvidia-smi` prints the card. |
 | `There is already a .env here.` | `install` was run before. | It will not overwrite anything. `./transcribe install --reconfigure` changes the office facts; `./transcribe directory` changes only the directory. |
 | `There is no Hugging Face token stored; the model pull will refuse.` | The token step was skipped, or Enter was pressed with nothing stored. | `./transcribe install --reconfigure` and type the token when asked. |
+| `There is no Docker network called '...' on this server.` | The engine's network was mistyped, or the engine's own stack is not running. | `docker network ls` lists them; start the engine's stack first, then `./transcribe engine`. |
+| `The AI assistant refused the connection. Ask IT.` (in the app) | The engine wants a different token from the one in `secrets/llm_api_token`, or the file is empty. | `./transcribe engine`, paste the engine's token, then `docker compose up -d`. |
+| The Status page says `AI assistant: unreachable since ...` | The engine is down, or `llm-worker` is not on its network. | Check the engine's own stack; `./transcribe check` proves the network membership; `./transcribe engine` fixes it. |
 | `error from registry: denied` during a pull | The two images are not published, or the server is not signed in to the registry. | Nothing. Compose falls back to building them on the server, which is slower and otherwise the same. |
 | `The registry had nothing to give, so the images are built here.` | As above, during an upgrade. Not an error. | Wait. Ten to twenty minutes the first time. |
 | `The build failed, so the upgrade stops here.` | Building an image on the server failed. The old containers are still running. | Read the message above it. Usually the server cannot reach one of the appendix's hosts. `./transcribe rollback <the tag you were on>` puts the checkout back. |

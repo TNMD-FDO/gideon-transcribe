@@ -18,6 +18,29 @@
     </p>
   {% endif %}
 
+  {% if token %}
+    <div class="arow">
+      <div class="lbl">
+        <b>Token</b>
+        <div class="help">
+          The engine's bearer token. It lives in a file on the server, named by
+          <code>LLM_API_TOKEN_FILE</code> in .env, and is never shown or edited here.
+          <code>./transcribe engine</code> writes it; a change reaches the workers at
+          the next <code>docker compose up -d</code>.
+        </div>
+      </div>
+      <div>
+        {% if token.set %}
+          <span class="pill ok">set</span>
+        {% else %}
+          <span class="pill danger">missing</span>
+        {% endif %}
+        <span class="muted small">{{ token.file }}</span>
+        <div class="effect">Test connection is on the Status page.</div>
+      </div>
+    </div>
+  {% endif %}
+
   <form method="post" action="{% url 'panel-edit' here %}">
     {% csrf_token %}
 

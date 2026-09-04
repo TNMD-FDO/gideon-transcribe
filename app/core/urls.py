@@ -197,6 +197,7 @@ urlpatterns = [
     path("panel/audit/check", panel_pages.integrity_check, name="panel-integrity"),
     path("panel/installation", panel_pages.installation, name="panel-installation"),
     path("panel/help", panel_pages.admin_guide, name="panel-help"),
+    path("panel/assistant/test", panel_pages.test_engine, name="panel-test-engine"),
     path("panel/settings/<str:page>", panel.settings_page, name="panel-settings"),
     path("panel/settings/<str:page>/edit", panel.edit, name="panel-edit"),
     path("panel/apply", panel.apply, name="panel-apply"),

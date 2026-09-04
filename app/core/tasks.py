@@ -201,6 +201,29 @@ def mind_the_workspaces(timestamp: int) -> None:
         lifecycle.discard(user)
 
 
+@app.periodic(cron="* * * * *")
+@app.task(queue="llm", name="check_the_engine")
+def check_the_engine(timestamp: int) -> None:
+    """Does the engine answer? Asked once a minute, from the one container that can.
+
+    Only llm-worker is on the engine's network, so the check lives on its
+    queue. What it finds goes on the status row, which is all the viewer and
+    the Status page read: neither ever touches that network. Quiet while no
+    engine is configured.
+    """
+    from core import engine
+
+    engine.check()
+
+
+@app.task(queue="llm", name="test_the_engine")
+def test_the_engine() -> None:
+    """The panel's Test connection, run where the engine can be reached."""
+    from core import engine
+
+    engine.test_connection()
+
+
 @app.periodic(cron="30 3 * * *")
 @app.task(queue="default", name="retention_sweep")
 def retention_sweep(timestamp: int) -> None:

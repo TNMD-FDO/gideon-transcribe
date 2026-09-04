@@ -181,6 +181,20 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             }
         )
 
+    # The AI assistant page shows the engine's token as set or missing and
+    # nothing more: it lives in a file on the server, never in the panel or
+    # the database, and changing it is a file change and a restart.
+    token = None
+    if page == settings_store.ASSISTANT:
+        import os
+
+        from core import engine
+
+        token = {
+            "set": engine.token_is_set(),
+            "file": os.environ.get("LLM_API_TOKEN_FILE", "./secrets/llm_api_token"),
+        }
+
     return render(
         request,
         "panel/settings.html",
@@ -188,6 +202,7 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             **furniture(request, page),
             "title": dict(settings_store.PAGES)[page],
             "rows": rows,
+            "token": token,
             "fixed_rules": FIXED_RULES,
             "directory": _directory_facts() if page == settings_store.SIGN_IN else None,
             "limits_cross_reference": page == settings_store.LIMITS,
