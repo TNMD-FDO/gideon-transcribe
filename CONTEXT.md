@@ -177,6 +177,10 @@ The Upload page choice that puts a Recording into an existing Case from the star
 Taking a Done Recording out of the Workspace and into a Case, whole: its Transcript, Summaries, Chats, Clips, and Provenance go with it. Nothing ever moves back; a person takes a Recording out of a Case only by Delete, and the Retention policy takes a Case whole to the Recycle bin.
 _Avoid_: save to case, copy
 
+**Description**:
+An optional free-text note on a Recording in a Case, asked for when it is moved in and editable afterwards in Details and on the Case page. Never printed in the audit log, never sent in a Notification.
+_Avoid_: notes, comment, summary (that is the LLM's)
+
 **Recording type**:
 An optional label for a Recording (Body camera, Jail call, Interview, and the like), picked at upload from a list an Admin keeps and changeable later.
 _Avoid_: source type, category
