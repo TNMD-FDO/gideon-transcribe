@@ -12,10 +12,20 @@
 
   var rows = document.getElementById("rows");
   var counts = document.getElementById("counts");
-  var after = document.getElementById("after");
   var cancel = document.getElementById("cancel");
   var downloadLine = document.getElementById("download-line");
   var download = document.getElementById("download");
+
+  // The finished state: the download becomes the page and everything about
+  // waiting goes away, because a batch that is done is about getting the
+  // transcripts out and nothing else.
+  var finished = document.getElementById("finished");
+  var finishedHeading = document.getElementById("finished-heading");
+  var finishedWhen = document.getElementById("finished-when");
+  var downloadDone = document.getElementById("download-done");
+  var whileRunning = document.getElementById("while-running");
+  var heading = document.getElementById("heading");
+  var lead = document.getElementById("lead");
 
   var STATES = {
     uploading: "Waiting to upload",
@@ -114,11 +124,15 @@
     // The download is a zip of the transcripts that are done. Recordings
     // still on their way are simply left out, so the button says how many.
     var waiting = tally.waiting + tally.inLine + tally.running;
-    downloadLine.hidden = tally.done === 0;
-    download.querySelector("button").textContent =
+    var words =
       "Download " + tally.done +
       (tally.done === 1 ? " transcript" : " transcripts") +
       (waiting ? " (" + waiting + " not ready)" : "");
+    downloadLine.hidden = tally.done === 0;
+    download.querySelector("button").textContent = words;
+    downloadDone.querySelector("button").textContent =
+      "Download all " + tally.done +
+      (tally.done === 1 ? " transcript" : " transcripts");
 
     // The one overall line, while anything is still on its way.
     var done = document.getElementById("when-done");
@@ -128,8 +142,27 @@
       document.getElementById("heading").textContent = "Processing again";
     }
 
-    after.hidden = !state.finished;
     cancel.hidden = state.finished;
+
+    // Done: the summary takes over, and the row of controls that was about
+    // waiting goes. A batch where nothing came out has nothing to download,
+    // so it says so rather than offering an empty zip.
+    finished.hidden = !state.finished;
+    whileRunning.hidden = state.finished;
+    heading.hidden = state.finished;
+    if (lead) { lead.hidden = state.finished; }
+
+    if (state.finished) {
+      finishedHeading.textContent = tally.done
+        ? (tally.done === 1
+            ? "The transcript is ready"
+            : "All " + tally.done + " transcripts are ready")
+        : "This batch produced no transcripts";
+      finishedWhen.textContent = tally.failed || tally.refused
+        ? tally.failed + " failed, " + tally.refused + " refused."
+        : "";
+      downloadDone.hidden = tally.done === 0;
+    }
   }
 
   function ask() {

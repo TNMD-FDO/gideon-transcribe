@@ -1,4 +1,4 @@
-"""Finishing with a batch, and landing on the page you work on.
+"""Finishing with a batch, and where signing in lands.
 
 An office running batches works in a loop: upload, wait, download, clear,
 upload the next lot. The clearing step did not exist. The only ways to remove
@@ -179,53 +179,41 @@ def test_a_stranger_cannot_clear_anything(client):
 # Where a person lands ---------------------------------------------------------
 
 
-def test_the_specified_page_stands_until_somebody_shows_otherwise():
+def test_everybody_lands_on_upload():
     from core.views import where_they_land
 
+    # With Cases on, where the specification would send them to Cases.
     settings_store.set_to("folder_management", True)
     person = a_person()
+    assert where_they_land(person) == reverse("upload")
 
-    assert where_they_land(person) == reverse("cases")
-
-
-def test_somebody_who_works_in_recordings_lands_there(client):
-    from core.views import where_they_land
-
-    settings_store.set_to("folder_management", True)
-    person = a_person()
-
-    signed_in(client, person)
-    assert client.get(reverse("home")).status_code == 200
-
-    person.refresh_from_db()
-    assert where_they_land(person) == reverse("home")
-
-
-def test_opening_cases_again_puts_them_back(client):
-    from core.views import where_they_land
-
-    settings_store.set_to("folder_management", True)
-    person = a_person()
-
-    signed_in(client, person)
-    assert client.get(reverse("home")).status_code == 200
-    person.refresh_from_db()
-    assert person.lands_on == User.LANDS_RECORDINGS
-
-    assert client.get(reverse("cases")).status_code == 200
-    person.refresh_from_db()
-    assert where_they_land(person) == reverse("cases")
-
-
-def test_with_cases_off_there_is_only_one_page():
-    from core.views import where_they_land
-
+    # And with Cases off, where there is no Cases page at all.
     settings_store.set_to("folder_management", False)
-    person = a_person()
-    person.lands_on = User.LANDS_CASES
-    person.save()
+    assert where_they_land(person) == reverse("upload")
 
-    assert where_they_land(person) == reverse("home")
+
+def test_signing_in_opens_the_upload_page(client):
+    settings_store.set_to("folder_management", True)
+    person = a_person()
+
+    answer = client.post(
+        reverse("sign-in"), {"username": person.username, "password": PASSWORD}
+    )
+
+    assert answer.status_code == 302
+    assert answer["Location"] == reverse("upload")
+
+
+def test_the_upload_page_greets_the_person(client):
+    person = a_person()
+    signed_in(client, person)
+
+    page = client.get(reverse("upload")).content.decode()
+
+    assert "Good morning" in page or "Good afternoon" in page or "Good evening" in page
+    assert person.shown_name in page
+    # The line that answers the question every new user of this app has.
+    assert "Nothing leaves this building" in page
 
 
 def test_the_pages_carry_the_way_out():
@@ -237,3 +225,33 @@ def test_the_pages_carry_the_way_out():
     assert "'upload'" in (here / "cases.html").read_text(encoding="utf-8")
     assert "clear-recordings" in (here / "recordings.html").read_text(encoding="utf-8")
     assert "clear-recordings" in (here / "batch.html").read_text(encoding="utf-8")
+
+
+def test_every_document_page_is_centred():
+    """An inline max-width with no margin puts the column against the left edge.
+
+    Seven pages did this, so on a wide monitor a third of the screen was
+    empty beside every one of them. The widths live in one class now.
+    """
+    from pathlib import Path
+
+    here = Path(__file__).resolve().parent.parent / "templates"
+    loose = []
+    for page in ("upload", "batch", "recordings", "cases", "clips", "case"):
+        text = (here / f"{page}.html").read_text(encoding="utf-8")
+        first = text.index("{% block content %}")
+        # The page's own wrapper is the first div after the content block.
+        opening = text.index("<div", first)
+        line = text[opening : text.index(">", opening) + 1]
+        if 'class="page' not in line:
+            loose.append(f"{page}.html: {line}")
+
+    assert not loose, (
+        "these pages set their own width instead of using the centred .page "
+        "class, so each sits against the left edge:\n  " + "\n  ".join(loose)
+    )
+
+    css = (Path(__file__).resolve().parent.parent / "static" / "app.css").read_text(
+        encoding="utf-8"
+    )
+    assert ".page { max-width: 52rem; margin: 0 auto; }" in css

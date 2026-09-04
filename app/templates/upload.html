@@ -4,8 +4,14 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div style="max-width: 52rem">
-    <h1>Upload recordings</h1>
+  <div class="page">
+    <header class="welcome">
+      <h1>{{ greeting }}, {{ user.shown_name }}</h1>
+      <p class="lead">
+        Drop your recordings below. You will get transcripts back, and you can
+        download the whole batch in one go.
+      </p>
+    </header>
     <p class="notice">{{ standing_line }}</p>
 
     {% if disk_is_low %}
@@ -22,10 +28,9 @@
 
     <ol class="steps">
       <li id="step-1" class="card here">
-        <h2>1. Choose files</h2>
-
-        <div id="drop" class="drop">
-          <p><b>Drop recordings here</b>, or <label class="link" for="picker">choose files</label>.</p>
+        <div id="drop" class="drop hero">
+          <p class="big"><b>Drop recordings here</b></p>
+          <p class="or">or <label class="link" for="picker">choose files</label></p>
           <input type="file" id="picker" multiple hidden>
           <p class="muted small">
             Files that usually work: mp4, mov, m4a, mp3, wav, wma, ogg, webm,
@@ -38,7 +43,7 @@
         </div>
 
         <ul id="chosen" class="cards"></ul>
-        <div class="dialog">
+        <div class="dialog centre">
           <button type="button" id="to-settings" class="primary" disabled>Next</button>
         </div>
       </li>
@@ -215,6 +220,11 @@
         </p>
       </li>
     </ol>
+
+    <p class="muted small centre" style="margin-top: 18px">
+      Nothing leaves this building. Everything here is removed when you sign
+      out.
+    </p>
     {% endif %}
   </div>
 

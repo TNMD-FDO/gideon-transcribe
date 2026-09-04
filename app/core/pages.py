@@ -25,11 +25,9 @@ from core import (
     settings_store,
     tasks,
     uploads,
-    views,
     whisperx,
 )
 from core.jobs import JobState
-from core.models import User
 from core.recordings import Batch, MediaState, Recording, Refusal
 
 log = logging.getLogger("transcribe.pages")
@@ -49,8 +47,6 @@ def standing_line() -> str:
 @login_required
 def recordings(request: HttpRequest) -> HttpResponse:
     """Where a person lands: everything they have uploaded this session."""
-    if request.user.is_authenticated:
-        views.note_where_they_work(request.user, User.LANDS_RECORDINGS)
     return render(
         request,
         "recordings.html",
@@ -85,6 +81,22 @@ def _with_their_state(recordings):
     return rows
 
 
+def greeting() -> str:
+    """Good morning, afternoon or evening, by the office's own clock.
+
+    The upload page is where signing in lands, so this is the app's first
+    line to a person, and it should sound like somebody rather than a form.
+    TZ is set at install, so the hour is the office's and not the server's
+    idea of UTC.
+    """
+    hour = timezone.localtime().hour
+    if hour < 12:
+        return "Good morning"
+    if hour < 18:
+        return "Good afternoon"
+    return "Good evening"
+
+
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
     """Choose files, choose settings, and start; or watch the Batch running."""
@@ -108,6 +120,7 @@ def upload(request: HttpRequest) -> HttpResponse:
         "upload.html",
         {
             "page": "upload",
+            "greeting": greeting(),
             "standing_line": standing_line(),
             "to_a_case": to_a_case,
             "chosen_case": chosen_case,

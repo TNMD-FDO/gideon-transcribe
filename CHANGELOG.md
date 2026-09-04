@@ -19,7 +19,35 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+```
+Models: unchanged
+Database: migrates
+```
+
+### Changed
+
+- **Every page is centred.** `main.wide` takes the whole window on purpose,
+  for the viewer and the admin panel, but the six document pages inside it
+  each set their own width with an inline `max-width` and no margin. So every
+  one of them sat against the left edge with a third of a wide monitor empty
+  beside it. The widths live in one `.page` class now, and a check fails if
+  anyone writes an inline one again.
+- **Signing in opens the Upload page**, for everybody, whatever the settings
+  say. The specification lands people on Cases when folder management is on,
+  which is right for the office that works in cases and wrong for the one
+  whose larger use is batches that belong to no case. Upload is right for
+  both, because it is what everybody came to do, and cases and recordings are
+  one click away. This replaces the per-person landing preference added
+  earlier the same day, whose column the database now drops.
+- **The Upload page greets you** by name and by the hour, says in one line
+  what will happen, and makes the drop area the main object on the page
+  rather than a box inside "step 1 of 3". It also carries the line that
+  answers the question every new user of this app has: nothing leaves this
+  building, and everything here goes when you sign out.
+- **A finished batch is about the download.** It used to be one button among
+  four in a left-aligned row under a list. The page now says how many
+  transcripts are ready, offers one large download, and puts everything else
+  quietly underneath.
 
 ## v0.2.0, 2026-09-04
 
