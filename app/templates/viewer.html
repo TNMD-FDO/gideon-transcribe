@@ -21,7 +21,7 @@
   <div class="desk">
     {# The dock: the picture or the waveform, the title, the transport. #}
     <div class="dock">
-      <div class="thumb{% if not is_video %} audio{% endif %}">
+      <div class="thumb{% if not is_video %} audio{% endif %}" id="thumb">
         {% if media_url %}
           {% if is_video %}
             <video id="player" src="{{ media_url }}" preload="metadata"></video>
@@ -41,6 +41,10 @@
               {% endif %}
             </p>
           </div>
+        {% endif %}
+        {% if media_url and is_video %}
+          <div id="thumb-grip" class="grip" title="Drag to resize. Double-click to reset."
+               role="separator" aria-label="Resize the video" tabindex="0"></div>
         {% endif %}
       </div>
 
@@ -111,7 +115,7 @@
         <div id="playhead"></div>
       </div>
       <p class="hint" style="grid-column: 1 / -1">
-        <span>Timeline: click to seek, drag to mark a clip. Speaker lanes are coloured.</span>
+        <span>Timeline: click to seek, drag to mark a clip. Speaker lanes are coloured.{% if media_url and is_video %} Drag the right edge of the picture to resize it.{% endif %}</span>
         <span class="grow"></span>
         <span id="clip-said"></span>
       </p>

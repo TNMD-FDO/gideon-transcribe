@@ -465,15 +465,52 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   align-items: start;
 }
 .dock .thumb {
-  width: 220px;
-  height: 124px;
+  /* The width is a person's to choose; the height follows it, so the picture
+     keeps its shape and the transport beside it never jumps about. */
+  width: var(--thumb-width, 220px);
+  aspect-ratio: 16 / 9;
   background: #000;
   border-radius: var(--radius);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
+/* An audio recording has no picture to resize and no handle to resize it
+   with, so it keeps the usual box rather than inheriting a width chosen for
+   somebody's video. */
+.dock .thumb.audio { aspect-ratio: auto; height: 124px; width: 220px; }
+
+/* A bar down the right edge rather than a corner: width is the only thing
+   being chosen, and an edge is easier to hit than a corner. */
+.grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.grip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 3px;
+  height: 26px;
+  margin-top: -13px;
+  border-radius: 2px;
+  /* An outline as well as a fill, because the bar sits over the picture and
+     the picture can be any colour. */
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.grip:hover::after,
+.grip:focus-visible::after { background: var(--accent); }
+.grip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.dock.resizing { cursor: ew-resize; user-select: none; }
 .dock .thumb.audio { background: var(--surface-2); }
 .dock .thumb video { width: 100%; height: 100%; object-fit: contain; }
 .dock .thumb audio { width: 96%; }
