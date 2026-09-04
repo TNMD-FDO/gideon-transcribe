@@ -100,19 +100,22 @@ jobs:
         timeout-minutes: 30
         run: docker push "${{ matrix.image }}:${{ github.ref_name }}"
 
-      - name: Say what to pin
+      # The digest is recorded, not pinned in compose.yaml: a tag cannot
+      # carry the digest of the image it produces, because the image is built
+      # after the tag exists (ADR 0013). This record is what an upgrade-time
+      # check would compare against.
+      - name: Record the digest
         run: |
           digest="$(docker inspect --format '{{index .RepoDigests 0}}' \
             "${{ matrix.image }}:${{ github.ref_name }}" | cut -d@ -f2)"
-          line="image: ${{ matrix.image }}:${{ github.ref_name }}@${digest}"
-          echo "::notice title=${{ matrix.name }}::${line}"
+          echo "::notice title=${{ matrix.name }}::${{ matrix.image }}:${{ github.ref_name }}@${digest}"
           {
             echo "### ${{ matrix.name }}"
             echo
-            echo "Pin this in \`compose.yaml\`:"
+            echo "Built from \`${{ github.sha }}\` and pushed as"
             echo
-            echo '```yaml'
-            echo "    ${line}"
+            echo '```'
+            echo "${{ matrix.image }}:${{ github.ref_name }}@${digest}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

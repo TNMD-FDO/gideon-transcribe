@@ -19,7 +19,31 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The README says what is built.** It said the code was not written yet,
+  and listed VTT export and an AI assistant that do not exist. It now lists
+  what each Release actually holds, names what is not built rather than
+  implying it, and points at the three guides.
+- **The third-party licence file records the ffmpeg the Releases ship.** Its
+  table said "none published yet" while three Releases sat on the registry,
+  and a GPL binary that is distributed must have its source pointed at. The
+  exact ffmpeg and codec package versions of both images are recorded from
+  the running images, `audiowaveform` (GPL-3.0-or-later, in the app image)
+  is listed for the first time, the app's Python packages are listed, and the
+  rows for the engine and backup images say they are not yet shipped.
+- **Why our two images are pinned by tag** is written down as ADR 0013: a
+  tag cannot carry the digest of the image built from it, because the image
+  is built after the tag exists. The upstream images are pinned by digest as
+  before; ours are pinned by an immutable tag, and the workflow records each
+  digest at every Release. An upgrade-time check against that record is
+  proposed there and not yet built. The release workflow's summary no longer
+  tells a reader to pin the digest in `compose.yaml`.
 
 ## v0.4.0, 2026-09-04
 
