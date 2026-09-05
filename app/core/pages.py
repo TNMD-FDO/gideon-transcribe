@@ -92,7 +92,7 @@ def state_words(one) -> tuple[str, str]:
     if one.being_replaced:
         return "Processing again", "warn"
     if one.in_the_queue:
-        return "In the queue", ""
+        return "In the queue", "warn"
     if hasattr(one, "transcript"):
         return "Ready", "ok"
     if one.media_state == "rejected":

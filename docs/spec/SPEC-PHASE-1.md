@@ -4089,6 +4089,10 @@ These rules cut across every chapter. Each one is stated once in the chapter tha
 29. **No em dashes or en dashes anywhere** in pages, exports, guides, or documents; hyphens, commas, or full stops. British spelling in documents and pages, as the glossary uses it. (This document's conventions)
 30. **Guides are part of the Release.** The user guide and the admin guide are rendered into the app at build time from `docs/`, so they always match the running Release. (Repository, releases, and distribution)
 
+### The look
+
+31. **One visual language, applied everywhere.** From v1.14.0 (the finish the maintainer approved on 5 September 2026, `docs/research/` has no paper for it because it is a decision, not a fact): every colour on a page is a token from the stylesheet's palettes, light and dark being two palettes for the same roles; the typeface is IBM Plex Sans with IBM Plex Mono for times and counts, shipped with the app under the SIL Open Font License and fetched from nowhere; type is one of four sizes (display 28, title 22, heading 17, body 15, small 13); there are four buttons (primary, the one thing to do on a page; secondary; quiet, for tools inside a panel; danger, red and last in any row) in three fixed heights; one shape of pill whose colour is the state, with a dot for anyone who does not see the colour; one set of line icons in a sprite included on every page (`templates/icons.html`, `{% icon %}`), drawn at the stroke of the type, in place of typewriter glyphs; a visible focus ring on every control; motion of 120 ms and none for anyone who asked for none. The mark beside the wordmark is the favicon's waveform on a rounded square. A test keeps the stylesheet free of colours outside the palettes and the pages free of the old glyphs. (Every page; the Repository chapter for the licence.)
+
 ## 16. Build gates and deliverables
 
 This chapter gathers what the build must prove before the Phase 1 release and what it must deliver beside the running app. Every item was fixed by a decision; the build settles only the values the decisions left to measurement. The chapters own the details; this is the list.

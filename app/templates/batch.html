@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static icons %}
 {% block title %}Batch{% endblock %}
 {% block main_class %}wide{% endblock %}
 
@@ -21,7 +21,7 @@
       with the estimate for the rest.
     {% endcomment %}
     <div id="finished" class="card done-hero" hidden>
-      <div class="tick">&#10003;</div>
+      <div class="tick">{% icon "done" %}</div>
       <h1 id="finished-heading">The transcripts are ready</h1>
       <p id="finished-when" class="lead"></p>
       <a id="download-done" href="{% url 'batch-download' batch.pk %}">

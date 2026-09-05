@@ -251,7 +251,7 @@
     if (!suggestionList) { return; }
     suggestionList.innerHTML = state.pending.map(function (one) {
       return "<li class='suggestion' title='" + escape(one.quote) + " at " + escape(one.clock) + "'>" +
-        "<span class='grow'><b>" + escape(one.speaker) + "</b> → " + escape(one.name) + (one.role ? " (" + escape(one.role) + ")" : "") +
+        "<span class='grow'><b>" + escape(one.speaker) + "</b> " + window.VIEWER.icon("forward") + " " + escape(one.name) + (one.role ? " (" + escape(one.role) + ")" : "") +
         " <span class='muted small'>(" + escape(one.confidence) + ", " + escape(one.kind) + ")</span>" +
         "<br><span class='muted small'>“" + escape(one.quote) + "” <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a></span></span>" +
         "<button type='button' class='small accept' data-suggestion='" + one.id + "'>Accept</button>" +
@@ -260,7 +260,7 @@
     state.pending.forEach(function (one) {
       var rows = document.querySelectorAll("#transcript .seg .name");
       for (var i = 0; i < rows.length; i += 1) {
-        if (rows[i].textContent.replace(" ✎", "") === one.speaker) {
+        if (rows[i].textContent.trim() === one.speaker) {
           var pill = document.createElement("span");
           pill.className = "pill side suggested";
           pill.textContent = "Suggested: " + one.name + (one.role ? " (" + one.role + ")" : "");
