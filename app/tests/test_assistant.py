@@ -502,3 +502,42 @@ def test_the_templates_page_saves_resets_and_versions(person, client):
     rows = Row.objects.filter(category="admin", object_type="template")
     assert rows.count() >= 5
     assert "Answer briefly" not in json.dumps([row.details for row in rows])
+
+
+@pytest.mark.django_db
+def test_thinking_gets_its_own_room_and_an_empty_answer_says_why(
+    ready, person, monkeypatch
+):
+    # Thinking on: the cap sent is the answer's plus the allowance, and a model
+    # that spends it all thinking leaves an empty answer at the cap, which is
+    # not "cut short" but its own plain failure line.
+    settings_store.set_to("assistant_thinks", True)
+    asked = reachable(monkeypatch, "", finish="length")
+    summary = Summary.objects.create(
+        recording=ready,
+        asked_by=person,
+        template_name="Standard summary",
+        length="short",
+    )
+    assistant.write_summary(summary.pk)
+    summary.refresh_from_db()
+    assert asked[0]["max_completion_tokens"] == 600 + assistant.THINKING_ALLOWANCE
+    assert asked[0]["thinking"] is True and asked[0]["timeout"] == 600
+    assert summary.state == assistant.FAILED
+    assert summary.reason_class == assistant.THOUGHT_AWAY
+    assert "Turn off" in assistant.what_to_say(summary.reason_class)
+    # The audit row keeps the chapter's own class.
+    row = Row.objects.filter(category="llm").latest("at")
+    assert row.reason_class == "llm_error"
+
+    # Thinking off: the cap is the answer's alone.
+    settings_store.set_to("assistant_thinks", False)
+    asked.clear()
+    again = Summary.objects.create(
+        recording=ready,
+        asked_by=person,
+        template_name="Standard summary",
+        length="short",
+    )
+    assistant.write_summary(again.pk)
+    assert asked[0]["max_completion_tokens"] == 600 and asked[0]["thinking"] is False
