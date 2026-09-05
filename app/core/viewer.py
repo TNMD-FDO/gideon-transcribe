@@ -543,7 +543,9 @@ def _the_rest_of_the_case(recording) -> list:
 
 
 def _people_of(recording) -> list[dict]:
-    if not recording.case_id:
+    from core import people
+
+    if not people._in_a_case(recording):
         return []
     return [
         {"name": one.name, "role": one.role, "count": len(one.recordings())}
@@ -554,7 +556,7 @@ def _people_of(recording) -> list[dict]:
 def _roles_if_in_a_case(recording) -> list[str]:
     from core import people
 
-    return people.roles() if recording.case_id else []
+    return people.roles() if people._in_a_case(recording) else []
 
 
 def _has_video(recording) -> bool:
