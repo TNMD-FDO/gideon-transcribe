@@ -4,7 +4,7 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="page">
+  <div class="page workbench">
     <header class="welcome">
       <h1>{{ greeting }}, {{ user.shown_name }}</h1>
       <p class="lead">
@@ -28,6 +28,7 @@
 
     <ol class="steps">
       <li id="step-1" class="card here">
+        <h2>1. Choose files</h2>
         <div id="drop" class="drop hero">
           <p class="big"><b>Drop recordings here</b></p>
           <p class="or">or <label class="link" for="picker">choose files</label></p>
@@ -53,7 +54,7 @@
 
         <div class="two-panes">
           {# Left: every file, and whether it follows the batch or not. #}
-          <div>
+          <div id="exceptions-block">
             <h3 class="small">Exceptions for single files</h3>
             <p class="muted small">
               Every file follows the batch settings unless you give it its

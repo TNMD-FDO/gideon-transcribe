@@ -15,6 +15,9 @@
   var cancel = document.getElementById("cancel");
   var downloadLine = document.getElementById("download-line");
   var download = document.getElementById("download");
+  // The Ready now pane: the transcripts already finished, each with Open.
+  var ready = document.getElementById("ready");
+  var readyNone = document.getElementById("ready-none");
 
   // The finished state: the download becomes the page and everything about
   // waiting goes away, because a batch that is done is about getting the
@@ -134,9 +137,19 @@
       "Download all " + tally.done +
       (tally.done === 1 ? " transcript" : " transcripts");
 
-    // The one overall line, while anything is still on its way.
+    // Ready now: whatever can already be opened, in the order of the batch.
+    var finishedOnes = state.recordings.filter(function (one) { return one.has_transcript; });
+    ready.innerHTML = finishedOnes.map(function (one) {
+      return "<li><span class='grow'>" + escape(one.title) + "</span>" +
+        "<a href='/recording/" + one.id + "' class='btn small'>Open</a></li>";
+    }).join("");
+    readyNone.hidden = finishedOnes.length > 0;
+
+    // Still to come: how many, and the estimate, while anything is on its way.
     var done = document.getElementById("when-done");
-    done.textContent = state.finished ? "" : (state.everything_done_by || "");
+    done.textContent = state.finished ? "" :
+      (waiting ? waiting + (waiting === 1 ? " recording" : " recordings") + " still to come" : "Nothing still to come") +
+      (state.everything_done_by ? ". " + state.everything_done_by : ".");
 
     if (state.reprocessing) {
       document.getElementById("heading").textContent = "Processing again";

@@ -21,6 +21,44 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.5.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. Three pages change shape on wide
+windows and keep their shape on narrow ones.
+
+### Changed
+
+- **The Upload page shows its three steps at once on a wide window.** From
+  1280 pixels, Choose files sits on the left and Settings above Check and
+  start on the right, with Upload and transcribe always in view and greyed
+  until there is a file to send. Nothing hides behind Next: the review table
+  follows every change as it is made, and each file's card carries the
+  `Same as batch` chip that opens that file's own settings, so the exceptions
+  table is not repeated there. On a laptop the stepper is exactly as it was,
+  with the chips on the cards as an extra way in.
+- **The Recordings page is a table with the chosen recording's details
+  beside it.** Title, state, length, clips and the time of its batch in one
+  row each, with Open on every ready row, and one block of details for the
+  chosen recording (the file, the state in full, the Sides, the clips, and
+  Process again, Move to case, Retry and Delete) in a pane on the right from
+  1280 pixels, or opening under the row on a narrower window. Up and down
+  move along the rows, Enter opens, and a wide window shows the first
+  recording's details until another is chosen. Twenty recordings are no
+  longer twenty rows of buttons.
+- **The Batch page has a `Ready now` pane.** While a batch runs, the rows sit
+  on the left and, on the right, the transcripts that are already finished
+  with Open beside each, the download of them so far, how many are still to
+  come with the estimate, and Cancel. On a narrow window the same blocks
+  follow the rows. The finished state is unchanged and takes the whole width.
+  The Upload page and Batch page chapter carries the amendments.
+
 ## v1.4.0, 2026-09-04
 
 ```

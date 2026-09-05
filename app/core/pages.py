@@ -78,8 +78,28 @@ def _with_their_state(recordings):
         # A length, not a count of seconds: the same shape a Citation and an
         # export use, so the app says a length one way everywhere.
         one.length = exports.clock(one.duration_seconds or 0)
+        one.state_word, one.state_tone = _state_words(one)
         rows.append(one)
     return rows
+
+
+def _state_words(one) -> tuple[str, str]:
+    """The word a Recording's row shows, and the tone of the pill it sits in.
+
+    Worked out here rather than in the template, because the table and the
+    details block both say it and they must agree.
+    """
+    if one.being_replaced:
+        return "Processing again", "warn"
+    if one.in_the_queue:
+        return "In the queue", ""
+    if hasattr(one, "transcript"):
+        return "Ready", "ok"
+    if one.media_state == "rejected":
+        return "Refused", "danger"
+    if one.media_state == "failed":
+        return "Failed", "danger"
+    return one.get_media_state_display(), ""
 
 
 @login_required

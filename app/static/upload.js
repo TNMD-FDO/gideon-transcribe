@@ -17,6 +17,13 @@
   var list = document.getElementById("chosen");
   if (!picker) { return; }
 
+  // The stylesheet lays the three steps out two ways by the width of the
+  // window: one at a time with Next and Back on a narrow one, all three at
+  // once on a wide one. This is the same question asked from here.
+  var WIDE = window.matchMedia("(min-width: 1280px)");
+  function allAtOnce() { return WIDE.matches; }
+  var step = 1;
+
   function bytes(size) {
     if (size >= 1073741824) { return (size / 1073741824).toFixed(1) + " GB"; }
     if (size >= 1048576) { return (size / 1048576).toFixed(0) + " MB"; }
@@ -81,11 +88,27 @@
         why.textContent = one.refused;
         card.appendChild(why);
       }
+      if (!one.refused) {
+        // The same chip the exceptions table carries, so that on a wide
+        // window, where that table is not repeated, a file's own settings
+        // are one click from the file.
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "pill chip-for";
+        chip.dataset.index = String(index);
+        chip.title = "Give this file its own settings";
+        chip.addEventListener("click", function () {
+          showFile(index);
+          if (!allAtOnce()) { show(2); }
+        });
+        card.appendChild(chip);
+      }
       card.appendChild(remove);
       list.appendChild(card);
     });
 
     document.getElementById("to-settings").disabled = !usable().length;
+    drawExceptions();
   }
 
   function usable() {
@@ -106,17 +129,16 @@
 
   // The three steps -----------------------------------------------------------
 
-  function show(step) {
-    [1, 2, 3].forEach(function (number) {
-      var element = document.getElementById("step-" + number);
-      element.hidden = number !== step;
-      element.classList.toggle("here", number === step);
+  function show(number) {
+    step = number;
+    [1, 2, 3].forEach(function (each) {
+      var element = document.getElementById("step-" + each);
+      element.hidden = allAtOnce() ? false : each !== number;
+      element.classList.toggle("here", each === number);
     });
   }
 
   document.getElementById("to-settings").addEventListener("click", function () {
-    if (batchSettings === null) { batchSettings = readRail(); }
-    showBatch();
     show(2);
   });
   document.getElementById("to-check").addEventListener("click", function () {
@@ -337,13 +359,27 @@
         "<td class='muted'>" + escape(speakersInWords(values)) + "</td>" +
         "<td class='muted'>" + (values.translate ? "yes" : "no") + "</td>" +
         "<td class='muted'>" + escape(values.language || "automatic") + "</td>" +
-        "<td><button type='button' class='pill chip-for'" +
-        (railFor === index ? " style='border-color:var(--accent);color:var(--accent)'" : "") +
-        ">" + (one.own ? "Custom" : "Same as batch") + "</button></td>";
+        "<td><button type='button' class='pill chip-for" +
+        (railFor === index ? " on" : "") +
+        "'>" + (one.own ? "Custom" : "Same as batch") + "</button></td>";
       row.querySelector(".chip-for").addEventListener("click", function () {
         showFile(index);
       });
       body.appendChild(row);
+    });
+    markChips();
+    review();
+  }
+
+  // The chips on the file cards say the same as the table's, and mark the
+  // file whose settings the rail is showing.
+  function markChips() {
+    Array.prototype.forEach.call(list.querySelectorAll(".chip-for"), function (chip) {
+      var index = parseInt(chip.dataset.index, 10);
+      var one = chosen[index];
+      if (!one) { return; }
+      chip.textContent = one.own ? "Custom settings" : "Same as batch";
+      chip.classList.toggle("on", railFor === index);
     });
   }
 
@@ -370,9 +406,12 @@
         "<td class='muted'>" + (marks.join(", ") || "plain transcription") + "</td>";
       body.appendChild(row);
     });
-    document.getElementById("start").textContent =
-      "Upload and transcribe " + usable().length +
-      (usable().length === 1 ? " file" : " files");
+    var start = document.getElementById("start");
+    start.disabled = !usable().length;
+    start.textContent = usable().length
+      ? "Upload and transcribe " + usable().length +
+        (usable().length === 1 ? " file" : " files")
+      : "Upload and transcribe";
   }
 
   function escape(text) {
@@ -550,4 +589,16 @@
 
     next();
   }
+
+  // The rail starts on the batch's settings, and the steps take their shape
+  // from the width of the window. A window widened or narrowed keeps the
+  // step it was on.
+  batchSettings = readRail();
+  showBatch();
+  show(1);
+  if (WIDE.addEventListener) {
+    WIDE.addEventListener("change", function () { show(step); });
+  }
+  // A plain resize as well: not every browser fires the change above.
+  window.addEventListener("resize", function () { show(step); });
 })();
