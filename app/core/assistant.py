@@ -627,7 +627,9 @@ def suggest_names(run_id) -> None:
             for word in (recording.vocabulary or [])
             if str(word).strip()
         ]
-        system = prompts.system_message(ground.text, template.text, "")
+        system = prompts.system_message(
+            ground.text, template.text, prompts.SUGGESTIONS_FORMAT
+        )
         user = "\n\n".join(
             [
                 prompts.nature_line(recording, transcript),

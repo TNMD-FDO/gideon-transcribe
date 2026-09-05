@@ -161,6 +161,46 @@ def test_a_speaker_label_is_told_from_a_name():
     assert not assistant._is_a_label("Speaker")
 
 
+def test_a_label_offered_as_a_name_is_dropped():
+    for label in (
+        "Speaker3",
+        "Speaker 3",
+        "SPEAKER_02",
+        "Side 1 Speaker 2",
+        "side1speaker2",
+        "Side 2",
+    ):
+        assert prompts.looks_like_a_label(label), label
+    for name in (
+        "Detective Ruiz",
+        "Officer",
+        "Speaker of the House",
+        "Sidney",
+        "Maria",
+    ):
+        assert not prompts.looks_like_a_label(name), name
+    raw = [
+        {
+            "speaker": "Speaker 1",
+            "name": "Speaker3",
+            "kind": "name",
+            "confidence": "high",
+            "line": 1,
+            "quote": "x",
+        },
+        {
+            "speaker": "Speaker 2",
+            "name": "Officer",
+            "kind": "role",
+            "confidence": "medium",
+            "line": 2,
+            "quote": "y",
+        },
+    ]
+    kept = prompts.keep_suggestions(raw, ["Speaker 1", "Speaker 2"], set(), LINES)
+    assert [(one["speaker"], one["name"]) for one in kept] == [("Speaker 2", "Officer")]
+
+
 # The features, against a fake engine ---------------------------------------------
 
 

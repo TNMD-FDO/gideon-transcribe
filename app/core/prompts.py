@@ -76,6 +76,12 @@ CHAT_FORMAT = (
     "Answer in plain text. Give every time as [hh:mm:ss], copied from the line "
     "it appears on."
 )
+SUGGESTIONS_FORMAT = (
+    "Answer with the JSON asked for. A speaker's label, such as Speaker 3 or "
+    "Side 1 Speaker 2, is not a name and not a role: when nothing said shows who "
+    "a speaker is, give the name unknown. A name is what someone is called in "
+    "the talk; a role is what they do, such as Officer or Interpreter."
+)
 
 LENGTH_LINES = {
     "short": "Keep the whole summary under about 250 words.",
@@ -288,6 +294,13 @@ def history_that_fits(turns: list[tuple[str, str]]) -> list[tuple[str, str]]:
 # Suggestions the app keeps ---------------------------------------------------------
 
 RANK = {"high": 2, "medium": 1, "low": 0}
+LABEL = re.compile(r"^(side\d+)?speaker\d+$|^side\d+$")
+
+
+def looks_like_a_label(name: str) -> bool:
+    """Speaker 3, SPEAKER_02, Side 1 Speaker 2: the app's or the engine's own labels."""
+    squashed = re.sub(r"[\s_\-]+", "", name).lower()
+    return bool(LABEL.match(squashed))
 
 
 def keep_suggestions(
@@ -308,7 +321,7 @@ def keep_suggestions(
             continue
         if confidence not in ("high", "medium"):
             continue
-        if not name or name.lower() == "unknown":
+        if not name or name.lower() == "unknown" or looks_like_a_label(name):
             continue
         if name.casefold() in {held.casefold() for held in taken}:
             continue
