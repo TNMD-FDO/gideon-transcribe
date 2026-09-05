@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.4, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Suggest names offered speaker labels as names.** The model answered
+  "Speaker3" where it had nothing to go on, and the app's checks, which stop
+  unknown, low confidence and names already held, let a label through. A
+  suggestion whose name is a label in any spelling (Speaker 3, SPEAKER_02,
+  Side 1 Speaker 2) is now dropped, and the answer format the app adds to
+  every suggestions call says that a label is never a name or a role and to
+  say unknown instead. Found on the first Suggest names against the Local
+  engine.
+
 ## v1.10.3, 2026-09-05
 
 ```
