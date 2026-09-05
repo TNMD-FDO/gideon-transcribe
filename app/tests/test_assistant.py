@@ -467,10 +467,10 @@ def test_suggest_names_keeps_what_the_checks_allow_and_accept_renames(
 
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["suggestion_run"]["state"] == "done"
-    assert [(one["speaker"], one["name"]) for one in state["suggestions"]] == [
+    assert [(one["speaker"], one["name"]) for one in state["pending"]] == [
         ("Speaker 1", "Detective Ruiz")
     ]
-    assert state["suggestions"][0]["clock"] == "00:00:00"
+    assert state["pending"][0]["clock"] == "00:00:00"
 
     suggestion = Suggestion.objects.get(state=Suggestion.PENDING)
     accepted = client.post(f"/suggestion/{suggestion.pk}/accept")

@@ -295,7 +295,7 @@
         said.textContent = "Reading the transcript...";
       } else if (run && run.state === "failed") {
         said.textContent = run.said;
-      } else if (run && run.state === "done" && !state.suggestions.length) {
+      } else if (run && run.state === "done" && !state.pending.length) {
         said.textContent = "Nothing in the transcript shows who these speakers are.";
       } else {
         said.textContent = "";
@@ -308,7 +308,7 @@
       pill.remove();
     });
     if (!suggestionList) { return; }
-    suggestionList.innerHTML = state.suggestions.map(function (one) {
+    suggestionList.innerHTML = state.pending.map(function (one) {
       return "<li class='suggestion' title='" + escape(one.quote) + " at " + escape(one.clock) + "'>" +
         "<span class='grow'><b>" + escape(one.speaker) + "</b> → " + escape(one.name) +
         " <span class='muted small'>(" + escape(one.confidence) + ", " + escape(one.kind) + ")</span>" +
@@ -316,7 +316,7 @@
         "<button type='button' class='small accept' data-suggestion='" + one.id + "'>Accept</button>" +
         "<button type='button' class='small ghost reject' data-suggestion='" + one.id + "'>Reject</button></li>";
     }).join("");
-    state.suggestions.forEach(function (one) {
+    state.pending.forEach(function (one) {
       var rows = document.querySelectorAll("#transcript .seg .name");
       for (var i = 0; i < rows.length; i += 1) {
         if (rows[i].textContent.replace(" ✎", "") === one.speaker) {

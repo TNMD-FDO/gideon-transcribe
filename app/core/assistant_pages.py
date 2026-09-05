@@ -187,7 +187,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             ],
             "default_template": str(default.pk) if default else "",
             "unnamed": unnamed,
-            "suggestions": suggestions,
+            # "pending", not "suggestions": that word is the feature's own flag above.
+            "pending": suggestions,
             "suggestion_run": run,
         }
     )
