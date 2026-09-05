@@ -20,7 +20,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, clip_work, settings_store
+from core import audit, cases, clip_work, exports, settings_store
 from core.clips import SHORTEST_SECONDS, Clip, RenderState, next_title
 from core.media_access import media_root
 from core.recordings import Recording
@@ -55,6 +55,18 @@ def _their_clip(request, clip_id) -> Clip | None:
     return None
 
 
+def spell(seconds: float) -> str:
+    """A length a person reads: "45 s", "1 min 37 s", "1 h 2 min"."""
+    whole = int(round(seconds or 0))
+    hours, rest = divmod(whole, 3600)
+    minutes, secs = divmod(rest, 60)
+    if hours:
+        return f"{hours} h {minutes} min" if minutes else f"{hours} h"
+    if minutes:
+        return f"{minutes} min {secs} s" if secs else f"{minutes} min"
+    return f"{secs} s"
+
+
 def _row(clip: Clip, here=None, asker=None) -> dict:
     """One Clip, as the sheet and the Case's Clips tab both draw it.
 
@@ -80,6 +92,9 @@ def _row(clip: Clip, here=None, asker=None) -> dict:
         "start": clip.start,
         "end": clip.end,
         "seconds": clip.seconds,
+        # As a person reads them: clocks for the span, words for the length.
+        "span": f"{exports.clock(clip.start)} to {exports.clock(clip.end)}",
+        "length": spell(clip.seconds),
         "burn_captions": clip.burn_captions,
         "include_excerpt": clip.include_excerpt,
         "state": clip.state,

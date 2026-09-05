@@ -52,8 +52,8 @@
                     data-open="{% url 'viewer' clip.recording.pk %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.pk }}">
                   <td><b>{{ clip.title }}</b></td>
                   <td class="muted">{{ clip.recording.title }}</td>
-                  <td class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
-                  <td>{{ clip.seconds|floatformat:0 }}s</td>
+                  <td class="mono">{{ clip.span }}</td>
+                  <td>{{ clip.length }}</td>
                   <td>
                     {% if clip.state == "ready" and not clip.captions_are_stale %}
                       <span class="pill ok">Ready</span>
@@ -91,7 +91,7 @@
                       {% if clip.note %}<p class="small" style="margin: 0 0 8px">{{ clip.note }}</p>{% endif %}
                       <dl class="kv">
                         <dt>Recording</dt><dd>{{ clip.recording.title }}</dd>
-                        <dt>Span</dt><dd class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s, {{ clip.seconds|floatformat:0 }}s</dd>
+                        <dt>Span</dt><dd><span class="mono">{{ clip.span }}</span>, {{ clip.length }}</dd>
                         <dt>Options</dt>
                         <dd>{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}{% if not clip.burn_captions and not clip.include_excerpt %}none{% endif %}</dd>
                         <dt>Size</dt><dd>{{ clip.size_bytes|filesizeformat }}</dd>
@@ -120,7 +120,11 @@
               {% endfor %}
             </tbody>
           </table>
-          <p class="muted small">Click a clip to play it and see its details. Up and down move, Enter opens it in the viewer.</p>
+          <div class="hint" data-hint="clips-table" hidden>
+            {% icon "info" %}
+            <span class="grow">Click a clip to play it and see its details beside the table. The arrow keys move, Enter opens it in the viewer.</span>
+            <button type="button" class="ghost tiny dismiss">Got it</button>
+          </div>
         </div>
         <aside class="pane-detail" id="detail-pane">
           <p class="muted small" id="detail-none">Choose a clip to play it.</p>
