@@ -8,6 +8,7 @@ script and replacing the two things it reaches for: the record, and docker.
 """
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -123,6 +124,63 @@ def test_the_script_parses():
         [BASH, "-n", SCRIPT.as_posix()], capture_output=True, text=True
     )
     assert done.returncode == 0, done.stderr
+
+
+@needs_bash
+def test_a_secret_is_written_and_seen_through_one_helper(tmp_path):
+    """Every secret goes through write_secret and secret_present.
+
+    After the install, secrets/ belongs to the app account and is mode 700, so
+    a plain test says a file is absent whether it is or not, and a plain
+    redirection dies on Permission denied, which under set -e ended an upgrade
+    silently on 2026-09-04. On a folder the caller owns the helpers take the
+    plain path, which is what can be exercised here; the sudo path is the
+    same two lines with sudo in front.
+    """
+    folder = tmp_path / "secrets"
+    program = f"""
+set +e
+source "{SCRIPT.as_posix()}" >/dev/null 2>&1
+own_the_secrets() {{ :; }}
+write_secret "{folder.as_posix()}/token" "hello there"
+secret_present "{folder.as_posix()}/token" && echo "present: yes"
+secret_present "{folder.as_posix()}/missing" || echo "present: no"
+secret_exists "{folder.as_posix()}/missing" || echo "exists: no"
+append_secret_line "{folder.as_posix()}/tokens" "one two"
+append_secret_line "{folder.as_posix()}/tokens" "three"
+cat "{folder.as_posix()}/token"; echo
+cat "{folder.as_posix()}/tokens"
+stat -c '%a' "{folder.as_posix()}/token" 2>/dev/null || echo "mode unknown"
+"""
+    done = subprocess.run(
+        [BASH, "-c", program], capture_output=True, text=True, cwd=HERE
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "present: yes" in done.stdout
+    assert "present: no" in done.stdout
+    assert "exists: no" in done.stdout
+    assert "hello there" in done.stdout
+    assert "one two\nthree" in done.stdout
+
+
+def test_no_secret_is_written_by_a_bare_redirection():
+    # The only way into a secrets folder is the helper, because the folder is
+    # not the caller's after the install and a bare `>` dies there.
+    text = SCRIPT.read_text(encoding="utf-8")
+    bare = [
+        line.strip()
+        for line in text.splitlines()
+        if re.search(r'>>?\s*"\$(SERVICE_)?SECRETS/', line)
+    ]
+    assert bare == [], "these write a secret without the helper:\n  " + "\n  ".join(
+        bare
+    )
+    for helper in ("write_secret()", "secret_present()", "secret_exists()"):
+        assert helper in text
+    # The helpers' own two redirections are the only ones onto "$path": the
+    # plain write and the plain append, taken while the folder is the
+    # caller's. Anything more is a third way in.
+    assert text.count('>"$path"') == 2
 
 
 def test_the_workflow_and_the_script_agree_on_where_the_record_lives():

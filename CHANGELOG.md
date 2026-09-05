@@ -21,6 +21,34 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.2.2, 2026-09-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **`./transcribe upgrade` stopped silently after the checkout on a server
+  installed the documented way.** After the install, `secrets/` belongs to
+  the app's account and is mode 700, so the account running the script
+  cannot see into it or write into it. The step added in v1.2.0 that makes
+  sure the engine's token file exists asked with a plain test, was told the
+  file was absent, tried to create it, and died on "Permission denied", which
+  under the script's strict mode ended the upgrade with the checkout moved
+  and nothing rebuilt. The v1.2.1 fix therefore never reached the
+  containers. Every write of a secret now goes through one helper that uses
+  `sudo` when the folder is not the caller's, and the existence test asks
+  through `sudo` too: the token file, the engine token, the directory bind
+  password, the Hugging Face token, and the generated secrets alike. A test
+  fails if a bare redirection into a secrets folder comes back.
+- **Recovering a server the v1.2.1 script left half upgraded** is one extra
+  step, because the script that runs an upgrade is the one already checked
+  out: `git fetch --tags && git checkout v1.2.2`, then
+  `./transcribe upgrade v1.2.2` as usual. The install guide's "When it
+  fails" table carries it.
+
 ## v1.2.1, 2026-09-04
 
 ```
