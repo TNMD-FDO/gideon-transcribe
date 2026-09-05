@@ -216,15 +216,31 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
         a_recording(owner, a_case, f"Call {n + 1}")
     # Each Transcript fills a Reading on its own, so three parts and one combining call.
     monkeypatch.setattr(case_chat, "READING_TOKENS", 10)
-    asked = reachable(
-        monkeypatch,
-        [
-            "Part one says blue [Recording 1, 00:12:45].",
-            "Part two says nothing.",
-            "Part three says blue [Recording 3, 00:12:45].",
-            "Blue, in two calls [Recording 1, 00:12:45] [Recording 3, 00:12:45].",
-        ],
-    )
+    # The Readings run two at a time, so the fake answers by what it was
+    # asked, not by the order the calls arrive in.
+    by_content = {
+        "Recording 1 of 3": "Part one says blue [Recording 1, 00:12:45].",
+        "Recording 2 of 3": "Part two says nothing.",
+        "Recording 3 of 3": "Part three says blue [Recording 3, 00:12:45].",
+        prompts.COMBINING: (
+            "Blue, in two calls [Recording 1, 00:12:45] [Recording 3, 00:12:45]."
+        ),
+    }
+    asked = reachable(monkeypatch, [""])
+
+    def by_the_question(messages, **options):
+        asked.append({"messages": messages, **options})
+        user = messages[-1]["content"]
+        text = next(answer for key, answer in by_content.items() if key in user)
+        return {
+            "text": text,
+            "finish_reason": "stop",
+            "input_tokens": 100,
+            "output_tokens": 10,
+            "model": "the-model",
+        }
+
+    monkeypatch.setattr(engine, "complete", by_the_question)
     signed_in(client, owner)
     chat = CaseChat.objects.create(case=a_case, asked_by=owner)
     turn = CaseChatTurn.objects.create(chat=chat, number=1, question="Colour?")
