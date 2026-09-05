@@ -139,7 +139,7 @@ def test_help_lands_on_the_section_about_the_page():
 
 def test_the_guide_opens_beside_the_page():
     base = page("base.html")
-    assert "{% load static help_links %}" in base
+    assert "{% load static help_links icons %}" in base
     assert 'id="help-beside"' in base and 'id="help-pane"' in base
     assert '<div class="shell">' in base
     assert base.count("{% help_url page %}") == 3
