@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from core import media, media_access
+from core.jobs import Transcript
 from core.models import LoginSession, User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
@@ -33,7 +34,11 @@ def person(db):
 
 
 def a_video(person, ready: bool) -> Recording:
-    """A recording whose playback.mp4 is on disk, ready or not yet."""
+    """A transcribed recording whose playback.mp4 is on disk, ready or not yet.
+
+    The transcript exists, as it did on the office server: recognition had
+    finished and the copy had not. That is the window the overlay explains.
+    """
     recording = Recording.objects.create(
         batch=Batch.objects.create(user=person),
         user=person,
@@ -50,6 +55,7 @@ def a_video(person, ready: bool) -> Recording:
     recording.folder.mkdir(parents=True, exist_ok=True)
     (recording.folder / "playback.mp4").write_bytes(b"half written or whole")
     (recording.folder / "waveform.json").write_text("{}", encoding="utf-8")
+    Transcript.objects.create(recording=recording, language="en")
     return recording
 
 
