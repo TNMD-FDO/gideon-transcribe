@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.13.1, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The starter questions are the office's own.** The built-in questions an
+  empty chat offered in v1.13.0 are withdrawn. In their place the Templates
+  page gains two lists, **Chat starter questions** and **Case chat starter
+  questions**, one question per line, empty by default: an empty chat offers
+  chips only when an Admin has written some, and otherwise opens with its
+  grounding line and its box alone. Saving writes the ordinary Setting
+  changed row and applies at once.
+
 ## v1.13.0, 2026-09-05
 
 ```

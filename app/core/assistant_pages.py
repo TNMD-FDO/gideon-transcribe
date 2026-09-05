@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, exports, tasks
+from core import assistant, audit, cases, exports, settings_store, tasks
 from core.assistant import (
     Chat,
     ChatTurn,
@@ -192,6 +192,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             "busy": busy,
             "summaries": summaries,
             "chats": chats,
+            # The office's starter questions for an empty chat; none by default.
+            "starters": settings_store.lines_of("chat_starters"),
             "templates": [
                 {"id": str(one.pk), "name": one.name, "description": one.description}
                 for one in templates

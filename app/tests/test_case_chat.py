@@ -333,6 +333,11 @@ def test_the_tab_and_its_endpoints_follow_the_switches(owner, a_case, client):
     viewer = client.get(f"/recording/{recording.pk}").content.decode()
     assert f'caseChatUrl: "/case/{a_case.pk}?tab=chat"' in viewer
     assert client.get(f"/case/{a_case.pk}/chat").status_code == 200
+    assert client.get(f"/case/{a_case.pk}/chat").json()["starters"] == []
+    settings_store.set_to("case_chat_starters", "Summarise this case")
+    assert client.get(f"/case/{a_case.pk}/chat").json()["starters"] == [
+        "Summarise this case"
+    ]
 
     settings_store.set_to("chat_across_cases", False)
     page = client.get(f"/case/{a_case.pk}?tab=chat").content.decode()
@@ -462,5 +467,8 @@ def test_the_settings_and_the_template_exist():
     )
     hours = settings_store.DEFINITIONS["case_chat_hours"]
     assert (hours.default, hours.least, hours.most) == (120, 6, 600)
+    starters = settings_store.DEFINITIONS["case_chat_starters"]
+    assert starters.default == "" and starters.page == settings_store.TEMPLATES
+    assert settings_store.TEMPLATES not in dict(settings_store.PAGES)
     assert PromptTemplate.DEFAULTS["case_chat"] == ("Case chat", prompts.CASE_CHAT)
     assert engine.WHAT_TO_SAY["llm_case_too_large"]

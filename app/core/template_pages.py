@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, prompts
+from core import audit, prompts, settings_store
 from core.assistant import PromptTemplate, SummaryTemplate
 from core.panel import admins_only, furniture
 
@@ -48,8 +48,46 @@ def templates(request: HttpRequest) -> HttpResponse:
             ],
             "summary_templates": list(SummaryTemplate.objects.all()),
             "standard_text": prompts.STANDARD_SUMMARY,
+            # The starter questions, two lists, edited here like the templates.
+            "starters": [
+                settings_store.definition(key)
+                for key in ("chat_starters", "case_chat_starters")
+            ],
+            "starter_text": {
+                key: settings_store.get(key) or ""
+                for key in ("chat_starters", "case_chat_starters")
+            },
         },
     )
+
+
+@admins_only
+@require_POST
+def starter_questions(request: HttpRequest, key: str) -> HttpResponse:
+    """One list of starter questions saved, at once, with the ordinary Setting row."""
+    if key not in ("chat_starters", "case_chat_starters"):
+        return redirect(reverse(PAGE))
+    known = settings_store.definition(key)
+    was = settings_store.shown(key)
+    text = "\n".join(
+        line.strip()
+        for line in request.POST.get("text", "").splitlines()
+        if line.strip()
+    )
+    settings_store.set_to(key, text)
+    audit.write(
+        audit.Category.ADMIN,
+        "Setting changed",
+        actor=request.user,
+        request=request,
+        object_type="setting",
+        object_id=key,
+        object_label=known.name,
+        was=was,
+        now=settings_store.shown(key),
+        note="from the Templates page",
+    )
+    return redirect(reverse(PAGE))
 
 
 @admins_only

@@ -33,6 +33,9 @@ NOTICES = "notices"
 SIGN_IN = "sign-in"
 AUDIT = "audit"
 CASES = "cases"
+# Not a Settings page: these rows are edited on the Templates page, at once,
+# outside the tray, like the prompt templates beside them.
+TEMPLATES = "templates"
 
 # The Recording types the app ships with, one per line. A type an office
 # removes stays on the Recordings that already hold it.
@@ -446,6 +449,34 @@ def _rows() -> list[Definition]:
             when_changed="Off hides Chat; existing Chats are hidden, not deleted.",
         ),
         Definition(
+            key="chat_starters",
+            page=TEMPLATES,
+            name="Chat starter questions",
+            kind=TEXT,
+            default="",
+            lines=5,
+            what_it_does=(
+                "Questions an empty Chat in the viewer offers as one-click chips, "
+                "one per line. Empty means none are offered."
+            ),
+            when_changed="The next Chat opened; applies at once, outside the tray.",
+        ),
+        Definition(
+            key="case_chat_starters",
+            page=TEMPLATES,
+            name="Case chat starter questions",
+            kind=TEXT,
+            default="",
+            lines=5,
+            what_it_does=(
+                "Questions an empty Case Chat offers as one-click chips, one per "
+                "line. Empty means none are offered."
+            ),
+            when_changed=(
+                "The next Case Chat opened; applies at once, outside the tray."
+            ),
+        ),
+        Definition(
             key="chat_across_cases",
             page=ASSISTANT,
             name="Chat across cases",
@@ -673,6 +704,11 @@ def _rows() -> list[Definition]:
 
 
 DEFINITIONS = {one.key: one for one in _rows()}
+
+
+def lines_of(key: str) -> list[str]:
+    """A list setting's lines, trimmed, blanks dropped."""
+    return [line.strip() for line in str(get(key) or "").splitlines() if line.strip()]
 
 
 def page_settings(page: str) -> list[Definition]:

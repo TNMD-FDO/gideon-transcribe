@@ -16,7 +16,16 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, case_chat, cases, engine, exports, tasks
+from core import (
+    assistant,
+    audit,
+    case_chat,
+    cases,
+    engine,
+    exports,
+    settings_store,
+    tasks,
+)
 from core.assistant import Chat
 from core.case_chat import CaseChat, CaseChatTurn
 from core.case_pages import _on_or_404, _their_case
@@ -161,6 +170,7 @@ def state(request: HttpRequest, case_id) -> JsonResponse:
             "busy": any(one["busy"] for one in chats),
             "readable": len(read),
             "skipped": len(skipped),
+            "starters": settings_store.lines_of("case_chat_starters"),
             "chats": chats,
         }
     )
