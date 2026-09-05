@@ -42,6 +42,10 @@
           {% endif %}
           <a href="{% url 'case' case.pk %}?tab=speakers"
              class="tab{% if tab == 'speakers' %} on{% endif %}">Speakers ({{ people_count }})</a>
+          {% if case_chat_available %}
+            <a href="{% url 'case' case.pk %}?tab=chat"
+               class="tab{% if tab == 'chat' %} on{% endif %}">Chat</a>
+          {% endif %}
         </div>
 
         {% if tab == "recordings" %}
@@ -81,7 +85,29 @@
           <h2 style="margin-top: 26px">Recordings</h2>
         {% endif %}
 
-        {% if tab == "speakers" %}
+        {% if tab == "chat" %}
+          {% comment %}
+            The Case Chat: a question answered from every transcript in the
+            case, read whole. Drawn by case-chat.js from one state answer,
+            the way the viewer's Chat panel is.
+          {% endcomment %}
+          <div class="panel chat case-chat" id="case-chat" data-case="{{ case.pk }}">
+            <div class="row" style="margin: 12px 0 8px">
+              <p class="lead grow" id="case-chat-lead">Ask about every transcript in this case.</p>
+              <span id="chat-tools" class="row" hidden>
+                <a id="chat-export" class="btn small" href="#">Export to Word</a>
+                <button type="button" class="ghost small danger" id="chat-delete">Delete chat</button>
+              </span>
+            </div>
+            <div id="chat-threads" class="threads"></div>
+            <div id="chat-turns" class="turns"></div>
+            <div class="row" style="gap: 6px; margin-top: 8px">
+              <textarea id="chat-question" rows="2" class="grow" placeholder="Ask about the recordings in this case"></textarea>
+              <button type="button" class="primary small" id="chat-ask">Ask</button>
+            </div>
+          </div>
+
+        {% elif tab == "speakers" %}
           {% comment %}
             The Speakers tab: inside a case a name means a person. The People
             list, each with where they appear; Add person; and the recordings
@@ -385,4 +411,5 @@
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
+  {% if tab == "chat" %}<script src="{% static 'case-chat.js' %}"></script>{% endif %}
 {% endblock %}

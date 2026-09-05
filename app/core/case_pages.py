@@ -183,13 +183,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     cases.note_activity(case, by=request.user)
 
     asked = request.GET.get("q", "").strip()
-    # Three of the four tabs the chapter gives this page; Chat belongs to a
-    # chapter that is not built.
-    tab = (
-        request.GET.get("tab")
-        if request.GET.get("tab") in ("clips", "speakers")
-        else "recordings"
-    )
+    # The four tabs the chapter gives this page; Chat only while the Case
+    # Chat exists.
+    from core import case_chat
+
+    chat_here = case_chat.available()
+    tabs = ("clips", "speakers") + (("chat",) if chat_here else ())
+    tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
 
     # The pane about the case says where its clock stands, as its row on the
     # Cases page does.
@@ -211,6 +211,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 else {"people_count": case.people.count()}
             ),
             "people_said": request.session.pop("people_said", ""),
+            "case_chat_available": chat_here,
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             "is_owner": case.owner_id == request.user.pk,
             "recordings": _rows_for(case),
@@ -407,6 +408,7 @@ def _counts_of(case: Case) -> dict:
         "recordings": recordings.count(),
         "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
         "clips": sum(one.clips.count() for one in recordings),
+        "chats": case.chats.count(),
         "size": uploads.as_gb(case.disk_bytes()),
     }
 

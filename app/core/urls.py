@@ -4,6 +4,7 @@ from django.urls import path
 
 from core import (
     assistant_pages,
+    case_chat_pages,
     case_pages,
     clip_pages,
     exports,
@@ -157,6 +158,20 @@ urlpatterns = [
     path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
     # The Speakers tab's acts: add a Person, and rename, edit, merge or delete one.
     path("case/<uuid:case_id>/people", people_pages.add_person, name="add-person"),
+    # The Chat tab: the Case Chat's state, New chat, Ask, Delete, Export.
+    path("case/<uuid:case_id>/chat", case_chat_pages.state, name="case-chat-state"),
+    path("case/<uuid:case_id>/chats", case_chat_pages.new_chat, name="new-case-chat"),
+    path("case-chat/<uuid:chat_id>/ask", case_chat_pages.ask, name="ask-case-chat"),
+    path(
+        "case-chat/<uuid:chat_id>/delete",
+        case_chat_pages.delete_chat,
+        name="delete-case-chat",
+    ),
+    path(
+        "case-chat/<uuid:chat_id>/export",
+        case_chat_pages.export,
+        name="export-case-chat",
+    ),
     path("person/<uuid:person_id>", people_pages.person_action, name="person-action"),
     path("case/<uuid:case_id>/delete", case_pages.delete_case, name="delete-case"),
     path(

@@ -55,6 +55,18 @@ CHAT = (
     "transcript."
 )
 
+CASE_CHAT = (
+    "Answer the user's questions using only the transcripts of the recordings "
+    "in this case. If the answer is not in them, say so in one sentence and do "
+    "not guess. Quote the transcripts when it helps. For every statement you "
+    "rely on, give the recording and the time as [Recording 3, 00:12:45], "
+    "copied from the line it appears on, and never make one up. When several "
+    "recordings bear on the question, say which says what. Keep answers short "
+    "unless the user asks for detail. If a question asks for legal advice, an "
+    "opinion on guilt or credibility, or anything outside these transcripts, "
+    "reply: I can only answer from the transcripts in this case."
+)
+
 SUGGESTIONS = (
     "Some speakers in this transcript have no name yet. For each of them, work "
     "out from what is said who they are: a name, if someone says it or is "
@@ -75,6 +87,19 @@ SUMMARY_FORMAT = (
 CHAT_FORMAT = (
     "Answer in plain text. Give every time as [hh:mm:ss], copied from the line "
     "it appears on."
+)
+CASE_CHAT_FORMAT = (
+    'Answer in plain text. Each recording opens with a line "Recording n of '
+    'N"; give every reference as [Recording n, hh:mm:ss], the n from that line '
+    "and the time copied from the transcript line it appears on."
+)
+# The combining call, when a Case was read in parts: plumbing, not a template.
+COMBINING = (
+    "The same question was answered separately over several parts of one "
+    "case's recordings. Write one answer from these part answers. Keep every "
+    "[Recording n, hh:mm:ss] reference exactly as written and add none. Where "
+    "the parts disagree, say so. If no part found an answer, say the "
+    "transcripts do not answer it."
 )
 SUGGESTIONS_FORMAT = (
     "Answer with the JSON asked for. For every unnamed speaker, suggest a name "

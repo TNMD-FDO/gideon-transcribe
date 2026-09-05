@@ -1142,6 +1142,120 @@ def chat_word(chat, exported_by: str) -> bytes:
     return holder.getvalue()
 
 
+CASE_CITED = re.compile(r"(\[Recording \d{1,3}, \d{1,2}:\d{2}:\d{2}\])")
+
+
+def case_chat_word(chat, exported_by: str) -> bytes:
+    """The Case Chat export: the Case's cover facts, then the questions in order.
+
+    The cover lists the Recordings the Chat has read across its questions,
+    each with its title, type, upload date and length, in the order first read.
+    A Citation prints as the Recording's title and [hh:mm:ss] in grey; one
+    whose Recording has left the Case prints as it was written, marked.
+    """
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches, Pt, RGBColor
+
+    from core import assistant
+    from core.recordings import Recording
+
+    case = chat.case
+    turns = list(chat.turns.filter(state="done"))
+    document = _open_record_document()
+    heading = document.add_paragraph(case.name)
+    heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    heading.runs[0].bold = True
+    heading.runs[0].font.size = Pt(20)
+    said = document.add_paragraph("Case chat")
+    said.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    said.runs[0].font.size = Pt(13)
+    document.add_paragraph()
+
+    read: dict[str, dict] = {}
+    for turn in turns:
+        for one in turn.readings or []:
+            read.setdefault(one["recording"], one)
+    first_when = turns[0].answered_at if turns else chat.created
+    first_model = next((one.model for one in turns if one.model), "")
+    _facts(
+        document,
+        [
+            ("Case", case.name),
+            ("Owner", case.owner.username),
+            ("Recordings read", str(len(read))),
+            ("Started", f"{chat.created:{DAY_AND_TIME}}"),
+            ("Questions", str(len(turns))),
+            ("Model", first_model or "the AI assistant"),
+            ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+        ],
+        Inches,
+    )
+    if read:
+        document.add_paragraph()
+        table = document.add_table(rows=1, cols=4)
+        table.style = "Light Grid Accent 1"
+        for cell, word in zip(
+            table.rows[0].cells,
+            ("Recording", "Type", "Uploaded", "Length"),
+            strict=True,
+        ):
+            cell.text = word
+        for one in read.values():
+            row = table.add_row().cells
+            row[0].text = one["title"]
+            row[1].text = one.get("type") or ""
+            row[2].text = one.get("uploaded") or ""
+            row[3].text = one.get("length") or ""
+    document.add_paragraph()
+
+    # The AI notice, the Transcription notice, and the Translation notice when
+    # any Recording read was translated, each filled from a Transcript read.
+    notices = [assistant.notice(first_model, first_when)]
+    seen_kinds: set[str] = set()
+    for one in read.values():
+        recording = Recording.objects.filter(pk=one["recording"]).first()
+        transcript = getattr(recording, "transcript", None) if recording else None
+        if transcript is None or transcript.task_run in seen_kinds:
+            continue
+        seen_kinds.add(transcript.task_run)
+        notices.append(notice_for(transcript))
+    for text in notices:
+        if text:
+            line = document.add_paragraph(text)
+            line.runs[0].italic = True
+
+    titles = {key: one["title"] for key, one in read.items()}
+    for turn in turns:
+        document.add_paragraph()
+        document.add_heading(f"Question {turn.number}.", level=2)
+        asked = document.add_paragraph(turn.question)
+        asked.runs[0].italic = True
+        for paragraph in turn.answer.split("\n"):
+            if not paragraph.strip():
+                continue
+            line = document.add_paragraph()
+            for piece in CASE_CITED.split(paragraph):
+                if not piece:
+                    continue
+                where = (turn.citations or {}).get(piece)
+                if where is None:
+                    line.add_run(piece)
+                    continue
+                title = titles.get(where["recording"], "recording removed")
+                run = line.add_run(f"{title} [{clock(where['seconds'])}]")
+                run.font.color.rgb = RGBColor(0x77, 0x77, 0x77)
+        if turn.cut_short:
+            note = document.add_paragraph("The answer was cut short.")
+            note.runs[0].italic = True
+    holder = io.BytesIO()
+    document.save(holder)
+    return holder.getvalue()
+
+
+def case_chat_name(chat) -> str:
+    return f"{safe_name(chat.case.name)} - case chat {chat.created:%Y-%m-%d %H%M}.docx"
+
+
 def summary_name(summary) -> str:
     when = summary.written_at or summary.created
     return (

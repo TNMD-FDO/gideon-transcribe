@@ -40,6 +40,8 @@ REFUSED = "llm_refused"
 TOO_LONG = "llm_too_long"
 BAD_OUTPUT = "llm_bad_output"
 ERROR = "llm_error"
+# The Case Chat's own: a question over more talk than the ceiling allows.
+CASE_TOO_LARGE = "llm_case_too_large"
 
 WHAT_TO_SAY = {
     UNREACHABLE: "The AI assistant is not available right now.",
@@ -48,6 +50,7 @@ WHAT_TO_SAY = {
     TOO_LONG: "This transcript is too long for the AI assistant.",
     BAD_OUTPUT: "The AI assistant gave an answer the app could not read. Try again.",
     ERROR: "The AI assistant hit a problem. Try again.",
+    CASE_TOO_LARGE: "This case is too large for one question.",
 }
 
 # The check and Test connection are quick questions, not calls.

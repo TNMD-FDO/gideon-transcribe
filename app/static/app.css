@@ -281,6 +281,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
 .pill.role { font-size: 0.72em; padding: 0 6px; margin-left: 4px; }
 .person-acts form { flex-wrap: wrap; }
+/* The Case Chat tab: the viewer's Chat panel, at the case page's width. */
+.case-chat .turns { max-height: 60vh; overflow-y: auto; }
+.case-chat .cite.removed { color: var(--muted); text-decoration: line-through; }
 
 .card {
   background: var(--surface);

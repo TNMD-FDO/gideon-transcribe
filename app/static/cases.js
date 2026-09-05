@@ -142,8 +142,10 @@
             "This removes " + counts.recordings + " recording" +
             (counts.recordings === 1 ? "" : "s") + ", " +
             counts.transcripts + " transcript" +
-            (counts.transcripts === 1 ? "" : "s") + ", and " +
+            (counts.transcripts === 1 ? "" : "s") + ", " +
+            (counts.chats ? "" : "and ") +
             counts.clips + " clip" + (counts.clips === 1 ? "" : "s") +
+            (counts.chats ? ", and " + counts.chats + " case chat" + (counts.chats === 1 ? "" : "s") : "") +
             ", " + counts.size + " in all.\n\n" +
             "This is final. There is no way to get it back.";
           if (!window.confirm(words)) { return; }

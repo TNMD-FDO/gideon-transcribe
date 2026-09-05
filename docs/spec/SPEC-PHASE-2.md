@@ -1426,6 +1426,16 @@ Chat across a whole Case; Speaker management panel (the People the line is built
 - From Chat across a whole Case to the backup rules: Case Chats are Postgres rows with the Case, in the dump; nothing new.
 - From Chat across a whole Case to the GitHub distribution rules: the user guide gains the Case Chat page; the admin guide the two settings.
 - Within Chat across a whole Case: the Answer's forms win over round 1 where they differ ("(recording removed)" for a Recording deleted or moved out, Chats listed newest first and named from the first question, "Let the model think before answering" as the setting's name).
+- From the v1.12.0 build, which shipped this chapter ahead of the Cases release, the decisions it left to the build:
+  - **How a question remembers what it read.** Each turn stores its header lines' list (`readings`): per Recording read, in the question's order, the Recording's id, title, type, upload date, length, whether it was translated, and the Transcript's creation time. A Citation is stored as its text with the Recording's id and the Segment's start, so it opens the right Recording later whatever the Case now holds; the tab resolves it at display time to the title and time, or to "(recording removed)" when the Recording has left the Case. The export's cover lists the union of every turn's readings, in the order first read.
+  - **The engine's window** for "would not fit even alone" is the Phase 1 build's constant (131,072 tokens, the Local engine's) with the Phase 1 estimate, as the Phase 1 `llm_too_long` check uses; the failure names the Recording in the turn's own words.
+  - **Packing** is the fixed rules and nothing more: whole Transcripts in upload order, a new Reading when the next would take the current one past 100,000 estimated tokens, a Transcript larger than that alone in its own.
+  - **A Case with no readable Transcript** shows the tab with the line "No recording in this case has a transcript to read yet." and refuses a question (409) rather than queueing one that would fail.
+  - **A question in flight when "Chat across cases" is switched Off** finishes on the worker and is kept with its Chat, hidden until the switch is On again; nothing is cancelled.
+  - **The Readings' own answers are never stored**, as the chapter says; the part answers live only in the worker's memory until the combining call returns.
+  - **The tab polls without an ADR 0004 row.** Opening the Case page already wrote the Admin's row; the state answer the tab fetches every two seconds does not write another. Asking and exporting, which open a Chat, do.
+  - **The reason class `llm_case_too_large`** carries the person's line "This case is too large for one question." in the engine's table, and the turn carries the figures ("140 hours of recordings; the limit is 120").
+  - **The time limit** of fifteen minutes is kept by the task itself: before each engine call it checks the time spent and fails with `llm_timeout` when the limit has passed; each call keeps the Chat's two minutes.
 
 
 ## 8. Email notifications

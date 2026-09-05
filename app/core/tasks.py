@@ -229,6 +229,14 @@ def test_the_engine() -> None:
 # order. None of them ever holds a Job in Running.
 
 
+@app.task(queue="llm", name="answer_case_turn")
+def answer_case_turn(turn_id: str) -> None:
+    """One Case Chat question: its Readings and, when in parts, the combining call."""
+    from core import case_chat
+
+    case_chat.answer_case_turn(turn_id)
+
+
 @app.task(queue="llm", name="write_summary")
 def write_summary(summary_id: str) -> None:
     from core import assistant
