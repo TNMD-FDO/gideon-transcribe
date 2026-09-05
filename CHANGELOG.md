@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.17.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **Page pass one: Upload, Recordings, Batch and the viewer**, checked against
+  the finish at desk and laptop widths in both themes. The Upload page's
+  settings say one sentence each ("Tells the speakers apart and labels each
+  line. It is sometimes wrong, so check the names against the audio."), the
+  list of file types folds behind "Which files", and the foot no longer
+  repeats the standing line. The Batch page's tally names only the states
+  there are, so "1 transcribing · 2 done" rather than a row of zeros.
+  Checkboxes and radios take the accent colour and sit on the text's
+  baseline. Recordings and the viewer needed nothing beyond what the
+  foundations, the dialogs and the hints had already given them.
+
 ## v1.16.1, 2026-09-05
 
 ```
