@@ -423,6 +423,12 @@ services:
       - "qwen3"
       - "--gpu-memory-utilization"
       - "${LLM_LOCAL_GPU_FRACTION:-0.21}"
+      # How many conversations the engine holds in flight at once. The app
+      # sends at most four (llm-worker's concurrency) and the minute check;
+      # vLLM's default of 1,024 needs a per-sequence state this model cannot
+      # fit in its share of the card, and the engine refuses to start.
+      - "--max-num-seqs"
+      - "8"
     environment:
       VLLM_USE_DEEP_GEMM: "0"
       VLLM_NO_USAGE_STATS: "1"
