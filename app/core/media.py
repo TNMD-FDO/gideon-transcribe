@@ -649,7 +649,10 @@ def waveform_zoom(
 
 
 def make_waveform(
-    source: Path, target: Path, duration_seconds: float | None = None
+    source: Path,
+    target: Path,
+    duration_seconds: float | None = None,
+    split_channels: bool = False,
 ) -> None:
     """The peaks the player draws, from the Playback copy.
 
@@ -661,6 +664,9 @@ def make_waveform(
     for the whole Recording: the peaks are a picture the width of the page, and
     more of them would only make the file bigger. The file's own header records
     the zoom used, and that header is where the viewer reads it.
+
+    A Two-channel call gets one lane per Side, audiowaveform's own
+    --split-channels; anything else is mixed to one lane, as the chapter says.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     # Under another name until whole, for the same reason as the playback
@@ -697,6 +703,7 @@ def make_waveform(
             str(waveform_zoom(duration_seconds)),
             "-b",
             "8",
+            *(["--split-channels"] if split_channels else []),
         ],
         stdin=decode.stdout,
         capture_output=True,

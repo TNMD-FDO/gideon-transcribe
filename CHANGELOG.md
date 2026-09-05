@@ -55,6 +55,16 @@ made from now on get the smaller file.
   before it sampled one pair and could miss a shout or a slammed door between
   samples. The media chapter carries the amendment.
 
+### Fixed
+
+- **A Two-channel call's waveform was never split into its two Sides.** The
+  media chapter says the peaks are split per channel for a Two-channel call,
+  and the viewer has always drawn one lane per Side when the file has two
+  channels, but the media worker never asked audiowaveform for it, so the
+  strip showed both parties mixed into one lane. It asks now, for a
+  Two-channel call and nothing else. Recordings already on the server keep
+  the file they have.
+
 ## v1.2.3, 2026-09-04
 
 ```

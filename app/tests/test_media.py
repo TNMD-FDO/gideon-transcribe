@@ -301,3 +301,39 @@ def test_the_zoom_reaches_audiowaveform_and_the_file_is_renamed_when_whole(
     assert asked[0][asked[0].index("-o") + 1] == str(media.partial_name(target))
     assert target.exists()
     assert not media.partial_name(target).exists()
+
+
+def test_a_two_channel_call_gets_one_lane_per_side_and_nothing_else_does(
+    tmp_path, monkeypatch
+):
+    asked = []
+
+    class Decoder:
+        stdout = None
+
+        def wait(self, timeout=None):
+            return 0
+
+    def fake_run(arguments, **rest):
+        asked.append(arguments)
+        Path(arguments[arguments.index("-o") + 1]).write_text("{}", encoding="utf-8")
+
+        class Finished:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Finished()
+
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: Decoder())
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    media.make_waveform(tmp_path / "a.mp4", tmp_path / "one.json", 60)
+    media.make_waveform(
+        tmp_path / "b.mp4", tmp_path / "two.json", 60, split_channels=True
+    )
+
+    # The chapter: split channels for a Two-channel call, one lane per Side;
+    # any other stereo recording is mixed to one lane.
+    assert "--split-channels" not in asked[0]
+    assert "--split-channels" in asked[1]
