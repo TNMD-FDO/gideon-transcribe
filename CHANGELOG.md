@@ -34,7 +34,7 @@ Database: unchanged
   "Let the model think before answering" On, the model's thinking was billed
   against the same answer budget, and a small model's thinking alone used all
   of it, so Summary and Chat came back empty and marked cut short. Thinking
-  now gets its own room on top of the answer's cap, and a call whose whole
+  now gets its own room on top of the answer's cap, 8,000 tokens, and a call whose whole
   budget still goes on thinking fails with a plain line saying so and what to
   do, rather than an empty summary. The admin guide says to leave the setting
   Off for a small Local engine, and that the engine's first request after a
