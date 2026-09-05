@@ -206,3 +206,15 @@ def test_the_users_table_fits_beside_its_pane():
     head = users[users.index("<thead>") : users.index("</thead>")]
     assert head.count("<th>") == 7
     assert 'colspan="7"' in users and 'colspan="10"' not in users
+
+
+def test_every_template_that_draws_an_icon_loads_the_tag():
+    """A template that uses {% icon %} without {% load icons %} compiles only
+    when rendered, so the mistake reaches CI as a page that raises."""
+    for template in every_template():
+        text = template.read_text(encoding="utf-8")
+        if "{% icon " in text and template.name != "icons.html":
+            loads = re.findall(r"\{% load ([^%]*)%\}", text)
+            assert any("icons" in one for one in loads), (
+                f"{template.name} draws an icon without loading the tag"
+            )
