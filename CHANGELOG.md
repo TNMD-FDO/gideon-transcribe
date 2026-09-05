@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.16.0, 2026-09-05
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0022 adds the office logo's table. Nothing on disk changes.
+
+### Added
+
+- **The office's own face.** The Panel gains an **Appearance** page. An Admin
+  uploads the office logo there, a PNG or JPEG up to 2 MB, and it appears
+  large on the sign-in page at once, with the **Office name** under it and
+  the app's name under that. **Logo on Word exports**, Off by default, puts
+  the logo at the head of every export's cover, above the title, with the
+  office name in grey beneath. The logo is kept with the app's own data, so a
+  backup carries it, and is served by the app itself to the sign-in page;
+  uploading and removing are audited, the image never is. Replace and Remove
+  sit beside the preview.
+- **The front door.** The sign-in page is one calm card: the logo or the
+  app's mark, the names, two fields and one button, and the line "Your office
+  sign-in. Nothing you upload leaves this building." where no notice is set.
+- **Titles.** Every browser tab reads where you are, then the app's name:
+  "Sign in · Gideon Transcribe", "Ramirez · Gideon Transcribe".
+
 ## v1.15.0, 2026-09-05
 
 ```

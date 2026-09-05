@@ -6,7 +6,7 @@ Nothing you upload leaves the building. The app runs on the office's own server,
 
 ## Signing in
 
-Sign in with your office username and password, the same ones you use for your computer. You can sign in if you are in the office's sign-in group. If you are not and think you should be, ask IT.
+The sign-in page carries your office's logo and name when your Admin has set them. Sign in with your office username and password, the same ones you use for your computer. You can sign in if you are in the office's sign-in group. If you are not and think you should be, ask IT.
 
 You land on the Upload page. Along the top of every page are your recordings, Cases (if your office has turned them on), Clips, and this guide under Help.
 

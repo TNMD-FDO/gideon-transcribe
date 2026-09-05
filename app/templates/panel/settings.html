@@ -128,6 +128,41 @@
     <script src="{% static 'panel-directory.js' %}"></script>
   {% endif %}
 
+  {% if appearance %}
+    <h2 style="margin-top: 28px">Office logo</h2>
+    <p class="muted small">
+      Shown large on the sign-in page, and at the head of every Word export
+      when the toggle above is on. A PNG or JPEG up to 2 MB; a wide mark reads
+      best. It is kept with the app's own data and never leaves this server.
+    </p>
+    {% if appearance_said %}<p class="problem">{{ appearance_said }}</p>{% endif %}
+    <div class="card">
+      {% if appearance.logo %}
+        <div class="row" style="gap: 18px; align-items: flex-start">
+          <img src="{% url 'logo' %}" alt="The office logo as uploaded" class="logo-preview">
+          <div class="grow small muted">
+            {{ appearance.kind }}, uploaded {{ appearance.uploaded_at|date:"j F Y H:i" }}{% if appearance.uploaded_by %} by {{ appearance.uploaded_by }}{% endif %}.
+          </div>
+        </div>
+      {% else %}
+        <p class="muted small">No logo yet. The sign-in page shows the app's mark and name.</p>
+      {% endif %}
+      <form method="post" action="{% url 'panel-logo' %}" enctype="multipart/form-data" class="row" style="margin-top: 12px; gap: 8px">
+        {% csrf_token %}
+        <input type="file" name="logo" accept="image/png,image/jpeg" required>
+        <button type="submit" class="primary small">{% if appearance.logo %}Replace logo{% else %}Upload logo{% endif %}</button>
+      </form>
+      {% if appearance.logo %}
+        <form method="post" action="{% url 'panel-logo' %}" style="margin-top: 8px"
+              data-confirm-title="Remove the office logo?" data-confirm="The sign-in page goes back to the app's own mark, and exports lose the logo at once." data-confirm-ok="Remove logo" data-danger>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="remove">
+          <button type="submit" class="ghost small danger">Remove logo</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <h2 style="margin-top: 28px">Fixed rules, not settings</h2>
   <p class="muted small">
     These are fixed in the app, so that nobody looks for them here.

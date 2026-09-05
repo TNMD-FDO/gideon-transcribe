@@ -95,6 +95,15 @@ AI-generated and unverified. Check against the recording before relying on it. W
 |---|---|---|---|---|---|
 | Audit log retention | 1 to 120 months | 3 months | 1 | Rows older than this are removed by the daily sweep, which is itself recorded. | The next sweep; shortening it removes rows the same night. |
 
+## Appearance
+
+The Appearance page of the rail, added in v1.16.0 at the maintainer's ask. It also carries the office logo, which is a file and not a setting: an Admin uploads or removes it there at once, outside the tray, each act an audit row (Logo uploaded, Logo removed). A PNG or JPEG up to 2 MB, kept as one row in the database so it rides with the backup and needs no folder, served by the app to the sign-in page. Nothing office-specific enters the repository: every office uploads its own.
+
+| Setting | Type | Default | Phase | What it does | When changed |
+|---|---|---|---|---|---|
+| Office name | text, one line | empty | 1 | The office's name, under the logo on the sign-in page and on the cover of every Word export. Empty shows the app's name alone. | The next page or export. |
+| Logo on Word exports | On or Off | Off | 1 | Puts the uploaded logo at the head of every Word export's cover: transcripts, summaries, chats and case chats, 1.5 inches wide, centred, above the title. | The next export; nothing already exported changes. |
+
 ## Cases (Phase 2)
 
 The Cases page of the rail, absent from the Phase 1 build. Sharing, Retention period, Warning before deletion, Recycle bin, and Speaker roles are greyed while Folder management is Off.
@@ -150,6 +159,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 - From the Upload page ticket, to the Transcription defaults group: "Two-channel calls start unticked regardless" withdrawn from Diarization ticked by default; the "Diarize" label; the 80% storage warning as a build constant, not a setting.
 - From the email notifications ticket, to the Email group and the Sign-in and directory group: Email notifications, Batch finished emails, the Notification templates, Test message; the Email address on Create Local admin.
 - From the maintainer, on the v1.13.1 build, to the AI assistant group: Chat starter questions and Case chat starter questions, the office's own lists on the Templates page, empty by default; the built-in questions of v1.13.0 withdrawn.
+- From the maintainer, on the v1.16.0 build: the Appearance page, with Office name, Logo on Word exports, and the office logo itself.
 - From the v1.12.0 build: Chat across cases, the Case chat template, and Case chat: most hours of talk per question ship, as the Case Chat chapter defines them; Chat across cases is greyed while the AI assistant is Off.
 - From the v1.11.0 build, to the AI assistant group: Speaker suggestion method, the extension point for better ways of telling Speakers apart, with "evidence" as its first and only method. To the Cases group: the Speaker roles row ships in v1.11.0, greyed while Folder management is Off, as the Cases release planned.
 - From the Case Chat ticket, to the AI assistant and Limits groups: Chat across cases, the Case chat prompt template, Case chat: most hours of talk per question.

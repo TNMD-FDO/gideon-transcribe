@@ -1,16 +1,31 @@
 {% extends "base.html" %}
+{% load icons %}
 {% block title %}Sign in{% endblock %}
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
+  {% comment %}
+    The front door: the office's logo when an Admin has uploaded one, the
+    office's name, and the app's name under them; then the two fields and the
+    one button. Nothing else, so the first thing anyone sees is calm.
+  {% endcomment %}
   <div class="gate">
-    <form method="post" action="{% url 'sign-in' %}" autocomplete="off" class="card">
+    <form method="post" action="{% url 'sign-in' %}" autocomplete="off" class="card door">
       {% csrf_token %}
-      <h1>Gideon Transcribe</h1>
-      <p class="muted small" style="text-align: center">
-        Transcription, translation, and speaker separation, on this office's
-        own server.
-      </p>
+      <div class="face">
+        {% if has_logo %}
+          <img src="{% url 'logo' %}" alt="" class="office-logo">
+        {% else %}
+          <svg class="mark big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></svg>
+        {% endif %}
+        {% if office_name %}
+          <h1 class="office">{{ office_name }}</h1>
+          <p class="app-name">Gideon Transcribe</p>
+        {% else %}
+          <h1 class="office">Gideon Transcribe</h1>
+          <p class="app-name">Transcription, translation and speakers told apart, on this office's own server.</p>
+        {% endif %}
+      </div>
 
       <label for="username">Username</label>
       <input type="text" id="username" name="username" value="{{ username }}"
@@ -21,9 +36,11 @@
 
       {% if problem %}<p class="problem">{{ problem }}</p>{% endif %}
 
-      <button type="submit" class="primary">Sign in</button>
+      <button type="submit" class="primary big">Sign in</button>
 
-      {% if notice %}<p class="muted small" style="margin-top: 14px">{{ notice }}</p>{% endif %}
+      <p class="muted small foot">
+        {% if notice %}{{ notice }}{% else %}Your office sign-in. Nothing you upload leaves this building.{% endif %}
+      </p>
     </form>
   </div>
 {% endblock %}

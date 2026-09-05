@@ -148,6 +148,37 @@ FIXED_RULES = [
 
 
 @admins_only
+def _appearance() -> dict:
+    from core import branding
+
+    row = branding.current()
+    return {
+        "logo": row is not None,
+        "kind": row.content_type if row else "",
+        "uploaded_at": row.uploaded_at if row else None,
+        "uploaded_by": row.uploaded_by.username if row and row.uploaded_by else "",
+        "said": "",
+    }
+
+
+@admins_only
+@require_POST
+def logo(request: HttpRequest) -> HttpResponse:
+    """Upload or remove the office logo, at once, with its audit row."""
+    from core import branding
+
+    back = reverse("panel-settings", args=[settings_store.APPEARANCE])
+    if request.POST.get("action") == "remove":
+        branding.remove(by=request.user, request=request)
+        return redirect(back)
+    sent = request.FILES.get("logo")
+    try:
+        branding.upload(sent.read() if sent else b"", by=request.user, request=request)
+    except branding.Refused as refused:
+        request.session["appearance_said"] = str(refused)
+    return redirect(back)
+
+
 def settings_page(request: HttpRequest, page: str) -> HttpResponse:
     """One settings page: name and help on the left, the control on the right."""
     if page not in dict(settings_store.PAGES):
@@ -212,6 +243,10 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             "token": token,
             "fixed_rules": FIXED_RULES,
             "directory": _directory_facts() if page == settings_store.SIGN_IN else None,
+            # The Appearance page carries the logo, which is a file and not a
+            # setting: uploaded and removed at once, outside the tray.
+            "appearance": _appearance() if page == settings_store.APPEARANCE else None,
+            "appearance_said": request.session.pop("appearance_said", ""),
             "limits_cross_reference": page == settings_store.LIMITS,
         },
     )
