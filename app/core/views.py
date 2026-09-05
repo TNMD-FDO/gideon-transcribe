@@ -51,6 +51,21 @@ def where_they_land(user=None) -> str:
     return reverse("upload")
 
 
+def logo(request: HttpRequest) -> HttpResponse:
+    """The office logo, served to the sign-in page and the nav; 404 while none."""
+    from core import branding
+
+    found = branding.current()
+    if found is None:
+        return HttpResponse(status=404)
+    if request.headers.get("If-None-Match") == found.etag:
+        return HttpResponse(status=304)
+    answer = HttpResponse(bytes(found.logo), content_type=found.content_type)
+    answer["ETag"] = found.etag
+    answer["Cache-Control"] = "public, max-age=300"
+    return answer
+
+
 def sign_in(request: HttpRequest) -> HttpResponse:
     """One form for everybody: directory users and Local admins alike."""
     if request.user.is_authenticated:
@@ -81,9 +96,20 @@ def sign_in(request: HttpRequest) -> HttpResponse:
             # An office's own line under the form: an authorised-use notice,
             # or where to ring for help. Empty hides it.
             "notice": settings_store.get("sign_in_notice"),
+            **_face(),
         },
         status=400 if problem else 200,
     )
+
+
+def _face() -> dict:
+    """The office's logo and name for the sign-in page; the app's own when none."""
+    from core import branding
+
+    return {
+        "has_logo": branding.current() is not None,
+        "office_name": branding.office_name(),
+    }
 
 
 def _still_movable(user) -> list:

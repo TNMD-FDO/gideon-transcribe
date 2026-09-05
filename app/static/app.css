@@ -1473,12 +1473,18 @@ body.no-speakers .seg .name { display: none; }
 
 /* The sign-in page ----------------------------------------------------------- */
 
-.gate { display: grid; place-items: center; height: 100%; }
-.gate .card { width: min(24rem, 92vw); }
-.gate h1 { text-align: center; }
-.gate label { display: block; font-size: 0.85em; color: var(--muted); margin-top: 10px; }
+.gate { display: grid; place-items: center; height: 100%; padding: 24px 0; }
+.gate .card { width: min(26rem, 92vw); padding: 28px 30px 24px; box-shadow: var(--shadow); }
+.gate .face { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; margin-bottom: 22px; }
+.gate .office-logo { max-height: 110px; max-width: 100%; object-fit: contain; margin-bottom: 8px; }
+.gate .mark.big { width: 52px; height: 52px; margin-bottom: 8px; }
+.gate h1.office { font-size: var(--t-title); margin: 0; }
+.gate .app-name { color: var(--muted); margin: 0; font-size: var(--t-small); }
+.gate label { display: block; font-size: var(--t-small); font-weight: 500; margin-top: 12px; margin-bottom: 4px; }
 .gate input { width: 100%; }
-.gate button { width: 100%; margin-top: 14px; }
+.gate button { width: 100%; margin-top: 18px; }
+.gate .foot { text-align: center; margin: 14px 0 0; }
+.logo-preview { max-height: 80px; max-width: 240px; object-fit: contain; background: var(--surface-2); border-radius: var(--radius); padding: 6px; }
 
 /* The upload page ------------------------------------------------------------ */
 

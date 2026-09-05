@@ -33,6 +33,7 @@ NOTICES = "notices"
 SIGN_IN = "sign-in"
 AUDIT = "audit"
 CASES = "cases"
+APPEARANCE = "appearance"
 # Not a Settings page: these rows are edited on the Templates page, at once,
 # outside the tray, like the prompt templates beside them.
 TEMPLATES = "templates"
@@ -52,6 +53,7 @@ PAGES = [
     (SIGN_IN, "Sign-in and directory"),
     (AUDIT, "Audit log"),
     (CASES, "Cases"),
+    (APPEARANCE, "Appearance"),
 ]
 
 
@@ -221,6 +223,32 @@ def _rows() -> list[Definition]:
             when_changed=(
                 "A type removed from the list stays on the Recordings that hold it."
             ),
+        ),
+        # Appearance -----------------------------------------------------------
+        Definition(
+            key="office_name",
+            page=APPEARANCE,
+            name="Office name",
+            kind=TEXT,
+            default="",
+            lines=1,
+            what_it_does=(
+                "The office's name, under the logo on the sign-in page and on "
+                "the cover of every Word export. Empty shows the app's name alone."
+            ),
+            when_changed="The next page or export.",
+        ),
+        Definition(
+            key="logo_on_exports",
+            page=APPEARANCE,
+            name="Logo on Word exports",
+            kind=TOGGLE,
+            default=False,
+            what_it_does=(
+                "Puts the office logo, uploaded on this page, at the head of every "
+                "Word export's cover: transcripts, summaries, chats and case chats."
+            ),
+            when_changed="The next export. Nothing already exported changes.",
         ),
         Definition(
             key="speaker_roles",

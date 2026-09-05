@@ -383,6 +383,7 @@ def word(recording: Recording, exported_by: str) -> bytes:
         section.top_margin = section.bottom_margin = Inches(1)
 
     # The cover -----------------------------------------------------------------
+    _office_head(document)
     heading = document.add_paragraph(title)
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     heading.runs[0].bold = True
@@ -988,10 +989,27 @@ def _open_record_document():
     return document
 
 
+def _office_head(document) -> None:
+    """The office logo and name above a cover's title, when the Admin set them."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
+
+    from core import branding
+
+    branding.stamp(document)
+    name = branding.office_name()
+    if name:
+        line = document.add_paragraph(name)
+        line.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        line.runs[0].font.size = Pt(11)
+        line.runs[0].font.color.rgb = RGBColor(0x77, 0x77, 0x77)
+
+
 def _cover(document, recording, transcript, kind: str) -> None:
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt
 
+    _office_head(document)
     heading = document.add_paragraph(title_of(recording))
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     heading.runs[0].bold = True
@@ -1162,6 +1180,7 @@ def case_chat_word(chat, exported_by: str) -> bytes:
     case = chat.case
     turns = list(chat.turns.filter(state="done"))
     document = _open_record_document()
+    _office_head(document)
     heading = document.add_paragraph(case.name)
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     heading.runs[0].bold = True

@@ -271,6 +271,9 @@ urlpatterns = [
     path("panel/help", panel_pages.admin_guide, name="panel-help"),
     path("panel/assistant/test", panel_pages.test_engine, name="panel-test-engine"),
     path("panel/templates", template_pages.templates, name="panel-templates"),
+    path("panel/appearance/logo", panel.logo, name="panel-logo"),
+    # The logo itself, for the sign-in page nobody has signed in to yet.
+    path("branding/logo", views.logo, name="logo"),
     path(
         "panel/templates/prompt/<str:key>",
         template_pages.prompt_template,
