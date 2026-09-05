@@ -33,6 +33,18 @@ SAMPLING = {"temperature": 0.3, "top_p": 0.9}
 SUGGESTION_SAMPLING = {"temperature": 0.0, "top_p": 1.0}
 
 CUT_SHORT = "The answer was cut short."
+# While the model may think, its thinking is billed against the same answer
+# budget, so the cap is raised by this much to leave the answer its room. A
+# small model thinks at length; when the whole budget still goes on thinking
+# the answer is empty, and the page says so rather than "cut short".
+THINKING_ALLOWANCE = 4000
+# The reason word the page shows for that case; the audit row keeps llm_error.
+THOUGHT_AWAY = "llm_thought_it_away"
+THOUGHT_IT_AWAY = (
+    "The model spent its whole budget thinking and never began the answer. "
+    'Turn off "Let the model think before answering" on the AI assistant '
+    "settings page, or try again."
+)
 SPOKEN = "the transcript"  # never logged; a placeholder for messages only
 
 
@@ -292,6 +304,23 @@ def time_limit(feature: str) -> int:
     return TIME_LIMITS[feature] * (2 if thinking() else 1)
 
 
+def cap(answer_tokens: int) -> int:
+    """The answer cap as sent: the feature's, plus room to think when thinking is on."""
+    return answer_tokens + (THINKING_ALLOWANCE if thinking() else 0)
+
+
+class ThoughtItAway(engine.Problem):
+    """The call failed the chapter's way, llm_error, but the page can say why."""
+
+    def __init__(self) -> None:
+        super().__init__(engine.ERROR, "the whole budget went on thinking")
+
+
+def thought_it_away(answer: dict) -> bool:
+    """Nothing said and the budget gone: every token went into thinking."""
+    return answer["finish_reason"] == "length" and not answer["text"].strip()
+
+
 def notice(model: str, when) -> str:
     """The AI notice with {model} and {date} filled from the call."""
     shown = settings_store.get("engine_display_name") or model or engine.model_name()
@@ -397,12 +426,14 @@ def write_summary(summary_id) -> None:
                 prompts.summary_input(summary.focus, summary.length),
             ]
         )
-        cap = prompts.ANSWER_CAPS.get(summary.length, prompts.ANSWER_CAPS["standard"])
-        if not prompts.fits(system, user, answer_cap=cap):
+        wanted = prompts.ANSWER_CAPS.get(
+            summary.length, prompts.ANSWER_CAPS["standard"]
+        )
+        if not prompts.fits(system, user, answer_cap=cap(wanted)):
             raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
         answer = engine.complete(
             _messages(system, user),
-            max_completion_tokens=cap,
+            max_completion_tokens=cap(wanted),
             thinking=thinking(),
             timeout=time_limit("summary"),
             **SAMPLING,
@@ -410,6 +441,8 @@ def write_summary(summary_id) -> None:
         usage = answer
         summary.text = answer["text"].strip()
         summary.citations = prompts.citations(summary.text, lines)
+        if thought_it_away(answer):
+            raise ThoughtItAway()
         summary.cut_short = answer["finish_reason"] == "length"
         summary.model = answer["model"]
         summary.transcript_created = transcript.created
@@ -429,7 +462,9 @@ def write_summary(summary_id) -> None:
         )
     except engine.Problem as problem:
         summary.state = FAILED
-        summary.reason_class = problem.reason
+        summary.reason_class = (
+            THOUGHT_AWAY if isinstance(problem, ThoughtItAway) else problem.reason
+        )
         summary.save(update_fields=["state", "reason_class"])
         _record(
             "summary",
@@ -482,11 +517,13 @@ def answer_turn(turn_id) -> None:
             [prompts.nature_line(recording, transcript), rendered, turn.question]
         )
         history_text = "\n".join(q + "\n" + a for q, a in history)
-        if not prompts.fits(system, user, history_text, answer_cap=prompts.CHAT_CAP):
+        if not prompts.fits(
+            system, user, history_text, answer_cap=cap(prompts.CHAT_CAP)
+        ):
             raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
         answer = engine.complete(
             _messages(system, user, history),
-            max_completion_tokens=prompts.CHAT_CAP,
+            max_completion_tokens=cap(prompts.CHAT_CAP),
             thinking=thinking(),
             timeout=time_limit("chat_turn"),
             **SAMPLING,
@@ -494,6 +531,8 @@ def answer_turn(turn_id) -> None:
         usage = answer
         turn.answer = answer["text"].strip()
         turn.citations = prompts.citations(turn.answer, lines)
+        if thought_it_away(answer):
+            raise ThoughtItAway()
         turn.cut_short = answer["finish_reason"] == "length"
         turn.model = answer["model"]
         turn.transcript_created = transcript.created
@@ -513,7 +552,9 @@ def answer_turn(turn_id) -> None:
         )
     except engine.Problem as problem:
         turn.state = FAILED
-        turn.reason_class = problem.reason
+        turn.reason_class = (
+            THOUGHT_AWAY if isinstance(problem, ThoughtItAway) else problem.reason
+        )
         turn.save(update_fields=["state", "reason_class"])
         _record(
             "chat_turn",
@@ -600,7 +641,7 @@ def suggest_names(run_id) -> None:
         for attempt in (1, 2):
             answer = engine.complete(
                 _messages(system, user),
-                max_completion_tokens=prompts.SUGGESTIONS_CAP,
+                max_completion_tokens=cap(prompts.SUGGESTIONS_CAP),
                 thinking=thinking(),
                 timeout=time_limit("speaker_suggestions"),
                 schema=prompts.SUGGESTIONS_SCHEMA,
@@ -668,4 +709,6 @@ def suggest_names(run_id) -> None:
 
 def what_to_say(reason: str) -> str:
     """The person's line for a failed call, from the engine's own table."""
+    if reason == THOUGHT_AWAY:
+        return THOUGHT_IT_AWAY
     return engine.WHAT_TO_SAY.get(reason, engine.WHAT_TO_SAY.get(engine.ERROR, ""))

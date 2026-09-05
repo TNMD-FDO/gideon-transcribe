@@ -30,6 +30,16 @@ Database: unchanged
 
 ### Fixed
 
+- **An empty answer with "The answer was cut short" when thinking was on.** With
+  "Let the model think before answering" On, the model's thinking was billed
+  against the same answer budget, and a small model's thinking alone used all
+  of it, so Summary and Chat came back empty and marked cut short. Thinking
+  now gets its own room on top of the answer's cap, and a call whose whole
+  budget still goes on thinking fails with a plain line saying so and what to
+  do, rather than an empty summary. The admin guide says to leave the setting
+  Off for a small Local engine, and that the engine's first request after a
+  start is slow while it warms up. Found on the first trial of the assistant
+  against the Local engine.
 - **`./transcribe check` said no engine token was stored when one was.** Since
   v1.2.2 the check asked for the token file through a helper miscalled with
   `-s` handed to `sudo` rather than to `test`, so it answered "no" whenever
