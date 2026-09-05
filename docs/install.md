@@ -237,7 +237,7 @@ It shows the cards on the server and asks three things, each with a sensible ans
 ./transcribe engine local off
 ```
 
-stops the engine and frees the card. The weights stay on disk for the next `on`; delete `<App data folder>/models/vllm` to free the space. Switching to a shared engine later is `./transcribe engine` as above; the two are never on together.
+stops the engine, frees the card, and leaves the app using no engine: the panel's Engine address and Model name are cleared and the AI assistant toggle is turned off, so nobody sees a button for an engine that is not there and the Status page reads "off; no engine is configured". The weights stay on disk for the next `on`; delete `<App data folder>/models/vllm` to free the space. Switching to a shared engine is `./transcribe engine` as above: it asks for the engine's address and model name and writes them into the panel, and it stops a running Local engine in the same step, since the two are never on together.
 
 ## 4. Check
 

@@ -805,7 +805,7 @@ WORDS
 
   ensure_the_token_file
 
-  local network
+  local network shared_engine_settings=""
   network="$(ask "The Docker network the engine listens on, as 'docker network ls'
   shows it. Blank means no shared engine (the Local engine, or none)" "$(env_value LLM_NETWORK)")"
 
@@ -820,11 +820,19 @@ WORDS
     # written whole, never left empty: an empty COMPOSE_FILE is read as a path
     # and Compose refuses to start.
     set_env COMPOSE_FILE "compose.yaml:compose.shared-engine.yaml"
+    # The two are never on together: a Local engine still running would hold
+    # its card for nothing while the app talks to the shared one.
+    if local_engine_is_on; then
+      echo "  The Local engine is on; stopping it, since the app will use the shared one."
+      stop_the_local_engine
+    fi
     green "The app will join '$network' to reach the engine."
-    echo
-    echo "  Then, in the Admin panel under Settings, AI assistant, enter the"
-    echo "  engine's address on that network (for example http://<its name>:8000/v1)"
-    echo "  and the model name it serves, and press Test connection."
+    # The panel's two provider settings, so nobody has to type them twice.
+    # Blank keeps what the panel holds, for the office that set them there.
+    local address model
+    address="$(ask "The engine's address on that network (for example http://<its name>:8000/v1)" "")"
+    model="$(ask "The model name the engine serves (its --served-model-name)" "")"
+    shared_engine_settings="$address|$model"
   else
     set_env LLM_NETWORK "transcribe-llm"
     # Drop the shared-engine line if it was there; the default is compose.yaml
@@ -834,8 +842,7 @@ WORDS
     fi
     echo
     echo "  No shared engine. To run the Local engine on this server instead,"
-    echo "  set COMPOSE_PROFILES=llm and LLM_LOCAL_GPU_UUID in .env and give it"
-    echo "  a token below; or leave the assistant off."
+    echo "  './transcribe engine local on'; or leave the assistant off."
   fi
 
   # The token --------------------------------------------------------------------
@@ -860,8 +867,18 @@ WORDS
   else
     amber "No engine token is stored. The AI assistant stays off until there is one."
   fi
+  # The panel settings, once the token is in place: the command runs in the
+  # app container, which is up whenever the stack is.
+  if [ -n "${shared_engine_settings:-}" ]; then
+    address="${shared_engine_settings%%|*}"
+    model="${shared_engine_settings#*|}"
+    [ -n "$address" ] && panel_set engine_address "$address"
+    [ -n "$model" ] && panel_set engine_model "$model"
+  fi
   echo
   echo "  A change here reaches the workers at the next 'docker compose up -d'."
+  echo "  Then, on the Panel's Status page, press Test connection; when it answers"
+  echo "  'ready', turn the AI assistant toggle on (Settings, AI assistant)."
 }
 
 # The Local engine ----------------------------------------------------------------
@@ -875,6 +892,19 @@ WORDS
 
 LOCAL_MODEL_DEFAULT="Qwen/Qwen3.5-4B"
 LOCAL_SHARE_DEFAULT="0.21"
+
+panel_set() {
+  # One admin setting from here, through the same checks and audit row as the
+  # panel. The value is quoted so that an empty one reaches the command; the
+  # worker's start-up chatter and the static-files warning around the command's
+  # own line are dropped.
+  compose exec -T app python manage.py set_setting --skip-checks "$1" "$2" </dev/null 2>&1 \
+    | grep -v "procrastinate\|^$" || true
+}
+
+local_engine_is_on() {
+  grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"
+}
 
 least_busy_gpu() {
   # The card with the least memory in use right now, by UUID: on a server whose
@@ -947,11 +977,8 @@ WORDS
   # The panel's two provider settings, so the app talks to what was started.
   # The command's own line is what matters; the worker's start-up chatter and
   # the static-files warning around it are not.
-  for pair in "engine_address http://vllm:8000/v1" "engine_model local-engine"; do
-    # shellcheck disable=SC2086
-    compose exec -T app python manage.py set_setting --skip-checks $pair </dev/null 2>&1 \
-      | grep -v "procrastinate\|^$" || true
-  done
+  panel_set engine_address "http://vllm:8000/v1"
+  panel_set engine_model "local-engine"
   echo
   green "The Local engine is on: $model on card $gpu, within $share of its memory."
   echo "  Watch it come up with:   ./transcribe logs vllm"
@@ -961,15 +988,27 @@ WORDS
 }
 
 cmd_engine_local_off() {
-  if grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"; then
+  # Off means the app uses no engine: the container goes, and the panel stops
+  # pointing at it, so nobody sees a greyed button for an engine that is not
+  # there and the Status page reads "off; no engine is configured". A shared
+  # engine is named afterwards with './transcribe engine', which sets the
+  # panel again.
+  stop_the_local_engine
+  panel_set engine_address ""
+  panel_set engine_model ""
+  panel_set assistant_available off
+  green "The Local engine is off and its card is free. The weights stay in the app"
+  echo "  data folder for the next 'on'; delete data/models/vllm to free the disk."
+  echo "  The AI assistant is off and points at no engine. To use one again:"
+  echo "  './transcribe engine' for a shared one, or 'engine local on'."
+}
+
+stop_the_local_engine() {
+  if local_engine_is_on; then
     compose --profile llm stop vllm 2>/dev/null || true
     compose --profile llm rm -f vllm 2>/dev/null || true
   fi
   set_env COMPOSE_PROFILES ""
-  green "The Local engine is off and its card is free. The weights stay in the app"
-  echo "  data folder for the next 'on'; delete data/models/vllm to free the disk."
-  echo "  The AI assistant is unreachable until an engine is named again:"
-  echo "  './transcribe engine' for a shared one, or 'engine local on'."
 }
 
 cmd_folders() {

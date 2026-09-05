@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.11.1, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The engine has three plain states: the Local engine, a shared engine, or
+  none.** `./transcribe engine local off` used to stop the container and leave
+  the app pointed at it, so every user saw greyed Summary and Chat buttons
+  saying the assistant was not available and the Status page reported it
+  unreachable. Off now means none: the panel's Engine address and Model name
+  are cleared and the AI assistant toggle is turned off, through the same
+  checks and audit row as the panel. `./transcribe engine`, for a shared
+  engine, now asks for the engine's address and model name and writes them
+  into the panel, as `local on` already did for its own, and stops a running
+  Local engine in the same step so it does not hold the card for nothing. The
+  install and admin guides say so.
+
 ## v1.11.0, 2026-09-05
 
 ```
