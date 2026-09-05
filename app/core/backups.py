@@ -178,7 +178,7 @@ def write_manifest(dump: Path | None = None) -> dict:
     manifest = {
         "release": _checkout_tag(),
         "migration": migration_number(),
-        "whisperx_version": os.environ.get("WHISPERX_VERSION", ""),
+        "whisperx_version": _service_version(),
         "written_at": timezone.now().isoformat(),
         "dump": dump.name if dump else "",
         "dump_size": dump.stat().st_size if dump and dump.exists() else 0,
@@ -187,6 +187,16 @@ def write_manifest(dump: Path | None = None) -> dict:
     }
     (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
     return manifest
+
+
+def _service_version() -> str:
+    """The WhisperX service's own version, asked of it; empty when it is down."""
+    try:
+        from core import whisperx
+
+        return str((whisperx.status().get("versions") or {}).get("service", ""))
+    except Exception:  # noqa: BLE001 - a manifest is written whether or not it answers
+        return ""
 
 
 def _checkout_tag() -> str:
