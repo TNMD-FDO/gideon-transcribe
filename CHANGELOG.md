@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.16.1, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The logo on the sign-in page was small, and dim on the dark theme.** The
+  first office to upload one has a wide mark drawn for a white page, and the
+  card boxed it into 110 pixels. The card is wider when there is a logo, the
+  logo takes the card's width up to 230 pixels tall, and on the dark theme it
+  sits on a white plate so its colours read as they were drawn. The exports
+  were right already.
+
 ## v1.16.0, 2026-09-05
 
 ```

@@ -102,6 +102,8 @@
    * white knob of a switch. */
   --well: #000000;
   --knob: #ffffff;
+  /* Behind an uploaded logo: nothing on the light theme, white on the dark. */
+  --logo-plate: transparent;
   --radius: 6px;
   --radius-lg: 10px;
   --shadow: 0 8px 28px rgba(15, 30, 45, 0.14);
@@ -151,6 +153,7 @@ html[data-theme="dark"] {
   --sp6: #f58bb6;
   --sp7: #c9a38f;
   --sp8: #a3b5c2;
+  --logo-plate: #ffffff;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
@@ -187,6 +190,7 @@ html[data-theme="dark"] {
     --sp6: #f58bb6;
     --sp7: #c9a38f;
     --sp8: #a3b5c2;
+    --logo-plate: #ffffff;
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   }
 }
@@ -1475,8 +1479,21 @@ body.no-speakers .seg .name { display: none; }
 
 .gate { display: grid; place-items: center; height: 100%; padding: 24px 0; }
 .gate .card { width: min(26rem, 92vw); padding: 28px 30px 24px; box-shadow: var(--shadow); }
+/* A card with the office's logo is wider, so a wide mark reads at size. */
+.gate .card.with-logo { width: min(32rem, 94vw); }
 .gate .face { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; margin-bottom: 22px; }
-.gate .office-logo { max-height: 110px; max-width: 100%; object-fit: contain; margin-bottom: 8px; }
+/* Most office marks are drawn for a white page; on the dark theme the logo
+   sits on a white plate so its colours read as they were meant to. */
+.gate .office-logo {
+  display: block;
+  width: 100%;
+  max-height: 230px;
+  object-fit: contain;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--logo-plate);
+}
 .gate .mark.big { width: 52px; height: 52px; margin-bottom: 8px; }
 .gate h1.office { font-size: var(--t-title); margin: 0; }
 .gate .app-name { color: var(--muted); margin: 0; font-size: var(--t-small); }
