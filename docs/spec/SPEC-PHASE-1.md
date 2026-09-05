@@ -2883,7 +2883,7 @@ These are the facts the LLM handler research file fixed for vLLM. The research w
 
 ### What the user sees
 
-The viewer's sidebar offers Summary and Chat as overlays, and the Speakers panel offers Suggest names (the Transcript viewer and player chapter). Nothing appears without a click. The queued page's line reads "Diarization follows"; no LLM step is announced there.
+The viewer offers Summary and Chat as panels of the Bench on a wide window and as overlays on a narrow one (the Transcript viewer and player chapter's v1.4.0 amendment), and the Speakers panel offers Suggest names. Nothing appears without a click. The queued page's line reads "Diarization follows"; no LLM step is announced there.
 
 #### Summary
 
@@ -3186,6 +3186,7 @@ Phase 1 LLM features: Chat, Summary, Speaker suggestions; LLM handler capabiliti
 - From the Speaker management panel ticket to "Speaker suggestions": the known-names line inside a Case, Accept joining a Person, no Case-level Suggest names, no embeddings in Phase 2 (all under Carried for Phase 2).
 - From the Case Chat ticket to "Chat": the Case Chat, the Case chat template, and `llm_case_too_large` (under Carried for Phase 2); the line "Chat across a Case is Phase 2 fog" superseded.
 - From the LLM features ticket to the viewer and queue tickets, carried here as rules: "Diarization follows" on the queued page; no LLM step after a Job; `llm-worker` on queue `llm` beside `media-worker` and `worker`.
+- From the build (v1.9.0), the second half of this chapter: Summary, Chat and Speaker suggestions built as fixed, with these decisions on what was left to the build. A time in an answer is a Citation when some Segment starts within the same whole second. The engine's window for the too-long check is the floor any stand-in engine must offer, 131,072 tokens, held in code. The answer format the app adds is one sentence for Summary (each part's heading on its own line followed by a colon, times as [hh:mm:ss]) and one for Chat. `llm_bad_output` reads "The AI assistant gave an answer the app could not read. Try again." The date in a Chat's AI notice is its first answer's. Test connection asks "Reply with the single word: ready". Delete asks "Delete this summary? Export it first if you want to keep it." and the same for a Chat. A Chat's name is its first question's first sixty characters, cut on a word. Templates are edited on the Panel's Templates page, in the Settings group of the rail.
 
 ## 11. Exports
 

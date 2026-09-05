@@ -99,6 +99,16 @@ On the right are the exports: **Export to Word** for a document with the speaker
 
 **Process again** sends the recording back through transcription with new settings, replacing the transcript. **Delete** removes the recording and everything about it.
 
+### The AI assistant
+
+When your office has turned it on, the viewer's right-hand column gains **Summary** and **Chat** tabs (on a laptop they are tabs of the sheet along the bottom), and the **Speakers** list offers **Suggest names**. Each works from this one transcript and nothing else, runs only when you ask, and arrives whole after a short wait while the page says "Reading the transcript...". Every one opens with a notice that it is AI-generated and unverified: check against the recording before relying on it.
+
+- **Summary.** **New summary** asks what to concentrate on (optional) and how long: Short, Standard or Detailed. If your office has more than one template, you choose one. A summary lists what happened with a time on each point; a time shown as a link is a **citation** that plays the recording from that moment. **Regenerate** writes it again with the same choices; **Export to Word** keeps it; **Delete** removes it. Summaries live as long as the recording does, so export what you want to keep.
+- **Chat.** Ask questions about the transcript: who said what, when something came up, how many times, what a stretch was about. The answer comes from the transcript alone; asked for legal advice, an opinion, or anything outside it, the assistant answers "I can only answer from this transcript." Each chat is a thread named from its first question; **New chat** starts another, **Copy** copies an answer, **Export to Word** keeps the thread.
+- **Suggest names.** When two or more speakers still have no name, one click asks the assistant who they are, from what is said: a name someone uses, or a role such as Interviewer or Officer. Each suggestion shows the line it came from and how sure the assistant is. Nothing changes until you press **Accept**, which renames every segment of that speaker; **Reject** dismisses it.
+
+If a button is greyed with "The AI assistant is not available right now", the engine cannot be reached; try again later. Nothing you ask or read here is written to the audit log, only that a call was made.
+
 ### Keyboard shortcuts
 
 Shortcuts work whenever you are not typing in a box, so a corrector or an interpreter can stay on the keyboard. **?** shows this list in the viewer.

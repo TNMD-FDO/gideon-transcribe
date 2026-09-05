@@ -42,7 +42,10 @@ RAIL = [
     ),
     (
         "Settings",
-        [(name, key) for key, name in settings_store.PAGES],
+        # The settings pages, then the AI assistant's templates, which are
+        # edited outside the tray and so have a page of their own.
+        [(name, key) for key, name in settings_store.PAGES]
+        + [("Templates", "panel-templates")],
     ),
     ("Server", [("Installation", "panel-installation")]),
 ]
@@ -94,11 +97,15 @@ def furniture(request, page: str = "") -> dict:
                         "name": name,
                         "url": (
                             reverse("panel-settings", args=[key])
-                            if group == "Settings"
+                            if key in dict(settings_store.PAGES)
                             else reverse(key)
                         ),
                         "here": key == page,
-                        "waiting": waiting_on(key, tray) if group == "Settings" else 0,
+                        "waiting": (
+                            waiting_on(key, tray)
+                            if key in dict(settings_store.PAGES)
+                            else 0
+                        ),
                     }
                     for name, key in pages
                 ],

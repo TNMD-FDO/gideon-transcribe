@@ -265,6 +265,15 @@ class SignInAttempt(models.Model):
 # their own because they are separate ideas, and they are imported here so that
 # whether Django knows about them does not depend on which other module
 # happened to be loaded first.
+from core.assistant import (  # noqa: E402, F401
+    Chat,
+    ChatTurn,
+    PromptTemplate,
+    Suggestion,
+    SuggestionRun,
+    Summary,
+    SummaryTemplate,
+)
 from core.audit import Row  # noqa: E402, F401
 from core.cases import Case, OffSpell  # noqa: E402, F401
 from core.clips import Clip  # noqa: E402, F401

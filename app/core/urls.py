@@ -3,6 +3,7 @@
 from django.urls import path
 
 from core import (
+    assistant_pages,
     case_pages,
     clip_pages,
     exports,
@@ -10,6 +11,7 @@ from core import (
     pages,
     panel,
     panel_pages,
+    template_pages,
     uploads,
     viewer,
     views,
@@ -81,6 +83,51 @@ urlpatterns = [
         "recording/<uuid:recording_id>/process-again",
         pages.process_again,
         name="process-again",
+    ),
+    # The AI assistant: one state answer the viewer polls, and one POST per
+    # thing a person does. Every call runs on llm-worker; nothing here waits.
+    path(
+        "recording/<uuid:recording_id>/assistant",
+        assistant_pages.state,
+        name="assistant-state",
+    ),
+    path(
+        "recording/<uuid:recording_id>/summaries",
+        assistant_pages.new_summary,
+        name="new-summary",
+    ),
+    path(
+        "summary/<uuid:summary_id>/regenerate",
+        assistant_pages.regenerate_summary,
+        name="regenerate-summary",
+    ),
+    path(
+        "summary/<uuid:summary_id>/delete",
+        assistant_pages.delete_summary,
+        name="delete-summary",
+    ),
+    path(
+        "summary/<uuid:summary_id>/export",
+        assistant_pages.export_summary,
+        name="export-summary",
+    ),
+    path(
+        "recording/<uuid:recording_id>/chats",
+        assistant_pages.new_chat,
+        name="new-chat",
+    ),
+    path("chat/<uuid:chat_id>/ask", assistant_pages.ask, name="ask"),
+    path("chat/<uuid:chat_id>/delete", assistant_pages.delete_chat, name="delete-chat"),
+    path("chat/<uuid:chat_id>/export", assistant_pages.export_chat, name="export-chat"),
+    path(
+        "recording/<uuid:recording_id>/suggest",
+        assistant_pages.suggest,
+        name="suggest-names",
+    ),
+    path(
+        "suggestion/<uuid:suggestion_id>/<str:verdict>",
+        assistant_pages.decide,
+        name="decide-suggestion",
     ),
     # The sign-out dialog's two downloads, across the whole Workspace.
     path(
@@ -204,6 +251,22 @@ urlpatterns = [
     path("panel/installation", panel_pages.installation, name="panel-installation"),
     path("panel/help", panel_pages.admin_guide, name="panel-help"),
     path("panel/assistant/test", panel_pages.test_engine, name="panel-test-engine"),
+    path("panel/templates", template_pages.templates, name="panel-templates"),
+    path(
+        "panel/templates/prompt/<str:key>",
+        template_pages.prompt_template,
+        name="panel-prompt-template",
+    ),
+    path(
+        "panel/templates/summary",
+        template_pages.add_summary_template,
+        name="panel-add-summary-template",
+    ),
+    path(
+        "panel/templates/summary/<uuid:template_id>",
+        template_pages.summary_template,
+        name="panel-summary-template",
+    ),
     path("panel/settings/<str:page>", panel.settings_page, name="panel-settings"),
     path("panel/settings/<str:page>/edit", panel.edit, name="panel-edit"),
     path("panel/apply", panel.apply, name="panel-apply"),

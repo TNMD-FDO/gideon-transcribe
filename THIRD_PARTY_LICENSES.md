@@ -37,8 +37,8 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | Caddy | Apache-2.0 | upstream image |
 | PostgreSQL | the PostgreSQL Licence | upstream image |
 | tusd | MIT | upstream image |
-| vLLM | Apache-2.0 | the Local engine's upstream image, for when the AI assistant is built; not yet shipped |
-| Qwen3 weights | Apache-2.0 | the Local engine's model, not gated; not yet shipped |
+| vLLM | Apache-2.0 | the Local engine's upstream image, behind the `llm` Compose profile, off by default; pulled by digest only when an office turns the profile on |
+| Qwen3 weights | Apache-2.0 | the Local engine's model, not gated; downloaded by the Local engine itself, never shipped in an image |
 | restic | BSD-2-Clause | the Backup chapter's upstream image; not yet shipped |
 | `nvidia/cuda` base image | NVIDIA Deep Learning Container Licence (proprietary) | the WhisperX service's base; see note 2 |
 | ffmpeg as Debian and Ubuntu build it, with its codec packages | GPL v2 or later | see note 1 |
@@ -66,10 +66,10 @@ below, with a pointer to Debian's source packages for them.**
 
 | Release | Image | ffmpeg package | codec packages | Source |
 |---|---|---|---|---|
-| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
-| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
+| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0, v1.9.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
+| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0, v1.9.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
 
-The fifteen Releases from v0.2.0 to v1.8.0 share a row each because their
+The sixteen Releases from v0.2.0 to v1.9.0 share a row each because their
 images are the same builds: the base image digest is pinned in both Dockerfiles, and
 nothing in either image's package list changed between the tags. The versions
 were read from the running images with `dpkg-query` on that day. A later

@@ -224,6 +224,32 @@ def test_the_engine() -> None:
     engine.test_connection()
 
 
+# The AI assistant's three features, each one task on the llm queue, run by
+# llm-worker with concurrency 4: four calls in flight, the rest waiting in
+# order. None of them ever holds a Job in Running.
+
+
+@app.task(queue="llm", name="write_summary")
+def write_summary(summary_id: str) -> None:
+    from core import assistant
+
+    assistant.write_summary(summary_id)
+
+
+@app.task(queue="llm", name="answer_turn")
+def answer_turn(turn_id: str) -> None:
+    from core import assistant
+
+    assistant.answer_turn(turn_id)
+
+
+@app.task(queue="llm", name="suggest_names")
+def suggest_names(run_id: str) -> None:
+    from core import assistant
+
+    assistant.suggest_names(run_id)
+
+
 @app.periodic(cron="30 3 * * *")
 @app.task(queue="default", name="retention_sweep")
 def retention_sweep(timestamp: int) -> None:

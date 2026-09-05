@@ -21,6 +21,62 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.9.0, 2026-09-05
+
+```
+Models: unchanged
+Database: migrates
+```
+
+### Upgrading to this one
+
+The database migrates when the app starts: seven tables for the AI
+assistant's templates and what its features store. The models are unchanged.
+Nothing appears for users until the AI assistant toggle is turned on, which
+should wait for Test connection to succeed against the office's engine; the
+plumbing has been in place since v1.2.0, and the engine token is still the
+one thing this office is waiting on.
+
+### Added
+
+- **The AI assistant's three features.** The second half of the AI assistant
+  chapter, on the plumbing of v1.2.0. **Summary**: New summary asks for an
+  optional focus and a length, Short, Standard or Detailed, and a template
+  when two or more are Enabled; the call reads the whole transcript on
+  `llm-worker` and the summary arrives whole, with every time the app can
+  match to a segment made a citation that plays the recording from that
+  moment, the AI notice at its head, Regenerate, Export to Word and Delete.
+  **Chat**: threads named from their first question, answers from the
+  transcript alone with the last turns carried back within the 16,000-token
+  history budget, citations, Copy, Export to Word, Delete. **Speaker
+  suggestions**: when two or more speakers have no name, Suggest names asks
+  once for the whole transcript with the chapter's JSON schema; the app keeps
+  a suggestion only when its line exists, its confidence is high or medium,
+  the name is not unknown, not held by another speaker, and not proposed
+  twice; each shows its reason and its time, with Accept renaming every
+  segment of that speaker and Reject dismissing it. On the Bench, Summary and
+  Chat are two more tabs beside Clips and Details; on a laptop they are the
+  sheet's. Every call writes one audit row, metadata only: feature, model,
+  endpoint host, template versions, token counts, duration, outcome. Never
+  the question, the prompt, the answer, or a name.
+- **The Templates page** in the Panel's Settings group: Ground rules, Chat
+  and Speaker suggestions as plain text with Reset to default and a version
+  that rises on every save; Summary templates with name, description, text,
+  Enabled and Default, Add template, and the built-in Standard summary that
+  cannot be deleted. Everything applies at once, outside the tray, each act
+  its own audit row naming the template and version, never the text.
+- **Two Word exports**: a Summary and a Chat each export on their own in the
+  Record layout, cover facts, header block, the AI notice above the
+  transcript's notice, and the body with citations printed in grey, named
+  `<title> - summary (<template>) <date>.docx` and `<title> - chat
+  <date>.docx`.
+
+### Changed
+
+- **The Status page's AI assistant line** reads "off; no engine token yet"
+  when an address is set but the token file is empty, which is this office's
+  state while it waits for the key, rather than "no engine is configured".
+
 ## v1.8.0, 2026-09-05
 
 ```
