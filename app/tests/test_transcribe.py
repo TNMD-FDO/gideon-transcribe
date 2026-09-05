@@ -208,10 +208,23 @@ def test_the_local_engine_switch_is_in_the_script_and_the_guides():
     assert "cmd_engine_local_on()" in script and "cmd_engine_local_off()" in script
     assert 'LOCAL_MODEL_DEFAULT="Qwen/Qwen3.5-4B"' in script
     assert 'LOCAL_SHARE_DEFAULT="0.21"' in script
-    # The panel is pointed at what was started, through the checked command.
-    assert "set_setting --skip-checks $pair" in script
-    assert "engine_address http://vllm:8000/v1" in script
-    assert "engine_model local-engine" in script
+    # The panel is pointed at what was started, through the checked command,
+    # with the value quoted so that an empty one arrives when off clears it.
+    assert 'set_setting --skip-checks "$1" "$2"' in script
+    assert 'panel_set engine_address "http://vllm:8000/v1"' in script
+    assert 'panel_set engine_model "local-engine"' in script
+    # Off means no engine: the address and model cleared, the assistant off.
+    off = script[script.index("cmd_engine_local_off()") :]
+    off = off[: off.index("stop_the_local_engine() {")]
+    assert 'panel_set engine_address ""' in off
+    assert 'panel_set engine_model ""' in off
+    assert "panel_set assistant_available off" in off
+    # A shared engine names the address and model here, and stops the Local one.
+    shared = script[
+        script.index("cmd_engine() {") : script.index("cmd_engine_local_on() {")
+    ]
+    assert "stop_the_local_engine" in shared
+    assert "panel_set engine_address" in shared and "panel_set engine_model" in shared
     # The check asks for the token through the helper that can see into secrets/.
     assert 'secret_present "$SECRETS/llm_api_token"' in script
     assert "looked -s" not in script
