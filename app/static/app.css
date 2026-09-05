@@ -1101,7 +1101,9 @@ body.no-speakers .seg .name { display: none; }
 .cite { text-decoration: none; border-bottom: 1px dotted var(--accent); color: var(--accent); }
 .threads { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .threads .thread { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.threads .thread.on { border-color: var(--accent); color: var(--accent); }
+/* The open thread: outlined, not filled. The generic button.on fills it,
+   which left accent text on an accent ground and no name to read. */
+.threads .thread.on { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
 .turns { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
 .turn .question { margin: 0 0 4px; }
 .turn .answer { padding-left: 10px; border-left: 3px solid var(--line); }

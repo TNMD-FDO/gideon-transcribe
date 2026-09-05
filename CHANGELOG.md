@@ -63,6 +63,12 @@ Migration 0020 adds the Case Chat and its turns. Nothing on disk changes.
   the `case_chat_turn` call, metadata only: transcripts read, readings used,
   model, host, template versions, tokens, duration and outcome.
 
+### Fixed
+
+- **The open chat's name was invisible.** In the viewer's Chat panel, and so
+  in the new tab, the selected thread button was filled with the accent colour
+  and its text was the accent colour too. It is outlined now, and readable.
+
 ## v1.11.1, 2026-09-05
 
 ```
