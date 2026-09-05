@@ -184,13 +184,6 @@
         window.VIEWER.play();
         if (window.VIEWER.showSegment) { window.VIEWER.showSegment(seconds); }
       },
-      starters: [
-        "Who is speaking, and what is each person's part?",
-        "What is this recording about, in a few lines?",
-        "What happened first, and what came after?",
-        "Where is money, a car, or an address mentioned?",
-        "Summarise this recording"
-      ],
       grounding: function () { return "Answers come from this transcript only, not from any other recording."; },
       readingLine: function () { return "Reading the transcript..."; },
       expectation: "usually 5 to 20 seconds",
@@ -216,6 +209,7 @@
       reachable: state.reachable,
       unavailable_line: state.unavailable_line,
       chats: state.chats || [],
+      starters: state.starters || [],
       busy: state.busy
     });
   }

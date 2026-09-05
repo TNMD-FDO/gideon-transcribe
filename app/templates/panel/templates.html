@@ -30,6 +30,23 @@
         </form>
       {% endfor %}
 
+      <h2 style="margin-top: 24px">Starter questions</h2>
+      <p class="muted small">
+        What an empty chat offers as one-click chips, one question per line.
+        Leave a list empty and the chat offers nothing but its box.
+      </p>
+      {% for row in starters %}
+        <form method="post" action="{% url 'panel-starter-questions' row.key %}" class="card" style="margin-bottom: 12px">
+          {% csrf_token %}
+          <div class="row"><b class="grow">{{ row.name }}</b></div>
+          <textarea name="text" rows="{{ row.lines }}" style="width: 100%; margin: 8px 0"
+                    placeholder="One question per line">{% for key, text in starter_text.items %}{% if key == row.key %}{{ text }}{% endif %}{% endfor %}</textarea>
+          <div class="row">
+            <button type="submit" class="primary small">Save</button>
+          </div>
+        </form>
+      {% endfor %}
+
       <h2 style="margin-top: 24px">Summary templates</h2>
       <p class="muted small">
         Users choose a template only when two or more are Enabled. Exactly one

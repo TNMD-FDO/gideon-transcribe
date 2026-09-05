@@ -196,13 +196,17 @@
       var atBottom = bodyBox.scrollHeight - bodyBox.scrollTop - bodyBox.clientHeight < 40;
       var html = "";
       var grounding = options.grounding ? options.grounding(state) : "";
+      // The starter questions are the office's own, from the state; an office
+      // that keeps the list empty gets the grounding line and the box alone.
+      var starters = state.starters || [];
       if (!chat || !chat.turns.length) {
         html += "<div class='starters'>" +
           (grounding ? "<p class='muted small'>" + escape(grounding) + "</p>" : "") +
-          "<p class='small'>Try one of these, or ask your own question.</p>" +
-          "<div class='chips'>" + (options.starters || []).map(function (one) {
-            return "<button type='button' class='chip starter' data-question='" + escape(one) + "'" + (canAsk ? "" : " disabled") + ">" + escape(one) + "</button>";
-          }).join("") + "</div></div>";
+          (starters.length ? "<p class='small'>Try one of these, or ask your own question.</p>" +
+            "<div class='chips'>" + starters.map(function (one) {
+              return "<button type='button' class='chip starter' data-question='" + escape(one) + "'" + (canAsk ? "" : " disabled") + ">" + escape(one) + "</button>";
+            }).join("") + "</div>" : "") +
+          "</div>";
       }
       if (chat) {
         if (chat.notice) { html += "<p class='notice quiet tiny'><span aria-hidden='true'>&#9432;</span> " + escape(chat.notice) + "</p>"; }

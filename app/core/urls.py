@@ -282,6 +282,11 @@ urlpatterns = [
         name="panel-add-summary-template",
     ),
     path(
+        "panel/templates/starters/<str:key>",
+        template_pages.starter_questions,
+        name="panel-starter-questions",
+    ),
+    path(
         "panel/templates/summary/<uuid:template_id>",
         template_pages.summary_template,
         name="panel-summary-template",

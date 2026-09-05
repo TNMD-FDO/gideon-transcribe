@@ -569,6 +569,35 @@ def test_the_templates_page_saves_resets_and_versions(person, client):
 
 
 @pytest.mark.django_db
+def test_the_starter_questions_are_the_offices_own_and_start_empty(
+    ready, person, client
+):
+    signed_in(client, person)
+    assert settings_store.get("chat_starters") == ""
+    assert client.get(f"/recording/{ready.pk}/assistant").json()["starters"] == []
+    page = client.get("/panel/templates").content.decode()
+    assert "Chat starter questions" in page and "Case chat starter questions" in page
+
+    client.post(
+        "/panel/templates/starters/chat_starters",
+        {"text": "Who is speaking?\n\n  What is this about?  \n"},
+    )
+    assert settings_store.lines_of("chat_starters") == [
+        "Who is speaking?",
+        "What is this about?",
+    ]
+    assert client.get(f"/recording/{ready.pk}/assistant").json()["starters"] == [
+        "Who is speaking?",
+        "What is this about?",
+    ]
+    row = Row.objects.get(category="admin", event="Setting changed")
+    assert row.object_id == "chat_starters" and row.details["was"] == "(empty)"
+    # An unknown list is refused without a row.
+    client.post("/panel/templates/starters/nonsense", {"text": "x"})
+    assert Row.objects.filter(category="admin", event="Setting changed").count() == 1
+
+
+@pytest.mark.django_db
 def test_thinking_gets_its_own_room_and_an_empty_answer_says_why(
     ready, person, monkeypatch
 ):

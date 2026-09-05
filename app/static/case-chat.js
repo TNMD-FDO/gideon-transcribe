@@ -22,12 +22,6 @@
       if (where.removed) { return { removed: true }; }
       return { name: where.title, clock: where.clock, href: where.href, line: where.line };
     },
-    starters: [
-      "Who are the people in these recordings, and what is each one's part?",
-      "What do the recordings say about the same event, and where do they differ?",
-      "When is the subject first mentioned, and in which recording?",
-      "Summarise this case"
-    ],
     grounding: function (now) {
       if (!now.readable) { return "No recording in this case has a transcript to read yet."; }
       return "Answers come from the " + now.readable + " transcript" + (now.readable === 1 ? "" : "s") +
