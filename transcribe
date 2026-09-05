@@ -198,8 +198,8 @@ WORDS
 
   # The bind password ----------------------------------------------------------
   echo
-  mkdir -p "$SECRETS"
-  chmod 700 "$SECRETS"
+  mkdir -p "$SECRETS" 2>/dev/null || true
+  chmod 700 "$SECRETS" 2>/dev/null || true
   local password="" again=""
   printf 'The bind account'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
   read -rs password
@@ -213,8 +213,7 @@ WORDS
       red "Those did not match. Nothing was written."
       return 1
     fi
-    printf '%s' "$password" >"$SECRETS/ldap_bind_password"
-    chmod 600 "$SECRETS/ldap_bind_password"
+    write_secret "$SECRETS/ldap_bind_password" "$password"
     if id "$APP_USER" >/dev/null 2>&1; then
       # The app runs as its own account and has to be able to read the file.
       sudo chown "$APP_USER:$APP_USER" "$SECRETS/ldap_bind_password" 2>/dev/null ||
@@ -601,23 +600,21 @@ ask_the_gpu() {
 
 make_the_secrets() {
   echo
-  mkdir -p "$SECRETS" "$SERVICE_SECRETS"
-  chmod 700 "$SECRETS" "$SERVICE_SECRETS"
+  mkdir -p "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null || true
+  chmod 700 "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null || true
 
   # The random ones are made here and never typed by anybody.
   random_secret "$SECRETS/django_secret_key" "the Django key"
   random_secret "$SECRETS/postgres_password" "the database password"
 
-  if [ -s "$SECRETS/whisperx_consumer_token" ]; then
+  if secret_present "$SECRETS/whisperx_consumer_token"; then
     green "The WhisperX consumer token was already made."
   else
     local token
     token="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-    printf '%s' "$token" >"$SECRETS/whisperx_consumer_token"
-    chmod 600 "$SECRETS/whisperx_consumer_token"
+    write_secret "$SECRETS/whisperx_consumer_token" "$token"
     # The service reads its consumers from a file of its own, one per line.
-    printf 'transcribe      %s\n' "$token" >>"$SERVICE_SECRETS/tokens"
-    chmod 600 "$SERVICE_SECRETS/tokens"
+    append_secret_line "$SERVICE_SECRETS/tokens" "$(printf 'transcribe      %s' "$token")"
     green "The WhisperX consumer token was made and added to the service's tokens file."
   fi
 
@@ -626,12 +623,11 @@ make_the_secrets() {
 
 random_secret() {
   local path="$1" what="$2"
-  if [ -s "$path" ]; then
+  if secret_present "$path"; then
     green "$what was already made."
     return
   fi
-  head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$path"
-  chmod 600 "$path"
+  write_secret "$path" "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
   green "$what was made."
 }
 
@@ -643,6 +639,54 @@ own_the_secrets() {
     sudo chmod 400 "$SECRETS"/* "$SERVICE_SECRETS"/* 2>/dev/null || true
     sudo chmod 700 "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null || true
   fi
+}
+
+# Writing and seeing secrets after the install ----------------------------------
+#
+# Once own_the_secrets has run, secrets/ belongs to the app account and is
+# mode 700, so the account running this script cannot see into it or write
+# into it. A plain `test -e` says a file is absent whether it is or not, and a
+# bare `>` dies on "Permission denied", which under set -e ends the script
+# without a word. That is what an upgrade did on the day the engine's token
+# file was added. So every secret is written and looked for through these
+# four, which take the plain path while the folder is the caller's and go
+# through sudo once it is not; the bytes travel by a pipe, never a command
+# line.
+
+write_secret() {
+  local path="$1" value="$2" folder
+  folder="$(dirname "$path")"
+  mkdir -p "$folder" 2>/dev/null || true
+  if [ -w "$folder" ]; then
+    printf '%s' "$value" >"$path"
+    chmod 600 "$path"
+  else
+    printf '%s' "$value" | sudo tee "$path" >/dev/null
+    sudo chmod 600 "$path"
+  fi
+}
+
+append_secret_line() {
+  local path="$1" line="$2" folder
+  folder="$(dirname "$path")"
+  mkdir -p "$folder" 2>/dev/null || true
+  if [ -w "$folder" ]; then
+    printf '%s\n' "$line" >>"$path"
+    chmod 600 "$path"
+  else
+    printf '%s\n' "$line" | sudo tee -a "$path" >/dev/null
+    sudo chmod 600 "$path"
+  fi
+}
+
+secret_present() {
+  local path="$1"
+  if [ -r "$(dirname "$path")" ]; then [ -s "$path" ]; else sudo test -s "$path"; fi
+}
+
+secret_exists() {
+  local path="$1"
+  if [ -r "$(dirname "$path")" ]; then [ -e "$path" ]; else sudo test -e "$path"; fi
 }
 
 ask_the_hugging_face_token() {
@@ -663,11 +707,10 @@ ask_the_hugging_face_token() {
       red "Those did not match. Nothing was written."
       return 1
     fi
-    printf '%s' "$token" >"$SERVICE_SECRETS/hf_token"
-    chmod 600 "$SERVICE_SECRETS/hf_token"
+    write_secret "$SERVICE_SECRETS/hf_token" "$token"
     own_the_secrets
     green "The Hugging Face token was written."
-  elif [ -s "$SERVICE_SECRETS/hf_token" ]; then
+  elif secret_present "$SERVICE_SECRETS/hf_token"; then
     green "The stored Hugging Face token was kept."
   else
     amber "There is no Hugging Face token stored; the model pull will refuse."
@@ -714,10 +757,8 @@ ensure_the_token_file() {
   # engine still has to start, so the file always exists: empty until
   # ./transcribe engine fills it. Called by install and by every upgrade, so an
   # install from before the AI assistant existed comes up as before.
-  mkdir -p "$SECRETS"
-  if [ ! -e "$SECRETS/llm_api_token" ]; then
-    : >"$SECRETS/llm_api_token"
-    chmod 600 "$SECRETS/llm_api_token"
+  if ! secret_exists "$SECRETS/llm_api_token"; then
+    write_secret "$SECRETS/llm_api_token" ""
     own_the_secrets
   fi
 }
@@ -787,11 +828,10 @@ WORDS
       red "Those did not match. The token was not changed."
       return 1
     fi
-    printf '%s' "$token" >"$SECRETS/llm_api_token"
-    chmod 600 "$SECRETS/llm_api_token"
+    write_secret "$SECRETS/llm_api_token" "$token"
     own_the_secrets
     green "The engine token was written to secrets/llm_api_token."
-  elif looked -s "$SECRETS/llm_api_token"; then
+  elif secret_present "$SECRETS/llm_api_token"; then
     green "The stored engine token was kept."
   else
     amber "No engine token is stored. The AI assistant stays off until there is one."
