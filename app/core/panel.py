@@ -147,7 +147,6 @@ FIXED_RULES = [
 ]
 
 
-@admins_only
 def _appearance() -> dict:
     from core import branding
 
@@ -179,6 +178,7 @@ def logo(request: HttpRequest) -> HttpResponse:
     return redirect(back)
 
 
+@admins_only
 def settings_page(request: HttpRequest, page: str) -> HttpResponse:
     """One settings page: name and help on the left, the control on the right."""
     if page not in dict(settings_store.PAGES):
