@@ -431,3 +431,37 @@ def live_jobs():
 def ready_without_a_job():
     """Recordings that are Ready and have not joined the line yet."""
     return Recording.objects.filter(media_state=MediaState.READY, jobs__isnull=True)
+
+
+def unname(transcript: Transcript, name: str) -> int:
+    """Put the Speakers of one name back to their labels, Speaker 1 and on.
+
+    The reverse of _speaker_names, for a Person deleted on a Case's Speakers
+    tab: the labels the engine gave are still on every Segment, so the app's
+    names are worked out again from them, per Side, exactly as at storage.
+    """
+    recording = transcript.recording
+    sides = list(recording.sides.all())
+    many_sides = len(sides) > 1
+    changed = 0
+    for side in sides or [None]:
+        rows = (
+            transcript.segments.filter(side=side) if side else transcript.segments.all()
+        )
+        labels = sorted(
+            set(rows.exclude(speaker_label="").values_list("speaker_label", flat=True))
+        )
+        side_name = side.name if (side is not None and many_sides) else ""
+        if many_sides and len(labels) == 1:
+            names = {labels[0]: side_name, "": side_name}
+        else:
+            names = {
+                label: (f"{side_name} Speaker {n}" if side_name else f"Speaker {n}")
+                for n, label in enumerate(labels, start=1)
+            }
+            names[""] = side_name
+        for segment in rows.filter(speaker__iexact=name.strip()):
+            segment.speaker = names.get(segment.speaker_label, side_name)
+            segment.save(update_fields=["speaker"])
+            changed += 1
+    return changed

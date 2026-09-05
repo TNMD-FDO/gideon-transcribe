@@ -219,6 +219,23 @@ def _rows() -> list[Definition]:
                 "A type removed from the list stays on the Recordings that hold it."
             ),
         ),
+        Definition(
+            key="speaker_roles",
+            page=CASES,
+            name="Speaker roles",
+            kind=TEXT,
+            default="Defendant\nWitness\nVictim\nOfficer\nAttorney\nInterpreter\nInterviewer\nCaller",
+            lines=8,
+            needs="folder_management",
+            what_it_does=(
+                "The Roles a Person in a case may be given, one per line. Suggest "
+                "names offers roles from this list when nobody is named."
+            ),
+            when_changed=(
+                "The next Role pick; a Role removed from the list stays on the "
+                "People that hold it."
+            ),
+        ),
         # Limits ---------------------------------------------------------------
         Definition(
             key="largest_file_gb",
@@ -436,6 +453,24 @@ def _rows() -> list[Definition]:
                 "small engine does this badly; try it and judge before leaving it on."
             ),
             when_changed="Off hides Suggest names.",
+        ),
+        Definition(
+            key="suggestion_method",
+            page=ASSISTANT,
+            name="Speaker suggestion method",
+            kind=CHOICE,
+            default="evidence",
+            choices=("evidence",),
+            needs="suggestions_available",
+            what_it_does=(
+                'How Suggest names works out who is speaking. "evidence": the app '
+                "finds self-introductions and forms of address in the transcript "
+                "first, hands them to the model with the case's People and the "
+                "Speaker roles, and keeps a name only when the text backs it. New "
+                "methods join this list as they are built; the toggle above turns "
+                "the feature off whatever the method."
+            ),
+            when_changed="The next Suggest names.",
         ),
         Definition(
             key="assistant_thinks",

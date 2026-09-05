@@ -124,8 +124,15 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             .values_list("speaker", flat=True)
             .distinct()
         )
+        from core import people
+
         speakers = [
-            {"name": name, "colour": colour_for(number)}
+            {
+                "name": name,
+                "colour": colour_for(number),
+                # The Role badge, inside a Case, when the name is a Person's.
+                "role": people.role_of(recording, name),
+            }
             for number, name in enumerate(names)
         ]
 
@@ -140,6 +147,9 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             # Which of the AI assistant's three features the page offers;
             # the panels' contents come from the assistant's own endpoint.
             "assistant": assistant.features(),
+            # The Case's People, for the rename box to offer; none in a Workspace.
+            "people": _people_of(recording),
+            "speaker_roles": _roles_if_in_a_case(recording),
             # The rest of the case, so somebody working through a matter moves
             # between its recordings without going back to the case page.
             "in_case": _the_rest_of_the_case(recording),
@@ -328,6 +338,12 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
 
     merging = transcript.segments.filter(speaker=now).exists()
     changed = transcript.segments.filter(speaker=was).update(speaker=now)
+    # Inside a Case, a name means a person: the new name joins or makes one.
+    from core import people
+
+    people.on_named(
+        recording, now, by=request.user, how="named in the viewer", request=request
+    )
 
     audit.write(
         audit.Category.EDITS,
@@ -524,6 +540,21 @@ def _the_rest_of_the_case(recording) -> list:
             }
         )
     return rows
+
+
+def _people_of(recording) -> list[dict]:
+    if not recording.case_id:
+        return []
+    return [
+        {"name": one.name, "role": one.role, "count": len(one.recordings())}
+        for one in recording.case.people.all()
+    ]
+
+
+def _roles_if_in_a_case(recording) -> list[str]:
+    from core import people
+
+    return people.roles() if recording.case_id else []
 
 
 def _has_video(recording) -> bool:

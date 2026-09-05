@@ -165,12 +165,33 @@
                 Click a name to rename it. Drag one speaker onto another to
                 merge them, when two labels are the same person.
               </p>
+              {% if in_case %}
+                {% comment %}
+                  Inside a case the rename box offers the case's People as the
+                  person types; a name that matches one joins it. It changes
+                  this recording only; the Speakers tab renames everywhere.
+                {% endcomment %}
+                <div id="rename-box" class="card" hidden style="margin: 6px 0">
+                  <label for="rename-input" class="small" id="rename-label">Rename</label>
+                  <div class="row" style="gap: 6px">
+                    <input type="text" id="rename-input" list="people-list" maxlength="60" class="grow" autocomplete="off">
+                    <button type="button" class="primary small" id="rename-save">Save</button>
+                    <button type="button" class="ghost small" id="rename-cancel">Cancel</button>
+                  </div>
+                  <datalist id="people-list">
+                    {% for one in people %}
+                      <option value="{{ one.name }}">{{ one.name }}{% if one.role %} ({{ one.role }}){% endif %}, in {{ one.count }} recording{{ one.count|pluralize }}</option>
+                    {% endfor %}
+                  </datalist>
+                  <p class="muted small" style="margin: 6px 0 0">Changes this recording only. To rename in every recording, use the <a href="{% url 'case' recording.case_id %}?tab=speakers">case's Speakers tab</a>.</p>
+                </div>
+              {% endif %}
               <ul id="speakers" class="speakerchips">
                 {% for speaker in speakers %}
                   <li class="speakerchip" draggable="true"
                       data-name="{{ speaker.name }}"
                       style="--speaker: {{ speaker.colour }}">
-                    <span class="dot"></span>{{ speaker.name }}
+                    <span class="dot"></span>{{ speaker.name }}{% if speaker.role %} <span class="pill role">{{ speaker.role }}</span>{% endif %}
                   </li>
                 {% endfor %}
               </ul>

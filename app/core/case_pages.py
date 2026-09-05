@@ -183,9 +183,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     cases.note_activity(case, by=request.user)
 
     asked = request.GET.get("q", "").strip()
-    # One of the four tabs the chapter gives this page. Speakers and Chat
-    # belong to chapters that are not built.
-    tab = "clips" if request.GET.get("tab") == "clips" else "recordings"
+    # Three of the four tabs the chapter gives this page; Chat belongs to a
+    # chapter that is not built.
+    tab = (
+        request.GET.get("tab")
+        if request.GET.get("tab") in ("clips", "speakers")
+        else "recordings"
+    )
 
     # The pane about the case says where its clock stands, as its row on the
     # Cases page does.
@@ -200,6 +204,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "tab": tab,
             "warned": retention.is_warned(left),
             "deletes_line": retention.deletes_line(left),
+            # The Speakers tab: the Case's People and the Recordings still unnamed.
+            **(
+                _speakers_tab(case)
+                if tab == "speakers"
+                else {"people_count": case.people.count()}
+            ),
+            "people_said": request.session.pop("people_said", ""),
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             "is_owner": case.owner_id == request.user.pk,
             "recordings": _rows_for(case),
@@ -229,6 +240,14 @@ def _clips_in(case: Case, asker) -> list:
         .select_related("recording", "user")
         .order_by("recording__created", "created")
     ]
+
+
+def _speakers_tab(case: Case) -> dict:
+    from core import people_pages
+
+    shown = people_pages.tab_context(case)
+    shown["people_count"] = len(shown["people"])
+    return shown
 
 
 def _rows_for(case: Case) -> list:
@@ -261,7 +280,10 @@ def _speakers_in_words(recording: Recording) -> str:
     )
     if not labels:
         return ""
-    named = {one for one in labels if not one.upper().startswith("SPEAKER_")}
+    # The app's own labels are Speaker 1 and Side 1 Speaker 1; the rest are names.
+    from core.assistant import _is_a_label
+
+    named = {one for one in labels if not _is_a_label(one)}
     unnamed = len(labels) - len(named)
     parts = []
     if named:

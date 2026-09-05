@@ -11,6 +11,7 @@ from core import (
     pages,
     panel,
     panel_pages,
+    people_pages,
     template_pages,
     uploads,
     viewer,
@@ -154,6 +155,9 @@ urlpatterns = [
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
+    # The Speakers tab's acts: add a Person, and rename, edit, merge or delete one.
+    path("case/<uuid:case_id>/people", people_pages.add_person, name="add-person"),
+    path("person/<uuid:person_id>", people_pages.person_action, name="person-action"),
     path("case/<uuid:case_id>/delete", case_pages.delete_case, name="delete-case"),
     path(
         "case/<uuid:case_id>/what-would-go",

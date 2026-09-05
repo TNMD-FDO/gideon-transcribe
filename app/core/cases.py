@@ -323,6 +323,10 @@ def move_recording(recording, case: Case, actor, description="", request=None) -
             shutil.move(str(now), str(was))
         recording.case = from_case
         raise
+    # A Recording moved in brings its named Speakers as People of the Case.
+    from core import people
+
+    people.moved_in(recording, by=actor, request=request)
 
     audit.write(
         CATEGORY,

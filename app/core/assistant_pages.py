@@ -47,6 +47,12 @@ def _body(request) -> dict:
         return {}
 
 
+def _role_of(recording, name: str) -> str:
+    from core import people
+
+    return people.role_of(recording, name)
+
+
 def _affected(request, recording):
     return recording.user if recording.user_id != request.user.pk else None
 
@@ -152,6 +158,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
                 "quote": one.quote,
                 "start": one.start,
                 "clock": exports.clock(one.start),
+                # The Role, when the suggested name is one of the Case's People.
+                "role": _role_of(recording, one.name),
             }
             for one in transcript.suggestions.filter(state=Suggestion.PENDING)
         ]
@@ -377,6 +385,16 @@ def decide(request: HttpRequest, suggestion_id, verdict: str) -> JsonResponse:
             speaker=suggestion.speaker
         ).update(speaker=suggestion.name)
         suggestion.state = Suggestion.ACCEPTED
+        # Inside a Case the accepted name joins or makes a Person.
+        from core import people
+
+        people.on_named(
+            recording,
+            suggestion.name,
+            by=request.user,
+            how="suggestion accepted",
+            request=request,
+        )
     else:
         suggestion.state = Suggestion.REJECTED
     suggestion.save(update_fields=["state"])

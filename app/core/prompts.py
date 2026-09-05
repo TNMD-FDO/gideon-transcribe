@@ -330,6 +330,133 @@ def history_that_fits(turns: list[tuple[str, str]]) -> list[tuple[str, str]]:
     return kept
 
 
+# Evidence, found before the model is asked ------------------------------------------
+#
+# A name from text has two honest sources: a self-introduction ("This is
+# Detective Ruiz", "my name is Maria"), which names the speaker of that line,
+# and a form of address at the edge of a turn ("Maria, ...", "..., thanks
+# Maria"), which names the other party. The app finds both with plain patterns
+# and hands them to the model with their line numbers, so the model reasons
+# from evidence rather than from the whole transcript at once, and a suggested
+# name is kept only when the text backs it.
+
+INTRODUCES = re.compile(
+    r"\b(?i:this is|my name is|i am|i'm|it's|speaking with|you're speaking to)\s+"
+    r"((?:[A-Z][\w'.-]+\s?){1,4})",
+)
+ADDRESSES = re.compile(
+    r"(?:^|(?<=[,.!?] ))((?:[A-Z][\w'.-]+\s?){1,3}),\s"
+    r"|,\s((?:[A-Z][\w'.-]+\s?){1,3})[.!?]?$"
+)
+NOT_NAMES = {
+    "i",
+    "the",
+    "a",
+    "an",
+    "this",
+    "that",
+    "it",
+    "yes",
+    "no",
+    "okay",
+    "ok",
+    "sir",
+    "ma'am",
+    "man",
+    "hey",
+    "hello",
+    "hi",
+    "well",
+    "so",
+    "and",
+    "but",
+    "officer",
+    "detective",
+    "sergeant",
+    "your",
+    "honor",
+    "thank",
+    "thanks",
+    "please",
+    "right",
+}
+
+
+def _clean(name: str) -> str:
+    words = [
+        w for w in name.strip().strip(".,").split() if w.casefold() not in NOT_NAMES
+    ]
+    return " ".join(words[:3])
+
+
+def evidence(lines: list[Line]) -> list[dict]:
+    """Every self-introduction and form of address, with its line and speaker."""
+    found = []
+    for line in lines:
+        for match in INTRODUCES.finditer(line.text):
+            name = _clean(match.group(1))
+            if name:
+                found.append(
+                    {
+                        "kind": "introduces",
+                        "line": line.number,
+                        "speaker": line.speaker.replace(" (corrected)", ""),
+                        "name": name,
+                    }
+                )
+        for match in ADDRESSES.finditer(line.text):
+            name = _clean(match.group(1) or match.group(2) or "")
+            if name:
+                found.append(
+                    {
+                        "kind": "addresses",
+                        "line": line.number,
+                        "speaker": line.speaker.replace(" (corrected)", ""),
+                        "name": name,
+                    }
+                )
+    return found
+
+
+def evidence_lines(found: list[dict]) -> str:
+    """The evidence as the model reads it, or a plain word when there is none."""
+    if not found:
+        return (
+            "Evidence found in the transcript: none. Only roles can be told, if that."
+        )
+    out = ["Evidence found in the transcript:"]
+    for one in found[:60]:
+        if one["kind"] == "introduces":
+            who = one["speaker"] or "the speaker"
+            out.append(
+                f"- line {one['line']}: {who} introduces themselves as {one['name']}"
+            )
+        else:
+            who = one["speaker"] or "the speaker"
+            out.append(
+                f"- line {one['line']}: {who} addresses someone as {one['name']}"
+            )
+    return "\n".join(out)
+
+
+def roles_line(roles: list[str]) -> str:
+    return (
+        f"Roles to choose from: {', '.join(roles)}"
+        if roles
+        else "Roles to choose from: any plain role word"
+    )
+
+
+def backed_by_evidence(name: str, found: list[dict]) -> bool:
+    """Whether some evidence line carries this name, ignoring case and order."""
+    wanted = {w.casefold() for w in name.split()}
+    for one in found:
+        theirs = {w.casefold() for w in one["name"].split()}
+        if wanted & theirs:
+            return True
+    return False
+
+
 # Suggestions the app keeps ---------------------------------------------------------
 
 RANK = {"high": 2, "medium": 1, "low": 0}
@@ -343,9 +470,17 @@ def looks_like_a_label(name: str) -> bool:
 
 
 def keep_suggestions(
-    raw: list[dict], unnamed: list[str], taken: set[str], lines: list[Line]
+    raw: list[dict],
+    unnamed: list[str],
+    taken: set[str],
+    lines: list[Line],
+    found: list[dict] | None = None,
 ) -> list[dict]:
-    """The chapter's five checks, in order, on what the model proposed."""
+    """The chapter's five checks, in order, on what the model proposed.
+
+    With `found`, the evidence-first rule as well: a name (not a role) the
+    evidence does not back is dropped, since a name from nowhere is a guess.
+    """
     by_number = {line.number: line for line in lines}
     kept: dict[str, dict] = {}
     for one in raw:
@@ -364,11 +499,14 @@ def keep_suggestions(
             continue
         if name.casefold() in {held.casefold() for held in taken}:
             continue
+        kind = str(one.get("kind", "name"))
+        if found is not None and kind != "role" and not backed_by_evidence(name, found):
+            continue
         line = by_number[number]
         candidate = {
             "speaker": speaker,
             "name": name,
-            "kind": str(one.get("kind", "name")),
+            "kind": kind if found is not None else str(one.get("kind", "name")),
             "confidence": confidence,
             "line": number,
             "segment_id": line.segment_id,
