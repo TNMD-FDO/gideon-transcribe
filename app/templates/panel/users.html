@@ -21,19 +21,23 @@
     <table class="tbl">
       <thead>
         <tr>
-          <th>Username</th><th>Display name</th><th>Directory address</th>
-          <th>Role</th><th>Admin source</th><th>Status</th>
+          <th>User</th>
+          <th>Role</th><th>Status</th>
           <th>Workspace</th><th>Recordings</th><th>Quota</th><th>Last sign-in</th>
         </tr>
       </thead>
       <tbody>
         {% for row in rows %}
           <tr>
-            <td><b>{{ row.user.username }}</b></td>
-            <td>{{ row.user.display_name }}</td>
-            <td class="muted">{{ row.user.directory_address }}</td>
-            <td>{% if row.user.is_admin %}<span class="pill">Admin</span>{% else %}User{% endif %}</td>
-            <td class="muted">{{ row.admin_source }}</td>
+            <td>
+              <b>{{ row.user.username }}</b>
+              {% if row.user.display_name %}<div class="small">{{ row.user.display_name }}</div>{% endif %}
+              {% if row.user.directory_address %}<div class="muted small">{{ row.user.directory_address }}</div>{% endif %}
+            </td>
+            <td>
+              {% if row.user.is_admin %}<span class="pill">Admin</span>{% else %}User{% endif %}
+              {% if row.admin_source %}<div class="muted small">{{ row.admin_source }}</div>{% endif %}
+            </td>
             <td>
               {% if row.status == "Blocked" %}<span class="pill danger">Blocked</span>
               {% elif row.status == "Deactivated" %}<span class="pill warn">Deactivated</span>
@@ -50,7 +54,7 @@
             <td class="muted">{{ row.user.last_sign_in|default:"never" }}</td>
           </tr>
           <tr>
-            <td colspan="10" style="padding-bottom: 14px">
+            <td colspan="7" style="padding-bottom: 14px">
               <form method="post" action="{% url 'panel-user' row.user.username %}" class="row">
                 {% csrf_token %}
                 <a href="{% url 'panel-workspace' row.user.username %}" class="btn small">Open their Workspace</a>

@@ -131,7 +131,11 @@
               {% endfor %}
             </tbody>
           </table>
-          <p class="muted small">Click a case for its details. Up and down move, Enter opens.</p>
+          <div class="hint" data-hint="cases-table" hidden>
+            {% icon "info" %}
+            <span class="grow">Click a case to see its details beside the table. The arrow keys move, Enter opens it.</span>
+            <button type="button" class="ghost tiny dismiss">Got it</button>
+          </div>
         </div>
         <aside class="pane-detail" id="detail-pane">
           <p class="muted small" id="detail-none">Choose a case to see its details.</p>

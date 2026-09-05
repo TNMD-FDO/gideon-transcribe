@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.18.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **Page pass two: Cases, a case, Clips, the Recycle bin, the Panel and the
+  guides**, the last of the five releases of the finish. A clip's span reads
+  as two clocks and its length in words, "00:12:04 to 00:13:40, 1 min 37 s",
+  in the table and the details, instead of raw seconds. The instruction lines
+  under the Cases and Clips tables are first-time hints with Got it. The
+  Panel's Users table folds the display name and directory address under the
+  username and the Admin's source under the role, seven columns instead of
+  ten, so it fits beside the Create Local admin pane without a scrollbar. The
+  case page, the Recycle bin, the rest of the Panel and the guides needed
+  nothing beyond what the foundations, the dialogs, the empty states and the
+  hints had already given them.
+
 ## v1.17.0, 2026-09-05
 
 ```

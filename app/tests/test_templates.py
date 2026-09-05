@@ -185,3 +185,24 @@ def test_every_list_page_has_an_empty_state_and_hints_can_be_dismissed():
             assert 'class="ghost tiny dismiss"' in block, (
                 f"{name}: hint {match.group(1)} cannot be dismissed"
             )
+
+
+def test_a_clip_span_is_read_as_clocks_and_words():
+    """Raw seconds ("724.0s to 820.5s, 97s") are for machines; a person reads
+    two clocks and a length in words."""
+    from core.clip_pages import spell
+
+    assert spell(45) == "45 s"
+    assert spell(97.4) == "1 min 37 s"
+    assert spell(120) == "2 min"
+    assert spell(3720) == "1 h 2 min"
+    clips = (TEMPLATES / "clips.html").read_text(encoding="utf-8")
+    assert "floatformat:1 }}s" not in clips
+    assert "{{ clip.span }}" in clips and "{{ clip.length }}" in clips
+
+
+def test_the_users_table_fits_beside_its_pane():
+    users = (TEMPLATES / "panel" / "users.html").read_text(encoding="utf-8")
+    head = users[users.index("<thead>") : users.index("</thead>")]
+    assert head.count("<th>") == 7
+    assert 'colspan="7"' in users and 'colspan="10"' not in users
