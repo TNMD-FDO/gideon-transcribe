@@ -19,7 +19,27 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **A video opened right after transcription loaded slowly and froze.**
+  Recognition finishes on the GPU before the playback copy of a long video
+  is finished on the CPU, and for that minute the copy existed on disk but
+  was still being written, with its index not yet in place. The viewer
+  handed the browser any playback file that existed, so a browser opening in
+  that window found no index, read blindly, and stalled; and the page never
+  re-checked, so the person stayed stuck until they reloaded by hand. The
+  copy and the waveform are now written under another name and renamed when
+  whole, so a half-written file is never visible under the name the viewer
+  looks for; the viewer decides by the recording's own "playback ready" flag,
+  which it had never read; and a page that opens before the copy is done
+  shows "Preparing video", says so plainly, asks every five seconds, and
+  lifts the overlay itself, as the chapter says it should. Reading, search
+  and correction work meanwhile.
 
 ## v1.2.2, 2026-09-04
 
