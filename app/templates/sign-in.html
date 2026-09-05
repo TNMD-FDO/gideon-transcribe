@@ -10,7 +10,7 @@
     one button. Nothing else, so the first thing anyone sees is calm.
   {% endcomment %}
   <div class="gate">
-    <form method="post" action="{% url 'sign-in' %}" autocomplete="off" class="card door">
+    <form method="post" action="{% url 'sign-in' %}" autocomplete="off" class="card door{% if has_logo %} with-logo{% endif %}">
       {% csrf_token %}
       <div class="face">
         {% if has_logo %}
