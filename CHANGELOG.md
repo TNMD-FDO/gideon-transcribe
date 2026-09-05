@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.5, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Suggest names failed with "an answer the app could not read".** Under
+  strict output shaping the small model repeated entries until the answer hit
+  its cap and the JSON was cut off, twice. The schema now allows at most one
+  entry per unnamed speaker and bounds every string, a cut-off answer is
+  salvaged by keeping the entries that were finished, and the cap rises from
+  1,000 to 1,500 tokens. Found on the second Suggest names against the Local
+  engine.
+
 ## v1.10.4, 2026-09-05
 
 ```

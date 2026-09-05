@@ -144,6 +144,22 @@ def test_suggestions_are_kept_only_when_every_check_holds():
     assert kept[0]["segment_id"] == 1 and kept[0]["start"] == 0.0
 
 
+def test_the_suggestions_schema_is_bounded_and_a_cut_answer_is_salvaged():
+    schema = prompts.suggestions_schema(["Speaker 1", "Speaker 2", "Speaker 3"])
+    assert schema["properties"]["suggestions"]["maxItems"] == 3
+    assert (
+        schema["properties"]["suggestions"]["items"]["properties"]["quote"]["maxLength"]
+        == 300
+    )
+    cut = (
+        '{"suggestions": [{"speaker": "Speaker 1", "name": "Officer", "kind": "role", '
+        '"confidence": "high", "line": 1, "quote": "x"}, {"speaker": "Speaker 2", "na'
+    )
+    whole = json.loads(prompts.salvage_json(cut))
+    assert [one["speaker"] for one in whole["suggestions"]] == ["Speaker 1"]
+    assert prompts.salvage_json("not json at all") == "not json at all"
+
+
 def test_a_chat_is_named_from_its_first_question():
     assert (
         Chat.name_from("When is the car first mentioned?")
@@ -442,7 +458,8 @@ def test_suggest_names_keeps_what_the_checks_allow_and_accept_renames(
     assistant.suggest_names(started.json()["id"])
 
     call = asked[0]
-    assert call["schema"] == prompts.SUGGESTIONS_SCHEMA and call["temperature"] == 0.0
+    assert call["schema"]["properties"]["suggestions"]["maxItems"] == 2
+    assert call["temperature"] == 0.0
     assert "Unnamed speakers: Speaker 1, Speaker 2" in call["messages"][-1]["content"]
     assert "Known names: Maria Lopez" in call["messages"][-1]["content"]
 

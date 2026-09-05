@@ -647,12 +647,16 @@ def suggest_names(run_id) -> None:
                 max_completion_tokens=cap(prompts.SUGGESTIONS_CAP),
                 thinking=thinking(),
                 timeout=time_limit("speaker_suggestions"),
-                schema=prompts.SUGGESTIONS_SCHEMA,
+                schema=prompts.suggestions_schema(unnamed),
                 **SUGGESTION_SAMPLING,
             )
             usage = answer
             try:
-                parsed = json.loads(answer["text"])
+                try:
+                    parsed = json.loads(answer["text"])
+                except ValueError:
+                    # Cut off at the cap: keep the entries that were finished.
+                    parsed = json.loads(prompts.salvage_json(answer["text"]))
                 raw = parsed.get("suggestions", [])
                 if not isinstance(raw, list):
                     raise ValueError("not a list")
