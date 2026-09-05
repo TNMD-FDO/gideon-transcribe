@@ -336,9 +336,11 @@
 
   // The timeline --------------------------------------------------------------
   //
-  // One canvas, drawn in layers the way the prototype draws it: the surface,
-  // then the speaker lanes as translucent bands, then the peaks, with the
+  // One canvas, drawn in two layers: the surface, then the peaks, with the
   // part already played in the accent colour and the rest in the muted one.
+  // The speaker lanes the prototype drew behind the peaks are gone: one band
+  // per segment on every redraw, on a transcript of thousands of rows, for a
+  // stripe of colour the rows already carry.
 
   function drawTimeline() {
     if (!canvas || !timeline) { return; }
@@ -370,44 +372,59 @@
 
     var time = player ? player.currentTime : 0;
 
-    // The speaker lanes, behind everything, so the waveform stays readable.
-    if (duration && segments.length) {
-      var laneInk = {};
-      Object.keys(colours).forEach(function (name) {
-        laneInk[name] = ink(colours[name]);
-      });
-      pen.globalAlpha = 0.35;
-      segments.forEach(function (segment) {
-        var colour = laneInk[segment.speaker];
-        if (!colour) { return; }
-        pen.fillStyle = colour;
-        var from = (segment.start / duration) * width;
-        var to = (segment.end / duration) * width;
-        pen.fillRect(from, 0, Math.max(1, to - from), height);
-      });
-      pen.globalAlpha = 1;
-    }
-
-    if (peaks && peaks.data) {
-      var channels = peaks.channels || 1;
-      var pairs = Math.floor(peaks.data.length / (2 * channels));
-      var scale = Math.pow(2, (peaks.bits || 8) - 1);
-      var lane = channels === 2 ? height / 2 : height;
-
+    var strip = peaksForWidth(width);
+    if (strip) {
+      var lane = strip.channels === 2 ? height / 2 : height;
       for (var x = 0; x < width; x += 1) {
-        var index = Math.floor((x / width) * pairs);
-        for (var channel = 0; channel < channels; channel += 1) {
-          var low = peaks.data[(index * channels + channel) * 2] / scale;
-          var high = peaks.data[(index * channels + channel) * 2 + 1] / scale;
-          var middle = channels === 2 ? lane * channel + lane / 2 : height / 2;
-          pen.fillStyle = duration && (x / width) * duration <= time
-            ? played
-            : unplayed;
+        pen.fillStyle = duration && (x / width) * duration <= time
+          ? played
+          : unplayed;
+        for (var channel = 0; channel < strip.channels; channel += 1) {
+          var at = x * strip.channels + channel;
+          var low = strip.lows[at];
+          var high = strip.highs[at];
+          var middle = strip.channels === 2 ? lane * channel + lane / 2 : height / 2;
           var top = middle - Math.max(1, high * (lane / 2 - 1));
           pen.fillRect(x, top, 1, Math.max(1, (high - low) * (lane / 2 - 1)));
         }
       }
     }
+  }
+
+  // The peaks file holds a few pairs per pixel for a recording made since
+  // v1.3.0, and hundreds for one made before. Either way the strip is worked
+  // out once per width, every pair taken in (the lowest low and the highest
+  // high of the pairs a pixel covers, so a shout or a slammed door does not
+  // vanish between samples), and the redraw once a second only paints it.
+  var reduced = null;
+
+  function peaksForWidth(width) {
+    if (!peaks || !peaks.data) { return null; }
+    if (reduced && reduced.width === width && reduced.from === peaks) {
+      return reduced;
+    }
+    var channels = peaks.channels || 1;
+    var pairs = Math.floor(peaks.data.length / (2 * channels));
+    var scale = Math.pow(2, (peaks.bits || 8) - 1);
+    var lows = new Float32Array(width * channels);
+    var highs = new Float32Array(width * channels);
+    for (var x = 0; x < width; x += 1) {
+      var first = Math.floor((x / width) * pairs);
+      var last = Math.max(first + 1, Math.floor(((x + 1) / width) * pairs));
+      for (var channel = 0; channel < channels; channel += 1) {
+        var low = 0;
+        var high = 0;
+        for (var index = first; index < last && index < pairs; index += 1) {
+          var here = (index * channels + channel) * 2;
+          if (peaks.data[here] < low) { low = peaks.data[here]; }
+          if (peaks.data[here + 1] > high) { high = peaks.data[here + 1]; }
+        }
+        lows[x * channels + channel] = low / scale;
+        highs[x * channels + channel] = high / scale;
+      }
+    }
+    reduced = { width: width, from: peaks, channels: channels, lows: lows, highs: highs };
+    return reduced;
   }
 
   function movePlayhead(time) {

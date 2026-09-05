@@ -113,14 +113,14 @@
         <p id="player-trouble" class="problem" hidden></p>
       </div>
 
-      {# The timeline: the waveform, the speaker lanes, the marked range. #}
+      {# The timeline: the waveform and the marked range. #}
       <div class="timeline" id="timeline">
         <canvas id="waveform" height="56"></canvas>
         <div id="range" hidden></div>
         <div id="playhead"></div>
       </div>
       <p class="hint" style="grid-column: 1 / -1">
-        <span>Timeline: click to seek, drag to mark a clip. Speaker lanes are coloured.{% if media_url and is_video %} Drag the right edge of the picture to resize it.{% endif %}</span>
+        <span>Timeline: click to seek, drag to mark a clip.{% if media_url and is_video %} Drag the right edge of the picture to resize it.{% endif %}</span>
         <span class="grow"></span>
         <span id="clip-said"></span>
         <button type="button" id="drop-clip" class="ghost tiny" hidden

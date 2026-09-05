@@ -23,8 +23,8 @@ from core.recordings import Recording
 
 log = logging.getLogger("transcribe.viewer")
 
-# One colour per Speaker, used for the name, the bar beside the row, and the
-# Timeline lane, so that the same person is the same colour everywhere. They
+# One colour per Speaker, used for the name and the bar beside the row, so
+# that the same person is the same colour everywhere. They
 # are the stylesheet's own tokens rather than fixed colours, because each one
 # has a light and a dark value and a person may be reading in either.
 SPEAKER_COLOURS = [

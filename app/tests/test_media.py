@@ -241,3 +241,63 @@ def test_the_cap_falls_back_to_the_specifications_default(monkeypatch):
     assert media.threads_per_job() == 8
     monkeypatch.setenv("MEDIA_THREADS_PER_JOB", "0")
     assert media.threads_per_job() == 8
+
+
+# The waveform's zoom -------------------------------------------------------------
+
+
+def test_the_zoom_gives_about_the_same_number_of_pairs_whatever_the_length():
+    # 51 minutes at 48 kHz is 146,880,000 samples; 8,192 pairs of them is one
+    # pair every 17,930 samples. Six hours is one every 126,563.
+    assert media.waveform_zoom(51 * 60) == 17930
+    assert media.waveform_zoom(6 * 3600) == 126563
+    for seconds in (51 * 60, 6 * 3600, 20 * 3600):
+        pairs = seconds * media.PLAYBACK_SAMPLE_RATE / media.waveform_zoom(seconds)
+        assert media.WAVEFORM_PAIRS - 1 < pairs <= media.WAVEFORM_PAIRS
+
+
+def test_the_zoom_is_never_finer_than_the_old_fixed_figure():
+    # A short recording is drawn exactly as before v1.3.0, and an unknown
+    # length falls back to the same figure rather than guessing.
+    assert media.waveform_zoom(10) == 256
+    assert media.waveform_zoom(43) == 256
+    assert media.waveform_zoom(None) == 256
+    assert media.waveform_zoom(0) == 256
+    assert media.waveform_zoom(60) > 256
+
+
+def test_the_zoom_reaches_audiowaveform_and_the_file_is_renamed_when_whole(
+    tmp_path, monkeypatch
+):
+    target = tmp_path / "waveform.json"
+    asked = []
+
+    class Decoder:
+        stdout = None
+
+        def wait(self, timeout=None):
+            return 0
+
+    def fake_popen(arguments, **rest):
+        return Decoder()
+
+    def fake_run(arguments, **rest):
+        asked.append(arguments)
+        Path(arguments[arguments.index("-o") + 1]).write_text("{}", encoding="utf-8")
+
+        class Finished:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Finished()
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    media.make_waveform(tmp_path / "playback.mp4", target, 51 * 60)
+
+    assert asked[0][asked[0].index("-z") + 1] == "17930"
+    assert asked[0][asked[0].index("-o") + 1] == str(media.partial_name(target))
+    assert target.exists()
+    assert not media.partial_name(target).exists()

@@ -209,7 +209,7 @@ def make_playback(recording: Recording) -> Recording:
         media.make_playback_copy(
             recording.original_path, target, probed, recording.preprocessing
         )
-        media.make_waveform(target, recording.waveform_path)
+        media.make_waveform(target, recording.waveform_path, probed.duration_seconds)
     except media.MediaError as problem:
         # A Recording without a Playback copy is still transcribable, so this
         # is not a failure of the Recording. The pages keep saying it is being
