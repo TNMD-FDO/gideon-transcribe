@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.2, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The Local engine stopped after warming up.** The model keeps a fixed
+  state for every conversation in flight, and vLLM's default room for 1,024
+  of them does not fit in the engine's share of the card: "max_num_seqs
+  (1024) exceeds available Mamba cache blocks (409)". The app never has more
+  than four calls in flight, so the engine is now told to hold eight, which
+  also leaves more of its memory for the transcript itself. Found on the
+  first start of the Local engine on the office server.
+
 ## v1.10.1, 2026-09-05
 
 ```
