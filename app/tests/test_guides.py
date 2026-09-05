@@ -193,7 +193,9 @@ def test_the_office_s_own_files_never_enter_the_build_context():
 
 def test_the_help_links_are_on_the_pages():
     base = (HERE / "app" / "templates" / "base.html").read_text(encoding="utf-8")
-    assert "{% url 'help' %}" in base
+    # Help goes through the help_url tag, which lands on the section for the
+    # page; the tag itself reverses the help route.
+    assert "{% help_url page %}" in base
     panel = (HERE / "app" / "templates" / "panel" / "base.html").read_text(
         encoding="utf-8"
     )
