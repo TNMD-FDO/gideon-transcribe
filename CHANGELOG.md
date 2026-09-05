@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.4.0, 2026-09-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. The viewer's layout changes on wide
+windows; a remembered sheet height and picture width carry over, and a
+remembered column width is new.
+
+### Changed
+
+- **The viewer has a Bench.** On a window 1280 pixels or wider, the video
+  and the Clips and Details panels move to a column on the right of the
+  transcript, always open, with the video at the top and one panel at a time
+  under it chosen by tabs. The top bar keeps the title, the markers, the
+  transport and the Timeline, which now spans the transcript's width. The
+  empty margins either side of the transcript on a wide monitor are what the
+  column takes; the transcript keeps its reading width. Nothing covers the
+  words: no sheet rises over them and, when the AI assistant's Summary and
+  Chat arrive, they will be two more tabs on the Bench rather than overlays.
+  The picture is resized by dragging the column's left edge, and the width is
+  remembered on its own, apart from the picture width a laptop remembers. On
+  a window narrower than 1280 pixels nothing changes: the picture sits beside
+  the title and the panels are the bottom sheet, as before. This is the first
+  page of the Workbench Layout, which the following releases apply to Upload,
+  Recordings and Batch, then Cases and Clips, then the Panel. The viewer
+  chapter carries the amendment and the glossary gains the word.
+
 ## v1.3.0, 2026-09-04
 
 ```

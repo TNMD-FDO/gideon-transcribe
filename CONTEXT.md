@@ -101,6 +101,9 @@ A user edit of a Segment's text in the viewer. Marked on the Segment and recorde
 **Timeline**:
 The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call.
 
+**Bench**:
+The viewer's right-hand column on a window 1280 pixels or wider: the video at the top and, under it, one of the Clips, Details, Summary and Chat panels, chosen by tabs. On a narrower window the same panels are the bottom sheet. Avoid: sidebar (that is the left one), drawer, inspector.
+
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.
 

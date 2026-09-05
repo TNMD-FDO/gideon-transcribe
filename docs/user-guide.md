@@ -69,7 +69,7 @@ A recording in a case is not listed here. It is on its case's page.
 
 ## Reading a transcript
 
-Open a recording and the viewer shows the recording on the left and the transcript on the right, at reading width. Playing the recording highlights the words being spoken, and the transcript scrolls to keep up.
+Open a recording and the viewer shows the transcript at reading width with the tools on its left. On a wide monitor the video sits at the top of a column on the right, with the **Clips** and **Details** panels under it, so you can read, play and mark clips without anything covering the words; drag the column's left edge to make the picture bigger or smaller. On a laptop the picture sits above the transcript and the panels open as a sheet along the bottom instead. Playing the recording highlights the words being spoken, and the transcript scrolls to keep up.
 
 ### Playing
 

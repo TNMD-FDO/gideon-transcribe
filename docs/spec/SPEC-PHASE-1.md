@@ -2374,7 +2374,7 @@ A prototype exists in the planning repository at `prototypes/transcript-viewer/`
 
 ### The Desk layout
 
-The Transcript comes first, at reading width, in the middle of the screen. The media sits above it in a dock, the tools sit in a left sidebar, and Clips and Details sit in a bottom sheet. The layout is built for correctors and interpreters who live on the keyboard.
+The Transcript comes first, at reading width, in the middle of the screen. The tools sit in a left sidebar. On a window narrower than 1280 pixels the media sits above the Transcript in a dock and Clips and Details sit in a bottom sheet, as the diagram below shows. From 1280 pixels the picture and the panels move to a third column on the right, the **Bench**: the video at the top, at the column's width and resizable by its left edge, and under it one panel at a time from Clips, Details and, when the AI assistant is on, Summary and Chat, chosen by a row of tabs. The Bench is always open; there is no sheet and nothing to close. The dock then holds only the title, the markers, the transport and the Timeline, which spans the Transcript's width. The layout is built for correctors and interpreters who live on the keyboard, and for the wide monitors an office actually has, without taking anything from a laptop.
 
 ```
 +--------------+---------------------------------------------------+
@@ -2394,10 +2394,10 @@ The Transcript comes first, at reading width, in the middle of the screen. The m
 ```
 
 - **Transcript column**: the Transcript at reading width, one row per Segment (see "The Transcript" below). It is the only thing that scrolls in Follow mode.
-- **Media dock**, above the Transcript: a thumbnail of the video, which pops out to a floating window (the header's `Pop out video` and `Dock video` control; while popped out the thumbnail slot reads `Video popped out`); for an audio-only Recording a waveform stands in the thumbnail's place. Beside the thumbnail sit the transport bar and the primary **New Clip** button. Under them runs the **Timeline**: the waveform; click to seek, drag to mark a Clip. For a Two-channel call the waveform is split into one lane per Side.
+- **Media dock**, above the Transcript: a thumbnail of the video (on the Bench, the picture at the top of the column instead), which pops out to a floating window (the header's `Pop out video` and `Dock video` control; while popped out the thumbnail slot reads `Video popped out`); for an audio-only Recording a waveform stands in the thumbnail's place. Beside the thumbnail sit the transport bar and the primary **New Clip** button. Under them runs the **Timeline**: the waveform; click to seek, drag to mark a Clip. For a Two-channel call the waveform is split into one lane per Side.
 - **Left sidebar**: the search box, the Speakers toggle, the Speakers panel, and the Export, Summary, Chat, and shortcuts buttons. What each holds is below.
-- **Bottom sheet**: two panels, **Clips** (the Clip tool and the Recording's Clips list) and **Details** (the Provenance). The New Clip button opens the sheet at Clips, and marking a Clip by any route (I or O, a drag on the Timeline, `+ Clip` on a Segment, S) opens it too. The sheet is never the only way to a Clip, because a Clip tool that lives only in a closed sheet is not found.
-- **Overlays**: Summary and Chat open as overlays from the sidebar; the shortcuts list opens as an overlay from the sidebar button or `?`. Esc closes an overlay or panel.
+- **Bottom sheet**, on a narrow window, or the **Bench**'s tabbed panels on a wide one: **Clips** (the Clip tool and the Recording's Clips list) and **Details** (the Provenance). The New Clip button opens the sheet at Clips, and marking a Clip by any route (I or O, a drag on the Timeline, `+ Clip` on a Segment, S) opens it too. The sheet is never the only way to a Clip, because a Clip tool that lives only in a closed sheet is not found.
+- **Overlays**: on a narrow window Summary and Chat open as overlays from the sidebar; on the Bench they are two more tabs beside Clips and Details, so an answer is read beside the Transcript it cites. The shortcuts list opens as an overlay from the sidebar button or `?`. Esc closes an overlay or, on a narrow window, the sheet.
 - **Header**: a control back to the Recordings page, the Recording's title, the markers (see "Markers" below), the pop-out control for a video once playback is Ready, and the light and dark theme toggle.
 
 ### Player and transport
@@ -2521,9 +2521,9 @@ The Clips chapter owns the Clip: its fields, rendering, downloads, limits, and l
 ### Export, Summary, and Chat
 
 - **Export** in the sidebar offers the Transcript's exports: **Word**, **plain text (.txt)**, and **Captions (.srt)**. Each is written at the moment of export from the live Transcript, carries what the Exports chapter fixes (the Word layout and its Processing record; the plain-text shape with its head, the one notice, and `[hh:mm:ss] Speaker: text` lines with `(corrected)` after the name; the Captions cues with no notice), and writes an audit row. No VTT is produced in Phase 1.
-- **Summary** opens an overlay that lists the Transcript's Summaries, each with Export to Word, Regenerate, and Delete, and a `New summary` dialog with a Summary template choice (shown only when two or more templates are Enabled), an optional Focus box, and a Length choice of Short, Standard, or Detailed. Every time in a Summary is a Citation, a link that seeks the player. The AI notice sits at the top.
-- **Chat** opens an overlay with a thread list (New chat, Delete per Chat), the conversation, Copy per answer, and Export to Word. Answers cite Segments; each Citation seeks the player. The AI notice sits at the top.
-- Both overlays show `Reading the transcript...` while the AI assistant works and deliver whole answers; there is no streaming.
+- **Summary** opens its panel (a Bench tab on a wide window, an overlay on a narrow one) that lists the Transcript's Summaries, each with Export to Word, Regenerate, and Delete, and a `New summary` dialog with a Summary template choice (shown only when two or more templates are Enabled), an optional Focus box, and a Length choice of Short, Standard, or Detailed. Every time in a Summary is a Citation, a link that seeks the player. The AI notice sits at the top.
+- **Chat** opens its panel (a Bench tab on a wide window, an overlay on a narrow one) with a thread list (New chat, Delete per Chat), the conversation, Copy per answer, and Export to Word. Answers cite Segments; each Citation seeks the player. The AI notice sits at the top.
+- Both panels show `Reading the transcript...` while the AI assistant works and deliver whole answers; there is no streaming.
 - The content of Summaries, Chats, and Speaker suggestions, their prompts, and their exports are the AI assistant chapter's and the Exports chapter's decisions.
 
 ### Details panel and the Provenance
@@ -2625,6 +2625,7 @@ Transcript viewer and synced player; Clips: model, lifecycle, and management (it
 - From the Upload page ticket to the markers: the pill reads `Not diarized`; a Side with one Speaker is labelled `Side 1`, with more `Side 1 Speaker 1`, `Side 1 Speaker 2`, in the Transcript, the Speakers panel, and the Timeline lanes.
 - From the Word export ticket, as recorded on the Clips ticket, to the Export entries: Captions (.srt) joins Word and plain text; the plain-text export's shape (head, one notice, `[hh:mm:ss] Speaker: text`, `(corrected)`) replaces "Speakers, timestamps, and the Transcript, nothing else"; no VTT in Phase 1.
 - From the maintainer, on the v1.3.0 build, to the Timeline: the Speaker lanes withdrawn. The Timeline is the waveform, split into one lane per Side on a Two-channel call, and a Speaker's colour is used for the name and the colour bar. The lanes were one translucent band per Segment on every redraw, and told a corrector nothing the rows beside them did not.
+- From the maintainer, on the v1.4.0 build, to the layout: the Bench. From 1280 pixels the video and the Clips, Details, Summary and Chat panels are a third column on the right, always open, with the sheet and the overlays kept for narrower windows; the dock then carries the title, transport and Timeline only. The first page of the Workbench Layout, which every page follows in turn: use the width, put the action beside its consequence, cover nothing, and stack as before below 1280 pixels.
 
 ## 9. Clips
 
