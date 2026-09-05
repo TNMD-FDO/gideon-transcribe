@@ -198,14 +198,19 @@
   }
 
   cancel.addEventListener("click", function () {
-    if (!window.confirm(
-      "Cancel this batch? Each recording is removed from your recordings and " +
-      "would have to be uploaded again."
-    )) { return; }
-    fetch("/batch/" + window.BATCH + "/cancel", {
-      method: "POST",
-      headers: { "X-CSRFToken": cookie("csrftoken") }
-    }).then(function () { window.location = "/"; });
+    UI.confirm({
+      title: "Cancel this batch?",
+      body: "Each recording is removed from your recordings and would have to be uploaded again.",
+      ok: "Cancel the batch",
+      cancel: "Keep going",
+      danger: true
+    }).then(function (yes) {
+      if (!yes) { return; }
+      fetch("/batch/" + window.BATCH + "/cancel", {
+        method: "POST",
+        headers: { "X-CSRFToken": cookie("csrftoken") }
+      }).then(function () { window.location = "/"; });
+    });
   });
 
   ask();

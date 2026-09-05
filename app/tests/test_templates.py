@@ -141,3 +141,47 @@ def test_the_typeface_ships_with_the_app_under_its_licence():
     assert not re.search(r"#[0-9a-fA-F]{3,6}\b", body.replace("#i-", "")), (
         "a colour written into a rule"
     )
+
+
+def test_no_browser_pop_up_is_left_and_every_confirm_names_its_action():
+    """The app's dialogs replaced the browser's; a template that asks first
+    says what the action is, so the button in the dialog never just says OK."""
+    for path in list(every_template()) + [
+        p for p in STATIC.glob("*.js") if p.name != "ui.js"
+    ]:
+        text = path.read_text(encoding="utf-8")
+        for bad in (
+            "window.confirm(",
+            "window.prompt(",
+            "window.alert(",
+            "return confirm(",
+        ):
+            assert bad not in text, f"{path.name} still uses {bad}"
+    for template in every_template():
+        text = template.read_text(encoding="utf-8")
+        for match in re.finditer(r'data-confirm="', text):
+            tail = text[match.start() : match.start() + 700]
+            assert "data-confirm-ok=" in tail, (
+                f"{template.name}: a confirm without its action word"
+            )
+    base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
+    assert "ui.js" in base and base.index("ui.js") < base.index("theme.js")
+
+
+def test_every_list_page_has_an_empty_state_and_hints_can_be_dismissed():
+    for name in (
+        "recordings.html",
+        "cases.html",
+        "clips.html",
+        "case.html",
+        "recycle-bin.html",
+    ):
+        text = (TEMPLATES / name).read_text(encoding="utf-8")
+        assert '{% include "empty.html"' in text, f"{name} has no empty state"
+    for name in ("recordings.html", "case.html", "viewer.html"):
+        text = (TEMPLATES / name).read_text(encoding="utf-8")
+        for match in re.finditer(r'class="hint" data-hint="([a-z-]+)"', text):
+            block = text[match.start() : match.start() + 600]
+            assert 'class="ghost tiny dismiss"' in block, (
+                f"{name}: hint {match.group(1)} cannot be dismissed"
+            )

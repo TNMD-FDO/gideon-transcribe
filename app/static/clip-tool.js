@@ -328,36 +328,39 @@
       from.value = clock(parseFloat(card.dataset.start));
       to.value = clock(parseFloat(card.dataset.end));
       say();
-      var wanted = window.prompt(
-        "Adjust this clip. Change the times in the tool above, then press OK " +
-        "to save them.",
-        "save"
-      );
-      if (wanted === null) { return; }
-      var span = range();
-      if (!span) { return; }
-      fetch("/clip/" + id, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": cookie("csrftoken")
-        },
-        body: JSON.stringify({ start: span.from, end: span.to })
-      }).then(load);
+      UI.confirm({
+        title: "Adjust this clip",
+        body: "Change the start and end in the tool above, then save. The clip is rendered again with the new span.",
+        ok: "Save the new span",
+        cancel: "Leave it"
+      }).then(function (yes) {
+        if (!yes) { return; }
+        var span = range();
+        if (!span) { return; }
+        fetch("/clip/" + id, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": cookie("csrftoken")
+          },
+          body: JSON.stringify({ start: span.from, end: span.to })
+        }).then(load).then(function () { UI.toast("Span saved; rendering again"); });
+      });
     } else if (event.target.closest(".clip-rename")) {
-      var name = window.prompt("Rename this clip to:", card.dataset.title);
-      if (!name) { return; }
-      fetch("/clip/" + id, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": cookie("csrftoken")
-        },
-        body: JSON.stringify({ title: name })
-      }).then(load);
+      UI.prompt({ title: "Rename this clip", value: card.dataset.title, ok: "Rename" }).then(function (name) {
+        if (!name || name === card.dataset.title) { return; }
+        fetch("/clip/" + id, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": cookie("csrftoken")
+          },
+          body: JSON.stringify({ title: name })
+        }).then(load).then(function () { UI.toast("Renamed"); });
+      });
     } else if (event.target.closest(".clip-delete")) {
-      if (!window.confirm("Delete this clip? The file goes with it.")) { return; }
-      send("/clip/" + id + "/delete").then(load);
+      UI.confirm({ title: "Delete this clip?", body: "The clip and its file go together.", ok: "Delete clip", danger: true })
+        .then(function (yes) { if (yes) { send("/clip/" + id + "/delete").then(load); } });
     }
   });
 

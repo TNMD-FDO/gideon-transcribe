@@ -127,13 +127,7 @@
         </aside>
       </div>
     {% else %}
-      <div class="card">
-        <b>No clips yet.</b>
-        <p class="muted small" style="margin: 4px 0 0">
-          Open a recording, mark a span with I and O or by dragging on the
-          timeline, and save it.
-        </p>
-      </div>
+      {% include "empty.html" with icon="clip" title="No clips yet" line="A clip is a span of a recording, rendered as a file you can play outside the app. Open a recording, mark a start and an end, and save it." action="Your recordings" action_url="/" %}
     {% endif %}
   </div>
 

@@ -588,9 +588,19 @@
 
   var trouble = document.getElementById("player-trouble");
 
-  function sayTrouble(words) {
+  function sayTrouble(words, detail) {
     if (!trouble) { return; }
-    trouble.textContent = words;
+    trouble.textContent = "";
+    trouble.appendChild(document.createTextNode(words + " "));
+    if (detail) {
+      var more = document.createElement("details");
+      more.className = "inline";
+      var summary = document.createElement("summary");
+      summary.textContent = "Details";
+      more.appendChild(summary);
+      more.appendChild(document.createTextNode(detail));
+      trouble.appendChild(more);
+    }
     trouble.hidden = false;
   }
   window.VIEWER.sayTrouble = sayTrouble;
@@ -600,16 +610,17 @@
     // the Play button simply does nothing. Whatever went wrong is worth
     // saying, because the person watching cannot see the network.
     var WHY = {
-      1: "the download was stopped",
-      2: "the download failed part way through",
-      3: "this browser could not decode the file",
-      4: "this browser will not play this file, or it could not be fetched"
+      1: "The download was stopped.",
+      2: "The download failed part way through.",
+      3: "This browser could not decode the file.",
+      4: "This browser will not play this file, or it could not be fetched."
     };
     player.addEventListener("error", function () {
       var code = player.error ? player.error.code : 0;
+      // The first sentence is for a colleague; the detail sits behind a word.
       sayTrouble(
-        "This recording will not play: " + (WHY[code] || "an unknown fault") +
-        " (error " + code + "). The transcript below still works."
+        "This recording will not play here. The transcript still works.",
+        (WHY[code] || "An unknown fault.") + " Media error " + code + "."
       );
       if (window.console) {
         window.console.error("playback failed", code,
@@ -935,10 +946,10 @@
       }).catch(function () {
         box.disabled = false;
         save.disabled = false;
-        window.alert(
-          "That correction was not saved. You may have been signed out; " +
-          "open the page again and check before retyping it."
-        );
+        UI.alert({
+          title: "That correction was not saved",
+          body: "You may have been signed out. Open the page again and check before retyping it."
+        });
       });
     }
 
@@ -977,9 +988,11 @@
         box.select();
         return;
       }
-      var now = window.prompt("Rename " + chip.dataset.name + " to:", chip.dataset.name);
-      if (!now || now === chip.dataset.name) { return; }
-      rename(chip.dataset.name, now);
+      UI.prompt({ title: "Rename " + chip.dataset.name, body: "Every line this speaker spoke takes the new name.", value: chip.dataset.name, ok: "Rename" })
+        .then(function (now) {
+          if (!now || now === chip.dataset.name) { return; }
+          rename(chip.dataset.name, now);
+        });
     });
     if (renameBox) {
       document.getElementById("rename-save").addEventListener("click", function () {
@@ -1015,11 +1028,12 @@
       if (!onto) { return; }
       onto.classList.remove("over");
       if (!dragged || dragged === onto.dataset.name) { return; }
-      if (!window.confirm(
-        "Merge " + dragged + " into " + onto.dataset.name +
-        "? Every segment of " + dragged + " becomes " + onto.dataset.name + "."
-      )) { return; }
-      rename(dragged, onto.dataset.name);
+      var was = dragged;
+      UI.confirm({
+        title: "Merge " + was + " into " + onto.dataset.name + "?",
+        body: "Every line of " + was + " becomes " + onto.dataset.name + ". Rename one of them afterwards if that was wrong.",
+        ok: "Merge"
+      }).then(function (yes) { if (yes) { rename(was, onto.dataset.name); } });
     });
   }
 
@@ -1370,7 +1384,7 @@
         document.exitPictureInPicture();
       } else {
         player.requestPictureInPicture().catch(function () {
-          window.alert("This browser would not pop the video out.");
+          UI.toast("This browser will not pop the video out.", { problem: true, icon: "warning" });
         });
       }
     });
@@ -1505,14 +1519,19 @@
   var cancel = document.getElementById("cancel-job");
   if (cancel) {
     cancel.addEventListener("click", function () {
-      if (!window.confirm(
-        "Cancel this recording? It is removed from your recordings as if it " +
-        "had never been uploaded, and would have to be uploaded again."
-      )) { return; }
-      fetch("/recording/" + window.VIEWER.recording + "/delete", {
-        method: "POST",
-        headers: { "X-CSRFToken": cookie("csrftoken") }
-      }).then(function () { window.location = "/"; });
+      UI.confirm({
+        title: "Cancel this recording?",
+        body: "It is removed from your recordings as if it had never been uploaded, and would have to be uploaded again.",
+        ok: "Cancel the recording",
+        cancel: "Let it run",
+        danger: true
+      }).then(function (yes) {
+        if (!yes) { return; }
+        fetch("/recording/" + window.VIEWER.recording + "/delete", {
+          method: "POST",
+          headers: { "X-CSRFToken": cookie("csrftoken") }
+        }).then(function () { window.location = "/"; });
+      });
     });
   }
 

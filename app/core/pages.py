@@ -35,8 +35,8 @@ log = logging.getLogger("transcribe.pages")
 
 # What the standing line says, with the hours from the idle timeout.
 STANDING_LINE = (
-    "Your recordings and transcripts are removed when you sign out or after "
-    "{hours} hours without activity. Download or export anything you want to keep."
+    "Your recordings stay until you sign out, or {hours} hours after you stop "
+    "working. Export anything you want to keep."
 )
 
 

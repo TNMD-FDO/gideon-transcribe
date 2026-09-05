@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static icons %}
 {% block title %}{{ case.name }}{% endblock %}
 {% block main_class %}wide{% endblock %}
 
@@ -150,7 +150,7 @@
                         </form>
                         {% if row.others %}
                           <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px"
-                                onsubmit="return confirm('Merge {{ row.person.name|escapejs }} into ' + this.into.options[this.into.selectedIndex].text + '? Their speakers in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }} take that name.')">
+                                data-confirm-title="Merge {{ row.person.name }} into the chosen person?" data-confirm="Their speakers in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }} take that person's name. Their notes are kept under the old name." data-confirm-ok="Merge">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="merge">
                             <label class="muted">Merge into</label>
@@ -163,7 +163,7 @@
                           </form>
                         {% endif %}
                         <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px"
-                              onsubmit="return confirm('Delete {{ row.person.name|escapejs }} from this case? Their speakers go back to Speaker 1, Speaker 2 and so on.')">
+                              data-confirm-title="Delete {{ row.person.name }} from this case?" data-confirm="Their speakers go back to Speaker 1, Speaker 2 and so on. Nothing in the recordings is lost." data-confirm-ok="Delete person" data-danger>
                           {% csrf_token %}
                           <input type="hidden" name="action" value="delete">
                           <button type="submit" class="small ghost danger">Delete person</button>
@@ -268,13 +268,7 @@
               </table>
             </div>
           {% else %}
-            <div class="card">
-              <b>No clips in this case yet.</b>
-              <p class="muted small" style="margin: 4px 0 0">
-                Open a recording, mark a span, and save it. A clip made on a
-                recording in a case is listed here and never on the Clips page.
-              </p>
-            </div>
+            {% include "empty.html" with icon="clip" title="No clips in this case yet" line="Open a recording, mark a start and an end, and save it. A clip made on a recording in a case is listed here and never on the Clips page." %}
           {% endif %}
 
         {% elif recordings %}
@@ -353,14 +347,13 @@
               {% endfor %}
             </tbody>
           </table>
-          <p class="muted small">Click a recording for its details, type and notes. Up and down move, Enter opens.</p>
-        {% else %}
-          <div class="card">
-            <b>Nothing in this case yet.</b>
-            <p class="muted small" style="margin: 4px 0 0">
-              Add recordings here, or move one in from your recordings.
-            </p>
+          <div class="hint" data-hint="case-table" hidden>
+            {% icon "info" %}
+            <span class="grow">Click a recording to see its details, type and notes. The arrow keys move, Enter opens.</span>
+            <button type="button" class="ghost tiny dismiss">Got it</button>
           </div>
+        {% else %}
+          {% include "empty.html" with icon="upload" title="Nothing in this case yet" line="Add recordings here, or move one in from your recordings. A recording in a case is kept after you sign out." action="Add recordings" action_url=add_recordings_url %}
         {% endif %}
       </div>
 

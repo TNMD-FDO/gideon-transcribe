@@ -93,8 +93,8 @@
         <div id="range" hidden></div>
         <div id="playhead"></div>
       </div>
-      <p class="hint">
-        <span>Timeline: click to seek, drag to mark a clip.{% if media_url and is_video %} Drag the edge of the picture to resize it.{% endif %}</span>
+      <p class="caption">
+        <span>Click the timeline to jump; drag along it to mark a clip.{% if media_url and is_video %} Drag the edge of the picture to resize it.{% endif %}</span>
         <span class="grow"></span>
         <span id="clip-said"></span>
         <button type="button" id="drop-clip" class="ghost tiny" hidden
@@ -161,10 +161,11 @@
           </div>
           {% if transcript %}
             {% if speakers %}
-              <p class="small muted">
-                Click a name to rename it. Drag one speaker onto another to
-                merge them, when two labels are the same person.
-              </p>
+              <div class="hint" data-hint="speakers" hidden>
+                {% icon "info" %}
+                <span class="grow">Click a name to change it. Drag one speaker onto another when two labels are the same person.</span>
+                <button type="button" class="ghost tiny dismiss">Got it</button>
+              </div>
               {% if in_case %}
                 {% comment %}
                   Inside a case the rename box offers the case's People as the
@@ -310,12 +311,7 @@
           <button type="button" class="sheet-tab" data-panel="chat">Chat</button>
         {% endif %}
         <button type="button" class="sheet-tab" data-panel="details">Details</button>
-        <span class="muted small grow">
-          {% if transcript %}
-            Double-click a segment or use {% icon "correct" %} edit to correct it &middot;
-            I and O mark a clip while playing
-          {% endif %}
-        </span>
+        <span class="grow"></span>
         <button type="button" class="ghost small" id="expand-sheet" hidden title="Give the panel the height of the window">{% icon "expand" %} Expand</button>
         <button type="button" class="ghost small" id="close-sheet" hidden>{% icon "chevron-down" %} Close</button>
       </div>

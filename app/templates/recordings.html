@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static icons %}
 {% block title %}{% if someone_elses %}{{ someone_elses.username }}'s recordings{% else %}Your recordings{% endif %}{% endblock %}
 {% block main_class %}wide{% endblock %}
 
@@ -108,19 +108,22 @@
               {% endfor %}
             </tbody>
           </table>
-          <p class="muted small">Click a recording for its details. Up and down move, Enter opens.</p>
+          <div class="hint" data-hint="recordings-table" hidden>
+            {% icon "info" %}
+            <span class="grow">Click a recording to see its details beside the table. The arrow keys move, Enter opens.</span>
+            <button type="button" class="ghost tiny dismiss">Got it</button>
+          </div>
         </div>
         <aside class="pane-detail" id="detail-pane">
           <p class="muted small" id="detail-none">Choose a recording to see its details.</p>
         </aside>
       </div>
     {% else %}
-      <div class="card">
-        <b>Nothing here yet.</b>
-        <p class="muted small" style="margin: 4px 0 0">
-          Uploaded recordings appear here while you are signed in.
-        </p>
-      </div>
+      {% if someone_elses %}
+        {% include "empty.html" with icon="upload" title="No recordings" line="This person has nothing in their workspace at the moment." %}
+      {% else %}
+        {% include "empty.html" with icon="upload" title="No recordings yet" line="Upload a recording and it is transcribed here. Your recordings stay until you sign out." action="Upload recordings" action_url="/upload" %}
+      {% endif %}
     {% endif %}
   </div>
 

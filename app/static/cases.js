@@ -46,10 +46,14 @@
     var newName = document.getElementById("new-name");
     var newWarning = document.getElementById("new-warning");
 
-    openNew.addEventListener("click", function () {
+    function openTheBox() {
       show(newBox, true);
       newName.focus();
-    });
+    }
+    openNew.addEventListener("click", openTheBox);
+    // The empty state's own New case, when there are no cases yet.
+    var openNewEmpty = document.getElementById("open-new-empty");
+    if (openNewEmpty) { openNewEmpty.addEventListener("click", openTheBox); }
     var neverMind = document.getElementById("never-mind");
     if (neverMind) {
       neverMind.addEventListener("click", function () { show(newBox, false); });
@@ -63,7 +67,7 @@
       post("/cases/new", { name: name }).then(function (answer) {
         makeIt.disabled = false;
         if (!answer.ok) {
-          window.alert(answer.said.why || "That case could not be made.");
+          UI.toast(answer.said.why || "That case could not be made.", { problem: true, icon: "warning" });
           return;
         }
         // The duplicate name is a warning, so the case exists either way and
@@ -115,7 +119,7 @@
       if (!name) { return; }
       post("/case/" + caseId + "/rename", { name: name }).then(function (answer) {
         if (!answer.ok) {
-          window.alert(answer.said.why || "That name could not be saved.");
+          UI.toast(answer.said.why || "That name could not be saved.", { problem: true, icon: "warning" });
           return;
         }
         document.getElementById("case-name").textContent = answer.said.name;
@@ -137,26 +141,29 @@
       fetch("/case/" + caseId + "/what-would-go")
         .then(function (answer) { return answer.json(); })
         .then(function (counts) {
-          var words =
-            "Delete the case “" + counts.name + "”?\n\n" +
-            "This removes " + counts.recordings + " recording" +
-            (counts.recordings === 1 ? "" : "s") + ", " +
-            counts.transcripts + " transcript" +
-            (counts.transcripts === 1 ? "" : "s") + ", " +
-            (counts.chats ? "" : "and ") +
-            counts.clips + " clip" + (counts.clips === 1 ? "" : "s") +
-            (counts.chats ? ", and " + counts.chats + " case chat" + (counts.chats === 1 ? "" : "s") : "") +
-            ", " + counts.size + " in all.\n\n" +
-            "This is final. There is no way to get it back.";
-          if (!window.confirm(words)) { return; }
-          remove.disabled = true;
-          post("/case/" + caseId + "/delete").then(function (answer) {
-            if (!answer.ok) {
-              remove.disabled = false;
-              window.alert("That case could not be deleted.");
-              return;
-            }
-            window.location = answer.said.where;
+          var taking =
+            "This removes " + plural(counts.recordings, "recording") + ", " +
+            plural(counts.transcripts, "transcript") + ", " +
+            (counts.chats ? "" : "and ") + plural(counts.clips, "clip") +
+            (counts.chats ? ", and " + plural(counts.chats, "case chat") : "") +
+            ", " + counts.size + " in all.";
+          UI.confirm({
+            title: "Delete the case " + counts.name + "?",
+            body: [taking, "This is final. There is no way to get it back."],
+            ok: "Delete case",
+            cancel: "Keep it",
+            danger: true
+          }).then(function (yes) {
+            if (!yes) { return; }
+            remove.disabled = true;
+            post("/case/" + caseId + "/delete").then(function (answer) {
+              if (!answer.ok) {
+                remove.disabled = false;
+                UI.toast("That case could not be deleted.", { problem: true, icon: "warning" });
+                return;
+              }
+              window.location = answer.said.where;
+            });
           });
         });
     });
@@ -176,7 +183,7 @@
       post("/case/" + keep.dataset.case + "/keep").then(function (answer) {
         if (answer.ok) { window.location.reload(); return; }
         keep.disabled = false;
-        window.alert("That case could not be kept.");
+        UI.toast("That case could not be kept.", { problem: true, icon: "warning" });
       });
       return;
     }
@@ -187,7 +194,7 @@
       post("/case/" + restore.dataset.case + "/restore").then(function (answer) {
         if (answer.ok) { window.location = answer.said.where; return; }
         restore.disabled = false;
-        window.alert("That case could not be restored.");
+        UI.toast("That case could not be restored.", { problem: true, icon: "warning" });
       });
       return;
     }
@@ -198,18 +205,25 @@
       fetch("/case/" + wipe.dataset.case + "/what-would-go")
         .then(function (answer) { return answer.json(); })
         .then(function (counts) {
-          var words =
-            "Delete the case “" + counts.name + "” permanently?\n\n" +
-            "This removes " + plural(counts.recordings, "recording") + ", " +
-            plural(counts.transcripts, "transcript") + ", and " +
-            plural(counts.clips, "clip") + ", " + counts.size + " in all.\n\n" +
-            "Nothing can bring it back.";
-          if (!window.confirm(words)) { return; }
-          wipe.disabled = true;
-          post("/case/" + wipe.dataset.case + "/wipe").then(function (answer) {
-            if (answer.ok) { window.location.reload(); return; }
-            wipe.disabled = false;
-            window.alert("That case could not be deleted.");
+          UI.confirm({
+            title: "Delete the case " + counts.name + " permanently?",
+            body: [
+              "This removes " + plural(counts.recordings, "recording") + ", " +
+              plural(counts.transcripts, "transcript") + ", and " +
+              plural(counts.clips, "clip") + ", " + counts.size + " in all.",
+              "Nothing can bring it back."
+            ],
+            ok: "Delete permanently",
+            cancel: "Leave it in the bin",
+            danger: true
+          }).then(function (yes) {
+            if (!yes) { return; }
+            wipe.disabled = true;
+            post("/case/" + wipe.dataset.case + "/wipe").then(function (answer) {
+              if (answer.ok) { window.location.reload(); return; }
+              wipe.disabled = false;
+              UI.toast("That case could not be deleted.", { problem: true, icon: "warning" });
+            });
           });
         });
     }
@@ -221,19 +235,25 @@
       fetch("/cases/bin/what-would-go")
         .then(function (answer) { return answer.json(); })
         .then(function (counts) {
-          if (!counts.cases) { window.alert("Your recycle bin is empty."); return; }
-          var words =
-            "Empty the recycle bin?\n\n" +
-            "This permanently removes " + plural(counts.cases, "case") +
-            " holding " + plural(counts.recordings, "recording") + ", " +
-            counts.size + " in all.\n\n" +
-            "Nothing can bring them back.";
-          if (!window.confirm(words)) { return; }
-          emptyBin.disabled = true;
-          post("/cases/bin/empty").then(function (answer) {
-            if (answer.ok) { window.location.reload(); return; }
-            emptyBin.disabled = false;
-            window.alert("The recycle bin could not be emptied.");
+          if (!counts.cases) { UI.toast("The recycle bin is already empty.", { icon: "info" }); return; }
+          UI.confirm({
+            title: "Empty the recycle bin?",
+            body: [
+              "This permanently removes " + plural(counts.cases, "case") + " holding " +
+              plural(counts.recordings, "recording") + ", " + counts.size + " in all.",
+              "Nothing can bring them back."
+            ],
+            ok: "Empty the bin",
+            cancel: "Leave it",
+            danger: true
+          }).then(function (yes) {
+            if (!yes) { return; }
+            emptyBin.disabled = true;
+            post("/cases/bin/empty").then(function (answer) {
+              if (answer.ok) { window.location.reload(); return; }
+              emptyBin.disabled = false;
+              UI.toast("The recycle bin could not be emptied.", { problem: true, icon: "warning" });
+            });
           });
         });
     });
@@ -351,16 +371,15 @@
         .then(function (answer) {
           if (!answer.ok) {
             go.disabled = false;
-            window.alert(answer.said.why || "That could not be moved.");
+            UI.toast(answer.said.why || "That could not be moved.", { problem: true, icon: "warning" });
             return;
           }
           window.location = answer.said.where;
         })
         .catch(function (trouble) {
           go.disabled = false;
-          window.alert(trouble.message === "no case"
-            ? "That case could not be made."
-            : "That could not be moved.");
+          UI.toast(trouble.message === "no case" ? "That case could not be made." : "That could not be moved.",
+            { problem: true, icon: "warning" });
         });
     });
   }

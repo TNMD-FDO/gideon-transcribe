@@ -17,17 +17,23 @@
       ? " and its " + button.dataset.clips + " clip" +
         (button.dataset.clips === "1" ? "" : "s")
       : "";
-    if (!window.confirm(
-      "Delete " + button.dataset.title + also + "? This removes the recording, " +
-      "its transcript, and everything else about it. It cannot be undone, and " +
-      "anything you want to keep has to be exported first."
-    )) { return; }
-
-    fetch("/recording/" + button.dataset.recording + "/delete", {
-      method: "POST",
-      headers: { "X-CSRFToken": cookie("csrftoken") }
-    }).then(function (answer) {
-      if (answer.ok) { window.location.reload(); }
+    UI.confirm({
+      title: "Delete " + button.dataset.title + also + "?",
+      body: [
+        "This removes the recording, its transcript, and everything else about it.",
+        "It cannot be undone. Export anything you want to keep first."
+      ],
+      ok: "Delete recording",
+      cancel: "Keep it",
+      danger: true
+    }).then(function (yes) {
+      if (!yes) { return; }
+      fetch("/recording/" + button.dataset.recording + "/delete", {
+        method: "POST",
+        headers: { "X-CSRFToken": cookie("csrftoken") }
+      }).then(function (answer) {
+        if (answer.ok) { window.location.reload(); }
+      });
     });
   });
 })();

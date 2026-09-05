@@ -35,8 +35,7 @@
       what += " and " + many(told.clips, "clip");
     }
     what += ", " + told.size + ".";
-    return what +
-      "\n\nDownload anything you want to keep first. This cannot be undone.";
+    return what;
   }
 
   document.addEventListener("click", function (event) {
@@ -52,29 +51,36 @@
       .then(function (told) {
         button.disabled = false;
         if (!told.recordings) {
-          window.alert("There is nothing to clear.");
+          UI.toast("There is nothing to clear.", { icon: "info" });
           return;
         }
-        if (!window.confirm(theSentence(told, batch))) { return; }
-
-        button.disabled = true;
-        var form = new FormData();
-        if (batch) { form.append("batch", batch); }
-        return fetch("/recordings/clear", {
-          method: "POST",
-          headers: { "X-CSRFToken": cookie("csrftoken") },
-          body: form
-        }).then(function (answer) { return answer.json(); })
-          .then(function (done) {
-            window.location.href = done.where || "/";
-          });
+        return UI.confirm({
+          title: batch ? "Done with these recordings?" : "Clear your recordings?",
+          body: [theSentence(told, batch), "Download anything you want to keep first. This cannot be undone."],
+          ok: batch ? "Remove them" : "Clear my recordings",
+          cancel: "Keep them",
+          danger: true
+        }).then(function (yes) {
+          if (!yes) { return; }
+          button.disabled = true;
+          var form = new FormData();
+          if (batch) { form.append("batch", batch); }
+          return fetch("/recordings/clear", {
+            method: "POST",
+            headers: { "X-CSRFToken": cookie("csrftoken") },
+            body: form
+          }).then(function (answer) { return answer.json(); })
+            .then(function (done) {
+              window.location.href = done.where || "/";
+            });
+        });
       })
       .catch(function () {
         button.disabled = false;
-        window.alert(
-          "Nothing was cleared. The page could not reach the app. Try again, " +
-          "and if it keeps happening tell whoever looks after the server."
-        );
+        UI.alert({
+          title: "Nothing was cleared",
+          body: "The page could not reach the app. Try again, and if it keeps happening tell whoever looks after the server."
+        });
       });
   });
 })();

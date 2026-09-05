@@ -66,7 +66,7 @@
         </tbody>
       </table>
     {% else %}
-      <p class="lead">The recycle bin is empty.</p>
+      {% include "empty.html" with icon="delete" title="The recycle bin is empty" line="A case the retention clock deletes waits here, whole, and can be restored until it is wiped." %}
     {% endif %}
   </div>
 
