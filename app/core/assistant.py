@@ -34,10 +34,11 @@ SUGGESTION_SAMPLING = {"temperature": 0.0, "top_p": 1.0}
 
 CUT_SHORT = "The answer was cut short."
 # While the model may think, its thinking is billed against the same answer
-# budget, so the cap is raised by this much to leave the answer its room. A
-# small model thinks at length; when the whole budget still goes on thinking
-# the answer is empty, and the page says so rather than "cut short".
-THINKING_ALLOWANCE = 4000
+# budget, so the cap is raised by this much to leave the answer its room: about
+# a minute and a half of thinking on the Local engine, inside the doubled time
+# limits. A small model thinks at length; when the whole budget still goes on
+# thinking the answer is empty, and the page says so rather than "cut short".
+THINKING_ALLOWANCE = 8000
 # The reason word the page shows for that case; the audit row keeps llm_error.
 THOUGHT_AWAY = "llm_thought_it_away"
 THOUGHT_IT_AWAY = (
