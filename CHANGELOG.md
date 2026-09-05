@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.6, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **Speaker suggestions starts Off.** The feature stays, with its toggle on
+  the AI assistant settings page, but a new install (and an install that
+  never touched the toggle) no longer offers Suggest names until an Admin
+  turns it on. The first trials against the small Local engine did the job
+  badly, and the reading behind the decision, with what would make it better
+  and why voice biometrics are not the answer, is in
+  `docs/research/speaker-suggestions.md`. Chat and Summary stay On by
+  default. The settings catalogue and the AI assistant chapter carry the
+  amendment.
+
 ## v1.10.5, 2026-09-05
 
 ```
