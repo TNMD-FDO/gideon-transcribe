@@ -77,10 +77,13 @@ CHAT_FORMAT = (
     "it appears on."
 )
 SUGGESTIONS_FORMAT = (
-    "Answer with the JSON asked for. A speaker's label, such as Speaker 3 or "
-    "Side 1 Speaker 2, is not a name and not a role: when nothing said shows who "
-    "a speaker is, give the name unknown. A name is what someone is called in "
-    "the talk; a role is what they do, such as Officer or Interpreter."
+    "Answer with the JSON asked for. For every unnamed speaker, suggest a name "
+    "when somebody says it or addresses them by it; otherwise suggest a role, "
+    "what the speaker does or is in this recording, such as Officer, Sergeant, "
+    "Dispatcher, Caller, Interviewer, Interpreter, Suspect, Passenger, or "
+    "Witness. A role is the expected answer when no name is spoken; say unknown "
+    "only when even a role cannot be told. A speaker's label, such as Speaker 3 "
+    "or Side 1 Speaker 2, is never a name or a role."
 )
 
 LENGTH_LINES = {
