@@ -130,6 +130,10 @@ The AI assistant, Summary, Chat and Speaker suggestions, talks to a language-mod
 
 **Test connection**, on the Status page, lists the engine's models with the token and asks it one tiny question. It runs on the worker that can reach the engine, so the answer appears a few seconds later on the same page. Turn the **AI assistant** toggle on only once it succeeds. The Status page's AI assistant line stays live afterwards: green with the model and the time of the last check, or red with "unreachable since". The check runs once a minute, and while it fails the Summary, Chat and Suggest names buttons are disabled everywhere and any call already queued fails at once.
 
+**Turning the features on.** The AI assistant toggle is the master switch; Chat, Summary and Speaker suggestions each have their own. Off hides a feature everywhere; what people wrote with it is kept, not deleted. **Let the model think before answering** is slower and sometimes better, and doubles every time limit.
+
+**Templates.** The Settings group of the rail has a **Templates** page: the Ground rules every call starts from, the Chat and Speaker suggestions instructions, and the Summary templates. Each is plain text you can edit, with **Reset to default** and a version that rises by one on every save; changes apply at once, outside the tray, and the audit log records the template and its new version, never the words. A Summary template has a name, a one-line description, and Enabled and Default flags; exactly one of the Enabled is the Default, users choose a template only when two or more are Enabled, and the built-in Standard summary cannot be deleted. **Add template** adds another shape of summary.
+
 **When it fails**, the app says one of six things and records which: not available (the engine cannot be reached), took too long, refused the connection (the token is wrong or missing: "Ask IT" means you), too long a transcript, an answer the app could not read, or a problem. It never records what was asked or answered.
 
 ## The Installation page

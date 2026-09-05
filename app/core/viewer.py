@@ -16,7 +16,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit
+from core import assistant, audit
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -137,6 +137,9 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
         {
             "page": "viewer",
             "recording": recording,
+            # Which of the AI assistant's three features the page offers;
+            # the panels' contents come from the assistant's own endpoint.
+            "assistant": assistant.features(),
             # The rest of the case, so somebody working through a matter moves
             # between its recordings without going back to the case page.
             "in_case": _the_rest_of_the_case(recording),

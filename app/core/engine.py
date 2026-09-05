@@ -262,7 +262,11 @@ def status_for_the_panel() -> dict:
     if not configured():
         return {
             "state": "off",
-            "says": "off; no engine is configured",
+            "says": (
+                "off; no engine token yet"
+                if address() and not token_is_set()
+                else "off; no engine is configured"
+            ),
             "test": status.last_test,
         }
     if status.checked_at is None:

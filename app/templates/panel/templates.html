@@ -1,0 +1,99 @@
+{% extends "panel/base.html" %}
+{% block title %}Templates{% endblock %}
+{% block page_class %} workbench{% endblock %}
+
+{% block panel %}
+  <h1>Templates</h1>
+  <p class="lead">
+    The instructions the AI assistant works from. Every save applies at once,
+    outside the tray, and raises the template's version by one; the audit log
+    records the template and its version, never the words. The app itself adds
+    the transcript, what it is, the person's choices, and the answer format.
+  </p>
+
+  <div class="panes templates">
+    <div class="pane-list">
+      <h2>Prompt templates</h2>
+      {% for row in prompt_templates %}
+        <form method="post" action="{% url 'panel-prompt-template' row.key %}" class="card" style="margin-bottom: 12px">
+          {% csrf_token %}
+          <div class="row">
+            <b class="grow">{{ row.name }}</b>
+            <span class="muted small">version {{ row.version }}</span>
+          </div>
+          <textarea name="text" rows="6" style="width: 100%; margin: 8px 0">{{ row.text }}</textarea>
+          <div class="row">
+            <button type="submit" name="action" value="save" class="primary small">Save</button>
+            <button type="submit" name="action" value="reset" class="ghost small"
+                    onclick="return confirm('Put back the default wording of {{ row.name }}?')">Reset to default</button>
+          </div>
+        </form>
+      {% endfor %}
+
+      <h2 style="margin-top: 24px">Summary templates</h2>
+      <p class="muted small">
+        Users choose a template only when two or more are Enabled. Exactly one
+        is the Default among the Enabled; Standard summary is built in and
+        cannot be deleted.
+      </p>
+      {% for row in summary_templates %}
+        <form method="post" action="{% url 'panel-summary-template' row.pk %}" class="card" style="margin-bottom: 12px">
+          {% csrf_token %}
+          <div class="row">
+            {% if row.built_in %}
+              <b class="grow">{{ row.name }} <span class="muted small">built in</span></b>
+            {% else %}
+              <input type="text" name="name" value="{{ row.name }}" maxlength="80" class="grow" aria-label="Name">
+            {% endif %}
+            {% if row.is_default %}<span class="pill ok">Default</span>{% endif %}
+            {% if row.enabled %}<span class="pill">Enabled</span>{% else %}<span class="pill warn">Disabled</span>{% endif %}
+            <span class="muted small">version {{ row.version }}</span>
+          </div>
+          <input type="text" name="description" value="{{ row.description }}" maxlength="200"
+                 placeholder="One line about what this summary is for" style="width: 100%; margin: 8px 0 0">
+          <textarea name="text" rows="8" style="width: 100%; margin: 8px 0">{{ row.text }}</textarea>
+          <div class="row">
+            <button type="submit" name="action" value="save" class="primary small">Save</button>
+            {% if not row.is_default %}
+              <button type="submit" name="action" value="default" class="small">Make default</button>
+            {% endif %}
+            {% if row.enabled %}
+              {% if not row.is_default %}
+                <button type="submit" name="action" value="disable" class="small">Disable</button>
+              {% endif %}
+            {% else %}
+              <button type="submit" name="action" value="enable" class="small">Enable</button>
+            {% endif %}
+            {% if row.built_in %}
+              <button type="submit" name="action" value="reset" class="ghost small"
+                      onclick="return confirm('Put back the default wording of Standard summary?')">Reset to default</button>
+            {% else %}
+              <span class="grow"></span>
+              <button type="submit" name="action" value="delete" class="ghost small danger"
+                      onclick="return confirm('Delete the template {{ row.name }}? Summaries already written keep their text.')">Delete</button>
+            {% endif %}
+          </div>
+        </form>
+      {% endfor %}
+    </div>
+
+    <aside class="pane-detail">
+      <h2 style="margin-top: 0">Add template</h2>
+      <p class="muted small">
+        A new shape for a summary: a name people will recognise, one line
+        about when to use it, and the instruction text. It starts Enabled and
+        at version 1.
+      </p>
+      <form method="post" action="{% url 'panel-add-summary-template' %}" class="card stack">
+        {% csrf_token %}
+        <label class="field"><span>Name</span>
+          <input type="text" name="name" maxlength="80" required></label>
+        <label class="field"><span>Description</span>
+          <input type="text" name="description" maxlength="200"></label>
+        <label class="field"><span>Instruction text</span>
+          <textarea name="text" rows="8" required placeholder="{{ standard_text|truncatechars:120 }}"></textarea></label>
+        <button type="submit" class="primary">Add template</button>
+      </form>
+    </aside>
+  </div>
+{% endblock %}

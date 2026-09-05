@@ -1089,6 +1089,22 @@ body.no-speakers .seg .name { display: none; }
   }
 }
 
+/* The AI assistant's panels ---------------------------------------------------- */
+.assistant-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.assistant-list .answer p, .turns .answer p { margin: 0 0 6px; }
+.cite { text-decoration: none; border-bottom: 1px dotted var(--accent); color: var(--accent); }
+.threads { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.threads .thread { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.threads .thread.on { border-color: var(--accent); color: var(--accent); }
+.turns { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.turn .question { margin: 0 0 4px; }
+.turn .answer { padding-left: 10px; border-left: 3px solid var(--line); }
+.asking { margin-top: 8px; align-items: flex-end; }
+.asking textarea { resize: vertical; }
+.suggestions { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.suggestion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9em; }
+.pill.suggested { margin-left: 6px; }
+
 /* The Workbench pages ---------------------------------------------------------
    A list beside its detail from 1280 pixels, stacked below that. The viewer's
    Bench is the same idea for the viewer; these rules are for the pages that
@@ -1167,6 +1183,7 @@ body.no-speakers .seg .name { display: none; }
   .pane-filters { position: sticky; top: 12px; }
   .panes.users { grid-template-columns: minmax(0, 1fr) 300px; }
   .panes.settings { grid-template-columns: minmax(0, 1fr) 260px; }
+  .panes.templates { grid-template-columns: minmax(0, 1fr) 320px; }
 
   /* The guides: the contents as a rail beside the text, which keeps its
      reading width; the section being read is marked. */

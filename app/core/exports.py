@@ -955,3 +955,197 @@ def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
     for recording in included:
         record_export(request, recording, "transcript text")
     return hand_over(body, zip_name(), "application/zip")
+
+
+# The Summary and Chat exports -----------------------------------------------------
+#
+# Each on its own, in layout Record's typography: the cover facts with no
+# Appearances table and no Processing record, the header block, the AI notice
+# above the Transcript's own notice, then the body with Citations printed as
+# [hh:mm:ss] in grey. Summaries and Chat answers are English whatever the
+# Transcript's language.
+
+
+def _open_record_document():
+    from docx import Document
+    from docx.shared import Inches, Pt
+
+    document = Document()
+    normal = document.styles["Normal"]
+    normal.font.name = "Calibri"
+    normal.font.size = Pt(11)
+    for section in document.sections:
+        section.page_width = Inches(8.5)
+        section.page_height = Inches(11)
+        section.left_margin = section.right_margin = Inches(1)
+        section.top_margin = section.bottom_margin = Inches(1)
+    return document
+
+
+def _cover(document, recording, transcript, kind: str) -> None:
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches, Pt
+
+    heading = document.add_paragraph(title_of(recording))
+    heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    heading.runs[0].bold = True
+    heading.runs[0].font.size = Pt(20)
+    said = document.add_paragraph(kind)
+    said.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    said.runs[0].font.size = Pt(13)
+    document.add_paragraph()
+    in_a_case = (
+        [("Case", recording.case.name)] if getattr(recording, "case", None) else []
+    )
+    _facts(
+        document,
+        [
+            ("Recording", recording.original_filename),
+            *in_a_case,
+            ("Length", length_of(recording)),
+            ("Uploaded", f"{recording.created:{DAY}} by {recording.user.username}"),
+            ("Language", language_name(transcript.language)),
+            (
+                "Processed",
+                f"{transcript.created:{DAY}} with Whisper {model_of(transcript)}",
+            ),
+            ("SHA-256", recording.sha256),
+        ],
+        Inches,
+    )
+    document.add_paragraph()
+
+
+def _notices(document, transcript, ai_notice: str) -> None:
+    for text in (ai_notice, notice_for(transcript)):
+        if text:
+            line = document.add_paragraph(text)
+            line.runs[0].italic = True
+
+
+CITED = re.compile(r"(\[\d{1,2}:\d{2}:\d{2}\])")
+
+
+def _paragraph_with_citations(document, text: str, citations: dict, style=None):
+    """One paragraph, the matched times in grey, everything else as it came."""
+    from docx.shared import RGBColor
+
+    paragraph = (
+        document.add_paragraph(style=style) if style else document.add_paragraph()
+    )
+    for piece in CITED.split(text):
+        if not piece:
+            continue
+        run = paragraph.add_run(piece)
+        if piece in citations:
+            run.font.color.rgb = RGBColor(0x77, 0x77, 0x77)
+    return paragraph
+
+
+def _summary_body(document, summary) -> None:
+    """The template's parts as Heading 2, read off the lines that end in a colon."""
+    for raw in summary.text.splitlines():
+        line = raw.rstrip()
+        if not line:
+            continue
+        stripped = line.lstrip("#* ").rstrip()
+        if stripped.endswith(":") and len(stripped) <= 60:
+            document.add_heading(stripped[:-1], level=2)
+            continue
+        if stripped.startswith(("- ", "* ", "• ")):
+            _paragraph_with_citations(
+                document, stripped[2:], summary.citations, style="List Bullet"
+            )
+            continue
+        _paragraph_with_citations(document, line, summary.citations)
+    if summary.cut_short:
+        note = document.add_paragraph("The answer was cut short.")
+        note.runs[0].italic = True
+
+
+def summary_word(summary, exported_by: str) -> bytes:
+    from docx.shared import Inches
+
+    from core import assistant
+
+    recording = summary.recording
+    transcript = recording.transcript
+    document = _open_record_document()
+    _cover(document, recording, transcript, f"Summary ({summary.template_name})")
+    written = summary.written_at or summary.created
+    _facts(
+        document,
+        [
+            ("Template", f"{summary.template_name} v{summary.template_version}"),
+            ("Focus", summary.focus or "none"),
+            ("Length", summary.length.capitalize()),
+            (
+                "Written",
+                f"{written:{DAY_AND_TIME}} by {summary.model or 'the AI assistant'}",
+            ),
+            ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+        ],
+        Inches,
+    )
+    document.add_paragraph()
+    _notices(document, transcript, assistant.notice(summary.model, written))
+    document.add_paragraph()
+    _summary_body(document, summary)
+    holder = io.BytesIO()
+    document.save(holder)
+    return holder.getvalue()
+
+
+def chat_word(chat, exported_by: str) -> bytes:
+    from docx.shared import Inches
+
+    from core import assistant
+
+    recording = chat.recording
+    transcript = recording.transcript
+    turns = list(chat.turns.filter(state="done"))
+    document = _open_record_document()
+    _cover(document, recording, transcript, "Chat")
+    first_when = turns[0].answered_at if turns else chat.created
+    first_model = next((one.model for one in turns if one.model), "")
+    _facts(
+        document,
+        [
+            ("Started", f"{chat.created:{DAY_AND_TIME}}"),
+            ("Questions", str(len(turns))),
+            ("Model", first_model or "the AI assistant"),
+            ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+        ],
+        Inches,
+    )
+    document.add_paragraph()
+    _notices(document, transcript, assistant.notice(first_model, first_when))
+    for turn in turns:
+        document.add_paragraph()
+        document.add_heading(f"Question {turn.number}.", level=2)
+        asked = document.add_paragraph(turn.question)
+        asked.runs[0].italic = True
+        for paragraph in turn.answer.split("\n"):
+            if paragraph.strip():
+                _paragraph_with_citations(document, paragraph, turn.citations)
+        if turn.cut_short:
+            note = document.add_paragraph("The answer was cut short.")
+            note.runs[0].italic = True
+    holder = io.BytesIO()
+    document.save(holder)
+    return holder.getvalue()
+
+
+def summary_name(summary) -> str:
+    when = summary.written_at or summary.created
+    return (
+        f"{safe_name(title_of(summary.recording))} - summary "
+        f"({safe_name(summary.template_name)}) {when:%Y-%m-%d %H%M}.docx"
+    )
+
+
+def chat_name(chat) -> str:
+    return (
+        f"{safe_name(title_of(chat.recording))} - chat "
+        f"{chat.created:%Y-%m-%d %H%M}.docx"
+    )

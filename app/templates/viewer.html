@@ -177,6 +177,19 @@
             {% else %}
               <p><span class="pill">Not diarized</span></p>
             {% endif %}
+            {% if assistant.suggestions %}
+              {% comment %}
+                Suggest names, shown by the script only while two or more
+                speakers have no name. One click, one call for the whole
+                transcript; nothing changes until a suggestion is accepted.
+              {% endcomment %}
+              <div id="suggest-line" hidden>
+                <p class="small muted" style="margin: 8px 0 4px">Want name suggestions from what people say?</p>
+                <button type="button" class="small" id="suggest-names">Suggest names</button>
+                <p id="suggest-said" class="small muted" style="margin: 4px 0 0"></p>
+                <ul id="suggestions" class="suggestions"></ul>
+              </div>
+            {% endif %}
           {% else %}
             <p class="small muted">The speakers appear with the transcript.</p>
           {% endif %}
@@ -269,6 +282,12 @@
         {% if clips_available %}
           <button type="button" class="sheet-tab" data-panel="clips">Clips</button>
         {% endif %}
+        {% if assistant.summary and transcript %}
+          <button type="button" class="sheet-tab" data-panel="summary">Summary</button>
+        {% endif %}
+        {% if assistant.chat and transcript %}
+          <button type="button" class="sheet-tab" data-panel="chat">Chat</button>
+        {% endif %}
         <button type="button" class="sheet-tab" data-panel="details">Details</button>
         <span class="muted small grow">
           {% if transcript %}
@@ -335,6 +354,56 @@
           <div class="panel" data-panel="clips">
             <h2 id="clips-heading">Clips of this recording</h2>
             <div id="clip-list" class="cliplist"></div>
+          </div>
+        {% endif %}
+
+        {% if assistant.summary and transcript %}
+          <div class="panel" data-panel="summary" hidden>
+            <div class="row">
+              <h2 class="grow">Summaries</h2>
+              <button type="button" class="small primary" id="new-summary">New summary</button>
+            </div>
+            <div id="summary-dialog" class="card" hidden style="margin: 8px 0">
+              <div class="field" id="summary-template-line" hidden>
+                <label for="summary-template">Template</label>
+                <select id="summary-template"></select>
+              </div>
+              <div class="field">
+                <label for="summary-focus">What should the summary concentrate on? (optional)</label>
+                <input type="text" id="summary-focus" maxlength="200">
+              </div>
+              <div class="field">
+                <label for="summary-length">Length</label>
+                <select id="summary-length">
+                  <option value="short">Short</option>
+                  <option value="standard" selected>Standard</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </div>
+              <div class="row">
+                <button type="button" class="primary small" id="summary-write">Write summary</button>
+                <button type="button" class="ghost small" id="summary-cancel">Cancel</button>
+              </div>
+            </div>
+            <div id="summary-list" class="assistant-list"></div>
+          </div>
+        {% endif %}
+
+        {% if assistant.chat and transcript %}
+          <div class="panel chat" data-panel="chat" hidden>
+            <div class="row">
+              <h2 class="grow">Chat</h2>
+              <span id="chat-tools" class="row" hidden>
+                <a id="chat-export" class="btn small" href="#">Export to Word</a>
+                <button type="button" class="ghost small danger" id="chat-delete">Delete chat</button>
+              </span>
+            </div>
+            <div id="chat-threads" class="threads"></div>
+            <div id="chat-turns" class="turns"></div>
+            <div class="row asking">
+              <textarea id="chat-question" rows="2" class="grow" placeholder="Ask about this transcript"></textarea>
+              <button type="button" class="primary small" id="chat-ask">Ask</button>
+            </div>
           </div>
         {% endif %}
 
@@ -417,12 +486,14 @@
       clips: {% if clips_available %}true{% else %}false{% endif %},
       twoChannel: {% if recording.is_two_channel_call %}true{% else %}false{% endif %},
       batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %},
-      inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %}
+      inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %},
+      assistant: {% if assistant.assistant and transcript %}{ summary: {% if assistant.summary %}true{% else %}false{% endif %}, chat: {% if assistant.chat %}true{% else %}false{% endif %}, suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %} }{% else %}null{% endif %}
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
+  {% if assistant.assistant and transcript %}<script src="{% static 'assistant.js' %}"></script>{% endif %}
   {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
 {% endblock %}

@@ -206,6 +206,8 @@
     // A redraw builds every row again, so a start marked before it has to be
     // put back on the row it belongs to.
     if (clipStartsAt !== null) { showsStart(clipStartsAt); }
+    // The AI assistant puts its suggestion pills on the rows after they exist.
+    document.dispatchEvent(new Event("transcript-drawn"));
   }
 
   function wordsOf(segment) {
@@ -1249,8 +1251,11 @@
     try {
       was = window.localStorage.getItem("sheet");
     } catch (ignored) { /* the sheet then starts closed, as it always did */ }
-    if (was === "clips" && window.VIEWER.clips) { openSheet("clips", true); }
-    else if (was === "details") { openSheet("details", true); }
+    // Whichever panel was open last, if this page has it: Clips and Details
+    // always, Summary and Chat while the AI assistant offers them.
+    if (was && was !== "closed" && document.querySelector('.sheet-tab[data-panel="' + was + '"]')) {
+      openSheet(was, true);
+    }
     window.requestAnimationFrame(trimToFit);
   }());
 
