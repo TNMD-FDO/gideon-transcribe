@@ -22,7 +22,16 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, guides, lifecycle, settings_store, uploads, whisperx
+from core import (
+    audit,
+    backups,
+    cases,
+    guides,
+    lifecycle,
+    settings_store,
+    uploads,
+    whisperx,
+)
 from core.cases import Case
 from core.jobs import Job, JobState
 from core.models import LoginSession, User
@@ -99,6 +108,9 @@ def status_lines(request: HttpRequest) -> JsonResponse:
             # and the last Test connection. Read from the status row; this
             # container is not on the engine's network and never asks it.
             "assistant": engine.status_for_the_panel(),
+            # The Backup line: the last Snapshot and the last drill, from the
+            # row the nightly job's record commands write.
+            "backup": backups.status_for_the_panel(),
             "storage": {
                 "free": uploads.as_gb(free),
                 "colour": "red"
@@ -770,6 +782,9 @@ def installation(request: HttpRequest) -> HttpResponse:
     facts += [
         ("WhisperX GPU", _the_services_gpu()),
     ]
+    # The Backup's read-only rows: the target as account and host, the
+    # schedule, the keep rule, and whether its two secrets are set.
+    facts += backups.installation_rows()
 
     secrets = [
         ("Django key", os.environ.get("DJANGO_SECRET_KEY_FILE", "")),

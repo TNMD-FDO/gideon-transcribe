@@ -2252,6 +2252,18 @@ Backup and restore; Create the backup account and folder on the NAS.
 - From Backup and restore to the deployment topology's pre-upgrade dump: `pre-<tag>.dump` in Postgres custom format, not `.sql`.
 - From Backup and restore to the Folder management toggle's Off spell: the row gains a cause (`toggle` or `restore`).
 - From Backup and restore to the Queue's Failed rule: the reason class `restored`.
+- From the v1.19.0 build, which shipped this chapter ahead of the Cases release, the decisions it left to the build and two departures:
+  - **The two backup secrets are never mounted into the live stack.** The chapter had the app's preflight check them; the build checks them on the host in `./transcribe backup` (`target_unreachable` when one is empty) and the app's `backup_preflight` checks only the room and the target, so no container of the live stack ever holds the repository password or the store's key. They are the `backup` service's Compose secrets alone, in the long form so ssh finds the key owned by the running user at 0400. The Installation page's "whether the two backup secrets are set" row is therefore "Backup last run" from `backup/last-run.json`.
+  - **Operator mail waits for the Email notifications chapter.** `OPERATOR_EMAIL` is asked and shown; the four mails are the mailer's when it exists. Meanwhile the Status page and the audit log say everything, and the `worker`'s hourly `watch_the_backups` writes "Backup overdue" and "Restore drill overdue" rows at most once a day while either holds.
+  - **The manifest's shape**: `release`, `migration`, `whisperx_version`, `written_at`, `dump`, `dump_size`, `tables` (name to count), `files` (path under cases/ to sha256). **`last-run.json`**: `at`, `ok`, `step`, `reason`, `duration_seconds`, `dump_bytes`, `snapshot_bytes`, `snapshots_held`.
+  - **The key made when none is found** is ed25519, comment `gideon-transcribe-backup`; the repository password is 36 random bytes, base64. **An existing repository** at the target opens with the existing password and is used; **an existing password** is kept; the install never generates over either.
+  - **The install does not run the first `backup` and `restore-drill` itself**: the stack is not up when the install runs, so they are the guide's steps 7 and 8 and the install prints them.
+  - **The weekly command** is `./transcribe backup-weekly`; the drill timer fires thirty minutes after `DRILL_TIME` on the first Sunday and its service is ordered after the weekly one, so the two never overlap. The units live in `systemd/` in the repository and `./transcribe install-timers` writes them from `.env`. **`./transcribe install-backup`** repeats the backup questions, keys, repository and timers alone.
+  - **The drill folder** is `DRILL_DIR` in `.env` when set and `<App data folder>-drill` otherwise; `./transcribe restore-drill` makes it.
+  - **Write access for a restore**: restore and drill run restic through `docker run` with the same pinned image and the target folder mounted read-write, while the nightly `backup` service keeps its read-only mounts.
+  - **`./transcribe snapshots`** prints restic's own table of the nightly Snapshots (id, time, host, tags, paths).
+  - **The check's item 4** fails, as the planning script did, when anything but the folder and `home` is visible at the account's root.
+  - **The Restore drill's project** is `transcribe-drill` from `compose.yaml` with `compose.drill.yaml`: Postgres and the app alone on the `transcribe-drill` network, every other service behind a profile the drill never asks for, directory sign-in off, no mail, and the restored data under the drill folder.
 
 
 ## 10. Admin panel additions in Phase 2

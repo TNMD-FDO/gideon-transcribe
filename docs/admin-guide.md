@@ -137,9 +137,90 @@ The AI assistant, Summary, Chat and Speaker suggestions, talks to a language-mod
 
 **When it fails**, the app says one of six things and records which: not available (the engine cannot be reached), took too long, refused the connection (the token is wrong or missing: "Ask IT" means you), too long a transcript, an answer the app could not read, or a problem. It never records what was asked or answered.
 
+## Backups
+
+Every night at 02:00 the app carries a copy of itself to a folder of its own on the office's backup store: one consistent dump of the database, the recordings in cases with everything about them, the configuration and secrets, and a manifest that says what the copy holds. The copy is encrypted before it leaves the server, deduplicated so an unchanged recording costs nothing after its first night, and kept for thirty nights. Once a month, by itself, the app proves that the newest copy restores by restoring it into a throwaway copy beside the live one and tearing that down again. The Status page's **Backup** line says how the last night and the last drill went; the Installation page shows the target and the schedule.
+
+A backup is for the server dying. Nothing is ever picked out of it for a person: Delete stays final, and the Recycle bin is the only undo. Recordings in a person's own workspace are never copied, since nothing there outlives their sign-in.
+
+**Turning it on** is a line in the server's environment file, `BACKUP_TARGET`, which `./transcribe install` asks for. Empty means backups are off, and the Status page says so in red. It has the form `sftp:<account>@<store>:/<folder>`: an account and a folder on the store made for this app alone, reached over SFTP on port 22, and nothing else. An office without such a store can point it at any machine that speaks SFTP.
+
+### The store's side
+
+On a Synology-class store, in this order:
+
+1. **The account.** An ordinary account, never an administrator: an administrator sees the folder under a volume path, and a path like `/volume1/...` in the target betrays the mistake. Give it SFTP and deny it every other application, so its password opens nothing. It signs in with a key only; since the store cannot turn passwords off, give it a long random password nobody uses, locked and never expiring, saved in the password manager as the account's record. Turn its home service on, since the key lives in its home. Description: "Gideon Transcribe nightly backup, restic over SFTP, key only".
+2. **The folder.** A shared folder of the app's own, on a volume with room for thirty nights (the first is the size of the cases folder; later ones only what changed). Recycle bin off, or it hoards every pruned file for good. Encryption off, since the copy is already encrypted, and an encrypted share that is not mounted after a store reboot fails silently. Data integrity on, compression off. A quota, so a runaway fills the folder and fails the backup rather than the volume. Permissions: the account Read/Write, everyone else No access, and an explicit No access on every other shared folder, or the account sees them at its root.
+3. **The service.** SFTP on, on port 22. FTP and FTPS off.
+4. **The key.** Run `./transcribe install` (or `./transcribe install-backup`) on the server; when it finds no key it makes one and prints the public half. Place it from the store's shell as root, because a file uploaded through the store's file manager belongs to the administrator who uploaded it, and sshd reads the file as the account:
+
+```bash
+sudo -i
+H=/var/services/homes/<backup account>
+mkdir -p "$H/.ssh"
+echo '<public key line>' > "$H/.ssh/authorized_keys"
+chown <backup account>:users "$H"; chown -R <backup account>:users "$H/.ssh"
+chmod 755 "$H"; chmod 700 "$H/.ssh"; chmod 600 "$H/.ssh/authorized_keys"
+ls -la "$H" "$H/.ssh"
+```
+
+The listing must show the account, not root, as the owner of `.ssh` and `authorized_keys`.
+
+5. **The password manager.** Before the first backup, put three things in the account's record: the private key from `secrets/backup_ssh_key`, the repository password from `secrets/backup_password`, and a note with the target line and the store's host key fingerprint the install printed. Without the password every copy is unreadable, and there is no recovery. Compare the fingerprint with the one the store's administrator knows.
+6. **Check it.** `./transcribe check` runs eight tests against the store: the key and the recorded host key are present, the store presents the same host key, key-only sign-in works, the account sees only its folder and `home` at its root, the folder's path is not a volume path, a file can be written and removed, there is no recycle bin in the folder, and a shell is refused. The three failures every new account shows the first time: the key file owned by root after placement, another shared folder visible at the root until it gets an explicit No access, and the recycle bin still on.
+7. **The first copy and the first proof**, once the stack is up:
+
+```bash
+./transcribe backup
+```
+
+```bash
+./transcribe restore-drill
+```
+
+Both should pass before the app has anything to lose. The store may also keep its own scheduled snapshot of the folder, daily after 02:00, as a second line against the server itself; nothing in the app depends on it.
+
+### What runs, and when
+
+| When | What |
+|---|---|
+| Nightly at `BACKUP_TIME` (02:00) | `./transcribe backup`: the dump, the manifest, the copy to the store, the keep rule, and the record on the Status page |
+| Sundays at `DRILL_TIME` (04:00) | the weekly prune and a check of a tenth of the data |
+| The first Sunday of the month, thirty minutes later | `./transcribe restore-drill` |
+
+They are host timers, so they fire when the stack is down. `systemctl list-timers 'transcribe-*'` shows them. Changing the times means editing `.env` and running `./transcribe install-timers`. `./transcribe snapshots` lists what the store holds.
+
+**When a backup fails**, the Status line turns red and names the step and the reason: `disk_full` (the server's data folder is under its floor), `dump_failed`, `manifest_failed`, `target_unreachable` (the store, the key or the host key), `snapshot_failed` (a full folder on the store ends here; raise its quota), `prune_failed` or `check_failed` (the weekly slot). The audit log holds a **Backup failed** row with the same words, and a **Backup overdue** row once a day while there has been no successful copy for 26 hours. When the Email notifications chapter is built, the Operator address in `OPERATOR_EMAIL` is told as well.
+
+### Restoring: the runbook
+
+**A restore takes the app back to 02:00 of the Snapshot's day, and everything done after that is gone.** Every recording uploaded since, every correction, every case chat. Workspaces are discarded and everybody is signed out. Do it when the server has died or the data is beyond repair, not to undo a mistake.
+
+**On the same server**, nothing to do first. **On a fresh server**, follow the install guide to the end of `./transcribe install`, with two things from the password manager placed first: the private key at `secrets/backup_ssh_key` before the install runs, so it uses that key and prints nothing to paste; and the repository password at `secrets/backup_password` after it. The install finds the existing repository on the store and uses it.
+
+Then:
+
+```bash
+./transcribe snapshots
+```
+
+lists the nights. Pick one, or `latest`:
+
+```bash
+./transcribe restore latest
+```
+
+It reads the Snapshot's manifest first and refuses unless the checkout is at the release the Snapshot was taken with (it says which tag to check out), and refuses while a job is running. It says what it is about to do and waits for the word RESTORE. Then it stops the stack, puts back the configuration (keeping the two backup secrets already in place), the cases folder in full, and the dump; recreates the database and loads it; starts the stack; and runs the after-restore step, which signs everybody out, discards every workspace, fails any job that was in flight at the Snapshot with the reason `restored` and a Retry, records the outage as days that count against no case, checks the audit log's chain, and prints the report. The **Restore completed** row in the audit log carries the same figures.
+
+Afterwards, two commands the restore names: `docker compose run --rm whisperx pull`, because the model cache is not backed up, and `./transcribe check`. Then upgrade to the current release if the Snapshot was older.
+
+### The drill
+
+The monthly drill restores the newest Snapshot into a folder beside the app data folder, brings up a throwaway copy of the database and the app on a network of their own (no web server, no GPU, no transcription, no sign-in, no mail), loads the dump, and checks it against the manifest: a row count per table, a checksum per file, every recording in a case has its files, the audit chain unbroken. It records **Restore drill ran**, pass or fail with the failing step, in the live app's audit log and on the Status page, and tears everything down whatever the result. It needs free space for the Snapshot plus the floor, and refuses when there is not. Nobody is made to rehearse a restore by hand: the drill is the rehearsal.
+
 ## The Installation page
 
-What this server is, read from its environment and shown so that an Admin can check an installation without opening a terminal: the address and port, the bind address, the client networks allowed in, the time zone, the app data folder, the WhisperX service's address and the card it reserved, the engine network and profile, and the media worker's thread and job limits.
+What this server is, read from its environment and shown so that an Admin can check an installation without opening a terminal: the address and port, the bind address, the client networks allowed in, the time zone, the app data folder, the WhisperX service's address and the card it reserved, the engine network and profile, the media worker's thread and job limits, and the backup target, schedule, keep rule and last run.
 
 **Secrets** are shown as set or missing, never as values. **How this office gets releases** names the repository and says, in one sentence, that the app never checks for updates: a person subscribes to the repository's Releases on GitHub and runs the upgrade by hand.
 

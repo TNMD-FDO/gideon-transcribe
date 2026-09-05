@@ -322,6 +322,18 @@ def check_the_directory(timestamp: int) -> None:
     directory.check_accounts()
 
 
+@app.periodic(cron="30 * * * *")
+@app.task(queue="default", name="watch_the_backups")
+def watch_the_backups(timestamp: int) -> None:
+    """The two overdue tests, once an hour: no Snapshot in 26 hours, a drill
+    more than three days late. Each writes one audit row a day while it holds,
+    so the log shows the gap without filling with it; the Operator mail joins
+    when the Email chapter is built."""
+    from core import backups
+
+    backups.watch()
+
+
 @app.task(queue="media", name="render_clip")
 def render_clip(clip_id: str) -> None:
     """Cut one Clip from the Playback copy.

@@ -183,7 +183,7 @@ If you run it a second time it refuses to overwrite anything. `./transcribe inst
 
 ### Step 5: bring it up
 
-The six things install printed, in order. Each is one command, run from the install home.
+The things install printed, in order. Each is one command, run from the install home.
 
 **Get the images.** Compose pulls the app's two images from the registry, and the upstream ones (the database, the web server, the upload sidecar):
 
@@ -238,6 +238,20 @@ It shows the cards on the server and asks three things, each with a sensible ans
 ```
 
 stops the engine, frees the card, and leaves the app using no engine: the panel's Engine address and Model name are cleared and the AI assistant toggle is turned off, so nobody sees a button for an engine that is not there and the Status page reads "off; no engine is configured". The weights stay on disk for the next `on`; delete `<App data folder>/models/vllm` to free the space. Switching to a shared engine is `./transcribe engine` as above: it asks for the engine's address and model name and writes them into the panel, and it stops a running Local engine in the same step, since the two are never on together.
+
+### The backup
+
+`./transcribe install` asks for the backup target and the Operator address after the engine. With a target named it makes the store account's key when there is none and prints the public half to paste into the store, generates the repository password, records the store's host key and prints its fingerprint to compare, makes the repository on the store, and writes the three host timers. The admin guide's Backups chapter has the store's side, in order, and what goes into the password manager before the first copy. Then, with the stack up:
+
+```bash
+./transcribe backup
+```
+
+```bash
+./transcribe restore-drill
+```
+
+Leave the target empty to run without backups; the Status page says so in red until one is set with `./transcribe install-backup`.
 
 ## 4. Check
 
@@ -467,6 +481,11 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | Key | Meaning |
 |---|---|
 | `LLM_NETWORK` | The Docker network the engine is reached on. |
+| `BACKUP_TARGET` | The backup store, as `sftp:<account>@<store>:/<folder>`; empty means backups are off. The admin guide's Backups chapter has the store's side. |
+| `BACKUP_SSH_KEY_FILE`, `BACKUP_KEY_FILE`, `BACKUP_KNOWN_HOSTS_FILE` | The store account's private key, the repository password, and the store's host key, each a file under `secrets/`. The first two never ride in a backup: a fresh server gets them from the office's password manager. |
+| `BACKUP_KEEP_DAYS`, `BACKUP_LOCAL_DUMPS` | Nightly copies kept on the store (30) and dumps kept on the server (7). |
+| `BACKUP_TIME`, `DRILL_TIME` | When the nightly backup runs (02:00) and when the weekly check and the monthly drill run (04:00, Sundays). Written into the host's timers; after a change, `./transcribe install-timers`. |
+| `OPERATOR_EMAIL` | Who is told when a backup or a drill fails or a restore completes; empty means nobody. Mail arrives with the Email notifications chapter. |
 | `COMPOSE_FILE` | Which compose files Compose reads. Left out entirely for most offices; uncommented only for a shared engine. Never set empty: Compose reads an empty value as a path and refuses to start. |
 | `COMPOSE_PROFILES` | `llm` starts the Local engine in this stack; `./transcribe engine local on` sets it and `off` clears it. Empty means a shared engine, or none. |
 | `LLM_LOCAL_MODEL` | The model the Local engine loads, as Hugging Face names it. Default `Qwen/Qwen3.5-4B`, which fits in 20 GB with its cache. |
