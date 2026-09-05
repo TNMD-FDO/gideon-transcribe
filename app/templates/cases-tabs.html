@@ -1,0 +1,12 @@
+{% comment %}
+  The strip above the Cases page and the Recycle bin: one page in the reader's
+  eyes, three views. Everyone's is an Admin's alone. `who` is mine, everyone,
+  or bin.
+{% endcomment %}
+<div class="tabs" style="margin: 0 0 12px">
+  <a href="{% url 'cases' %}" class="tab{% if who == 'mine' %} on{% endif %}">Mine</a>
+  {% if user.is_admin %}
+    <a href="{% url 'cases' %}?who=everyone" class="tab{% if who == 'everyone' %} on{% endif %}">Everyone's</a>
+  {% endif %}
+  <a href="{% url 'recycle-bin' %}" class="tab{% if who == 'bin' %} on{% endif %}">Recycle bin{% if binned %} ({{ binned }}){% endif %}</a>
+</div>

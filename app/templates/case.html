@@ -12,7 +12,7 @@
     </p>
   {% endif %}
 
-  <div class="page roomy" data-case="{{ case.pk }}">
+  <div class="page roomy workbench" data-case="{{ case.pk }}">
     <p class="muted small" style="margin: 0 0 4px">
       <a href="{% url 'cases' %}">Cases</a>
     </p>
@@ -20,227 +20,254 @@
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
-      <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
-      <button type="button" class="btn" id="rename">Rename</button>
-      <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
-    </div>
-
-    <p class="lead">
-      {{ recordings|length }} recording{{ recordings|length|pluralize }}, {{ size }}.
-      Last activity {{ case.last_activity|date:"d M Y H:i" }}.
-    </p>
-
-    <div id="rename-box" class="card" hidden style="margin-bottom: 14px">
-      <label for="new-name">Name</label>
-      <div class="row" style="gap: 6px">
-        <input id="new-name" type="text" maxlength="200" class="grow" value="{{ case.name }}">
-        <button type="button" class="btn primary" id="save-name">Save</button>
-        <button type="button" class="btn ghost" id="never-mind">Cancel</button>
-      </div>
-      <p class="notice warn" id="rename-warning" hidden></p>
     </div>
 
     {% comment %}
-      Two of the four tabs the chapter gives this page. Speakers and Chat
-      belong to chapters that are not built, so the space is left rather than
-      filled with a guess.
+      Two panes from 1280 pixels: what is in the case on the left, what is
+      about the case on the right. Below that width the right pane follows.
     {% endcomment %}
-    <div class="tabs">
-      <a href="{% url 'case' case.pk %}"
-         class="tab{% if tab == 'recordings' %} on{% endif %}">Recordings</a>
-      {% if clips_available %}
-        <a href="{% url 'case' case.pk %}?tab=clips"
-           class="tab{% if tab == 'clips' %} on{% endif %}">Clips</a>
-      {% endif %}
-    </div>
+    <div class="panes">
+      <div class="pane-list">
+        {% comment %}
+          Two of the four tabs the chapter gives this page. Speakers and Chat
+          belong to chapters that are not built, so the space is left rather
+          than filled with a guess.
+        {% endcomment %}
+        <div class="tabs" style="margin-top: 6px">
+          <a href="{% url 'case' case.pk %}"
+             class="tab{% if tab == 'recordings' %} on{% endif %}">Recordings ({{ recordings|length }})</a>
+          {% if clips_available %}
+            <a href="{% url 'case' case.pk %}?tab=clips"
+               class="tab{% if tab == 'clips' %} on{% endif %}">Clips{% if tab == 'clips' %} ({{ clips_here|length }}){% endif %}</a>
+          {% endif %}
+        </div>
 
-    {% if tab == "recordings" %}
-    <form method="get" class="row" style="gap: 6px; margin: 14px 0">
-      <input type="search" name="q" value="{{ asked }}" class="grow"
-             style="max-width: 26rem"
-             placeholder="Search this case's transcripts and speaker names">
-      <button type="submit" class="btn">Search</button>
-      {% if asked %}
-        <a href="{% url 'case' case.pk %}" class="btn ghost">Clear</a>
-      {% endif %}
-    </form>
-    {% endif %}
-
-    {% if hits is not None %}
-      <h2>{{ hits|length }} hit{{ hits|length|pluralize }} for &ldquo;{{ asked }}&rdquo;</h2>
-      {% if hits %}
-        <table class="tbl">
-          <thead>
-            <tr><th>Recording</th><th>At</th><th>Speaker</th><th>What was said</th></tr>
-          </thead>
-          <tbody>
-            {% for hit in hits %}
-              <tr>
-                <td><a href="{% url 'viewer' hit.recording.pk %}?t={{ hit.start|floatformat:1 }}">{{ hit.recording.title }}</a></td>
-                <td class="mono muted">{{ hit.at }}</td>
-                <td class="muted">{{ hit.speaker }}</td>
-                <td>{{ hit.text }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p class="lead">Nothing in this case says that.</p>
-      {% endif %}
-      <p class="muted small">Search terms are never written to the audit log.</p>
-      <h2 style="margin-top: 26px">Recordings</h2>
-    {% endif %}
-
-    {% if tab == "clips" %}
-      <div class="row" style="margin-bottom: 10px">
-        <span class="grow">
-          {{ clips_here|length }} clip{{ clips_here|length|pluralize }} in this case
-        </span>
-        {% if clips_here %}
-          <a href="{% url 'case-clips-download' case.pk %}" class="btn">Download all clips</a>
+        {% if tab == "recordings" %}
+        <form method="get" class="row" style="gap: 6px; margin: 14px 0">
+          <input type="search" name="q" value="{{ asked }}" class="grow"
+                 style="max-width: 26rem"
+                 placeholder="Search this case's transcripts and speaker names">
+          <button type="submit" class="btn">Search</button>
+          {% if asked %}
+            <a href="{% url 'case' case.pk %}" class="btn ghost">Clear</a>
+          {% endif %}
+        </form>
         {% endif %}
-      </div>
 
-      {% if clips_here %}
-        <div style="overflow-x: auto">
-          <table class="tbl">
+        {% if hits is not None %}
+          <h2>{{ hits|length }} hit{{ hits|length|pluralize }} for &ldquo;{{ asked }}&rdquo;</h2>
+          {% if hits %}
+            <table class="tbl">
+              <thead>
+                <tr><th>Recording</th><th>At</th><th>Speaker</th><th>What was said</th></tr>
+              </thead>
+              <tbody>
+                {% for hit in hits %}
+                  <tr>
+                    <td><a href="{% url 'viewer' hit.recording.pk %}?t={{ hit.start|floatformat:1 }}">{{ hit.recording.title }}</a></td>
+                    <td class="mono muted">{{ hit.at }}</td>
+                    <td class="muted">{{ hit.speaker }}</td>
+                    <td>{{ hit.text }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="lead">Nothing in this case says that.</p>
+          {% endif %}
+          <p class="muted small">Search terms are never written to the audit log.</p>
+          <h2 style="margin-top: 26px">Recordings</h2>
+        {% endif %}
+
+        {% if tab == "clips" %}
+          <div class="row" style="margin: 12px 0 10px">
+            <span class="grow">
+              {{ clips_here|length }} clip{{ clips_here|length|pluralize }} in this case
+            </span>
+            {% if clips_here %}
+              <a href="{% url 'case-clips-download' case.pk %}" class="btn">Download all clips</a>
+            {% endif %}
+          </div>
+
+          {% if clips_here %}
+            <div style="overflow-x: auto">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Title</th><th>Recording</th><th>Span</th><th>Length</th>
+                    <th>Options</th><th>Status</th><th>Size</th>
+                    <th>Saved</th><th>Saved by</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for clip in clips_here %}
+                    <tr>
+                      <td><b>{{ clip.title }}</b></td>
+                      <td class="muted">{{ clip.recording_title }}</td>
+                      <td class="mono muted">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
+                      <td>{{ clip.seconds|floatformat:0 }}s</td>
+                      <td class="muted">{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}</td>
+                      <td>
+                        {% if clip.state == "ready" and not clip.stale %}
+                          <span class="pill ok">Ready</span>
+                        {% elif clip.stale %}
+                          <span class="pill warn">Captions out of date</span>
+                        {% elif clip.state == "failed" %}
+                          <span class="pill danger">Failed</span>
+                        {% else %}
+                          <span class="pill translate">Rendering</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ clip.size|filesizeformat }}</td>
+                      <td class="muted">{{ clip.saved }}</td>
+                      <td class="muted">{{ clip.saved_by }}</td>
+                      <td>
+                        <span class="row">
+                          {% if clip.state == "ready" %}
+                            <a href="/clip/{{ clip.id }}/download" class="btn primary small">Download</a>
+                          {% endif %}
+                          <a href="{% url 'viewer' clip.recording %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.id }}"
+                             class="btn small">Open in viewer</a>
+                          {% if clip.may_change %}
+                            {% if clip.state == "failed" or clip.stale %}
+                              <button type="button" class="small rerender" data-clip="{{ clip.id }}">
+                                {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
+                              </button>
+                            {% endif %}
+                            <button type="button" class="small ghost danger delete-clip"
+                                    data-clip="{{ clip.id }}" data-title="{{ clip.title }}">Delete</button>
+                          {% endif %}
+                        </span>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="card">
+              <b>No clips in this case yet.</b>
+              <p class="muted small" style="margin: 4px 0 0">
+                Open a recording, mark a span, and save it. A clip made on a
+                recording in a case is listed here and never on the Clips page.
+              </p>
+            </div>
+          {% endif %}
+
+        {% elif recordings %}
+          {% comment %}
+            One table, one block of details per recording, opening under its
+            row on every width: the pane on the right is the case's own, so
+            the recordings' details stay with their rows.
+          {% endcomment %}
+          <table class="tbl" id="recordings">
             <thead>
-              <tr>
-                <th>Title</th><th>Recording</th><th>Span</th><th>Length</th>
-                <th>Options</th><th>Status</th><th>Size</th>
-                <th>Saved</th><th>Saved by</th><th></th>
-              </tr>
+              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Added</th><th></th></tr>
             </thead>
             <tbody>
-              {% for clip in clips_here %}
-                <tr>
-                  <td><b>{{ clip.title }}</b></td>
-                  <td class="muted">{{ clip.recording_title }}</td>
-                  <td class="mono muted">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
-                  <td>{{ clip.seconds|floatformat:0 }}s</td>
-                  <td class="muted">{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}</td>
-                  <td>
-                    {% if clip.state == "ready" and not clip.stale %}
-                      <span class="pill ok">Ready</span>
-                    {% elif clip.stale %}
-                      <span class="pill warn">Captions out of date</span>
-                    {% elif clip.state == "failed" %}
-                      <span class="pill danger">Failed</span>
-                    {% else %}
-                      <span class="pill translate">Rendering</span>
+              {% for recording in recordings %}
+                <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
+                    {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
+                  <td><b>{{ recording.title }}</b></td>
+                  <td class="muted">{{ recording.recording_type }}</td>
+                  <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span></td>
+                  <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
+                  <td class="muted">{{ recording.speakers_in_words }}</td>
+                  <td class="muted">
+                    {{ recording.created|date:"d M Y" }}
+                    {% if recording.user_id != case.owner_id %}by {{ recording.user.shown_name }}{% endif %}
+                  </td>
+                  <td class="acts">
+                    {% if recording.transcript %}
+                      <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
                     {% endif %}
                   </td>
-                  <td>{{ clip.size|filesizeformat }}</td>
-                  <td class="muted">{{ clip.saved }}</td>
-                  <td class="muted">{{ clip.saved_by }}</td>
-                  <td>
-                    <span class="row">
-                      {% if clip.state == "ready" %}
-                        <a href="/clip/{{ clip.id }}/download" class="btn primary small">Download</a>
+                </tr>
+                <tr class="detail-row" hidden>
+                  <td colspan="7">
+                    <div class="detail" id="detail-{{ recording.pk }}" data-recording="{{ recording.pk }}">
+                      {% if recording.description %}
+                        <p class="small" style="margin: 0 0 8px">{{ recording.description }}</p>
                       {% endif %}
-                      <a href="{% url 'viewer' clip.recording %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.id }}"
-                         class="btn small">Open in viewer</a>
-                      {% if clip.may_change %}
-                        {% if clip.state == "failed" or clip.stale %}
-                          <button type="button" class="small rerender" data-clip="{{ clip.id }}">
-                            {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
-                          </button>
+                      {% if recording.failure_message %}
+                        <p class="small" style="margin: 0 0 8px">{{ recording.state_word }}: {{ recording.failure_message }}</p>
+                      {% endif %}
+                      <div class="row" style="gap: 6px">
+                        <select class="a-type" style="max-width: 12rem">
+                          <option value="">No type</option>
+                          {% for one in types %}
+                            <option value="{{ one }}"{% if one == recording.recording_type %} selected{% endif %}>{{ one }}</option>
+                          {% endfor %}
+                        </select>
+                        <input type="text" class="a-description grow" maxlength="2000"
+                               value="{{ recording.description }}" placeholder="Notes about this recording">
+                        <button type="button" class="btn small save-details">Save</button>
+                      </div>
+                      <div class="row actions">
+                        {% if recording.transcript %}
+                          <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
                         {% endif %}
-                        <button type="button" class="small ghost danger delete-clip"
-                                data-clip="{{ clip.id }}" data-title="{{ clip.title }}">Delete</button>
-                      {% endif %}
-                    </span>
+                        {% if recording.transcript and not recording.being_replaced %}
+                          <button type="button" class="small process-again"
+                                  data-recording="{{ recording.pk }}"
+                                  data-title="{{ recording.title }}">Process again</button>
+                          <button type="button" class="small move"
+                                  data-recording="{{ recording.pk }}"
+                                  data-title="{{ recording.title }}">Move to another case</button>
+                        {% elif recording.media_state == "failed" %}
+                          <button type="button" class="small retry"
+                                  data-recording="{{ recording.pk }}">Retry</button>
+                        {% endif %}
+                        <span class="grow"></span>
+                        <button type="button" class="ghost small danger delete"
+                                data-recording="{{ recording.pk }}"
+                                data-title="{{ recording.title }}"
+                                data-clips="{{ recording.clips.count }}">Delete</button>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
-        </div>
-      {% else %}
-        <div class="card">
-          <b>No clips in this case yet.</b>
-          <p class="muted small" style="margin: 4px 0 0">
-            Open a recording, mark a span, and save it. A clip made on a
-            recording in a case is listed here and never on the Clips page.
-          </p>
-        </div>
-      {% endif %}
-
-    {% elif recordings %}
-      <ul class="cards">
-        {% for recording in recordings %}
-          <li data-recording="{{ recording.pk }}">
-            <div class="row">
-              <b class="grow">{{ recording.title }}</b>
-              {% if recording.being_replaced %}
-                <span class="pill warn">Processing again</span>
-              {% elif recording.in_the_queue %}
-                <span class="pill">In the queue</span>
-              {% endif %}
-              {% if recording.transcript %}
-                <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
-              {% elif recording.media_state == "rejected" %}
-                <span class="pill danger">Refused</span>
-              {% elif recording.media_state == "failed" %}
-                <span class="pill danger">Failed</span>
-              {% else %}
-                <span class="pill">{{ recording.get_media_state_display }}</span>
-              {% endif %}
-              {% if recording.transcript and not recording.being_replaced %}
-                <button type="button" class="small process-again"
-                        data-recording="{{ recording.pk }}"
-                        data-title="{{ recording.title }}">Process again</button>
-                <button type="button" class="small move"
-                        data-recording="{{ recording.pk }}"
-                        data-title="{{ recording.title }}">Move to another case</button>
-              {% elif recording.media_state == "failed" %}
-                <button type="button" class="small retry"
-                        data-recording="{{ recording.pk }}">Retry</button>
-              {% endif %}
-              <button type="button" class="ghost small danger delete"
-                      data-recording="{{ recording.pk }}"
-                      data-title="{{ recording.title }}"
-                      data-clips="{{ recording.clips.count }}">Delete</button>
-            </div>
+          <p class="muted small">Click a recording for its details, type and notes. Up and down move, Enter opens.</p>
+        {% else %}
+          <div class="card">
+            <b>Nothing in this case yet.</b>
             <p class="muted small" style="margin: 4px 0 0">
-              {% if recording.recording_type %}{{ recording.recording_type }} &middot; {% endif %}
-              {% if recording.duration_seconds %}{{ recording.length }} &middot;{% endif %}
-              {% if recording.speakers_in_words %}
-                {{ recording.speakers_in_words }} &middot;
-              {% endif %}
-              added {{ recording.created|date:"d M Y" }}
-              {% if recording.user_id != case.owner_id %}
-                by {{ recording.user.shown_name }}
-              {% endif %}
+              Add recordings here, or move one in from your recordings.
             </p>
-            {% if recording.description %}
-              <p class="small" style="margin: 4px 0 0">{{ recording.description }}</p>
-            {% endif %}
-            <details style="margin-top: 6px">
-              <summary class="muted small">Type and description</summary>
-              <div class="row" style="gap: 6px; margin-top: 6px">
-                <select class="a-type" style="max-width: 12rem">
-                  <option value="">No type</option>
-                  {% for one in types %}
-                    <option value="{{ one }}"{% if one == recording.recording_type %} selected{% endif %}>{{ one }}</option>
-                  {% endfor %}
-                </select>
-                <input type="text" class="a-description grow" maxlength="2000"
-                       value="{{ recording.description }}" placeholder="Notes about this recording">
-                <button type="button" class="btn small save-details">Save</button>
-              </div>
-            </details>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="card">
-        <b>Nothing in this case yet.</b>
-        <p class="muted small" style="margin: 4px 0 0">
-          Add recordings here, or move one in from your recordings.
-        </p>
+          </div>
+        {% endif %}
       </div>
-    {% endif %}
+
+      <aside class="pane-detail about-case">
+        <h2>About this case</h2>
+        <dl class="kv">
+          {% if not is_owner %}<dt>Owner</dt><dd>{{ case.owner.shown_name }}</dd>{% endif %}
+          <dt>Recordings</dt><dd>{{ recordings|length }}, {{ size }}</dd>
+          <dt>Last activity</dt><dd>{{ case.last_activity|date:"d M Y H:i" }}</dd>
+          <dt>Retention</dt>
+          <dd>{% if warned %}<span class="deletes">{{ deletes_line }}</span>{% else %}{{ deletes_line }}{% endif %}</dd>
+        </dl>
+        <div class="row actions">
+          <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
+          {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
+          <button type="button" class="btn" id="rename">Rename</button>
+          <span class="grow"></span>
+          <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
+        </div>
+        <div id="rename-box" class="card" hidden style="margin-top: 12px">
+          <label for="new-name">Name</label>
+          <div class="row" style="gap: 6px">
+            <input id="new-name" type="text" maxlength="200" class="grow" value="{{ case.name }}">
+            <button type="button" class="btn primary" id="save-name">Save</button>
+            <button type="button" class="btn ghost" id="never-mind">Cancel</button>
+          </div>
+          <p class="notice warn" id="rename-warning" hidden></p>
+        </div>
+      </aside>
+    </div>
   </div>
 
   <script src="{% static 'again.js' %}"></script>

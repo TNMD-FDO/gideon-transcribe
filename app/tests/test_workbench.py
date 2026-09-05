@@ -64,3 +64,32 @@ def test_the_stylesheet_has_both_shapes_for_the_pages():
     assert "#detail-pane { display: block; }" in wide
     assert '"one two" "one three"' in wide
     assert ".workbench #exceptions-block { display: none; }" in wide
+
+
+def test_the_cases_pages_share_the_strip_and_the_chooser():
+    cases = page("cases.html")
+    assert '{% include "cases-tabs.html" %}' in cases
+    assert 'id="recordings"' in cases and 'id="detail-pane"' in cases
+    assert "Everyone else's" not in cases
+    strip = page("cases-tabs.html")
+    for view in ("mine", "everyone", "bin"):
+        assert f"who == '{view}'" in strip
+    bin_page = page("recycle-bin.html")
+    assert '{% include "cases-tabs.html" %}' in bin_page
+    one = page("case.html")
+    assert 'class="pane-detail about-case"' in one
+    # The case page's rows open under themselves: no pane for them.
+    assert 'id="recordings"' in one and 'id="detail-pane"' not in one
+    js = script("recordings.js")
+    assert "pane !== null" in js
+    assert 'addEventListener("rows-changed", settle)' in js
+
+
+def test_the_clips_page_is_one_table_with_a_player():
+    clips = page("clips.html")
+    assert 'id="clip-filter"' in clips
+    assert 'data-of="{{ clip.recording.pk }}"' in clips
+    assert 'class="clipplayer" src="{{ clip.url }}"' in clips
+    assert "{% for group in groups %}" not in clips
+    js = script("clips.js")
+    assert 'new Event("rows-changed")' in js

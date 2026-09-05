@@ -4,9 +4,20 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="page roomy">
+  <div class="page roomy workbench">
     <div class="row">
       <h1 class="grow">Your clips</h1>
+      {% if clips|length > 1 %}
+        <label class="row small" style="gap: 6px">
+          Recording
+          <select id="clip-filter">
+            <option value="">All recordings</option>
+            {% for recording in recordings %}
+              <option value="{{ recording.pk }}">{{ recording.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
       {% if any_ready %}
         <a href="{% url 'download-clips' %}" class="btn primary">Download all</a>
       {% endif %}
@@ -18,61 +29,104 @@
 
     <p class="notice">{{ standing_line }}</p>
 
-    {% for group in groups %}
-      <h2 style="margin-top: 20px">{{ group.recording.title }}</h2>
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Title</th><th>Span</th><th>Length</th><th>Options</th>
-            <th>Status</th><th>Size</th><th>Saved</th><th>Downloaded</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for clip in group.clips %}
-            <tr>
-              <td><b>{{ clip.title }}</b></td>
-              <td class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
-              <td>{{ clip.seconds|floatformat:0 }}s</td>
-              <td class="muted">
-                {% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}
-              </td>
-              <td>
-                {% if clip.state == "ready" and not clip.captions_are_stale %}
-                  <span class="pill ok">Ready</span>
-                {% elif clip.captions_are_stale %}
-                  <span class="pill warn">Captions out of date</span>
-                {% elif clip.state == "failed" %}
-                  <span class="pill danger">Failed</span>
-                {% else %}
-                  <span class="pill translate">Rendering</span>
-                {% endif %}
-              </td>
-              <td>{{ clip.size_bytes|filesizeformat }}</td>
-              <td class="muted">{{ clip.created|date:"d M H:i" }}</td>
-              <td class="muted">
-                {% if clip.first_downloaded %}{{ clip.first_downloaded|date:"d M H:i" }}{% else %}Not yet{% endif %}
-              </td>
-              <td>
-                <span class="row">
-                  {% if clip.state == "ready" %}
-                    <a href="{% url 'download-clip' clip.pk %}" class="btn primary small">Download</a>
-                  {% endif %}
-                  <a href="{% url 'viewer' clip.recording.pk %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.pk }}"
-                     class="btn small">Open in viewer</a>
-                  {% if clip.state == "failed" or clip.captions_are_stale %}
-                    <button type="button" class="small rerender" data-clip="{{ clip.pk }}">
-                      {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
-                    </button>
-                  {% endif %}
-                  <button type="button" class="small ghost danger delete-clip"
-                          data-clip="{{ clip.pk }}" data-title="{{ clip.title }}">Delete</button>
-                </span>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% empty %}
+    {% if clips %}
+      {% comment %}
+        One table for every clip, with the recording as a column, and one block
+        of details per clip: the file plays there, on a wide window in the pane
+        on the right and on a narrow one under the row. recordings.js moves the
+        block; the filter above hides the rows of other recordings.
+      {% endcomment %}
+      <div class="panes">
+        <div class="pane-list">
+          <table class="tbl" id="recordings">
+            <thead>
+              <tr>
+                <th>Clip</th><th>Recording</th><th>Span</th><th>Length</th>
+                <th>Status</th><th>Saved</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for clip in clips %}
+                <tr class="pick" tabindex="0" data-recording="{{ clip.pk }}"
+                    data-of="{{ clip.recording.pk }}"
+                    data-open="{% url 'viewer' clip.recording.pk %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.pk }}">
+                  <td><b>{{ clip.title }}</b></td>
+                  <td class="muted">{{ clip.recording.title }}</td>
+                  <td class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
+                  <td>{{ clip.seconds|floatformat:0 }}s</td>
+                  <td>
+                    {% if clip.state == "ready" and not clip.captions_are_stale %}
+                      <span class="pill ok">Ready</span>
+                    {% elif clip.captions_are_stale %}
+                      <span class="pill warn">Captions out of date</span>
+                    {% elif clip.state == "failed" %}
+                      <span class="pill danger">Failed</span>
+                    {% else %}
+                      <span class="pill translate">Rendering</span>
+                    {% endif %}
+                  </td>
+                  <td class="muted">{{ clip.created|date:"d M H:i" }}</td>
+                  <td class="acts">
+                    {% if clip.state == "ready" %}
+                      <a href="{% url 'download-clip' clip.pk %}" class="btn primary small">Download</a>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr class="detail-row" hidden>
+                  <td colspan="7">
+                    <div class="detail" id="detail-{{ clip.pk }}">
+                      {% if clip.state == "ready" %}
+                        {% comment %}
+                          The rendered file itself, off the disk through Caddy
+                          like every media file. Nothing plays until Play is
+                          pressed, so a chosen row costs nothing to choose.
+                        {% endcomment %}
+                        {% if clip.is_video %}
+                          <video class="clipplayer" src="{{ clip.url }}" controls preload="none"></video>
+                        {% else %}
+                          <audio class="clipplayer" src="{{ clip.url }}" controls preload="none"></audio>
+                        {% endif %}
+                      {% endif %}
+                      <h2>{{ clip.title }}</h2>
+                      {% if clip.note %}<p class="small" style="margin: 0 0 8px">{{ clip.note }}</p>{% endif %}
+                      <dl class="kv">
+                        <dt>Recording</dt><dd>{{ clip.recording.title }}</dd>
+                        <dt>Span</dt><dd class="mono">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s, {{ clip.seconds|floatformat:0 }}s</dd>
+                        <dt>Options</dt>
+                        <dd>{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}{% if not clip.burn_captions and not clip.include_excerpt %}none{% endif %}</dd>
+                        <dt>Size</dt><dd>{{ clip.size_bytes|filesizeformat }}</dd>
+                        <dt>Saved</dt><dd>{{ clip.created|date:"d M H:i" }}</dd>
+                        <dt>Downloaded</dt>
+                        <dd>{% if clip.first_downloaded %}{{ clip.first_downloaded|date:"d M H:i" }}{% else %}Not yet{% endif %}</dd>
+                      </dl>
+                      <div class="row actions">
+                        {% if clip.state == "ready" %}
+                          <a href="{% url 'download-clip' clip.pk %}" class="btn primary">Download</a>
+                        {% endif %}
+                        <a href="{% url 'viewer' clip.recording.pk %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.pk }}"
+                           class="btn">Open in viewer</a>
+                        {% if clip.state == "failed" or clip.captions_are_stale %}
+                          <button type="button" class="small rerender" data-clip="{{ clip.pk }}">
+                            {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
+                          </button>
+                        {% endif %}
+                        <span class="grow"></span>
+                        <button type="button" class="small ghost danger delete-clip"
+                                data-clip="{{ clip.pk }}" data-title="{{ clip.title }}">Delete</button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="muted small">Click a clip to play it and see its details. Up and down move, Enter opens it in the viewer.</p>
+        </div>
+        <aside class="pane-detail" id="detail-pane">
+          <p class="muted small" id="detail-none">Choose a clip to play it.</p>
+        </aside>
+      </div>
+    {% else %}
       <div class="card">
         <b>No clips yet.</b>
         <p class="muted small" style="margin: 4px 0 0">
@@ -80,8 +134,9 @@
           timeline, and save it.
         </p>
       </div>
-    {% endfor %}
+    {% endif %}
   </div>
 
+  <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'clips.js' %}"></script>
 {% endblock %}

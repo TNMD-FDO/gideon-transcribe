@@ -41,11 +41,14 @@
   "use strict";
 
   var table = document.getElementById("recordings");
+  // Without a pane the details open under the row on every width, which is
+  // the case page's shape: its pane is about the case, not the row.
   var pane = document.getElementById("detail-pane");
-  if (!table || !pane) { return; }
+  if (!table) { return; }
 
   var WIDE = window.matchMedia("(min-width: 1280px)");
   var none = document.getElementById("detail-none");
+  function onTheBench() { return WIDE.matches && pane !== null; }
   var rows = Array.prototype.slice.call(table.querySelectorAll("tr.pick"));
   var chosenRow = null;
 
@@ -58,17 +61,17 @@
       var holder = row.nextElementSibling;
       var detail = detailOf(row);
       var isChosen = row === chosenRow;
-      if (WIDE.matches && isChosen) {
+      if (onTheBench() && isChosen) {
         pane.appendChild(detail);
         holder.hidden = true;
       } else {
         var cell = holder.querySelector("td");
         if (detail.parentNode !== cell) { cell.appendChild(detail); }
-        holder.hidden = !isChosen || WIDE.matches;
+        holder.hidden = !isChosen || onTheBench() || row.hidden;
       }
       row.classList.toggle("on", isChosen);
     });
-    none.hidden = chosenRow !== null;
+    if (none) { none.hidden = chosenRow !== null; }
   }
 
   function choose(row) {
@@ -80,22 +83,24 @@
     row.addEventListener("click", function (event) {
       // A click on Open is Open, not a choice.
       if (event.target.closest("a, button")) { return; }
-      choose(row === chosenRow && !WIDE.matches ? null : row);
+      choose(row === chosenRow && !onTheBench() ? null : row);
     });
   });
 
   table.addEventListener("keydown", function (event) {
     var row = event.target.closest("tr.pick");
     if (!row) { return; }
-    var at = rows.indexOf(row);
-    if (event.key === "ArrowDown" && at < rows.length - 1) {
+    // Along the rows a filter has left showing.
+    var shown = rows.filter(function (one) { return !one.hidden; });
+    var at = shown.indexOf(row);
+    if (event.key === "ArrowDown" && at < shown.length - 1) {
       event.preventDefault();
-      rows[at + 1].focus();
-      choose(rows[at + 1]);
+      shown[at + 1].focus();
+      choose(shown[at + 1]);
     } else if (event.key === "ArrowUp" && at > 0) {
       event.preventDefault();
-      rows[at - 1].focus();
-      choose(rows[at - 1]);
+      shown[at - 1].focus();
+      choose(shown[at - 1]);
     } else if (event.key === "Enter" && row.dataset.open) {
       window.location = row.dataset.open;
     } else if (event.key === " ") {
@@ -107,9 +112,13 @@
   // A wide window always shows a recording's details, the first one until
   // another is chosen; a narrow one shows none until a row is clicked.
   function settle() {
-    if (WIDE.matches && chosenRow === null && rows.length) { chosenRow = rows[0]; }
+    var shown = rows.filter(function (one) { return !one.hidden; });
+    if (chosenRow && chosenRow.hidden) { chosenRow = null; }
+    if (onTheBench() && chosenRow === null && shown.length) { chosenRow = shown[0]; }
     place();
   }
+  // A filter on the page hides rows and then asks for this.
+  table.addEventListener("rows-changed", settle);
   settle();
   if (WIDE.addEventListener) { WIDE.addEventListener("change", settle); }
   // A plain resize as well: not every browser fires the change above.
