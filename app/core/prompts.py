@@ -93,7 +93,7 @@ LENGTH_LINES = {
 }
 ANSWER_CAPS = {"short": 600, "standard": 1200, "detailed": 2500}
 CHAT_CAP = 1500
-SUGGESTIONS_CAP = 1000
+SUGGESTIONS_CAP = 1500
 # The history a Chat carries back to the model, in tokens, oldest dropped first.
 HISTORY_TOKENS = 16000
 
@@ -113,15 +113,15 @@ SUGGESTIONS_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "speaker": {"type": "string"},
-                    "name": {"type": "string"},
+                    "speaker": {"type": "string", "maxLength": 60},
+                    "name": {"type": "string", "maxLength": 60},
                     "kind": {"type": "string", "enum": ["name", "role", "unknown"]},
                     "confidence": {
                         "type": "string",
                         "enum": ["high", "medium", "low"],
                     },
                     "line": {"type": "integer"},
-                    "quote": {"type": "string"},
+                    "quote": {"type": "string", "maxLength": 300},
                 },
                 "required": ["speaker", "name", "kind", "confidence", "line", "quote"],
             },
@@ -129,6 +129,42 @@ SUGGESTIONS_SCHEMA = {
     },
     "required": ["suggestions"],
 }
+
+
+def suggestions_schema(unnamed: list[str]) -> dict:
+    """The schema with the array bounded: one entry per unnamed Speaker at most.
+
+    Under strict output shaping a small model can repeat entries until the
+    cap cuts the JSON off; a bound on the array is the cheapest stop to that.
+    """
+    import copy
+
+    schema = copy.deepcopy(SUGGESTIONS_SCHEMA)
+    schema["properties"]["suggestions"]["maxItems"] = max(1, len(unnamed))
+    return schema
+
+
+def salvage_json(text: str) -> str:
+    """A suggestions answer cut off at the cap, closed after its last whole entry.
+
+    Only the entries that were finished are kept; a half-written one goes.
+    Anything that is not the expected shape comes back unchanged and fails
+    the ordinary way.
+    """
+    start = text.find("[")
+    if start < 0:
+        return text
+    depth, last_whole = 0, -1
+    for at in range(start + 1, len(text)):
+        if text[at] == "{":
+            depth += 1
+        elif text[at] == "}":
+            depth -= 1
+            if depth == 0:
+                last_whole = at
+    if last_whole < 0:
+        return text
+    return text[: last_whole + 1] + "]}"
 
 
 def tokens(text: str) -> int:
