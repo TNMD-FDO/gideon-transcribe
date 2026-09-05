@@ -282,6 +282,22 @@ def _rows() -> list[Definition]:
             when_changed="The next Clip saved.",
         ),
         Definition(
+            key="case_chat_hours",
+            page=LIMITS,
+            name="Case chat: most hours of talk per question",
+            kind=NUMBER,
+            default=120,
+            least=6,
+            most=600,
+            unit="hours",
+            what_it_does=(
+                "The most talk one Case Chat question may read, as the summed "
+                "length of the recordings it would read. A question over more "
+                "refuses and says so."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
             key="files_per_batch",
             page=LIMITS,
             name="Files per Batch",
@@ -428,6 +444,22 @@ def _rows() -> list[Definition]:
             default=True,
             what_it_does="Asking questions of one Transcript.",
             when_changed="Off hides Chat; existing Chats are hidden, not deleted.",
+        ),
+        Definition(
+            key="chat_across_cases",
+            page=ASSISTANT,
+            name="Chat across cases",
+            kind=TOGGLE,
+            default=True,
+            needs="assistant_available",
+            what_it_does=(
+                "The Case Chat: a Chat tab on every Case page that answers from "
+                "every transcript in the case. Under the master switch and "
+                "independent of the Chat toggle above."
+            ),
+            when_changed=(
+                "Off hides the Chat tab on every Case page and keeps the Chats."
+            ),
         ),
         Definition(
             key="summary_available",

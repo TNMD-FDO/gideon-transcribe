@@ -21,6 +21,48 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.12.0, 2026-09-05
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0020 adds the Case Chat and its turns. Nothing on disk changes.
+
+### Added
+
+- **The Case Chat.** A case's page gains a **Chat** tab whose ground is the
+  whole case: every recording with a transcript, read whole, as the case
+  stands when the question is asked. A small case is one engine call, like a
+  recording's Chat; a large one is read in parts, two at a time, and one
+  combining call writes the answer from the part answers, with the tab saying
+  "Reading 40 transcripts in 4 parts. This takes a few minutes." Nothing is
+  indexed or kept between questions. The case's people go ahead of the talk
+  with their roles and never their notes, and each transcript opens with a
+  header line naming the recording, its type, upload date, length and nature.
+  A citation names the recording as well as the time, "Jail call 2 at
+  00:12:45", and opens that recording in the viewer at that moment; one whose
+  recording has left the case is marked "(recording removed)". Recordings
+  still transcribing or failed are skipped and the answer says so at the top.
+  The chats belong to the case, are listed newest first and named from the
+  first question, export to Word with the case's cover facts and the
+  recordings read, and count in the case's Delete confirmation. Asking is
+  activity for the retention clock; deleting a chat is not. This is the Cases
+  release's Case Chat chapter, shipped early; its amendment records the
+  build's decisions.
+- **Three settings.** **Chat across cases** on the AI assistant page (On by
+  default, under the master switch, independent of the viewer's Chat toggle)
+  turns the tab on and off and keeps the chats. **Case chat: most hours of
+  talk per question** on the Limits page (120 hours, 6 to 600) is the ceiling
+  one question may read; over it the question refuses with the figures. The
+  **Case chat** prompt template joins the Templates page, editable with Reset
+  to default, version 1.
+- **Reason class `llm_case_too_large`**, and `llm_too_long` now also names the
+  one transcript that would not fit a reading even alone. The audit log gains
+  the `case_chat_turn` call, metadata only: transcripts read, readings used,
+  model, host, template versions, tokens, duration and outcome.
+
 ## v1.11.1, 2026-09-05
 
 ```

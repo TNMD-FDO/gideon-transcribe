@@ -168,6 +168,16 @@ Under each person's row: **Rename everywhere** changes the name in every recordi
 
 At the bottom, **Unnamed speakers** lists the recordings with speakers still unnamed, each a link. That list is the way to work through a case: open a recording, use Suggest names or type the names in its Speakers panel, and come back until the list is empty.
 
+### The Chat tab
+
+When your office has the AI assistant on, a case's page also has a **Chat** tab. It works like the Chat in a recording's viewer, but its ground is the whole case: every recording in the case that has a transcript, read whole, as the case stands when you ask. Nothing is picked and nothing is kept between questions; each question reads the transcripts afresh, so a recording added or moved in later is read from the next question on. A recording still transcribing, or one that failed, is skipped, and the answer says so at the top.
+
+Ask about who said what across the calls, when something first came up, how many times, or what one recording says that another does not. "Summarise this case" is a question like any other. The answer comes from the transcripts alone, in English whatever language they are in, and the case's people and their roles are told to the assistant ahead of the talk. A time in an answer is a **citation** naming the recording, "Jail call 2 at 00:12:45", and a link that opens that recording in the viewer at that moment. If a recording has since left the case, its citations stay as text marked "(recording removed)".
+
+A small case is one reading and takes about as long as a recording's Chat. A large one is read in parts: the tab says "Reading 40 transcripts in 4 parts. This takes a few minutes.", each part is asked your question, and one final step writes the answer from the parts. There is a ceiling on how much talk one question may read, 120 hours unless your Admin has changed it; over it the question refuses and says so. A question that fails shows why and **Try again**, never half an answer.
+
+The chats belong to the case: everyone who can open the case sees the same ones, and **New chat**, **Copy**, **Export to Word** and **Delete chat** work as in the viewer. Asking a question counts as using the case, so it starts the retention clock over; deleting a chat does not. The export's cover lists the recordings the chat has read, and its citations print as the recording's title and time.
+
 ### How long a case is kept
 
 A case is kept for as long as somebody uses it. Every use starts its clock over: opening the case or a recording in it, adding or moving a recording in, correcting, naming a speaker, exporting, saving or downloading a clip, renaming. Looking at the list of cases does not count, and neither does an Admin looking in.

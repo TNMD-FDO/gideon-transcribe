@@ -53,13 +53,16 @@ SPOKEN = "the transcript"  # never logged; a placeholder for messages only
 
 
 class PromptTemplate(models.Model):
-    """An Admin-editable instruction: Ground rules, Chat, or Speaker suggestions."""
+    """An Admin-editable instruction: Ground rules, Chat, Speaker suggestions, Case
+    chat."""
 
     GROUND_RULES, CHAT, SUGGESTIONS = "ground_rules", "chat", "suggestions"
+    CASE_CHAT = "case_chat"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
         SUGGESTIONS: ("Speaker suggestions", prompts.SUGGESTIONS),
+        CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
     }
 
     key = models.CharField(max_length=30, unique=True)

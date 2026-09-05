@@ -148,6 +148,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 - From the Clips ticket, to the Limits and Features groups: Longest Clip added; what Clips available Off hides, the Clips page, the sign-out dialog, "Download everything", and in Phase 2 the Case page's Clips tab; no caption style setting.
 - From the Upload page ticket, to the Transcription defaults group: "Two-channel calls start unticked regardless" withdrawn from Diarization ticked by default; the "Diarize" label; the 80% storage warning as a build constant, not a setting.
 - From the email notifications ticket, to the Email group and the Sign-in and directory group: Email notifications, Batch finished emails, the Notification templates, Test message; the Email address on Create Local admin.
+- From the v1.12.0 build: Chat across cases, the Case chat template, and Case chat: most hours of talk per question ship, as the Case Chat chapter defines them; Chat across cases is greyed while the AI assistant is Off.
 - From the v1.11.0 build, to the AI assistant group: Speaker suggestion method, the extension point for better ways of telling Speakers apart, with "evidence" as its first and only method. To the Cases group: the Speaker roles row ships in v1.11.0, greyed while Folder management is Off, as the Cases release planned.
 - From the Case Chat ticket, to the AI assistant and Limits groups: Chat across cases, the Case chat prompt template, Case chat: most hours of talk per question.
 
