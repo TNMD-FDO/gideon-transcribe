@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.1, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The Local engine died before loading its model.** vLLM runs as the app's
+  own account, as every container does, and that account has no home folder
+  inside the image; vLLM writes its caches under the home folder, tried
+  `/.cache`, was refused, and stopped with "Model architectures failed to be
+  inspected", which hid the permission error underneath. The service now has
+  its home on the models volume it already owns. Found on the first
+  `./transcribe engine local on`; the upgrade restarts the engine with the
+  fix, and the profile and settings from `on` are kept.
+
 ## v1.10.0, 2026-09-05
 
 ```
