@@ -379,7 +379,7 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
   echo "The AI assistant"
   local network
   network="$(env_value LLM_NETWORK)"
-  if ! looked -s "$SECRETS/llm_api_token"; then
+  if ! secret_present "$SECRETS/llm_api_token"; then
     note "no engine token is stored, so the AI assistant is off"
   elif [ -z "$network" ] || [ "$network" = "transcribe-llm" ]; then
     if grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"; then
@@ -945,8 +945,13 @@ WORDS
   echo "Starting the engine (the first start downloads the model)..."
   compose up -d
   # The panel's two provider settings, so the app talks to what was started.
-  compose exec -T app python manage.py set_setting engine_address "http://vllm:8000/v1" </dev/null
-  compose exec -T app python manage.py set_setting engine_model "local-engine" </dev/null
+  # The command's own line is what matters; the worker's start-up chatter and
+  # the static-files warning around it are not.
+  for pair in "engine_address http://vllm:8000/v1" "engine_model local-engine"; do
+    # shellcheck disable=SC2086
+    compose exec -T app python manage.py set_setting --skip-checks $pair </dev/null 2>&1 \
+      | grep -v "procrastinate\|^$" || true
+  done
   echo
   green "The Local engine is on: $model on card $gpu, within $share of its memory."
   echo "  Watch it come up with:   ./transcribe logs vllm"
