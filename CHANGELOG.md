@@ -21,6 +21,30 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.8.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes.
+
+### Added
+
+- **The guide beside the page.** On a window 1500 pixels or wider, a `?`
+  beside Help opens the user guide (the admin guide, from the Panel) in a
+  360-pixel column on the right of the page, at the section about the page
+  you are on. The page makes room for it rather than being covered, it
+  scrolls on its own, and it stays open from page to page, each time at the
+  new page's section, until it is closed. The guide's own links work inside
+  it, and Open as a page goes to the full guide. On a narrower window the
+  `?` is not shown and Help opens the guide as a page, as before. Set aside
+  in v1.7.0 and built at the maintainer's ask; the Admin panel chapter
+  carries the amendment.
+
 ## v1.7.0, 2026-09-05
 
 ```

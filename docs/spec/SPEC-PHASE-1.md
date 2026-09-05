@@ -3944,7 +3944,7 @@ The service's own settings (batch size, VAD thresholds, limits, timeouts, alignm
 
 ### Help and the guides
 
-The rail carries a Help link that opens the admin guide, rendered inside the app from the repository's `docs/admin-guide.md`. Every user-facing page carries a Help link to the user guide at `/help/`, rendered the same way, opening at the guide's section about that page. On a window 1280 pixels or wider the guide's contents list is a rail beside the text, which keeps its reading width, with the section being read marked. The guides therefore always match the running Release, and nobody needs GitHub to read them. The admin guide explains the panel, the tray and its note, the catalogue, the Installation page, the Sign-in page notice, and the `./transcribe` subcommand that clears a wedged background job.
+The rail carries a Help link that opens the admin guide, rendered inside the app from the repository's `docs/admin-guide.md`. Every user-facing page carries a Help link to the user guide at `/help/`, rendered the same way, opening at the guide's section about that page, and on a window 1500 pixels or wider a `?` beside it that opens the same guide (the admin guide, from the Panel) in a pane on the right of the page, at that section, the page making room for it rather than being covered; the pane stays open from page to page, each time at the new page's section, until it is closed. On a window 1280 pixels or wider the guide's contents list is a rail beside the text, which keeps its reading width, with the section being read marked. The guides therefore always match the running Release, and nobody needs GitHub to read them. The admin guide explains the panel, the tray and its note, the catalogue, the Installation page, the Sign-in page notice, and the `./transcribe` subcommand that clears a wedged background job.
 
 ### Fixed rules, not settings
 
@@ -4032,6 +4032,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 - From the email notifications ticket, to the rail, the Status page, the Users page, the Audit log page, and the Installation page: the Email page and its rows, the Email line, the Users page's email changes, the Email category, the seven mail keys (carried).
 - From the Case Chat ticket, to the AI assistant and Limits rows: Chat across cases, the Case chat prompt template, Case chat: most hours of talk per question (carried).
 - From the maintainer, on the v1.7.0 build, to the Audit log, Users and settings pages and to Help and the guides: the Workbench Layout's fourth page. The audit filters as a pane, the Local admin form beside the users table, a jump list beside every settings page, the guides' contents as a rail with the section being read marked, and Help landing on the section about the page it was pressed on. The "?" pane the layout proposal sketched, the guide opening beside any page, is not built: a pane on every page would make every page's layout yield to it, and the section link gives most of its worth.
+- From the maintainer, on the v1.8.0 build, to Help and the guides: the `?` that opens the guide beside the page, which the v1.7.0 amendment had set aside, is built after all at the maintainer's ask, on windows 1500 pixels or wider, where a 360-pixel pane leaves the page its own shape.
 
 
 ## 15. Rules that hold everywhere
