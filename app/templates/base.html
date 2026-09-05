@@ -1,4 +1,4 @@
-{% load static %}
+{% load static help_links %}
 <!doctype html>
 <html lang="en-GB">
 <head>
@@ -34,8 +34,11 @@
         {% comment %}
           Help opens the user guide at the section about the page it was
           pressed on, so the answer is a click away rather than a read away.
+          The "?" opens the same guide beside the page, on a window with the
+          room for it; the stylesheet hides it on one without.
         {% endcomment %}
-        <a href="{% url 'help' %}{% if page == "recordings" %}#your-recordings{% elif page == "upload" %}#uploading-a-batch{% elif page == "viewer" %}#reading-a-transcript{% elif page == "clips" %}#clips{% elif page == "cases" %}#cases{% endif %}"{% if page == "help" %} class="on"{% endif %}>Help</a>
+        <a href="{% help_url page %}"{% if page == "help" %} class="on"{% endif %}>Help</a>
+        <a href="{% help_url page %}" id="help-beside" class="help-beside" title="Open the guide beside this page" aria-expanded="false">?</a>
       </span>
       <span class="who">
         {{ user.shown_name }}{% if user.is_admin %} &middot; Admin{% endif %}
@@ -56,13 +59,30 @@
     <script src="{% static 'idle.js' %}"></script>
   {% endif %}
 
-  <main class="{% block main_class %}narrow{% endblock %}">
-    {% if messages %}
-      {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+  {% comment %}
+    The shell holds the page and, when it is open, the guide beside it: a
+    real column the page makes room for, never a layer over it.
+  {% endcomment %}
+  <div class="shell">
+    <main class="{% block main_class %}narrow{% endblock %}">
+      {% if messages %}
+        {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    {% if user.is_authenticated %}
+      <aside id="help-pane" class="help-pane" hidden aria-label="The guide">
+        <div class="help-head">
+          <b class="grow">Guide</b>
+          <a class="help-full small" href="{% help_url page %}">Open as a page</a>
+          <button type="button" class="ghost tiny help-close" title="Close the guide">Close</button>
+        </div>
+        <div class="help-body guide"></div>
+      </aside>
     {% endif %}
-    {% block content %}{% endblock %}
-  </main>
+  </div>
 
   <script src="{% static 'theme.js' %}"></script>
+  {% if user.is_authenticated %}<script src="{% static 'help-pane.js' %}"></script>{% endif %}
 </body>
 </html>

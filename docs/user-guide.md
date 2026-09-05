@@ -170,6 +170,10 @@ You are also signed out after a period without activity, eight hours unless your
 
 Your recordings count against a quota, fifty gigabytes unless your Admin has set it differently. The Upload page tells you when you are near it. **Done with these** and **Clear my recordings** are how you make room without signing out.
 
+## The guide beside the page
+
+On a wide monitor, the **?** at the top of every page opens this guide in a column on the right, at the part about the page you are on, and the page moves over to make room. It stays open as you move between pages, each time at that page's part, until you close it. On a laptop, **Help** opens the guide as a page instead.
+
 ## When something goes wrong
 
 - **Refused.** The file was over a limit, or the app has already got an identical copy of it. The reason is shown beside it. Nothing else in the batch is affected.

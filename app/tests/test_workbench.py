@@ -119,23 +119,33 @@ def test_the_panel_pages_spread_out_and_the_guides_have_their_rail():
 
 
 def test_help_lands_on_the_section_about_the_page():
-    base = page("base.html")
-    for word, anchor in (
-        ("recordings", "your-recordings"),
-        ("upload", "uploading-a-batch"),
-        ("viewer", "reading-a-transcript"),
-        ("clips", "clips"),
-        ("cases", "cases"),
-    ):
-        assert f'page == "{word}" %}}#{anchor}' in base, word
-    # Every anchor is a heading the user guide actually has.
+    from core.templatetags.help_links import SECTIONS, help_url
+
+    assert help_url("recordings").endswith("/#your-recordings")
+    assert help_url("viewer").endswith("/#reading-a-transcript")
+    assert help_url("panel").endswith("/panel/help")
+    assert "#" not in help_url("help")
+    # Every anchor is a heading the user guide actually has, as Python-Markdown
+    # names it: lower case, spaces to hyphens.
     guide = (APP.parent / "docs" / "user-guide.md").read_text(encoding="utf-8")
-    for heading in (
-        "## Your recordings",
-        "## Uploading a batch",
-        "## While it runs",
-        "## Reading a transcript",
-        "## Clips",
-        "## Cases",
-    ):
-        assert heading in guide, heading
+    headings = {
+        line[3:].strip().lower().replace(" ", "-")
+        for line in guide.splitlines()
+        if line.startswith("## ")
+    }
+    for anchor in SECTIONS.values():
+        assert anchor in headings, anchor
+
+
+def test_the_guide_opens_beside_the_page():
+    base = page("base.html")
+    assert "{% load static help_links %}" in base
+    assert 'id="help-beside"' in base and 'id="help-pane"' in base
+    assert '<div class="shell">' in base
+    assert base.count("{% help_url page %}") == 3
+    js = script("help-pane.js")
+    assert 'window.matchMedia("(min-width: 1500px)")' in js
+    assert 'one.id = "help-" + one.id' in js
+    css = script("app.css")
+    assert ".help-pane {" in css and ".shell > main { flex: 1; min-width: 0; }" in css
+    assert "a.help-beside { display: inline-block; }" in css
