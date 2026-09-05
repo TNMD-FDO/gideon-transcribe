@@ -104,7 +104,11 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     cases.used(recording, by=request.user)
 
     transcript = getattr(recording, "transcript", None)
-    playback = recording.playback_path()
+    # Ready, not merely present: the copy is written under another name until
+    # it is whole, and the flag is set only once the waveform is there too.
+    # Recognition finishes before the copy does, so a page opened in between
+    # shows "Preparing video" and asks again until this says yes.
+    playback = recording.playback_path() if recording.playback_ready else None
 
     speakers = []
     if transcript is not None:
@@ -149,10 +153,16 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             "media_url": (
                 f"{media_root(recording)}/{playback.name}" if playback else ""
             ),
-            "is_video": bool(playback and playback.suffix == ".mp4"),
+            # While the copy is still being written there is no file to judge
+            # by, so the overlay's word comes from the probe: "Preparing
+            # video" for a recording with a picture, and not "audio".
+            "is_video": (
+                bool(playback and playback.suffix == ".mp4")
+                or (playback is None and _expects_video(recording))
+            ),
             "waveform_url": (
                 f"{media_root(recording)}/waveform.json"
-                if recording.waveform_path.exists()
+                if recording.playback_ready and recording.waveform_path.exists()
                 else ""
             ),
             "frame_rate": frame_rate(recording),
@@ -332,6 +342,26 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
 
 
 @login_required
+def media_state(request: HttpRequest, recording_id) -> JsonResponse:
+    """Whether the Playback copy is ready yet, for a page that opened before it was.
+
+    Asked every five seconds by a viewer showing "Preparing video", so it
+    writes no audit row: an Admin's opening was recorded when the page was
+    opened, and a poll is not another opening.
+    """
+    from core import cases
+
+    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
+    if (
+        recording is None
+        or not cases.reachable(recording)
+        or (recording.user_id != request.user.pk and not request.user.is_admin)
+    ):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    return JsonResponse({"ready": recording.playback_ready})
+
+
+@login_required
 def details(request: HttpRequest, recording_id) -> JsonResponse:
     """The Provenance: where a Recording came from and how it was processed.
 
@@ -495,6 +525,16 @@ def _the_rest_of_the_case(recording) -> list:
 def _has_video(recording) -> bool:
     playback = recording.playback_path()
     return bool(playback and playback.suffix == ".mp4")
+
+
+def _expects_video(recording) -> bool:
+    """Whether the recording has a picture, from the probe, before any copy exists."""
+    from core import media
+
+    try:
+        return media.video_stream(recording.probe or {}) is not None
+    except Exception:  # noqa: BLE001 - an odd probe is not a reason to fail the page
+        return False
 
 
 def frame_rate(recording) -> float:

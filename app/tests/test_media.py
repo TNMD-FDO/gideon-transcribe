@@ -125,6 +125,9 @@ def test_the_playback_copy_pins_its_sample_rate():
         mock.patch.object(media, "_run", remember),
         mock.patch.object(media, "_measure_loudness", return_value={}),
         mock.patch.object(Path, "exists", return_value=True),
+        # No file is written here, so the rename from the .part name is a
+        # no-op too; what is being checked is what ffmpeg is asked.
+        mock.patch.object(media.os, "replace"),
     ):
         media.make_playback_copy(Path("in.mp4"), Path("out.m4a"), probed, "standard")
 

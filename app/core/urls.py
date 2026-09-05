@@ -53,6 +53,12 @@ urlpatterns = [
         viewer.details,
         name="details",
     ),
+    # Whether the Playback copy is ready, for a viewer that opened before it was.
+    path(
+        "recording/<uuid:recording_id>/media",
+        viewer.media_state,
+        name="media-state",
+    ),
     path(
         "recording/<uuid:recording_id>/speakers",
         viewer.speakers,

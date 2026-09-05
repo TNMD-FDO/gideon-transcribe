@@ -589,12 +589,33 @@ def make_playback_copy(
             "yuv420p",
         ]
 
-    arguments.append(str(target))
+    # Written under another name and renamed when whole, so that a file under
+    # the name the viewer looks for is always a finished one. ffmpeg opens the
+    # target at once and, with +faststart, writes the index last and then
+    # rewrites the whole file to move it to the front; a browser handed the
+    # file in between finds no index, reads blindly, and stalls. That is what
+    # a person saw as a frozen player for the minute after transcription
+    # finished, because recognition on the GPU is done before this copy is.
+    # The extension is kept so ffmpeg still knows the container.
+    partial = partial_name(target)
+    arguments.append(str(partial))
     finished = _run(arguments, timeout=DECODE_TIMEOUT)
-    if finished.returncode != 0 or not target.exists():
+    if finished.returncode != 0 or not partial.exists():
+        partial.unlink(missing_ok=True)
         raise MediaError(
             "The playback copy of this recording could not be made", "media_failed"
         )
+    os.replace(partial, target)
+
+
+def partial_name(target: Path) -> Path:
+    """`playback.part.mp4` for `playback.mp4`: never a name a page looks for.
+
+    The viewer finds the copy by its exact name and Caddy serves only the
+    exact names it is told, so a file still being written under this name is
+    invisible to both until the rename.
+    """
+    return target.with_name(f"{target.stem}.part{target.suffix}")
 
 
 def playback_suffix(probed: Probe) -> str:
@@ -616,6 +637,9 @@ def make_waveform(source: Path, target: Path) -> None:
     are a picture, and asking for more of them would only make the file bigger.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
+    # Under another name until whole, for the same reason as the playback
+    # copy: the page reads this file by its exact name the moment it exists.
+    partial = partial_name(target)
 
     decode = subprocess.Popen(
         [
@@ -640,7 +664,7 @@ def make_waveform(source: Path, target: Path) -> None:
             "--input-format",
             "wav",
             "-o",
-            str(target),
+            str(partial),
             "--output-format",
             "json",
             "-z",
@@ -658,10 +682,12 @@ def make_waveform(source: Path, target: Path) -> None:
         decode.stdout.close()
     decode.wait(timeout=DECODE_TIMEOUT)
 
-    if peaks.returncode != 0 or not target.exists():
+    if peaks.returncode != 0 or not partial.exists():
+        partial.unlink(missing_ok=True)
         raise MediaError(
             "The waveform for this recording could not be made", "media_failed"
         )
+    os.replace(partial, target)
 
 
 # Clips ------------------------------------------------------------------------

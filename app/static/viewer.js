@@ -1359,6 +1359,25 @@
     }, 5000);
   }
 
+  // Waiting for the playback copy ---------------------------------------------
+  //
+  // Recognition finishes before the playback copy of a long video does, so a
+  // person who opens the recording the moment the transcript lands sees
+  // "Preparing video" on the thumbnail. The chapter says that overlay lifts
+  // by itself, so the page asks every five seconds whether the copy is ready
+  // and loads itself again the moment it is. Reading, search and correction
+  // work meanwhile, and nothing here writes an audit row.
+  function watchThePlayer() {
+    if (window.VIEWER.canPlay) { return; }
+    window.setInterval(function () {
+      fetch("/recording/" + window.VIEWER.recording + "/media")
+        .then(function (answer) { return answer.json(); })
+        .then(function (state) { if (state.ready) { window.location.reload(); } })
+        .catch(function () { /* the next look will find it */ });
+    }, 5000);
+  }
+  watchThePlayer();
+
   var cancel = document.getElementById("cancel-job");
   if (cancel) {
     cancel.addEventListener("click", function () {
