@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.7.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. The last of the four Workbench
+releases; every page now has its wide shape.
+
+### Changed
+
+- **The Panel spreads out on a wide window.** The audit log's filters sit in
+  a pane on the left and stay put while the rows scroll; the form that
+  creates a Local admin sits beside the users table instead of below it;
+  every settings page lists its settings in a pane beside the form, each a
+  jump to its row and marked when changed from default or waiting in the
+  tray; and the panel page is no longer capped at 1100 pixels. Below 1280
+  pixels the pages are as they were.
+- **The guides read beside their contents.** The contents list is a rail on
+  the left of the text, which keeps its reading width, and the section being
+  read is marked as you scroll. Help on every page now opens the user guide
+  at the section about that page: Help on the Recordings page lands on Your
+  recordings, on the viewer on Reading a transcript, and so on. The
+  proposal's "?" pane, the guide opening beside any page, is not built: a
+  pane on every page would make every page's layout give way to it, and the
+  section link gives most of its worth. The Admin panel chapter carries the
+  amendment.
+
 ## v1.6.0, 2026-09-05
 
 ```

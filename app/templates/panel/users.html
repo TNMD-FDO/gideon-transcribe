@@ -1,6 +1,8 @@
 {% extends "panel/base.html" %}
 {% block title %}Users{% endblock %}
 
+{% block page_class %} workbench{% endblock %}
+
 {% block panel %}
   <h1>Users</h1>
   <p class="lead">
@@ -9,7 +11,13 @@
     running, which is the way to free their space.
   </p>
 
-  <div class="card">
+  {% comment %}
+    From 1280 pixels the form that creates a Local admin sits beside the
+    table rather than below it; below that width it follows the table.
+  {% endcomment %}
+  <div class="panes users">
+    <div class="pane-list">
+  <div class="card" style="overflow-x: auto">
     <table class="tbl">
       <thead>
         <tr>
@@ -119,13 +127,15 @@
     </table>
   </div>
 
-  <h2 style="margin-top: 24px">Create Local admin</h2>
+    </div>
+    <aside class="pane-detail">
+  <h2 style="margin-top: 0">Create Local admin</h2>
   <p class="muted small">
     An account kept inside the app, for signing in when the directory cannot be
     reached. Every local account is an Admin, and the last one cannot be
     deleted.
   </p>
-  <form method="post" action="{% url 'panel-create-local-admin' %}" class="card row">
+  <form method="post" action="{% url 'panel-create-local-admin' %}" class="card stack">
     {% csrf_token %}
     <label class="field"><span>Username</span>
       <input type="text" name="username" autocomplete="off"></label>
@@ -135,4 +145,6 @@
       <input type="password" name="password" autocomplete="new-password"></label>
     <button type="submit" class="primary">Create</button>
   </form>
+    </aside>
+  </div>
 {% endblock %}

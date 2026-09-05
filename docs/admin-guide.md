@@ -83,6 +83,8 @@ A person who has left the sign-in group is shown as **Deactivated** after the ne
 
 ## The audit log
 
+On a wide monitor the filters sit in a pane on the left and stay put while you scroll the rows; on a laptop they sit above the table.
+
 The log records what happened, who did it, and to whose material: sign-ins and sign-outs, uploads, downloads, corrections, deletions, every settings change with its note, every action on the Users page, every cancelled job, and every time an Admin opens somebody else's recordings.
 
 It never records any of these, whatever the page and whoever is signed in: transcript text, either side of a correction, chat questions or answers, summaries, vocabulary, search terms, file contents, passwords, tokens, speaker names, clip titles, or clip notes. A recording's original file name is kept, because it is the only way to recognise a recording after it has been discarded.

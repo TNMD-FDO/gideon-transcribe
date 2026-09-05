@@ -19,7 +19,7 @@
       <a href="{% url 'home' %}">Back to your recordings</a>
     </nav>
 
-    <section class="panel-page">
+    <section class="panel-page{% block page_class %}{% endblock %}">
       {% block panel %}{% endblock %}
 
       {% if tray %}

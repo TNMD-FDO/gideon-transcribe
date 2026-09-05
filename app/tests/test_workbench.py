@@ -93,3 +93,49 @@ def test_the_clips_page_is_one_table_with_a_player():
     assert "{% for group in groups %}" not in clips
     js = script("clips.js")
     assert 'new Event("rows-changed")' in js
+
+
+def test_the_panel_pages_spread_out_and_the_guides_have_their_rail():
+    for name in (
+        "panel/audit.html",
+        "panel/users.html",
+        "panel/settings.html",
+        "panel/guide.html",
+    ):
+        assert "{% block page_class %} workbench{% endblock %}" in page(name), name
+    assert 'class="panes audit"' in page("panel/audit.html")
+    assert 'class="panes users"' in page("panel/users.html")
+    settings = page("panel/settings.html")
+    assert (
+        'id="row-{{ row.key }}"' in settings and 'href="#row-{{ row.key }}"' in settings
+    )
+    for name in ("guide.html", "panel/guide.html"):
+        assert 'class="guide-body"' in page(name), name
+        assert "guide.js" in page(name), name
+    css = script("app.css")
+    assert ".panel-page.workbench { max-width: none; }" in css
+    assert ".guide.workbench {" in css
+    assert "IntersectionObserver" in script("guide.js")
+
+
+def test_help_lands_on_the_section_about_the_page():
+    base = page("base.html")
+    for word, anchor in (
+        ("recordings", "your-recordings"),
+        ("upload", "uploading-a-batch"),
+        ("viewer", "reading-a-transcript"),
+        ("clips", "clips"),
+        ("cases", "cases"),
+    ):
+        assert f'page == "{word}" %}}#{anchor}' in base, word
+    # Every anchor is a heading the user guide actually has.
+    guide = (APP.parent / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    for heading in (
+        "## Your recordings",
+        "## Uploading a batch",
+        "## While it runs",
+        "## Reading a transcript",
+        "## Clips",
+        "## Cases",
+    ):
+        assert heading in guide, heading

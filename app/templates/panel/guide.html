@@ -1,13 +1,17 @@
 {% extends "panel/base.html" %}
+{% load static %}
 {% block title %}{{ guide.title }}{% endblock %}
+
+{% block page_class %} workbench{% endblock %}
 
 {% block panel %}
   {% comment %}
     Rendered from this repository's own docs/admin-guide.md and from nothing
     a user typed, so it is marked safe here. See core/guides.py.
   {% endcomment %}
-  <article class="guide">
+  <article class="guide workbench">
     <nav class="contents" aria-label="Contents">{{ guide.contents|safe }}</nav>
-    {{ guide.body|safe }}
+    <div class="guide-body">{{ guide.body|safe }}</div>
   </article>
+  <script src="{% static 'guide.js' %}"></script>
 {% endblock %}

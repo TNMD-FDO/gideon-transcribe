@@ -1,6 +1,8 @@
 {% extends "panel/base.html" %}
 {% block title %}Audit log{% endblock %}
 
+{% block page_class %} workbench{% endblock %}
+
 {% block panel %}
   <h1>Audit log</h1>
   <p class="lead">
@@ -10,6 +12,12 @@
     filtering this page is not itself logged.
   </p>
 
+  {% comment %}
+    From 1280 pixels the filters are a pane on the left that stays put while
+    the rows scroll; below that they sit above the table as before.
+  {% endcomment %}
+  <div class="panes audit">
+    <aside class="pane-filters">
   <form method="get" class="filters">
     <label>From <input type="date" name="since" value="{{ asked.since }}"></label>
     <label>To <input type="date" name="until" value="{{ asked.until }}"></label>
@@ -41,6 +49,8 @@
       </span>
     </label>
   </form>
+    </aside>
+    <div class="pane-list">
 
   <p class="muted small">
     {{ found }} row{{ found|pluralize }}, newest first. Page {{ page_number }} of {{ pages }}.
@@ -91,5 +101,7 @@
     {% if page_number < pages %}
       <a href="?{{ carried }}&page={{ page_number|add:'1' }}" class="btn">Older</a>
     {% endif %}
+  </div>
+    </div>
   </div>
 {% endblock %}

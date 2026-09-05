@@ -135,6 +135,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
         request,
         "viewer.html",
         {
+            "page": "viewer",
             "recording": recording,
             # The rest of the case, so somebody working through a matter moves
             # between its recordings without going back to the case page.

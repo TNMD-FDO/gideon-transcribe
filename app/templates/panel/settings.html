@@ -2,6 +2,8 @@
 {% load static %}
 {% block title %}{{ title }}{% endblock %}
 
+{% block page_class %} workbench{% endblock %}
+
 {% block panel %}
   <h1>{{ title }}</h1>
   <p class="lead">
@@ -41,11 +43,18 @@
     </div>
   {% endif %}
 
+  {% comment %}
+    From 1280 pixels the settings on this page are listed in a pane beside
+    the form, each a jump to its row, marked when changed from default or
+    waiting in the tray; below that width the list is not shown.
+  {% endcomment %}
+  <div class="panes settings">
+    <div class="pane-list">
   <form method="post" action="{% url 'panel-edit' here %}">
     {% csrf_token %}
 
     {% for row in rows %}
-      <div class="arow{% if row.waiting %} dirty{% endif %}{% if row.greyed %} greyed{% endif %}">
+      <div class="arow{% if row.waiting %} dirty{% endif %}{% if row.greyed %} greyed{% endif %}" id="row-{{ row.key }}">
         <div class="lbl">
           <label for="{{ row.key }}"><b>{{ row.name }}</b></label>
           <div class="help">{{ row.help }}</div>
@@ -126,4 +135,14 @@
   <ul class="muted small">
     {% for rule in fixed_rules %}<li>{{ rule }}</li>{% endfor %}
   </ul>
+    </div>
+    <aside class="pane-detail jumplist">
+      <h2>On this page</h2>
+      <ul>
+        {% for row in rows %}
+          <li><a href="#row-{{ row.key }}">{{ row.name }}</a>{% if row.waiting %} <span class="pill warn">waiting</span>{% elif row.changed %} <span class="pill">changed</span>{% endif %}{% if row.greyed %} <span class="muted small">greyed</span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </aside>
+  </div>
 {% endblock %}

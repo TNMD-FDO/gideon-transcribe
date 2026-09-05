@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ guide.title }}{% endblock %}
 {% block main_class %}wide{% endblock %}
 
@@ -8,8 +9,9 @@
     own docs/user-guide.md, and from nothing a user typed, so they are marked
     safe here. See core/guides.py.
   {% endcomment %}
-  <article class="page guide">
+  <article class="page guide workbench">
     <nav class="contents" aria-label="Contents">{{ guide.contents|safe }}</nav>
-    {{ guide.body|safe }}
+    <div class="guide-body">{{ guide.body|safe }}</div>
   </article>
+  <script src="{% static 'guide.js' %}"></script>
 {% endblock %}
