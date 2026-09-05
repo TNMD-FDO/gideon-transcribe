@@ -34,13 +34,14 @@
           <p class="or">or <label class="link" for="picker">choose files</label></p>
           <input type="file" id="picker" multiple hidden>
           <p class="muted small">
-            Files that usually work: mp4, mov, m4a, mp3, wav, wma, ogg, webm,
-            mkv, avi, flac, amr, 3gp. No zip files.
-          </p>
-          <p class="muted small">
             Up to {{ limits.files_per_batch }} files in a batch,
             {{ limits.largest_file }} and {{ limits.longest_hours }} hours each.
+            Most audio and video files work; not zip files.
           </p>
+          <details class="inline muted small">
+            <summary>Which files</summary>
+            mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv, avi, flac, amr, 3gp.
+          </details>
         </div>
 
         <ul id="chosen" class="cards"></ul>
@@ -121,9 +122,8 @@
                 <input type="checkbox" id="diarize"> <b>Diarize</b>
               </label>
               <p class="muted small">
-                Labels who is talking. Automatic speaker separation is
-                sometimes wrong: one person can be split into two speakers, or
-                two merged into one. Check the names against the audio.
+                Tells the speakers apart and labels each line. It is sometimes
+                wrong, so check the names against the audio.
               </p>
 
               <div id="hint-wrap" style="margin-left: 24px">
@@ -145,9 +145,8 @@
                 <input type="checkbox" id="translate"> <b>Translate to English</b>
               </label>
               <p class="muted small">
-                A recording holding more than one language is translated to
-                English whether or not this is ticked. Translation loses word
-                timing.
+                A recording in more than one language is translated whether or
+                not this is ticked. A translation has no word timing.
               </p>
 
               <details id="more" style="margin-top: 10px">
@@ -230,8 +229,7 @@
       person wondering where their recordings went.
     {% endcomment %}
     <p class="muted small centre" style="margin-top: 18px">
-      Nothing leaves this building. Everything here is removed when you sign
-      out.
+      Nothing leaves this building.
     </p>
   </div>
 

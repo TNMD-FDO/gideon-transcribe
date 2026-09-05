@@ -325,7 +325,8 @@ input:hover, textarea:hover, select:hover { border-color: var(--muted); }
 input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 input[type="number"] { width: 7em; }
 textarea { width: 100%; resize: vertical; line-height: 1.45; }
-input[type="range"] { accent-color: var(--accent); }
+input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; margin: 0 6px 0 0; vertical-align: -3px; }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
 
 code, .mono { font-family: var(--mono); font-size: 0.9em; }

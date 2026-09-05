@@ -116,13 +116,17 @@
       else { tally.inLine += 1; }
     });
 
-    counts.textContent =
-      tally.waiting + " uploading or preparing · " +
-      tally.inLine + " in line · " +
-      tally.running + " transcribing · " +
-      tally.done + " done · " +
-      tally.failed + " failed · " +
-      tally.refused + " refused";
+    // Only the states there are: a row of zeros says nothing.
+    counts.textContent = [
+      [tally.waiting, "uploading or preparing"],
+      [tally.inLine, "in line"],
+      [tally.running, "transcribing"],
+      [tally.done, "done"],
+      [tally.failed, "failed"],
+      [tally.refused, "refused"]
+    ].filter(function (pair) { return pair[0] > 0; })
+      .map(function (pair) { return pair[0] + " " + pair[1]; })
+      .join(" \u00b7 ") || "Nothing here yet";
 
     // The download is a zip of the transcripts that are done. Recordings
     // still on their way are simply left out, so the button says how many.
