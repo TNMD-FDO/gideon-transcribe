@@ -85,7 +85,7 @@ A video can be popped out into its own window, so the transcript can have the wh
 
 ### Speakers
 
-Each speaker has a colour, used for their name, their lines, and their lane on the waveform. Click a speaker's name in the **Speakers** list to give them a real one; every segment they spoke is renamed.
+Each speaker has a colour, used for their name and their lines. Click a speaker's name in the **Speakers** list to give them a real one; every segment they spoke is renamed.
 
 ### Correcting
 

@@ -21,6 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.3.0, 2026-09-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. Recordings already on the server keep
+the waveform files they have, which draw exactly as before; only recordings
+made from now on get the smaller file.
+
+### Changed
+
+- **The Timeline no longer draws Speaker lanes.** The coloured bands behind
+  the waveform, one per Segment, were drawn again on every redraw of the
+  Timeline, once a second while playing, on transcripts of thousands of rows,
+  and told a corrector nothing the rows beside them did not: a Speaker's
+  colour stays on the name and on the bar beside each row. The Timeline is
+  the waveform, split into one lane per Side on a Two-channel call. The
+  specification's viewer chapter carries the amendment.
+- **The waveform file is sized to the strip, not to the recording.** The
+  Timeline draws the whole recording across the width of the page and never
+  zooms, yet the peaks file held one pair for every 256 samples of sound:
+  4 MB for a 51-minute recording, 27 MB for six hours, fetched again on every
+  opening of the viewer, of which the strip drew one pair in four hundred. A
+  recording now gets about 8,192 pairs whatever its length, never finer than
+  before, so the file is about 60 KB for any recording (double for a
+  Two-channel call). The strip is also truer: each pixel now shows the lowest
+  and the highest of every pair it covers, worked out once per width, where
+  before it sampled one pair and could miss a shout or a slammed door between
+  samples. The media chapter carries the amendment.
+
 ## v1.2.3, 2026-09-04
 
 ```

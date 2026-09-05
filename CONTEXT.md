@@ -99,7 +99,7 @@ The viewer behaviour that keeps the current Segment in view while the Recording 
 A user edit of a Segment's text in the viewer. Marked on the Segment and recorded in the audit log.
 
 **Timeline**:
-The waveform strip in the viewer, with a lane per Speaker, used to seek and to mark a Clip by dragging.
+The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call.
 
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.

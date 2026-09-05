@@ -29,7 +29,7 @@ plain-language recovery when something fails.
   anyone and a queue everyone can see.
 - Translation to English, and speaker diarization, as per-recording choices.
 - A viewer with the transcript at reading width, a synced audio and video
-  player, a speaker-lane waveform, correction, speaker naming, search, and
+  player, a waveform timeline, correction, speaker naming, search, and
   clips.
 - Export to Word, plain text, and SRT captions.
 - Cases: named pages of recordings for one matter that outlive the session

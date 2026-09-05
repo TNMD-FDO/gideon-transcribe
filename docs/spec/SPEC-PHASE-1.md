@@ -36,7 +36,7 @@ Nothing in this document is office-specific. Every office fact (hostnames, netwo
 - Transcription by the WhisperX service, one Run at a time across the whole office, in arrival order, with no priority for anyone; a queue the user can see, with position, the person ahead, and an Estimated wait.
 - Translation to English as a per-Recording choice, with automatic language detection and a rule for recordings holding more than one language.
 - Diarization as a per-Recording choice with a speaker-count hint; Two-channel calls transcribed per Side.
-- A viewer with the Transcript at reading width, a synced player for audio and video, a Speaker-lane Timeline, Correction of Segments, merging, Speaker naming, Follow mode, frame stepping, speeds, and Boost.
+- A viewer with the Transcript at reading width, a synced player for audio and video, a waveform Timeline, Correction of Segments, merging, Speaker naming, Follow mode, frame stepping, speeds, and Boost.
 - Clips: a span of a Recording saved as a playable file for use outside the app, with an excerpt, captions, and optional burned captions.
 - The AI assistant, on request only: a Summary shaped by a Summary template, a Chat grounded in one Transcript with checked Citations, and Speaker suggestions; prompt templates Admins can edit.
 - Exports: a Word Transcript as a Record, a combined document with Summaries and Chats, plain text, SRT captions, a Batch download, and "Download everything" at sign-out.
@@ -1444,7 +1444,7 @@ Every Recording gets exactly one Playback copy; the player never touches the upl
 
 ### Waveform peaks
 
-- BBC `audiowaveform` (GPL-3, run as a separate command-line process, never linked into the app) produces JSON peaks from the Playback copy's audio: 8-bit, 256 samples per pixel, split channels for a Two-channel call. The file is stored beside the Playback copy as `waveform.json`.
+- BBC `audiowaveform` (GPL-3, run as a separate command-line process, never linked into the app) produces JSON peaks from the Playback copy's audio: 8-bit, about 8,192 pairs for the whole Recording whatever its length (the zoom is the Recording's samples divided by 8,192, never finer than 256 samples per pair), split channels for a Two-channel call. The Timeline draws the whole Recording at the width of the page and never zooms, so a fixed count, a few pairs per pixel on the widest screen, is all it can use, and the file stays under 100 KB for a six-hour Recording. The file is stored beside the Playback copy as `waveform.json`.
 
 ```
 audiowaveform -i <audio> -o waveform.json -z 256 -b 8
@@ -1670,6 +1670,7 @@ Media handling from browser to ASR to player; Assemble a test corpus of real rec
 - From Workspace lifecycle rules, to Clips and duplicates: a Clip's definition does not survive the Recording; a file uploaded again is a new Recording never matched to an earlier one; the duplicate rejection against a live Recording stands.
 - From Clips: model, lifecycle, and management, to Clips and the storage layout: no `.txt` or `.srt` stored beside a Clip; a Clip possible once playback is Ready; renders on the media worker with the timeout and `clip_render_failed`; the Longest Clip limit; a deleted Clip leaves the Provenance.
 - From Upload page and Batch settings prototype, to Diarization on a multi-Side Recording: "defaults to off for a Two-channel call" withdrawn; the user's Diarize choice honoured per Side with "Let the app decide"; the Side-alone label for a one-Speaker Side; the title editable at upload.
+- From the maintainer, on the v1.3.0 build, to Waveform peaks: 256 samples per pixel replaced by about 8,192 pairs for the whole Recording, never finer than 256, because the Timeline never zooms and was drawing one pair in four hundred of a 4 MB file that every opening of the viewer fetched again.
 
 ## 5. Upload page and Batch page
 
@@ -2381,7 +2382,7 @@ The Transcript comes first, at reading width, in the middle of the screen. The m
 |              |         Pop out video / Dock video, theme          |
 | search       | Media dock: thumbnail or waveform | transport      |
 | Speakers     |                                   | New Clip        |
-|   toggle     |   Timeline: waveform with Speaker lanes           |
+|   toggle     |   Timeline: waveform                              |
 | Speakers     +---------------------------------------------------+
 |   panel      |                                                   |
 |              |        Transcript column, reading width           |
@@ -2393,7 +2394,7 @@ The Transcript comes first, at reading width, in the middle of the screen. The m
 ```
 
 - **Transcript column**: the Transcript at reading width, one row per Segment (see "The Transcript" below). It is the only thing that scrolls in Follow mode.
-- **Media dock**, above the Transcript: a thumbnail of the video, which pops out to a floating window (the header's `Pop out video` and `Dock video` control; while popped out the thumbnail slot reads `Video popped out`); for an audio-only Recording a waveform stands in the thumbnail's place. Beside the thumbnail sit the transport bar and the primary **New Clip** button. Under them runs the **Timeline**: the waveform with coloured Speaker lanes, one lane per Speaker; click to seek, drag to mark a Clip. For a Two-channel call the waveform is split into one lane per Side.
+- **Media dock**, above the Transcript: a thumbnail of the video, which pops out to a floating window (the header's `Pop out video` and `Dock video` control; while popped out the thumbnail slot reads `Video popped out`); for an audio-only Recording a waveform stands in the thumbnail's place. Beside the thumbnail sit the transport bar and the primary **New Clip** button. Under them runs the **Timeline**: the waveform; click to seek, drag to mark a Clip. For a Two-channel call the waveform is split into one lane per Side.
 - **Left sidebar**: the search box, the Speakers toggle, the Speakers panel, and the Export, Summary, Chat, and shortcuts buttons. What each holds is below.
 - **Bottom sheet**: two panels, **Clips** (the Clip tool and the Recording's Clips list) and **Details** (the Provenance). The New Clip button opens the sheet at Clips, and marking a Clip by any route (I or O, a drag on the Timeline, `+ Clip` on a Segment, S) opens it too. The sheet is never the only way to a Clip, because a Clip tool that lives only in a closed sheet is not found.
 - **Overlays**: Summary and Chat open as overlays from the sidebar; the shortcuts list opens as an overlay from the sidebar button or `?`. Esc closes an overlay or panel.
@@ -2456,7 +2457,7 @@ Following paused while you read. Resume (F)
 
 #### Rows and seeking
 
-- One row per Segment: the time, the Speaker's name in the Speaker's colour with a colour bar, and the text. Each Speaker has one colour, used for the name, the colour bar, and the Timeline lane.
+- One row per Segment: the time, the Speaker's name in the Speaker's colour with a colour bar, and the text. Each Speaker has one colour, used for the name and the colour bar.
 - Clicking a row seeks the player to the Segment's start.
 - The current Segment is highlighted; the current word is underlined when word timing exists.
 - A corrected Segment carries a ✎ mark. Segments inside a Clip's marked range are tinted.
@@ -2478,7 +2479,7 @@ Following paused while you read. Resume (F)
 
 - The **Speakers toggle** in the sidebar hides and shows the Speaker labels.
 - A Recording processed without Diarization shows the plain flow of Segments and a `Not diarized` pill in place of the toggle (the pages say Diarize).
-- A Two-channel call shows its Sides as Speakers, a `Two-channel call: 2 Sides` pill, and the waveform split into one lane per Side. On a Two-channel call diarized per Side, a Side with one Speaker is labelled by its Side alone (`Side 1`) and a Side with more as `Side 1 Speaker 1`, `Side 1 Speaker 2`; the Speakers panel and the Timeline lanes follow the same labels.
+- A Two-channel call shows its Sides as Speakers, a `Two-channel call: 2 Sides` pill, and the waveform split into one lane per Side. On a Two-channel call diarized per Side, a Side with one Speaker is labelled by its Side alone (`Side 1`) and a Side with more as `Side 1 Speaker 1`, `Side 1 Speaker 2`; the Speakers panel follows the same labels.
 - A Translation shows the marker `Translated to English from <language>` in the header (its tooltip says the speech was recognised in that language and translated to English, that the original-language text is not kept, and that word timing is not available for translations) and no word underline, since a translated Transcript has Segment timing only.
 
 ### Speakers panel
@@ -2545,10 +2546,10 @@ Opening a Recording whose Job is Queued or Running, before its playback is Ready
 
 As soon as the Recording's playback readiness is Ready (the Playback copy and the waveform, media steps 6 and 7, which run beside recognition), even while the Job is still Queued or Running, the queued page becomes the viewer:
 
-- The media dock, the transport, and New Clip are live. The Timeline is a bare waveform with no Speaker lanes.
+- The media dock, the transport, and New Clip are live, and the Timeline is the waveform.
 - Where the Transcript will go, the page shows the Job's position and Estimated wait, or its Steps while Running, and Cancel.
 - Marking a Clip by I and O, typed times, and dragging on the Timeline works, as do Preview and Save. Snap to Segment, `+ Clip`, and both Clip options are greyed with the text `available once the transcript is ready`.
-- When the Job finishes, the Transcript appears in place, the Timeline gains its Speaker lanes, and the greyed controls come alive. Nothing about the Clips saved meanwhile is announced and nothing re-renders by itself (see the Clips chapter).
+- When the Job finishes, the Transcript appears in place and the greyed controls come alive. Nothing about the Clips saved meanwhile is announced and nothing re-renders by itself (see the Clips chapter).
 
 #### Transcript ready before the Playback copy
 
@@ -2623,6 +2624,7 @@ Transcript viewer and synced player; Clips: model, lifecycle, and management (it
 - From the Clips ticket to the Clips sheet: the statuses Rendering, Ready, Failed, and Captions out of date with Re-render; Rename beside Adjust; Adjust clears the downloaded mark.
 - From the Upload page ticket to the markers: the pill reads `Not diarized`; a Side with one Speaker is labelled `Side 1`, with more `Side 1 Speaker 1`, `Side 1 Speaker 2`, in the Transcript, the Speakers panel, and the Timeline lanes.
 - From the Word export ticket, as recorded on the Clips ticket, to the Export entries: Captions (.srt) joins Word and plain text; the plain-text export's shape (head, one notice, `[hh:mm:ss] Speaker: text`, `(corrected)`) replaces "Speakers, timestamps, and the Transcript, nothing else"; no VTT in Phase 1.
+- From the maintainer, on the v1.3.0 build, to the Timeline: the Speaker lanes withdrawn. The Timeline is the waveform, split into one lane per Side on a Two-channel call, and a Speaker's colour is used for the name and the colour bar. The lanes were one translucent band per Segment on every redraw, and told a corrector nothing the rows beside them did not.
 
 ## 9. Clips
 
@@ -2665,7 +2667,7 @@ A Clip is a user-chosen span of a Recording, marked by a start and an end, with 
 
 ### Making a Clip
 
-- **When**: as soon as the Recording's playback readiness is Ready (media steps 6 and 7, the Playback copy and the waveform, which run beside recognition), even while the Job is still Queued or Running. The viewer opens then with the media dock, the Timeline as a bare waveform with no Speaker lanes, and New Clip; where the Transcript will go, the page shows the Job's position and Estimated wait, or its Steps while Running. Marking by I and O, typed times, and dragging on the Timeline works; Snap to Segment, `+ Clip`, and both options are greyed with `available once the transcript is ready`. Preview and Save work.
+- **When**: as soon as the Recording's playback readiness is Ready (media steps 6 and 7, the Playback copy and the waveform, which run beside recognition), even while the Job is still Queued or Running. The viewer opens then with the media dock, the Timeline, and New Clip; where the Transcript will go, the page shows the Job's position and Estimated wait, or its Steps while Running. Marking by I and O, typed times, and dragging on the Timeline works; Snap to Segment, `+ Clip`, and both options are greyed with `available once the transcript is ready`. Preview and Save work.
 - **When the Transcript arrives**: a Clip saved before it keeps `Include the transcript excerpt` on (the default), so its download gains the excerpt at once; until then there is no excerpt to build and the download is the bare media file. `Burn captions` was unavailable, so the user turns it on through Adjust, which re-renders. Nothing is announced and nothing re-renders by itself.
 - **Marking**: the routes and the tool are the Transcript viewer and player chapter's (I and O while playing, typed times, Snap to the current Segment, `+ Clip` on a Segment, drag on the Timeline; Preview; title, note, the two options; Save). Segments inside the range are tinted in the Transcript.
 
@@ -2822,6 +2824,7 @@ Clips: model, lifecycle, and management; Transcript viewer and synced player.
 - From the Clips ticket to the queue rules: the queued page opens the viewer as soon as playback is Ready; Cancel's confirmation names the Clips.
 - From the Clips ticket to the Word export rules: Download everything includes every Ready Clip with its excerpt; the Clip SRT starts at zero while the excerpt keeps the Recording's times.
 - From the Upload page ticket to the Clips page and quota: the Workspace's "Using X of Y GB" line no longer exists; storage is shown only as a warning near the limit; the Clips page keeps its own total-size line.
+- From the viewer chapter's Timeline amendment on the v1.3.0 build: the "bare waveform with no Speaker lanes" the viewer opened with before the Transcript is now simply the Timeline; nothing about Clips changes.
 
 
 ## 10. AI assistant

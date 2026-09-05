@@ -28,8 +28,8 @@
   --changed: #fff3c4;
   --changed-line: #d9a400;
 
-  /* One colour per speaker, used for the name, the row's bar, and the
-   * timeline lane, so the same person is the same colour everywhere. They
+  /* One colour per speaker, used for the name and the row's bar, so the
+   * same person is the same colour everywhere. They
    * stay apart on both themes and survive the commonest colour blindness,
    * which red and green together do not. */
   --sp1: #1f6fb2;

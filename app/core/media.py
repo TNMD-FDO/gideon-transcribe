@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import os
 import subprocess
 from dataclasses import dataclass
@@ -626,15 +627,40 @@ def playback_suffix(probed: Probe) -> str:
 # The waveform -----------------------------------------------------------------
 
 
-def make_waveform(source: Path, target: Path) -> None:
+# The Timeline draws the whole Recording across the width of the page and
+# never zooms, so it can use a few pairs of peaks per pixel and no more. About
+# this many pairs for any Recording, whatever its length: two or more per pixel
+# on a 4K screen, and a file under 100 KB for a six-hour Recording, where 256
+# samples a pair made 27 MB that every opening of the viewer fetched again.
+WAVEFORM_PAIRS = 8192
+# Never finer than this, audiowaveform's own default: a Recording under about
+# 45 seconds is drawn exactly as before.
+WAVEFORM_FINEST_ZOOM = 256
+
+
+def waveform_zoom(
+    duration_seconds: float | None, sample_rate: int = PLAYBACK_SAMPLE_RATE
+) -> int:
+    """Samples per pair of peaks, so that a Recording gives about WAVEFORM_PAIRS."""
+    if not duration_seconds or duration_seconds <= 0:
+        return WAVEFORM_FINEST_ZOOM
+    wanted = math.ceil(duration_seconds * sample_rate / WAVEFORM_PAIRS)
+    return max(WAVEFORM_FINEST_ZOOM, wanted)
+
+
+def make_waveform(
+    source: Path, target: Path, duration_seconds: float | None = None
+) -> None:
     """The peaks the player draws, from the Playback copy.
 
     audiowaveform reads MP3, WAV, FLAC, Ogg Vorbis, and Opus, and the Playback
     copy is AAC, which is none of them. So ffmpeg decodes it to WAV on the way
     through rather than a second file being written and deleted.
 
-    Eight bits and 256 samples a pixel is what the viewer draws with: the peaks
-    are a picture, and asking for more of them would only make the file bigger.
+    Eight bits, and as many samples a pair as gives about WAVEFORM_PAIRS pairs
+    for the whole Recording: the peaks are a picture the width of the page, and
+    more of them would only make the file bigger. The file's own header records
+    the zoom used, and that header is where the viewer reads it.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     # Under another name until whole, for the same reason as the playback
@@ -668,7 +694,7 @@ def make_waveform(source: Path, target: Path) -> None:
             "--output-format",
             "json",
             "-z",
-            "256",
+            str(waveform_zoom(duration_seconds)),
             "-b",
             "8",
         ],
