@@ -19,10 +19,20 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.2.3, 2026-09-04
+
 ```
 Models: unchanged
 Database: unchanged
 ```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. Recordings already on the server are
+unaffected; the change is in how new copies are written and how the viewer
+decides a copy is ready.
 
 ### Fixed
 
