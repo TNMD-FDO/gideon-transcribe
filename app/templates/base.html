@@ -1,4 +1,4 @@
-{% load static help_links %}
+{% load static help_links icons %}
 <!doctype html>
 <html lang="en-GB">
 <head>
@@ -16,8 +16,9 @@
   </script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
+  {% include "icons.html" %}
   <nav class="nav">
-    <span class="brand"><i></i> Gideon Transcribe</span>
+    <a class="brand" href="{% url 'home' %}"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></svg>Gideon Transcribe</a>
     {% if user.is_authenticated %}
       <span class="links">
         {% if folder_management %}
@@ -43,7 +44,7 @@
       <span class="who">
         {{ user.shown_name }}{% if user.is_admin %} &middot; Admin{% endif %}
         &middot; <a href="{% url 'sign-out' %}">Sign out</a>
-        <button type="button" class="ghost tiny" id="theme" title="Light or dark">&#9789;</button>
+        <button type="button" class="ghost icon small" id="theme" title="Light or dark" aria-label="Light or dark">{% icon "theme" %}</button>
       </span>
     {% endif %}
   </nav>

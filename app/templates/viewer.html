@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static icons %}
 {% block title %}{{ recording.title }}{% endblock %}
 {% block body_class %}viewer{% endblock %}
 {% block main_class %}wide{% endblock %}
@@ -25,7 +25,7 @@
     {% endcomment %}
     <div class="dockhead">
         <div class="head">
-          <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost">&larr;</a>
+          <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
           <h1>{{ recording.title }}</h1>
           {% if recording.is_two_channel_call %}
             <span class="pill side">Two-channel call: {{ sides|length }} sides</span>
@@ -43,11 +43,11 @@
           <span class="grow"></span>
           {% if in_case %}
             <button type="button" class="tiny" id="show-case"
-                    title="Show or hide the rest of the case">&#9776; Case</button>
+                    title="Show or hide the rest of the case">{% icon "menu" %} Case</button>
           {% endif %}
           {% if clips_available and media_url %}
             <button type="button" class="primary" id="new-clip"
-                    title="Mark a start and an end with I and O while playing, by dragging on the timeline, or with + clip on a segment, then save">&#9986; New clip</button>
+                    title="Mark a start and an end with I and O while playing, by dragging on the timeline, or with + clip on a segment, then save">{% icon "clip" %} New clip</button>
           {% endif %}
           {% if is_video and media_url %}
             <button type="button" class="tiny" id="pop-out">Pop out video</button>
@@ -56,11 +56,11 @@
 
         <div class="transport">
           <button type="button" id="play" class="big">Play</button>
-          <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">&#8630; 3s</button>
+          <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
           <button type="button" data-seek="-5" title="Back five seconds (Left)">&minus;5s</button>
           <button type="button" data-seek="5" title="Forward five seconds (Right)">+5s</button>
-          <button type="button" id="frame-back" title="One frame back (,)">&#9664;|</button>
-          <button type="button" id="frame-on" title="One frame forward (.)">|&#9654;</button>
+          <button type="button" id="frame-back" class="icon" title="One frame back (,)" aria-label="One frame back">{% icon "frame-back" %}</button>
+          <button type="button" id="frame-on" class="icon" title="One frame forward (.)" aria-label="One frame forward">{% icon "frame-forward" %}</button>
           <span id="clock" class="time">0:00 / 0:00</span>
           <label>Speed
             <select id="speed">
@@ -312,12 +312,12 @@
         <button type="button" class="sheet-tab" data-panel="details">Details</button>
         <span class="muted small grow">
           {% if transcript %}
-            Double-click a segment or use &#9998; edit to correct it &middot;
+            Double-click a segment or use {% icon "correct" %} edit to correct it &middot;
             I and O mark a clip while playing
           {% endif %}
         </span>
-        <button type="button" class="ghost small" id="expand-sheet" hidden title="Give the panel the height of the window">Expand &#8597;</button>
-        <button type="button" class="ghost small" id="close-sheet" hidden>Close &#9662;</button>
+        <button type="button" class="ghost small" id="expand-sheet" hidden title="Give the panel the height of the window">{% icon "expand" %} Expand</button>
+        <button type="button" class="ghost small" id="close-sheet" hidden>{% icon "chevron-down" %} Close</button>
       </div>
 
       <div id="sheet" class="sheet" hidden>

@@ -1,37 +1,94 @@
 /* Gideon Transcribe: the whole look of the app, in one file.
  *
- * The tokens and the widgets are the planning prototypes' (the transcript
- * viewer and the admin panel, which agree with each other; the upload page's
- * own green palette was the odd one out and is not used). Nothing here is
- * borrowed from another application: the specification asks for fresh CSS
- * with a light and a dark theme, and this is it.
+ * One visual language, applied everywhere (the finish approved on 5 September
+ * 2026): tokens for colour, one typeface shipped with the app, four sizes of
+ * type, four buttons, one shape of pill, one set of line icons. The tokens and
+ * the widgets began as the planning prototypes' and were refined into this set;
+ * nothing here is borrowed from another application. Light and dark are two
+ * palettes for the same roles, not an inversion.
  *
  * Everything is a token. A colour written into a rule below is a mistake.
  */
 
+/* The typeface: IBM Plex Sans for everything a person reads, IBM Plex Mono
+ * for times and counts. Shipped with the app under the SIL Open Font License
+ * (static/fonts/OFL-ibm-plex.txt), so the app looks like itself on every desk
+ * and fetches nothing from outside. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/ibm-plex-sans-latin-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+}
+
 :root {
-  --bg: #f3f4f6;
+  /* Neutrals with a slight blue cast, so they read as chosen. */
+  --bg: #f4f6f8;
   --surface: #ffffff;
-  --surface-2: #eaecf0;
-  --line: #d6d9df;
-  --text: #171a1f;
-  --muted: #5d6572;
-  --accent: #0b6e99;
+  --surface-2: #e9edf1;
+  --line: #d3d9e0;
+  --text: #171b21;
+  --muted: #5b6673;
+  /* The accent, its hover, and the soft ground a selected thing sits on. */
+  --accent: #0f5e86;
+  --accent-hover: #0b4d6e;
+  --accent-soft: #e3eef5;
   --accent-ink: #ffffff;
-  --now: #ffe58a;
-  --now-ink: #171a1f;
-  --warn: #b4530a;
+  /* The states, each strong and soft, so a pill, a stripe and a message
+   * about the same state look related. --warn is the working state. */
   --ok: #2f7d4f;
+  --ok-soft: #e4f2e9;
+  --warn: #9a5b06;
+  --warn-soft: #fbefd9;
   --danger: #b3261e;
+  --danger-soft: #f9e4e2;
+  --now: #ffe58a;
+  --now-ink: #171b21;
   --clip: #7a3ea0;
   --clip-soft: rgba(122, 62, 160, 0.18);
   --changed: #fff3c4;
   --changed-line: #d9a400;
 
   /* One colour per speaker, used for the name and the row's bar, so the
-   * same person is the same colour everywhere. They
-   * stay apart on both themes and survive the commonest colour blindness,
-   * which red and green together do not. */
+   * same person is the same colour everywhere. They stay apart on both
+   * themes and survive the commonest colour blindness, which red and green
+   * together do not. */
   --sp1: #1f6fb2;
   --sp2: #c2410c;
   --sp3: #2e7d32;
@@ -41,28 +98,47 @@
   --sp7: #6d4c41;
   --sp8: #546e7a;
 
-  --radius: 8px;
-  --shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-  --mono: ui-monospace, Consolas, "Cascadia Mono", monospace;
+  /* The two colours that are the same in both themes: a video well, and the
+   * white knob of a switch. */
+  --well: #000000;
+  --knob: #ffffff;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow: 0 8px 28px rgba(15, 30, 45, 0.14);
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, "Cascadia Mono", monospace;
+  /* The four sizes of type. Everything on a page is one of these. */
+  --t-display: 28px;
+  --t-title: 22px;
+  --t-heading: 17px;
+  --t-body: 15px;
+  --t-small: 13px;
+  /* How fast a hover or a focus ring arrives; nothing on the page is slower. */
+  --quick: 120ms;
 
   color-scheme: light dark;
   font-size: 15px;
 }
 
 html[data-theme="dark"] {
-  --bg: #121417;
-  --surface: #1b1e23;
-  --surface-2: #262a31;
-  --line: #363b44;
-  --text: #e8eaee;
-  --muted: #9aa3b0;
-  --accent: #4fa3d1;
-  --accent-ink: #0b1218;
+  --bg: #12161b;
+  --surface: #1a1f26;
+  --surface-2: #242b33;
+  --line: #343d48;
+  --text: #e7ebef;
+  --muted: #98a4b1;
+  --accent: #5fadd8;
+  --accent-hover: #7cbde0;
+  --accent-soft: #1b3646;
+  --accent-ink: #0b141b;
+  --ok: #6fc28a;
+  --ok-soft: #1c3526;
+  --warn: #f0a850;
+  --warn-soft: #3d2c12;
+  --danger: #ff8078;
+  --danger-soft: #45201d;
   --now: #5a4a00;
   --now-ink: #fff3b0;
-  --warn: #f0a050;
-  --ok: #6fc28a;
-  --danger: #ff7a70;
   --clip: #c58cf0;
   --clip-soft: rgba(197, 140, 240, 0.22);
   --changed: #3a3208;
@@ -75,25 +151,30 @@ html[data-theme="dark"] {
   --sp6: #f58bb6;
   --sp7: #c9a38f;
   --sp8: #a3b5c2;
-  --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
 /* A browser set to dark, with nobody having chosen otherwise. */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --bg: #121417;
-    --surface: #1b1e23;
-    --surface-2: #262a31;
-    --line: #363b44;
-    --text: #e8eaee;
-    --muted: #9aa3b0;
-    --accent: #4fa3d1;
-    --accent-ink: #0b1218;
+    --bg: #12161b;
+    --surface: #1a1f26;
+    --surface-2: #242b33;
+    --line: #343d48;
+    --text: #e7ebef;
+    --muted: #98a4b1;
+    --accent: #5fadd8;
+    --accent-hover: #7cbde0;
+    --accent-soft: #1b3646;
+    --accent-ink: #0b141b;
+    --ok: #6fc28a;
+    --ok-soft: #1c3526;
+    --warn: #f0a850;
+    --warn-soft: #3d2c12;
+    --danger: #ff8078;
+    --danger-soft: #45201d;
     --now: #5a4a00;
     --now-ink: #fff3b0;
-    --warn: #f0a050;
-    --ok: #6fc28a;
-    --danger: #ff7a70;
     --clip: #c58cf0;
     --clip-soft: rgba(197, 140, 240, 0.22);
     --changed: #3a3208;
@@ -106,7 +187,7 @@ html[data-theme="dark"] {
     --sp6: #f58bb6;
     --sp7: #c9a38f;
     --sp8: #a3b5c2;
-    --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -128,43 +209,87 @@ html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.45;
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 a { color: var(--accent); }
 
-h1, h2, h3 { margin: 0; font-weight: 650; }
-h1 { font-size: 1.35em; margin-bottom: 4px; }
-h2 { font-size: 1.05em; }
-h3 { font-size: 0.95em; }
+h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.2; text-wrap: balance; }
+h1 { font-size: var(--t-title); margin-bottom: 4px; letter-spacing: -0.005em; }
+h2 { font-size: var(--t-heading); }
+h3 { font-size: var(--t-body); }
+.display { font-size: var(--t-display); }
 p { margin: 0 0 8px; }
+
+/* Digits that line up: every time, count and size. */
+.num, time, kbd, .t { font-variant-numeric: tabular-nums; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 
-button {
+/* The four buttons. A plain <button> or .btn is the secondary; .primary is
+ * the one thing to do on a page; .ghost is the quiet tool inside a panel;
+ * .danger is red and stands last in any row. Three sizes: the default, .small
+ * and .tiny, each a fixed height so a row of mixed buttons lines up. */
+button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
-  background: var(--surface-2);
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 5px 10px;
+  border-radius: var(--radius);
+  padding: 0 12px;
+  min-height: 34px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--quick), border-color var(--quick), color var(--quick);
 }
-button:hover { border-color: var(--accent); }
-button:disabled { opacity: 0.45; cursor: default; }
-button.primary {
+button:hover, .btn:hover { background: var(--surface-2); border-color: var(--line); }
+button:disabled, .btn.disabled { opacity: 0.45; cursor: default; }
+button.primary, .btn.primary {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: var(--accent);
-  font-weight: 600;
+  font-weight: 500;
 }
-button.ghost { background: transparent; border-color: transparent; }
-button.ghost:hover { background: var(--surface-2); }
+button.primary:hover, .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+button.ghost, .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
+button.ghost:hover, .btn.ghost:hover { background: var(--accent-soft); border-color: transparent; }
 button.on {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--accent-soft);
+  color: var(--accent);
   border-color: var(--accent);
 }
-button.danger { color: var(--danger); }
+button.danger, .btn.danger { color: var(--danger); }
+button.danger:hover, .btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+button.danger.primary, .btn.danger.primary { background: var(--danger); color: var(--knob); border-color: var(--danger); }
+button.small, .btn.small { min-height: 28px; padding: 0 10px; font-size: var(--t-small); }
+button.tiny, .btn.tiny { min-height: 24px; padding: 0 8px; font-size: var(--t-small); }
+button.big, .btn.big { min-height: 40px; padding: 0 16px; font-size: var(--t-heading); }
+/* A button that is only an icon. */
+button.icon, .btn.icon { padding: 0; width: 34px; }
+button.icon.small, .btn.icon.small { width: 28px; }
+
+/* The icons: one set of line symbols from the sprite in icons.html, sized to
+ * the text beside them. */
+.i {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.2em;
+}
 
 /* Somebody driving this from the keyboard has to be able to see where they
  * are. :focus-visible rather than :focus, so a mouse click does not ring
@@ -180,51 +305,26 @@ select:focus-visible, textarea:focus-visible, summary:focus-visible,
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-button.tiny { padding: 1px 7px; font-size: 0.82em; }
-button.big, .btn.big { padding: 8px 16px; font-size: 1.05em; }
-
-/* A link that looks like a button. A <button> inside an <a> is invalid and
- * gives one action two tab stops, so the anchor carries the look itself.
- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 5px 10px;
-  color: inherit;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.btn:hover { border-color: var(--accent); }
-.btn.primary {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-color: var(--accent);
-  font-weight: 600;
-}
-.btn.ghost { background: transparent; border-color: transparent; }
-.btn.ghost:hover { background: var(--surface-2); }
-.btn.danger { color: var(--danger); }
-.btn.small { font-size: 0.85em; padding: 3px 8px; }
-.btn.tiny { padding: 1px 7px; font-size: 0.82em; }
 
 input[type="text"], input[type="search"], input[type="number"],
 input[type="date"], input[type="time"], input[type="password"],
+input[type="email"], input[type="url"],
 textarea, select {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 5px 8px;
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  min-height: 34px;
+  transition: border-color var(--quick);
 }
+input:hover, textarea:hover, select:hover { border-color: var(--muted); }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 input[type="number"] { width: 7em; }
-textarea { width: 100%; resize: vertical; }
+textarea { width: 100%; resize: vertical; line-height: 1.45; }
 input[type="range"] { accent-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
 
-code, .mono { font-family: var(--mono); font-size: 0.88em; }
+code, .mono { font-family: var(--mono); font-size: 0.9em; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
 
 kbd {
@@ -242,42 +342,49 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 /* The small words ----------------------------------------------------------- */
 
 .muted, .quiet { color: var(--muted); }
-.small { font-size: 0.85em; }
+.small { font-size: var(--t-small); }
+.tiny { font-size: var(--t-small); }
 .lead { color: var(--muted); margin-bottom: 14px; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .grow { flex: 1; }
+/* A label over a group: small capitals with a little air. */
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
 
+/* One shape of pill; the colour is the state, and a dot says so before the
+ * word for anyone who does not see the colour. */
 .pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border-radius: 999px;
   padding: 1px 9px;
-  font-size: 0.8em;
-  border: 1px solid var(--line);
+  font-size: var(--t-small);
+  font-weight: 500;
   background: var(--surface-2);
+  color: var(--text);
   white-space: nowrap;
+  line-height: 1.5;
 }
-.pill.ok {
-  color: var(--ok);
-  border-color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
+.pill.ok, .pill.warn, .pill.danger { padding-left: 8px; }
+.pill.ok::before, .pill.warn::before, .pill.danger::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
-.pill.warn {
-  color: var(--warn);
-  border-color: var(--warn);
-  background: color-mix(in srgb, var(--warn) 14%, transparent);
-}
-.pill.danger {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-}
-.pill.translate {
-  background: color-mix(in srgb, var(--warn) 18%, transparent);
-  border-color: var(--warn);
-  color: var(--warn);
-  font-weight: 600;
-}
-.pill.side { border-style: dashed; }
+.pill.ok { color: var(--ok); background: var(--ok-soft); }
+.pill.warn { color: var(--warn); background: var(--warn-soft); }
+.pill.danger { color: var(--danger); background: var(--danger-soft); }
+.pill.translate { color: var(--warn); background: var(--warn-soft); }
+.pill.side { border: 1px dashed var(--line); background: transparent; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
 .pill.role { font-size: 0.72em; padding: 0 6px; margin-left: 4px; }
 .person-acts form { flex-wrap: wrap; }
@@ -285,33 +392,40 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
 }
 
 .kv {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 3px 12px;
-  font-size: 0.9em;
+  gap: 4px 14px;
+  font-size: var(--t-small);
   margin: 0;
 }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; word-break: break-word; }
 
-table.tbl { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.tbl th, table.tbl td {
   text-align: left;
-  padding: 6px 8px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
-table.tbl th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
+table.tbl th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+table.tbl tbody tr:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 
 .banner {
-  padding: 6px 14px;
-  font-size: 0.9em;
-  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  padding: 8px 16px;
+  font-size: 14px;
+  background: var(--warn-soft);
   border-bottom: 1px solid var(--warn);
 }
 
@@ -331,6 +445,11 @@ table.tbl th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
   border-left: 3px solid var(--danger);
   padding: 6px 10px;
   margin: 8px 0;
+}
+
+/* Motion is short, and none for anyone who asked for none. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 .progress {
@@ -400,29 +519,23 @@ table.tbl th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
-.nav .brand { font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.nav .brand i {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: var(--accent);
-}
+.nav .brand { font-weight: 600; display: flex; align-items: center; gap: 9px; color: var(--text); text-decoration: none; }
+/* The mark: the favicon's waveform on a rounded square, drawn in the sprite's
+ * stroke so it is the same on every page and in the browser tab. */
+.nav .brand .mark { width: 20px; height: 20px; flex: none; }
 .nav .links { display: flex; gap: 2px; }
 .nav .links a {
-  padding: 5px 11px;
-  border-radius: 6px;
+  padding: 6px 11px;
+  border-radius: var(--radius);
   color: var(--muted);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9em;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background-color var(--quick), color var(--quick);
 }
-.nav .links a:hover { background: var(--surface-2); }
-.nav .links a.on {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-}
-.nav .who { margin-left: auto; color: var(--muted); font-size: 0.9em; }
+.nav .links a:hover { background: var(--surface-2); color: var(--text); }
+.nav .links a.on { background: var(--accent-soft); color: var(--accent); }
+.nav .who { margin-left: auto; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .nav .who a { text-decoration: none; }
 
 /* The shell: the page, and the guide beside it when that is open. The pane
@@ -628,7 +741,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
      keeps its shape and the transport beside it never jumps about. */
   width: var(--thumb-width, 220px);
   aspect-ratio: 16 / 9;
-  background: #000;
+  background: var(--well);
   border-radius: var(--radius);
   overflow: hidden;
   display: flex;
@@ -871,8 +984,9 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   cursor: pointer;
 }
 .seg.here .t { color: inherit; }
+.seg .who .corrected-mark { margin-left: 4px; color: var(--muted); }
 .seg .who {
-  font-weight: 650;
+  font-weight: 600;
   font-size: 0.85em;
   margin-bottom: 2px;
   color: var(--speaker, inherit);
@@ -973,10 +1087,11 @@ body.no-speakers .seg .name { display: none; }
   padding: 7px 14px;
   color: var(--muted);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.92em;
+  font-weight: 500;
+  font-size: 14px;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
+  transition: color var(--quick), border-color var(--quick);
 }
 .tabs .tab:hover { color: var(--text); }
 .tabs .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
@@ -1043,7 +1158,7 @@ body.no-speakers .seg .name { display: none; }
   padding: 8px 10px;
   background: var(--surface);
 }
-.clipcard .title { font-weight: 650; }
+.clipcard .title { font-weight: 600; }
 
 .popout {
   position: fixed;
@@ -1188,7 +1303,7 @@ body.no-speakers .seg .name { display: none; }
 }
 .chip-for.on { border-color: var(--accent); color: var(--accent); }
 /* A clip plays where it is chosen: in the pane, or under its row. */
-.detail .clipplayer { display: block; width: 100%; max-height: 260px; margin: 0 0 10px; background: #000; border-radius: var(--radius); }
+.detail .clipplayer { display: block; width: 100%; max-height: 260px; margin: 0 0 10px; background: var(--well); border-radius: var(--radius); }
 .detail audio.clipplayer { background: transparent; max-height: none; }
 .about-case h2 { margin: 0 0 8px; font-size: 1.1em; }
 /* A form of stacked fields, for the pane beside a table. */
@@ -1318,8 +1433,8 @@ body.no-speakers .seg .name { display: none; }
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
-  transition: 0.15s;
+  background: var(--knob);
+  transition: var(--quick);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .switch input:checked + .knob { background: var(--ok); }

@@ -75,3 +75,69 @@ def test_every_block_tag_is_closed():
             trouble.append(f"{template.name}:{line}: {tag} is never closed")
 
     assert not trouble, "\n".join(trouble)
+
+
+# The finish: the icon set and the typeface ------------------------------------------
+
+STATIC = Path(__file__).resolve().parent.parent / "static"
+
+
+def sprite_names():
+    text = (TEMPLATES / "icons.html").read_text(encoding="utf-8")
+    return set(re.findall(r'id="i-([a-z0-9-]+)"', text))
+
+
+def test_every_icon_a_page_or_script_asks_for_is_in_the_sprite():
+    """A missing symbol draws nothing, silently, so the names are checked here."""
+    have = sprite_names()
+    assert len(have) > 20
+    asked = set()
+    for template in every_template():
+        asked |= set(
+            re.findall(r'\{% icon "([a-z0-9-]+)"', template.read_text(encoding="utf-8"))
+        )
+    for script in STATIC.glob("*.js"):
+        text = script.read_text(encoding="utf-8")
+        asked |= set(re.findall(r"#i-([a-z0-9-]+)", text))
+        asked |= set(re.findall(r'icon\("([a-z0-9-]+)"\)', text))
+    assert asked, "no page asks for an icon, which cannot be right"
+    assert asked <= have, asked - have
+
+
+def test_the_sprite_is_on_every_page_and_no_glyph_stands_for_an_icon():
+    base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
+    assert '{% include "icons.html" %}' in base
+    assert 'class="brand"' in base and 'class="mark"' in base
+    # The typewriter glyphs the icons replaced, which rendered differently on
+    # every machine, are gone from the pages and the scripts.
+    glyphs = [
+        "✎",
+        "&#9998;",
+        "&#9654;",
+        "&#8597;",
+        "&#9662;",
+        "&#9986;",
+        "&#9776;",
+        "&#8630;",
+        "&#9789;",
+        "&#10003;",
+    ]
+    for path in list(every_template()) + list(STATIC.glob("*.js")):
+        text = path.read_text(encoding="utf-8")
+        for glyph in glyphs:
+            assert glyph not in text, f"{path.name} still draws {glyph}"
+
+
+def test_the_typeface_ships_with_the_app_under_its_licence():
+    css = (STATIC / "app.css").read_text(encoding="utf-8")
+    for face in re.findall(r'url\("fonts/([^"]+)"\)', css):
+        assert (STATIC / "fonts" / face).exists(), face
+    assert '"IBM Plex Sans"' in css and '"IBM Plex Mono"' in css
+    licence = (STATIC / "fonts" / "OFL-ibm-plex.txt").read_text(encoding="utf-8")
+    assert "SIL Open Font License" in licence and "IBM Corp" in licence
+    # The stylesheet has no colour of its own outside the token blocks: every
+    # rule reads a token. Hex colours may appear only in the :root palettes.
+    body = css[css.index("/* The elements") :]
+    assert not re.search(r"#[0-9a-fA-F]{3,6}\b", body.replace("#i-", "")), (
+        "a colour written into a rule"
+    )

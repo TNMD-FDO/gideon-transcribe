@@ -143,7 +143,7 @@
           var label = (where.name ? escape(where.name) + ", " : "") + shortClock(where.clock);
           return "<a href='" + escape(where.href || "#") + "' class='cite play'" +
             (where.seconds !== undefined ? " data-seconds='" + where.seconds + "'" : "") + title + ">" +
-            "<span aria-hidden='true'>&#9654;</span> " + label + "</a>";
+            "<svg class='i' aria-hidden='true'><use href='#i-play'></use></svg> " + label + "</a>";
         });
       };
     }
@@ -209,7 +209,7 @@
           "</div>";
       }
       if (chat) {
-        if (chat.notice) { html += "<p class='notice quiet tiny'><span aria-hidden='true'>&#9432;</span> " + escape(chat.notice) + "</p>"; }
+        if (chat.notice) { html += "<p class='notice quiet tiny'><svg class='i' aria-hidden='true'><use href='#i-info'></use></svg> " + escape(chat.notice) + "</p>"; }
         if (chat.earlier) { html += "<p class='muted tiny'>" + escape(chat.earlier) + "</p>"; }
         chat.turns.forEach(function (turn) {
           html += "<div class='turn'>" +

@@ -61,6 +61,11 @@
   }
 
   // What the rest of the page may ask this one for.
+  // A sprite icon from a script, the same one the {% icon %} tag draws.
+  function icon(name) {
+    return "<svg class='i' aria-hidden='true' focusable='false'><use href='#i-" + name + "'></use></svg>";
+  }
+  window.VIEWER.icon = icon;
   window.VIEWER.clock = clock;
   window.VIEWER.at = function () { return player ? player.currentTime : 0; };
   window.VIEWER.currentSegment = function () {
@@ -181,7 +186,7 @@
       editButton.type = "button";
       editButton.className = "ghost tiny edit-row";
       editButton.title = "Correct this segment (E)";
-      editButton.textContent = "✎ edit";
+      editButton.innerHTML = icon("correct") + " edit";
       actions.appendChild(editButton);
 
       if (window.VIEWER.clips) {
@@ -204,7 +209,14 @@
       // controls even when there is no speaker to name.
       var name = document.createElement("span");
       name.className = "name";
-      name.textContent = (segment.speaker || "") + (segment.corrected ? " ✎" : "");
+      name.textContent = segment.speaker || "";
+      if (segment.corrected) {
+        var mark = document.createElement("span");
+        mark.className = "corrected-mark";
+        mark.title = "Corrected by staff";
+        mark.innerHTML = icon("corrected");
+        name.appendChild(mark);
+      }
       who.appendChild(name);
       who.appendChild(actions);
       body.appendChild(who);
@@ -1180,11 +1192,11 @@
         // Never smaller than it was: on a short window the rule that keeps
         // the transcript in view may already be the limit.
         setSheetHeight(Math.max(tallest(), heightBefore));
-        expandSheet.innerHTML = "Shrink &#8597;";
+        expandSheet.innerHTML = icon("expand") + " Shrink";
       } else {
         setSheetHeight(heightBefore);
         heightBefore = null;
-        expandSheet.innerHTML = "Expand &#8597;";
+        expandSheet.innerHTML = icon("expand") + " Expand";
       }
       drawTimeline();
     });

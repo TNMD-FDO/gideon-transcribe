@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.14.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The foundations of the finish.** One visual language on every page,
+  approved as the first of five releases. The app ships its own typeface,
+  IBM Plex Sans with IBM Plex Mono for times and counts, under the SIL Open
+  Font License, so it looks like itself on every desk and fetches nothing from
+  outside. The colour tokens gain a slight blue cast, a soft form for every
+  state, and a hover for the accent; the dark palette is the same roles, not
+  an inversion. Type is one of four sizes instead of nine. There are four
+  buttons in three fixed heights, so a row of mixed buttons lines up; one
+  shape of pill whose colour is the state, with a dot for anyone who does not
+  see the colour; table headings in small capitals; a visible focus ring on
+  every control; motion of 120 ms and none for anyone whose system asks for
+  none. One set of line icons, drawn in a sprite included on every page,
+  replaces the typewriter glyphs that rendered differently on every machine,
+  and the brand mark beside the wordmark is the favicon's waveform. A
+  recording in the queue now wears the working colour like one being
+  processed again. Nothing moves; every page picks the finish up at once.
+  Rule 31 in the Phase 1 chapter of rules records it.
+
 ## v1.13.1, 2026-09-05
 
 ```
