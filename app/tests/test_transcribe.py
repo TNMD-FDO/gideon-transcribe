@@ -218,6 +218,8 @@ def test_the_local_engine_switch_is_in_the_script_and_the_guides():
     compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
     assert "${LLM_LOCAL_MODEL:-Qwen/Qwen3.5-4B}" in compose
     assert "${LLM_LOCAL_GPU_FRACTION:-0.21}" in compose
+    # The engine runs as the app's account, which needs a home for its caches.
+    assert "HOME: /models" in compose
     install = (HERE / "docs" / "install.md").read_text(encoding="utf-8")
     assert "./transcribe engine local on" in install
     assert "local-engine-model.md" in install
