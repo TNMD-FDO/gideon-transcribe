@@ -209,8 +209,12 @@ def test_the_local_engine_switch_is_in_the_script_and_the_guides():
     assert 'LOCAL_MODEL_DEFAULT="Qwen/Qwen3.5-4B"' in script
     assert 'LOCAL_SHARE_DEFAULT="0.21"' in script
     # The panel is pointed at what was started, through the checked command.
-    assert "set_setting engine_address" in script
-    assert "set_setting engine_model" in script
+    assert "set_setting --skip-checks $pair" in script
+    assert "engine_address http://vllm:8000/v1" in script
+    assert "engine_model local-engine" in script
+    # The check asks for the token through the helper that can see into secrets/.
+    assert 'secret_present "$SECRETS/llm_api_token"' in script
+    assert "looked -s" not in script
     # The example environment and the compose file carry the same defaults.
     example = (HERE / ".env.example").read_text(encoding="utf-8")
     assert "LLM_LOCAL_MODEL=Qwen/Qwen3.5-4B" in example

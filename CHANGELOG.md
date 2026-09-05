@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.3, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **`./transcribe check` said no engine token was stored when one was.** Since
+  v1.2.2 the check asked for the token file through a helper miscalled with
+  `-s` handed to `sudo` rather than to `test`, so it answered "no" whenever
+  sudo had no cached password. It now asks through the same helper every
+  other secret is looked for with. The engine itself was never affected.
+- **`./transcribe engine local on` no longer prints the worker's start-up
+  chatter** twice around the two lines that matter, the settings it moved.
+
 ## v1.10.2, 2026-09-05
 
 ```
