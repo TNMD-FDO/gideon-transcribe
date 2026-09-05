@@ -428,6 +428,11 @@ services:
       VLLM_NO_USAGE_STATS: "1"
       DO_NOT_TRACK: "1"
       HF_HOME: /models
+      # The process runs as the app's account, which has no home inside the
+      # image, and vLLM writes caches (torch, triton, its own) under HOME. Without
+      # one it tries /.cache, is refused, and dies before loading the model.
+      HOME: /models
+      XDG_CACHE_HOME: /models/.cache
       TZ: "${TZ:-UTC}"
     deploy:
       resources:
