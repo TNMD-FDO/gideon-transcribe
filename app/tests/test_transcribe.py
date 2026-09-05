@@ -201,3 +201,24 @@ def test_the_record_s_line_shape_is_the_one_the_script_splits():
     # and the name before the last ":". The workflow writes exactly that.
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert 'echo "$image:$tag@$digest" >> digests.txt' in workflow
+
+
+def test_the_local_engine_switch_is_in_the_script_and_the_guides():
+    script = (HERE / "transcribe").read_text(encoding="utf-8")
+    assert "cmd_engine_local_on()" in script and "cmd_engine_local_off()" in script
+    assert 'LOCAL_MODEL_DEFAULT="Qwen/Qwen3.5-4B"' in script
+    assert 'LOCAL_SHARE_DEFAULT="0.21"' in script
+    # The panel is pointed at what was started, through the checked command.
+    assert "set_setting engine_address" in script
+    assert "set_setting engine_model" in script
+    # The example environment and the compose file carry the same defaults.
+    example = (HERE / ".env.example").read_text(encoding="utf-8")
+    assert "LLM_LOCAL_MODEL=Qwen/Qwen3.5-4B" in example
+    assert "LLM_LOCAL_GPU_FRACTION=0.21" in example
+    compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
+    assert "${LLM_LOCAL_MODEL:-Qwen/Qwen3.5-4B}" in compose
+    assert "${LLM_LOCAL_GPU_FRACTION:-0.21}" in compose
+    install = (HERE / "docs" / "install.md").read_text(encoding="utf-8")
+    assert "./transcribe engine local on" in install
+    assert "local-engine-model.md" in install
+    assert (HERE / "docs" / "research" / "local-engine-model.md").exists()
