@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.6.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. The Cases pages and the Clips page
+change shape on wide windows; the Recycle bin keeps its address and gains
+the Cases strip above it.
+
+### Changed
+
+- **The Cases page has three tabs and a details pane.** Mine, Everyone's
+  (Admins only) and Recycle bin in one strip, in place of a second table
+  below the first and a bin to go and find. The table gains a Retention
+  column, the clock's own line for every case. Click a case and its details
+  appear in a pane beside the table from 1280 pixels, or under its row on a
+  narrower window, with Open, Case page, and Keep when it is in its last
+  days. Up and down move along the rows; Enter opens.
+- **A case's page is two panes.** What is in the case on the left: the
+  Recordings and Clips tabs, the search box and its hits, and the recordings
+  as a table (title, type, state, length, speakers, added) whose details,
+  type and notes open under the row. What is about the case on the right:
+  owner, count and size, last activity, where its clock stands with Keep,
+  Download all transcripts, Rename, and Delete case. Add recordings stays in
+  the header. On a narrower window the right pane follows the list.
+- **The Clips page is one table with a player.** Every clip in one table
+  with the recording as a column and a filter by recording above, in place
+  of a table per recording. Click a clip and it plays where it is chosen,
+  in the pane on the right from 1280 pixels or under its row below that,
+  with its details, Download, Open in viewer and Delete. The Cases chapters
+  of Phase 2 and the Clips chapter carry the amendments.
+
 ## v1.5.0, 2026-09-05
 
 ```

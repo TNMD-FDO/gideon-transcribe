@@ -402,31 +402,34 @@ def clips_page(request: HttpRequest) -> HttpResponse:
 
     from core.pages import standing_line
 
-    groups = []
-    total = 0
-    for recording in (
+    # One table for every clip, in the order of the recordings' upload and
+    # the clips' start inside each, with the recording as a column and a
+    # filter by recording above. Each clip knows its file's address so the
+    # page can play it where it is chosen.
+    recordings = list(
         Recording.objects.filter(
             user=request.user, case__isnull=True, clips__isnull=False
         )
         .distinct()
         .order_by("created")
-    ):
-        rows = list(recording.clips.all())
-        total += sum(one.size_bytes for one in rows)
-        groups.append({"recording": recording, "clips": rows})
+    )
+    clips = []
+    total = 0
+    for recording in recordings:
+        for one in recording.clips.all():
+            one.url = f"{media_root(recording)}/clips/{one.pk}{one.suffix}"
+            total += one.size_bytes
+            clips.append(one)
 
     return render(
         request,
         "clips.html",
         {
             "page": "clips",
-            "groups": groups,
+            "clips": clips,
+            "recordings": recordings,
             "total": f"{total / 1024 / 1024:.1f} MB",
-            "any_ready": any(
-                one.state == RenderState.READY
-                for group in groups
-                for one in group["clips"]
-            ),
+            "any_ready": any(one.state == RenderState.READY for one in clips),
             "standing_line": standing_line(),
         },
     )

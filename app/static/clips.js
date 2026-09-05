@@ -36,3 +36,21 @@
     }
   });
 })();
+
+// The filter by recording on the Clips page: the rows of other recordings
+// are hidden, their details with them, and the chooser is told.
+(function () {
+  "use strict";
+
+  var filter = document.getElementById("clip-filter");
+  var table = document.getElementById("recordings");
+  if (!filter || !table) { return; }
+
+  filter.addEventListener("change", function () {
+    var wanted = filter.value;
+    Array.prototype.forEach.call(table.querySelectorAll("tr.pick"), function (row) {
+      row.hidden = !!wanted && row.dataset.of !== wanted;
+    });
+    table.dispatchEvent(new Event("rows-changed"));
+  });
+})();

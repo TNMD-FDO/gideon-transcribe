@@ -4,14 +4,15 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="page roomy">
+  <div class="page roomy workbench">
     <div class="row">
       <h1 class="grow">Recycle bin</h1>
-      <a href="{% url 'cases' %}" class="btn">Cases</a>
       {% if mine %}
         <button type="button" class="btn ghost danger" id="empty-bin">Empty recycle bin</button>
       {% endif %}
     </div>
+
+    {% include "cases-tabs.html" %}
 
     <p class="lead">
       Cases the retention policy has deleted wait here for {{ bin_days }} days,

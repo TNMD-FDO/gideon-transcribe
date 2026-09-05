@@ -2722,7 +2722,7 @@ A Clip is a user-chosen span of a Recording, marked by a start and an end, with 
 
 - A **Clips** item in the top navigation, beside Recordings and Upload, lists every Clip in the Workspace.
 - Columns: Title, Recording, Span, Length, Options (captions burned, excerpt), Status (Rendering, Ready, Failed, Captions out of date), Size, Saved, Downloaded (`Downloaded <time>` or `Not yet`).
-- Grouped by Recording in upload order, with Clips in start-time order inside; a sort control for Title, Saved, Length, and Size.
+- One table in upload order of the Recordings and start-time order of the Clips inside each, with the Recording as a column and a filter by Recording above; a sort control for Title, Saved, Length, and Size. The chosen Clip's details, with its player, sit in a pane beside the table from 1280 pixels or open under its row on a narrower window; Up and Down move along the rows and Enter opens the viewer.
 - Per Clip: Play (an inline player of the rendered file, served by Caddy with forward auth like every media file), Download, Open in viewer (opens the Recording at the Clip's start with the Clips sheet open), Rename, Adjust (goes to the viewer), Delete (confirmed).
 - At the top: Download all, a total-size line, and the standing Workspace line about removal at sign-out (see the Workspace lifecycle chapter).
 - The page is hidden while "Clips available" is Off.
@@ -2828,6 +2828,7 @@ Clips: model, lifecycle, and management; Transcript viewer and synced player.
 - From the Clips ticket to the Word export rules: Download everything includes every Ready Clip with its excerpt; the Clip SRT starts at zero while the excerpt keeps the Recording's times.
 - From the Upload page ticket to the Clips page and quota: the Workspace's "Using X of Y GB" line no longer exists; storage is shown only as a warning near the limit; the Clips page keeps its own total-size line.
 - From the viewer chapter's Timeline amendment on the v1.3.0 build: the "bare waveform with no Speaker lanes" the viewer opened with before the Transcript is now simply the Timeline; nothing about Clips changes.
+- From the maintainer, on the v1.6.0 build, to the Clips page: the Workbench Layout's third page. One table with the Recording as a column and a filter by Recording, in place of a table per Recording; the chosen Clip's details and its inline player in a pane from 1280 pixels, under its row below that.
 
 
 ## 10. AI assistant

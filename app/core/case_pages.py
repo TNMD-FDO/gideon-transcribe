@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, exports, retention, settings_store, uploads
+from core import audit, cases, exports, pages, retention, settings_store, uploads
 from core.cases import Case
 from core.jobs import Segment
 from core.recordings import Recording
@@ -83,11 +83,18 @@ def cases_page(request: HttpRequest) -> HttpResponse:
     if owner_deactivated:
         others = others.filter(owner__deactivated_at__isnull=False)
 
-    rows = [_as_row(one) for one in mine]
-    other_rows = [_as_row(one) for one in others]
+    # Three views of one page: the person's own cases, everyone's (an Admin's
+    # alone), and the Recycle bin, which is its own view. Everyone's is the
+    # chapter's "every Case" for an Admin, shown apart from their own so a
+    # leaver's case is found without wading through one's own.
+    who = (
+        "everyone"
+        if request.GET.get("who") == "everyone" and request.user.is_admin
+        else "mine"
+    )
+    rows = [_as_row(one) for one in (others if who == "everyone" else mine)]
     if expiring:
         rows = [one for one in rows if one["warned"]]
-        other_rows = [one for one in other_rows if one["warned"]]
 
     if request.user.is_admin:
         binned = Case.objects.filter(deleted_on__isnull=False).count()
@@ -100,7 +107,7 @@ def cases_page(request: HttpRequest) -> HttpResponse:
         {
             "page": "cases",
             "cases": rows,
-            "others": other_rows,
+            "who": who,
             "name_filter": filter_text,
             "expiring": expiring,
             "owner_deactivated": owner_deactivated,
@@ -180,6 +187,10 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # belong to chapters that are not built.
     tab = "clips" if request.GET.get("tab") == "clips" else "recordings"
 
+    # The pane about the case says where its clock stands, as its row on the
+    # Cases page does.
+    left = retention.days_left(case)
+
     return render(
         request,
         "case.html",
@@ -187,6 +198,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "page": "cases",
             "case": case,
             "tab": tab,
+            "warned": retention.is_warned(left),
+            "deletes_line": retention.deletes_line(left),
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             "is_owner": case.owner_id == request.user.pk,
             "recordings": _rows_for(case),
@@ -229,6 +242,7 @@ def _rows_for(case: Case) -> list:
         one.in_the_queue = bool(job is not None and job.is_live)
         one.speakers_in_words = _speakers_in_words(one)
         one.length = exports.clock(one.duration_seconds or 0)
+        one.state_word, one.state_tone = pages.state_words(one)
         rows.append(one)
     return rows
 
@@ -425,6 +439,9 @@ def recycle_bin(request: HttpRequest) -> HttpResponse:
                 else []
             ),
             "bin_days": retention.recycle_bin_days(),
+            # The strip above the page: the bin is the third view of Cases.
+            "who": "bin",
+            "binned": len(rows),
             "mine": sum(1 for one in rows if one["case"].owner_id == request.user.pk),
         },
     )

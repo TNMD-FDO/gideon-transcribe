@@ -176,7 +176,7 @@ The owner or an Admin can move a Recording to another Case, with the same mechan
 
 When Folder management is on, the Cases page is the landing page at sign-in, with "your recordings" (the Workspace) reachable at the top.
 
-- One list holds the user's own Cases and the Cases shared with them: Name, Recordings, size, Last activity, and the owner when it is someone else. Sortable by any column, with a text filter on the name.
+- One list holds the user's own Cases and the Cases shared with them: Name, Recordings, size, Last activity, Retention (the clock's line), and the owner when it is someone else. Sortable by any column, with a text filter on the name. The page has three views in one strip of tabs, Mine, Everyone's (an Admin's alone), and Recycle bin, so the bin is a view of this page rather than a page to find. The chosen Case's details (the same facts, with Open, Case page, and Keep in its last days) sit in a pane beside the table from 1280 pixels, or open under its row on a narrower window; Up and Down move along the rows and Enter opens.
 - A shared Case shows the owner's name and a Shared mark, New until first opened (see the Sharing chapter).
 - A Case in its last days carries the amber Retention warning on its row, with Keep (see the Retention policy and the Recycle bin chapter).
 - This is where a Case is created: the name is typed, nothing else.
@@ -185,7 +185,7 @@ When Folder management is on, the Cases page is the landing page at sign-in, wit
 
 ### The Case page
 
-Four tabs, one search box, and the Case's own controls.
+Four tabs, one search box, and the Case's own controls. From 1280 pixels the page is two panes: what is in the Case on the left (the tabs, the search box and its hits, the list), and what is about the Case on the right (owner, count and size, Last activity, the Retention line with Keep, Download all transcripts, Rename, Delete case; Add recordings stays in the header). On a narrower window the right pane follows the list. A Recording's details (Description, type, and its actions) open under its row on every width, because the pane is the Case's.
 
 - **Recordings** tab: the list with title, Recording type, Description, length, Speakers (reads `2 named, 1 unnamed`), Transcript state (a Recording added at upload shows its Step while its Job runs), and last opened. Per Recording: Move to another case, for those allowed to move it. Opening, Process again, Retry, Details, exports, and Delete are the Workspace's own, unchanged.
 - **Speakers** tab: the Case's People (name, optional Role, notes, where they appear) and the Recordings with unnamed Speakers; the one place a Person is renamed for the whole Case, merged, or deleted (see the People and the Speakers tab chapter).
@@ -334,6 +334,7 @@ Case folder model on the mount (with its amendments from the Sharing model, Rete
 - From the Clips ticket, to the Case page and Move to case: the Clips tab with "Saved by" and Download all; the Clips page stays the Workspace's; a Clip rides in with its Recording; the Provenance lists the Clips at export time.
 - From the Email notifications over SMTP ticket, to owners and leavers: the "case handed to you" mail; the old owner gets nothing; the Operator address's nightly section and the "Expiring" filter.
 - From the Chat across a whole Case ticket, to the Case page, the database, and Delete: the Chat tab; Case Chats as Case rows that move, go to the bin, and are deleted with the Case; the Delete confirmation's chat count includes them.
+- From the maintainer, on the v1.6.0 build, to the Cases page and the Case page: the Workbench Layout's third page. The Cases page's three views (Mine, Everyone's, Recycle bin) in one strip of tabs, a Retention column, and the chosen Case's details in a pane from 1280 pixels; the Case page in two panes, what is in the Case and what is about it. Below 1280 pixels the details open under the row and the panes stack.
 
 ## 2. Sharing
 
@@ -711,6 +712,7 @@ Retention policy; Folder management toggle transitions.
 - From the Clips ticket to The clock: downloading a Clip in a Case is Last activity, like an export.
 - From the email notifications ticket to The warning and The nightly sweep: the email is the nightly Retention digest to everyone who owns or shares a warned Case; the last mail is the final warning the night before deletion; nothing is sent on deletion, restore, or wipe; Deactivated or Blocked owners' Cases go to the Operator address; no digest while Folder management is Off, and the first sweep after On sends it as on any other night.
 - From the Case Chat ticket to The clock and Deletion into the Recycle bin: starting or continuing a Case Chat is Last activity, deleting one is not, an Admin's use under ADR 0004 is not; a binned Case cannot be asked; Case Chats go to the bin and come back with their Case.
+- From the maintainer, on the v1.6.0 build, to the Recycle bin page: reached as the third tab of the Cases page's strip (Mine, Everyone's, Recycle bin) as well as by its own address; its columns and controls unchanged.
 
 ## 4. The Folder management toggle
 

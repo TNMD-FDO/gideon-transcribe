@@ -1080,6 +1080,10 @@ body.no-speakers .seg .name { display: none; }
   border-bottom: 1px solid var(--line);
 }
 .chip-for.on { border-color: var(--accent); color: var(--accent); }
+/* A clip plays where it is chosen: in the pane, or under its row. */
+.detail .clipplayer { display: block; width: 100%; max-height: 260px; margin: 0 0 10px; background: #000; border-radius: var(--radius); }
+.detail audio.clipplayer { background: transparent; max-height: none; }
+.about-case h2 { margin: 0 0 8px; font-size: 1.1em; }
 @media (min-width: 1280px) {
   .page.workbench { max-width: 100rem; }
   .panes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }

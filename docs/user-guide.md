@@ -134,7 +134,11 @@ In the viewer, **New clip** opens the clip tool. Mark the start and the end by d
 
 A clip is part of the recording it came from. Deleting the recording deletes its clips, and so does signing out, unless the recording is in a case.
 
+The Clips page is one table of every clip you have made this session, with the recording each came from. Click a clip and it plays beside the table (under its row, on a laptop), with its details and **Download**, **Open in viewer** and **Delete**. Pick a recording at the top to see only its clips.
+
 ## Cases
+
+The Cases page has three tabs: **Mine**, **Everyone's** (Admins only), and the **Recycle bin**. Click a case and its details appear beside the table (under the row, on a laptop) with **Open** and **Case page**; the Retention column says when the clock would delete it. A case's own page puts what is in the case on the left, its recordings and their search, and what is about the case on the right: how many recordings, when it was last used, where its clock stands, and **Rename** and **Delete case**.
 
 Your office may have Cases turned on. A case is a named page of recordings for one matter, and a recording in a case is kept after you sign out, for as long as the office's retention policy says.
 
