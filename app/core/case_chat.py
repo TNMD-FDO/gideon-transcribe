@@ -16,7 +16,7 @@ import logging
 import re
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.db import models
 from django.utils import timezone
@@ -405,17 +405,22 @@ def answer_case_turn(turn_id) -> None:
             calls["readings"] += 1
             if len(groups) == 1:
                 turn.cut_short = answer["finish_reason"] == "length"
-            else:
-                _a_part_is_read(turn.pk)
             return answer["text"].strip()
 
         if len(groups) == 1:
             text = ask_reading(groups[0], PART_CAP)
         else:
+            # Two at a time; the parts are counted here, on this thread, as
+            # each returns, so nothing but the engine call runs in a thread.
             with ThreadPoolExecutor(max_workers=READINGS_AT_ONCE) as pool:
-                parts = list(
-                    pool.map(lambda group: ask_reading(group, PART_CAP), groups)
-                )
+                futures = [
+                    pool.submit(ask_reading, group, PART_CAP) for group in groups
+                ]
+                for future in as_completed(futures):
+                    future.result()
+                    turn.parts_done += 1
+                    turn.save(update_fields=["parts_done"])
+                parts = [future.result() for future in futures]
             labelled = "\n\n".join(
                 f"Part {n} of {len(parts)}:\n{part}"
                 for n, part in enumerate(parts, start=1)
@@ -461,21 +466,6 @@ def answer_case_turn(turn_id) -> None:
             outcome=problem.reason,
             reason=problem.reason,
         )
-
-
-def _a_part_is_read(turn_id) -> None:
-    """One more part read, written from the Reading's own thread.
-
-    Each thread gets its own database connection from Django; it is closed
-    here so the pool is not left holding one per Reading.
-    """
-    from django.db import connections
-    from django.db.models import F
-
-    try:
-        CaseChatTurn.objects.filter(pk=turn_id).update(parts_done=F("parts_done") + 1)
-    finally:
-        connections.close_all()
 
 
 def time_limit_for_the_question() -> int:
