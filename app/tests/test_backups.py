@@ -57,6 +57,8 @@ def test_off_when_the_target_is_empty(monkeypatch):
 
 @pytest.mark.django_db
 def test_preflight_passes_with_room_and_fails_under_the_floor(on, monkeypatch):
+    # The runner's disk is whatever it is; the floor is what is under test.
+    monkeypatch.setattr(settings_store, "minimum_free_disk_bytes", lambda: 0)
     ok, why = backups.preflight()
     assert ok and why == "ok"
     monkeypatch.setattr(settings_store, "minimum_free_disk_bytes", lambda: 10**18)
