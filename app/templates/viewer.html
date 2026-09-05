@@ -19,37 +19,11 @@
   {% endif %}
 
   <div class="desk">
-    {# The dock: the picture or the waveform, the title, the transport. #}
-    <div class="dock">
-      <div class="thumb{% if not is_video %} audio{% endif %}" id="thumb">
-        {% if media_url %}
-          {% if is_video %}
-            <video id="player" src="{{ media_url }}" preload="metadata"></video>
-            <p id="popped" class="preparing" hidden>Video popped out</p>
-          {% else %}
-            <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
-          {% endif %}
-        {% else %}
-          <div class="preparing">
-            <b>Preparing {% if is_video %}video{% else %}audio{% endif %}</b>
-            <p class="small">
-              {% if transcript %}
-                The transcript is ready; you can read, search, and correct it
-                now. Playback starts when the playback copy is done, a few
-                minutes for a long video. This page notices by itself.
-              {% else %}
-                The player appears when it is ready.
-              {% endif %}
-            </p>
-          </div>
-        {% endif %}
-        {% if media_url and is_video %}
-          <div id="thumb-grip" class="grip" title="Drag to resize. Double-click to reset."
-               role="separator" aria-label="Resize the video" tabindex="0"></div>
-        {% endif %}
-      </div>
-
-      <div>
+    {% comment %}
+      The dock: the title and the transport. The picture is in the column,
+      which a narrow screen lays out beside this and a wide screen on the right.
+    {% endcomment %}
+    <div class="dockhead">
         <div class="head">
           <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost">&larr;</a>
           <h1>{{ recording.title }}</h1>
@@ -111,7 +85,7 @@
         </div>
 
         <p id="player-trouble" class="problem" hidden></p>
-      </div>
+    </div>
 
       {# The timeline: the waveform and the marked range. #}
       <div class="timeline" id="timeline">
@@ -119,14 +93,13 @@
         <div id="range" hidden></div>
         <div id="playhead"></div>
       </div>
-      <p class="hint" style="grid-column: 1 / -1">
-        <span>Timeline: click to seek, drag to mark a clip.{% if media_url and is_video %} Drag the right edge of the picture to resize it.{% endif %}</span>
+      <p class="hint">
+        <span>Timeline: click to seek, drag to mark a clip.{% if media_url and is_video %} Drag the edge of the picture to resize it.{% endif %}</span>
         <span class="grow"></span>
         <span id="clip-said"></span>
         <button type="button" id="drop-clip" class="ghost tiny" hidden
                 title="Drop this selection (Esc)">clear</button>
       </p>
-    </div>
 
     {# The body: tools on the left, the transcript in the middle. #}
     <div class="body{% if in_case %} with-case{% endif %}">
@@ -251,8 +224,43 @@
       </div>
     </div>
 
-    {# The bottom sheet: clips and details. #}
-    <div>
+    {% comment %}
+      The Bench: the picture, and the Clips and Details panels. On a wide
+      screen it is the column on the right; on a narrow one the picture sits
+      in the dock and the panels are a sheet along the bottom. The stylesheet
+      decides which, by the width of the window.
+    {% endcomment %}
+    <div class="column">
+      <div class="thumb{% if not is_video %} audio{% endif %}" id="thumb">
+        {% if media_url %}
+          {% if is_video %}
+            <video id="player" src="{{ media_url }}" preload="metadata"></video>
+            <p id="popped" class="preparing" hidden>Video popped out</p>
+          {% else %}
+            <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
+          {% endif %}
+        {% else %}
+          <div class="preparing">
+            <b>Preparing {% if is_video %}video{% else %}audio{% endif %}</b>
+            <p class="small">
+              {% if transcript %}
+                The transcript is ready; you can read, search, and correct it
+                now. Playback starts when the playback copy is done, a few
+                minutes for a long video. This page notices by itself.
+              {% else %}
+                The player appears when it is ready.
+              {% endif %}
+            </p>
+          </div>
+        {% endif %}
+        {% if media_url and is_video %}
+          <div id="thumb-grip" class="grip" title="Drag to resize. Double-click to reset."
+               role="separator" aria-label="Resize the video" tabindex="0"></div>
+        {% endif %}
+      </div>
+
+
+      <div class="bench">
       <div id="sheet-grip" class="sheetgrip" hidden
            title="Drag to resize. Double-click to reset."
            role="separator" aria-label="Resize the panel" tabindex="0"></div>
@@ -357,6 +365,7 @@
             export or a clip.
           </p>
         </div>
+      </div>
       </div>
     </div>
   </div>

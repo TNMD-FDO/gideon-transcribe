@@ -557,19 +557,35 @@ main.wide { max-width: none; }
 body.viewer { display: flex; flex-direction: column; overflow: hidden; }
 body.viewer main { padding: 0; flex: 1; min-height: 0; }
 
-.desk { display: grid; grid-template-rows: auto 1fr auto; min-height: 0;
-  height: 100%; }
-
-.dock {
+/* The desk is one grid, and the width of the window decides its shape. A
+   narrow window (a laptop) has the picture beside the title, the transcript
+   under them, and the Clips and Details panels as a sheet along the bottom.
+   From 1280 pixels the picture and the panels move to a column on the right,
+   the Bench, and the sheet is not there at all. The column element wraps the
+   picture and the panels in both shapes; on the narrow one it is
+   `display: contents`, so its children take their own places in the grid. */
+.desk {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  padding: 8px 14px;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "thumb head"
+    "timeline timeline"
+    "hint hint"
+    "body body"
+    "bench bench";
   background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  align-items: start;
 }
-.dock .thumb {
+.column { display: contents; }
+.desk .thumb { grid-area: thumb; margin: 8px 0 0 14px; }
+.dockhead { grid-area: head; padding: 8px 14px 0; min-width: 0; }
+.desk .hint { grid-area: hint; }
+.body { grid-area: body; }
+.bench { grid-area: bench; }
+
+.desk .thumb {
   /* The width is a person's to choose; the height follows it, so the picture
      keeps its shape and the transport beside it never jumps about. */
   width: var(--thumb-width, 220px);
@@ -585,7 +601,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 /* An audio recording has no picture to resize and no handle to resize it
    with, so it keeps the usual box rather than inheriting a width chosen for
    somebody's video. */
-.dock .thumb.audio { aspect-ratio: auto; height: 124px; width: 220px; }
+.desk .thumb.audio { aspect-ratio: auto; height: 124px; width: 220px; }
 
 /* A bar down the right edge rather than a corner: width is the only thing
    being chosen, and an edge is easier to hit than a corner. */
@@ -615,18 +631,18 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .grip:hover::after,
 .grip:focus-visible::after { background: var(--accent); }
 .grip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.dock.resizing { cursor: ew-resize; user-select: none; }
-.dock .thumb.audio { background: var(--surface-2); }
-.dock .thumb video { width: 100%; height: 100%; object-fit: contain; }
-.dock .thumb audio { width: 96%; }
-.dock .thumb .preparing {
+.desk.resizing { cursor: ew-resize; user-select: none; }
+.desk .thumb.audio { background: var(--surface-2); }
+.desk .thumb video { width: 100%; height: 100%; object-fit: contain; }
+.desk .thumb audio { width: 96%; }
+.desk .thumb .preparing {
   color: var(--muted);
   font-size: 0.82em;
   text-align: center;
   padding: 8px;
 }
-.dock .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.dock .head h1 { font-size: 1.1em; margin: 0; }
+.desk .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.desk .head h1 { font-size: 1.1em; margin: 0; }
 
 .transport {
   display: flex;
@@ -654,21 +670,23 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 }
 
 .timeline {
-  grid-column: 1 / -1;
+  grid-area: timeline;
   position: relative;
-  margin-top: 6px;
+  margin: 6px 14px 0;
   border-radius: 6px;
   overflow: hidden;
   cursor: crosshair;
   user-select: none;
 }
 .timeline canvas { display: block; width: 100%; }
-.dock .hint {
+.desk .hint {
   display: flex;
   gap: 8px;
   font-size: 0.8em;
   color: var(--muted);
-  padding: 2px 2px 0;
+  padding: 2px 16px 6px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
 }
 #range {
   position: absolute;
@@ -731,7 +749,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 /* Below this there is not room for three columns, so the rail starts closed
    and opens over the page rather than squeezing the transcript to nothing.
    The button in the head is always there, so there is always a way in. */
-@media (max-width: 1100px) {
+@media (max-width: 1100px), (min-width: 1280px) and (max-width: 1499px) {
   .body.with-case { grid-template-columns: 260px 1fr; }
   .body.with-case .caserail { display: none; }
   .body.with-case.case-shown .caserail {
@@ -992,6 +1010,48 @@ body.no-speakers .seg .name { display: none; }
   z-index: 30;
   border-radius: var(--radius);
   overflow: hidden;
+}
+
+/* The Bench: the wide shape of the desk. The picture takes the column's width
+   and the panels take the rest of its height, each with its own scroll. The
+   grip that resized the picture now resizes the column, from its left edge,
+   and the sheet's own grip and Close have nothing to do. */
+@media (min-width: 1280px) {
+  .desk {
+    grid-template-columns: minmax(0, 1fr) var(--column-width, 400px);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "head column"
+      "timeline column"
+      "hint column"
+      "body column";
+  }
+  .column {
+    display: flex;
+    flex-direction: column;
+    grid-area: column;
+    min-height: 0;
+    border-left: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .desk .thumb { grid-area: auto; width: auto; margin: 0; border-radius: 0; flex: none; }
+  .desk .thumb.audio { width: auto; }
+  .grip { right: auto; left: 0; }
+  .grip::after { right: auto; left: 3px; }
+  .bench { grid-area: auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .sheetgrip, #close-sheet { display: none; }
+  .sheetbar { border-top: 0; border-bottom: 1px solid var(--line); }
+  .sheet {
+    height: auto;
+    flex: 1;
+    border-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+  .sheet .panel:not([hidden]) + .panel:not([hidden]) {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
 }
 
 /* The admin panel ------------------------------------------------------------ */

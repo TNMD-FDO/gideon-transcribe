@@ -1042,6 +1042,12 @@
 
   var sheet = document.getElementById("sheet");
   var closeSheet = document.getElementById("close-sheet");
+  // The stylesheet lays the desk out two ways by the width of the window,
+  // and this is the same question asked from here: on a wide window the
+  // panels are the Bench, a column that is always open, so nothing closes
+  // it and the grip resizes the column rather than the picture.
+  var WIDE = window.matchMedia("(min-width: 1280px)");
+  function onTheBench() { return WIDE.matches; }
   var detailsLoaded = false;
 
   function loadDetails() {
@@ -1093,7 +1099,7 @@
     function (tab) {
       tab.addEventListener("click", function () {
         if (!sheet.hidden && tab.classList.contains("on")) {
-          hideSheet();
+          if (!onTheBench()) { hideSheet(); }
         } else {
           openSheet(tab.dataset.panel);
         }
@@ -1102,6 +1108,8 @@
   );
 
   function hideSheet(keep) {
+    // The Bench has no closed state: Esc and the tabs leave it as it is.
+    if (onTheBench()) { return; }
     sheet.hidden = true;
     closeSheet.hidden = true;
     if (sheetGrip) { sheetGrip.hidden = true; }
@@ -1150,6 +1158,8 @@
   }
 
   function trimToFit() {
+    // The Bench takes the column's height; nothing to trim.
+    if (onTheBench()) { return; }
     // Once the sheet is really there, a remembered height that no longer fits
     // is brought down to one that does. The stored figure is left alone, so a
     // bigger window gets it back.
@@ -1243,6 +1253,17 @@
     else if (was === "details") { openSheet("details", true); }
     window.requestAnimationFrame(trimToFit);
   }());
+
+  // The Bench always shows a panel. A window widened onto it opens one if
+  // none was open; narrowed off it, the sheet stays as it was.
+  function settleTheBench() {
+    if (!onTheBench() || !sheet.hidden) { return; }
+    openSheet(window.VIEWER.clips ? "clips" : "details", true);
+  }
+  settleTheBench();
+  if (WIDE.addEventListener) {
+    WIDE.addEventListener("change", function () { settleTheBench(); drawTimeline(); });
+  }
 
   var overlay = document.getElementById("shortcuts");
   function shortcuts(show) { overlay.hidden = !show; }
@@ -1484,32 +1505,53 @@
 
   var SMALLEST = 160;
   var USUAL = 220;
+  // On the Bench the grip sizes the whole column, and the picture with it.
+  var NARROWEST_COLUMN = 320;
+  var USUAL_COLUMN = 400;
+  function smallest() { return onTheBench() ? NARROWEST_COLUMN : SMALLEST; }
+  function usual() { return onTheBench() ? USUAL_COLUMN : USUAL; }
 
   function widest() {
     // Never more than half the window: the transcript is the point of the
     // page, and a picture that pushed it off the screen would be a worse
     // page, not a bigger picture.
-    return Math.max(SMALLEST, Math.round(window.innerWidth * 0.5));
+    return Math.max(smallest(), Math.round(window.innerWidth * 0.5));
   }
 
   function setWidth(pixels) {
-    var wanted = Math.round(Math.min(widest(), Math.max(SMALLEST, pixels)));
-    document.documentElement.style.setProperty("--thumb-width", wanted + "px");
+    var wanted = Math.round(Math.min(widest(), Math.max(smallest(), pixels)));
+    document.documentElement.style.setProperty(
+      onTheBench() ? "--column-width" : "--thumb-width", wanted + "px"
+    );
     return wanted;
   }
 
   var grip = document.getElementById("thumb-grip");
   var thumb = document.getElementById("thumb");
 
-  var remembered = null;
+  // Two sizes are remembered, one for each shape of the desk, because a
+  // width chosen for a picture beside the title is no width for a column.
   try {
-    remembered = window.localStorage.getItem("thumb-width");
-  } catch (ignored) { /* a browser that forbids storage keeps the usual size */ }
-  if (remembered) { setWidth(parseInt(remembered, 10) || USUAL); }
+    var rememberedThumb = window.localStorage.getItem("thumb-width");
+    var rememberedColumn = window.localStorage.getItem("column-width");
+    if (rememberedThumb) {
+      document.documentElement.style.setProperty(
+        "--thumb-width", Math.max(SMALLEST, parseInt(rememberedThumb, 10) || USUAL) + "px"
+      );
+    }
+    if (rememberedColumn) {
+      document.documentElement.style.setProperty(
+        "--column-width",
+        Math.max(NARROWEST_COLUMN, parseInt(rememberedColumn, 10) || USUAL_COLUMN) + "px"
+      );
+    }
+  } catch (ignored) { /* a browser that forbids storage keeps the usual sizes */ }
 
   function remember(pixels) {
     try {
-      window.localStorage.setItem("thumb-width", String(pixels));
+      window.localStorage.setItem(
+        onTheBench() ? "column-width" : "thumb-width", String(pixels)
+      );
     } catch (ignored) { /* the same, and the size lasts this page only */ }
   }
 
@@ -1531,19 +1573,23 @@
       pictureFromX = event.clientX;
       pictureWas = thumb.getBoundingClientRect().width;
       grip.setPointerCapture(event.pointerId);
-      document.querySelector(".dock").classList.add("resizing");
+      document.querySelector(".desk").classList.add("resizing");
       event.preventDefault();
     });
 
     grip.addEventListener("pointermove", function (event) {
       if (!sizingPicture) { return; }
-      setWidth(pictureWas + (event.clientX - pictureFromX));
+      // The grip is on the picture's right edge, or the column's left edge
+      // on the Bench, where dragging left makes the column wider.
+      var moved = event.clientX - pictureFromX;
+      setWidth(pictureWas + (onTheBench() ? -moved : moved));
+      window.requestAnimationFrame(drawTimeline);
     });
 
     function letGo() {
       if (!sizingPicture) { return; }
       sizingPicture = false;
-      document.querySelector(".dock").classList.remove("resizing");
+      document.querySelector(".desk").classList.remove("resizing");
       remember(Math.round(thumb.getBoundingClientRect().width));
       trimToFit();
       drawTimeline();
@@ -1555,7 +1601,7 @@
     window.addEventListener("blur", letGo);
 
     grip.addEventListener("dblclick", function () {
-      remember(setWidth(USUAL));
+      remember(setWidth(usual()));
       drawTimeline();
     });
 
