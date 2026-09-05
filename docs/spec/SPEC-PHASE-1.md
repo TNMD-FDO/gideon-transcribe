@@ -1680,7 +1680,7 @@ Where the rules behind what the page shows belong to the Queue (positions, the p
 
 ### The three steps
 
-The page is a stepper with three steps: 1 Choose files, 2 Settings, 3 Check and start.
+The page is a stepper with three steps: 1 Choose files, 2 Settings, 3 Check and start. On a window narrower than 1280 pixels one step shows at a time, with Next and Back. From 1280 pixels all three are on the page at once: Choose files on the left, Settings above Check and start on the right, with Upload and transcribe always in view and greyed until there is a file to send; Next and Back are not shown. The steps are the same three in the same order either way, and the Check and start table follows every change as it is made.
 
 #### Step 1: Choose files
 
@@ -1697,7 +1697,7 @@ Up to 25 files in a batch, 10 GB and 6 hours each.
 
 #### Step 2: Settings
 
-Two panes.
+Two panes. Each chosen file's card in step 1 also carries the `Same as batch` or `Custom settings` chip that the table below carries, which opens that file's own settings in the rail; on a wide window, where the whole page is in view, the table is not repeated and the chips on the cards are the way to a file's own settings.
 
 - Left, the "Exceptions for single files" table: one row per file with its title, speakers, translate, language, and a chip reading "Same as batch" or "Custom".
 - Right, a sticky rail holding the Batch settings (below).
@@ -1760,6 +1760,7 @@ Keep this page open while files are uploading; once every file shows 'in line' o
 The Upload page and the Batch page are one page. After Submit the Upload page shows the Batch and keeps showing it, accepting no files, until every Recording in it has ended (Done, Failed, Refused, Cancelled); then "Upload more" clears it. Opening Upload while a Batch is unfinished shows that Batch under `You have a batch in progress; wait for it to finish.` (the prototype adds: `New files can be added once every recording in it has ended.`). A user has one unfinished Batch at a time.
 
 - **Heading**: "Batch of N, started 1:52 pm" (or "Processing again" for a Process again Batch); the standing line; the Batch download button, `Download 5 transcripts (1 not ready)`, which downloads the plain-text zip, one plain-text Transcript per Done Recording, each with its notice (Word, captions, and the combined document live in the viewer's Export group, chapter "Exports"); Cancel batch.
+- **Two panes from 1280 pixels**: the count strip and the rows on the left; on the right `Ready now`, every Done Recording with Open, then the Batch download, then `Still to come` with the count and the overall line, then Cancel. On a narrower window the same blocks follow the rows. The finished state takes the whole width.
 - **The count strip**: Uploading (waiting, uploading, checking, preparing), In line, Transcribing, Done, Failed, Refused or cancelled.
 - **The overall line**: `Everything done by about 3:40 pm`, from the last Recording's Estimated wait plus its own audio at the measured speed, refreshed with every poll, shown while anything is unfinished.
 - **One row per Recording**:
@@ -1785,7 +1786,7 @@ Process again opens from a Done Recording (the Batch page row, the Recordings pa
 
 ### Landing and the Recordings page
 
-Sign-in lands on the Recordings page, empty or not. It holds the list of the user's Recordings, each with Open, Process again, Details, and Delete, plus the time of its batch; the standing line at the top; an "Upload recordings" button; and the storage warning once past 80%. Delete confirms with the counts of what goes with the Recording (chapter "Workspace lifecycle"). The pages say "your recordings", never Workspace.
+Sign-in lands on the Recordings page, empty or not. It holds the user's Recordings as one table (title, state, length, Clips, the time of its batch) with Open on each Ready row, and the chosen Recording's details (the file, the state in full, the Sides, the Clips, and Process again, Move to case, Retry and Delete) in a pane beside the table from 1280 pixels or under its row on a narrower window; Up and Down move along the rows, Enter opens, and on a wide window the first Recording's details show until another is chosen; the standing line at the top; an "Upload recordings" button; and the storage warning once past 80%. Delete confirms with the counts of what goes with the Recording (chapter "Workspace lifecycle"). The pages say "your recordings", never Workspace.
 
 ### Shared page furniture
 
@@ -1856,6 +1857,7 @@ Upload page and Batch settings prototype; Media handling from browser to ASR to 
 
 - From Email notifications, to the settings step: the Phase 2 "Email me when this batch finishes" tick (carried, nothing in the Phase 1 build).
 - Within Upload page and Batch settings prototype, the Answer over the prototype: the prototype's Diarize-off rule for a Two-channel call, its storage meter, and its IT-administrators line withdrawn; "Diarize" for "Separate speakers".
+- From the maintainer, on the v1.5.0 build, to the three steps, the Batch page, and the Recordings page: the Workbench Layout's second page. From 1280 pixels the Upload page shows all three steps at once with Start always in view and the exceptions chip on each file's card; the Batch page is two panes, the rows and `Ready now`; the Recordings page is a table with the chosen Recording's details in a pane. Below 1280 pixels the stepper, the single column, and details under the row.
 
 
 ## 6. Queue and Jobs

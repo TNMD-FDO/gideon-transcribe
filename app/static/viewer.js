@@ -1264,6 +1264,8 @@
   if (WIDE.addEventListener) {
     WIDE.addEventListener("change", function () { settleTheBench(); drawTimeline(); });
   }
+  // A plain resize as well: not every browser fires the change above.
+  window.addEventListener("resize", settleTheBench);
 
   var overlay = document.getElementById("shortcuts");
   function shortcuts(show) { overlay.hidden = !show; }

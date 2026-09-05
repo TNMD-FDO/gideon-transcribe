@@ -14,7 +14,7 @@ You have one login session at a time. Signing in from a second browser ends the 
 
 ## Uploading a batch
 
-A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts.
+A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. On a wide monitor the three steps are on the page together, files on the left and the settings and the start button on the right; on a laptop they come one at a time, with **Next** between them.
 
 ### 1. Choose files
 
@@ -24,7 +24,7 @@ The page tells you the limits your Admin has set: how many files a batch may hol
 
 ### 2. Settings
 
-The settings apply to the whole batch. Click a file in the list on the left to give that one file different settings; every other file keeps the batch's.
+The settings apply to the whole batch. Click **Same as batch** on a file to give that one file different settings; every other file keeps the batch's.
 
 - **Speakers.** Whether to separate the voices. Leave it on unless the recording is one person. If you know how many people are talking, saying so helps: **Exactly** two for a phone call, for instance, or **Between** two and four for an interview. **Let the app decide** is right when you do not know.
 - **Translate to English.** For a recording in another language, or with more than one. The transcript comes back in English and the original-language text is not kept. A translated transcript is marked in the viewer and carries a notice on every export.
@@ -44,6 +44,8 @@ Starting a batch takes you to its Batch page. Each recording shows what is happe
 
 One transcription runs at a time for the whole office, in the order recordings arrive, with no priority for anybody. Your place in the line is shown. You can leave the page and come back; the batch carries on without you.
 
+Beside the list, **Ready now** names the transcripts that are already finished, each with **Open**, and offers the download of them so far; under it is how many are still to come and when they should be done.
+
 **Cancel batch** stops everything in it that has not finished. A recording that has already finished keeps its transcript.
 
 You have one unfinished batch at a time. The Upload page takes you back to it until it has finished.
@@ -61,7 +63,7 @@ Every recording counts against your quota until it goes, so an office running ba
 
 ## Your recordings
 
-The Recordings page lists everything you have uploaded and not yet removed, newest first. For each one: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Details**, and **Delete**.
+The Recordings page is a table of everything you have uploaded and not yet removed, newest first. Click a recording and its details appear beside the table (under the row, on a laptop): the file, its state, its clips, and what you can do with it: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Move to case** when your office uses cases, and **Delete**. Up and down move along the rows; Enter opens.
 
 **Clear my recordings** removes all of them at once, after telling you what would go. **Upload recordings** starts a new batch.
 

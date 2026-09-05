@@ -1054,6 +1054,64 @@ body.no-speakers .seg .name { display: none; }
   }
 }
 
+/* The Workbench pages ---------------------------------------------------------
+   A list beside its detail from 1280 pixels, stacked below that. The viewer's
+   Bench is the same idea for the viewer; these rules are for the pages that
+   are documents: Upload, Recordings, Batch. */
+.panes { display: grid; gap: 16px; align-items: start; }
+.tbl tr.pick { cursor: pointer; }
+.tbl tr.pick:hover td { background: var(--surface-2); }
+.tbl tr.pick.on td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.tbl tr.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tbl td.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tbl td.acts { text-align: right; white-space: nowrap; }
+.tbl tr.detail-row > td { background: var(--surface-2); padding: 12px 14px; }
+.detail h2 { margin: 0 0 4px; font-size: 1.1em; }
+.detail .actions { margin-top: 12px; }
+/* The Recordings page's pane is for the wide shape only: on a narrow window
+   the details open under the row instead. */
+#detail-pane { display: none; }
+.readylist { list-style: none; margin: 8px 0; padding: 0; }
+.readylist li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.chip-for.on { border-color: var(--accent); color: var(--accent); }
+@media (min-width: 1280px) {
+  .page.workbench { max-width: 100rem; }
+  .panes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .pane-detail {
+    position: sticky;
+    top: 12px;
+    border-left: 1px solid var(--line);
+    padding-left: 18px;
+    min-width: 0;
+  }
+  #detail-pane { display: block; }
+  .tbl tr.detail-row { display: none; }
+
+  /* The Upload page: the three steps at once, Choose files on the left and
+     Settings over Check and start on the right. Next and Back have nothing
+     to do; the file list carries the chips the exceptions table carried. */
+  .workbench .steps {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-areas: "one two" "one three";
+    align-items: start;
+  }
+  .workbench #step-1 { grid-area: one; }
+  .workbench #step-2 { grid-area: two; }
+  .workbench #step-3 { grid-area: three; }
+  .workbench #step-1 .dialog,
+  .workbench .steps [data-back],
+  .workbench #to-check,
+  .workbench #exceptions-block { display: none; }
+  .workbench .two-panes { grid-template-columns: minmax(0, 1fr); }
+  .workbench .rail-settings { position: static; border-left: 0; padding-left: 0; }
+}
+
 /* The admin panel ------------------------------------------------------------ */
 
 .panel-shell { display: grid; grid-template-columns: 230px 1fr; min-height: 100%; }
