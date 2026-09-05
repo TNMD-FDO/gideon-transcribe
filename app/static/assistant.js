@@ -15,15 +15,11 @@
   var EVERY = 2000;
 
   var summaryList = document.getElementById("summary-list");
-  var chatThreads = document.getElementById("chat-threads");
-  var chatTurns = document.getElementById("chat-turns");
   var suggestLine = document.getElementById("suggest-line");
   var suggestionList = document.getElementById("suggestions");
 
   var state = null;
-  var currentChat = null;
   var timer = null;
-  var pending = {};  // asked questions not yet in the state answer, by chat id
 
   function cookie(name) {
     var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -59,10 +55,11 @@
 
   document.addEventListener("click", function (event) {
     var cite = event.target.closest(".cite");
-    if (!cite) { return; }
+    if (!cite || cite.classList.contains("play")) { return; }
     event.preventDefault();
     window.VIEWER.seek(parseFloat(cite.dataset.seconds));
     window.VIEWER.play();
+    if (window.VIEWER.showSegment) { window.VIEWER.showSegment(parseFloat(cite.dataset.seconds)); }
   });
 
   function paragraphs(text, citations) {
@@ -162,122 +159,72 @@
   }
 
   // Chat --------------------------------------------------------------------------
+  // The shared component draws it; this page owns the state and the polling.
 
-  var askBox = document.getElementById("chat-question");
-  var askButton = document.getElementById("chat-ask");
-
-  function theChat() {
-    if (!state || !state.chats.length) { return null; }
-    var found = null;
-    state.chats.forEach(function (one) { if (one.id === currentChat) { found = one; } });
-    if (!found) { found = state.chats[0]; currentChat = found.id; }
-    return found;
+  var chat = null;
+  var chatRoot = document.getElementById("chat-root");
+  if (chatRoot && window.ChatUI) {
+    chat = window.ChatUI.mount(chatRoot, {
+      citationPattern: /\[(\d{1,2}):(\d{2}):(\d{2})\]/g,
+      citation: function (whole, citations) {
+        if (!Object.prototype.hasOwnProperty.call(citations, whole)) { return null; }
+        var seconds = citations[whole];
+        var line = "";
+        (window.VIEWER.segments() || []).some(function (segment) {
+          if (Math.floor(segment.start) === Math.floor(seconds)) {
+            line = (segment.speaker ? segment.speaker + ": " : "") + segment.text;
+            return true;
+          }
+          return false;
+        });
+        return { clock: whole.slice(1, -1), seconds: seconds, line: line };
+      },
+      onCite: function (seconds) {
+        window.VIEWER.seek(seconds);
+        window.VIEWER.play();
+        if (window.VIEWER.showSegment) { window.VIEWER.showSegment(seconds); }
+      },
+      starters: [
+        "Who is speaking, and what is each person's part?",
+        "What is this recording about, in a few lines?",
+        "What happened first, and what came after?",
+        "Where is money, a car, or an address mentioned?",
+        "Summarise this recording"
+      ],
+      grounding: function () { return "Answers come from this transcript only, not from any other recording."; },
+      readingLine: function () { return "Reading the transcript..."; },
+      expectation: "usually 5 to 20 seconds",
+      placeholder: "Ask anything about this recording",
+      crossLink: window.VIEWER.caseChatUrl
+        ? { text: "Ask about the whole case instead.", href: window.VIEWER.caseChatUrl }
+        : null,
+      exportHref: function (chatId) { return "/chat/" + chatId + "/export"; },
+      newChat: function () {
+        return post("/recording/" + recording + "/chats").then(function (answer) {
+          return answer.ok ? answer.said.id : null;
+        });
+      },
+      ask: function (chatId, question) { return post("/chat/" + chatId + "/ask", { question: question }); },
+      remove: function (chatId) { return post("/chat/" + chatId + "/delete"); },
+      refresh: function () { return refresh(); }
+    });
   }
 
   function drawChat() {
-    if (!chatThreads || !state) { return; }
-    var chat = theChat();
-    chatThreads.innerHTML =
-      "<button type='button' class='small' id='chat-new'>New chat</button>" +
-      state.chats.map(function (one) {
-        return "<button type='button' class='thread" + (chat && one.id === chat.id ? " on" : "") +
-          "' data-chat='" + one.id + "'>" + escape(one.name) + "</button>";
-      }).join("");
-    unavailable(document.getElementById("chat-new"));
-
-    var tools = document.getElementById("chat-tools");
-    if (!chat) {
-      chatTurns.innerHTML = "<p class='muted small'>Ask a question about this transcript. The answer comes from the transcript and nothing else.</p>";
-      if (tools) { tools.hidden = true; }
-      if (askBox) { askBox.disabled = !state.reachable; askButton.disabled = !state.reachable; }
-      return;
-    }
-    if (tools) {
-      tools.hidden = false;
-      document.getElementById("chat-export").setAttribute("href", "/chat/" + chat.id + "/export");
-      document.getElementById("chat-export").hidden = !chat.turns.some(function (one) { return one.state === "done"; });
-    }
-    var html = "";
-    if (chat.notice) { html += "<p class='notice small'>" + escape(chat.notice) + "</p>"; }
-    if (chat.earlier) { html += "<p class='muted small'>" + escape(chat.earlier) + "</p>"; }
-    chat.turns.forEach(function (turn) {
-      html += "<div class='turn'><p class='question'><b>You:</b> " + escape(turn.question) + "</p>";
-      if (turn.state === "queued" || turn.state === "running") {
-        html += "<p class='muted'>Reading the transcript...</p>";
-      } else if (turn.state === "failed") {
-        html += "<p class='problem'>" + escape(turn.said) + "</p>";
-      } else {
-        html += "<div class='answer'>" + paragraphs(turn.answer, turn.citations) + "</div>" +
-          (turn.cut_short ? "<p class='muted small'>The answer was cut short.</p>" : "") +
-          "<button type='button' class='ghost tiny copy' data-answer='" + escape(turn.answer) + "'>Copy</button>";
-      }
-      html += "</div>";
-    });
-    if (pending[chat.id]) {
-      html += "<div class='turn'><p class='question'><b>You:</b> " + escape(pending[chat.id]) + "</p><p class='muted'>Reading the transcript...</p></div>";
-    }
-    chatTurns.innerHTML = html;
-    chatTurns.scrollTop = chatTurns.scrollHeight;
-    var busy = chat.busy || !!pending[chat.id];
-    if (askBox) {
-      askBox.disabled = busy || !state.reachable;
-      askButton.disabled = busy || !state.reachable;
-      askBox.placeholder = state.reachable ? "Ask about this transcript" : state.unavailable_line;
-    }
-  }
-
-  if (chatThreads) {
-    chatThreads.addEventListener("click", function (event) {
-      if (event.target.closest("#chat-new")) {
-        post("/recording/" + recording + "/chats").then(function (answer) {
-          if (answer.ok) { currentChat = answer.said.id; }
-          refresh();
-        });
-        return;
-      }
-      var thread = event.target.closest(".thread");
-      if (thread) { currentChat = thread.dataset.chat; drawChat(); }
-    });
-    chatTurns.addEventListener("click", function (event) {
-      var copy = event.target.closest(".copy");
-      if (!copy) { return; }
-      var text = copy.dataset.answer;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function () {
-          copy.textContent = "Copied";
-          window.setTimeout(function () { copy.textContent = "Copy"; }, 1500);
-        });
-      }
-    });
-    function ask() {
-      var question = askBox.value.trim();
-      if (!question) { return; }
-      var chat = theChat();
-      var send = function (chatId) {
-        pending[chatId] = question;
-        askBox.value = "";
-        drawChat();
-        post("/chat/" + chatId + "/ask", { question: question }).then(function () {
-          delete pending[chatId];
-          refresh();
-        });
-      };
-      if (chat) { send(chat.id); return; }
-      post("/recording/" + recording + "/chats").then(function (answer) {
-        if (answer.ok) { currentChat = answer.said.id; send(answer.said.id); }
-      });
-    }
-    askButton.addEventListener("click", ask);
-    askBox.addEventListener("keydown", function (event) {
-      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ask(); }
-    });
-    document.getElementById("chat-delete").addEventListener("click", function () {
-      var chat = theChat();
-      if (!chat) { return; }
-      if (!window.confirm("Delete this chat? Export it first if you want to keep it.")) { return; }
-      post("/chat/" + chat.id + "/delete").then(function () { currentChat = null; refresh(); });
+    if (!chat || !state) { return; }
+    chat.update({
+      reachable: state.reachable,
+      unavailable_line: state.unavailable_line,
+      chats: state.chats || [],
+      busy: state.busy
     });
   }
+
+  // Opening the Chat panel puts the cursor in the box.
+  document.addEventListener("click", function (event) {
+    var tab = event.target.closest(".sheet-tab[data-panel='chat']");
+    if (tab && chat) { window.setTimeout(chat.focus, 50); }
+  });
 
   // Speaker suggestions -------------------------------------------------------------
 
@@ -365,7 +312,7 @@
         state = body;
         draw();
         window.clearTimeout(timer);
-        if (state.busy || Object.keys(pending).length) {
+        if (state.busy || (chat && chat.pendingCount())) {
           timer = window.setTimeout(refresh, EVERY);
         }
       })

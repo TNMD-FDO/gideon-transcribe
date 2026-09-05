@@ -104,6 +104,7 @@ def _chat_json(chat: Chat, transcript) -> dict:
     return {
         "id": str(chat.pk),
         "name": chat.name or "New chat",
+        "started": chat.created.isoformat(),
         "busy": any(
             one.state in (assistant.QUEUED, assistant.RUNNING) for one in turns
         ),
@@ -126,6 +127,8 @@ def _chat_json(chat: Chat, transcript) -> dict:
                 if one.reason_class
                 else "",
                 "cut_short": one.cut_short,
+                "asked_at": one.asked_at.isoformat() if one.asked_at else "",
+                "answered_at": one.answered_at.isoformat() if one.answered_at else "",
             }
             for one in turns
         ],

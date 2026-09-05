@@ -150,6 +150,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             # The Case's People, for the rename box to offer; none in a Workspace.
             "people": _people_of(recording),
             "speaker_roles": _roles_if_in_a_case(recording),
+            # The case's Chat tab, for the link under the viewer's chat.
+            "case_chat_url": _case_chat_url(recording),
             # The rest of the case, so somebody working through a matter moves
             # between its recordings without going back to the case page.
             "in_case": _the_rest_of_the_case(recording),
@@ -551,6 +553,14 @@ def _people_of(recording) -> list[dict]:
         {"name": one.name, "role": one.role, "count": len(one.recordings())}
         for one in recording.case.people.all()
     ]
+
+
+def _case_chat_url(recording) -> str:
+    from core import case_chat
+
+    if not recording.case_id or not case_chat.available():
+        return ""
+    return f"{reverse('case', args=[recording.case_id])}?tab=chat"
 
 
 def _roles_if_in_a_case(recording) -> list[str]:

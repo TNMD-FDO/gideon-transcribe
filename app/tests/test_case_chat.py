@@ -198,6 +198,10 @@ def test_one_reading_sends_the_people_the_headers_and_the_template(
     cited = chat["turns"][0]["citations"]["[Recording 1, 00:12:45]"]
     assert cited["title"] == "Jail call 1" and cited["clock"] == "00:12:45"
     assert cited["href"] == f"/recording/{first.pk}?t=765.0"
+    # The line the pill points to, for its hover; and when things happened.
+    assert cited["line"] == "Speaker 2: The car was blue."
+    assert chat["started"] and chat["turns"][0]["asked_at"]
+    assert chat["turns"][0]["answered_at"] and chat["turns"][0]["parts"] == 0
 
     row = Row.objects.get(category="llm", event="AI assistant call")
     assert row.details["feature"] == "case_chat_turn"
@@ -257,6 +261,8 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
     assert "Part 1 of 3:\nPart one says blue" in user and "Part 3 of 3:" in user
     turn.refresh_from_db()
     assert turn.parts == 3 and turn.state == "done"
+    # Each part read was counted as it came back, for the page's wait line.
+    assert turn.parts_done == 3
     assert turn.answer.startswith("Blue, in two calls")
     assert set(turn.citations) == {"[Recording 1, 00:12:45]", "[Recording 3, 00:12:45]"}
     row = Row.objects.get(category="llm", event="AI assistant call")
@@ -321,6 +327,11 @@ def test_the_tab_and_its_endpoints_follow_the_switches(owner, a_case, client):
     signed_in(client, owner)
     page = client.get(f"/case/{a_case.pk}?tab=chat").content.decode()
     assert 'id="case-chat"' in page and "?tab=chat" in page
+    assert page.index("chat-ui.js") < page.index("case-chat.js")
+    # The viewer of a recording in the case offers the case's Chat tab.
+    recording = Recording.objects.get(title="A call")
+    viewer = client.get(f"/recording/{recording.pk}").content.decode()
+    assert f'caseChatUrl: "/case/{a_case.pk}?tab=chat"' in viewer
     assert client.get(f"/case/{a_case.pk}/chat").status_code == 200
 
     settings_store.set_to("chat_across_cases", False)

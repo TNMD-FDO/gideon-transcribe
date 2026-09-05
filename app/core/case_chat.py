@@ -94,6 +94,8 @@ class CaseChatTurn(models.Model):
     readings = models.JSONField(default=list, blank=True)
     skipped = models.JSONField(default=list, blank=True)
     parts = models.IntegerField(default=0)
+    # How many parts have been read so far, for the page's wait line.
+    parts_done = models.IntegerField(default=0)
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     # The failure's own words when the reason needs them: the ceiling's figures,
@@ -403,6 +405,8 @@ def answer_case_turn(turn_id) -> None:
             calls["readings"] += 1
             if len(groups) == 1:
                 turn.cut_short = answer["finish_reason"] == "length"
+            else:
+                _a_part_is_read(turn.pk)
             return answer["text"].strip()
 
         if len(groups) == 1:
@@ -457,6 +461,21 @@ def answer_case_turn(turn_id) -> None:
             outcome=problem.reason,
             reason=problem.reason,
         )
+
+
+def _a_part_is_read(turn_id) -> None:
+    """One more part read, written from the Reading's own thread.
+
+    Each thread gets its own database connection from Django; it is closed
+    here so the pool is not left holding one per Reading.
+    """
+    from django.db import connections
+    from django.db.models import F
+
+    try:
+        CaseChatTurn.objects.filter(pk=turn_id).update(parts_done=F("parts_done") + 1)
+    finally:
+        connections.close_all()
 
 
 def time_limit_for_the_question() -> int:

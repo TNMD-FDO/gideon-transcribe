@@ -521,6 +521,11 @@ def test_the_viewer_offers_the_tabs_when_the_assistant_is_on(
     signed_in(client, person)
     page = client.get(f"/recording/{ready.pk}").content.decode()
     assert 'data-panel="summary"' in page and 'data-panel="chat"' in page
+    # The shared Chat fills its root; the two scripts come in that order.
+    assert 'id="chat-root"' in page
+    assert page.index("chat-ui.js") < page.index("assistant.js")
+    # In the Workspace there is no case to ask about.
+    assert "caseChatUrl: null" in page
     assert 'id="suggest-names"' in page and "assistant.js" in page
 
 

@@ -316,6 +316,7 @@
             I and O mark a clip while playing
           {% endif %}
         </span>
+        <button type="button" class="ghost small" id="expand-sheet" hidden title="Give the panel the height of the window">Expand &#8597;</button>
         <button type="button" class="ghost small" id="close-sheet" hidden>Close &#9662;</button>
       </div>
 
@@ -412,19 +413,12 @@
 
         {% if assistant.chat and transcript %}
           <div class="panel chat" data-panel="chat" hidden>
-            <div class="row">
-              <h2 class="grow">Chat</h2>
-              <span id="chat-tools" class="row" hidden>
-                <a id="chat-export" class="btn small" href="#">Export to Word</a>
-                <button type="button" class="ghost small danger" id="chat-delete">Delete chat</button>
-              </span>
-            </div>
-            <div id="chat-threads" class="threads"></div>
-            <div id="chat-turns" class="turns"></div>
-            <div class="row asking">
-              <textarea id="chat-question" rows="2" class="grow" placeholder="Ask about this transcript"></textarea>
-              <button type="button" class="primary small" id="chat-ask">Ask</button>
-            </div>
+            {% comment %}
+              The shared Chat (chat-ui.js) fills this root; assistant.js feeds
+              it the state and the calls. The same component draws the case
+              page's Chat tab, so the two look and behave as one thing.
+            {% endcomment %}
+            <div id="chat-root"></div>
           </div>
         {% endif %}
 
@@ -508,6 +502,7 @@
       twoChannel: {% if recording.is_two_channel_call %}true{% else %}false{% endif %},
       batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %},
       inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %},
+      caseChatUrl: {% if case_chat_url %}"{{ case_chat_url }}"{% else %}null{% endif %},
       assistant: {% if assistant.assistant and transcript %}{ summary: {% if assistant.summary %}true{% else %}false{% endif %}, chat: {% if assistant.chat %}true{% else %}false{% endif %}, suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %} }{% else %}null{% endif %}
     };
   </script>
@@ -515,6 +510,9 @@
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
-  {% if assistant.assistant and transcript %}<script src="{% static 'assistant.js' %}"></script>{% endif %}
+  {% if assistant.assistant and transcript %}
+    <script src="{% static 'chat-ui.js' %}"></script>
+    <script src="{% static 'assistant.js' %}"></script>
+  {% endif %}
   {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
 {% endblock %}
