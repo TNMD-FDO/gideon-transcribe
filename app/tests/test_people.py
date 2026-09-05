@@ -39,6 +39,8 @@ def owner(db):
 
 @pytest.fixture
 def a_case(owner):
+    # Cases, and so People, exist only while Folder management is On.
+    settings_store.set_to("folder_management", True)
     return Case.objects.create(owner=owner, name="Ramirez")
 
 
@@ -291,7 +293,7 @@ def test_the_word_export_fills_the_role_column_inside_a_case(owner, a_case):
 
     recording = a_recording(owner, a_case, speakers=("Detective Ruiz", "Speaker 2"))
     people.join_or_create(a_case, "Detective Ruiz", by=owner, how="test", role="Agent")
-    document = Document(BytesIO(exports.word(recording)))
+    document = Document(BytesIO(exports.word(recording, "case-owner")))
     cells = [
         cell.text
         for table in document.tables

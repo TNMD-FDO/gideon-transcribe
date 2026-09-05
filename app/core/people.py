@@ -282,20 +282,29 @@ def unnamed_by_recording(case) -> list[tuple]:
     return found
 
 
+def _in_a_case(recording) -> bool:
+    """In a Case, and Folder management On: the People show only then."""
+    from core import cases
+
+    return recording.case_id is not None and cases.folder_management_on()
+
+
 def known_names(recording) -> list[str]:
     """The Known names line's list: the Case's People first, then the Vocabularies."""
     names: list[str] = []
     seen: set[str] = set()
 
-    def take(one: str) -> None:
-        key = one.strip().casefold()
+    def take(one: str, key: str | None = None) -> None:
+        key = (key if key is not None else one).strip().casefold()
         if key and key not in seen:
             seen.add(key)
             names.append(one.strip())
 
-    if recording.case_id is not None:
+    if _in_a_case(recording):
         for person in Person.objects.filter(case=recording.case):
-            take(person.shown())
+            # Shown as "Name (Role)", but the name alone is what a Vocabulary
+            # entry would repeat, so the name is the key.
+            take(person.shown(), key=person.name)
     for word in recording.vocabulary or []:
         take(str(word))
     for line in str(settings_store.get("office_vocabulary") or "").splitlines():
@@ -305,7 +314,7 @@ def known_names(recording) -> list[str]:
 
 def role_of(recording, name: str) -> str:
     """The Role of the Person a Speaker's name matches, inside a Case; else nothing."""
-    if recording.case_id is None or not name:
+    if not _in_a_case(recording) or not name:
         return ""
     person = find(recording.case, name)
     return person.role if person else ""
