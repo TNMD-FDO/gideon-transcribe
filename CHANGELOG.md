@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.13.0, 2026-09-05
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0021 adds one column to the Case Chat's turns. Nothing on disk changes.
+
+### Changed
+
+- **Chat, made natural.** The viewer's Chat panel and the case page's Chat
+  tab are now one component, drawn the same in both places, and made for a
+  person who has never used it. An empty chat opens with starter questions
+  as chips and a line saying what the assistant reads. Your questions sit on
+  the right, answers on the left as cards with their time; answers render
+  their lists, bold and headings, with Copy under each. A citation is a play
+  pill (▶ 12:45, or ▶ Jail call 2, 12:45 on a case): hover shows the line it
+  points to, a click plays from there and lights that line in the transcript.
+  While the assistant reads, a pulse, the reading line, an honest expectation
+  ("usually 5 to 20 seconds"; "Part 2 of 4 read" on a case in parts) and the
+  seconds elapsed. A failed answer offers Try again in both places; a
+  cut-short one says what to do. Earlier chats are a list with their names,
+  when they started and how many questions; New chat stands apart. The
+  conversation follows new answers only while you are at the bottom. Enter
+  asks, Shift+Enter makes a new line, and the box grows as you type. The AI
+  notice is one quiet line. Inside a case, the viewer's chat links to the
+  case's Chat tab: "Ask about the whole case instead".
+- **Expand, on a laptop.** The bar of the bottom panel gains Expand, which
+  gives the open panel the height the window allows, and Shrink to go back.
+
 ## v1.12.0, 2026-09-05
 
 ```

@@ -61,6 +61,8 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
             "title": exports.title_of(recording),
             "clock": exports.clock(where["seconds"]),
             "href": f"{reverse('viewer', args=[recording.pk])}?t={where['seconds']}",
+            # The line it points to, for the pill's hover; never logged.
+            "line": _line_at(recording, where["seconds"]),
         }
     running = turn.state in (assistant.QUEUED, assistant.RUNNING)
     count = len(turn.readings or [])
@@ -83,7 +85,29 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
         "reading": reading if running else "",
         "said": case_chat.what_to_say(turn) if turn.state == assistant.FAILED else "",
         "cut_short": turn.cut_short,
+        "parts": turn.parts,
+        "parts_done": turn.parts_done,
+        "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
+        "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
     }
+
+
+def _line_at(recording, seconds: float) -> str:
+    from core.jobs import Segment
+
+    segment = (
+        Segment.objects.filter(
+            transcript__recording=recording,
+            start__gte=int(seconds),
+            start__lt=int(seconds) + 1,
+        )
+        .order_by("start")
+        .first()
+    )
+    if segment is None:
+        return ""
+    who = f"{segment.speaker}: " if segment.speaker else ""
+    return (who + segment.text)[:200]
 
 
 def _earlier_line(chat: CaseChat, still_here: dict) -> str:
@@ -114,6 +138,7 @@ def _chat_json(chat: CaseChat, still_here: dict) -> dict:
     return {
         "id": str(chat.pk),
         "name": chat.name or "New chat",
+        "started": chat.created.isoformat(),
         "busy": any(
             one.state in (assistant.QUEUED, assistant.RUNNING) for one in turns
         ),

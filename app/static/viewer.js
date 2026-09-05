@@ -131,6 +131,22 @@
   window.VIEWER.play = function () { if (player) { player.play(); } };
   window.VIEWER.pause = function () { if (player) { player.pause(); } };
   window.VIEWER.segments = function () { return segments; };
+  // A citation clicked: the transcript scrolls to the line that starts in
+  // that second and lights it for a moment, so the eye lands where the ear does.
+  window.VIEWER.showSegment = function (seconds) {
+    if (!column) { return; }
+    var index = -1;
+    segments.some(function (segment, n) {
+      if (Math.floor(segment.start) === Math.floor(seconds)) { index = n; return true; }
+      return false;
+    });
+    if (index < 0) { return; }
+    var row = column.children[index];
+    if (!row) { return; }
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    row.classList.add("lit");
+    window.setTimeout(function () { row.classList.remove("lit"); }, 2400);
+  };
   window.VIEWER.length = function () { return duration; };
   window.VIEWER.redraw = function () { drawTimeline(); };
 
@@ -1108,6 +1124,7 @@
   function openSheet(which, keep) {
     sheet.hidden = false;
     closeSheet.hidden = false;
+    if (expandSheet) { expandSheet.hidden = false; }
     if (sheetGrip) { sheetGrip.hidden = false; }
     Array.prototype.forEach.call(
       sheet.querySelectorAll(".panel"),
@@ -1142,6 +1159,7 @@
     if (onTheBench()) { return; }
     sheet.hidden = true;
     closeSheet.hidden = true;
+    if (expandSheet) { expandSheet.hidden = true; }
     if (sheetGrip) { sheetGrip.hidden = true; }
     Array.prototype.forEach.call(
       document.querySelectorAll(".sheet-tab"),
@@ -1150,6 +1168,27 @@
     if (!keep) { rememberSheet("closed"); }
   }
   closeSheet.addEventListener("click", function () { hideSheet(); });
+
+  // Expand: the sheet takes all the height the window allows, for reading a
+  // long answer; pressed again it goes back to the height it had.
+  var expandSheet = document.getElementById("expand-sheet");
+  var heightBefore = null;
+  if (expandSheet) {
+    expandSheet.addEventListener("click", function () {
+      if (heightBefore === null) {
+        heightBefore = Math.round(sheet.getBoundingClientRect().height);
+        // Never smaller than it was: on a short window the rule that keeps
+        // the transcript in view may already be the limit.
+        setSheetHeight(Math.max(tallest(), heightBefore));
+        expandSheet.innerHTML = "Shrink &#8597;";
+      } else {
+        setSheetHeight(heightBefore);
+        heightBefore = null;
+        expandSheet.innerHTML = "Expand &#8597;";
+      }
+      drawTimeline();
+    });
+  }
 
   // Resizing it ----------------------------------------------------------------
 

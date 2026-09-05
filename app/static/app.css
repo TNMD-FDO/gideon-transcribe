@@ -281,9 +281,6 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
 .pill.role { font-size: 0.72em; padding: 0 6px; margin-left: 4px; }
 .person-acts form { flex-wrap: wrap; }
-/* The Case Chat tab: the viewer's Chat panel, at the case page's width. */
-.case-chat .turns { max-height: 60vh; overflow-y: auto; }
-.case-chat .cite.removed { color: var(--muted); text-decoration: line-through; }
 
 .card {
   background: var(--surface);
@@ -1028,6 +1025,12 @@ body.no-speakers .seg .name { display: none; }
 .sheetgrip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .desk.sizing { cursor: ns-resize; user-select: none; }
 .sheet .panel { padding: 12px 14px; }
+/* Each panel scrolls inside itself rather than the sheet as a whole, so the
+   Chat's box stays in view at the foot while its conversation scrolls. */
+.sheet { grid-template-rows: minmax(0, 1fr); }
+.sheet .panel { overflow: auto; min-height: 0; }
+.sheet .panel.chat { display: flex; flex-direction: column; overflow: hidden; grid-column: 1 / -1; }
+.sheet .panel.chat[hidden] { display: none; }
 .sheet .panel:not([hidden]) + .panel:not([hidden]) {
   border-left: 1px solid var(--line);
 }
@@ -1080,7 +1083,7 @@ body.no-speakers .seg .name { display: none; }
   .grip { right: auto; left: 0; }
   .grip::after { right: auto; left: 3px; }
   .bench { grid-area: auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
-  .sheetgrip, #close-sheet { display: none; }
+  .sheetgrip, #close-sheet, #expand-sheet { display: none; }
   .sheetbar { border-top: 0; border-bottom: 1px solid var(--line); }
   .sheet {
     height: auto;
@@ -1097,18 +1100,63 @@ body.no-speakers .seg .name { display: none; }
 
 /* The AI assistant's panels ---------------------------------------------------- */
 .assistant-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-.assistant-list .answer p, .turns .answer p { margin: 0 0 6px; }
+.assistant-list .answer p { margin: 0 0 6px; }
 .cite { text-decoration: none; border-bottom: 1px dotted var(--accent); color: var(--accent); }
-.threads { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-.threads .thread { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The open thread: outlined, not filled. The generic button.on fills it,
-   which left accent text on an accent ground and no name to read. */
-.threads .thread.on { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
-.turns { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
-.turn .question { margin: 0 0 4px; }
-.turn .answer { padding-left: 10px; border-left: 3px solid var(--line); }
 .asking { margin-top: 8px; align-items: flex-end; }
-.asking textarea { resize: vertical; }
+.asking textarea { resize: none; }
+
+/* The shared Chat (chat-ui.js): one look in the viewer and on the case page.
+   A head with New chat, the list of earlier chats and the tools; the
+   conversation as your questions on the right and the answers as cards on the
+   left; the box at the foot. The panel scrolls inside itself. */
+.chat-ui { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.chat-ui .chat-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chat-ui .chat-list { position: relative; }
+.chat-ui .chat-list summary { cursor: pointer; color: var(--muted); list-style: none; padding: 4px 6px; border-radius: 6px; }
+.chat-ui .chat-list summary::-webkit-details-marker { display: none; }
+.chat-ui .chat-list summary:hover { background: var(--surface-2); }
+.chat-ui .chat-list ul {
+  position: absolute; z-index: 5; left: 0; top: 100%; min-width: 16rem; max-width: 24rem; max-height: 50vh; overflow: auto;
+  list-style: none; margin: 4px 0 0; padding: 4px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.chat-ui .thread {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left;
+  background: transparent; border: 0; border-radius: 6px; padding: 6px 8px; white-space: normal;
+}
+.chat-ui .thread:hover { background: var(--surface-2); }
+.chat-ui .thread.on { background: var(--surface-2); color: var(--accent); }
+.chat-ui .thread .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.chat-ui .chat-body { flex: 1; min-height: 6rem; max-height: 60vh; overflow-y: auto; padding: 8px 2px; display: flex; flex-direction: column; gap: 10px; }
+.sheet .chat-ui .chat-body { max-height: none; }
+.chat-ui .chat-foot { flex: none; }
+.chat-ui .starters .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-ui .chip.starter { border-radius: 999px; padding: 4px 10px; font-size: 0.9em; text-align: left; white-space: normal; }
+.chat-ui .turn { display: flex; flex-direction: column; gap: 6px; }
+.chat-ui .bubble.you { align-self: flex-end; max-width: 85%; background: var(--accent); color: var(--accent-ink); border-radius: 14px 14px 4px 14px; padding: 8px 12px; }
+.chat-ui .bubble.you p { margin: 0; white-space: pre-wrap; }
+.chat-ui .bubble.you .stamp { display: block; text-align: right; color: var(--accent-ink); opacity: 0.75; margin-top: 2px; }
+.chat-ui .card.answer { align-self: flex-start; max-width: 95%; padding: 10px 12px; border-radius: 4px 14px 14px 14px; }
+.chat-ui .card.answer p { margin: 0 0 6px; }
+.chat-ui .card.answer p.heading { font-weight: 600; margin-top: 6px; }
+.chat-ui .card.answer ul, .chat-ui .card.answer ol { margin: 0 0 6px; padding-left: 20px; }
+.chat-ui .card.answer li { margin: 0 0 3px; }
+.chat-ui .card.answer.problem { border-left: 3px solid var(--danger); }
+.chat-ui .card.answer .tools { gap: 8px; margin-top: 4px; }
+.chat-ui .cite.play {
+  display: inline-block; border: 1px solid var(--accent); border-radius: 999px; padding: 0 8px; margin: 0 1px;
+  font-size: 0.85em; line-height: 1.5; text-decoration: none; color: var(--accent); white-space: nowrap;
+}
+.chat-ui .cite.play:hover { background: var(--accent); color: var(--accent-ink); }
+.chat-ui .cite.removed { color: var(--muted); text-decoration: line-through; }
+.chat-ui .waiting { display: flex; align-items: center; gap: 8px; color: var(--muted); padding: 4px 2px; }
+.chat-ui .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: chat-pulse 1.4s ease-in-out infinite; flex: none; }
+@keyframes chat-pulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+.chat-ui .notice.quiet { background: transparent; border-left-width: 2px; padding: 2px 8px; margin: 0; color: var(--muted); }
+.chat-ui .hint { margin: 4px 0 0; }
+.tiny { font-size: 0.78em; }
+/* The cited line in the transcript, lit for a moment when its pill is clicked. */
+.seg.lit { outline: 2px solid var(--accent); outline-offset: -2px; transition: outline-color 1.2s ease; }
 .suggestions { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .suggestion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9em; }
 .pill.suggested { margin-left: 6px; }
