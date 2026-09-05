@@ -3792,7 +3792,7 @@ A throwaway prototype of the panel exists in the planning repository at `prototy
 
 #### 1. Shape
 
-The panel is one layout: a left rail of pages in three groups, and the chosen page on the right.
+The panel is one layout: a left rail of pages in three groups, and the chosen page on the right. A settings page lists its settings in a pane beside the form from 1280 pixels, each a jump to its row and marked when changed from default or waiting in the tray.
 
 | Rail group | Pages, in order |
 |---|---|
@@ -3893,7 +3893,7 @@ Every Job in the Queue, with user, title, Batch, duration, state, Step, position
 
 ### The Users page
 
-One row per account.
+One row per account. From 1280 pixels the form that creates a Local admin sits in a pane beside the table; below that width it follows the table.
 
 | Column | Shows |
 |---|---|
@@ -3925,7 +3925,7 @@ At page level: **Create Local admin** (username, display name, password). The in
 
 ### The Audit log page
 
-The audit log viewer, defined in the Audit log and logging chapter: newest first, 100 rows a page; filters for date range, actor, affected user, category, event, outcome, object (an id or part of a file name), and client address; a row expands to its details block. No export button. There is no user-facing view of the audit log anywhere.
+The audit log viewer, defined in the Audit log and logging chapter: newest first, 100 rows a page; filters for date range, actor, affected user, category, event, outcome, object (an id or part of a file name), and client address, in a pane on the left that stays put while the rows scroll from 1280 pixels and above the table on a narrower window; a row expands to its details block. No export button. There is no user-facing view of the audit log anywhere.
 
 ### The Installation page
 
@@ -3944,7 +3944,7 @@ The service's own settings (batch size, VAD thresholds, limits, timeouts, alignm
 
 ### Help and the guides
 
-The rail carries a Help link that opens the admin guide, rendered inside the app from the repository's `docs/admin-guide.md`. Every user-facing page carries a Help link to the user guide at `/help/`, rendered the same way. The guides therefore always match the running Release, and nobody needs GitHub to read them. The admin guide explains the panel, the tray and its note, the catalogue, the Installation page, the Sign-in page notice, and the `./transcribe` subcommand that clears a wedged background job.
+The rail carries a Help link that opens the admin guide, rendered inside the app from the repository's `docs/admin-guide.md`. Every user-facing page carries a Help link to the user guide at `/help/`, rendered the same way, opening at the guide's section about that page. On a window 1280 pixels or wider the guide's contents list is a rail beside the text, which keeps its reading width, with the section being read marked. The guides therefore always match the running Release, and nobody needs GitHub to read them. The admin guide explains the panel, the tray and its note, the catalogue, the Installation page, the Sign-in page notice, and the `./transcribe` subcommand that clears a wedged background job.
 
 ### Fixed rules, not settings
 
@@ -4031,6 +4031,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 - From the Upload page ticket, to the Transcription defaults rows and the fixed rules: "Two-channel calls start unticked regardless" withdrawn; the "Diarize" label; the 80% storage warning as a build constant.
 - From the email notifications ticket, to the rail, the Status page, the Users page, the Audit log page, and the Installation page: the Email page and its rows, the Email line, the Users page's email changes, the Email category, the seven mail keys (carried).
 - From the Case Chat ticket, to the AI assistant and Limits rows: Chat across cases, the Case chat prompt template, Case chat: most hours of talk per question (carried).
+- From the maintainer, on the v1.7.0 build, to the Audit log, Users and settings pages and to Help and the guides: the Workbench Layout's fourth page. The audit filters as a pane, the Local admin form beside the users table, a jump list beside every settings page, the guides' contents as a rail with the section being read marked, and Help landing on the section about the page it was pressed on. The "?" pane the layout proposal sketched, the guide opening beside any page, is not built: a pane on every page would make every page's layout yield to it, and the section link gives most of its worth.
 
 
 ## 15. Rules that hold everywhere

@@ -31,7 +31,11 @@
         {% if user.is_admin %}
           <a href="{% url 'panel' %}"{% if page == "panel" %} class="on"{% endif %}>Panel</a>
         {% endif %}
-        <a href="{% url 'help' %}"{% if page == "help" %} class="on"{% endif %}>Help</a>
+        {% comment %}
+          Help opens the user guide at the section about the page it was
+          pressed on, so the answer is a click away rather than a read away.
+        {% endcomment %}
+        <a href="{% url 'help' %}{% if page == "recordings" %}#your-recordings{% elif page == "upload" %}#uploading-a-batch{% elif page == "viewer" %}#reading-a-transcript{% elif page == "clips" %}#clips{% elif page == "cases" %}#cases{% endif %}"{% if page == "help" %} class="on"{% endif %}>Help</a>
       </span>
       <span class="who">
         {{ user.shown_name }}{% if user.is_admin %} &middot; Admin{% endif %}
