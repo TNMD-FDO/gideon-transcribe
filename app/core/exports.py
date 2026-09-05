@@ -361,6 +361,12 @@ def word(recording: Recording, exported_by: str) -> bytes:
         transcript.segments.filter(same_as_other_side=False).select_related("side")
     )
     who = appearances(segments)
+    # Inside a Case the Role column fills from the People; blank otherwise.
+    if recording.case_id:
+        from core import people
+
+        for one in who:
+            one.role = people.role_of(recording, one.name)
     corrections = sum(1 for segment in segments if segment.corrected)
     title = title_of(recording)
     kind = kind_line(transcript)

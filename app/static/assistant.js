@@ -310,7 +310,7 @@
     if (!suggestionList) { return; }
     suggestionList.innerHTML = state.pending.map(function (one) {
       return "<li class='suggestion' title='" + escape(one.quote) + " at " + escape(one.clock) + "'>" +
-        "<span class='grow'><b>" + escape(one.speaker) + "</b> → " + escape(one.name) +
+        "<span class='grow'><b>" + escape(one.speaker) + "</b> → " + escape(one.name) + (one.role ? " (" + escape(one.role) + ")" : "") +
         " <span class='muted small'>(" + escape(one.confidence) + ", " + escape(one.kind) + ")</span>" +
         "<br><span class='muted small'>“" + escape(one.quote) + "” <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a></span></span>" +
         "<button type='button' class='small accept' data-suggestion='" + one.id + "'>Accept</button>" +
@@ -322,7 +322,7 @@
         if (rows[i].textContent.replace(" ✎", "") === one.speaker) {
           var pill = document.createElement("span");
           pill.className = "pill side suggested";
-          pill.textContent = "Suggested: " + one.name;
+          pill.textContent = "Suggested: " + one.name + (one.role ? " (" + one.role + ")" : "");
           pill.title = one.quote + " at " + one.clock;
           rows[i].parentNode.insertBefore(pill, rows[i].nextSibling);
           break;

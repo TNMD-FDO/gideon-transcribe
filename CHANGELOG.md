@@ -21,6 +21,55 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.11.0, 2026-09-05
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0019 adds the Person table. Nothing on disk changes.
+
+### Added
+
+- **People and the Speakers tab.** Inside a case a name means a person: every
+  speaker in the case's recordings given the same name is one person, with a
+  role and notes. The case page gains a **Speakers** tab that lists them, where
+  each appears (links that play from their first words), **Add person**, and
+  under each row **Rename everywhere**, a role and notes to **Save**, **Merge
+  into** and **Delete person**. Below, **Unnamed speakers** lists the
+  recordings still to work through. Naming a speaker in the viewer, accepting
+  a suggestion or moving a recording in makes or joins a person. This is the
+  Cases release's People chapter, shipped early because Suggest names needed
+  it; the chapter's amendment records the build's decisions, the main one that
+  the name is the link and there is no separate person column on a segment.
+- **The viewer's rename box, inside a case.** Clicking a speaker opens a box
+  under the list that offers the case's people as you type, each with their
+  role and how many recordings they are in, and says it changes this recording
+  only, with a link to the tab for renaming everywhere. Each speaker's role is
+  a small badge after the name, and the Word export's Appearances table fills
+  its Role column inside a case. In the Workspace nothing changes.
+- **Speaker roles**, a list on the Cases settings page (Defendant, Witness,
+  Victim, Officer, Attorney, Interpreter, Interviewer, Caller by default).
+- **Evidence-first Suggest names.** Before asking the engine, the app finds
+  the self-introductions ("this is Detective Ruiz") and forms of address
+  ("Thanks, Maria") in the transcript and sends them with their line numbers,
+  along with the case's people first in the Known names line and the office's
+  roles. A suggested name is kept only when some evidence line carries it; a
+  role needs none. The suggested pill shows the role when the name is a person
+  in the case. The research behind this is `docs/research/speaker-suggestions.md`.
+- **Speaker suggestion method**, a choice on the AI assistant settings page
+  with one method today, "evidence". It is the extension point the maintainer
+  asked for: better methods, from more capable models or new pipeline tools,
+  join the list as they are built and are chosen there, while the Speaker
+  suggestions toggle turns the whole feature off whichever method is chosen.
+
+### Fixed
+
+- **The case page's Speakers column counted "Speaker 1" as a named speaker.**
+  It looked for the engine's raw labels, which the app never stores as
+  names; it now uses the app's own rule for what a label is.
+
 ## v1.10.6, 2026-09-05
 
 ```

@@ -932,13 +932,41 @@
 
   var chips = document.getElementById("speakers");
   if (chips) {
+    // Inside a case the rename box lists the case's people as the name is
+    // typed; elsewhere the browser's own prompt does, as it always did.
+    var renameBox = document.getElementById("rename-box");
+    var renaming = null;
     chips.addEventListener("click", function (event) {
       var chip = event.target.closest(".speakerchip");
       if (!chip) { return; }
+      if (renameBox) {
+        renaming = chip.dataset.name;
+        document.getElementById("rename-label").textContent = "Rename " + renaming + " to";
+        var box = document.getElementById("rename-input");
+        box.value = renaming;
+        renameBox.hidden = false;
+        box.focus();
+        box.select();
+        return;
+      }
       var now = window.prompt("Rename " + chip.dataset.name + " to:", chip.dataset.name);
       if (!now || now === chip.dataset.name) { return; }
       rename(chip.dataset.name, now);
     });
+    if (renameBox) {
+      document.getElementById("rename-save").addEventListener("click", function () {
+        var now = document.getElementById("rename-input").value.trim();
+        if (!now || now === renaming) { renameBox.hidden = true; return; }
+        rename(renaming, now);
+      });
+      document.getElementById("rename-cancel").addEventListener("click", function () {
+        renameBox.hidden = true;
+      });
+      document.getElementById("rename-input").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") { event.preventDefault(); document.getElementById("rename-save").click(); }
+        if (event.key === "Escape") { renameBox.hidden = true; }
+      });
+    }
 
     var dragged = null;
     chips.addEventListener("dragstart", function (event) {

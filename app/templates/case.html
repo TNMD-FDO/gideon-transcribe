@@ -29,9 +29,9 @@
     <div class="panes">
       <div class="pane-list">
         {% comment %}
-          Two of the four tabs the chapter gives this page. Speakers and Chat
-          belong to chapters that are not built, so the space is left rather
-          than filled with a guess.
+          Three of the four tabs the chapter gives this page. Chat belongs to
+          a chapter that is not built, so the space is left rather than
+          filled with a guess.
         {% endcomment %}
         <div class="tabs" style="margin-top: 6px">
           <a href="{% url 'case' case.pk %}"
@@ -40,6 +40,8 @@
             <a href="{% url 'case' case.pk %}?tab=clips"
                class="tab{% if tab == 'clips' %} on{% endif %}">Clips{% if tab == 'clips' %} ({{ clips_here|length }}){% endif %}</a>
           {% endif %}
+          <a href="{% url 'case' case.pk %}?tab=speakers"
+             class="tab{% if tab == 'speakers' %} on{% endif %}">Speakers ({{ people_count }})</a>
         </div>
 
         {% if tab == "recordings" %}
@@ -79,7 +81,116 @@
           <h2 style="margin-top: 26px">Recordings</h2>
         {% endif %}
 
-        {% if tab == "clips" %}
+        {% if tab == "speakers" %}
+          {% comment %}
+            The Speakers tab: inside a case a name means a person. The People
+            list, each with where they appear; Add person; and the recordings
+            whose speakers are still unnamed, which is the review workflow.
+          {% endcomment %}
+          <p class="lead" style="margin: 12px 0 8px">{{ people_line }}</p>
+          {% if people_said %}<p class="notice warn">{{ people_said }}</p>{% endif %}
+
+          {% if people %}
+            <table class="tbl" id="people">
+              <thead>
+                <tr><th>Name</th><th>Role</th><th>Notes</th><th>Appears in</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for row in people %}
+                  <tr>
+                    <td><b>{{ row.person.name }}</b></td>
+                    <td class="muted">{{ row.person.role }}</td>
+                    <td class="muted small">{{ row.first_line }}</td>
+                    <td>
+                      {% if row.recordings %}
+                        <details>
+                          <summary class="small">in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }}</summary>
+                          <ul class="small" style="margin: 4px 0 0; padding-left: 18px">
+                            {% for recording, start in row.recordings %}
+                              <li><a href="{% url 'viewer' recording.pk %}?t={{ start|floatformat:1 }}">{{ recording.title }}</a></li>
+                            {% endfor %}
+                          </ul>
+                        </details>
+                      {% else %}
+                        <span class="muted small">in 0 recordings</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <details class="person-acts">
+                        <summary class="small">Rename, edit, merge, delete</summary>
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="rename">
+                          <input type="text" name="name" value="{{ row.person.name }}" maxlength="60" aria-label="New name">
+                          <button type="submit" class="small">Rename everywhere</button>
+                        </form>
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="edit">
+                          <select name="role" aria-label="Role">
+                            <option value="">No role</option>
+                            {% for one in roles %}
+                              <option value="{{ one }}"{% if one == row.person.role %} selected{% endif %}>{{ one }}</option>
+                            {% endfor %}
+                          </select>
+                          <input type="text" name="notes" value="{{ row.person.notes }}" maxlength="1000" placeholder="Notes, a few lines" class="grow" aria-label="Notes">
+                          <button type="submit" class="small">Save</button>
+                        </form>
+                        {% if row.others %}
+                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px"
+                                onsubmit="return confirm('Merge {{ row.person.name|escapejs }} into ' + this.into.options[this.into.selectedIndex].text + '? Their speakers in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }} take that name.')">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="merge">
+                            <label class="muted">Merge into</label>
+                            <select name="into" aria-label="Merge into">
+                              {% for other in row.others %}
+                                <option value="{{ other.pk }}">{{ other.name }}</option>
+                              {% endfor %}
+                            </select>
+                            <button type="submit" class="small">Merge</button>
+                          </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px"
+                              onsubmit="return confirm('Delete {{ row.person.name|escapejs }} from this case? Their speakers go back to Speaker 1, Speaker 2 and so on.')">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="delete">
+                          <button type="submit" class="small ghost danger">Delete person</button>
+                        </form>
+                      </details>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="muted small">No people yet. Name a speaker in a recording's viewer, accept a suggestion, or add one here.</p>
+          {% endif %}
+
+          <form method="post" action="{% url 'add-person' case.pk %}" class="card row" style="gap: 8px; margin-top: 14px">
+            {% csrf_token %}
+            <b>Add person</b>
+            <input type="text" name="name" maxlength="60" placeholder="Name" required aria-label="Name">
+            <select name="role" aria-label="Role">
+              <option value="">No role</option>
+              {% for one in roles %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
+            </select>
+            <input type="text" name="notes" maxlength="1000" placeholder="Notes (optional)" class="grow" aria-label="Notes">
+            <button type="submit" class="primary small">Add</button>
+          </form>
+
+          <h2 style="margin-top: 22px">Unnamed speakers</h2>
+          {% if unnamed %}
+            <ul class="small">
+              {% for recording, count in unnamed %}
+                <li><a href="{% url 'viewer' recording.pk %}">{{ recording.title }}</a>: {{ count }} unnamed</li>
+              {% endfor %}
+            </ul>
+            <p class="muted small">Open a recording, use Suggest names or type the names in its Speakers panel, and come back.</p>
+          {% else %}
+            <p class="muted small">Every speaker in this case has a name.</p>
+          {% endif %}
+
+        {% elif tab == "clips" %}
           <div class="row" style="margin: 12px 0 10px">
             <span class="grow">
               {{ clips_here|length }} clip{{ clips_here|length|pluralize }} in this case

@@ -622,11 +622,12 @@ def suggest_names(run_id) -> None:
             .distinct()
         )
         taken = {name for name in all_names if not _is_a_label(name)}
-        known = [
-            str(word).strip()
-            for word in (recording.vocabulary or [])
-            if str(word).strip()
-        ]
+        # Inside a Case the People come first, then the Vocabularies; the roles
+        # are the Admin's list; the evidence is what the app found itself.
+        from core import people
+
+        known = people.known_names(recording)
+        found = prompts.evidence(lines)
         system = prompts.system_message(
             ground.text, template.text, prompts.SUGGESTIONS_FORMAT
         )
@@ -635,6 +636,8 @@ def suggest_names(run_id) -> None:
                 prompts.nature_line(recording, transcript),
                 prompts.render(lines),
                 prompts.suggestions_input(unnamed, known),
+                prompts.roles_line(people.roles()),
+                prompts.evidence_lines(found),
             ]
         )
         if not prompts.fits(system, user, answer_cap=prompts.SUGGESTIONS_CAP):
@@ -666,7 +669,7 @@ def suggest_names(run_id) -> None:
                     raise engine.Problem(
                         engine.BAD_OUTPUT, "invalid suggestion JSON twice"
                     ) from bad
-        kept = prompts.keep_suggestions(raw or [], unnamed, taken, lines)
+        kept = prompts.keep_suggestions(raw or [], unnamed, taken, lines, found)
 
         transcript.suggestions.filter(state=Suggestion.PENDING).delete()
         for one in kept:

@@ -89,6 +89,8 @@ A video can be popped out into its own window, so the transcript can have the wh
 
 Each speaker has a colour, used for their name and their lines. Click a speaker's name in the **Speakers** list to give them a real one; every segment they spoke is renamed.
 
+Inside a case, a name means a person: every speaker in the case's recordings given the same name is the same person. Click a speaker's name and a box opens under the list; as you type it offers the case's people, each with their role and how many recordings they are in, so you pick the person or type a new name. The box changes this recording only. A small badge after a name is the person's role. To rename someone in every recording at once, use the case's **Speakers** tab, described under Cases.
+
 ### Correcting
 
 Click a segment, or press E on the one that is playing, to correct its text. **Save** keeps the correction and marks the segment as corrected; **Cancel** or Esc leaves it. Corrections go into every export. The fact that a correction was made is recorded, but what it said is not: transcript text never goes into any log.
@@ -105,7 +107,7 @@ When your office has turned it on, the viewer's right-hand column gains **Summar
 
 - **Summary.** **New summary** asks what to concentrate on (optional) and how long: Short, Standard or Detailed. If your office has more than one template, you choose one. A summary lists what happened with a time on each point; a time shown as a link is a **citation** that plays the recording from that moment. **Regenerate** writes it again with the same choices; **Export to Word** keeps it; **Delete** removes it. Summaries live as long as the recording does, so export what you want to keep.
 - **Chat.** Ask questions about the transcript: who said what, when something came up, how many times, what a stretch was about. The answer comes from the transcript alone; asked for legal advice, an opinion, or anything outside it, the assistant answers "I can only answer from this transcript." Each chat is a thread named from its first question; **New chat** starts another, **Copy** copies an answer, **Export to Word** keeps the thread.
-- **Suggest names.** When two or more speakers still have no name, one click asks the assistant who they are, from what is said: a name someone uses, or a role such as Interviewer or Officer. Each suggestion shows the line it came from and how sure the assistant is. Nothing changes until you press **Accept**, which renames every segment of that speaker; **Reject** dismisses it.
+- **Suggest names.** When two or more speakers still have no name, one click asks the assistant who they are, from what is said: a name someone uses, or a role such as Interviewer or Officer. The app first finds the evidence itself, the self-introductions ("this is Detective Ruiz") and the forms of address ("Thanks, Maria"), and hands them to the assistant along with the case's people and the office's roles; a name is suggested only when the transcript backs it, so the assistant often offers a role, or nothing, rather than a guess. Each suggestion shows the line it came from and how sure the assistant is, and the role in brackets when the name is a person already in the case. Nothing changes until you press **Accept**, which renames every segment of that speaker; **Reject** dismisses it.
 
 If a button is greyed with "The AI assistant is not available right now", the engine cannot be reached; try again later. Nothing you ask or read here is written to the audit log, only that a call was made.
 
@@ -157,6 +159,14 @@ The Cases page lists your cases. **New case** makes one; there is nothing to typ
 A recording goes into a case either at upload, with **Add to case**, or afterwards with **Move to case**, from the Recordings page, from the viewer's Details, or from the sign-out dialog. Moving is instant whatever the size, and it takes the transcript, the clips and the corrections along. Nothing ever moves back out of a case; the only way a recording leaves one is **Delete**.
 
 Deleting a case asks first and names what it is taking. It cannot be undone.
+
+### The Speakers tab
+
+A case's page has a **Speakers** tab beside its recordings and clips. Inside a case a name means a person, so the tab lists the case's **people**: everyone who has been named in any of its recordings, with their **role** (Defendant, Officer, Interpreter and the others your office uses), the first line of any notes, and "in N recordings", which opens to the recording titles, each a link that plays from that person's first words there. A person also comes to be when you accept a suggestion, when a recording with named speakers is moved into the case, or when you type one in with **Add person**; a name already in the case joins that person rather than making a second.
+
+Under each person's row: **Rename everywhere** changes the name in every recording of the case at once (the viewer's rename box changes one recording only); **Save** keeps a changed role or notes; **Merge into** joins two people who turned out to be one, renaming every segment of the first to the second's name and keeping the first's notes under their old name; **Delete person** puts their speakers back to Speaker 1, Speaker 2 and removes them from the list. Merge and Delete ask first.
+
+At the bottom, **Unnamed speakers** lists the recordings with speakers still unnamed, each a link. That list is the way to work through a case: open a recording, use Suggest names or type the names in its Speakers panel, and come back until the list is empty.
 
 ### How long a case is kept
 
