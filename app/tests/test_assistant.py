@@ -253,6 +253,8 @@ def ready(person, tmp_path, settings):
             speaker_label=speaker.upper().replace(" ", "_"),
         )
     settings_store.set_to("assistant_available", True)
+    # Suggestions start Off; these tests exercise them, so they turn it on.
+    settings_store.set_to("suggestions_available", True)
     return recording
 
 
@@ -598,3 +600,18 @@ def test_thinking_gets_its_own_room_and_an_empty_answer_says_why(
     )
     assistant.write_summary(again.pk)
     assert asked[0]["max_completion_tokens"] == 600 and asked[0]["thinking"] is False
+
+
+@pytest.mark.django_db
+def test_speaker_suggestions_start_off(ready, person, client):
+    settings_store.set_to("suggestions_available", False)
+    settings_store.set_to("assistant_available", True)
+    assert settings_store.definition("suggestions_available").default is False
+    signed_in(client, person)
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["suggestions"] is False and state["summary"] is True
+    assert client.post(f"/recording/{ready.pk}/suggest").status_code == 404
+    assert (
+        'id="suggest-names"'
+        not in client.get(f"/recording/{ready.pk}").content.decode()
+    )

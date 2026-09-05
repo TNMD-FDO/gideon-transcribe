@@ -43,7 +43,8 @@ What every Upload page starts with.
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
 | AI assistant | On or Off | Off | 1 | The master switch; starts Off until an engine answers. | Off hides Summary, Chat, and Suggest names everywhere; existing Summaries and Chats are hidden, not deleted. |
-| Chat; Summary; Speaker suggestions | On or Off, one each | On | 1 | One feature each, under the master switch. | Off hides that feature; existing items hidden, not deleted. |
+| Chat; Summary | On or Off, one each | On | 1 | One feature each, under the master switch. | Off hides that feature; existing items hidden, not deleted. |
+| Speaker suggestions | On or Off | Off | 1 | Suggesting who each Speaker is, from the talk. Off by default since v1.10.6: a small engine does this badly (`docs/research/speaker-suggestions.md`); an office tries it and judges before leaving it on. | Off hides Suggest names; existing suggestions hidden, not deleted. |
 | Chat across cases | On or Off | On | 2 | The Case Chat: a Chat tab on every Case page. Under the master switch and independent of the Chat toggle above. | Off hides the Chat tab on every Case page and keeps the Chats. |
 | Let the model think before answering | On or Off | Off | 1 | Slower, sometimes better. | On doubles the time limits (Chat 4 min, Summary 10 min, suggestions 6 min). The next call. |
 | Engine address | text, with Test connection | `http://vllm:8000/v1` (the Local engine's) | 1 | The engine's base URL; Test connection lists the models and runs one tiny completion. | The next call. |

@@ -428,8 +428,13 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Speaker suggestions",
             kind=TOGGLE,
-            default=True,
-            what_it_does="Suggesting who each Speaker is, from the talk.",
+            # Off until an office has seen it do well on its own recordings: a
+            # small engine does this badly (docs/research/speaker-suggestions.md).
+            default=False,
+            what_it_does=(
+                "Suggesting who each Speaker is, from the talk. Off by default: a "
+                "small engine does this badly; try it and judge before leaving it on."
+            ),
             when_changed="Off hides Suggest names.",
         ),
         Definition(
