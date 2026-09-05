@@ -96,7 +96,15 @@ jobs:
           : > secrets/postgres_password
           : > secrets/whisperx_consumer_token
           : > secrets/llm_api_token
+          : > secrets/backup_password
+          : > secrets/backup_ssh_key
+          : > secrets/backup_known_hosts
+          mkdir -p tls ca whisperx-service/secrets
+          touch whisperx-service/.env
           docker compose config --quiet
+          # The backup profile's service, and the drill's override project.
+          docker compose --profile backup config --quiet
+          DRILL_DIR=/tmp/drill docker compose -p transcribe-drill             -f compose.yaml -f compose.drill.yaml config --quiet
           # The Shared engine file joins llm-worker to an external network the
           # office names; and the Local engine profile, which nobody runs in
           # CI, must at least be a valid service.

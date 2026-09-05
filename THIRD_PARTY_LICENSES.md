@@ -33,6 +33,7 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | lxml | BSD-3-Clause | python-docx's own dependency |
 | python-ldap | Python-style (its own permissive licence) | directory sign-in; see ADR 0010 |
 | Markdown (Python-Markdown) | BSD-3-Clause | renders the two guides at build time; see ADR 0012 |
+| restic | BSD-2-Clause | the Backup's tool, from its official image `restic/restic` pinned by digest, run as the `backup` Compose service behind its own profile and never on the host; the image carries Alpine's openssh client for SFTP |
 | IBM Plex Sans and IBM Plex Mono (fonts) | OFL-1.1 | the app's typeface since v1.14.0, six woff2 files in `app/static/fonts/` with the licence beside them (`OFL-ibm-plex.txt`); the Open Font License permits bundling and use, forbids selling the fonts alone, and reserves the name "Plex", which the app does not use for anything of its own |
 | audiowaveform | GPL-3.0-or-later | in the app image, fetched as a `.deb` by version and hash and called as a separate program; source at `github.com/bbc/audiowaveform`; see note 1 |
 | Caddy | Apache-2.0 | upstream image |
@@ -67,10 +68,10 @@ below, with a pointer to Debian's source packages for them.**
 
 | Release | Image | ffmpeg package | codec packages | Source |
 |---|---|---|---|---|
-| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0, v1.9.0, v1.10.0, v1.10.1, v1.10.2, v1.10.3, v1.10.4, v1.10.5, v1.10.6, v1.11.0, v1.11.1, v1.12.0, v1.13.0, v1.13.1, v1.14.0, v1.15.0, v1.16.0, v1.16.1, v1.17.0, v1.18.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
-| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0, v1.9.0, v1.10.0, v1.10.1, v1.10.2, v1.10.3, v1.10.4, v1.10.5, v1.10.6, v1.11.0, v1.11.1, v1.12.0, v1.13.0, v1.13.1, v1.14.0, v1.15.0, v1.16.0, v1.16.1, v1.17.0, v1.18.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
+| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0, v1.9.0, v1.10.0, v1.10.1, v1.10.2, v1.10.3, v1.10.4, v1.10.5, v1.10.6, v1.11.0, v1.11.1, v1.12.0, v1.13.0, v1.13.1, v1.14.0, v1.15.0, v1.16.0, v1.16.1, v1.17.0, v1.18.0, v1.19.0 | app | `7:7.1.5-0+deb13u1` | `libavcodec61 7:7.1.5-0+deb13u1`, `libx264-164 2:0.164.3108+git31e19f9-2+b1`, `libx265-215 4.1-2`, `libxvidcore4 2:1.3.7-1+b2` | Debian 13 (trixie) source packages |
+| v0.2.0, v0.3.0, v0.4.0, v1.0.0, v1.1.0, v1.2.0, v1.2.1, v1.2.2, v1.2.3, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0, v1.8.0, v1.9.0, v1.10.0, v1.10.1, v1.10.2, v1.10.3, v1.10.4, v1.10.5, v1.10.6, v1.11.0, v1.11.1, v1.12.0, v1.13.0, v1.13.1, v1.14.0, v1.15.0, v1.16.0, v1.16.1, v1.17.0, v1.18.0, v1.19.0 | whisperx | `7:6.1.1-3ubuntu5` | `libavcodec60 7:6.1.1-3ubuntu5`, `libx264-164 2:0.164.3108+git31e19f9-1`, `libx265-199 3.5-2build1`, `libxvidcore4 2:1.3.7-1build1` | Ubuntu 24.04 (noble) source packages |
 
-The thirty-four Releases from v0.2.0 to v1.18.0 share a row each because their
+The thirty-five Releases from v0.2.0 to v1.19.0 share a row each because their
 images are the same builds: the base image digest is pinned in both Dockerfiles, and
 nothing in either image's package list changed between the tags. The versions
 were read from the running images with `dpkg-query` on that day. A later

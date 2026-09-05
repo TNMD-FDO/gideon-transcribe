@@ -1,0 +1,9 @@
+[Unit]
+Description=Gideon Transcribe nightly backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=__INSTALL_HOME__
+ExecStart=__INSTALL_HOME__/transcribe backup

@@ -173,6 +173,15 @@ services:
       # The Release this is running, so the panel and the audit log can say so
       # rather than guessing. Written by ./transcribe upgrade.
       RELEASE_TAG: "${RELEASE_TAG:-}"
+      # The Backup's facts, for the Status and Installation pages and the
+      # nightly job's app commands. The target is the account and the host,
+      # never a key; the two backup secrets are never mounted into the stack.
+      BACKUP_TARGET: "${BACKUP_TARGET:-}"
+      BACKUP_KEEP_DAYS: "${BACKUP_KEEP_DAYS:-30}"
+      BACKUP_LOCAL_DUMPS: "${BACKUP_LOCAL_DUMPS:-7}"
+      BACKUP_TIME: "${BACKUP_TIME:-02:00}"
+      DRILL_TIME: "${DRILL_TIME:-04:00}"
+      OPERATOR_EMAIL: "${OPERATOR_EMAIL:-}"
       # The office directory. Every value is this office's own and lives in
       # .env; the bind password is a secret file and the CA root is mounted
       # read-only, so neither is ever an environment value.
@@ -467,7 +476,73 @@ services:
     logging:
       driver: journald
 
+  # The Backup: restic, from its official image pinned by digest, behind the
+  # `backup` profile so `up -d` never starts it. ./transcribe backup, snapshots,
+  # restore and restore-drill run it with `compose run --rm backup ...`. The
+  # nightly mounts are read-only for cases/ and the configuration and
+  # read-write for backup/; a restore adds its own writable mounts on the
+  # command line. It reaches the store on port 22 over the LAN and nothing
+  # else. The repository password and the store's key are its Compose secrets
+  # and no other service's.
+  backup:
+    profiles: ["backup"]
+    image: restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+    user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
+    entrypoint: ["restic"]
+    environment:
+      RESTIC_REPOSITORY: "${BACKUP_TARGET:-}"
+      RESTIC_PASSWORD_FILE: /run/secrets/backup_password
+      # restic speaks SFTP through ssh; the key and the store's host key are
+      # the only credentials, and a host key the store did not present before
+      # is refused. HOME so ssh has somewhere to look for nothing.
+      HOME: /tmp
+      RESTIC_CACHE_DIR: /cache
+    command:
+      - version
+    volumes:
+      - "${APP_DATA_DIR:?set APP_DATA_DIR in .env}/backup:/backup/backup"
+      - "${APP_DATA_DIR}/cases:/backup/cases:ro"
+      - "./.env:/backup/config/env:ro"
+      - "./secrets:/backup/config/secrets:ro"
+      - "./tls:/backup/config/tls:ro"
+      - "./ca:/backup/config/ca:ro"
+      - "./whisperx-service/.env:/backup/config/whisperx-env:ro"
+      - "./whisperx-service/secrets:/backup/config/whisperx-secrets:ro"
+      - "${APP_DATA_DIR}/backup/.restic-cache:/cache"
+    secrets:
+      # In the long form: ssh refuses a private key any other user can read,
+      # so the key is given to the running user at 0400.
+      - source: backup_password
+        target: backup_password
+        uid: "${APP_UID}"
+        gid: "${APP_GID}"
+        mode: 0400
+      - source: backup_ssh_key
+        target: backup_ssh_key
+        uid: "${APP_UID}"
+        gid: "${APP_GID}"
+        mode: 0400
+      - source: backup_known_hosts
+        target: backup_known_hosts
+        uid: "${APP_UID}"
+        gid: "${APP_GID}"
+        mode: 0400
+    networks:
+      - transcribe
+    logging:
+      driver: journald
+
 secrets:
+  # The Backup's three: the repository password and the store account's key,
+  # which never ride in a Snapshot, and the store's host key, which does. The
+  # files always exist, empty when backups are off, because a secret whose
+  # file is missing stops the whole stack; ./transcribe install makes sure.
+  backup_password:
+    file: "${BACKUP_KEY_FILE:-./secrets/backup_password}"
+  backup_ssh_key:
+    file: "${BACKUP_SSH_KEY_FILE:-./secrets/backup_ssh_key}"
+  backup_known_hosts:
+    file: "${BACKUP_KNOWN_HOSTS_FILE:-./secrets/backup_known_hosts}"
   # The engine's bearer token: a copy of the Shared engine's, or the one the
   # Local engine serves with. The file always exists, empty when there is no
   # engine, because a secret whose file is missing stops the whole stack;

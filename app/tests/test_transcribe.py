@@ -243,3 +243,106 @@ def test_the_local_engine_switch_is_in_the_script_and_the_guides():
     assert "./transcribe engine local on" in install
     assert "local-engine-model.md" in install
     assert (HERE / "docs" / "research" / "local-engine-model.md").exists()
+
+
+def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
+    script = (HERE / "transcribe").read_text(encoding="utf-8")
+    for command in (
+        "cmd_backup()",
+        "cmd_backup_weekly()",
+        "cmd_snapshots()",
+        "cmd_restore()",
+        "cmd_restore_drill()",
+        "ask_the_backup()",
+        "install_timers()",
+        "check_the_backup()",
+    ):
+        assert command in script, command
+    # The nightly job records every failure through the app, with its step and
+    # its reason class, and never continues past one.
+    for reason in (
+        "dump_failed",
+        "manifest_failed",
+        "target_unreachable",
+        "snapshot_failed",
+        "prune_failed",
+        "check_failed",
+    ):
+        assert reason in script, reason
+    # The two backup secrets are checked on the host, before anything runs.
+    assert (
+        "for key in BACKUP_SSH_KEY_FILE BACKUP_KEY_FILE BACKUP_KNOWN_HOSTS_FILE"
+        in script
+    )
+    # A restore says what is lost and waits for the word.
+    assert "A restore takes the app back to" in script
+    assert "Type RESTORE to go on" in script
+    # The install asks its two questions and runs the backup steps.
+    assert "  ask_the_backup\n" in script
+    # The compose file: the restic service behind its profile, pinned by digest,
+    # the three secrets in the long form owned by the running user.
+    compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
+    assert 'profiles: ["backup"]' in compose
+    assert "restic/restic:0.19.1@sha256:" in compose
+    assert compose.count("mode: 0400") >= 3
+    for name in ("backup_password", "backup_ssh_key", "backup_known_hosts"):
+        assert f"  {name}:\n    file:" in compose, name
+    # The drill override keeps everything but Postgres and the app out.
+    drill = (HERE / "compose.drill.yaml").read_text(encoding="utf-8")
+    for service in (
+        "caddy",
+        "tusd",
+        "whisperx",
+        "worker",
+        "media-worker",
+        "llm-worker",
+        "vllm",
+        "backup",
+    ):
+        assert f'  {service}:\n    profiles: ["never"]' in drill, service
+    assert 'LDAP_ENABLED: "false"' in drill and 'SMTP_HOST: ""' in drill
+    # The three timers and their services, with the placeholders the install fills.
+    units = HERE / "systemd"
+    for unit in (
+        "transcribe-backup",
+        "transcribe-backup-weekly",
+        "transcribe-backup-drill",
+    ):
+        assert (units / f"{unit}.timer").exists() and (
+            units / f"{unit}.service"
+        ).exists()
+        assert "__INSTALL_HOME__" in (units / f"{unit}.service").read_text(
+            encoding="utf-8"
+        )
+    assert "__BACKUP_TIME__" in (units / "transcribe-backup.timer").read_text(
+        encoding="utf-8"
+    )
+    assert "Sun *-*-01..07" in (units / "transcribe-backup-drill.timer").read_text(
+        encoding="utf-8"
+    )
+    # The environment example carries the nine keys, the target empty.
+    example = (HERE / ".env.example").read_text(encoding="utf-8")
+    for key in (
+        "BACKUP_TARGET=\n",
+        "BACKUP_SSH_KEY_FILE=",
+        "BACKUP_KEY_FILE=",
+        "BACKUP_KNOWN_HOSTS_FILE=",
+        "BACKUP_KEEP_DAYS=30",
+        "BACKUP_LOCAL_DUMPS=7",
+        "BACKUP_TIME=02:00",
+        "DRILL_TIME=04:00",
+        "OPERATOR_EMAIL=\n",
+    ):
+        assert key in example, key
+    # The guides: the runbook's fixed first line, and the store's side.
+    admin = (HERE / "docs" / "admin-guide.md").read_text(encoding="utf-8")
+    first_line = (
+        "A restore takes the app back to 02:00 of the Snapshot's day, "
+        "and everything done after that is gone."
+    )
+    assert first_line in admin
+    assert "authorized_keys" in admin and "#recycle" in admin.replace(
+        "recycle bin", "#recycle"
+    )
+    install = (HERE / "docs" / "install.md").read_text(encoding="utf-8")
+    assert "./transcribe restore-drill" in install and "`BACKUP_TARGET`" in install

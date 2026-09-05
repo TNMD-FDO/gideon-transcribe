@@ -1,0 +1,52 @@
+# The Restore drill's override (Phase 2, Backup and restore).
+#
+# Used only as `docker compose -p transcribe-drill -f compose.yaml
+# -f compose.drill.yaml ...` by ./transcribe restore-drill: Postgres and the
+# app container alone, on a network of their own, no published ports, no
+# Caddy, no GPU, no WhisperX service, no workers, directory sign-in off, no
+# mail, and the restored data under the drill folder rather than the App data
+# folder. It never starts a Login session. Everything it makes is torn down
+# with `down -v` afterwards.
+
+services:
+  postgres:
+    volumes: !override
+      - "${DRILL_DIR:?set by ./transcribe restore-drill}/postgres:/var/lib/postgresql/data"
+    networks: !override
+      - drill
+  app:
+    environment:
+      LDAP_ENABLED: "false"
+      SMTP_HOST: ""
+      BACKUP_TARGET: ""
+      APP_HOSTNAME: "drill.invalid"
+    volumes: !override
+      - "${DRILL_DIR}/data:/srv/data"
+    networks: !override
+      - drill
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+  # Nothing else runs in a drill: each is given a profile the drill never asks for.
+  caddy:
+    profiles: ["never"]
+  tusd:
+    profiles: ["never"]
+  whisperx:
+    profiles: ["never"]
+  worker:
+    profiles: ["never"]
+  media-worker:
+    profiles: ["never"]
+  llm-worker:
+    profiles: ["never"]
+  vllm:
+    profiles: ["never"]
+  backup:
+    profiles: ["never"]
+
+networks:
+  drill:
+    name: transcribe-drill

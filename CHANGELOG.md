@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.0, 2026-09-05
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0023 adds the Backup's status row. The app image gains nothing;
+restic runs from its own image behind the `backup` profile.
+
+### Added
+
+- **Backup and restore**, the Cases release's chapter 9. Every night at
+  `BACKUP_TIME` a host timer runs `./transcribe backup`: one consistent dump
+  of the database, a manifest (release, migration, a row count per table, a
+  checksum per file under cases/), and restic carrying the dump, cases/ and
+  the configuration to an encrypted, deduplicated repository over SFTP on
+  the office's backup store, keeping `BACKUP_KEEP_DAYS` nights there and
+  `BACKUP_LOCAL_DUMPS` dumps on the box. Sundays the repository is pruned and
+  a tenth of its data checked; the first Sunday of the month
+  `./transcribe restore-drill` restores the newest Snapshot into a throwaway
+  project beside the live one, checks it against the manifest, records the
+  result in the live app, and tears it down. `./transcribe snapshots` lists
+  the nights; `./transcribe restore <id>` puts one back on the same or a
+  fresh server, after saying what is lost and waiting for the word RESTORE,
+  and ends with the after-restore step: everybody signed out, every
+  workspace discarded, in-flight case jobs failed as `restored` with a
+  Retry, the outage recorded as an Off spell, the audit chain checked, and
+  the report written as "Restore completed". The Status page gains the
+  Backup line (red when off, failed or 26 hours stale; amber while the first
+  copy is to come or a drill is late), the Installation page its rows, the
+  audit log the rows Backup ran, Backup failed, Backup overdue, Restore drill
+  ran, Restore drill overdue and Restore completed. `./transcribe install`
+  asks for the target and the Operator address, makes the key and the
+  password when there are none, records the store's host key, makes the
+  repository and writes the timers; `./transcribe check` gains eight tests
+  against the store. The admin guide gains the Backups chapter, the store's
+  side for a Synology-class device, and the restore runbook; the install
+  guide its step and keys. Operator mail waits for the Email chapter; the
+  Status page and the audit log say everything meanwhile.
+
 ## v1.18.0, 2026-09-05
 
 ```

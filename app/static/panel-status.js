@@ -146,6 +146,17 @@
       }
     }
 
+    // The Backup line: red when off, failed or overdue; amber while the
+    // first Snapshot is still to come or a drill is late; plain otherwise.
+    var backup = document.getElementById("backup");
+    if (backup && state.backup) {
+      backup.textContent = "Backup: " + state.backup.says;
+      backup.className = state.backup.colour === "red" ? "notice danger"
+        : state.backup.colour === "amber" ? "notice warn" : "notice";
+      var drillLine = document.getElementById("backup-drill");
+      drillLine.textContent = state.backup.drill ? "Restore drill: " + state.backup.drill : "";
+    }
+
     facts("versions", [
       ["Release", state.versions.release],
       ["Database migration", state.versions.migration],

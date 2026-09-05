@@ -14,6 +14,13 @@
 #                             start or stop the Local engine, a small model on this server
 #   ./transcribe folders      make the app data folders, owned by the app account
 #   ./transcribe backup-db    a dump of the database into the app data folder
+#   ./transcribe backup       the nightly job: dump, manifest, Snapshot to the store
+#   ./transcribe snapshots    the Snapshots in the repository, with their ids
+#   ./transcribe restore ID   put one Snapshot back (ID or 'latest'); asks first
+#   ./transcribe restore-drill
+#                             prove the newest Snapshot restores, in a throwaway copy
+#   ./transcribe install-backup
+#                             the backup questions, keys, repository and timers again
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
 #   ./transcribe rollback TAG go back to a release, restoring the dump if need be
 #   ./transcribe logs [name]  follow the logs of one service, or of all of them
@@ -423,6 +430,8 @@ print(', '.join(served) or 'nothing')
   fi
 
   echo
+  check_the_backup
+
   if [ "$FAILURES" -eq 0 ]; then
     green "Everything checked passed."
   else
@@ -476,6 +485,7 @@ cmd_install() {
   cmd_directory
   ask_the_hugging_face_token
   cmd_engine
+  ask_the_backup
   make_the_data_folders
 
   echo
@@ -492,6 +502,10 @@ cmd_install() {
   echo "  4. docker compose up -d"
   echo "  5. docker compose run --rm app create-local-admin"
   echo "  6. ./transcribe check"
+  if backup_on; then
+    echo "  7. ./transcribe backup            the first Snapshot"
+    echo "  8. ./transcribe restore-drill     the first proof that it restores"
+  fi
 }
 
 prerequisites() {
@@ -1053,6 +1067,613 @@ cmd_backup_db() {
   green "Done: $(sudo du -h "$folder/$name.dump" | cut -f1)"
 }
 
+# Backup and restore (Phase 2, chapter 9) -----------------------------------------
+#
+# Nightly, a host timer runs `./transcribe backup`: one consistent dump of the
+# database, the manifest, and then restic carries the dump, cases/, and the
+# configuration into an encrypted, deduplicated repository over SFTP on the
+# office's backup store. restic runs as the Compose service `backup` behind
+# its own profile; the repository password and the store account's key are
+# its secrets and no other service's, and the app never sees either: the two
+# are checked here, on the host, before anything runs. `restore <snapshot>`
+# brings the whole app back to one night; `restore-drill` proves, monthly and
+# by itself, that the newest Snapshot restores, into a throwaway project that
+# is torn down afterwards.
+
+BACKUP_IMAGE_LINE='image: restic/restic:'
+
+backup_target() { env_value BACKUP_TARGET; }
+backup_on() { [ -n "$(backup_target)" ]; }
+backup_user_host() {
+  # sftp:account@store:/folder -> account@store
+  local target="$1"
+  target="${target#sftp:}"
+  printf '%s' "${target%%:*}"
+}
+backup_folder_path() {
+  local target="$1"
+  target="${target#sftp:}"
+  printf '%s' "${target#*:}"
+}
+backup_secret_file() { printf '%s/%s' "$HERE" "${1#./}"; }
+
+# The ssh restic uses: the account's key and the store's recorded host key,
+# nothing else, and no prompt ever.
+backup_ssh_options() {
+  printf '%s' "-i /run/secrets/backup_ssh_key -o UserKnownHostsFile=/run/secrets/backup_known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20"
+}
+
+# restic with the nightly mounts: cases/ and the configuration read-only,
+# backup/ read-write. Arguments are restic's own.
+restic_ro() {
+  local user_host
+  user_host="$(backup_user_host "$(backup_target)")"
+  compose --profile backup run --rm -T backup \
+    -o "sftp.command=ssh $(backup_ssh_options) $user_host -s sftp" "$@"
+}
+
+# restic with the store's data written into place: for a restore. Run through
+# docker directly so cases/ and a target folder can be mounted read-write;
+# the image reference is the one compose.yaml pins, read from it.
+restic_rw() {
+  local target_dir="$1"
+  shift
+  local image user_host
+  image="$(grep -o 'restic/restic:[^ ]*' "$HERE/compose.yaml" | head -1)"
+  user_host="$(backup_user_host "$(backup_target)")"
+  docker run --rm \
+    --user "$(env_value APP_UID):$(env_value APP_GID)" \
+    -e RESTIC_REPOSITORY="$(backup_target)" \
+    -e RESTIC_PASSWORD_FILE=/run/secrets/backup_password \
+    -e RESTIC_CACHE_DIR=/cache -e HOME=/tmp \
+    -v "$(backup_secret_file "$(env_value BACKUP_KEY_FILE)"):/run/secrets/backup_password:ro" \
+    -v "$(backup_secret_file "$(env_value BACKUP_SSH_KEY_FILE)"):/run/secrets/backup_ssh_key:ro" \
+    -v "$(backup_secret_file "$(env_value BACKUP_KNOWN_HOSTS_FILE)"):/run/secrets/backup_known_hosts:ro" \
+    -v "$(env_value APP_DATA_DIR)/backup/.restic-cache:/cache" \
+    -v "$target_dir:/restore" \
+    --network transcribe \
+    "$image" \
+    -o "sftp.command=ssh $(backup_ssh_options) $user_host -s sftp" "$@"
+}
+
+app_command() {
+  # One of the app's management commands, inside the running app container.
+  compose exec -T app python manage.py "$@" </dev/null
+}
+
+record_backup_failure() {
+  # step, reason
+  red "Backup failed at $1 ($2)."
+  app_command record_backup failed --step "$1" --reason "$2" 2>/dev/null | grep -v procrastinate || true
+  exit 1
+}
+
+cmd_backup() {
+  need_env
+  local started step folder data today dump
+  started="$(date +%s)"
+  data="$(env_value APP_DATA_DIR)"
+  folder="$data/backup"
+  today="$(date +%Y-%m-%d)"
+  dump="nightly-$today.dump"
+
+  # 1. Preflight: on the host, the target and the two secrets the app never
+  # sees; in the app, the room on the App data folder.
+  step=preflight
+  if ! backup_on; then
+    amber "BACKUP_TARGET is empty, so backups are off. Nothing was done."
+    exit 0
+  fi
+  for key in BACKUP_SSH_KEY_FILE BACKUP_KEY_FILE BACKUP_KNOWN_HOSTS_FILE; do
+    if ! secret_present "$(backup_secret_file "$(env_value "$key")")"; then
+      record_backup_failure "$step" "target_unreachable"
+    fi
+  done
+  local said
+  said="$(app_command backup_preflight 2>/dev/null | grep -v procrastinate | tail -1)" || true
+  if [ "$said" != "ok" ]; then
+    record_backup_failure "$step" "${said:-disk_full}"
+  fi
+
+  # 2. The dump, the same as backup-db's, named for the night.
+  step=dump
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder/.restic-cache" 2>/dev/null || true
+  if ! compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom >"/tmp/$dump"; then
+    rm -f "/tmp/$dump"
+    record_backup_failure "$step" "dump_failed"
+  fi
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "/tmp/$dump" "$folder/$dump"
+  rm -f "/tmp/$dump"
+  local dump_bytes
+  dump_bytes="$(sudo stat -c %s "$folder/$dump")"
+
+  # 3. The manifest, written by the app so the drill checks with the same code.
+  step=manifest
+  if ! app_command write_manifest 2>/dev/null | grep -q "manifest written"; then
+    record_backup_failure "$step" "manifest_failed"
+  fi
+
+  # 4. The Snapshot: the newest dump, the manifest, cases/, and the configuration.
+  step=snapshot
+  if ! restic_ro cat config >/dev/null 2>&1; then
+    record_backup_failure "$step" "target_unreachable"
+  fi
+  if ! restic_ro backup --host transcribe --tag nightly \
+      "/backup/backup/$dump" /backup/backup/manifest.json /backup/cases /backup/config; then
+    record_backup_failure "$step" "snapshot_failed"
+  fi
+
+  # 5. The keep rule. prune and check are the weekly slot's.
+  step=forget
+  if ! restic_ro forget --tag nightly --keep-daily "$(env_value BACKUP_KEEP_DAYS)" --quiet; then
+    record_backup_failure "$step" "prune_failed"
+  fi
+
+  # 6. Local dumps: the last BACKUP_LOCAL_DUMPS nightly dumps; pre-upgrade
+  # dumps and their configuration copies once they are 7 days past a newer
+  # release than their own.
+  step=local-dumps
+  local keep current
+  keep="$(env_value BACKUP_LOCAL_DUMPS)"
+  sudo ls -1 "$folder" | grep '^nightly-.*\.dump$' | sort | head -n -"${keep:-7}" | while read -r old; do
+    sudo rm -f "$folder/$old"
+  done
+  current="$(env_value RELEASE_TAG)"
+  sudo find "$folder" -maxdepth 1 \( -name 'pre-*.dump' -o -name 'config-pre-*.tar' \) -mtime +7 2>/dev/null | while read -r old; do
+    case "$old" in *"$current"*) ;; *) sudo rm -f "$old" ;; esac
+  done
+
+  # 7. Report to the app: the Status line and the audit row.
+  step=record
+  local held size
+  held="$(restic_ro snapshots --tag nightly --json 2>/dev/null | tr -d '\n' | grep -o '"short_id"' | wc -l | tr -d ' ')"
+  size="$(restic_ro stats --mode raw-data --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)"
+  app_command record_backup ok --duration "$(( $(date +%s) - started ))" \
+    --dump-bytes "$dump_bytes" --snapshot-bytes "${size:-0}" --held "${held:-0}" 2>/dev/null | grep -v procrastinate || true
+  green "Backup done: $dump, ${held:-?} Snapshots held, $(( ( $(date +%s) - started ) ))s."
+}
+
+cmd_backup_weekly() {
+  need_env
+  backup_on || { amber "BACKUP_TARGET is empty, so backups are off."; exit 0; }
+  echo "Pruning the repository..."
+  if ! restic_ro prune --quiet; then record_backup_failure "prune" "prune_failed"; fi
+  echo "Checking a tenth of the data..."
+  if ! restic_ro check --read-data-subset=10% --quiet; then record_backup_failure "check" "check_failed"; fi
+  green "Weekly prune and check done."
+}
+
+cmd_snapshots() {
+  need_env
+  backup_on || { amber "BACKUP_TARGET is empty, so backups are off."; exit 0; }
+  echo "Snapshots in $(backup_target):"
+  restic_ro snapshots --tag nightly
+  echo
+  echo "Restore one with:  ./transcribe restore <id>   (or 'latest')"
+}
+
+cmd_restore() {
+  need_env
+  local snapshot="${1:-}"
+  if [ -z "$snapshot" ]; then
+    red "Say which Snapshot: ./transcribe restore latest, or an id from ./transcribe snapshots."
+    exit 1
+  fi
+  backup_on || { red "BACKUP_TARGET is empty; there is nothing to restore from."; exit 1; }
+  for key in BACKUP_SSH_KEY_FILE BACKUP_KEY_FILE; do
+    if ! secret_present "$(backup_secret_file "$(env_value "$key")")"; then
+      red "$(env_value "$key") is empty. On a fresh box it comes from the office's password manager."
+      exit 1
+    fi
+  done
+  local data folder
+  data="$(env_value APP_DATA_DIR)"
+  folder="$data/backup"
+
+  # The manifest first: the checkout must be at the release the Snapshot names.
+  echo "Reading the Snapshot's manifest..."
+  local manifest release snap_time snap_id
+  manifest="$(restic_ro dump "$snapshot" /backup/backup/manifest.json 2>/dev/null)" || {
+    red "That Snapshot could not be read. ./transcribe snapshots lists them."
+    exit 1
+  }
+  release="$(printf '%s' "$manifest" | grep -o '"release": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  snap_time="$(printf '%s' "$manifest" | grep -o '"written_at": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  snap_id="$(restic_ro snapshots "$snapshot" --json 2>/dev/null | grep -o '"short_id": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  local here_tag
+  here_tag="$(git -C "$HERE" describe --tags --exact-match 2>/dev/null || echo "not at a tag")"
+  if [ -n "$release" ] && [ "$release" != "$here_tag" ]; then
+    red "This checkout is at $here_tag; the Snapshot was taken at $release."
+    echo "  Check out that release first:  git -C $HERE checkout $release"
+    echo "  then run this restore again, and upgrade afterwards."
+    exit 1
+  fi
+  local running
+  running="$(compose exec -T postgres psql -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" -tAc "select count(*) from core_job where state in ('queued','running')" 2>/dev/null | tr -d ' ')"
+  if [ -n "$running" ] && [ "$running" != "0" ]; then
+    red "$running job(s) are queued or running. Let them finish or cancel them on the Queue page first."
+    exit 1
+  fi
+
+  cat <<WORDS
+
+A restore takes the app back to $(printf '%s' "$snap_time" | cut -c1-16 | tr T ' ') (Snapshot ${snap_id:-$snapshot},
+release $release), and everything done after that is gone: every recording
+uploaded, every correction, every case chat since then. Workspaces are
+discarded and everybody is signed out.
+
+WORDS
+  printf 'Type RESTORE to go on, anything else to stop: '
+  read -r answer
+  [ "$answer" = "RESTORE" ] || { echo "Nothing was changed."; exit 0; }
+
+  echo "Stopping the stack..."
+  compose down --remove-orphans
+
+  # The configuration, over the fresh files, keeping the two backup secrets.
+  echo "Putting back the configuration..."
+  local work
+  work="$(mktemp -d /tmp/transcribe-restore.XXXXXX)"
+  chmod 755 "$work"
+  sudo chown "$APP_USER:$APP_USER" "$work"
+  restic_rw "$work" restore "$snapshot" --target /restore --include /backup/config --quiet
+  local got="$work/backup/config"
+  [ -f "$got/env" ] && sudo install -m 0600 "$got/env" "$ENV_FILE"
+  for name in $(sudo ls "$got/secrets" 2>/dev/null); do
+    case "$name" in backup_password|backup_ssh_key) ;; *) sudo install -m 0400 "$got/secrets/$name" "$SECRETS/$name" ;; esac
+  done
+  [ -d "$got/tls" ] && sudo cp -a "$got/tls/." "$HERE/tls/" 2>/dev/null
+  [ -d "$got/ca" ] && sudo cp -a "$got/ca/." "$HERE/ca/" 2>/dev/null
+  [ -f "$got/whisperx-env" ] && sudo install -m 0600 "$got/whisperx-env" "$HERE/whisperx-service/.env"
+  [ -d "$got/whisperx-secrets" ] && sudo cp -a "$got/whisperx-secrets/." "$HERE/whisperx-service/secrets/" 2>/dev/null
+  own_the_secrets
+
+  # cases/ in full, and the dump into backup/.
+  echo "Putting back the cases and the dump (this is the long part)..."
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" "$folder/.restic-cache" "$data/cases"
+  restic_rw "$data" restore "$snapshot" --target /restore --include /backup/cases --include /backup/backup --quiet
+  # restic keeps the path as it was inside the container: /restore/backup/cases -> data/backup/cases.
+  if [ -d "$data/backup/cases" ]; then
+    sudo rsync -a --delete "$data/backup/cases/" "$data/cases/" 2>/dev/null || sudo cp -a "$data/backup/cases/." "$data/cases/"
+    sudo rm -rf "$data/backup/cases"
+  fi
+  if [ -d "$data/backup/backup" ]; then
+    sudo cp -a "$data/backup/backup/." "$folder/"
+    sudo rm -rf "$data/backup/backup"
+  fi
+  local dump
+  dump="$(printf '%s' "$manifest" | grep -o '"dump": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  [ -n "$dump" ] && sudo test -f "$folder/$dump" || { red "The Snapshot's dump ($dump) is not there after the restore."; exit 1; }
+
+  # The database: empty, then the dump.
+  echo "Loading the database..."
+  compose up -d postgres
+  local tries=0
+  until compose exec -T postgres pg_isready -U "$(env_value POSTGRES_USER)" -d postgres >/dev/null 2>&1; do
+    tries=$((tries + 1)); [ "$tries" -gt 60 ] && { red "Postgres did not come up."; exit 1; }; sleep 2
+  done
+  local db user
+  db="$(env_value POSTGRES_DB)"; user="$(env_value POSTGRES_USER)"
+  compose exec -T postgres psql -U "$user" -d postgres -v ON_ERROR_STOP=1 \
+    -c "DROP DATABASE IF EXISTS \"$db\";" -c "CREATE DATABASE \"$db\" OWNER \"$user\";"
+  sudo cat "$folder/$dump" | compose exec -T postgres pg_restore -U "$user" -d "$db" --no-owner --no-privileges
+  echo "Starting the stack..."
+  compose up -d
+  tries=0
+  until compose exec -T app python -c "import sys; sys.exit(0)" >/dev/null 2>&1; do
+    tries=$((tries + 1)); [ "$tries" -gt 60 ] && { red "The app did not come up."; exit 1; }; sleep 2
+  done
+
+  # The after-restore step, and the report.
+  echo
+  app_command after_restore "${snap_id:-$snapshot}" "$snap_time" 2>/dev/null | grep -v procrastinate
+  echo
+  green "Restored to Snapshot ${snap_id:-$snapshot} ($snap_time)."
+  echo "  Now:  docker compose run --rm whisperx pull    (the model cache is not backed up)"
+  echo "  then: ./transcribe check"
+  sudo rm -rf "$work"
+}
+
+cmd_restore_drill() {
+  need_env
+  backup_on || { amber "BACKUP_TARGET is empty, so there is nothing to drill."; exit 0; }
+  local started data drill step
+  started="$(date +%s)"
+  data="$(env_value APP_DATA_DIR)"
+  drill="$(env_value DRILL_DIR)"
+  [ -n "$drill" ] || drill="${data%/}-drill"
+
+  drill_failed() {
+    red "Restore drill failed at $1."
+    app_command record_drill failed --step "$1" --duration "$(( $(date +%s) - started ))" 2>/dev/null | grep -v procrastinate || true
+    drill_teardown
+    exit 1
+  }
+  drill_teardown() {
+    DRILL_DIR="$drill" docker compose -p transcribe-drill -f "$HERE/compose.yaml" -f "$HERE/compose.drill.yaml" down -v --remove-orphans >/dev/null 2>&1 || true
+    sudo rm -rf "$drill"/* 2>/dev/null || true
+  }
+
+  # 1. Room: the Snapshot's size plus the floor.
+  step="room"
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$drill" "$drill/data" "$drill/data/backup" "$drill/data/cases" "$drill/postgres"
+  local need free floor_gb
+  need="$(restic_ro stats latest --mode restore-size --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)"
+  free="$(df --output=avail -B1 "$data" | tail -1 | tr -d ' ')"
+  floor_gb="$(app_command shell -c "from core import settings_store; print(settings_store.get('minimum_free_disk_gb'))" 2>/dev/null | grep -v procrastinate | tail -1)"
+  if [ -n "$need" ] && [ "$free" -lt $(( need + ${floor_gb:-20} * 1024 * 1024 * 1024 )) ]; then
+    drill_failed "$step: $(( free / 1073741824 )) GB free, the Snapshot needs $(( need / 1073741824 )) GB plus the ${floor_gb:-20} GB floor"
+  fi
+
+  # 2. The newest Snapshot, into the drill folder.
+  step="restore into the drill folder"
+  restic_rw "$drill/data" restore latest --target /restore --include /backup/backup --include /backup/cases --quiet || drill_failed "$step"
+  sudo mv "$drill/data/backup/cases" "$drill/data/cases-restored" 2>/dev/null && sudo rm -rf "$drill/data/cases" && sudo mv "$drill/data/cases-restored" "$drill/data/cases"
+  if [ -d "$drill/data/backup/backup" ]; then
+    sudo cp -a "$drill/data/backup/backup/." "$drill/data/backup/" && sudo rm -rf "$drill/data/backup/backup"
+  fi
+  sudo chown -R "$APP_USER:$APP_USER" "$drill/data"
+  local dump
+  dump="$(sudo ls -1 "$drill/data/backup" | grep '^nightly-.*\.dump$' | sort | tail -1)"
+  [ -n "$dump" ] || drill_failed "$step: no dump in the Snapshot"
+
+  # 3. The throwaway project: Postgres and the app only.
+  step="the drill project"
+  local dc="docker compose -p transcribe-drill -f $HERE/compose.yaml -f $HERE/compose.drill.yaml"
+  export DRILL_DIR="$drill"
+  $dc up -d postgres >/dev/null 2>&1 || drill_failed "$step"
+  local tries=0
+  until $dc exec -T postgres pg_isready -U "$(env_value POSTGRES_USER)" -d postgres >/dev/null 2>&1; do
+    tries=$((tries + 1)); [ "$tries" -gt 60 ] && drill_failed "$step: Postgres did not come up"; sleep 2
+  done
+
+  # 4. Load, migrate, check.
+  step="load the dump"
+  sudo cat "$drill/data/backup/$dump" | $dc exec -T postgres pg_restore -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --no-owner --no-privileges || drill_failed "$step"
+  step="migrate"
+  $dc run --rm -T app python manage.py migrate --skip-checks >/dev/null 2>&1 || drill_failed "$step"
+  step="check against the manifest"
+  local said
+  if ! said="$($dc run --rm -T app python manage.py drill_check /srv/data/backup/manifest.json /srv/data/cases 2>/dev/null | grep -v procrastinate)"; then
+    drill_failed "$step: $(printf '%s' "$said" | head -3 | tr '\n' ';')"
+  fi
+
+  # 5 and 6. Report to the live app, tear down.
+  drill_teardown
+  app_command record_drill ok --duration "$(( $(date +%s) - started ))" 2>/dev/null | grep -v procrastinate || true
+  green "Restore drill passed in $(( $(date +%s) - started ))s: the newest Snapshot restores and matches its manifest."
+}
+
+# The install's backup steps, and the timers -------------------------------------------
+
+ask_the_backup() {
+  cat <<'WORDS'
+
+Backup
+------
+Every night the app can carry a copy of itself, encrypted, to a folder of its
+own on the office's backup store over SFTP, as a dedicated account. The admin
+guide's Backups chapter has the store's side: the account, the folder, the key.
+Leave the target empty to run without backups; the Status page will say so.
+
+WORDS
+  local target
+  target="$(ask "The backup target, as sftp:<account>@<store>:/<folder>, or empty for none" "$(env_value BACKUP_TARGET)")"
+  set_env BACKUP_TARGET "$target"
+  local operator
+  operator="$(ask "The Operator address, told when a backup or drill fails (empty for none)" "$(env_value OPERATOR_EMAIL)")"
+  set_env OPERATOR_EMAIL "$operator"
+  for pair in "BACKUP_SSH_KEY_FILE ./secrets/backup_ssh_key" "BACKUP_KEY_FILE ./secrets/backup_password" "BACKUP_KNOWN_HOSTS_FILE ./secrets/backup_known_hosts"; do
+    # shellcheck disable=SC2086
+    set -- $pair
+    [ -n "$(env_value "$1")" ] || set_env "$1" "$2"
+  done
+  [ -n "$(env_value BACKUP_KEEP_DAYS)" ] || set_env BACKUP_KEEP_DAYS 30
+  [ -n "$(env_value BACKUP_LOCAL_DUMPS)" ] || set_env BACKUP_LOCAL_DUMPS 7
+  [ -n "$(env_value BACKUP_TIME)" ] || set_env BACKUP_TIME "02:00"
+  [ -n "$(env_value DRILL_TIME)" ] || set_env DRILL_TIME "04:00"
+
+  # The three files always exist, empty when backups are off, because a
+  # Compose secret whose file is missing stops the whole stack.
+  for key in BACKUP_SSH_KEY_FILE BACKUP_KEY_FILE BACKUP_KNOWN_HOSTS_FILE; do
+    local file
+    file="$(backup_secret_file "$(env_value "$key")")"
+    [ -e "$file" ] || write_secret "$file" ""
+  done
+  own_the_secrets
+  [ -n "$target" ] || return 0
+
+  # The key: used when it is there (a fresh box being restored brought it from
+  # the password manager), made only when it is not.
+  local key_file pub
+  key_file="$(backup_secret_file "$(env_value BACKUP_SSH_KEY_FILE)")"
+  if ! secret_present "$key_file"; then
+    local tmp
+    tmp="$(mktemp -d)"
+    ssh-keygen -q -t ed25519 -N "" -C "gideon-transcribe-backup" -f "$tmp/key"
+    write_secret "$key_file" "$(cat "$tmp/key")"
+    pub="$(cat "$tmp/key.pub")"
+    rm -rf "$tmp"
+    own_the_secrets
+    echo
+    green "A new key was made for the backup account. Its public half, to paste into the store:"
+    echo
+    echo "  $pub"
+    echo
+    echo "  And keep the private half (secrets/backup_ssh_key) in the office's password"
+    echo "  manager, in the account's record, before the first Snapshot."
+  else
+    echo "Using the backup key already at secrets/backup_ssh_key."
+  fi
+
+  # The repository password: generated once; a fresh box gets it from the
+  # password manager before this runs, and then it is kept.
+  local pass_file
+  pass_file="$(backup_secret_file "$(env_value BACKUP_KEY_FILE)")"
+  if ! secret_present "$pass_file"; then
+    write_secret "$pass_file" "$(openssl rand -base64 36 | tr -d '\n')"
+    own_the_secrets
+    amber "A repository password was generated into secrets/backup_password."
+    echo "  Copy it into the office's password manager now. Without it every Snapshot is unreadable."
+  else
+    echo "Using the repository password already at secrets/backup_password."
+  fi
+
+  # The store's host key, recorded now and compared by the installer.
+  local host known
+  host="$(backup_user_host "$target")"; host="${host#*@}"
+  known="$(backup_secret_file "$(env_value BACKUP_KNOWN_HOSTS_FILE)")"
+  if ! secret_present "$known"; then
+    local scanned
+    scanned="$(ssh-keyscan -T 10 -p 22 "$host" 2>/dev/null)"
+    if [ -z "$scanned" ]; then
+      amber "The store at $host did not answer on port 22. The host key was not recorded;"
+      echo "  run './transcribe install-backup' when it is reachable."
+      return 0
+    fi
+    write_secret "$known" "$scanned"
+    own_the_secrets
+    echo "The store's host key was recorded. Compare this fingerprint with the one the store's administrator knows:"
+    printf '%s\n' "$scanned" | ssh-keygen -lf - 2>/dev/null | sed 's/^/  /'
+  fi
+
+  # The repository: made when there is none, used when there is.
+  echo "Reaching the repository..."
+  if restic_ro cat config >/dev/null 2>&1; then
+    green "The repository at $target exists already and opens with this password."
+  elif restic_ro init --quiet 2>/dev/null; then
+    green "The repository at $target was initialised."
+  else
+    amber "The repository could not be reached or made. Check the store's account, folder"
+    echo "  and key with './transcribe check' once the public key is in place."
+  fi
+  install_timers
+}
+
+cmd_install_backup() {
+  need_env
+  ask_the_backup
+  echo
+  echo "Then, with the stack up:  ./transcribe backup   and   ./transcribe restore-drill"
+}
+
+install_timers() {
+  # The three timers and their services, from the repository's unit files
+  # with the install home and the times filled in. Nothing else is put on the
+  # host: the tool is a container.
+  local backup_time drill_time drill_plus
+  backup_time="$(env_value BACKUP_TIME)"; backup_time="${backup_time:-02:00}"
+  drill_time="$(env_value DRILL_TIME)"; drill_time="${drill_time:-04:00}"
+  drill_plus="$(date -d "today $drill_time 30 minutes" +%H:%M 2>/dev/null || echo "04:30")"
+  local unit
+  for unit in transcribe-backup transcribe-backup-weekly transcribe-backup-drill; do
+    for kind in service timer; do
+      sed -e "s|__INSTALL_HOME__|$HERE|g" -e "s|__BACKUP_TIME__|$backup_time|g" \
+          -e "s|__DRILL_TIME__|$drill_time|g" -e "s|__DRILL_PLUS_30__|$drill_plus|g" \
+          "$HERE/systemd/$unit.$kind" | sudo tee "/etc/systemd/system/$unit.$kind" >/dev/null
+    done
+  done
+  sudo systemctl daemon-reload
+  if backup_on; then
+    sudo systemctl enable --now transcribe-backup.timer transcribe-backup-weekly.timer transcribe-backup-drill.timer >/dev/null 2>&1
+    green "Timers on: nightly backup at $backup_time, weekly check Sundays at $drill_time, drill the first Sunday at $drill_plus."
+  else
+    sudo systemctl disable --now transcribe-backup.timer transcribe-backup-weekly.timer transcribe-backup-drill.timer >/dev/null 2>&1 || true
+    echo "Timers written and left off, since BACKUP_TARGET is empty."
+  fi
+}
+
+cmd_install_timers() {
+  need_env
+  install_timers
+}
+
+# The check's backup items ----------------------------------------------------------------
+
+check_the_backup() {
+  echo
+  echo "The Backup target"
+  if ! backup_on; then
+    amber "  note  BACKUP_TARGET is empty, so backups are off"
+    return 0
+  fi
+  local target user_host host folder key known
+  target="$(backup_target)"
+  user_host="$(backup_user_host "$target")"; host="${user_host#*@}"
+  folder="$(backup_folder_path "$target")"
+  key="$(backup_secret_file "$(env_value BACKUP_SSH_KEY_FILE)")"
+  known="$(backup_secret_file "$(env_value BACKUP_KNOWN_HOSTS_FILE)")"
+
+  # 1. The key and the host key are present.
+  if secret_present "$key"; then pass "the backup key is present"; else fail "secrets/backup_ssh_key is empty: place it from the password manager, or run ./transcribe install-backup"; return 0; fi
+  if secret_present "$known"; then pass "the store's host key is recorded"; else fail "secrets/backup_known_hosts is empty: run ./transcribe install-backup"; return 0; fi
+  if secret_present "$(backup_secret_file "$(env_value BACKUP_KEY_FILE)")"; then pass "the repository password is present"; else fail "secrets/backup_password is empty: place it from the password manager"; fi
+
+  # 5. The path form: a volume path betrays an administrator account.
+  case "$folder" in
+    /volume*|/volumeUSB*) fail "the folder is under a volume path ($folder): the account is an administrator, and must be an ordinary account" ;;
+    /*) pass "the folder is at the root of the account's view ($folder)" ;;
+    *) fail "the folder ($folder) does not start with /" ;;
+  esac
+
+  # 8. The host key the store presents matches the recorded one.
+  local scanned
+  scanned="$(ssh-keyscan -T 10 -p 22 "$host" 2>/dev/null | sort)"
+  if [ -z "$scanned" ]; then
+    fail "the store at $host did not answer on port 22"
+    return 0
+  fi
+  if [ "$(sudo sort "$known" 2>/dev/null)" = "$scanned" ]; then
+    pass "the store presents the host key that was recorded"
+  else
+    fail "the store's host key differs from the recorded one: if the store was rebuilt on purpose, empty secrets/backup_known_hosts and run ./transcribe install-backup"
+  fi
+
+  # The rest run inside the restic container, which has ssh and sftp and the
+  # key at the right mode, as a shell script; the entrypoint is overridden.
+  local sshopts="-i /run/secrets/backup_ssh_key -o UserKnownHostsFile=/run/secrets/backup_known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20"
+  local script
+  script=$(cat <<EOS
+set -u
+u="$user_host"; f="$folder"; o="$sshopts"
+# 2. What the store offers.
+offered=\$(ssh -o PreferredAuthentications=none -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/backup_known_hosts "\$u" 2>&1 | grep -o 'publickey[a-z,]*' | head -1)
+echo "OFFERED:\${offered:-unknown}"
+# 3. Key-only sign-in, and 4, the root listing.
+root=\$(printf 'ls\n' | sftp -q -b - \$o "\$u" 2>&1)
+rc=\$?
+echo "LOGIN:\$rc"
+echo "ROOT:\$(printf '%s' "\$root" | grep -v '^sftp>' | tr '\n' ' ')"
+# 6. Write and remove, and the recycle bin.
+probe="transcribe-check-\$\$.txt"
+echo probe > /tmp/\$probe
+printf 'cd %s\nput /tmp/%s\nls\nrm %s\nls\n' "\$f" "\$probe" "\$probe" | sftp -q -b - \$o "\$u" >/tmp/sftp-out 2>&1
+echo "WRITE:\$?"
+echo "AFTER:\$(grep -v '^sftp>' /tmp/sftp-out | tr '\n' ' ')"
+# 7. No shell.
+ssh \$o "\$u" true >/dev/null 2>&1 && echo "SHELL:yes" || echo "SHELL:no"
+EOS
+)
+  local out
+  out="$(compose --profile backup run --rm -T --entrypoint sh backup -c "$script" 2>/dev/null)"
+  local offered login root write after shell
+  offered="$(printf '%s\n' "$out" | sed -n 's/^OFFERED://p')"
+  login="$(printf '%s\n' "$out" | sed -n 's/^LOGIN://p')"
+  root="$(printf '%s\n' "$out" | sed -n 's/^ROOT://p')"
+  write="$(printf '%s\n' "$out" | sed -n 's/^WRITE://p')"
+  after="$(printf '%s\n' "$out" | sed -n 's/^AFTER://p')"
+  shell="$(printf '%s\n' "$out" | sed -n 's/^SHELL://p')"
+  [ -n "$offered" ] && echo "  note  the store offers: $offered"
+  if [ "$login" = "0" ]; then pass "key-only sign-in works"; else fail "key-only sign-in was refused: the public key is not in the account's authorized_keys, or the file is not the account's own (see the admin guide)"; return 0; fi
+  local extra
+  extra="$(printf '%s' "$root" | tr ' ' '\n' | grep -v "^$" | grep -v "^home$" | grep -v "^${folder#/}$" | tr '\n' ' ')"
+  if [ -z "$extra" ]; then pass "the account sees only ${folder#/} and home at its root"; else fail "the account also sees at its root: $extra (give it an explicit No access on those shared folders)"; fi
+  if [ "$write" = "0" ]; then pass "a file was written to and removed from the folder"; else fail "the folder could not be written to or cleaned up"; fi
+  if printf '%s' "$after" | grep -q '#recycle'; then fail "the folder has a #recycle entry: its recycle bin is on and would hoard every pruned data file"; else pass "no recycle bin in the folder"; fi
+  if [ "$shell" = "no" ]; then pass "a shell is refused; SFTP goes through"; else fail "the account gets a shell: turn every application but SFTP off for it"; fi
+}
+
 # upgrade ----------------------------------------------------------------------
 
 # The digest record ------------------------------------------------------------
@@ -1316,7 +1937,7 @@ cmd_restore_dump() {
 # ------------------------------------------------------------------------------
 
 usage() {
-  sed -n '3,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '3,31p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in
@@ -1327,6 +1948,13 @@ directory) shift && cmd_directory "$@" ;;
 engine) shift && cmd_engine "$@" ;;
 folders) shift && cmd_folders "$@" ;;
 backup-db) shift && cmd_backup_db "$@" ;;
+backup) shift && cmd_backup "$@" ;;
+backup-weekly) shift && cmd_backup_weekly "$@" ;;
+snapshots) shift && cmd_snapshots "$@" ;;
+restore) shift && cmd_restore "$@" ;;
+restore-drill) shift && cmd_restore_drill "$@" ;;
+install-backup) shift && cmd_install_backup "$@" ;;
+install-timers) shift && cmd_install_timers "$@" ;;
 upgrade) shift && cmd_upgrade "$@" ;;
 rollback) shift && cmd_rollback "$@" ;;
 restore-dump) shift && cmd_restore_dump "$@" ;;
