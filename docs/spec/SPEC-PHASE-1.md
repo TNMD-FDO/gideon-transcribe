@@ -321,14 +321,14 @@ An office gives the AI assistant an engine in one of two ways. The AI assistant 
 
 **A Shared engine.** Two `.env` lines: `COMPOSE_FILE=compose.yaml:compose.shared-engine.yaml` and `LLM_NETWORK=<engine network>`. The second file adds that external network to `llm-worker` and nothing else. The engine's bearer token is copied into `secrets/llm_api_token`. The engine address and model name are then changed once in the panel. The Shared engine listens only on its own Docker network behind that token, which is why `llm-worker` joins the network rather than the engine publishing a port.
 
-**The Local engine.** An office without a Shared engine leaves both lines out and turns the Compose profile `llm` on (`COMPOSE_PROFILES=llm`). The profile runs vllm/vllm-openai 0.27.1, pinned, serving `LLM_LOCAL_MODEL` (default `Qwen/Qwen3.8-27B-FP8`) on the GPU named by `LLM_LOCAL_GPU_UUID`, with:
+**The Local engine.** An office without a Shared engine leaves both lines out and turns the Compose profile `llm` on (`COMPOSE_PROFILES=llm`). The profile runs vllm/vllm-openai 0.27.1, pinned, serving `LLM_LOCAL_MODEL` (default `Qwen/Qwen3.5-4B`, the small model of `docs/research/local-engine-model.md`) on the GPU named by `LLM_LOCAL_GPU_UUID`, with:
 
 - `--served-model-name local-engine`
 - `--max-model-len 131072`
 - `--reasoning-parser qwen3`
 - `--api-key` from `secrets/llm_api_token`
-- `--gpu-memory-utilization ${LLM_LOCAL_GPU_FRACTION}` (0.55, to share the card with the WhisperX service)
-- `VLLM_USE_DEEP_GEMM=0` (mandatory for FP8 on this GPU generation)
+- `--gpu-memory-utilization ${LLM_LOCAL_GPU_FRACTION}` (0.21, twenty gigabytes of a 96 GB card, to share it with the WhisperX service)
+- `VLLM_USE_DEEP_GEMM=0` (mandatory for FP8 on this GPU generation, harmless for the bf16 default)
 - `HF_HUB_OFFLINE=1` after its own pull; weights under `<App data folder>/models/vllm/`
 - memory limit 64 GB; on the `transcribe` network only; health check `/health`
 
@@ -554,6 +554,7 @@ Deployment topology on the rebuilt server; Relationship to the platform project 
 - From the server-preparation task, to the topology's first-run step 2 and the DNS ticket's "Final home" table: the Install home is created empty because git clones only into an empty folder; the clone at the Release tag is the first thing into it; the certificate, key, and CA root are placed after the clone at first-run step 3, which also deletes the staging folder; the clone goes through the SSH nickname with a read-only deploy key while the repository is private. The directory-objects task's "delete the bind test with the folder" moves with it.
 - From the DNS ticket's second round, to its renewal steps: the `.cer` that certreq returns is already PEM and is copied to the box as is; there is no `certutil -encode` step.
 - From the email notifications ticket, to the topology's `.env` list and egress: the seven mail keys, `secrets/smtp_password`, the relay egress, and the drill override's empty `SMTP_HOST`, all Phase 2.
+- From the maintainer, on the v1.10.0 build, to The Local engine: the default model `Qwen/Qwen3.5-4B` and the memory fraction 0.21, for the reasons the AI assistant chapter's amendment gives; the switch that turns the profile on and off.
 
 
 ## 2. Repository, releases, and distribution
@@ -2860,7 +2861,7 @@ The app talks to one engine at a time through the engine's OpenAI-compatible API
 
 **The Shared engine.** The app was designed against the office's Shared engine: vLLM 0.27.1 serving `Qwen/Qwen3.8-27B-FP8` under the served name `<shared engine model name>`, with the full 262,144-token window, `--reasoning-parser qwen3`, thinking on by default at the engine, prefix caching off, token-gated, and reachable only on the engine network `<engine network>`, a Docker network outside the app's own Compose project that the app's containers join as an external network (the Architecture and deployment chapter). Structured output on it is `extra_body.structured_outputs.json`, which engages after the thinking block when thinking is on. The Shared engine's scheduler treats every client alike, and the app sends no `priority`. Its token is copied into the file that `LLM_API_TOKEN_FILE` names (see Environment keys). Switching the app from the Local engine to the Shared engine is a panel change (Engine address and Model name) plus the copied token in `secrets/llm_api_token`.
 
-**The Local engine.** The repository ships an optional Compose profile `llm`, the Local engine: vLLM 0.27.1 serving Qwen3.8-27B-FP8 as `local-engine` with a 131,072-token window, `--reasoning-parser qwen3`, `VLLM_USE_DEEP_GEMM=0` (mandatory for FP8 on the current GPU generation), the GPU chosen by UUID with a memory fraction so it can share the WhisperX service's GPU. It is off by default. An office turns it on only while it has no Shared engine that answers, and off again once one does. Any engine that stands in for the Shared engine must offer a window of at least 131,072 tokens.
+**The Local engine.** The repository ships an optional Compose profile `llm`, the Local engine: vLLM 0.27.1 serving a small model, `Qwen/Qwen3.5-4B` by default (`docs/research/local-engine-model.md`: the largest of its family that fits in 20 GB with its cache for the whole window, with the 262,144-token native context and Apache-2.0), as `local-engine` with a 131,072-token window, `--reasoning-parser qwen3`, `VLLM_USE_DEEP_GEMM=0`, the GPU chosen by UUID with a memory fraction, 0.21 by default, so it can share the WhisperX service's GPU. It is off by default; `./transcribe engine local on` starts it, writing a token when none is stored and pointing Engine address and Model name at it, and `./transcribe engine local off` stops it. An office turns it on when it has no Shared engine that answers, or wants the assistant without leaning on one, and off again when it does not. Any engine that stands in for the Shared engine must offer a window of at least 131,072 tokens.
 
 **Defaults and the first switch-on.** The panel's provider defaults are the Local engine's: Engine address `http://vllm:8000/v1`, Model name `local-engine`. The AI assistant toggle starts Off, and an Admin turns it On once Test connection succeeds against whichever engine is in use. An installation without any engine leaves the AI assistant Off, and everything else in the app works. The AI assistant behaves the same against either engine.
 
@@ -3187,6 +3188,7 @@ Phase 1 LLM features: Chat, Summary, Speaker suggestions; LLM handler capabiliti
 - From the Case Chat ticket to "Chat": the Case Chat, the Case chat template, and `llm_case_too_large` (under Carried for Phase 2); the line "Chat across a Case is Phase 2 fog" superseded.
 - From the LLM features ticket to the viewer and queue tickets, carried here as rules: "Diarization follows" on the queued page; no LLM step after a Job; `llm-worker` on queue `llm` beside `media-worker` and `worker`.
 - From the build (v1.9.0), the second half of this chapter: Summary, Chat and Speaker suggestions built as fixed, with these decisions on what was left to the build. A time in an answer is a Citation when some Segment starts within the same whole second. The engine's window for the too-long check is the floor any stand-in engine must offer, 131,072 tokens, held in code. The answer format the app adds is one sentence for Summary (each part's heading on its own line followed by a colon, times as [hh:mm:ss]) and one for Chat. `llm_bad_output` reads "The AI assistant gave an answer the app could not read. Try again." The date in a Chat's AI notice is its first answer's. Test connection asks "Reply with the single word: ready". Delete asks "Delete this summary? Export it first if you want to keep it." and the same for a Chat. A Chat's name is its first question's first sixty characters, cut on a word. Templates are edited on the Panel's Templates page, in the Settings group of the rail.
+- From the maintainer, on the v1.10.0 build, to The Local engine: the model is the small Qwen3.5-4B in place of the Shared engine's 27B, chosen against the maintainer's rule that the engine with its cache uses no more than 20 GB of the card it shares with the WhisperX service (`docs/research/local-engine-model.md`); the memory fraction 0.21; the `./transcribe engine local on|off` switch. The 131,072-token window stands, met natively.
 
 ## 11. Exports
 

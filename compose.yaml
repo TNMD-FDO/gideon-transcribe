@@ -384,10 +384,12 @@ services:
     # the panel's Engine address and Model name default to.
     #
     # It shares the WhisperX service's card, so its memory fraction is the
-    # ceiling that keeps the two apart; the service's README says how much
-    # the service needs. VLLM_USE_DEEP_GEMM=0 is mandatory for FP8 on the
-    # current GPU generation. The window is 131,072 tokens, enough for the
-    # longest Recording with room to spare, and half the Shared engine's.
+    # ceiling that keeps the two apart: 0.21 of a 96 GB card is 20 GB, which
+    # holds the default model, Qwen3.5-4B in bf16 (about 8 GB), and its cache
+    # for the whole window (docs/research/local-engine-model.md). The window is
+    # 131,072 tokens, enough for the longest Recording with room to spare, and
+    # half the Shared engine's. VLLM_USE_DEEP_GEMM=0 is harmless for a bf16
+    # model and mandatory should an office put an FP8 one in the slot.
     profiles: ["llm"]
     image: vllm/vllm-openai:v0.27.1@sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967
     restart: unless-stopped
@@ -408,7 +410,7 @@ services:
         exec vllm serve "$@"
       - "local-engine"
     command:
-      - "${LLM_LOCAL_MODEL:-Qwen/Qwen3.8-27B-FP8}"
+      - "${LLM_LOCAL_MODEL:-Qwen/Qwen3.5-4B}"
       - "--served-model-name"
       - "local-engine"
       - "--host"
@@ -420,7 +422,7 @@ services:
       - "--reasoning-parser"
       - "qwen3"
       - "--gpu-memory-utilization"
-      - "${LLM_LOCAL_GPU_FRACTION:-0.55}"
+      - "${LLM_LOCAL_GPU_FRACTION:-0.21}"
     environment:
       VLLM_USE_DEEP_GEMM: "0"
       VLLM_NO_USAGE_STATS: "1"
@@ -446,7 +448,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # Loading a 27B model takes minutes, and the first start also fetches it.
+      # The first start fetches the model (about 8 GB for the default) and a
+      # start after that takes about a minute; fifteen minutes covers both.
       start_period: 900s
     networks:
       - transcribe

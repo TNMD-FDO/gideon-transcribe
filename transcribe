@@ -10,6 +10,8 @@
 #   ./transcribe check        the smoke checks, as a plain report
 #   ./transcribe directory    ask the office's directory facts and write them
 #   ./transcribe engine       point the AI assistant at the office's engine
+#   ./transcribe engine local on|off
+#                             start or stop the Local engine, a small model on this server
 #   ./transcribe folders      make the app data folders, owned by the app account
 #   ./transcribe backup-db    a dump of the database into the app data folder
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
@@ -381,7 +383,16 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
     note "no engine token is stored, so the AI assistant is off"
   elif [ -z "$network" ] || [ "$network" = "transcribe-llm" ]; then
     if grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"; then
-      pass "the Local engine profile is on"
+      pass "the Local engine profile is on ($(env_value LLM_LOCAL_MODEL) as local-engine)"
+      if compose ps --status running --services 2>/dev/null | grep -qx vllm; then
+        if [ "$(docker inspect --format '{{.State.Health.Status}}' "$(compose ps -q vllm)" 2>/dev/null)" = "healthy" ]; then
+          pass "the Local engine is running and healthy"
+        else
+          note "the Local engine is starting (the first start downloads the model); ./transcribe logs vllm"
+        fi
+      else
+        fail "the Local engine container is not running; docker compose up -d"
+      fi
     else
       note "a token is stored but no engine is named; ./transcribe engine"
     fi
@@ -765,6 +776,19 @@ ensure_the_token_file() {
 
 cmd_engine() {
   need_env
+  # `engine local on` and `engine local off` are the Local engine's switch;
+  # plain `engine` is the conversation about a shared one.
+  if [ "${1:-}" = "local" ]; then
+    case "${2:-}" in
+      on) cmd_engine_local_on ;;
+      off) cmd_engine_local_off ;;
+      *)
+        red "Say 'on' or 'off': ./transcribe engine local on"
+        return 1
+        ;;
+    esac
+    return
+  fi
   cat <<'WORDS'
 The AI assistant's engine
 -------------------------
@@ -838,6 +862,109 @@ WORDS
   fi
   echo
   echo "  A change here reaches the workers at the next 'docker compose up -d'."
+}
+
+# The Local engine ----------------------------------------------------------------
+#
+# A vLLM this stack starts on its own, behind the `llm` Compose profile, serving a
+# small model under the name `local-engine`. For an office with no shared engine,
+# or one that wants the assistant without leaning on somebody else's. It shares
+# a card with WhisperX, so it is given a share of that card's memory and no
+# more; the default, 0.21 of a 96 GB card, is 20 GB for the default model and
+# its cache, which leaves WhisperX everything it needs.
+
+LOCAL_MODEL_DEFAULT="Qwen/Qwen3.5-4B"
+LOCAL_SHARE_DEFAULT="0.21"
+
+least_busy_gpu() {
+  # The card with the least memory in use right now, by UUID: on a server whose
+  # other card carries a shared engine, that is the WhisperX card.
+  nvidia-smi --query-gpu=uuid,memory.used --format=csv,noheader,nounits 2>/dev/null \
+    | sort -t, -k2 -n | head -1 | cut -d, -f1 | tr -d ' '
+}
+
+cmd_engine_local_on() {
+  cat <<'WORDS'
+The Local engine
+----------------
+A small language model this server runs itself for the AI assistant, beside
+WhisperX on the same card, within a share of that card's memory. The first
+start downloads the model's weights into the app data folder (about 8 GB for
+the default) and takes some minutes; after that it starts in about a minute.
+
+Nothing you type here leaves this server. Press Enter to keep what is shown in
+brackets.
+
+WORDS
+  ensure_the_token_file
+
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    red "nvidia-smi is not on this server, so no card can be named. Nothing was written."
+    return 1
+  fi
+  echo "The cards on this server:"
+  nvidia-smi --query-gpu=index,name,memory.total,memory.used,uuid --format=csv,noheader 2>/dev/null | sed 's/^/  /'
+  echo
+
+  local gpu model share
+  gpu="$(ask "The card the engine runs on, by UUID (the one WhisperX uses)" \
+    "$( [ -n "$(env_value LLM_LOCAL_GPU_UUID)" ] && [ "$(env_value LLM_LOCAL_GPU_UUID)" != "<GPU UUID>" ] && env_value LLM_LOCAL_GPU_UUID || least_busy_gpu)")"
+  if ! nvidia-smi -L 2>/dev/null | grep -q "$gpu"; then
+    red "No card on this server has the UUID '$gpu'. Nothing was written."
+    return 1
+  fi
+  model="$(ask "The model, as Hugging Face names it" "$( [ -n "$(env_value LLM_LOCAL_MODEL)" ] && env_value LLM_LOCAL_MODEL || echo "$LOCAL_MODEL_DEFAULT")")"
+  share="$(ask "The share of the card's memory the engine may use (0.21 of 96 GB is 20 GB)" "$( [ -n "$(env_value LLM_LOCAL_GPU_FRACTION)" ] && env_value LLM_LOCAL_GPU_FRACTION || echo "$LOCAL_SHARE_DEFAULT")")"
+  case "$share" in
+    0.[0-9]*|0,[0-9]*) ;;
+    *) red "The share is a fraction between 0 and 1, like 0.21. Nothing was written."; return 1 ;;
+  esac
+
+  set_env LLM_LOCAL_GPU_UUID "$gpu"
+  set_env LLM_LOCAL_MODEL "$model"
+  set_env LLM_LOCAL_GPU_FRACTION "$share"
+  set_env LLM_NETWORK "transcribe-llm"
+  set_env COMPOSE_PROFILES "llm"
+  # The Local engine lives on the project network, so the shared-engine file
+  # has nothing to add; commented rather than deleted, so the shape stays visible.
+  if grep -q '^COMPOSE_FILE=' "$ENV_FILE"; then
+    sed -i 's/^COMPOSE_FILE=/# COMPOSE_FILE=/' "$ENV_FILE"
+  fi
+
+  # The engine refuses to start without a token, and the app presents the same
+  # one, so the file is filled with a random one when it is empty. A shared
+  # engine's token already there is kept: it is the same file, and the person
+  # switching back to the shared engine would not thank us for losing it.
+  if ! secret_present "$SECRETS/llm_api_token"; then
+    write_secret "$SECRETS/llm_api_token" "$(openssl rand -hex 32)"
+    own_the_secrets
+    green "A token for the Local engine was written to secrets/llm_api_token."
+  fi
+
+  echo
+  echo "Starting the engine (the first start downloads the model)..."
+  compose up -d
+  # The panel's two provider settings, so the app talks to what was started.
+  compose exec -T app python manage.py set_setting engine_address "http://vllm:8000/v1" </dev/null
+  compose exec -T app python manage.py set_setting engine_model "local-engine" </dev/null
+  echo
+  green "The Local engine is on: $model on card $gpu, within $share of its memory."
+  echo "  Watch it come up with:   ./transcribe logs vllm"
+  echo "  Then, on the Panel's Status page, press Test connection. When it answers"
+  echo "  'ready', turn the AI assistant toggle on (Settings, AI assistant)."
+  echo "  ./transcribe engine local off stops it and frees the card."
+}
+
+cmd_engine_local_off() {
+  if grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"; then
+    compose --profile llm stop vllm 2>/dev/null || true
+    compose --profile llm rm -f vllm 2>/dev/null || true
+  fi
+  set_env COMPOSE_PROFILES ""
+  green "The Local engine is off and its card is free. The weights stay in the app"
+  echo "  data folder for the next 'on'; delete data/models/vllm to free the disk."
+  echo "  The AI assistant is unreachable until an engine is named again:"
+  echo "  './transcribe engine' for a shared one, or 'engine local on'."
 }
 
 cmd_folders() {

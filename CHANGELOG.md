@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.10.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Upgrading to this one
+
+Nothing migrates and no model changes. The Local engine stays off until an
+Admin turns it on; an office already pointing at a shared engine sees no
+change. `LLM_LOCAL_MODEL` and `LLM_LOCAL_GPU_FRACTION` gain new defaults in
+`.env.example`; an existing `.env` keeps its own values until `engine local
+on` asks.
+
+### Added
+
+- **The Local engine, on or off.** `./transcribe engine local on` starts a
+  small language model on this server for the AI assistant, beside the
+  transcription service on the same card: it shows the cards, offers the
+  least busy one, asks the model and the share of the card's memory the
+  engine may take, writes a token when none is stored, starts the engine and
+  points the Panel's Engine address and Model name at it. `./transcribe
+  engine local off` stops it and frees the card. `./transcribe check` reports
+  the engine's health. The default model is `Qwen/Qwen3.5-4B`, chosen in
+  `docs/research/local-engine-model.md` against the office's rule that the
+  engine with its cache uses no more than 20 GB: the largest of its family
+  that does, with the 262,144-token native context the chapter requires and
+  the same reasoning parser as the shared engine. The default share is 0.21,
+  twenty gigabytes of a 96 GB card. An office that wants a larger model
+  changes one line in `.env`.
+- **`manage.py set_setting`**, which moves one admin setting from the
+  server's command line under the panel's own checks, with an audit row as
+  the system; `engine local on` uses it and nothing else should.
+
+### Changed
+
+- The architecture and AI assistant chapters carry the new model and share;
+  the install guide gains "The Local engine"; the licence table names the
+  model's weights and their licence.
+
 ## v1.9.0, 2026-09-05
 
 ```

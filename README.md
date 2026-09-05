@@ -44,10 +44,12 @@ plain-language recovery when something fails.
 Everything a user does not put in a case is removed when their login
 session ends, by design.
 
-**Not built yet**, and said so rather than implied: the AI assistant
-(summaries and a chat over the transcript), and the rest of Cases: sharing a
-case with colleagues, the retention policy and recycle bin, the speakers
-tab, chat across a case, email notifications, and backups. The
+Also built: the AI assistant, summaries, a chat over the transcript and
+speaker name suggestions, against an office's own vLLM or a small Local
+engine the stack runs itself, and the retention policy with its recycle bin.
+**Not built yet**, and said so rather than implied: the rest of Cases:
+sharing a case with colleagues, the speakers tab, chat across a case, email
+notifications, and backups. The
 specification for all of it is in `docs/spec/`, and the changelog says
 exactly what each Release holds.
 

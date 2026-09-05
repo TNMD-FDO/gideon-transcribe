@@ -173,7 +173,7 @@ Then it asks, in plain words, for the facts about your office, offering a sensib
 - the App data folder and the time zone;
 - which graphics card the transcription service should use, chosen from a list by its UUID rather than its number, because numbers move between reboots;
 - the Hugging Face token;
-- the AI assistant's engine, if your office runs one: the Docker network a vLLM listens on, and its token. Leave the network blank for none. The engine's address and served model name are entered in the Admin panel afterwards, where Test connection proves them. `./transcribe engine` asks these again on its own.
+- the AI assistant's engine, if your office runs one: the Docker network a vLLM listens on, and its token. Leave the network blank for none. The engine's address and served model name are entered in the Admin panel afterwards, where Test connection proves them. `./transcribe engine` asks these again on its own. An office with no engine of its own can start the Local engine instead, after the install: see "The Local engine" below.
 
 Nothing you type leaves the server, and none of it is ever committed to the repository. The random secrets the app needs, the database password and the like, it makes itself; nobody types them.
 
@@ -222,6 +222,22 @@ docker compose run --rm app create-local-admin
 ```
 
 Section 4 says what each line of that means. When every line passes, the app is installed.
+
+### The Local engine
+
+The AI assistant needs a language-model engine. If your office already runs a vLLM, `./transcribe engine` points the app at it. If not, the stack can run a small one itself, on the same card as the transcription service, within a share of that card's memory:
+
+```bash
+./transcribe engine local on
+```
+
+It shows the cards on the server and asks three things, each with a sensible answer already filled in: which card (by UUID; it offers the one with the least in use, which is the transcription service's), which model (the default is `Qwen/Qwen3.5-4B`, chosen in `docs/research/local-engine-model.md` because it fits in 20 GB with its cache for a six-hour transcript), and what share of the card's memory the engine may take (0.21 of a 96 GB card is 20 GB). It writes a token for the engine if none is stored, starts it, and points the Admin panel's Engine address and Model name at it. The first start downloads the model's weights into the app data folder (about 8 GB for the default) and takes some minutes; `./transcribe logs vllm` shows the progress, and `./transcribe check` says when it is healthy. Then, on the Panel's Status page, press **Test connection**; when it answers "ready", turn the **AI assistant** toggle on.
+
+```bash
+./transcribe engine local off
+```
+
+stops the engine and frees the card. The weights stay on disk for the next `on`; delete `<App data folder>/models/vllm` to free the space. Switching to a shared engine later is `./transcribe engine` as above; the two are never on together.
 
 ## 4. Check
 
@@ -288,7 +304,8 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `There is no Hugging Face token stored; the model pull will refuse.` | The token step was skipped, or Enter was pressed with nothing stored. | `./transcribe install --reconfigure` and type the token when asked. |
 | `There is no Docker network called '...' on this server.` | The engine's network was mistyped, or the engine's own stack is not running. | `docker network ls` lists them; start the engine's stack first, then `./transcribe engine`. |
 | `The AI assistant refused the connection. Ask IT.` (in the app) | The engine wants a different token from the one in `secrets/llm_api_token`, or the file is empty. | `./transcribe engine`, paste the engine's token, then `docker compose up -d`. |
-| The Status page says `AI assistant: unreachable since ...` | The engine is down, or `llm-worker` is not on its network. | Check the engine's own stack; `./transcribe check` proves the network membership; `./transcribe engine` fixes it. |
+| The Status page says `AI assistant: unreachable since ...` | The engine is down, or `llm-worker` is not on its network. | Check the engine's own stack; `./transcribe check` proves the network membership; `./transcribe engine` fixes it. For the Local engine, `./transcribe logs vllm`: the first start downloads the model and takes minutes. |
+| `the engine token file is empty` in `./transcribe logs vllm` | The Local engine refuses to start without a token. | `./transcribe engine local on` writes one when the file is empty. |
 | `error from registry: denied` during a pull | The two images are not published, or the server is not signed in to the registry. | Nothing. Compose falls back to building them on the server, which is slower and otherwise the same. |
 | `The registry had nothing to give, so the images are built here.` | As above, during an upgrade. Not an error. | Wait. Ten to twenty minutes the first time. |
 | `The build failed, so the upgrade stops here.` | Building an image on the server failed. The old containers are still running. | Read the message above it. Usually the server cannot reach one of the appendix's hosts. `./transcribe rollback <the tag you were on>` puts the checkout back. |
@@ -451,10 +468,10 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 |---|---|
 | `LLM_NETWORK` | The Docker network the engine is reached on. |
 | `COMPOSE_FILE` | Which compose files Compose reads. Left out entirely for most offices; uncommented only for a shared engine. Never set empty: Compose reads an empty value as a path and refuses to start. |
-| `COMPOSE_PROFILES` | `llm` starts the engine in this stack. Empty means a shared engine, or none. |
-| `LLM_LOCAL_MODEL` | The model the local engine loads. |
-| `LLM_LOCAL_GPU_UUID` | Which card the local engine uses, by UUID. |
-| `LLM_LOCAL_GPU_FRACTION` | How much of that card's memory the engine may take, leaving the rest for transcription. |
+| `COMPOSE_PROFILES` | `llm` starts the Local engine in this stack; `./transcribe engine local on` sets it and `off` clears it. Empty means a shared engine, or none. |
+| `LLM_LOCAL_MODEL` | The model the Local engine loads, as Hugging Face names it. Default `Qwen/Qwen3.5-4B`, which fits in 20 GB with its cache. |
+| `LLM_LOCAL_GPU_UUID` | Which card the Local engine uses, by UUID; `engine local on` asks and offers the least busy one. |
+| `LLM_LOCAL_GPU_FRACTION` | The share of that card's memory the engine may take, leaving the rest for transcription. Default 0.21, which is 20 GB of a 96 GB card. |
 
 ### The files beside the keys
 
