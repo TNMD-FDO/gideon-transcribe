@@ -35,13 +35,11 @@
     // A refusal says why, and where the batch in the way is.
     var words = answer.said.error || "That could not be done.";
     if (answer.said.batch) {
-      words += "\n\nOpen it to see how it is getting on?";
-      if (window.confirm(words)) {
-        window.location = "/batch/" + answer.said.batch;
-      }
+      UI.confirm({ title: "Not yet", body: [words, "Open that batch to see how it is getting on?"], ok: "Open the batch", cancel: "Stay here" })
+        .then(function (yes) { if (yes) { window.location = "/batch/" + answer.said.batch; } });
       return;
     }
-    window.alert(words);
+    UI.alert({ title: "Not yet", body: words });
   }
 
   document.addEventListener("click", function (event) {
@@ -59,18 +57,22 @@
 
     // What a person is giving up has to be said before they agree to it, not
     // after: the corrections and the speaker names are somebody's afternoon.
-    if (!window.confirm(
-      "Transcribe " + over.dataset.title + " again from the start?\n\n" +
-      "Lost: this transcript, every correction made to it, and the speaker " +
-      "names.\n" +
-      "Kept: the recording itself, its clips and their spans, and the record " +
-      "of both processings.\n\n" +
-      "The old transcript stays readable, and locked, until the new one lands."
-    )) { return; }
-
-    over.disabled = true;
-    send("/recording/" + over.dataset.recording + "/process-again", {})
-      .then(went)
-      .catch(function () { over.disabled = false; });
+    UI.confirm({
+      title: "Transcribe " + over.dataset.title + " again?",
+      body: [
+        "Lost: this transcript, every correction made to it, and the speaker names.",
+        "Kept: the recording, its clips and their spans, and the record of both processings.",
+        "The old transcript stays readable, and locked, until the new one lands."
+      ],
+      ok: "Transcribe again",
+      cancel: "Keep this transcript",
+      danger: true
+    }).then(function (yes) {
+      if (!yes) { return; }
+      over.disabled = true;
+      send("/recording/" + over.dataset.recording + "/process-again", {})
+        .then(went)
+        .catch(function () { over.disabled = false; });
+    });
   });
 })();

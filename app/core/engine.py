@@ -44,12 +44,12 @@ ERROR = "llm_error"
 CASE_TOO_LARGE = "llm_case_too_large"
 
 WHAT_TO_SAY = {
-    UNREACHABLE: "The AI assistant is not available right now.",
-    TIMEOUT: "The AI assistant took too long. Try again.",
-    REFUSED: "The AI assistant refused the connection. Ask IT.",
+    UNREACHABLE: "The assistant is not available right now.",
+    TIMEOUT: "The assistant took too long. Try again.",
+    REFUSED: "The engine refused the connection. Tell whoever looks after the server.",
     TOO_LONG: "This transcript is too long for the AI assistant.",
-    BAD_OUTPUT: "The AI assistant gave an answer the app could not read. Try again.",
-    ERROR: "The AI assistant hit a problem. Try again.",
+    BAD_OUTPUT: "The assistant's answer did not come through. Try again.",
+    ERROR: "The assistant hit a problem. Try again.",
     CASE_TOO_LARGE: "This case is too large for one question.",
 }
 

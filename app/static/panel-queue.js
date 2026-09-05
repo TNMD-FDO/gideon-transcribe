@@ -34,14 +34,19 @@
   rows.addEventListener("click", function (event) {
     var button = event.target.closest(".cancel");
     if (!button) { return; }
-    if (!window.confirm(
-      "Cancel the job for " + button.dataset.title +
-      "? The recording stays; the transcription stops."
-    )) { return; }
-    fetch("/panel/queue/" + button.dataset.job + "/cancel", {
-      method: "POST",
-      headers: { "X-CSRFToken": cookie("csrftoken") }
-    }).then(ask);
+    UI.confirm({
+      title: "Cancel the job for " + button.dataset.title + "?",
+      body: "The recording stays; the transcription stops.",
+      ok: "Cancel the job",
+      cancel: "Let it run",
+      danger: true
+    }).then(function (yes) {
+      if (!yes) { return; }
+      fetch("/panel/queue/" + button.dataset.job + "/cancel", {
+        method: "POST",
+        headers: { "X-CSRFToken": cookie("csrftoken") }
+      }).then(ask);
+    });
   });
 
   function ask() {

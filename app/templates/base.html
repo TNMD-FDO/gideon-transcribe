@@ -17,6 +17,8 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
   {% include "icons.html" %}
+  {% comment %}The dialogs, toasts and hints every page script leans on; before them all.{% endcomment %}
+  <script src="{% static 'ui.js' %}"></script>
   <nav class="nav">
     <a class="brand" href="{% url 'home' %}"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></svg>Gideon Transcribe</a>
     {% if user.is_authenticated %}

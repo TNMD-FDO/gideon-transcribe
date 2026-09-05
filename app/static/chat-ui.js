@@ -108,7 +108,7 @@
           "<textarea rows='1' class='grow' aria-label='Your question'></textarea>" +
           "<button type='button' class='primary small' data-act='ask'>Ask</button>" +
         "</div>" +
-        "<p class='muted tiny hint'>Enter to ask, Shift+Enter for a new line." +
+        "<p class='muted tiny foot-hint'>Enter to ask, Shift+Enter for a new line." +
           (options.crossLink ? " <a href='" + escape(options.crossLink.href) + "'>" + escape(options.crossLink.text) + "</a>" : "") +
         "</p>" +
       "</div>";
@@ -295,17 +295,17 @@
       if (starter) { ask(starter.dataset.question); return; }
       var copy = target.closest(".copy");
       if (copy && navigator.clipboard) {
-        navigator.clipboard.writeText(copy.dataset.answer).then(function () {
-          copy.textContent = "Copied";
-          window.setTimeout(function () { copy.textContent = "Copy"; }, 1500);
-        });
+        navigator.clipboard.writeText(copy.dataset.answer).then(function () { UI.toast("Copied"); });
         return;
       }
       if (target.closest("[data-act='delete']")) {
         var chat = theChat();
         if (!chat) { return; }
-        if (!window.confirm("Delete this chat? Export it first if you want to keep it.")) { return; }
-        options.remove(chat.id).then(function () { currentChat = null; return options.refresh(); });
+        UI.confirm({ title: "Delete this chat?", body: "Its questions and answers go with it. Export first to keep a copy.", ok: "Delete chat", danger: true })
+          .then(function (yes) {
+            if (!yes) { return; }
+            options.remove(chat.id).then(function () { currentChat = null; return options.refresh(); });
+          });
         return;
       }
       var play = target.closest(".cite.play");

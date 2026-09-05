@@ -146,14 +146,14 @@
     summaryList.addEventListener("click", function (event) {
       var again = event.target.closest(".regenerate");
       if (again) {
-        if (!window.confirm("Replace this summary?")) { return; }
-        post("/summary/" + again.dataset.summary + "/regenerate").then(refresh);
+        UI.confirm({ title: "Write this summary again?", body: "The summary here is replaced by a new one with the same choices.", ok: "Write it again" })
+          .then(function (yes) { if (yes) { post("/summary/" + again.dataset.summary + "/regenerate").then(refresh); } });
         return;
       }
       var gone = event.target.closest(".delete-summary");
       if (gone) {
-        if (!window.confirm("Delete this summary? Export it first if you want to keep it.")) { return; }
-        post("/summary/" + gone.dataset.summary + "/delete").then(refresh);
+        UI.confirm({ title: "Delete this summary?", body: "Export it first to keep a copy.", ok: "Delete summary", danger: true })
+          .then(function (yes) { if (yes) { post("/summary/" + gone.dataset.summary + "/delete").then(refresh); } });
       }
     });
   }

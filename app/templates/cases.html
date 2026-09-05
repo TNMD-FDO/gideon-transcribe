@@ -144,7 +144,7 @@
     {% elif who == "everyone" %}
       <p class="lead">Nobody else has a case.</p>
     {% else %}
-      <p class="lead">No cases yet. A case keeps recordings after you sign out.</p>
+      {% include "empty.html" with icon="case" title="No cases yet" line="A case keeps a matter's recordings together, and keeps them after you sign out, for as long as the office's retention policy says." action="New case" action_id="open-new-empty" %}
     {% endif %}
   </div>
 

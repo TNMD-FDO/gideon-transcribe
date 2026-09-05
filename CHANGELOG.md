@@ -21,6 +21,35 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.15.0, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The app asks in its own words.** Every browser pop-up is gone. Deleting,
+  cancelling, merging, clearing, emptying the bin, resetting a template,
+  blocking a user and the rest now ask in the app's own dialog: a plain
+  title, the consequence in a sentence or two, the safe choice first and the
+  action last, red when it destroys. Renaming a speaker or a clip asks in the
+  same dialog with a field. Copied, Renamed and the other quiet confirmations
+  are a toast for two seconds; a refusal that needs no decision is a toast
+  too, marked as a problem.
+- **Empty pages say what they are for.** Recordings, Cases, Clips, a case's
+  recordings and clips, the Recycle bin and an empty audit search each show
+  one empty state with the one thing to do, instead of a bare heading.
+- **Instructions become hints.** The paragraphs that told you how to use the
+  Speakers panel and the tables are first-time hints with Got it, remembered
+  in your browser; the bar of the viewer's bottom panel no longer carries a
+  sentence of instructions. The words on the working pages are for work.
+- **Plainer messages.** A recording that will not play says so in one
+  sentence, with the detail behind "Details". The standing line reads "Your
+  recordings stay until you sign out, or 12 hours after you stop working."
+  The assistant's failure lines lose the capital letters and the jargon.
+
 ## v1.14.0, 2026-09-05
 
 ```

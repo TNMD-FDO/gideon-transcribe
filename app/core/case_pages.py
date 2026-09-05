@@ -212,6 +212,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             ),
             "people_said": request.session.pop("people_said", ""),
             "case_chat_available": chat_here,
+            "add_recordings_url": reverse("add-recordings", args=[case.pk]),
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             "is_owner": case.owner_id == request.user.pk,
             "recordings": _rows_for(case),

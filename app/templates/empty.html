@@ -1,0 +1,14 @@
+{% load icons %}
+{% comment %}
+  The empty state of a list page: what this place is for, and the one thing
+  to do. {% include "empty.html" with icon="case" title="No cases yet"
+  line="A case keeps a matter's recordings together." action="New case"
+  action_url="/case/new" %}. Without an action it is the words alone.
+{% endcomment %}
+<div class="empty">
+  {% icon icon %}
+  <h2>{{ title }}</h2>
+  {% if line %}<p>{{ line }}</p>{% endif %}
+  {% if action_url %}<a href="{{ action_url }}" class="btn primary">{{ action }}</a>{% endif %}
+  {% if action_id %}<button type="button" class="primary" id="{{ action_id }}">{{ action }}</button>{% endif %}
+</div>

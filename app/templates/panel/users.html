@@ -58,13 +58,13 @@
                 <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}" class="btn small">Access to their material</a>
 
                 <button type="submit" name="action" value="end-sessions" class="small"
-                        onclick="return confirm('This signs {{ row.user.username }} out and removes {{ row.counts.recordings }} recordings and their transcripts.')">End sessions</button>
+                        data-confirm-title="End {{ row.user.username }}'s sessions?" data-confirm="This signs them out and removes {{ row.counts.recordings }} recordings and their transcripts from their workspace." data-confirm-ok="End sessions" data-danger>End sessions</button>
 
                 {% if row.status == "Blocked" %}
                   <button type="submit" name="action" value="unblock" class="small">Unblock</button>
                 {% else %}
                   <button type="submit" name="action" value="block" class="small ghost danger"
-                          onclick="return confirm('Block {{ row.user.username }}? Only an Admin can lift it.')">Block</button>
+                          data-confirm-title="Block {{ row.user.username }}?" data-confirm="They cannot sign in until an Admin lifts it." data-confirm-ok="Block" data-danger>Block</button>
                 {% endif %}
 
                 <button type="submit" name="action" value="admin-flag" class="small"
@@ -82,9 +82,9 @@
                   <input type="text" name="to" class="small" style="max-width: 10rem"
                          placeholder="Give cases to (username)">
                   <button type="submit" name="action" value="reassign" class="small"
-                          onclick="return confirm('Give every case {{ row.user.username }} owns to the named person? The days left on each case are kept.')">Reassign to a named user</button>
+                          data-confirm-title="Give every case {{ row.user.username }} owns to the named person?" data-confirm="The days left on each case are kept." data-confirm-ok="Reassign">Reassign to a named user</button>
                   <button type="submit" name="action" value="delete-data" class="small ghost danger"
-                          onclick="return confirm('Delete all {{ row.in_cases }} recording(s) in {{ row.user.username }}'s cases, {{ row.cases_gigabytes }} GB? This is final.')">Delete data</button>
+                          data-confirm-title="Delete everything in {{ row.user.username }}'s cases?" data-confirm="All {{ row.in_cases }} recording{{ row.in_cases|pluralize }}, {{ row.cases_gigabytes }} GB. This is final." data-confirm-ok="Delete data" data-danger>Delete data</button>
                 {% else %}
                   <button type="button" class="small" disabled
                           title="Reassign acts on cases. Turn Folder management on to use it.">Reassign to a named user</button>
@@ -117,7 +117,7 @@
                          name="password" autocomplete="new-password">
                   <button type="submit" name="action" value="password" class="small">Change password</button>
                   <button type="submit" name="action" value="delete" class="small ghost danger"
-                          onclick="return confirm('Delete the local admin {{ row.user.username }}?')">Delete</button>
+                          data-confirm-title="Delete the local admin {{ row.user.username }}?" data-confirm="They can no longer sign in. Their recordings go with them." data-confirm-ok="Delete" data-danger>Delete</button>
                 </form>
               {% endif %}
             </td>

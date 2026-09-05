@@ -27,12 +27,16 @@
 
     var gone = event.target.closest(".delete-clip");
     if (gone) {
-      if (!window.confirm(
-        "Delete " + gone.dataset.title + "? The file goes with it, and " +
-        "anything you have not downloaded cannot be got back."
-      )) { return; }
-      post("/clip/" + gone.dataset.clip + "/delete")
-        .then(function () { window.location.reload(); });
+      UI.confirm({
+        title: "Delete " + gone.dataset.title + "?",
+        body: "The file goes with it. Anything not downloaded cannot be got back.",
+        ok: "Delete clip",
+        danger: true
+      }).then(function (yes) {
+        if (!yes) { return; }
+        post("/clip/" + gone.dataset.clip + "/delete")
+          .then(function () { window.location.reload(); });
+      });
     }
   });
 })();

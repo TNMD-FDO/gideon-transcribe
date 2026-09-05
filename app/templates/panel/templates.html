@@ -25,7 +25,7 @@
           <div class="row">
             <button type="submit" name="action" value="save" class="primary small">Save</button>
             <button type="submit" name="action" value="reset" class="ghost small"
-                    onclick="return confirm('Put back the default wording of {{ row.name }}?')">Reset to default</button>
+                    data-confirm-title="Put back the default wording of {{ row.name }}?" data-confirm="Your edits to it are lost; the version number rises." data-confirm-ok="Reset">Reset to default</button>
           </div>
         </form>
       {% endfor %}
@@ -83,11 +83,11 @@
             {% endif %}
             {% if row.built_in %}
               <button type="submit" name="action" value="reset" class="ghost small"
-                      onclick="return confirm('Put back the default wording of Standard summary?')">Reset to default</button>
+                      data-confirm-title="Put back the default wording of Standard summary?" data-confirm="Your edits to it are lost; the version number rises." data-confirm-ok="Reset">Reset to default</button>
             {% else %}
               <span class="grow"></span>
               <button type="submit" name="action" value="delete" class="ghost small danger"
-                      onclick="return confirm('Delete the template {{ row.name }}? Summaries already written keep their text.')">Delete</button>
+                      data-confirm-title="Delete the template {{ row.name }}?" data-confirm="Summaries already written keep their text. Nobody can choose this shape again." data-confirm-ok="Delete template" data-danger>Delete</button>
             {% endif %}
           </div>
         </form>
