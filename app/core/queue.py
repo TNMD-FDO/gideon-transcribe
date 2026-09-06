@@ -195,6 +195,17 @@ def merge(job: Job) -> Job:
         log.exception("the transcript of job %s could not be stored", job.id)
         return fail(job, Reason.MERGE_FAILED)
 
+    # A Live recording's Speakers are named from the taps made while it ran.
+    if job.recording.is_live and job.recording.speaker_taps:
+        from core import live
+
+        try:
+            live.name_from_taps(job.recording, transcript)
+        except Exception:  # noqa: BLE001 - a naming that fails leaves the labels
+            log.exception(
+                "the taps of recording %s could not be applied", job.recording_id
+            )
+
     for run in job.runs.all():
         whisperx.delete(run.service_job_id)
 

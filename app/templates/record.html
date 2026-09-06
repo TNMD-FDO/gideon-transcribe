@@ -60,6 +60,18 @@
         </label>
       </div>
 
+      <div class="field">
+        <label for="record-person">People expected</label>
+        <p class="muted small" style="margin: 0 0 6px">
+          The case's people, and anyone else who will speak. While recording, tap a person as they start talking and the transcript names its speakers from that.
+        </p>
+        <div class="people-buttons" id="people-expected"></div>
+        <div class="row" style="gap: 6px; margin-top: 6px">
+          <input type="text" id="record-person" maxlength="60" class="grow" placeholder="Add a person">
+          <button type="button" class="btn small" id="add-person">Add</button>
+        </div>
+      </div>
+
       <label class="row">
         <input type="checkbox" id="record-computer"> <b>Also record what this computer plays</b>
       </label>
@@ -84,6 +96,15 @@
       </div>
       <div class="row small muted" style="gap: 8px"><span style="width: 7rem">Microphone</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter"></div></div></div>
       <div class="row small muted" id="computer-row" hidden style="gap: 8px"><span style="width: 7rem">This computer</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter-computer"></div></div></div>
+      <div class="people-buttons" id="people-during"></div>
+      <div class="row" style="gap: 6px">
+        <button type="button" class="btn small" id="mark" title="M">Mark this moment</button>
+        <span class="muted small" id="marks-count"></span>
+      </div>
+      <div class="row mark-box" id="mark-box" hidden style="gap: 6px">
+        <input type="text" id="mark-word" maxlength="80" class="grow" placeholder="A word for the mark (optional), then Enter">
+        <button type="button" class="btn small ghost" id="mark-done">Done</button>
+      </div>
       <p class="muted small" id="during-line">Sent to the server as it goes. Leaving this page ends the recording with what has been sent.</p>
       <p class="problem" id="during-problem" hidden></p>
       <div class="row">

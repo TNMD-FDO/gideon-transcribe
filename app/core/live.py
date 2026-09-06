@@ -142,6 +142,8 @@ def ended(
     pauses: list | None = None,
     seconds: float | None = None,
     computer_ended_at: float | None = None,
+    taps: list | None = None,
+    marks: list | None = None,
     request=None,
 ) -> None:
     """The recording has ended: by Stop, the limit, the disk, or the page closing.
@@ -166,7 +168,9 @@ def ended(
     if computer_ended_at is not None:
         live["computer_ended_at"] = round(float(computer_ended_at), 1)
     recording.live = live
-    recording.save(update_fields=["live"])
+    recording.speaker_taps = _clean_taps(taps)
+    recording.marks = _clean_marks(marks)
+    recording.save(update_fields=["live", "speaker_taps", "marks"])
 
     if recording.media_state == MediaState.UPLOADING and how != "stop":
         _take_what_arrived(recording)
@@ -183,7 +187,115 @@ def ended(
         how=live["ended"],
         seconds=live.get("seconds"),
         pauses=len(live["pauses"]),
+        taps=len(recording.speaker_taps),
+        marks=len(recording.marks),
     )
+
+
+def _clean_taps(taps) -> list:
+    """The taps as moments and names, in time order, at most five hundred."""
+    kept = []
+    for one in taps or []:
+        if not isinstance(one, dict):
+            continue
+        name = str(one.get("name") or "").strip()[:60]
+        try:
+            at = max(0.0, float(one.get("at", 0)))
+        except (TypeError, ValueError):
+            continue
+        if name:
+            kept.append({"at": round(at, 1), "name": name})
+    kept.sort(key=lambda one: one["at"])
+    return kept[:500]
+
+
+def _clean_marks(marks) -> list:
+    kept = []
+    for one in marks or []:
+        if not isinstance(one, dict):
+            continue
+        try:
+            at = max(0.0, float(one.get("at", 0)))
+        except (TypeError, ValueError):
+            continue
+        kept.append(
+            {"at": round(at, 1), "word": str(one.get("word") or "").strip()[:80]}
+        )
+    kept.sort(key=lambda one: one["at"])
+    return kept[:500]
+
+
+# Speaker names from the taps ------------------------------------------------------
+
+
+def name_from_taps(recording: Recording, transcript) -> int:
+    """Give each diarized Speaker the name whose taps cover most of its speech.
+
+    A tap covers from its moment to the next tap's. For a one-channel
+    Recording every Segment counts; for a Two-channel call only the first
+    Side's, the microphone's, since the far side of a call was not in the
+    room to be tapped. A label nobody's taps cover keeps its name. Each
+    naming is the ordinary rename, and a tapped person who is not yet a
+    Person of the Case becomes one.
+    """
+    taps = recording.speaker_taps or []
+    if not taps or transcript is None:
+        return 0
+    from core import people
+
+    spans = []
+    for index, tap in enumerate(taps):
+        until = taps[index + 1]["at"] if index + 1 < len(taps) else float("inf")
+        spans.append((tap["at"], until, tap["name"]))
+
+    segments = transcript.segments.all()
+    if recording.is_two_channel_call:
+        first = recording.sides.order_by("number").first()
+        segments = segments.filter(side=first) if first is not None else segments
+
+    coverage: dict[str, dict[str, float]] = {}
+    for segment in segments:
+        label = segment.speaker_label or segment.speaker
+        if not label:
+            continue
+        for start, until, name in spans:
+            overlap = min(segment.end, until) - max(segment.start, start)
+            if overlap > 0:
+                coverage.setdefault(label, {}).setdefault(name, 0.0)
+                coverage[label][name] += overlap
+
+    named = 0
+    for label, by_name in coverage.items():
+        name = max(by_name.items(), key=lambda pair: pair[1])[0]
+        changed = (
+            segments.filter(speaker_label=label)
+            .exclude(speaker=name)
+            .update(speaker=name)
+        )
+        if changed:
+            named += 1
+            people.on_named(recording, name, by=recording.user, how="named from taps")
+    if named:
+        audit.write(
+            audit.Category.EDITS,
+            "Speakers named from taps",
+            system="record page",
+            affected_user=recording.user,
+            object_type="recording",
+            object_id=recording.pk,
+            object_label=recording.original_filename,
+            labels_named=named,
+        )
+        live = dict(recording.live or {})
+        live["named_from_taps"] = named
+        recording.live = live
+        recording.save(update_fields=["live"])
+    return named
+
+
+def people_expected(case) -> list[str]:
+    """The Case's People, for the Record page's buttons."""
+    return list(case.people.order_by("name").values_list("name", flat=True))
 
 
 def _take_what_arrived(recording: Recording) -> None:
@@ -303,6 +415,14 @@ def provenance_rows(recording) -> list[tuple[str, str]]:
     )
     ending = ENDINGS.get(facts.get("ended", ""), "ended")
     rows = [("Recorded live", f"On the Record page, from {said}; {ending}")]
+    if facts.get("named_from_taps"):
+        count = facts["named_from_taps"]
+        rows.append(
+            ("Speakers named from taps", f"{count} speaker{'s' if count != 1 else ''}")
+        )
+    if recording.marks:
+        count = len(recording.marks)
+        rows.append(("Marks", f"{count} mark{'s' if count != 1 else ''}"))
     if facts.get("computer_ended_at") is not None:
         at = facts["computer_ended_at"]
         rows.append(

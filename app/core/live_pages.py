@@ -150,15 +150,42 @@ def ended(request: HttpRequest, recording_id) -> JsonResponse:
         computer_ended_at = float(told.get("computer_ended_at"))
     except (TypeError, ValueError):
         computer_ended_at = None
+    taps = _list_of(told, "taps")
+    marks = _list_of(told, "marks")
     live.ended(
         recording,
         how=str(told.get("how") or "closed"),
         pauses=pauses if isinstance(pauses, list) else [],
         seconds=seconds,
         computer_ended_at=computer_ended_at,
+        taps=taps,
+        marks=marks,
         request=request,
     )
     return JsonResponse({"ok": True})
+
+
+def _list_of(told, key: str) -> list:
+    """A list from a JSON body, or from a form field holding JSON (a beacon)."""
+    value = told.get(key)
+    if isinstance(value, str):
+        try:
+            value = json.loads(value or "[]")
+        except json.JSONDecodeError:
+            value = []
+    return value if isinstance(value, list) else []
+
+
+@login_required
+def people(request: HttpRequest) -> JsonResponse:
+    """The chosen Case's People, for the Record page's buttons."""
+    _on_or_404()
+    case = Case.objects.filter(
+        pk=request.GET.get("case") or None, deleted_on__isnull=True
+    ).first()
+    if case is None or not (case.member(request.user) or request.user.is_admin):
+        return JsonResponse({"people": []})
+    return JsonResponse({"people": live.people_expected(case)})
 
 
 @login_required

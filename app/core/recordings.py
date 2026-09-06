@@ -240,6 +240,13 @@ class Recording(models.Model):
     # never content.
     live = models.JSONField(null=True, blank=True)
 
+    # While a Live recording ran: the moments a person was tapped as they
+    # started talking (a moment and a name), from which the Transcript's
+    # Speakers are named; and the Marks (a moment and an optional word). A
+    # Mark's word is content and is never in a row or a message.
+    speaker_taps = models.JSONField(default=list, blank=True)
+    marks = models.JSONField(default=list, blank=True)
+
     @property
     def is_live(self) -> bool:
         return bool(self.live)

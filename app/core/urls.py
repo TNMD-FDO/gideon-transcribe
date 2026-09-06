@@ -159,6 +159,7 @@ urlpatterns = [
     # The Record page (Phase 3): a Recording made in the browser.
     path("record", live_pages.record, name="record"),
     path("record/start", live_pages.start, name="record-start"),
+    path("record/people", live_pages.people, name="record-people"),
     path(
         "record/<uuid:recording_id>/upload",
         live_pages.note_upload,

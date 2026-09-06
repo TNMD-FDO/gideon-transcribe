@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.25.0, 2026-09-07
+
+```
+Models: unchanged
+Database: migrates (0028_taps_and_marks: the speaker taps and the Marks)
+```
+
+### Added
+
+- **Live recording, step three: who is talking, and the moments that
+  matter.** The Record page lists the case's people and takes anyone else
+  who will speak; while recording, tapping a person as they start talking
+  names the transcript's speakers from those taps when it lands, on a call
+  the microphone's side only, and a tapped person joins the case's people.
+  **M**, or the Mark button, drops a mark at this moment with an optional
+  word; the viewer's Details list every mark as a time that seeks the
+  player, with Make a clip beside it. A mark's word never reaches an audit
+  row or a message.
+
+### Fixed
+
+- **A live recording's length read as zero.** A file streamed from the
+  browser carries no length in its header, so the queue estimate and the
+  Word export had nothing to say; the length is now read from the prepared
+  audio when the original has none.
+
 ## v1.24.0, 2026-09-07
 
 ```
