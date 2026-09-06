@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.7, 2026-09-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The Restore drill failed at migrate**, three ways at once, all in the
+  throwaway project and none touching the live app. The app reaches its
+  database by an alias the drill's network did not carry; the drill called
+  its management commands as `python manage.py`, which the image's entrypoint
+  took as a command named "python"; and the throwaway database had no role
+  for the app to connect as, since a dump carries the database and never the
+  cluster's roles. The drill now keeps the alias, calls commands by name, and
+  makes the app's role before migrating, as the web container does at every
+  start. A failing step prints its last lines instead of nothing.
+- **A drill that restored nothing would have passed.** A missing manifest
+  read as an empty one, and an empty manifest had nothing to disagree with.
+  A manifest that is missing or names no tables now fails the check.
+
 ## v1.19.6, 2026-09-06
 
 ```

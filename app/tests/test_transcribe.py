@@ -300,6 +300,10 @@ def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     assert bare == [], bare
     for name in ("backup_password", "backup_ssh_key", "backup_known_hosts"):
         assert f"  {name}:\n    file:" in compose, name
+    # The image's entrypoint takes a management command as its first word,
+    # so `run --rm app python manage.py ...` would run "python" as a command.
+    assert "run --rm -T app python" not in script
+    assert "run --rm -T app ensure_roles" in script
     # The drill override keeps everything but Postgres and the app out.
     drill = (HERE / "compose.drill.yaml").read_text(encoding="utf-8")
     for service in (
@@ -314,6 +318,8 @@ def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     ):
         assert f'  {service}:\n    profiles: ["never"]' in drill, service
     assert 'LDAP_ENABLED: "false"' in drill and 'SMTP_HOST: ""' in drill
+    # The drill's Postgres keeps the alias every app container connects by.
+    assert "- transcribe-postgres" in drill
     # The three timers and their services, with the placeholders the install fills.
     units = HERE / "systemd"
     for unit in (

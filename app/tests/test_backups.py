@@ -233,6 +233,13 @@ def test_the_drill_check_names_what_differs(on, owner, tmp_path):
     assert any("core_case" in one for one in failures)
     assert any("original.m4a" in one and "differs" in one for one in failures)
 
+    # Nothing restored is a failure, not a vacuous pass.
+    assert backups.drill_check({}, tmp_path / "cases") != []
+    with pytest.raises(SystemExit):
+        call_command(
+            "drill_check", str(tmp_path / "absent.json"), str(tmp_path / "cases")
+        )
+
     manifest_file = tmp_path / "m.json"
     manifest_file.write_text(json.dumps(manifest))
     out = StringIO()
