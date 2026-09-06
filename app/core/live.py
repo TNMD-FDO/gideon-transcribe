@@ -61,6 +61,7 @@ def start(
     language: str = "",
     translate: bool = False,
     browser: str = "",
+    with_computer: bool = False,
     request=None,
 ) -> Recording:
     """Make the Recording a Live recording will become, before a byte arrives.
@@ -86,6 +87,7 @@ def start(
     title = (title or "").strip()[:300] or (
         f"{recording_type or 'Recording'} {when:%d %b %Y %H:%M}"
     )
+    sources = ["microphone", "computer"] if with_computer else ["microphone"]
     batch = Batch.objects.create(user=user, is_live=True)
     recording = Recording.objects.create(
         batch=batch,
@@ -101,7 +103,7 @@ def start(
         preprocessing="standard",
         live={
             "started": when.isoformat(),
-            "sources": ["microphone"],
+            "sources": sources,
             "browser": (browser or "")[:120],
             "pauses": [],
             "ended": "",
@@ -117,7 +119,7 @@ def start(
         object_id=recording.pk,
         object_label=recording.original_filename,
         case=case.name,
-        sources=["microphone"],
+        sources=sources,
         language=language or "auto",
         translate=bool(translate),
     )
@@ -139,6 +141,7 @@ def ended(
     how: str,
     pauses: list | None = None,
     seconds: float | None = None,
+    computer_ended_at: float | None = None,
     request=None,
 ) -> None:
     """The recording has ended: by Stop, the limit, the disk, or the page closing.
@@ -160,6 +163,8 @@ def ended(
     ][:200]
     if seconds is not None:
         live["seconds"] = round(float(seconds), 1)
+    if computer_ended_at is not None:
+        live["computer_ended_at"] = round(float(computer_ended_at), 1)
     recording.live = live
     recording.save(update_fields=["live"])
 
@@ -298,6 +303,15 @@ def provenance_rows(recording) -> list[tuple[str, str]]:
     )
     ending = ENDINGS.get(facts.get("ended", ""), "ended")
     rows = [("Recorded live", f"On the Record page, from {said}; {ending}")]
+    if facts.get("computer_ended_at") is not None:
+        at = facts["computer_ended_at"]
+        rows.append(
+            (
+                "The computer's sound",
+                f"stopped at {int(at // 60)}:{int(at % 60):02d}; the microphone "
+                "alone after that",
+            )
+        )
     if facts.get("browser"):
         rows.append(("Recorded with", facts["browser"][:80]))
     pauses = facts.get("pauses") or []

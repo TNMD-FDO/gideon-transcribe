@@ -155,6 +155,42 @@ def test_starting_is_refused_without_room_or_a_case_of_ones_own(
     assert answer.status_code == 400 and "storage space is full" in answer.json()["why"]
 
 
+def test_the_computers_sound_makes_a_call_with_named_sides(on, person, a_case, client):
+    from core import pipeline
+
+    recording = live.start(person, a_case, with_computer=True)
+    assert recording.live["sources"] == ["microphone", "computer"]
+    assert rows("Live recording started").get().details["sources"] == [
+        "microphone",
+        "computer",
+    ]
+    # The pipeline does not ask whether it looks like a call: it is one.
+    from unittest import mock
+
+    from core import media
+
+    probed = mock.Mock(best_track=None)
+    with mock.patch.object(media, "probe", return_value=probed):
+        pipeline._find_sides(recording)
+    recording.refresh_from_db()
+    assert recording.is_two_channel_call
+    assert [one.name for one in recording.sides.order_by("number")] == [
+        "This side",
+        "The other side",
+    ]
+    live.ended(recording, how="stop", seconds=120, computer_ended_at=90.5)
+    recording.refresh_from_db()
+    told = dict(live.provenance_rows(recording))
+    assert told["Recorded live"].startswith(
+        "On the Record page, from the microphone and the computer's sound"
+    )
+    assert told["The computer's sound"].startswith("stopped at 1:30")
+    # The page carries the tick and the second meter.
+    signed_in(client, person)
+    page = client.get(reverse("record")).content.decode()
+    assert 'id="record-computer"' in page and 'id="meter-computer"' in page
+
+
 def test_an_uploaded_recording_has_no_live_facts(person, a_case):
     rec = Recording.objects.create(
         batch=Batch.objects.create(user=person),

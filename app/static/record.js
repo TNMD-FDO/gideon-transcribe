@@ -79,7 +79,10 @@
 
   var recording = null;   // { id, title, caseUrl }
   var recorder = null;
-  var stream = null;
+  var stream = null;      // the microphone
+  var computer = null;    // what the computer plays, when asked for
+  var computerEndedAt = null;
+  var mixed = null;       // the two together, one channel each
   var audio = null;       // AudioContext
   var upload = null;
   var source = null;
@@ -107,16 +110,33 @@
     var button = this;
     button.disabled = true;
 
-    // The microphone first, so that a refused microphone makes no recording.
+    var withComputer = document.getElementById("record-computer").checked;
+
+    // The microphone first, so that a refused microphone makes no recording;
+    // then the computer's sound, when asked for, which the browser offers
+    // only as part of sharing a screen: the picture is dropped at once.
     navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } })
       .then(function (got) {
         stream = got;
+        if (!withComputer) { return null; }
+        return navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then(function (shared) {
+          shared.getVideoTracks().forEach(function (track) { track.stop(); });
+          if (!shared.getAudioTracks().length) {
+            shared.getTracks().forEach(function (track) { track.stop(); });
+            throw new Error("The sound was not shared. Choose the whole screen and tick Share system audio (Edge) or Share audio (Chrome), then try again.");
+          }
+          computer = new MediaStream(shared.getAudioTracks());
+          return null;
+        });
+      })
+      .then(function () {
         return post("/record/start", {
           case: caseId,
           recording_type: document.getElementById("record-type").value,
           title: document.getElementById("record-title").value,
           language: document.getElementById("record-language").value,
-          translate: document.getElementById("record-translate").checked
+          translate: document.getElementById("record-translate").checked,
+          with_computer: !!computer
         });
       })
       .then(function (answer) {
@@ -141,7 +161,33 @@
 
   function stopStream() {
     if (stream) { stream.getTracks().forEach(function (track) { track.stop(); }); stream = null; }
+    if (computer) { computer.getTracks().forEach(function (track) { track.stop(); }); computer = null; }
     if (audio) { audio.close().catch(function () {}); audio = null; }
+  }
+
+  // The two sources as one stream of two channels: the microphone on the
+  // first, the computer on the second, each mixed down to one channel. The
+  // pipeline reads them as the two sides of a call.
+  function mix() {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+    var merger = audio.createChannelMerger(2);
+    var out = audio.createMediaStreamDestination();
+    out.channelCount = 2;
+    audio.createMediaStreamSource(stream).connect(merger, 0, 0);
+    if (computer) {
+      audio.createMediaStreamSource(computer).connect(merger, 0, 1);
+      computer.getAudioTracks()[0].addEventListener("ended", function () {
+        // Sharing stopped from the browser's own bar: the microphone goes on
+        // alone, and the transcript's provenance says from when.
+        if (computerEndedAt === null && recorder) {
+          computerEndedAt = Math.round(elapsed() * 10) / 10;
+          document.getElementById("during-line").textContent = "The computer's sound stopped at " + clock(computerEndedAt) + "; the microphone is still recording.";
+          document.getElementById("computer-row").hidden = true;
+        }
+      });
+    }
+    merger.connect(out);
+    return out.stream;
   }
 
   // During: the recorder, the upload, the clock and the meter -------------------
@@ -149,7 +195,8 @@
   function begin() {
     source = pieceSource();
     var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
-    recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: BITS_PER_SECOND });
+    mixed = computer ? mix() : stream;
+    recorder = new MediaRecorder(mixed, { mimeType: mime, audioBitsPerSecond: computer ? BITS_PER_SECOND * 2 : BITS_PER_SECOND });
     recorder.addEventListener("dataavailable", function (event) {
       if (event.data && event.data.size) {
         event.data.arrayBuffer().then(function (buffer) { source.push(new Uint8Array(buffer)); });
@@ -186,6 +233,7 @@
     recorder.start(5000);
     startedAt = performance.now();
     document.getElementById("during-title").textContent = recording.title;
+    document.getElementById("computer-row").hidden = !computer;
     show(during);
     meter();
     ticker = window.setInterval(tick, 500);
@@ -199,18 +247,23 @@
 
   function meter() {
     try {
-      audio = new (window.AudioContext || window.webkitAudioContext)();
-      var analyser = audio.createAnalyser();
-      analyser.fftSize = 512;
-      audio.createMediaStreamSource(stream).connect(analyser);
-      var data = new Uint8Array(analyser.frequencyBinCount);
-      var bar = document.getElementById("meter");
+      if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); }
+      var meters = [[stream, document.getElementById("meter")]];
+      if (computer) { meters.push([computer, document.getElementById("meter-computer")]); }
+      var live = meters.map(function (pair) {
+        var analyser = audio.createAnalyser();
+        analyser.fftSize = 512;
+        audio.createMediaStreamSource(pair[0]).connect(analyser);
+        return { analyser: analyser, bar: pair[1], data: new Uint8Array(analyser.frequencyBinCount) };
+      });
       (function draw() {
         if (!recorder) { return; }
-        analyser.getByteTimeDomainData(data);
-        var peak = 0;
-        for (var i = 0; i < data.length; i += 1) { peak = Math.max(peak, Math.abs(data[i] - 128)); }
-        bar.style.width = Math.min(100, Math.round((peak / 128) * 140)) + "%";
+        live.forEach(function (one) {
+          one.analyser.getByteTimeDomainData(one.data);
+          var peak = 0;
+          for (var i = 0; i < one.data.length; i += 1) { peak = Math.max(peak, Math.abs(one.data[i] - 128)); }
+          one.bar.style.width = Math.min(100, Math.round((peak / 128) * 140)) + "%";
+        });
         window.requestAnimationFrame(draw);
       })();
     } catch (error) { /* no meter, no harm */ }
@@ -251,7 +304,7 @@
     document.getElementById("after-title").textContent = recording.title;
     document.getElementById("open-case").href = recording.caseUrl;
     show(after);
-    post("/record/" + recording.id + "/ended", { how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10 })
+    post("/record/" + recording.id + "/ended", { how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10, computer_ended_at: computerEndedAt })
       .then(function () { if (uploadDone || how !== "stop") { watch(); } });
   }
 
@@ -264,6 +317,7 @@
     form.append("how", "closed");
     form.append("pauses", JSON.stringify(pauses));
     form.append("seconds", String(Math.round(elapsed() * 10) / 10));
+    if (computerEndedAt !== null) { form.append("computer_ended_at", String(computerEndedAt)); }
     navigator.sendBeacon("/record/" + recording.id + "/ended", form);
   });
   window.addEventListener("beforeunload", function (event) {
