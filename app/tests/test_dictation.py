@@ -301,22 +301,21 @@ def test_the_memo_rides_with_the_mail_only_when_the_office_says_so(
     recording.folder.mkdir(parents=True, exist_ok=True)
     (recording.folder / "playback.m4a").write_bytes(b"\x00" * 2048)
     files, left_out = mail._attachments_for(str(recording.pk))
-    assert [name for name, _ in files] == [
-        f"{recording.title} - memo.docx",
-        f"{recording.title}.m4a",
-    ]
+    names = [name for name, _ in files]
+    assert names[0].endswith(" - memo.docx") and names[1].endswith(".m4a")
+    assert names[0].startswith("Dictation") and names[1].startswith("Dictation")
     assert files[0][1][:2] == b"PK" and left_out == ""
     message = mail.build("ben@example.org", "s", "body", files)
     parts = [
         (part.get_filename(), part.get_content_type())
         for part in message.iter_attachments()
     ]
-    assert parts[1] == (f"{recording.title}.m4a", "audio/mp4")
+    assert parts[1] == (names[1], "audio/mp4")
     # Too large for the office's limit: left out, and the mail says so.
     settings_store.set_to("attachment_most_mb", 1)
     (recording.folder / "playback.m4a").write_bytes(b"\x00" * (2 * 1024 * 1024))
     files, left_out = mail._attachments_for(str(recording.pk))
-    assert [name for name, _ in files] == [f"{recording.title} - memo.docx"]
+    assert [name for name, _ in files] == [names[0]]
     assert "too large to attach" in left_out and "1 MB" in left_out
     # Off: nothing rides.
     settings_store.set_to("dictation_by_email", False)
