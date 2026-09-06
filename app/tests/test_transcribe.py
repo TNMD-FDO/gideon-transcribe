@@ -286,6 +286,11 @@ def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     assert "restic/restic:0.19.1@sha256:" in compose
     assert "/backup/.passwd:/etc/passwd:ro" in compose
     assert "backup_prepare()" in script
+    # The configuration is staged with the two backup secrets left out; the
+    # Install home itself is never mounted into the container.
+    assert "stage_config()" in script and "backup/config:/backup/config:ro" in compose
+    assert "./secrets:/backup/config" not in compose
+    assert "backup_password|backup_ssh_key) ;;" in script
     for name in ("backup_password", "backup_ssh_key", "backup_known_hosts"):
         assert f"  {name}:\n    file:" in compose, name
     # The drill override keeps everything but Postgres and the app out.

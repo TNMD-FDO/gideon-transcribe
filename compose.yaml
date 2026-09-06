@@ -502,12 +502,11 @@ services:
     volumes:
       - "${APP_DATA_DIR:?set APP_DATA_DIR in .env}/backup:/backup/backup"
       - "${APP_DATA_DIR}/cases:/backup/cases:ro"
-      - "./.env:/backup/config/env:ro"
-      - "./secrets:/backup/config/secrets:ro"
-      - "./tls:/backup/config/tls:ro"
-      - "./ca:/backup/config/ca:ro"
-      - "./whisperx-service/.env:/backup/config/whisperx-env:ro"
-      - "./whisperx-service/secrets:/backup/config/whisperx-secrets:ro"
+      # The configuration, as ./transcribe backup stages it just before the
+      # Snapshot: a copy owned by the app's account, with the two backup
+      # secrets left out, so nothing in the Install home need be readable by
+      # the container and the repository never holds its own key or password.
+      - "${APP_DATA_DIR}/backup/config:/backup/config:ro"
       - "${APP_DATA_DIR}/backup/.restic-cache:/cache"
       # ssh refuses to run as a user its passwd file does not know, and the
       # container runs as the app's account, which Alpine's file does not list.

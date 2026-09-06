@@ -1110,13 +1110,33 @@ backup_prepare() {
   local folder uid gid
   folder="$(env_value APP_DATA_DIR)/backup"
   uid="$(env_value APP_UID)"; gid="$(env_value APP_GID)"
-  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" "$folder/.restic-cache" 2>/dev/null || true
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" "$folder/.restic-cache" "$folder/config" 2>/dev/null || true
   # Docker makes a missing bind-mount source as a directory; one left by a
   # run that reached the container first is removed so the file can be written.
   if sudo test -d "$folder/.passwd"; then sudo rmdir "$folder/.passwd" 2>/dev/null || sudo rm -rf "$folder/.passwd"; fi
   printf 'root:x:0:0:root:/root:/bin/sh\ntranscribe:x:%s:%s:Gideon Transcribe:/tmp:/bin/sh\n' "$uid" "$gid" \
     | sudo tee "$folder/.passwd" >/dev/null
   sudo chown "$APP_USER:$APP_USER" "$folder/.passwd"; sudo chmod 0644 "$folder/.passwd"
+}
+
+# The configuration the Snapshot carries, staged as a copy the container can
+# read: .env and the WhisperX service's .env, both secrets folders, tls/ and
+# ca/, with the two backup secrets left out. Owned by the app's account, 0700,
+# and remade on every run so a change on the box is in that night's copy.
+stage_config() {
+  local folder="$(env_value APP_DATA_DIR)/backup/config"
+  sudo rm -rf "$folder"
+  sudo install -d -m 0700 "$folder" "$folder/secrets" "$folder/tls" "$folder/ca" "$folder/whisperx-secrets"
+  [ -f "$ENV_FILE" ] && sudo cp "$ENV_FILE" "$folder/env"
+  [ -f "$HERE/whisperx-service/.env" ] && sudo cp "$HERE/whisperx-service/.env" "$folder/whisperx-env"
+  for name in $(sudo ls "$SECRETS" 2>/dev/null); do
+    case "$name" in backup_password|backup_ssh_key) ;; *) sudo cp "$SECRETS/$name" "$folder/secrets/$name" ;; esac
+  done
+  sudo cp -a "$HERE/tls/." "$folder/tls/" 2>/dev/null || true
+  sudo cp -a "$HERE/ca/." "$folder/ca/" 2>/dev/null || true
+  sudo cp -a "$HERE/whisperx-service/secrets/." "$folder/whisperx-secrets/" 2>/dev/null || true
+  sudo chown -R "$APP_USER:$APP_USER" "$folder"
+  sudo chmod -R u+rX,go-rwx "$folder"
 }
 
 # restic with the nightly mounts: cases/ and the configuration read-only,
@@ -1215,6 +1235,7 @@ cmd_backup() {
 
   # 4. The Snapshot: the newest dump, the manifest, cases/, and the configuration.
   step=snapshot
+  stage_config
   if ! restic_ro cat config >/dev/null 2>&1; then
     record_backup_failure "$step" "target_unreachable"
   fi

@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.4, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The first real backup could not read the two environment files**, which
+  belong to the installer's account, and mounting the secrets folder whole
+  would have carried the repository password and the store's key into the
+  repository. `./transcribe backup` now stages a copy of the configuration
+  into the backup folder just before the Snapshot, owned by the app's account
+  and without the two backup secrets, and that copy is what the container
+  reads. Found on the first Snapshot against the office's store, which
+  otherwise carried 3.6 GB in 34 seconds.
+
 ## v1.19.3, 2026-09-05
 
 ```
