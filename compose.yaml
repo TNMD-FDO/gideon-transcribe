@@ -509,24 +509,16 @@ services:
       - "./whisperx-service/.env:/backup/config/whisperx-env:ro"
       - "./whisperx-service/secrets:/backup/config/whisperx-secrets:ro"
       - "${APP_DATA_DIR}/backup/.restic-cache:/cache"
+      # ssh refuses to run as a user its passwd file does not know, and the
+      # container runs as the app's account, which Alpine's file does not list.
+      # ./transcribe writes this one-line file before every run.
+      - "${APP_DATA_DIR}/backup/.passwd:/etc/passwd:ro"
     secrets:
-      # In the long form: ssh refuses a private key any other user can read,
-      # so the key is given to the running user at 0400.
-      - source: backup_password
-        target: backup_password
-        uid: "${APP_UID}"
-        gid: "${APP_GID}"
-        mode: 0400
-      - source: backup_ssh_key
-        target: backup_ssh_key
-        uid: "${APP_UID}"
-        gid: "${APP_GID}"
-        mode: 0400
-      - source: backup_known_hosts
-        target: backup_known_hosts
-        uid: "${APP_UID}"
-        gid: "${APP_GID}"
-        mode: 0400
+      # Bind-mounted with the host files' own owner and mode: the install
+      # gives them to the app's account at 0400, which is what ssh wants.
+      - backup_password
+      - backup_ssh_key
+      - backup_known_hosts
     networks:
       - transcribe
     logging:
