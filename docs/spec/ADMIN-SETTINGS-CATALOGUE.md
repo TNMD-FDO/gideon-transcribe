@@ -139,6 +139,7 @@ Four rows and a template, specified in `docs/spec/SPEC-PHASE-3.md`. Live recordi
 | Record tab (Features page; key `dictation`) | On or Off; greyed while Live recording is Off | Off | 3 | People may record from a Record tab, choosing a dictation, a meeting in the room, or a call on the computer: a recording kept on its own, with a memo or summary one click away, sent to colleagues one at a time. | At once. Off hides the tab and the New recording page; every recording made there is kept. |
 | Longest live recording (Limits page) | whole minutes, 10 to 480 | 180 | 3 | The Record page stops a recording at this length. | The next recording. |
 | Dictation by email (Email page) | On or Off; greyed while mail is not configured | Off | 3 | Send to attaches a Dictation's Memo, as a Word file, to the mail that tells a colleague it is there. The one message the app sends that carries content; the recipient is always a colleague the directory knows. | The next Send to. |
+| Largest recording attached (Email page; key `attachment_most_mb`) | whole MB, 1 to 100; greyed while Dictation by email is Off | 20 | 3 | With Dictation by email On, Send to attaches the recording itself up to this size; a larger one is left out and the mail says so. | The next Send to. |
 | Recording sent (Email page, a template beside the four; keys `dictation_subject`, `dictation_body`) | a Subject and a Body with `{name}`, `{by}`, `{case}`, `{title}`, `{link}` | the Phase 3 wording | 3 | The mail Send to sends. | The next message. |
 
 ## Rules that apply to every setting

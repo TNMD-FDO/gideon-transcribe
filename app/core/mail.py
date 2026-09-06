@@ -332,13 +332,13 @@ def with_footer(body: str) -> str:
 # Sending -----------------------------------------------------------------------------
 
 
-def build(
-    to_address: str, subject: str, body: str, attachment: tuple | None = None
-) -> EmailMessage:
+def build(to_address: str, subject: str, body: str, attachment=None) -> EmailMessage:
     """One plain-text message, marked automatic so nothing auto-replies to it.
 
-    `attachment` is (filename, bytes) for the one message that carries a
-    file: a dictation's Memo, when the office has turned that on.
+    `attachment` is one (filename, bytes) pair or a list of them, for the one
+    kind of message that carries files: a recording sent to a colleague, its
+    memo or summary and the recording itself, when the office has turned
+    that on.
     """
     message = EmailMessage()
     message["From"] = formataddr(("Gideon Transcribe", mail_from()))
@@ -354,20 +354,36 @@ def build(
     message["X-Auto-Response-Suppress"] = "All"
     message["Precedence"] = "bulk"
     message.set_content(body)
-    if attachment is not None:
-        filename, data = attachment
+    files = (
+        attachment
+        if isinstance(attachment, list)
+        else ([attachment] if attachment else [])
+    )
+    for filename, data in files:
+        maintype, subtype = _mime_of(filename)
         message.add_attachment(
-            data,
-            maintype="application",
-            subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
-            filename=filename,
+            data, maintype=maintype, subtype=subtype, filename=filename
         )
     return message
 
 
-def deliver(
-    to_address: str, subject: str, body: str, attachment: tuple | None = None
-) -> str:
+def _mime_of(filename: str) -> tuple[str, str]:
+    """The type a file is sent as, from its ending; a Word file or a recording."""
+    ending = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    return {
+        "docx": (
+            "application",
+            "vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
+        "m4a": ("audio", "mp4"),
+        "mp4": ("video", "mp4"),
+        "webm": ("audio", "webm"),
+        "mp3": ("audio", "mpeg"),
+        "wav": ("audio", "wav"),
+    }.get(ending, ("application", "octet-stream"))
+
+
+def deliver(to_address: str, subject: str, body: str, attachment=None) -> str:
     """Hand one message to the relay, now, and return the relay's reply.
 
     Raises MailFailure with the reason class when the relay will not take it.
@@ -525,11 +541,20 @@ def attempt(
     status = MailStatus.the_one()
     attachment = None
     if details.get("attach_memo"):
-        # The one attachment: a dictation's Memo, built now from its Summary,
-        # so the file is the Memo as it stands when the mail goes.
-        attachment = _memo_file(details.get("attach_memo"))
+        # The attachments, built now: the memo or summary as it stands when
+        # the mail goes, and the recording itself when it fits the office's
+        # limit. A recording left out for size is said so in the body.
+        files, left_out = _attachments_for(details.get("attach_memo"))
+        attachment = files
+        if left_out:
+            body = body.replace(
+                "\nSent automatically by",
+                f"\n{left_out}\n\nSent automatically by",
+                1,
+            )
         details = {key: value for key, value in details.items() if key != "attach_memo"}
-        details["attached"] = attachment is not None
+        details["attached"] = bool(files)
+        details["files"] = [name for name, _ in files]
     try:
         reply = deliver(to_address, subject, body, attachment)
     except MailFailure as why:
@@ -579,6 +604,40 @@ def attempt(
     status.save()
     log.info("mail (%s) to %s accepted: %s", kind, recipient, reply)
     return None
+
+
+def _attachments_for(recording_id) -> tuple[list, str]:
+    """The files a sent recording's mail carries, and the line for one left out.
+
+    The memo or summary as a Word file when there is one; the recording's
+    playback copy (its original when there is none yet) when it is no larger
+    than the office's limit, else a line saying so.
+    """
+    from core.recordings import Recording
+
+    files: list = []
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None:
+        return files, ""
+    memo = _memo_file(recording_id)
+    if memo is not None:
+        files.append(memo)
+    path = recording.playback_path or (
+        recording.original_path if recording.original_path.exists() else None
+    )
+    if path is None or not path.exists():
+        return files, ""
+    limit = int(settings_store.get("attachment_most_mb") or 20) * 1024 * 1024
+    size = path.stat().st_size
+    if size > limit:
+        return files, (
+            f"The recording itself ({size / 1024 / 1024:.0f} MB) is too large to "
+            f"attach (the office's limit is {limit // 1024 // 1024} MB); the link "
+            "above opens it."
+        )
+    stem = "".join(ch for ch in recording.title if ch.isalnum() or ch in " -_")[:80]
+    files.append((f"{stem.strip() or 'Recording'}{path.suffix}", path.read_bytes()))
+    return files, ""
 
 
 def _memo_file(recording_id) -> tuple | None:

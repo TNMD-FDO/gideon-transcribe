@@ -353,9 +353,28 @@ def _rows() -> list[Definition]:
             needs_mail=True,
             what_it_does=(
                 "Send to attaches a recording's memo or summary, as a Word file, "
-                "to the mail that tells a colleague it is there. The one message "
-                "the app sends that carries content; the recipient is always a "
-                "colleague the directory knows."
+                "and the recording itself up to the size below, to the mail that "
+                "tells a colleague it is there. The one message the app sends "
+                "that carries content; the recipient is always a colleague the "
+                "directory knows."
+            ),
+            when_changed="The next Send to.",
+        ),
+        Definition(
+            key="attachment_most_mb",
+            page=EMAIL,
+            name="Largest recording attached",
+            kind=NUMBER,
+            default=20,
+            least=1,
+            most=100,
+            unit="MB",
+            needs="dictation_by_email",
+            what_it_does=(
+                "With Dictation by email on, Send to attaches the recording "
+                "itself as well as the memo or summary, up to this size. A "
+                "larger one is left out and the mail says so; the link opens "
+                "it in the app. Most relays refuse mail above 10 to 25 MB."
             ),
             when_changed="The next Send to.",
         ),
