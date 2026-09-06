@@ -50,10 +50,13 @@
       <h2 style="margin-top: 24px">Summary templates</h2>
       <p class="muted small">
         Users choose a template only when two or more are Enabled. Exactly one
-        is the Default among the Enabled; Standard summary is built in and
-        cannot be deleted.
+        is the Default among the Enabled; the shipped ones are built in and
+        cannot be deleted. A template ticked for a recording type is the one
+        the viewer chooses for a recording of that type; a template ticked for
+        none is for any recording.
+        {% if not folder_management %}Recording types come with Cases, which are off; the ticks apply once Folder management is on.{% endif %}
       </p>
-      {% for row in summary_templates %}
+      {% for item in summary_templates %}{% with row=item.row %}
         <form method="post" action="{% url 'panel-summary-template' row.pk %}" class="card" style="margin-bottom: 12px">
           {% csrf_token %}
           <div class="row">
@@ -68,6 +71,17 @@
           </div>
           <input type="text" name="description" value="{{ row.description }}" maxlength="200"
                  placeholder="One line about what this summary is for" style="width: 100%; margin: 8px 0 0">
+          <div class="row small types" style="margin: 8px 0 0; gap: 10px; flex-wrap: wrap">
+            <span class="muted">For recording types:</span>
+            {% for one in item.types %}
+              <label class="row" style="gap: 4px{% if one.gone %}; opacity: .6{% endif %}">
+                <input type="checkbox" name="types" value="{{ one.name }}"{% if one.ticked %} checked{% endif %}>
+                {{ one.name }}{% if one.gone %} <span class="muted">(no longer listed)</span>{% endif %}
+              </label>
+            {% empty %}
+              <span class="muted">none listed under Cases settings</span>
+            {% endfor %}
+          </div>
           <textarea name="text" rows="8" style="width: 100%; margin: 8px 0">{{ row.text }}</textarea>
           <div class="row">
             <button type="submit" name="action" value="save" class="primary small">Save</button>
@@ -83,7 +97,7 @@
             {% endif %}
             {% if row.built_in %}
               <button type="submit" name="action" value="reset" class="ghost small"
-                      data-confirm-title="Put back the default wording of Standard summary?" data-confirm="Your edits to it are lost; the version number rises." data-confirm-ok="Reset">Reset to default</button>
+                      data-confirm-title="Put back the shipped wording of {{ row.name }}?" data-confirm="Your edits to it are lost; the version number rises." data-confirm-ok="Reset">Reset to default</button>
             {% else %}
               <span class="grow"></span>
               <button type="submit" name="action" value="delete" class="ghost small danger"
@@ -91,15 +105,16 @@
             {% endif %}
           </div>
         </form>
-      {% endfor %}
+      {% endwith %}{% endfor %}
     </div>
 
     <aside class="pane-detail">
       <h2 style="margin-top: 0">Add template</h2>
       <p class="muted small">
         A new shape for a summary: a name people will recognise, one line
-        about when to use it, and the instruction text. It starts Enabled and
-        at version 1.
+        about when to use it, the recording types it is for, and the
+        instruction text. It starts Enabled and at version 1, and the viewer
+        offers it from then on.
       </p>
       <form method="post" action="{% url 'panel-add-summary-template' %}" class="card stack">
         {% csrf_token %}
@@ -107,6 +122,13 @@
           <input type="text" name="name" maxlength="80" required></label>
         <label class="field"><span>Description</span>
           <input type="text" name="description" maxlength="200"></label>
+        <div class="field"><span>For recording types (none means any)</span>
+          <div class="row small" style="gap: 10px; flex-wrap: wrap; margin-top: 4px">
+            {% for one in types_for_new %}
+              <label class="row" style="gap: 4px"><input type="checkbox" name="types" value="{{ one.name }}"> {{ one.name }}</label>
+            {% empty %}<span class="muted">none listed</span>{% endfor %}
+          </div>
+        </div>
         <label class="field"><span>Instruction text</span>
           <textarea name="text" rows="8" required placeholder="{{ standard_text|truncatechars:120 }}"></textarea></label>
         <button type="submit" class="primary">Add template</button>

@@ -90,6 +90,12 @@
           escape(one.name) + (one.description ? " (" + escape(one.description) + ")" : "") + "</option>";
       }).join("");
       document.getElementById("summary-template-line").hidden = state.templates.length < 2;
+      // Why this one: the recording's type chose it.
+      var typeLine = document.getElementById("summary-type-line");
+      if (typeLine) {
+        typeLine.textContent = state.type_line || "";
+        typeLine.hidden = !state.type_line;
+      }
     }
     if (!state.summaries.length) {
       summaryList.innerHTML = "<p class='muted small'>No summaries yet. New summary reads the whole transcript and writes one.</p>";

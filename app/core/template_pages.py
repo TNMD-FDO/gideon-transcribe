@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, prompts, settings_store
+from core import audit, cases, prompts, settings_store
 from core.assistant import PromptTemplate, SummaryTemplate
 from core.panel import admins_only, furniture
 
@@ -34,9 +34,31 @@ def _row(request, event: str, **details) -> None:
     )
 
 
+def _types_offered(template=None) -> list[dict]:
+    """The Recording types a template may be for: the setting's list, plus any
+    the template still names that the list no longer has, marked so."""
+    listed = cases.recording_types()
+    held = list(getattr(template, "recording_types", None) or [])
+    rows = [{"name": one, "ticked": one in held, "gone": False} for one in listed]
+    for one in held:
+        if one not in listed:
+            rows.append({"name": one, "ticked": True, "gone": True})
+    return rows
+
+
+def _types_from(request) -> list[str]:
+    """The ticked types, as the setting names them, plus any the page could
+    only show greyed (a type no longer listed keeps its place)."""
+    listed = cases.recording_types()
+    wanted = [one.strip() for one in request.POST.getlist("types") if one.strip()]
+    kept = [one for one in listed if one in wanted]
+    kept += [one for one in wanted if one not in listed]
+    return kept[:40]
+
+
 @admins_only
 def templates(request: HttpRequest) -> HttpResponse:
-    SummaryTemplate.standard()
+    SummaryTemplate.shipped()
     return render(
         request,
         "panel/templates.html",
@@ -46,7 +68,12 @@ def templates(request: HttpRequest) -> HttpResponse:
             "prompt_templates": [
                 PromptTemplate.named(key) for key in PromptTemplate.DEFAULTS
             ],
-            "summary_templates": list(SummaryTemplate.objects.all()),
+            "summary_templates": [
+                {"row": one, "types": _types_offered(one)}
+                for one in SummaryTemplate.objects.all()
+            ],
+            "types_for_new": _types_offered(),
+            "folder_management": cases.folder_management_on(),
             "standard_text": prompts.STANDARD_SUMMARY,
             # The starter questions, two lists, edited here like the templates.
             "starters": [
@@ -129,6 +156,7 @@ def add_summary_template(request: HttpRequest) -> HttpResponse:
             name=name,
             description=request.POST.get("description", "").strip()[:200],
             text=text,
+            recording_types=_types_from(request),
         )
         _row(
             request,
@@ -136,6 +164,7 @@ def add_summary_template(request: HttpRequest) -> HttpResponse:
             object_id=row.pk,
             object_label=row.name,
             version=1,
+            types=row.recording_types,
         )
     return redirect(reverse(PAGE))
 
@@ -184,8 +213,8 @@ def summary_template(request: HttpRequest, template_id) -> HttpResponse:
             object_id=row.pk,
             object_label=row.name,
         )
-    elif action == "reset" and row.built_in:
-        row.save_text(prompts.STANDARD_SUMMARY)
+    elif action == "reset" and row.built_in and row.shipped_text:
+        row.save_text(row.shipped_text)
         _row(
             request,
             "summary template reset",
@@ -204,8 +233,12 @@ def summary_template(request: HttpRequest, template_id) -> HttpResponse:
         if description != row.description:
             row.description = description
             changed = True
+        types = _types_from(request)
+        if types != list(row.recording_types or []):
+            row.recording_types = types
+            changed = True
         if changed:
-            row.save(update_fields=["name", "description"])
+            row.save(update_fields=["name", "description", "recording_types"])
         if text and text != row.text:
             row.save_text(text)
             changed = True
@@ -216,5 +249,6 @@ def summary_template(request: HttpRequest, template_id) -> HttpResponse:
                 object_id=row.pk,
                 object_label=row.name,
                 version=row.version,
+                types=row.recording_types,
             )
     return redirect(reverse(PAGE))
