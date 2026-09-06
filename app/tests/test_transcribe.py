@@ -280,11 +280,12 @@ def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     # The install asks its two questions and runs the backup steps.
     assert "  ask_the_backup\n" in script
     # The compose file: the restic service behind its profile, pinned by digest,
-    # the three secrets in the long form owned by the running user.
+    # the three secrets, and the passwd file ssh needs for the app's account.
     compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
     assert 'profiles: ["backup"]' in compose
     assert "restic/restic:0.19.1@sha256:" in compose
-    assert compose.count("mode: 0400") >= 3
+    assert "/backup/.passwd:/etc/passwd:ro" in compose
+    assert "backup_prepare()" in script
     for name in ("backup_password", "backup_ssh_key", "backup_known_hosts"):
         assert f"  {name}:\n    file:" in compose, name
     # The drill override keeps everything but Postgres and the app out.

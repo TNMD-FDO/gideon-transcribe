@@ -1103,11 +1103,25 @@ backup_ssh_options() {
   printf '%s' "-i /run/secrets/backup_ssh_key -o UserKnownHostsFile=/run/secrets/backup_known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20"
 }
 
+# The restic container runs as the app's account, and ssh will not run as a
+# user its passwd file does not know, so a one-line passwd is written for the
+# container before every run, beside restic's cache.
+backup_prepare() {
+  local folder uid gid
+  folder="$(env_value APP_DATA_DIR)/backup"
+  uid="$(env_value APP_UID)"; gid="$(env_value APP_GID)"
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" "$folder/.restic-cache" 2>/dev/null || true
+  printf 'root:x:0:0:root:/root:/bin/sh\ntranscribe:x:%s:%s:Gideon Transcribe:/tmp:/bin/sh\n' "$uid" "$gid" \
+    | sudo tee "$folder/.passwd" >/dev/null
+  sudo chown "$APP_USER:$APP_USER" "$folder/.passwd"; sudo chmod 0644 "$folder/.passwd"
+}
+
 # restic with the nightly mounts: cases/ and the configuration read-only,
 # backup/ read-write. Arguments are restic's own.
 restic_ro() {
   local user_host
   user_host="$(backup_user_host "$(backup_target)")"
+  backup_prepare
   compose --profile backup run --rm -T backup \
     -o "sftp.command=ssh $(backup_ssh_options) $user_host -s sftp" "$@"
 }
@@ -1121,8 +1135,10 @@ restic_rw() {
   local image user_host
   image="$(grep -o 'restic/restic:[^ ]*' "$HERE/compose.yaml" | head -1)"
   user_host="$(backup_user_host "$(backup_target)")"
+  backup_prepare
   docker run --rm \
     --user "$(env_value APP_UID):$(env_value APP_GID)" \
+    -v "$(env_value APP_DATA_DIR)/backup/.passwd:/etc/passwd:ro" \
     -e RESTIC_REPOSITORY="$(backup_target)" \
     -e RESTIC_PASSWORD_FILE=/run/secrets/backup_password \
     -e RESTIC_CACHE_DIR=/cache -e HOME=/tmp \
@@ -1656,6 +1672,7 @@ ssh \$o "\$u" true >/dev/null 2>&1 && echo "SHELL:yes" || echo "SHELL:no"
 EOS
 )
   local out
+  backup_prepare
   out="$(compose --profile backup run --rm -T --entrypoint sh backup -c "$script" 2>/dev/null)"
   local offered login root write after shell
   offered="$(printf '%s\n' "$out" | sed -n 's/^OFFERED://p')"
