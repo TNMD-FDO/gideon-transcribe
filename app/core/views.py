@@ -35,7 +35,12 @@ def healthz(request: HttpRequest) -> HttpResponse:
 
 
 def where_they_land(user=None) -> str:
-    """The Upload page, whoever it is and whatever the settings say.
+    """The Start page, whoever it is and whatever the settings say.
+
+    It asks one question, what do you want to do, and offers Upload files,
+    Record now, and Open a case; the top bar has the rest. Before it, the
+    landing was the Upload page, for the reasons below, which still hold:
+    the Start page is the Upload door and the others in one place.
 
     The specification lands people on Cases when Folder management is on. It
     is right for the office that works in Cases and wrong for the one that
@@ -48,7 +53,7 @@ def where_they_land(user=None) -> str:
     The argument is kept because the callers pass it and a future rule may
     want it.
     """
-    return reverse("upload")
+    return reverse("start")
 
 
 def logo(request: HttpRequest) -> HttpResponse:

@@ -109,7 +109,7 @@
     if (back) {
       UI.confirm({
         title: "Take this recording back from " + back.dataset.name + "?",
-        body: "It leaves their Record tab. Nothing is mailed.",
+        body: "It leaves their My recordings page. Nothing is mailed.",
         ok: "Take back",
         cancel: "Keep it",
         danger: true

@@ -49,7 +49,7 @@ def record(request: HttpRequest) -> HttpResponse:
     """The New recording page: one question, then Record.
 
     From a Case page (`?case=`) the Case is preset and the recording lands in
-    it; from the Record tab there is no Case and the recording is kept on its
+    it; from Record now there is no Case and the recording is kept on its
     own. Either way the three styles are the same presets.
     """
     _on_or_404()
@@ -62,7 +62,7 @@ def record(request: HttpRequest) -> HttpResponse:
         if case is None:
             raise Http404("not a case this person may record into")
     elif not dictation.on():
-        # Without the Record tab, a recording needs a Case to land in.
+        # Without Record now, a recording needs a Case to land in.
         raise Http404("choose a case to record into")
     return render(
         request,
@@ -122,9 +122,7 @@ def start(request: HttpRequest) -> JsonResponse:
             "title": recording.title,
             "filename": recording.original_filename,
             "case": (
-                reverse("case", args=[case.pk])
-                if case is not None
-                else reverse("record")
+                reverse("case", args=[case.pk]) if case is not None else reverse("home")
             ),
             "longest_seconds": live.longest_seconds(),
         }
@@ -215,6 +213,6 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     told["case"] = (
         reverse("case", args=[recording.case_id])
         if recording.case_id
-        else (reverse("record") if recording.is_dictation else "")
+        else (reverse("home") if recording.is_dictation else "")
     )
     return JsonResponse(told)

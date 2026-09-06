@@ -123,9 +123,17 @@ _Avoid_: bookmark, flag, tag
 A Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless they add it to one, whose product is a Memo. Its Recording type is Dictation, and the office's Retention period applies to it on its own. Phase 3.
 _Avoid_: voice note, voice memo
 
-**Record tab**:
-The tab where everything a person recorded from it is, newest first (dictations, meetings in the room, calls on the computer), with those colleagues have sent them under "Sent to you"; its New recording page asks what is being recorded and offers the three styles. Phase 3. The tab was called Dictations for one release.
-_Avoid_: Dictations page (the earlier name), recorder
+**Start page**:
+Where sign-in lands: one question, what do you want to do, and three doors, Upload files, Record now (with the Record now setting on), Open a case (with Folder management on). Nothing else is on it. The top bar reads Start, Cases, My recordings, Clips, Panel, Help.
+_Avoid_: home, dashboard, landing page, menu
+
+**Recorded here**:
+The first part of the My recordings page, with the Record now setting on: everything the person recorded from the New recording page and kept on its own, newest first, each with Play, Open, the memo or summary, Send to, Add to a case, Delete; and under them what colleagues have sent, "Sent to you". Kept for as long as the office keeps a case. Phase 3. It was a tab of its own, called Record, and before that Dictations, each for one release.
+_Avoid_: Record tab, Dictations page (the earlier names), recorder
+
+**Record now**:
+The Start page's door to the New recording page, and the name of the Admin setting (key `dictation`) that turns it and Recorded here on. Phase 3.
+_Avoid_: Record tab, Dictation setting
 
 **Memo**:
 The document a Dictation becomes: a Summary written by the shipped Dictation memo template, which writes the dictated words out as a memo rather than summarising a conversation. Phase 3.
@@ -168,8 +176,8 @@ What the Upload page shows from Submit until every Recording in the Batch has en
 _Avoid_: queue page, progress page, upload status
 
 **Recordings page**:
-The page a user lands on at sign-in: the list of their Recordings with Open, Process again, Details, and Delete, and the way to the Upload page. The pages say "your recordings", never Workspace.
-_Avoid_: home, dashboard, Workspace page
+"My recordings" in the top bar: everything that is the person's, in two parts, Recorded here (with the Record now setting on) and Uploaded this session, the list of their uploaded Recordings with Open, Process again, Details, and Delete, kept until sign-out unless moved to a Case. Sign-in landed here in Phase 1 and lands on the Start page from v1.29.0. The pages say "my recordings" or "your recordings", never Workspace.
+_Avoid_: home, dashboard, Workspace page, Recordings tab (it is My recordings)
 
 **WhisperX service**:
 The independent transcription engine that runs one job at a time for the whole office, consumed by the app and, later, by other Consumers.

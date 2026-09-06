@@ -8,13 +8,17 @@ Nothing you upload leaves the building. The app runs on the office's own server,
 
 The sign-in page carries your office's logo and name when your Admin has set them. Sign in with your office username and password, the same ones you use for your computer. You can sign in if you are in the office's sign-in group. If you are not and think you should be, ask IT.
 
-You land on the Upload page. Along the top of every page are your recordings, Cases (if your office has turned them on), Clips, and this guide under Help.
+You land on the Start page, which asks one question, what do you want to do, and offers **Upload files**, **Record now** (when your office has turned recording on), and **Open a case** (when it uses cases). Along the top of every page are **Start**, **Cases**, **My recordings**, **Clips**, the **Panel** for Admins, and this guide under **Help**.
 
 You have one login session at a time. Signing in from a second browser ends the first.
 
 ## Uploading a batch
 
-A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. On a wide monitor the three steps are on the page together, files on the left and the settings and the start button on the right; on a laptop they come one at a time, with **Next** between them.
+A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. **Upload files** on the Start page opens the Upload page.
+
+The page starts with two questions. **What are these?** offers a card for each kind of recording your office lists, a jail call, a phone call, an interview, body camera footage, a hearing, a meeting, a dictation, and **Something else** for anything else or a mixed batch. Choose one and the speaker settings are set for you: a jail call is two speakers told apart, a hearing is between two and eight, a dictation is one voice with no speaker labels. **Where do they go?** appears when your office uses cases: **This session only**, or **Into a case**, with the case chosen beside it. A recording put into a case is labelled with the kind you chose.
+
+Then the three steps. On a wide monitor they are on the page together, files on the left and the settings and the start button on the right; on a laptop they come one at a time, with **Next** between them.
 
 ### 1. Choose files
 
@@ -22,9 +26,9 @@ Drop the files on the Upload page, or click **choose files**. Most recordings wo
 
 The page tells you the limits your Admin has set: how many files a batch may hold, how big one file may be, and how long one recording may run. A file over a limit is refused when you try to start, with the reason beside it, and the rest of the batch goes ahead.
 
-### 2. Settings
+### 2. Anything else?
 
-The settings apply to the whole batch. Click **Same as batch** on a file to give that one file different settings; every other file keeps the batch's.
+This step is optional: the speaker settings are already set from what you said the files are. Change them here if you know better, or give one file its own. The settings apply to the whole batch. Click **Same as batch** on a file to give that one file different settings; every other file keeps the batch's.
 
 - **Speakers.** Whether to separate the voices. Leave it on unless the recording is one person. If you know how many people are talking, saying so helps: **Exactly** two for a phone call, for instance, or **Between** two and four for an interview. **Let the app decide** is right when you do not know.
 - **Translate to English.** For a recording in another language, or with more than one. The transcript comes back in English and the original-language text is not kept. A translated transcript is marked in the viewer and carries a notice on every export.
@@ -62,11 +66,15 @@ Then two choices:
 
 Every recording counts against your quota until it goes, so an office running batches all day works in a loop: upload, download, done with these, upload again.
 
-## Your recordings
+## My recordings
 
-The Recordings page is a table of everything you have uploaded and not yet removed, newest first. Click a recording and its details appear beside the table (under the row, on a laptop): the file, its state, its clips, and what you can do with it: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Move to case** when your office uses cases, and **Delete**. Up and down move along the rows; Enter opens.
+**My recordings** in the top bar is the one place to look for anything that is yours. It has two parts, each saying how long it keeps things.
 
-**Clear my recordings** removes all of them at once, after telling you what would go. **Upload recordings** starts a new batch.
+**Recorded here**, when your office has recording on, is everything you recorded at your desk and kept on your own, with what colleagues have sent you under it. It is described under [Recording at your desk](#recording-at-your-desk) below.
+
+**Uploaded this session** is a table of everything you have uploaded and not yet removed, newest first. Click a recording and its details appear beside the table (under the row, on a laptop): the file, its state, its clips, and what you can do with it: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Move to case** when your office uses cases, and **Delete**. Up and down move along the rows; Enter opens. These stay until you sign out, unless you move them to a case.
+
+**Clear my recordings** removes all the uploaded ones at once, after telling you what would go. **Upload files** starts a new batch.
 
 A recording in a case is not listed here. It is on its case's page.
 
@@ -217,19 +225,19 @@ Your own **Delete** of a case does not go to the bin. It is final, as the confir
 
 Days while the office has cases turned off do not count against any case.
 
-## The Record tab
+## Recording at your desk
 
-When your office has it on, **Record** is in the top bar: one place for anything you record at your desk. Press **New recording** and answer one question, what are you recording:
+When your office has it on, **Record now** is on the Start page, and **New recording** is beside **Recorded here** on My recordings. Either opens the New recording page, which asks one question, what are you recording:
 
 - **Dictation.** Just you. The product is the memo, written out as you dictated it.
 - **Meeting or interview in the room.** The microphone hears everyone; the people expected are buttons, and you tap who is talking so the transcript names them. The product is the transcript, with an Interview summary one click away.
 - **Call or meeting on this computer.** Zoom, Teams, a softphone, a jail call played here. The browser asks to share the screen's sound (choose the whole screen and tick Share system audio); the far side becomes its own side of the transcript. The product is the transcript, with a Meeting summary one click away.
 
-Choose a card, add a title if you want one, and press **Record**. Talk; for a dictation, say the punctuation and the layout as you go ("new paragraph", "full stop", "comma", "open quote", "heading"). Press **Stop**. Nothing appears while you talk; a minute or two later the transcript is ready and you land back on the Record tab with the new recording marked on top. Its **play** button plays it there, so you can check it is the right one before you send it; **Open** takes you to the transcript. The row offers **Write the memo** for a dictation or **Write the summary** for the others. One click writes it: a dictation comes back as the document you dictated, with the false starts and the "scratch that" taken out and nothing added; a meeting or call comes back summarised in the shape your office's template gives it. **Open the memo** or **Open the summary** shows it in the viewer beside the recording, where **Export to Word** keeps it as a file. **More options** on the New recording page has the spoken language, Translate to English, the recording type (a jail call played on the computer can be typed as Jail call to get the Jail call summary), and the computer's sound for a meeting in the room that has a caller on the line too.
+Choose a card, add a title if you want one, and press **Record**. Talk; for a dictation, say the punctuation and the layout as you go ("new paragraph", "full stop", "comma", "open quote", "heading"). Press **Stop**. Nothing appears while you talk; a minute or two later the transcript is ready and you land on My recordings with the new recording marked on top under **Recorded here**. Its **play** button plays it there, so you can check it is the right one before you send it; **Open** takes you to the transcript. The row offers **Write the memo** for a dictation or **Write the summary** for the others. One click writes it: a dictation comes back as the document you dictated, with the false starts and the "scratch that" taken out and nothing added; a meeting or call comes back summarised in the shape your office's template gives it. **Open the memo** or **Open the summary** shows it in the viewer beside the recording, where **Export to Word** keeps it as a file. **More options** on the New recording page has the spoken language, Translate to English, the recording type (a jail call played on the computer can be typed as Jail call to get the Jail call summary), and the computer's sound for a meeting in the room that has a caller on the line too.
 
-A recording made here is yours. **Send to** hands it to a colleague: pick them from the list, and they see it under **Sent to you** on their own Record tab and get an email saying it is there; if your office has turned it on, the memo or summary comes attached to that email as a Word file, and so does the recording itself when it is under the size the office allows; a larger one is left out and the email says so, and the link opens it. **Take back** removes it from their page. A colleague you send to can read, play, and export, and nothing more. **Add to a case** puts a recording that belongs to a matter into its case afterwards; it stays on your Record tab with the case's name, and follows the case's clock from then on. Recording from a case's own page, with its **Record** button, puts the recording straight into that case.
+A recording made here is yours. **Send to** hands it to a colleague: pick them from the list, and they see it under **Sent to you** on their own My recordings page and get an email saying it is there; if your office has turned it on, the memo or summary comes attached to that email as a Word file, and so does the recording itself when it is under the size the office allows; a larger one is left out and the email says so, and the link opens it. **Take back** removes it from their page. A colleague you send to can read, play, and export, and nothing more. **Add to a case** puts a recording that belongs to a matter into its case afterwards; it stays under Recorded here with the case's name, and follows the case's clock from then on. Recording from a case's own page, with its **Record** button, puts the recording straight into that case.
 
-A recording made from the tab is kept for as long as the office keeps a case, counted from the last time you or a colleague opened it, wrote its memo or summary, or sent it. In its last days the row turns amber and reads "deletes in N days unless opened", your nightly email lists it, and opening it starts the clock over. There is no recycle bin for these: when the clock runs out it is gone. **Delete** on the row is final too.
+A recording made here is kept for as long as the office keeps a case, counted from the last time you or a colleague opened it, wrote its memo or summary, or sent it. In its last days the row turns amber and reads "deletes in N days unless opened", your nightly email lists it, and opening it starts the clock over. There is no recycle bin for these: when the clock runs out it is gone. **Delete** on the row is final too.
 
 ## Emails the app sends
 

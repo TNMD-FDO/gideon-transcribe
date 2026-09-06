@@ -83,7 +83,7 @@ TEMPLATES = {
             "Hello {name},\n"
             "\n"
             '{by} sent you the recording "{title}". It is under Sent to you on '
-            "your Record tab.\n"
+            "your My recordings page.\n"
             "\n"
             "Open it: {link}\n"
         ),
@@ -855,7 +855,7 @@ def dictation_sent(recording, by, to_whom, attach_memo: bool = False) -> bool:
         name=to_whom.shown_name,
         by=by.shown_name,
         title=recording.title,
-        link=app_url("/record"),
+        link=app_url("/"),
     )
     return send_to_person(
         DICTATION,

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Start{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Where a person lands: one question, three answers, nothing else. Upload
+    files, Record now (when the office has the Record now setting on), Open a case
+    (when the office has Cases on). The top bar has the rest.
+  {% endcomment %}
+  <div class="page roomy start">
+    <h1>{{ greeting }}</h1>
+    <p class="lead">What do you want to do?</p>
+    {% if not service_is_up %}
+      <p class="notice danger">Transcription is not available right now. Try again later; uploads and recordings will wait.</p>
+    {% endif %}
+    <div class="starts">
+      <a class="start-card card" href="{% url 'upload' %}">
+        {% icon "upload" %}
+        <b>Upload files</b>
+        <span class="muted small">Recordings you already have: jail calls, body camera, interviews, hearings. Say what they are and they are transcribed.</span>
+      </a>
+      {% if can_record %}
+        <a class="start-card card" href="{% url 'record-new' %}">
+          {% icon "mic" %}
+          <b>Record now</b>
+          <span class="muted small">A dictation, a meeting in the room, or a call on this computer. The transcript comes back finished, with the memo or summary one click away.</span>
+        </a>
+      {% endif %}
+      {% if folder_management %}
+        <a class="start-card card" href="{% url 'cases' %}">
+          {% icon "case" %}
+          <b>Open a case</b>
+          <span class="muted small">A matter's recordings, kept together and shared with colleagues.</span>
+        </a>
+      {% endif %}
+    </div>
+    <p class="muted small" style="margin-top: 18px">Looking for something you already made? <a href="{% url 'home' %}">My recordings</a>.</p>
+  </div>
+{% endblock %}

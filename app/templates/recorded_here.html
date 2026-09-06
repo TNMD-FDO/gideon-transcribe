@@ -1,26 +1,19 @@
-{% extends "base.html" %}
 {% load static icons %}
-{% block title %}Record{% endblock %}
-{% block main_class %}wide{% endblock %}
-
-{% block content %}
-  {% comment %}
-    The Record tab (Phase 3): one tab, one door. New recording at the top;
-    everything the person recorded from here, newest first, each with Open,
-    the memo or summary, Send to, Add to a case, Delete; and, under them,
-    what colleagues have sent. A recording in its last days carries the
-    amber mark.
-  {% endcomment %}
-  <div class="page roomy dictations" id="dictations"
-       data-send-words="{{ send_words|join:' ' }}">
-    <div class="row">
-      <h1 class="grow">Record</h1>
-      <a href="{% url 'record-new' %}" class="btn primary">{% icon "mic" %} New recording</a>
-    </div>
-    <p class="lead">
-      A dictation, a meeting in the room, or a call on this computer, recorded here and kept on its own: the transcript comes back finished, and the memo or summary is one click. A recording is yours until you send it to a colleague, and is kept for as long as the office keeps a case, counted from the last time it was opened.
-    </p>
-
+{% comment %}
+  Recorded here (Phase 3): everything the person recorded from the New
+  recording page and kept on its own, newest first, each with Play, Open, the
+  memo or summary, Send to, Add to a case, Delete; and, under them, what
+  colleagues have sent. Included by the My recordings page. The wrapper's id
+  and its words are what dictations.js reads.
+{% endcomment %}
+<section class="dictations" id="dictations" data-send-words="{{ send_words|join:' ' }}">
+  <div class="row" style="margin-top: 6px">
+    <h2 class="grow" style="margin: 0">Recorded here</h2>
+    <a href="{% url 'record-new' %}" class="btn primary">{% icon "mic" %} New recording</a>
+  </div>
+  <p class="muted small" style="margin: 4px 0 12px">
+    Kept for as long as the office keeps a case, counted from the last time each was opened, and yours until you send it to a colleague.
+  </p>
     {% if new_id %}
       <p class="notice" id="just-recorded">Recorded. Press play to check it is the right one, then Write the memo or summary and Send to a colleague.</p>
     {% endif %}
@@ -83,7 +76,7 @@
         </tbody>
       </table>
     {% else %}
-      {% include "empty.html" with icon="mic" title="Nothing recorded yet" line="Press New recording, choose a dictation, a meeting, or a call, talk, press Stop. The transcript comes back finished, and the memo or summary is one click." action="New recording" action_url="/record/new" %}
+      <p class="muted">Nothing recorded here yet. <a href="{% url 'record-new' %}">New recording</a>: a dictation, a meeting, or a call, and the transcript comes back finished with the memo or summary one click away.</p>
     {% endif %}
 
     {% if received %}
@@ -113,8 +106,4 @@
         </tbody>
       </table>
     {% endif %}
-  </div>
-
-  <script src="{% static 'cases.js' %}"></script>
-  <script src="{% static 'dictations.js' %}"></script>
-{% endblock %}
+</section>

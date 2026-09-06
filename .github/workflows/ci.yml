@@ -13,8 +13,12 @@ name: CI
 # Each step that needs code runs only once that code exists, because the build
 # arrives one slice at a time.
 
+# On every branch push and pull request, and not on a tag: the commit a tag
+# marks has already had this run, and a tag's own work is the Release workflow.
 on:
   push:
+    branches:
+      - "**"
   pull_request:
 
 permissions:

@@ -10,7 +10,7 @@
     memo), a meeting in the room (people to tap, an Interview summary), a
     call or meeting on this computer (the computer's sound as the far side,
     a Meeting summary). From a case page the case is preset and the
-    recording lands in it; from the Record tab it is kept on its own. The
+    recording lands in it; from Record now it is kept on its own. The
     browser records and sends the sound as it goes; nothing rougher than
     the finished transcript is ever shown.
   {% endcomment %}
@@ -19,7 +19,7 @@
        data-case="{{ chosen_case }}"
        data-csrf="{{ csrf_token }}">
     <p class="muted small" style="margin: 0 0 4px">
-      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'record' %}">Record</a>{% endif %}
+      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'home' %}">My recordings</a>{% endif %}
     </p>
     <div class="row">
       <h1 class="grow">New recording</h1>
@@ -40,7 +40,7 @@
       {% if chosen_case %}
         <p class="muted small">Into the case <b>{{ case_name }}</b>. It is kept there under the case's clock.</p>
       {% else %}
-        <p class="muted small">Kept on your Record tab, yours alone until you send it, for as long as the office keeps a case. You can add it to a case afterwards.</p>
+        <p class="muted small">Kept under Recorded here on My recordings, yours alone until you send it, for as long as the office keeps a case. You can add it to a case afterwards.</p>
       {% endif %}
 
       <div class="card stack">
@@ -137,7 +137,7 @@
       <p id="after-line">Sending the last piece.</p>
       <div class="row">
         <a class="btn primary" id="open-viewer" hidden>Open the transcript</a>
-        <a class="btn" id="open-case">{% if chosen_case %}Case page{% else %}Record tab{% endif %}</a>
+        <a class="btn" id="open-case">{% if chosen_case %}Case page{% else %}My recordings{% endif %}</a>
         <a class="btn ghost" href="{% url 'record-new' %}{% if chosen_case %}?case={{ chosen_case }}{% endif %}">Record another</a>
       </div>
     </section>

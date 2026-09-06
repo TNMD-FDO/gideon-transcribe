@@ -47,7 +47,15 @@ def standing_line() -> str:
 
 @login_required
 def recordings(request: HttpRequest) -> HttpResponse:
-    """Where a person lands: everything they have uploaded this session."""
+    """My recordings: everything that is the person's, in two parts.
+
+    Recorded here (what they recorded from the New recording page and keep on
+    their own), and Uploaded this session (kept until sign-out unless moved
+    to a case). One place to look for "where did it go".
+    """
+    from core import dictation, dictation_pages
+
+    recorded_here = dictation_pages.tab_context(request) if dictation.on() else {}
     return render(
         request,
         "recordings.html",
@@ -58,6 +66,25 @@ def recordings(request: HttpRequest) -> HttpResponse:
             ),
             "standing_line": standing_line(),
             "storage_warning": uploads.storage_warning(request.user),
+            "recorded_here": bool(recorded_here),
+            **recorded_here,
+        },
+    )
+
+
+@login_required
+def start(request: HttpRequest) -> HttpResponse:
+    """Where a person lands: one question, what do you want to do."""
+    from core import dictation
+
+    return render(
+        request,
+        "start.html",
+        {
+            "page": "start",
+            "greeting": greeting(),
+            "can_record": dictation.on(),
+            "service_is_up": whisperx.is_alive(),
         },
     )
 
@@ -119,7 +146,7 @@ def user_guide(request: HttpRequest) -> HttpResponse:
 def greeting() -> str:
     """Good morning, afternoon or evening, by the office's own clock.
 
-    The upload page is where signing in lands, so this is the app's first
+    The Start page is where signing in lands, so this is the app's first
     line to a person, and it should sound like somebody rather than a form.
     TZ is set at install, so the hour is the office's and not the server's
     idea of UTC.
@@ -132,9 +159,66 @@ def greeting() -> str:
     return "Good evening"
 
 
+# What each Recording type usually is, so the Upload page can preset the
+# speaker settings from one click. Keyed by the type's name in lower case; a
+# type the Admin added that is not here gets diarization with the count left
+# to the app. The line is what the card says under its name.
+KIND_PRESETS = {
+    "jail call": ("A recorded call from a jail. Two speakers.", True, "exactly", 2, 2),
+    "phone call": ("A call, recorded. Two speakers.", True, "exactly", 2, 2),
+    "interview": (
+        "An interview or a statement; an interpreter counts.",
+        True,
+        "between",
+        2,
+        3,
+    ),
+    "body camera": (
+        "Body camera or dash camera footage. Anyone may speak.",
+        True,
+        "",
+        2,
+        4,
+    ),
+    "hearing": ("A hearing or a trial day. Several speakers.", True, "between", 2, 8),
+    "meeting": ("A meeting or a proffer. Several speakers.", True, "between", 2, 8),
+    "dictation": ("One voice, to be written up. No speaker labels.", False, "", 2, 4),
+}
+OTHER_KIND = (
+    "Anything else, or a mixed batch. Set the speakers yourself.",
+    False,
+    "",
+    2,
+    4,
+)
+UNKNOWN_KIND = ("Speakers told apart, the count left to the app.", True, "", 2, 4)
+
+
+def kinds() -> list[dict]:
+    """The cards on the Upload page: the office's Recording types, and Other."""
+
+    def card(name, preset):
+        line, diarize, hint, a, b = preset
+        return {
+            "name": name,
+            "line": line,
+            "diarize": diarize,
+            "hint": hint,
+            "a": a,
+            "b": b,
+        }
+
+    cards = [
+        card(name, KIND_PRESETS.get(name.lower(), UNKNOWN_KIND))
+        for name in cases.recording_types()
+    ]
+    cards.append(card("", OTHER_KIND))
+    return cards
+
+
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
-    """Choose files, choose settings, and start; or watch the Batch running."""
+    """Say what the files are and where they go, choose them, and start."""
     batch = Batch.unfinished_for(request.user)
     if batch is not None:
         return redirect(reverse("batch", args=[batch.pk]))
@@ -180,12 +264,12 @@ def upload(request: HttpRequest) -> HttpResponse:
         "upload.html",
         {
             "page": "upload",
-            "greeting": greeting(),
             "standing_line": standing_line(),
             "to_a_case": to_a_case,
             "chosen_case": chosen_case,
             "batch_mail": batch_mail,
             "recording_types": cases.recording_types() if to_a_case else [],
+            "kinds": kinds(),
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
             "limits": {
@@ -557,7 +641,9 @@ def clear_recordings(request: HttpRequest) -> JsonResponse:
             "ok": True,
             "recordings": gone,
             "freed": uploads.as_size(freed),
-            "where": reverse("upload") if batch_id else reverse("home"),
+            # Done with a Batch: back to Start for the next thing; cleared
+            # the whole Workspace: back to the (now empty) page itself.
+            "where": reverse("start") if batch_id else reverse("home"),
         }
     )
 

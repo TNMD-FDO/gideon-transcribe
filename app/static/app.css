@@ -1306,14 +1306,28 @@ body.no-speakers .seg .name { display: none; }
 .record .people-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .record .people-buttons .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .record .mark-box { margin-top: 6px; }
-/* The New recording page's three styles: cards that are radio buttons. */
-.record .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-@media (max-width: 720px) { .record .styles { grid-template-columns: 1fr; } }
-.record .style { display: grid; gap: 4px; cursor: pointer; border: 2px solid var(--line); padding: 12px 14px; }
-.record .style input { position: absolute; opacity: 0; pointer-events: none; }
-.record .style.on { border-color: var(--accent); background: var(--accent-soft); }
-.record .style:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* The Record tab: the row just recorded, and the play button with its player. */
+/* Cards that are radio buttons: the New recording page's three styles, and
+   the Upload page's two questions. */
+.styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 720px) { .styles { grid-template-columns: 1fr; } }
+.style { display: grid; gap: 4px; cursor: pointer; border: 2px solid var(--line); padding: 12px 14px; position: relative; }
+.style input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.style.on { border-color: var(--accent); background: var(--accent-soft); }
+.style:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.style select { font: inherit; }
+/* The Upload page's questions sit above the steps; the kinds wrap to as many
+   columns as fit. */
+.upload .asks { display: grid; gap: 16px; margin-bottom: 18px; }
+.upload .kinds { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+.upload .wheres { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 40rem; }
+@media (max-width: 720px) { .upload .kinds, .upload .wheres { grid-template-columns: 1fr; } }
+/* The Start page: three doors. */
+.start .starts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 56rem; }
+@media (max-width: 760px) { .start .starts { grid-template-columns: 1fr; } }
+.start .start-card { display: grid; gap: 6px; padding: 18px; text-decoration: none; color: inherit; border: 2px solid var(--line); }
+.start .start-card:hover, .start .start-card:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
+.start .start-card .icon, .start .start-card svg { width: 26px; height: 26px; color: var(--accent); }
+/* Recorded here: the row just recorded, and the play button with its player. */
 .dictations tr.new td { background: var(--accent-soft); }
 .dictations .play-cell { width: 2.4rem; white-space: nowrap; }
 .dictations .play-row.on { color: var(--accent); }

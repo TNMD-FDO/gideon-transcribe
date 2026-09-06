@@ -1,18 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Upload recordings{% endblock %}
+{% block title %}Upload files{% endblock %}
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="page workbench">
+  {% comment %}
+    The Upload page has the New recording page's shape: say what the files
+    are, say where they go, then choose them. The cards preset the speaker
+    settings, which wait under step 2 for anyone who wants to change them.
+  {% endcomment %}
+  <div class="page workbench upload">
     <header class="welcome">
-      <h1>{{ greeting }}, {{ user.shown_name }}</h1>
+      <span class="crumb muted small"><a href="{% url 'start' %}">Start</a></span>
+      <h1>Upload files</h1>
       <p class="lead">
-        Drop your recordings below. You will get transcripts back, and you can
-        download the whole batch in one go.
+        Recordings you already have. Say what they are, choose the files, and
+        you get transcripts back, the whole batch in one download.
       </p>
     </header>
-    <p class="notice">{{ standing_line }}</p>
 
     {% if disk_is_low %}
       <p class="notice danger">
@@ -25,6 +30,46 @@
     {% else %}
 
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
+
+    <section class="asks">
+      <div class="ask">
+        <p class="muted" style="margin: 0 0 6px">What are these?</p>
+        <div class="styles kinds" id="kinds" role="radiogroup" aria-label="What are these">
+          {% for kind in kinds %}
+            <label class="style card{% if not kind.name %} on{% endif %}">
+              <input type="radio" name="kind" value="{{ kind.name }}" data-diarize="{{ kind.diarize|yesno:'1,0' }}" data-hint="{{ kind.hint }}" data-a="{{ kind.a }}" data-b="{{ kind.b }}"{% if not kind.name %} checked{% endif %}>
+              <b>{{ kind.name|default:"Something else" }}</b>
+              <span class="muted small">{{ kind.line }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if to_a_case %}
+        <div class="ask">
+          <p class="muted" style="margin: 0 0 6px">Where do they go?</p>
+          <div class="styles wheres" id="wheres" role="radiogroup" aria-label="Where do they go">
+            <label class="style card{% if not chosen_case %} on{% endif %}">
+              <input type="radio" name="where" value=""{% if not chosen_case %} checked{% endif %}>
+              <b>This session only</b>
+              <span class="muted small">Under My recordings until you sign out. You can move them to a case later.</span>
+            </label>
+            <label class="style card{% if chosen_case %} on{% endif %}">
+              <input type="radio" name="where" value="case"{% if chosen_case %} checked{% endif %}>
+              <b>Into a case</b>
+              <span class="muted small">Kept with the case, shared with its people, labelled with the type above.</span>
+              <select id="which-case" aria-label="Which case" style="margin-top: 6px">
+                {% for one in to_a_case %}
+                  <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+        </div>
+      {% else %}
+        <p class="notice" style="margin: 0">{{ standing_line }}</p>
+      {% endif %}
+    </section>
 
     <ol class="steps">
       <li id="step-1" class="card here">
@@ -51,7 +96,11 @@
       </li>
 
       <li id="step-2" class="card" hidden>
-        <h2>2. Settings</h2>
+        <h2>2. Anything else? <span class="muted">(optional)</span></h2>
+        <p class="muted small">
+          The speaker settings are already set from what you said the files
+          are. Change them here, or give one file its own.
+        </p>
 
         <div class="two-panes">
           {# Left: every file, and whether it follows the batch or not. #}

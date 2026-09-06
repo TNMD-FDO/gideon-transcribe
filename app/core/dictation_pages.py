@@ -1,4 +1,4 @@
-"""The Record tab and its calls (Phase 3, Dictation and the styles).
+"""Recorded here on My recordings, and its calls (Phase 3, Dictation and the styles).
 
 One tab, one door: everything the person recorded from it (dictations,
 meetings in the room, calls on the computer), newest first, with what
@@ -12,7 +12,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
@@ -98,32 +98,35 @@ def _row(recording: Recording, viewer, mine: bool) -> dict:
     }
 
 
-@login_required
-def record_tab(request: HttpRequest) -> HttpResponse:
-    _on_or_404()
+def tab_context(request) -> dict:
+    """What "Recorded here" on the My recordings page needs."""
     mine = [_row(one, request.user, True) for one in dictation.mine(request.user)]
     received = [
         {**_row(share.recording, request.user, False), "share": share}
         for share in dictation.sent_to(request.user)
         if cases.reachable(share.recording)
     ]
-    return render(
-        request,
-        "record_tab.html",
-        {
-            "page": "record",
-            "mine": mine,
-            "received": received,
-            # The recording just made, marked on top so the person finds it.
-            "new_id": request.GET.get("new", ""),
-            "by_email": dictation.by_email(),
-            "send_words": (
-                dictation.SEND_WORDS_WITH_FILE
-                if dictation.by_email()
-                else dictation.SEND_WORDS
-            ),
-        },
-    )
+    return {
+        "mine": mine,
+        "received": received,
+        # The recording just made, marked on top so the person finds it.
+        "new_id": request.GET.get("new", ""),
+        "by_email": dictation.by_email(),
+        "send_words": (
+            dictation.SEND_WORDS_WITH_FILE
+            if dictation.by_email()
+            else dictation.SEND_WORDS
+        ),
+    }
+
+
+@login_required
+def record_tab(request: HttpRequest) -> HttpResponse:
+    """The Record tab's old address: My recordings now, with Recorded here on it."""
+    from django.shortcuts import redirect
+
+    new = request.GET.get("new", "")
+    return redirect(reverse("home") + (f"?new={new}" if new else ""))
 
 
 @login_required
@@ -136,10 +139,10 @@ def dictate(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def dictations(request: HttpRequest) -> HttpResponse:
-    """The old address of the Dictations page: the Record tab now."""
+    """The old address of the Dictations page: My recordings now."""
     from django.shortcuts import redirect
 
-    return redirect(reverse("record"))
+    return redirect(reverse("home"))
 
 
 @login_required

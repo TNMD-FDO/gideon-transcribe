@@ -29,8 +29,8 @@ TYPE = "Dictation"
 # The words a person reads before sending, fixed in the app.
 SEND_WORDS = (
     "They will see this recording, its transcript, and its memo or summary "
-    "under Sent to you on their Record tab, and they will be mailed that it "
-    "is there.",
+    "under Sent to you on their My recordings page, and they will be mailed "
+    "that it is there.",
 )
 SEND_WORDS_WITH_FILE = SEND_WORDS + (
     "The memo or summary, as a Word file, and the recording itself will be "
