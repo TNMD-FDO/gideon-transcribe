@@ -540,7 +540,10 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
     vad = used.get("vad") or {}
     sides = list(recording.sides.all())
 
+    from core import live
+
     rows = [
+        *live.provenance_rows(recording),
         ("Original name", recording.original_filename),
         ("Size", f"{recording.size_bytes / 1024 / 1024:.1f} MB"),
         ("SHA-256", recording.sha256),

@@ -15,6 +15,7 @@
         else.
       {% endcomment %}
       <a href="{% url 'home' %}" class="btn">Your recordings</a>
+      {% if live_recording %}<a href="{% url 'record' %}" class="btn">{% icon "mic" %} Record</a>{% endif %}
       <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
     </div>
 

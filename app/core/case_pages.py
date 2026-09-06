@@ -22,6 +22,7 @@ from core import (
     audit,
     cases,
     exports,
+    live,
     pages,
     retention,
     settings_store,
@@ -321,6 +322,12 @@ def _rows_for(case: Case) -> list:
             job is not None and job.is_live and job.batch.is_reprocessing
         )
         one.in_the_queue = bool(job is not None and job.is_live)
+        # A Live recording on its way says where it stands, in words.
+        one.queue_line = (
+            live.line_for(one)["says"]
+            if one.is_live and not hasattr(one, "transcript")
+            else ""
+        )
         one.speakers_in_words = _speakers_in_words(one)
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)

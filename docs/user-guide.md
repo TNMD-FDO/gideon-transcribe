@@ -161,6 +161,14 @@ A recording goes into a case either at upload, with **Add to case**, or afterwar
 
 Deleting a case asks first and names what it is taking. It cannot be undone.
 
+### Recording in the app
+
+When your office has Live recording on, **Record** sits beside Upload recordings on the Cases page and beside Add recordings on a case's page. Choose the case, the recording type, a title if you want one (the type and the date otherwise), and the spoken language, then press **Record**. The browser asks once to use the microphone. While it records, the page shows the clock and a level meter; **Pause** and **Resume** cut the pause out of the recording; **Stop** ends it. The sound is sent to the office's server as it goes, so a computer that dies loses at most the last few seconds, and nothing leaves the building.
+
+Nothing appears on the page while it records: the transcript is the finished one, never a draft. When you press Stop the recording joins the transcription queue ahead of everything uploaded, and the page says where it stands ("2 recordings ahead, about 4 minutes") until the transcript opens in the viewer. The case page shows the same line on the recording's row. A recording stops by itself at the office's limit, three hours unless your Admin has changed it, and leaving the page ends it with what has been sent. Its details say it was recorded live, from what, and how it ended.
+
+Record works in Edge and Chrome on the office's computers, not on a phone or a tablet.
+
 ### Sharing a case
 
 When your office has Sharing on, a case's page has a **Shared with** panel under the facts about the case, and a **Share** button. Share asks for a colleague's name or username, offering everyone in the office who has signed in to the app at least once, and says, before you confirm, what they will be able to do: everything in the case except share, rename, or delete it (add recordings, correct transcripts, name speakers, ask for summaries and chats, save clips), and that recordings they add count against your storage space. There is one kind of sharing; everyone you share with can edit.

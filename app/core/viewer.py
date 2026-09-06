@@ -402,6 +402,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
 
     rows = [
         *in_a_case,
+        *_live_rows(recording),
         ("Original name", recording.original_filename),
         ("Size", f"{recording.size_bytes / 1024 / 1024:.1f} MB"),
         ("SHA-256", recording.sha256),
@@ -502,6 +503,13 @@ def _plainly(seconds: float) -> str:
         return f"{seconds:.0f} second{'' if round(seconds) == 1 else 's'}"
     minutes = seconds / 60
     return f"{minutes:.0f} minute{'' if round(minutes) == 1 else 's'}"
+
+
+def _live_rows(recording) -> list:
+    """The Provenance's lines for a Live recording; none for an uploaded one."""
+    from core import live
+
+    return live.provenance_rows(recording)
 
 
 def _the_rest_of_the_case(recording) -> list:

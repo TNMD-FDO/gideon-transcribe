@@ -140,6 +140,7 @@ FIELDS = {
     "context",
     "return_speaker_embeddings",
     "client_reference",
+    "priority",
 }
 
 
@@ -172,6 +173,8 @@ class Submission:
     context: str = ""
     return_speaker_embeddings: bool = False
     client_reference: str | None = None
+    # 0 to 100; higher runs first, equal priorities in arrival order.
+    priority: int = 0
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -185,6 +188,7 @@ class Submission:
             "context": self.context,
             "return_speaker_embeddings": self.return_speaker_embeddings,
             "client_reference": self.client_reference,
+            "priority": self.priority,
         }
 
 
@@ -308,6 +312,12 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
     if reference is not None and not isinstance(reference, str):
         raise errors.invalid("client_reference must be text")
 
+    priority = body.get("priority", 0)
+    if isinstance(priority, bool) or not isinstance(priority, int):
+        raise errors.invalid("priority must be a whole number from 0 to 100")
+    if not 0 <= priority <= 100:
+        raise errors.invalid("priority must be a whole number from 0 to 100")
+
     return Submission(
         task=task,
         translate_if_mixed=_boolean(body, "translate_if_mixed", False),
@@ -319,4 +329,5 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
         context=_context(body),
         return_speaker_embeddings=embeddings,
         client_reference=reference,
+        priority=priority,
     )

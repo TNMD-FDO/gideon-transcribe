@@ -8,6 +8,7 @@ from core import (
     case_pages,
     clip_pages,
     exports,
+    live_pages,
     media_access,
     pages,
     panel,
@@ -155,6 +156,16 @@ urlpatterns = [
     path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
+    # The Record page (Phase 3): a Recording made in the browser.
+    path("record", live_pages.record, name="record"),
+    path("record/start", live_pages.start, name="record-start"),
+    path(
+        "record/<uuid:recording_id>/upload",
+        live_pages.note_upload,
+        name="record-upload",
+    ),
+    path("record/<uuid:recording_id>/ended", live_pages.ended, name="record-ended"),
+    path("record/<uuid:recording_id>/state", live_pages.state, name="record-state"),
     path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
     # Sharing: the people a Case may be shared with, Share, Remove, Transfer.
     path("case/<uuid:case_id>/share/who", case_pages.share_who, name="share-who"),

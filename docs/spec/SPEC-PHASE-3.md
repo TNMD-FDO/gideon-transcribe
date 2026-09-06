@@ -250,6 +250,19 @@ The admin setting **Dictation by email**: On or Off, default Off, on the Email p
 | Dictation by email | Email | On or Off; greyed while mail is not configured | Off |
 | Dictation sent (template) | Email | a Subject and a Body with `{name}`, `{by}`, `{case}`, `{title}`, `{link}` | the chapter's wording |
 
+## Amendments applied
+
+- **From the build, v1.23.0 (step one: the Record page with the microphone alone), the decisions it left to the build:**
+  - **The encoding** is Opus in WebM at 48 kbit/s, one channel, as `MediaRecorder` makes it in Edge and Chrome; the recorder emits a piece every five seconds and the upload client sends 64 KB at a time, about ten seconds of speech, so a page that dies loses at most that.
+  - **The upload** is one tus upload of deferred length into the existing sidecar, with `live=1` in its metadata; the sidecar's pre-create hook takes a deferred-length upload only for a Live recording still recording, tests the disk floor, and tests the Case owner's room against the longest allowed recording at the encoding's rate. The post-finish hook is unchanged; a Recording the page already ended is not taken twice.
+  - **How an early end is detected**: the page sends a beacon on `pagehide` (a form carrying the CSRF token, since a beacon carries no headers) with how it ended; the app moves the sidecar's partial file into place and starts the pipeline from it. A recording that ends with nothing arrived is marked failed, "ended before any sound arrived". The sidecar's silence is not watched: a computer that sleeps sends the beacon when it wakes or the tab is closed.
+  - **The priority** is 100, the service's `priority` field (service 0.2.0): the line runs a higher priority first and equal priorities in arrival order; `position` and `audio_minutes_ahead` count what runs before a job under that rule. The app asks 100 for every Run of a Live recording and 0 otherwise, so a Process again on one keeps it.
+  - **The queue line's estimate** divides the minutes of audio ahead plus the recording's own by the speed measured over the last twenty finished jobs, sixty times real time until there are any, rounded up to the minute, "about".
+  - **The page and the pauses**: the clock counts recorded time only; a pause is `MediaRecorder.pause`, a cut in the file, listed in the Provenance as "at m:ss for N s"; the level meter is an `AnalyserNode` over the microphone; the longest length is enforced by the page's clock. The Record button asks for the microphone before the Recording is made, so a refused microphone makes nothing.
+  - **Provenance** rows: "Recorded live" (the sources and how it ended), "Recorded with" (the browser's user agent, trimmed), "Pauses".
+  - **A Live recording's Batch** is marked `is_live` and left out of the one-unfinished-Batch rule, so recording and uploading never block each other.
+  - Still to come, in their steps: the computer's sound, the people buttons and Marks, Dictation and Send to, transcription during the recording.
+
 ## Sources
 
 The maintainer's brief of 2026-09-06: live transcription for staff who today take notes by hand; office computers only; Zoom, Teams, and jail-call platforms played on the computer; attorneys decide what to record; the finished transcript rather than a draft; Spanish as the most frequent other language; dictation shared inside the app and, at the office's option, by email.

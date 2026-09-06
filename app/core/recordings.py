@@ -140,6 +140,10 @@ class Batch(models.Model):
     email_when_done = models.BooleanField(default=False)
     mail_sent_at = models.DateTimeField(null=True, blank=True)
 
+    # A Live recording's own Batch (Phase 3): one Recording, made on the
+    # Record page, which never holds up the person's uploads.
+    is_live = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["-created"]
 
@@ -169,7 +173,12 @@ class Batch(models.Model):
 
     @classmethod
     def unfinished_for(cls, user) -> Batch | None:
-        for batch in cls.objects.filter(user=user):
+        """The person's one unfinished upload Batch, if any.
+
+        A Live recording's Batch is not one: a person may record while a
+        batch runs and upload while a recording is transcribed.
+        """
+        for batch in cls.objects.filter(user=user, is_live=False):
             if not batch.is_finished:
                 return batch
         return None
@@ -224,6 +233,16 @@ class Recording(models.Model):
     # The raw ffprobe output, kept for the Provenance. It is a fact about the
     # file, not content.
     probe = models.JSONField(default=dict, blank=True)
+
+    # A Live recording's facts (Phase 3): when it started, its sources, the
+    # browser, the pauses, how it ended, and the sidecar upload its pieces
+    # went into. Empty for an uploaded Recording. Facts about the recording,
+    # never content.
+    live = models.JSONField(null=True, blank=True)
+
+    @property
+    def is_live(self) -> bool:
+        return bool(self.live)
 
     # What the person chose, recorded per Recording at submission and copied
     # onto the Job, so the Provenance names exactly what was used.

@@ -73,6 +73,9 @@ def request_for(run: Run) -> dict:
         # The Run's own id, which is the service's duplicate protection: a
         # submission it has seen comes back as that job rather than a second.
         "client_reference": str(run.id),
+        # A Live recording goes ahead of every uploaded one: a meeting that
+        # has just ended is transcribed before the batches waiting.
+        "priority": 100 if recording.is_live else 0,
     }
 
     if not recording.translate and not recording.spoken_language:

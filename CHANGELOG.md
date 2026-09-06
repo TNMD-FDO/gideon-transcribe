@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.23.0, 2026-09-06
+
+```
+Models: unchanged
+Database: migrates (0027_live_recording: the Recording's live facts and the Batch's mark)
+```
+
+### Added
+
+- **Live recording, step one (Phase 3).** With the new **Live recording**
+  setting on (Features page, under Folder management, off by default),
+  **Record** sits beside Upload on the Cases page and beside Add recordings
+  on a case's page. The page records from the computer's microphone, sends
+  the sound to the server in pieces as it goes, and, at Stop, hands the
+  recording to the transcription service ahead of every uploaded one; the
+  page and the case row say where it stands in words ("2 recordings ahead,
+  about 4 minutes") until the finished transcript opens. Never a draft.
+  Pause cuts, the office's **Longest live recording** (Limits, three hours)
+  stops it, and leaving the page ends it with what was sent. The Details
+  panel and the Word export say it was recorded live. Audit rows: Live
+  recording started, Live recording finished. Edge and Chrome on the
+  office's computers.
+- **The transcription service gains a priority** (service 0.2.0): an
+  optional `priority` on a job, a higher number running first and equal
+  numbers in arrival order, with position and minutes ahead counted under
+  that rule. Every other job is unchanged at 0.
+
 ## v1.22.1, 2026-09-06
 
 ```

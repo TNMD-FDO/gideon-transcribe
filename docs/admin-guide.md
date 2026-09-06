@@ -33,8 +33,8 @@ Leaving the panel with a tray that is not empty asks whether to apply or drop. N
 
 Every setting has a table in the settings catalogue in the repository (`docs/spec/ADMIN-SETTINGS-CATALOGUE.md`), with its default, its limits, and its consequences. A setting that has been changed from its default carries a mark, and the default is shown beside it. This is what each page is for:
 
-- **Features**: whether speaker separation, translation, and clips are offered at all. Off hides the feature everywhere; nothing already made is deleted.
-- **Limits**: the largest file, the longest recording, the longest clip, the most files in one batch, the default quota per user, and how much free disk the server must keep. Uploading pauses when free disk falls under that last figure, and the Upload page says so.
+- **Features**: whether speaker separation, translation, clips, and live recording are offered at all. Off hides the feature everywhere; nothing already made is deleted. **Live recording** is greyed while Folder management is off, since a recording made in the browser lands in a case; see Live recording below.
+- **Limits**: the largest file, the longest recording, the longest live recording (three hours by default, which the Record page enforces so a page left recording overnight does not fill the disk), the longest clip, the most files in one batch, the default quota per user, and how much free disk the server must keep. Uploading pauses when free disk falls under that last figure, and the Upload page says so.
 - **Transcription defaults**: the model, whether speaker separation and translation are ticked by default, whether a mixed-language recording is translated without being asked, the office vocabulary that is added to every user's, and the preparation profile.
 - **AI assistant**: the assistant and its parts, and the engine it talks to. An installation with no engine leaves the assistant off and everything else works.
 - **Notices**: the four fixed texts. The **Transcription notice** goes on every export. The **Translation notice** goes on every export of a translated transcript. The **AI notice** goes with anything the assistant writes. The **Sign-in page notice** is the line under the sign-in form: an authorised-use statement, or where to ring for help. Empty hides it.
@@ -95,6 +95,14 @@ The Audit log page shows the rows newest first and filters them by date, person,
 **Retention.** Rows older than the **Audit log retention** setting are removed by a nightly sweep. Three months is the default. The record of an Admin opening somebody's recordings is a row like any other, so the retention period is also how long that record lasts: an office that wants a longer memory of Admin access sets a longer retention.
 
 **Integrity.** Every row carries a hash of itself and of the row before it, so a row that is changed or removed afterwards breaks the chain. **Integrity check** on the Status page walks the chain and says whether it holds. Rows are written through a database role that can only insert, and removed only by the sweep's own role; the app's ordinary role can do neither.
+
+## Live recording
+
+With **Live recording** on (Features page, under Folder management), people make a recording in the browser on an office computer, from the microphone, into a case: **Record** appears beside Upload on the Cases page and beside Add recordings on a case's page. The browser encodes the sound and sends it to the upload sidecar in pieces as it goes, on the same path an upload takes; nothing leaves the building, and a browser that dies loses at most the last few seconds. When the recording ends, its transcription job goes to the service with a priority above every uploaded one, so a meeting that has just ended is transcribed before the batches waiting; the service runs one job at a time, so recordings that end together wait their turn, and the page and the case row say where each stands in words. Nothing rougher than the finished transcript is ever shown.
+
+A live recording is a recording: it joins its case as it starts, counts against the case owner's space, follows the retention clock, and is shared, exported, and deleted like any other. Its own batch never holds up the person's uploads. The audit log writes **Live recording started** (the case, the sources, the language choice; never the title) and **Live recording finished** (how it ended, the length, the pauses). The Details panel and the Word export say it was recorded live, with what, and how it ended. It works in Edge and Chrome on the office's Windows computers; phones, tablets, and a desk phone's calls are outside it. What to record is the attorney's call: the app asks for no consent and refuses no source.
+
+The service's contract gained a `priority` field for this (service 0.2.0); a job's position and the minutes of audio ahead of it count what runs before it under the rule.
 
 ## Sharing
 
