@@ -372,7 +372,7 @@ def test_the_cases_page_marks_a_case_in_its_last_days(a_case, person, client):
     assert "Deletes in 5 days unless used" in page
     assert 'class="small keep"' in page
     # The amber row: the chooser's class first, then the warning's.
-    assert 'class="pick expiring"' in page
+    assert 'class="pick goes expiring"' in page
 
 
 def test_the_expiring_filter_shows_only_the_warned(a_case, person, client):
