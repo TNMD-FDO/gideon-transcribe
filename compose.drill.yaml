@@ -12,8 +12,12 @@ services:
   postgres:
     volumes: !override
       - "${DRILL_DIR:?set by ./transcribe restore-drill}/postgres:/var/lib/postgresql/data"
+    # The same alias as on the live network: the app reaches its database as
+    # transcribe-postgres, never as the bare service name.
     networks: !override
-      - drill
+      drill:
+        aliases:
+          - transcribe-postgres
   app:
     environment:
       LDAP_ENABLED: "false"

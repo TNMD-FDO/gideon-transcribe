@@ -1480,11 +1480,21 @@ cmd_restore_drill() {
   # 4. Load, migrate, check.
   step="load the dump"
   sudo cat "$drill/data/backup/$dump" | $dc exec -T postgres pg_restore -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --no-owner --no-privileges || drill_failed "$step"
-  step="migrate"
-  $dc run --rm -T app python manage.py migrate --skip-checks >/dev/null 2>&1 || drill_failed "$step"
-  step="check against the manifest"
+  # The app's own database role, as the web container makes it at every
+  # start: the dump carries the database, never the cluster's roles. The
+  # image's entrypoint takes a management command as its first word, so these
+  # are run the way the guides write them, not as `python manage.py`.
+  step="the app's database role"
   local said
-  if ! said="$($dc run --rm -T app python manage.py drill_check /srv/data/backup/manifest.json /srv/data/cases 2>/dev/null | grep -v procrastinate)"; then
+  if ! said="$($dc run --rm -T app ensure_roles 2>&1)"; then
+    printf '%s\n' "$said" | tail -8; drill_failed "$step"
+  fi
+  step="migrate"
+  if ! said="$($dc run --rm -T app migrate --skip-checks --no-input 2>&1)"; then
+    printf '%s\n' "$said" | tail -8; drill_failed "$step"
+  fi
+  step="check against the manifest"
+  if ! said="$($dc run --rm -T app drill_check /srv/data/backup/manifest.json /srv/data/cases 2>/dev/null | grep -v procrastinate)"; then
     drill_failed "$step: $(printf '%s' "$said" | head -3 | tr '\n' ';')"
   fi
 

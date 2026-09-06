@@ -540,8 +540,15 @@ def _tables_match(manifest: dict) -> str:
 
 
 def drill_check(manifest: dict, cases_root: Path) -> list[str]:
-    """The drill's four checks against the manifest; the failures, in words."""
+    """The drill's four checks against the manifest; the failures, in words.
+
+    A manifest that is missing or names no tables is itself a failure: a
+    drill that restored nothing must not pass because there was nothing to
+    compare.
+    """
     failures: list[str] = []
+    if not manifest.get("tables"):
+        return ["no manifest, or one that names no tables: nothing was restored"]
     have = row_counts()
     for table, count in (manifest.get("tables") or {}).items():
         if have.get(table) != count:
