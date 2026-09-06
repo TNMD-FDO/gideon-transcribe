@@ -1495,10 +1495,13 @@ WORDS
 
   # The three files always exist, empty when backups are off, because a
   # Compose secret whose file is missing stops the whole stack.
+  # Tested through sudo: secrets/ is the app account's, mode 0700, so a plain
+  # test as the person running this sees nothing there and would write empty
+  # files over the real ones. An existing file, empty or not, is left alone.
   for key in BACKUP_SSH_KEY_FILE BACKUP_KEY_FILE BACKUP_KNOWN_HOSTS_FILE; do
     local file
     file="$(backup_secret_file "$(env_value "$key")")"
-    [ -e "$file" ] || write_secret "$file" ""
+    sudo test -e "$file" || write_secret "$file" ""
   done
   own_the_secrets
   [ -n "$target" ] || return 0

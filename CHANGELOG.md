@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.3, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **`./transcribe install-backup` emptied the three backup secrets.** The step
+  that makes sure the files exist tested for them as the person running the
+  command, who cannot see inside the app account's secrets folder, took all
+  three for missing, and wrote empty files over them. It tests through sudo
+  now and never touches a file that exists. Found on the first real run; the
+  key was safe in its owner's home and nothing had yet been encrypted with the
+  password.
+
 ## v1.19.2, 2026-09-05
 
 ```
