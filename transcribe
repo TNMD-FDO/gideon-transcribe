@@ -1136,7 +1136,7 @@ restic_rw() {
   local target_dir="$1"
   shift
   local image user_host
-  image="$(grep -o 'restic/restic:[^ ]*' "$HERE/compose.yaml" | head -1)"
+  image="$(grep -o 'restic/restic:[^ ]*' "$HERE/compose.yaml" | head -1)" || true
   user_host="$(backup_user_host "$(backup_target)")"
   backup_prepare
   docker run --rm \
@@ -1246,8 +1246,8 @@ cmd_backup() {
   # 7. Report to the app: the Status line and the audit row.
   step=record
   local held size
-  held="$(restic_ro snapshots --tag nightly --json 2>/dev/null | tr -d '\n' | grep -o '"short_id"' | wc -l | tr -d ' ')"
-  size="$(restic_ro stats --mode raw-data --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)"
+  held="$(restic_ro snapshots --tag nightly --json 2>/dev/null | tr -d '\n' | grep -o '"short_id"' | wc -l | tr -d ' ')" || true
+  size="$(restic_ro stats --mode raw-data --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)" || true
   app_command record_backup ok --duration "$(( $(date +%s) - started ))" \
     --dump-bytes "$dump_bytes" --snapshot-bytes "${size:-0}" --held "${held:-0}" 2>/dev/null | grep -v procrastinate || true
   green "Backup done: $dump, ${held:-?} Snapshots held, $(( ( $(date +%s) - started ) ))s."
@@ -1297,9 +1297,9 @@ cmd_restore() {
     red "That Snapshot could not be read. ./transcribe snapshots lists them."
     exit 1
   }
-  release="$(printf '%s' "$manifest" | grep -o '"release": *"[^"]*"' | head -1 | cut -d'"' -f4)"
-  snap_time="$(printf '%s' "$manifest" | grep -o '"written_at": *"[^"]*"' | head -1 | cut -d'"' -f4)"
-  snap_id="$(restic_ro snapshots "$snapshot" --json 2>/dev/null | grep -o '"short_id": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  release="$(printf '%s' "$manifest" | grep -o '"release": *"[^"]*"' | head -1 | cut -d'"' -f4)" || true
+  snap_time="$(printf '%s' "$manifest" | grep -o '"written_at": *"[^"]*"' | head -1 | cut -d'"' -f4)" || true
+  snap_id="$(restic_ro snapshots "$snapshot" --json 2>/dev/null | grep -o '"short_id": *"[^"]*"' | head -1 | cut -d'"' -f4)" || true
   local here_tag
   here_tag="$(git -C "$HERE" describe --tags --exact-match 2>/dev/null || echo "not at a tag")"
   if [ -n "$release" ] && [ "$release" != "$here_tag" ]; then
@@ -1362,7 +1362,7 @@ WORDS
     sudo rm -rf "$data/backup/backup"
   fi
   local dump
-  dump="$(printf '%s' "$manifest" | grep -o '"dump": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  dump="$(printf '%s' "$manifest" | grep -o '"dump": *"[^"]*"' | head -1 | cut -d'"' -f4)" || true
   [ -n "$dump" ] && sudo test -f "$folder/$dump" || { red "The Snapshot's dump ($dump) is not there after the restore."; exit 1; }
 
   # The database: empty, then the dump.
@@ -1418,9 +1418,9 @@ cmd_restore_drill() {
   step="room"
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$drill" "$drill/data" "$drill/data/backup" "$drill/data/cases" "$drill/postgres"
   local need free floor_gb
-  need="$(restic_ro stats latest --mode restore-size --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)"
+  need="$(restic_ro stats latest --mode restore-size --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)" || true
   free="$(df --output=avail -B1 "$data" | tail -1 | tr -d ' ')"
-  floor_gb="$(app_command shell -c "from core import settings_store; print(settings_store.get('minimum_free_disk_gb'))" 2>/dev/null | grep -v procrastinate | tail -1)"
+  floor_gb="$(app_command shell -c "from core import settings_store; print(settings_store.get('minimum_free_disk_gb'))" 2>/dev/null | grep -v procrastinate | tail -1)" || true
   if [ -n "$need" ] && [ "$free" -lt $(( need + ${floor_gb:-20} * 1024 * 1024 * 1024 )) ]; then
     drill_failed "$step: $(( free / 1073741824 )) GB free, the Snapshot needs $(( need / 1073741824 )) GB plus the ${floor_gb:-20} GB floor"
   fi
@@ -1434,7 +1434,7 @@ cmd_restore_drill() {
   fi
   sudo chown -R "$APP_USER:$APP_USER" "$drill/data"
   local dump
-  dump="$(sudo ls -1 "$drill/data/backup" | grep '^nightly-.*\.dump$' | sort | tail -1)"
+  dump="$(sudo ls -1 "$drill/data/backup" | grep '^nightly-.*\.dump$' | sort | tail -1)" || true
   [ -n "$dump" ] || drill_failed "$step: no dump in the Snapshot"
 
   # 3. The throwaway project: Postgres and the app only.
@@ -1697,7 +1697,7 @@ EOS
   [ -n "$offered" ] && echo "  note  the store offers: $offered"
   if [ "$login" = "0" ]; then pass "key-only sign-in works"; else fail "key-only sign-in was refused: the public key is not in the account's authorized_keys, or the file is not the account's own (see the admin guide)"; return 0; fi
   local extra
-  extra="$(printf '%s' "$root" | tr ' ' '\n' | grep -v "^$" | grep -v "^home$" | grep -v "^${folder#/}$" | tr '\n' ' ')"
+  extra="$(printf '%s' "$root" | tr ' ' '\n' | grep -v "^$" | grep -v "^home$" | grep -v "^${folder#/}$" | tr '\n' ' ')" || true
   if [ -z "$extra" ]; then pass "the account sees only ${folder#/} and home at its root"; else fail "the account also sees at its root: $extra (give it an explicit No access on those shared folders)"; fi
   if [ "$write" = "0" ]; then pass "a file was written to and removed from the folder"; else fail "the folder could not be written to or cleaned up"; fi
   if printf '%s' "$after" | grep -q '#recycle'; then fail "the folder has a #recycle entry: its recycle bin is on and would hoard every pruned data file"; else pass "no recycle bin in the folder"; fi
