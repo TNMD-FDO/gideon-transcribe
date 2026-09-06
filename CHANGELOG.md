@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.28.0, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **Send to attaches the recording too.** With Dictation by email on, the
+  mail to a colleague carries the memo or summary as a Word file and the
+  recording itself, up to the new **Largest recording attached** setting on
+  the Email page (20 MB by default, since most relays refuse mail above 10
+  to 25 MB). A larger recording is left out and the mail says so; the link
+  opens it. The office decided this knowing the recording is the privileged
+  thing itself; the recipient is always a colleague the directory knows.
+
 ## v1.27.0, 2026-09-07
 
 ```

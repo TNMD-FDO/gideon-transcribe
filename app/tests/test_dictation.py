@@ -296,12 +296,28 @@ def test_the_memo_rides_with_the_mail_only_when_the_office_says_so(
     sent = quiet_tasks["mail"][-1]
     assert sent["details"]["attach_memo"] == str(recording.pk)
     assert DictationShare.objects.get(recording=recording).attached is True
-    # The file itself: the memo as Word, built when the mail goes.
-    name, data = mail._memo_file(str(recording.pk))
-    assert name.endswith(" - memo.docx") and data[:2] == b"PK"
-    message = mail.build("ben@example.org", "s", "body", (name, data))
-    parts = [part.get_filename() for part in message.iter_attachments()]
-    assert parts == [name]
+    # The files themselves, built when the mail goes: the memo as Word, and
+    # the recording when it fits the limit.
+    recording.folder.mkdir(parents=True, exist_ok=True)
+    (recording.folder / "playback.m4a").write_bytes(b"\x00" * 2048)
+    files, left_out = mail._attachments_for(str(recording.pk))
+    assert [name for name, _ in files] == [
+        f"{recording.title} - memo.docx",
+        f"{recording.title}.m4a",
+    ]
+    assert files[0][1][:2] == b"PK" and left_out == ""
+    message = mail.build("ben@example.org", "s", "body", files)
+    parts = [
+        (part.get_filename(), part.get_content_type())
+        for part in message.iter_attachments()
+    ]
+    assert parts[1] == (f"{recording.title}.m4a", "audio/mp4")
+    # Too large for the office's limit: left out, and the mail says so.
+    settings_store.set_to("attachment_most_mb", 1)
+    (recording.folder / "playback.m4a").write_bytes(b"\x00" * (2 * 1024 * 1024))
+    files, left_out = mail._attachments_for(str(recording.pk))
+    assert [name for name, _ in files] == [f"{recording.title} - memo.docx"]
+    assert "too large to attach" in left_out and "1 MB" in left_out
     # Off: nothing rides.
     settings_store.set_to("dictation_by_email", False)
     other = person("cy", "Cy Ng", "cy@example.org")

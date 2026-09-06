@@ -33,7 +33,8 @@ SEND_WORDS = (
     "is there.",
 )
 SEND_WORDS_WITH_FILE = SEND_WORDS + (
-    "The memo or summary will be attached to that mail as a Word file.",
+    "The memo or summary, as a Word file, and the recording itself will be "
+    "attached to that mail.",
 )
 
 
@@ -260,8 +261,9 @@ def send(recording: Recording, person, actor, request=None) -> DictationShare:
     )
     if not made:
         return share
-    memo = memo_of(recording)
-    attach = bool(by_email() and memo is not None and memo.text)
+    # With the switch on, the mail carries what there is: the memo or summary
+    # when one is written, and the recording itself when it fits the limit.
+    attach = by_email()
     share.attached = attach
     share.save(update_fields=["attached"])
     audit.write(
