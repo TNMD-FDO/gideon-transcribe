@@ -489,8 +489,21 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
             )
         )
 
+    # The Marks a person dropped while recording live: each a time the page
+    # seeks to, with its word. Content, so shown here and never in a row.
+    marks = [
+        {
+            "at": one["at"],
+            "clock": exports.clock(one["at"]),
+            "word": one.get("word", ""),
+        }
+        for one in (recording.marks or [])
+    ]
     return JsonResponse(
-        {"rows": [[name, value] for name, value in rows if str(value).strip()]}
+        {
+            "rows": [[name, value] for name, value in rows if str(value).strip()],
+            "marks": marks,
+        }
     )
 
 

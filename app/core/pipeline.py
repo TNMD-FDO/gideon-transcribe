@@ -55,6 +55,7 @@ def prepare(recording: Recording) -> Recording:
         _check(recording)
         _find_sides(recording)
         _make_asr_audio(recording)
+        _length_from_the_prepared_audio(recording)
     except media.MediaError as problem:
         return _failed(recording, problem)
 
@@ -160,6 +161,23 @@ def _find_sides(recording: Recording) -> None:
         Side.objects.create(recording=recording, number=1, kind=Side.WHOLE, name="")
 
     recording.save()
+
+
+def _length_from_the_prepared_audio(recording: Recording) -> None:
+    """A length for a file whose header carries none.
+
+    A Live recording streamed from the browser is written without its length,
+    so the probe of the original reads zero. The prepared audio is a whole
+    file with one, so the length is read from it once it exists. An uploaded
+    file with its length is left alone.
+    """
+    if recording.duration_seconds:
+        return
+    side = recording.sides.order_by("number").first()
+    if side is None or not side.asr_path.exists():
+        return
+    recording.duration_seconds = media.probe(side.asr_path).duration_seconds
+    recording.save(update_fields=["duration_seconds"])
 
 
 def _make_asr_audio(recording: Recording) -> None:

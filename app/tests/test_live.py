@@ -191,6 +191,136 @@ def test_the_computers_sound_makes_a_call_with_named_sides(on, person, a_case, c
     assert 'id="record-computer"' in page and 'id="meter-computer"' in page
 
 
+def test_taps_name_the_speakers_and_marks_are_kept(on, person, a_case, client):
+    from core.people import Person
+
+    recording = live.start(person, a_case)
+    live.ended(
+        recording,
+        how="stop",
+        seconds=60,
+        taps=[
+            {"at": 0, "name": "Ana Ruiz"},
+            {"at": 20, "name": "Ben Cole"},
+            {"at": 40, "name": "Ana Ruiz"},
+            {"at": "x", "name": "nobody"},
+        ],
+        marks=[{"at": 33.3, "word": "the threat"}, {"at": 5, "word": ""}],
+    )
+    recording.refresh_from_db()
+    assert recording.speaker_taps == [
+        {"at": 0.0, "name": "Ana Ruiz"},
+        {"at": 20.0, "name": "Ben Cole"},
+        {"at": 40.0, "name": "Ana Ruiz"},
+    ]
+    assert recording.marks == [
+        {"at": 5.0, "word": ""},
+        {"at": 33.3, "word": "the threat"},
+    ]
+    finished = rows("Live recording finished").get()
+    assert finished.details["taps"] == 3 and finished.details["marks"] == 2
+    assert "threat" not in str(finished.details)
+
+    # The transcript lands: label A spoke while Ana was tapped, label B while Ben.
+    transcript = Transcript.objects.create(recording=recording, language="en")
+    for start, label in (
+        (2, "SPEAKER_00"),
+        (12, "SPEAKER_00"),
+        (25, "SPEAKER_01"),
+        (45, "SPEAKER_00"),
+    ):
+        Segment.objects.create(
+            transcript=transcript,
+            start=start,
+            end=start + 6,
+            text="words",
+            speaker=label.replace("SPEAKER_0", "Speaker "),
+            speaker_label=label,
+        )
+    # A label nobody's taps cover keeps its name.
+    Segment.objects.create(
+        transcript=transcript,
+        start=100,
+        end=101,
+        text="w",
+        speaker="Speaker 3",
+        speaker_label="SPEAKER_02",
+    )
+    assert live.name_from_taps(recording, transcript) == 2
+    named = set(transcript.segments.values_list("speaker_label", "speaker"))
+    assert ("SPEAKER_00", "Ana Ruiz") in named and ("SPEAKER_01", "Ben Cole") in named
+    assert ("SPEAKER_02", "Speaker 3") in named
+    assert set(Person.objects.filter(case=a_case).values_list("name", flat=True)) == {
+        "Ana Ruiz",
+        "Ben Cole",
+    }
+    row = rows("Speakers named from taps").get()
+    assert row.details["labels_named"] == 2 and "Ana" not in str(row.details)
+    recording.refresh_from_db()
+    told = dict(live.provenance_rows(recording))
+    assert (
+        told["Speakers named from taps"] == "2 speakers" and told["Marks"] == "2 marks"
+    )
+
+    # The viewer's Details carry the Marks as times with their words.
+    signed_in(client, person)
+    recording.media_state = MediaState.READY
+    recording.save()
+    told = client.get(reverse("details", args=[recording.pk])).json()
+    assert told["marks"] == [
+        {"at": 5.0, "clock": "0:05", "word": ""},
+        {"at": 33.3, "clock": "0:33", "word": "the threat"},
+    ]
+
+
+def test_on_a_call_only_the_microphones_side_is_named_from_taps(on, person, a_case):
+    recording = live.start(person, a_case, with_computer=True)
+    recording.is_two_channel_call = True
+    recording.save()
+    mine = Side.objects.create(recording=recording, number=1, name="This side")
+    theirs = Side.objects.create(recording=recording, number=2, name="The other side")
+    live.ended(recording, how="stop", taps=[{"at": 0, "name": "Ana Ruiz"}])
+    recording.refresh_from_db()
+    transcript = Transcript.objects.create(recording=recording, language="en")
+    Segment.objects.create(
+        transcript=transcript,
+        side=mine,
+        start=0,
+        end=10,
+        text="a",
+        speaker="Speaker 1",
+        speaker_label="SPEAKER_00",
+    )
+    Segment.objects.create(
+        transcript=transcript,
+        side=theirs,
+        start=0,
+        end=10,
+        text="b",
+        speaker="Speaker 1",
+        speaker_label="SPEAKER_00",
+    )
+    assert live.name_from_taps(recording, transcript) == 1
+    assert transcript.segments.get(side=mine).speaker == "Ana Ruiz"
+    assert transcript.segments.get(side=theirs).speaker == "Speaker 1"
+
+
+def test_the_people_expected_come_from_the_case(on, person, a_case, client):
+    from core.people import Person
+
+    Person.objects.create(case=a_case, name="Ana Ruiz", added_by=person)
+    signed_in(client, person)
+    told = client.get(reverse("record-people") + f"?case={a_case.pk}").json()
+    assert told["people"] == ["Ana Ruiz"]
+    other = User.objects.create_local_admin("other", PASSWORD)
+    other.is_local = False
+    other.save()
+    signed_in(client, other)
+    assert client.get(reverse("record-people") + f"?case={a_case.pk}").json() == {
+        "people": []
+    }
+
+
 def test_an_uploaded_recording_has_no_live_facts(person, a_case):
     rec = Recording.objects.create(
         batch=Batch.objects.create(user=person),

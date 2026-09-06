@@ -94,12 +94,55 @@
   var ended = false;
   var ticker = null;
   var uploadDone = false;
+  var people = [];        // the names expected, buttons while recording
+  var taps = [];          // { at, name }
+  var marks = [];         // { at, word }
 
   function elapsed() {
     if (!recorder) { return 0; }
     if (paused) { return recordedBefore; }
     return recordedBefore + (performance.now() - startedAt) / 1000;
   }
+
+  // Before: the people expected -----------------------------------------------
+
+  var caseChoice = document.getElementById("record-case");
+  var expected = document.getElementById("people-expected");
+
+  function drawPeople() {
+    expected.innerHTML = people.map(function (name) {
+      return "<span class='btn small' data-name='" + name.replace(/'/g, "&#39;") + "'>" + name.replace(/</g, "&lt;") +
+        " <button type='button' class='ghost tiny drop' aria-label='Remove'>&times;</button></span>";
+    }).join("") || "<span class='muted small'>Nobody yet.</span>";
+  }
+
+  function loadPeople() {
+    if (!caseChoice.value) { people = []; drawPeople(); return; }
+    fetch("/record/people?case=" + encodeURIComponent(caseChoice.value))
+      .then(function (answer) { return answer.json(); })
+      .then(function (said) { people = said.people || []; drawPeople(); })
+      .catch(function () { people = []; drawPeople(); });
+  }
+  caseChoice.addEventListener("change", loadPeople);
+  loadPeople();
+
+  function addPerson() {
+    var box = document.getElementById("record-person");
+    var name = box.value.trim().slice(0, 60);
+    if (name && people.indexOf(name) < 0) { people.push(name); drawPeople(); }
+    box.value = "";
+  }
+  document.getElementById("add-person").addEventListener("click", addPerson);
+  document.getElementById("record-person").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") { event.preventDefault(); addPerson(); }
+  });
+  expected.addEventListener("click", function (event) {
+    var drop = event.target.closest(".drop");
+    if (!drop) { return; }
+    var name = drop.parentNode.dataset.name;
+    people = people.filter(function (one) { return one !== name; });
+    drawPeople();
+  });
 
   // Before: Record -------------------------------------------------------------
 
@@ -234,6 +277,7 @@
     startedAt = performance.now();
     document.getElementById("during-title").textContent = recording.title;
     document.getElementById("computer-row").hidden = !computer;
+    drawTapButtons();
     show(during);
     meter();
     ticker = window.setInterval(tick, 500);
@@ -268,6 +312,53 @@
       })();
     } catch (error) { /* no meter, no harm */ }
   }
+
+  // During: who is talking, and the moments that matter -------------------------
+
+  var tapButtons = document.getElementById("people-during");
+
+  function drawTapButtons() {
+    tapButtons.innerHTML = people.map(function (name) {
+      return "<button type='button' class='btn small tap' data-name='" + name.replace(/'/g, "&#39;") + "'>" + name.replace(/</g, "&lt;") + "</button>";
+    }).join("");
+    tapButtons.hidden = !people.length;
+  }
+
+  tapButtons.addEventListener("click", function (event) {
+    var button = event.target.closest(".tap");
+    if (!button || !recorder || paused) { return; }
+    taps.push({ at: Math.round(elapsed() * 10) / 10, name: button.dataset.name });
+    tapButtons.querySelectorAll(".tap").forEach(function (one) { one.classList.toggle("on", one === button); });
+  });
+
+  var markBox = document.getElementById("mark-box");
+  var markWord = document.getElementById("mark-word");
+  var pendingMark = null;
+
+  function dropMark() {
+    if (!recorder || paused) { return; }
+    finishMark();
+    pendingMark = { at: Math.round(elapsed() * 10) / 10, word: "" };
+    marks.push(pendingMark);
+    document.getElementById("marks-count").textContent = marks.length + (marks.length === 1 ? " mark" : " marks");
+    markWord.value = "";
+    markBox.hidden = false;
+    markWord.focus();
+  }
+  function finishMark() {
+    if (pendingMark) { pendingMark.word = markWord.value.trim().slice(0, 80); pendingMark = null; }
+    markBox.hidden = true;
+  }
+  document.getElementById("mark").addEventListener("click", dropMark);
+  document.getElementById("mark-done").addEventListener("click", finishMark);
+  markWord.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === "Escape") { event.preventDefault(); finishMark(); }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (during.hidden || !recorder) { return; }
+    var typing = event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA");
+    if ((event.key === "m" || event.key === "M") && !typing) { event.preventDefault(); dropMark(); }
+  });
 
   document.getElementById("pause").addEventListener("click", function () {
     if (!recorder) { return; }
@@ -304,7 +395,8 @@
     document.getElementById("after-title").textContent = recording.title;
     document.getElementById("open-case").href = recording.caseUrl;
     show(after);
-    post("/record/" + recording.id + "/ended", { how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10, computer_ended_at: computerEndedAt })
+    finishMark();
+    post("/record/" + recording.id + "/ended", { how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10, computer_ended_at: computerEndedAt, taps: taps, marks: marks })
       .then(function () { if (uploadDone || how !== "stop") { watch(); } });
   }
 
@@ -318,6 +410,8 @@
     form.append("pauses", JSON.stringify(pauses));
     form.append("seconds", String(Math.round(elapsed() * 10) / 10));
     if (computerEndedAt !== null) { form.append("computer_ended_at", String(computerEndedAt)); }
+    form.append("taps", JSON.stringify(taps));
+    form.append("marks", JSON.stringify(marks));
     navigator.sendBeacon("/record/" + recording.id + "/ended", form);
   });
   window.addEventListener("beforeunload", function (event) {

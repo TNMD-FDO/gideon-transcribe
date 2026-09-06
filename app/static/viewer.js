@@ -1133,7 +1133,35 @@
             return "<dt>" + escape(row[0]) + "</dt><dd>" + escape(row[1]) + "</dd>";
           }
         ).join("");
+        drawMarks(body.marks || []);
       });
+  }
+
+  // The Marks a person dropped while recording live: each a time that seeks
+  // the player, with its word, and Make a clip around it while Clips are on.
+  function drawMarks(marks) {
+    var box = document.getElementById("marks");
+    if (!box) { return; }
+    box.hidden = !marks.length;
+    if (!marks.length) { return; }
+    var list = box.querySelector("ul");
+    list.innerHTML = marks.map(function (one) {
+      return "<li><button type='button' class='cite' data-at='" + one.at + "'>" + escape(one.clock) + "</button>" +
+        (one.word ? " <span>" + escape(one.word) + "</span>" : "") +
+        (window.CLIPS ? " <button type='button' class='ghost tiny make-clip' data-at='" + one.at + "' data-word='" + escape(one.word || "") + "'>Make a clip</button>" : "") +
+        "</li>";
+    }).join("");
+    list.addEventListener("click", function (event) {
+      var cite = event.target.closest(".cite");
+      if (cite) { window.VIEWER.showSegment(parseFloat(cite.dataset.at)); return; }
+      var make = event.target.closest(".make-clip");
+      if (make && window.CLIPS) {
+        var at = parseFloat(make.dataset.at);
+        window.CLIPS.mark(Math.max(0, at - 30), at + 30);
+        var title = document.getElementById("clip-title");
+        if (title && make.dataset.word && !title.value) { title.value = make.dataset.word; }
+      }
+    });
   }
 
   // The sheet stays where it was put. Somebody working through a case moves
