@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.22.0, 2026-09-06
+
+```
+Models: unchanged
+Database: migrates (0026_summary_template_types: the shipped templates' key, and the types a template is for)
+```
+
+### Added
+
+- **Summary templates by recording type.** A Summary template can now be
+  for one or more recording types, ticked on the Templates page over the
+  Recording types list; none means any. In the viewer, a recording in a
+  case with a type starts New summary on the template made for that type,
+  listed first with the others still on offer, and the dialog says why. The
+  app ships five such templates beside the Standard summary, one each for
+  Jail call, Body camera, Interview, Phone call and Hearing, each Enabled
+  from the first day, editable, and resettable to its shipped wording;
+  Admins review them on the Templates page. Add template takes the ticks,
+  and a new template appears in the viewer for its types at once. A type
+  removed from the list stays on the templates that had it, marked so.
+
 ## v1.21.0, 2026-09-06
 
 ```

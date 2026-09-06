@@ -175,7 +175,22 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             }
 
     templates = SummaryTemplate.enabled_ones() if features["summary"] else []
-    default = SummaryTemplate.the_default() if features["summary"] else None
+    # The template chosen for this Recording: the one for its type, else the
+    # office's Default; the ones for its type are listed first.
+    chosen = SummaryTemplate.chosen_for(recording) if features["summary"] else None
+    for_type = (
+        SummaryTemplate.for_type(recording.recording_type)
+        if features["summary"]
+        else []
+    )
+    for_type_ids = {one.pk for one in for_type}
+    templates = for_type + [one for one in templates if one.pk not in for_type_ids]
+    type_line = ""
+    if chosen is not None and chosen.pk in for_type_ids and len(templates) > 1:
+        type_line = (
+            f"This is a {recording.recording_type.lower()}, so the "
+            f"{chosen.name} is chosen."
+        )
     busy = any(
         one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in summaries
     )
@@ -193,10 +208,16 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             # The office's starter questions for an empty chat; none by default.
             "starters": settings_store.lines_of("chat_starters"),
             "templates": [
-                {"id": str(one.pk), "name": one.name, "description": one.description}
+                {
+                    "id": str(one.pk),
+                    "name": one.name,
+                    "description": one.description,
+                    "for_type": one.pk in for_type_ids,
+                }
                 for one in templates
             ],
-            "default_template": str(default.pk) if default else "",
+            "default_template": str(chosen.pk) if chosen else "",
+            "type_line": type_line,
             "unnamed": unnamed,
             # "pending", not "suggestions": that word is the feature's own flag above.
             "pending": suggestions,

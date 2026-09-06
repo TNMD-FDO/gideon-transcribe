@@ -45,6 +45,118 @@ STANDARD_SUMMARY = (
     "if there are none."
 )
 
+# The Summary templates the app ships for the Recording types it ships, each
+# in the Standard summary's shape: named parts, in order, every point with its
+# time, quotes exact. Editable and resettable on the Templates page, like the
+# Standard summary; an office reviews them there. Keyed by the template key.
+SHIPPED_SUMMARIES = {
+    "jail_call": (
+        "Write a summary of this recorded jail call with these parts, in this "
+        "order, using these headings.\n"
+        "Overview: one short paragraph. Who is speaking, how they know each "
+        "other as far as the call says, and what the call is about.\n"
+        "What is discussed: a bulleted list in the order things come up. Each "
+        "point ends with the time it happens.\n"
+        "Statements about the case: anything said about the charges, the events "
+        "behind them, evidence, witnesses, police, lawyers, court dates, or a "
+        "plea, quoted exactly with the speaker and the time. Never paraphrase "
+        'inside quotation marks. Write "None noticed" if there are none.\n'
+        "Requests and instructions: anything one person asks the other to do, "
+        "such as contacting someone, moving money, delivering something, or "
+        "saying or not saying something, each with the time.\n"
+        "Threats, pressure, or guarded talk: any threat, any pressure on the "
+        "other person, and any stretch where the speakers seem to talk around "
+        'a subject, each with the time. Write "None noticed" if there are none.\n'
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned, each with the time of its first mention.\n"
+        "Unclear parts: stretches where the recording is garbled, cut off, "
+        'overlapping, or hard to follow, with their times. Write "None noticed" '
+        "if there are none."
+    ),
+    "body_camera": (
+        "Write a summary of this body camera recording with these parts, in this "
+        "order, using these headings.\n"
+        "Overview: one short paragraph. What the encounter is, where it takes "
+        "place as far as the recording says, and who takes part.\n"
+        "Timeline: a bulleted list of what happens in order, each point ending "
+        "with its time: arrival, contact, commands, searches, handcuffing, any "
+        "use of force, transport, and the end of the recording.\n"
+        "Commands, warnings, and rights: every command, warning, and advisement "
+        "of rights spoken by an officer, quoted exactly with the time. Never "
+        "paraphrase inside quotation marks.\n"
+        "What the person stopped says: their statements, quoted exactly with "
+        "the time, and for each whether it answers an officer's question or is "
+        "said unprompted.\n"
+        "What officers say to each other: statements between officers or over "
+        "the radio about the person, the scene, or what to do next, with times.\n"
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned, each with the time of its first mention.\n"
+        "Unclear parts: stretches where the audio is garbled, cut off, "
+        'overlapping, or hard to follow, with their times. Write "None noticed" '
+        "if there are none."
+    ),
+    "interview": (
+        "Write a summary of this interview with these parts, in this order, "
+        "using these headings.\n"
+        "Overview: one short paragraph. Who is interviewed, by whom, and what "
+        "the interview is about as far as it says.\n"
+        "Questions and answers: the main questions in the order asked, each "
+        "with the answer in brief and the time.\n"
+        "The account given: the interviewee's account of events, in the order "
+        "they tell it, each point with its time.\n"
+        "Admissions, denials, and changes: any statement that admits, denies, "
+        "or changes an earlier statement, quoted exactly with the time. Never "
+        'paraphrase inside quotation marks. Write "None noticed" if there are '
+        "none.\n"
+        "Rights, promises, and pressure: any advisement of rights, any promise "
+        "or offer, any threat or pressure, and any leading or repeated question, "
+        'each quoted with the time. Write "None noticed" if there are none.\n'
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned, each with the time of its first mention.\n"
+        "Unclear parts: stretches where the recording is garbled, cut off, "
+        'overlapping, or hard to follow, with their times. Write "None noticed" '
+        "if there are none."
+    ),
+    "phone_call": (
+        "Write a summary of this phone call with these parts, in this order, "
+        "using these headings.\n"
+        "Overview: one short paragraph. Who is speaking, how they know each "
+        "other as far as the call says, and what the call is about.\n"
+        "Key points: a bulleted list in the order things come up. Each point "
+        "ends with the time it happens.\n"
+        "Notable statements: short quotes that matter, each with the speaker "
+        "and the time. Quote exactly; never paraphrase inside quotation marks.\n"
+        "Arrangements made: anything agreed, planned, promised, or asked for, "
+        'each with the time. Write "None noticed" if there are none.\n'
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned, each with the time of its first mention.\n"
+        "Unclear parts: stretches where the recording is garbled, cut off, "
+        'overlapping, or hard to follow, with their times. Write "None noticed" '
+        "if there are none."
+    ),
+    "hearing": (
+        "Write a summary of this court hearing with these parts, in this order, "
+        "using these headings.\n"
+        "Overview: one short paragraph. What kind of hearing it is, which "
+        "court, and who appears, as far as the recording says.\n"
+        "Rulings, orders, and dates: every ruling, order, deadline, and date "
+        "set by the court, quoted exactly where the judge's words matter, each "
+        "with the time. Never paraphrase inside quotation marks.\n"
+        "Arguments: each side's points in brief, in the order made, each with "
+        "the time.\n"
+        "Testimony: each witness, and the substance of what they say, in order, "
+        'with times. Write "None" if nobody testifies.\n'
+        "What the defendant says: any statement by the defendant, quoted "
+        'exactly with the time. Write "None" if there are none.\n'
+        "Next steps: what is to happen next and when, with the time it is said.\n"
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned, each with the time of its first mention.\n"
+        "Unclear parts: stretches where the recording is garbled, cut off, "
+        'overlapping, or hard to follow, with their times. Write "None noticed" '
+        "if there are none."
+    ),
+}
+
 CHAT = (
     "Answer the user's questions using only this transcript. If the answer is "
     "not in the transcript, say so in one sentence and do not guess. Quote the "

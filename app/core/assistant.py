@@ -96,10 +96,64 @@ class PromptTemplate(models.Model):
         self.save_text(self.default_text)
 
 
+# The templates the app ships: the Standard summary and one per shipped
+# Recording type, each with the types it is for. Built in: editable and
+# resettable on the Templates page, never deleted, and made once the first
+# time they are wanted, so an office that upgrades gets them too.
+SHIPPED_TEMPLATES = (
+    (
+        "standard",
+        "Standard summary",
+        "Overview, key points, notable statements, names and dates, unclear parts.",
+        (),
+    ),
+    (
+        "jail_call",
+        "Jail call summary",
+        "Who is speaking, statements about the case, requests, threats or pressure.",
+        ("Jail call",),
+    ),
+    (
+        "body_camera",
+        "Body camera summary",
+        "Timeline of the encounter, commands and rights, what the person stopped says.",
+        ("Body camera",),
+    ),
+    (
+        "interview",
+        "Interview summary",
+        "Questions and answers, the account "
+        "given, admissions and changes, rights and pressure.",
+        ("Interview",),
+    ),
+    (
+        "phone_call",
+        "Phone call summary",
+        "Who is speaking, key points, arrangements made.",
+        ("Phone call",),
+    ),
+    (
+        "hearing",
+        "Hearing summary",
+        "Rulings and dates, arguments, testimony, what the defendant says, next steps.",
+        ("Hearing",),
+    ),
+)
+
+
 class SummaryTemplate(models.Model):
-    """The shape a Summary takes. "Standard summary" is built in and never deleted."""
+    """The shape a Summary takes.
+
+    The shipped ones are built in and never deleted; an office adds its own
+    with Add template. A template may be for one or more Recording types, and
+    the viewer chooses it for a Recording of that type; one for no type is
+    for any.
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # The shipped templates' key ("standard", "jail_call", ...); "" for an
+    # office's own. What Reset to default puts back is looked up by it.
+    key = models.CharField(max_length=40, blank=True, default="")
     name = models.CharField(max_length=80)
     description = models.CharField(max_length=200, blank=True, default="")
     text = models.TextField()
@@ -107,31 +161,74 @@ class SummaryTemplate(models.Model):
     enabled = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
     built_in = models.BooleanField(default=False)
+    # The Recording types this template is for, as the Recording types
+    # setting names them; empty means any. A type removed from the setting
+    # stays here, as a removed Role stays on a Person.
+    recording_types = models.JSONField(default=list, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-built_in", "name"]
 
+    @property
+    def shipped_text(self) -> str:
+        """What Reset to default puts back, for a shipped template."""
+        if self.key == "standard":
+            return prompts.STANDARD_SUMMARY
+        return prompts.SHIPPED_SUMMARIES.get(self.key, "")
+
+    def is_for(self, recording_type: str) -> bool:
+        wanted = (recording_type or "").strip().lower()
+        return bool(wanted) and any(
+            one.strip().lower() == wanted for one in self.recording_types or []
+        )
+
+    @classmethod
+    def shipped(cls) -> None:
+        """Make any shipped template that is not there yet."""
+        have = set(cls.objects.filter(built_in=True).values_list("key", flat=True))
+        for key, name, description, types in SHIPPED_TEMPLATES:
+            if key in have:
+                continue
+            text = (
+                prompts.STANDARD_SUMMARY
+                if key == "standard"
+                else prompts.SHIPPED_SUMMARIES[key]
+            )
+            cls.objects.create(
+                key=key,
+                name=name,
+                description=description,
+                text=text,
+                built_in=True,
+                recording_types=list(types),
+                is_default=(
+                    key == "standard"
+                    and not cls.objects.filter(is_default=True).exists()
+                ),
+            )
+
     @classmethod
     def standard(cls) -> SummaryTemplate:
-        row = cls.objects.filter(built_in=True).first()
-        if row is None:
-            row = cls.objects.create(
-                name="Standard summary",
-                description=(
-                    "Overview, key points, notable statements, names and dates, "
-                    "unclear parts."
-                ),
-                text=prompts.STANDARD_SUMMARY,
-                built_in=True,
-                is_default=not cls.objects.filter(is_default=True).exists(),
-            )
-        return row
+        cls.shipped()
+        return cls.objects.get(built_in=True, key="standard")
 
     @classmethod
     def enabled_ones(cls) -> list[SummaryTemplate]:
-        cls.standard()
+        cls.shipped()
         return list(cls.objects.filter(enabled=True))
+
+    @classmethod
+    def for_type(cls, recording_type: str) -> list[SummaryTemplate]:
+        """The Enabled templates for this type: the Default first, then by name."""
+        found = [one for one in cls.enabled_ones() if one.is_for(recording_type)]
+        return sorted(found, key=lambda one: (not one.is_default, one.name.lower()))
+
+    @classmethod
+    def chosen_for(cls, recording) -> SummaryTemplate:
+        """What the viewer preselects: the type's template, else the Default."""
+        for_it = cls.for_type(getattr(recording, "recording_type", ""))
+        return for_it[0] if for_it else cls.the_default()
 
     @classmethod
     def the_default(cls) -> SummaryTemplate:
