@@ -200,7 +200,7 @@ def test_taps_name_the_speakers_and_marks_are_kept(on, person, a_case, client):
         how="stop",
         seconds=60,
         taps=[
-            {"at": 0, "name": "Ana Ruiz"},
+            {"at": 10, "name": "Ana Ruiz"},
             {"at": 20, "name": "Ben Cole"},
             {"at": 40, "name": "Ana Ruiz"},
             {"at": "x", "name": "nobody"},
@@ -209,7 +209,7 @@ def test_taps_name_the_speakers_and_marks_are_kept(on, person, a_case, client):
     )
     recording.refresh_from_db()
     assert recording.speaker_taps == [
-        {"at": 0.0, "name": "Ana Ruiz"},
+        {"at": 10.0, "name": "Ana Ruiz"},
         {"at": 20.0, "name": "Ben Cole"},
         {"at": 40.0, "name": "Ana Ruiz"},
     ]
@@ -237,11 +237,11 @@ def test_taps_name_the_speakers_and_marks_are_kept(on, person, a_case, client):
             speaker=label.replace("SPEAKER_0", "Speaker "),
             speaker_label=label,
         )
-    # A label nobody's taps cover keeps its name.
+    # A label that spoke before the first tap is covered by nobody and keeps its name.
     Segment.objects.create(
         transcript=transcript,
-        start=100,
-        end=101,
+        start=0,
+        end=5,
         text="w",
         speaker="Speaker 3",
         speaker_label="SPEAKER_02",
