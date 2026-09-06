@@ -135,15 +135,23 @@ def _find_sides(recording: Recording) -> None:
 
     recording.sides.all().delete()
 
-    if track is not None and media.looks_like_a_call(recording.original_path, track):
+    # A Live recording made with the computer's sound is a call by the fact of
+    # how it was made: the microphone on one channel, the computer on the
+    # other. It is not asked whether it looks like one.
+    live_call = "computer" in ((recording.live or {}).get("sources") or [])
+
+    if live_call or (
+        track is not None and media.looks_like_a_call(recording.original_path, track)
+    ):
         recording.is_two_channel_call = True
         recording.tracks_distinct = 1
-        for number in (1, 2):
+        names = ("This side", "The other side") if live_call else ("Side 1", "Side 2")
+        for number, name in zip((1, 2), names, strict=True):
             Side.objects.create(
                 recording=recording,
                 number=number,
                 kind=Side.CHANNEL,
-                name=f"Side {number}",
+                name=name,
             )
         log.info("recording %s is a two-channel call", recording.id)
     else:

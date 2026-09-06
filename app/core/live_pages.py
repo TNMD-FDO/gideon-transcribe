@@ -98,6 +98,7 @@ def start(request: HttpRequest) -> JsonResponse:
             language=str(wanted.get("language") or ""),
             translate=bool(wanted.get("translate")),
             browser=request.headers.get("User-Agent", "")[:120],
+            with_computer=bool(wanted.get("with_computer")),
             request=request,
         )
     except live.Refused as why:
@@ -145,11 +146,16 @@ def ended(request: HttpRequest, recording_id) -> JsonResponse:
         seconds = float(told.get("seconds") or 0) or None
     except (TypeError, ValueError):
         seconds = None
+    try:
+        computer_ended_at = float(told.get("computer_ended_at"))
+    except (TypeError, ValueError):
+        computer_ended_at = None
     live.ended(
         recording,
         how=str(told.get("how") or "closed"),
         pauses=pauses if isinstance(pauses, list) else [],
         seconds=seconds,
+        computer_ended_at=computer_ended_at,
         request=request,
     )
     return JsonResponse({"ok": True})

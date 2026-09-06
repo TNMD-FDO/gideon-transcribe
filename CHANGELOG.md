@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.24.0, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Added
+
+- **Live recording, step two: the computer's sound.** Tick **Also record
+  what this computer plays** on the Record page for a call or a meeting on
+  the computer (Zoom, Teams, a softphone, a jail call played there). The
+  browser asks which screen to share and the page keeps only its sound; the
+  microphone becomes one side of the transcript and the computer the other,
+  as the app already handles a two-channel call, so who said what comes out
+  right without guessing. A meter for each; sharing stopped from the
+  browser's bar leaves the microphone recording alone, and the details say
+  from when. Edge and Chrome on Windows.
+
 ## v1.23.0, 2026-09-06
 
 ```

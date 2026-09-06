@@ -261,7 +261,8 @@ The admin setting **Dictation by email**: On or Off, default Off, on the Email p
   - **The page and the pauses**: the clock counts recorded time only; a pause is `MediaRecorder.pause`, a cut in the file, listed in the Provenance as "at m:ss for N s"; the level meter is an `AnalyserNode` over the microphone; the longest length is enforced by the page's clock. The Record button asks for the microphone before the Recording is made, so a refused microphone makes nothing.
   - **Provenance** rows: "Recorded live" (the sources and how it ended), "Recorded with" (the browser's user agent, trimmed), "Pauses".
   - **A Live recording's Batch** is marked `is_live` and left out of the one-unfinished-Batch rule, so recording and uploading never block each other.
-  - Still to come, in their steps: the computer's sound, the people buttons and Marks, Dictation and Send to, transcription during the recording.
+- **From the build, v1.24.0 (step two: the computer's sound):** the browser offers the computer's sound only through `getDisplayMedia` with video, so the page asks for the screen and drops the picture at once, and a share made without its sound is refused with the words to tick ("Share system audio" in Edge, "Share audio" in Chrome). The two sources are merged in the browser with a `ChannelMergerNode`, the microphone on channel 1 and the computer on channel 2, each mixed down to mono, into a stereo Opus stream at 96 kbit/s. The pipeline's `_find_sides` makes such a Recording a Two-channel call by the fact of its sources, never by the heuristic, with the Sides named "This side" and "The other side". Sharing stopped from the browser's own bar ends the computer's channel alone: the microphone goes on, and the Provenance says from when ("The computer's sound: stopped at m:ss"). A meter per source.
+  - Still to come, in their steps: the people buttons and Marks, Dictation and Send to, transcription during the recording.
 
 ## Sources
 

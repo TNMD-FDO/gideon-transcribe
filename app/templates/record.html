@@ -60,6 +60,13 @@
         </label>
       </div>
 
+      <label class="row">
+        <input type="checkbox" id="record-computer"> <b>Also record what this computer plays</b>
+      </label>
+      <p class="muted small" id="computer-help">
+        For a call or a meeting on this computer: Zoom, Teams, a softphone, or a jail call played here. The browser will ask which screen to share; choose the whole screen and tick <b>Share system audio</b> (Edge) or <b>Share audio</b> (Chrome). Only the sound is recorded, never the picture, and the far side becomes its own side of the transcript.
+      </p>
+
       <p class="muted small">
         Recorded from this computer's microphone and sent to the office's server as it goes. Nothing leaves the building. The recording stops by itself after {{ longest_minutes }} minutes.
       </p>
@@ -75,7 +82,8 @@
         <b class="grow" id="during-title"></b>
         <span class="time big" id="clock">0:00</span>
       </div>
-      <div class="meter" aria-hidden="true"><div class="meter-bar" id="meter"></div></div>
+      <div class="row small muted" style="gap: 8px"><span style="width: 7rem">Microphone</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter"></div></div></div>
+      <div class="row small muted" id="computer-row" hidden style="gap: 8px"><span style="width: 7rem">This computer</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter-computer"></div></div></div>
       <p class="muted small" id="during-line">Sent to the server as it goes. Leaving this page ends the recording with what has been sent.</p>
       <p class="problem" id="during-problem" hidden></p>
       <div class="row">
