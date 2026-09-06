@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     failure_class     TEXT,
     failure_message   TEXT,
     result_path       TEXT,
-    result_deleted    INTEGER NOT NULL DEFAULT 0
+    result_deleted    INTEGER NOT NULL DEFAULT 0,
+    priority          INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS jobs_by_state ON jobs (state, sequence);
@@ -114,6 +115,9 @@ class Job:
     failure_message: str | None
     result_path: str | None
     result_deleted: bool
+    # Higher runs first; equal priorities run in arrival order. 0 for every
+    # job unless the Consumer asks; the app asks 100 for a Live recording.
+    priority: int = 0
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Job:
@@ -138,6 +142,7 @@ class Job:
             failure_message=row["failure_message"],
             result_path=row["result_path"],
             result_deleted=bool(row["result_deleted"]),
+            priority=int(row["priority"]) if "priority" in tuple(row.keys()) else 0,
         )
 
     @property
@@ -167,6 +172,13 @@ class Store:
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA synchronous=FULL")
         self._db.executescript(SCHEMA)
+        # A line made before priorities existed gains the column, at 0.
+        with closing(self._db.execute("PRAGMA table_info(jobs)")) as cursor:
+            columns = {row["name"] for row in cursor.fetchall()}
+        if "priority" not in columns:
+            self._db.execute(
+                "ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0"
+            )
 
     def close(self) -> None:
         with self._lock:
@@ -220,14 +232,17 @@ class Store:
         """
         if job.ended:
             return 0, 0.0
+        # Ahead: the running job whatever its priority, and every queued job
+        # of a higher priority, or of the same priority and an earlier arrival.
         with (
             self._lock,
             closing(
                 self._db.execute(
                     "SELECT COUNT(*) AS jobs, "
                     "COALESCE(SUM(audio_seconds), 0) AS seconds "
-                    "FROM jobs WHERE state IN (?, ?) AND sequence < ?",
-                    (QUEUED, RUNNING, job.sequence),
+                    "FROM jobs WHERE id != ? AND (state = ? OR (state = ? AND "
+                    "(priority > ? OR (priority = ? AND sequence < ?))))",
+                    (job.id, RUNNING, QUEUED, job.priority, job.priority, job.sequence),
                 )
             ) as cursor,
         ):
@@ -279,13 +294,13 @@ class Store:
         audio_path: Path,
         audio_seconds: float,
     ) -> Job:
-        """Put a job at the end of the line."""
+        """Put a job in the line: at the end of its priority's stretch of it."""
         job_id = uuid.uuid4().hex
         with self._lock:
             self._db.execute(
                 "INSERT INTO jobs (id, consumer, client_reference, state, request, "
-                "audio_path, audio_seconds, model, diarize, created) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "audio_path, audio_seconds, model, diarize, created, priority) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     job_id,
                     consumer,
@@ -297,6 +312,7 @@ class Store:
                     request.get("model", "large-v3"),
                     1 if request.get("diarize") else 0,
                     now(),
+                    int(request.get("priority") or 0),
                 ),
             )
             job = self._one("SELECT * FROM jobs WHERE id = ?", (job_id,))
@@ -313,7 +329,8 @@ class Store:
             if self._one("SELECT * FROM jobs WHERE state = ? LIMIT 1", (RUNNING,)):
                 return None
             job = self._one(
-                "SELECT * FROM jobs WHERE state = ? ORDER BY sequence LIMIT 1",
+                "SELECT * FROM jobs WHERE state = ? "
+                "ORDER BY priority DESC, sequence LIMIT 1",
                 (QUEUED,),
             )
             if job is None:

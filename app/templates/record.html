@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Record{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The Record page (Phase 3): one page in three states. Before: the case,
+    the type, the title, the language. During: the clock, the meter, Pause
+    and Stop. After: where the recording stands until the transcript opens.
+    The browser records and sends the sound to the server in pieces as it
+    goes; nothing is shown that is rougher than the finished transcript.
+  {% endcomment %}
+  <div class="page roomy record" id="record"
+       data-longest="{{ longest_seconds }}"
+       data-csrf="{{ csrf_token }}">
+    <p class="muted small" style="margin: 0 0 4px">
+      <a href="{% url 'cases' %}">Cases</a>
+    </p>
+    <div class="row">
+      <h1 class="grow">Record</h1>
+    </div>
+
+    <section id="before" class="card stack" style="max-width: 40rem">
+      <div class="field">
+        <label for="record-case">Case</label>
+        <select id="record-case">
+          {% if not chosen_case %}<option value="">Choose a case</option>{% endif %}
+          {% for one in cases %}
+            <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
+          {% endfor %}
+        </select>
+        <p class="muted small" style="margin: 4px 0 0">
+          A recording is kept in its case after you sign out, for as long as the office's retention policy says.
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="record-type">Recording type</label>
+        <select id="record-type">
+          <option value="">No type</option>
+          {% for one in types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="record-title">Title</label>
+        <input type="text" id="record-title" maxlength="300" placeholder="The type and the date, unless you give one">
+      </div>
+
+      <div class="row" style="gap: 18px; flex-wrap: wrap">
+        <div class="field">
+          <label for="record-language">Spoken language</label>
+          <select id="record-language">
+            {% for code, name in languages %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+          </select>
+        </div>
+        <label class="row" style="align-self: end; padding-bottom: 6px">
+          <input type="checkbox" id="record-translate"> <b>Translate to English</b>
+        </label>
+      </div>
+
+      <p class="muted small">
+        Recorded from this computer's microphone and sent to the office's server as it goes. Nothing leaves the building. The recording stops by itself after {{ longest_minutes }} minutes.
+      </p>
+      <p class="problem" id="before-problem" hidden></p>
+      <div class="row">
+        <button type="button" class="btn primary big" id="start">{% icon "mic" %} Record</button>
+      </div>
+    </section>
+
+    <section id="during" class="card stack" hidden style="max-width: 40rem">
+      <div class="row">
+        <span class="pill danger" id="rec-pill">Recording</span>
+        <b class="grow" id="during-title"></b>
+        <span class="time big" id="clock">0:00</span>
+      </div>
+      <div class="meter" aria-hidden="true"><div class="meter-bar" id="meter"></div></div>
+      <p class="muted small" id="during-line">Sent to the server as it goes. Leaving this page ends the recording with what has been sent.</p>
+      <p class="problem" id="during-problem" hidden></p>
+      <div class="row">
+        <button type="button" class="btn" id="pause">Pause</button>
+        <span class="grow"></span>
+        <button type="button" class="btn primary" id="stop">Stop</button>
+      </div>
+    </section>
+
+    <section id="after" class="card stack" hidden style="max-width: 40rem">
+      <div class="row">
+        <b class="grow" id="after-title"></b>
+        <span class="pill warn" id="after-pill">Transcribing</span>
+      </div>
+      <p id="after-line">Sending the last piece.</p>
+      <div class="row">
+        <a class="btn primary" id="open-viewer" hidden>Open the transcript</a>
+        <a class="btn" id="open-case">Case page</a>
+        <a class="btn ghost" href="{% url 'record' %}">Record another</a>
+      </div>
+    </section>
+  </div>
+
+  <script src="{% static 'vendor/tus.min.js' %}"></script>
+  <script src="{% static 'record.js' %}"></script>
+{% endblock %}

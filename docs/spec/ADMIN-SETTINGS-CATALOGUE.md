@@ -131,7 +131,7 @@ The Email page of the Settings group, absent from the Phase 1 build. Built in v1
 
 ## Phase 3: Live recording
 
-Three rows and a template, absent from the Phase 2 build, specified in `docs/spec/SPEC-PHASE-3.md`.
+Three rows and a template, specified in `docs/spec/SPEC-PHASE-3.md`. Live recording and Longest live recording were built in v1.23.0 (keys `live_recording`, greyed through `needs` under Folder management, and `live_longest_minutes`, greyed under Live recording); the two Email rows wait for the Dictation step.
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|

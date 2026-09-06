@@ -154,6 +154,36 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="live_recording",
+            page=FEATURES,
+            name="Live recording",
+            kind=TOGGLE,
+            default=False,
+            needs="folder_management",
+            what_it_does=(
+                "People may make a recording in the browser on an office "
+                "computer, from the microphone, into a case; it is transcribed "
+                "at the front of the queue when it ends."
+            ),
+            when_changed=(
+                "At once. Off hides Record everywhere; a recording in "
+                "progress finishes."
+            ),
+        ),
+        Definition(
+            key="live_longest_minutes",
+            page=LIMITS,
+            name="Longest live recording",
+            kind=NUMBER,
+            default=180,
+            least=10,
+            most=480,
+            unit="minutes",
+            needs="live_recording",
+            what_it_does="The Record page stops a recording at this length.",
+            when_changed="The next recording.",
+        ),
+        Definition(
             key="sharing",
             page=CASES,
             name="Sharing",

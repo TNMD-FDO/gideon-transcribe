@@ -308,6 +308,8 @@ def hook(request: HttpRequest) -> JsonResponse:
     metadata = upload.get("MetaData", {}) or {}
 
     if name == "pre-create":
+        if (metadata.get("live") or "") == "1":
+            return _pre_create_live(event, upload)
         return _pre_create(event, upload)
     if name == "post-finish":
         return _post_finish(event, upload, metadata)
@@ -359,6 +361,48 @@ def _pre_create(event: dict, upload: dict) -> JsonResponse:
     return JsonResponse({})
 
 
+def _pre_create_live(event: dict, upload: dict) -> JsonResponse:
+    """May this Live recording's upload start? Its length is not yet known.
+
+    The Recording was made by the Record page a moment ago, in its Case; the
+    sidecar is told the upload's length only at the end. What can be checked
+    is checked: the session, the Recording, the disk floor, and the Case
+    owner's room against the longest recording the setting allows.
+    """
+    from core import live
+
+    session = _session_of(event)
+    if session is None:
+        return _reject("Your session has ended. Sign in again.", "no_session")
+    recording = Recording.objects.filter(
+        pk=(upload.get("MetaData") or {}).get("recording", ""),
+        user=session.user,
+        media_state=MediaState.UPLOADING,
+    ).first()
+    if recording is None or not recording.is_live:
+        return _reject("There is no recording to record into.", "no_recording")
+    if free_disk_bytes() < settings_store.minimum_free_disk_bytes():
+        return _reject(Refusal.MESSAGES[Refusal.DISK_FULL], Refusal.DISK_FULL)
+    # Opus at the page's rate is about a quarter of a megabyte a minute.
+    at_most = live.longest_seconds() // 60 * 256 * 1024
+    whose = recording.case.owner if recording.case_id else session.user
+    if used_bytes(whose) + at_most > quota_bytes(whose):
+        message = (
+            Refusal.MESSAGES[Refusal.QUOTA_EXCEEDED_THEIRS].format(
+                owner=whose.shown_name,
+                used=as_gb(used_bytes(whose) + at_most),
+                quota=as_gb(quota_bytes(whose)),
+            )
+            if whose.pk != session.user.pk
+            else Refusal.MESSAGES[Refusal.QUOTA_EXCEEDED].format(
+                used=as_gb(used_bytes(whose) + at_most),
+                quota=as_gb(quota_bytes(whose)),
+            )
+        )
+        return _reject(message, Refusal.QUOTA_EXCEEDED)
+    return JsonResponse({})
+
+
 def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
     """The bytes are here. Move them in and start the pipeline."""
     from core.tasks import prepare_recording
@@ -373,6 +417,11 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
     ).first()
     if recording is None:
         log.warning("an upload finished for a recording that is not there")
+        return JsonResponse({})
+    if recording.media_state != MediaState.UPLOADING:
+        # A Live recording the Record page already ended took what had
+        # arrived; the sidecar's finish comes second and changes nothing.
+        log.info("an upload finished for recording %s, already taken", recording.id)
         return JsonResponse({})
 
     arrived = Path(settings.UPLOADS_DIR) / f"{upload.get('ID', '')}"

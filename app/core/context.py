@@ -22,4 +22,9 @@ def workspace(request) -> dict:
         # Off hides every Case from everyone, Admins included, and keeps them:
         # the pages go, the rows and the files stay.
         "folder_management": settings_store.get("folder_management"),
+        # Off hides Record everywhere (Phase 3, Live recording).
+        "live_recording": bool(
+            settings_store.get("folder_management")
+            and settings_store.get("live_recording")
+        ),
     }

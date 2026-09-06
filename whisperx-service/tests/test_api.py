@@ -169,6 +169,22 @@ def test_the_second_submission_is_behind_the_first(client):
     assert body["audio_minutes_ahead"] == 10.0
 
 
+def test_a_higher_priority_goes_ahead_and_the_line_counts_it_so(client):
+    first = submit(client).json()
+    second = submit(client).json()
+    urgent = submit(client, priority=100).json()
+    # The urgent one is behind nothing; the earlier two are now behind it.
+    assert urgent["position"] == 0 and urgent["audio_minutes_ahead"] == 0
+    told = client.get(f"/v1/jobs/{first['id']}", headers=headers()).json()
+    assert told["position"] == 1 and told["audio_minutes_ahead"] == 10.0
+    told = client.get(f"/v1/jobs/{second['id']}", headers=headers()).json()
+    assert told["position"] == 2
+    # Out of range, or not a whole number, is refused.
+    assert submit(client, priority=101).status_code == 400
+    assert submit(client, priority="high").status_code == 400
+    assert submit(client, priority=True).status_code == 400
+
+
 def test_the_same_reference_returns_the_job_already_in_the_line(client):
     first = submit(client, client_reference="run-1").json()
     again = submit(client, client_reference="run-1")
