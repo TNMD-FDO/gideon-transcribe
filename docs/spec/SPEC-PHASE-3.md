@@ -16,10 +16,10 @@ Everything the app transcribes today arrives as a file. Phase 3 lets a person ma
 
 - **Live recording**: a Recording made in the browser on an office computer, from the microphone and, when asked, from what the computer plays, so that a meeting in the room, a Zoom or Teams call, or a jail call played on the computer becomes a Recording in a Case the moment it ends, and its finished Transcript follows minutes later at the front of the queue.
 - **Speaker buttons and Marks**: while recording, the people in the room are one tap each, so the finished Transcript names its Speakers; and one key drops a Mark at the moment that mattered.
-- **Dictation**: a Live recording of one person's speech whose product is a Memo, written by a shipped Summary template, and handed to a colleague with Send to.
+- **Dictation**: a recording of one person's speech, made from a tab of its own and kept on its own, whose product is a Memo, written by a shipped Summary template, and handed to a colleague with Send to.
 - **Dictation by email**: the one message the app sends that carries content, Off by default, so that a legal assistant gets the Memo in their mailbox when the office decides so.
 
-It adds three admin settings, five audit rows, and no environment key.
+It adds four admin settings, six audit rows, and no environment key.
 
 ## Contents
 
@@ -155,69 +155,90 @@ Built as the fifth step, after the four of the order of work, once a week of liv
 
 ## 2. Dictation and Send to
 
+Rewritten on 2026-09-07 from the maintainer's decision: a Dictation is a thing of its own, with a tab of its own, and not a Recording filed under a matter. Somebody who only ever dictates uses the Dictations page and nothing else; a Dictation that belongs to a matter is added to its Case afterwards, from the row, as a later choice and never a prerequisite. The earlier shape (Dictation as a Recording type on the Record page, in a Case, with Send to through Sharing) is superseded.
+
 ### Principles
 
-1. **A Dictation is a Live recording** of one person, of the Recording type Dictation, in a Case: everything above applies, with no people buttons and no second source.
-2. **The Memo is a Summary.** The shipped Summary template "Dictation memo", for the type Dictation, writes the dictated words out as a memo: the punctuation and paragraphs the speaker asked for, the false starts removed, nothing added and nothing left out. The viewer preselects it for a Dictation, as it preselects any type's template, and the Memo is one click, on request, as every Summary is. Regenerate, Export to Word, and Delete are the Summary's own.
-3. **Send to hands it over inside the app**, by the Sharing chapter's own means: the Case is shared with the colleague, and they are mailed that a Dictation is there for them. An attorney who does not want a whole matter shared for one dictation dictates into a Case of their own for dictations.
-4. **Dictation by email is the office's decision, Off by default.** When On, the Memo rides with the Send to mail as a Word file, the one message the app sends that carries content. The recipient is always a colleague the directory knows and never a typed address; the audit row says it was sent and to whom, never what it said.
+1. **One tab, one door.** The Dictations page is where a person dictates, reads the memo, sends it to a colleague, and, if they want, adds the dictation to a case. It asks for nothing before Record but a title, and even that is optional.
+2. **A Dictation stands on its own.** It is a Recording kept past sign-out, the person's alone, in no Case unless they add it to one. It counts against their space like anything they keep.
+3. **The Memo is the product.** One click writes it, by the shipped Dictation memo template, which writes the dictated words out as the memo they dictated and never summarises; it opens in the viewer and exports to Word.
+4. **Send to is per Dictation.** A colleague the directory knows gets that one Dictation under "Sent to you" on their own Dictations page, and a mail saying it is there; with Dictation by email On, the Memo rides along as a Word file. Never a typed address.
+5. **The office's retention applies to each Dictation on its own**: the Retention period after it was last used, with the same warning window, the same amber mark, the same nightly digest line, and no Recycle bin, since it is one recording and not a matter. One rule for the whole office, nothing new to set.
+6. **Simple first.** The Dictate page is the Record page with everything but Record put behind "More options": the computer's sound, the language, the people, for the person who dictates a meeting there too.
 
 ### Words
 
-The Words of the Live recording chapter, with Dictation, Memo, and Send to as defined there.
+- **Dictation**: a Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless added to one. Its Recording type is Dictation.
+- **Dictations page**: the tab where a person's Dictations are, newest first, with those colleagues have sent them under "Sent to you".
+- **Memo**: the document a Dictation becomes: a Summary written by the shipped Dictation memo template.
+- **Send to**: handing one Dictation to a colleague: they get it under "Sent to you", a mail saying it is there, and, when Dictation by email is On, the Memo as a Word file. Taking it back removes it from their page.
+- **Add to a case**: moving a Dictation into a Case afterwards, by the existing Move to case; from then on it is that Case's Recording, under the Case's clock and sharing, and still listed on the person's Dictations page with the Case's name.
 
-### The Record page for a Dictation
+### The Dictations page
 
-The Record page with the Recording type Dictation: no people buttons (the speaker is the person recording, whose name the Transcript takes), no "also record what this computer plays", the language and translate choice as before. The title defaults to "Dictation" and the date and time. Stop transcribes it at the front of the queue as any Live recording.
+In the top bar as **Dictations**, while the Dictation setting is On. At the top, **New dictation**. Then the person's Dictations, newest first, one row each: the title, when, the length, the state while it is on its way (the queue line, as the Record page shows it), whether the Memo is written, who it was sent to, and, when it is in a Case, the Case's name. Under them, **Sent to you**: the Dictations colleagues have sent, with who sent each and when. A Dictation in its last days carries the amber mark and "deletes in N days unless opened".
+
+Each of the person's rows offers:
+
+- **Open**: the viewer, with the Dictation's transcript and its Memo.
+- **Write the memo**, until one exists; then **Open the memo**. Writing it is one click: the Summary is made with the Dictation memo template and the viewer's Summary panel shows it when it is done.
+- **Send to**: a colleague from the same list Share offers; the dialog says, before confirming, that they will see this dictation and its memo under Sent to you, that they will be mailed that it is there, and, when the setting is On, that the memo will be attached. Beside each recipient, **Take back**.
+- **Add to a case**: the Move to case picker, over the Cases the person may put a Recording into.
+- **Delete**: final, as a Recording's Delete is.
+
+A row under "Sent to you" offers Open and Open the memo, and nothing more: a recipient reads, exports, and plays, and does not send, add, or delete.
+
+### The Dictate page
+
+The Record page in dictation mode, reached from New dictation: a title (optional; "Dictation" and the date otherwise), and Record. Under **More options**, folded: the spoken language and Translate to English, "also record what this computer plays", and the people expected. Everything of the Live recording chapter applies: the sound goes to the server as it is made, Pause cuts, the longest length stops it, leaving the page ends it, the queue line follows, and the finished Transcript is the only transcript shown. The Dictation is made in no Case, with the Recording type Dictation, its own Batch, and last used now.
 
 ### The Memo
 
-The viewer's New summary for a Dictation preselects **Dictation memo** and says so. The Memo is a Summary: it lists under the Recording's Summaries, exports to Word with the Summary's cover and the AI notice, and is deleted with the Recording. The template is shipped, editable, and resettable, like the other shipped templates, and the office reviews its wording on the Templates page.
+The shipped Summary template **Dictation memo**, for the Recording type Dictation, built in, editable and resettable, reviewed by the office on the Templates page. It writes the dictated words out as the memo dictated: every fact, name, date, number, and instruction kept and nothing added; false starts, repeats, filler, and asides to the typist removed, applying what they ask ("scratch that"); spoken punctuation and layout honoured ("new paragraph", "full stop", "comma", "open quote", "bullet", "heading"); no greeting, sign-off, or date unless dictated; an unclear word kept and marked. Write the memo asks for it at the Detailed length, so nothing is cut short. The Memo is a Summary: Regenerate, Export to Word, Delete as any; the viewer preselects the template for a Dictation as for any type.
 
 ### Send to
 
-On a Dictation's page in the viewer, and on the Case page's row for a Dictation: **Send to**, offered while the Dictation has a Memo. It asks for a colleague, from the same list Share offers (people who have signed in at least once and are Active; never Local admins; never a typed address), and says in plain words what will happen before the person confirms:
+`Send to` makes a **DictationShare** (the Dictation, the person, who sent it, when, last opened) and one "dictation sent" Notification through the mailer, at once, to the recipient: subject "Gideon Transcribe: {by} sent you a dictation", the title and the link, and the Memo as a Word file when Dictation by email is On and a Memo exists (a Dictation sent before its Memo is written is sent with the link alone). The recipient opens the Dictation and its Memo through the ordinary gates: they stand to it as their own for reading, playing, and exporting, and not for changing, sending, adding, or deleting. Sending again to the same person changes nothing. **Take back** deletes the share; nothing is mailed. Sending and taking back are use, for the clock.
 
-- the Case will be shared with the colleague, if it is not already, so they can open the Dictation and its Memo in the app;
-- they will be mailed that it is there, with a link (when mail is configured); and,
-- when Dictation by email is On, the Memo as a Word file will be attached to that mail.
+### Retention
 
-Confirming does those three things at once: a Share, audited as Share granted when new; and one "dictation sent" Notification through the mailer, at once, to the colleague, subject "Gideon Transcribe: {by} sent you a dictation in the case "{case}"", naming the Dictation's title and the Case and carrying the link, and the Word file when the setting is On. The "Dictation sent" row records the colleague's username and whether a file rode with it.
+Each Dictation not in a Case has its own clock: `last_used`, moved by opening it (the viewer), writing its Memo, sending it, taking a share back, and pressing Keep on its row; a recipient's opening moves it too. The nightly sweep (the retention sweep's minute, and independent of Folder management, since Dictations do not depend on Cases) deletes every Dictation whose days since last use reach the Retention period, for good, writing the Recording's own "Recording deleted" row with the cause `retention`, and nothing else: no Recycle bin. Inside the Warning-before-deletion window the row is amber with "deletes in N days unless opened", and the person's nightly digest carries a "Dictations deleting soon" block, one line per Dictation (the title and the days left), in the same message as their Cases. A Dictation added to a Case leaves its own clock and follows the Case's.
 
-### Dictation by email
+### What changes from the earlier phases
 
-The admin setting **Dictation by email**: On or Off, default Off, on the Email page, greyed while mail is not configured. Off: the Send to mail names and links and carries nothing. On: the Memo's Word export is attached. It is the one exception to the Email notifications chapter's rule that a message never carries content, made by the maintainer for the office's legal assistants, and the admin guide says so beside the switch. Nothing else the app sends is affected.
-
-### What changes from Phase 2
-
-- **Recording types**: the shipped list gains **Dictation**.
-- **Summary templates**: the shipped templates gain **Dictation memo**, for the type Dictation.
-- **The viewer and the Case page**: Send to on a Dictation with a Memo.
-- **The mailer**: a fifth Notification kind, "dictation sent", with its template on the Email page (placeholders `{name}`, `{by}`, `{case}`, `{title}`, `{link}`), and the one attachment the app ever sends, behind the setting.
-- **Sharing**: unchanged; Send to uses it.
+- **The Recording** gains `is_dictation` and `last_used`; the Workspace's lists, discard, and sign-out counts leave Dictations out; the Recordings page does not list them.
+- **The navigation** gains Dictations while the setting is On.
+- **The gates** (`cases.standing`) count a DictationShare's recipient as standing to the Dictation as their own.
+- **Recording types** ship with Dictation; **Summary templates** ship with Dictation memo, for that type.
+- **The mailer** gains the kind `dictation_sent`, its template (placeholders `{name}`, `{by}`, `{title}`, `{link}`) on the Email page, and the one attachment the app ever sends, behind the setting.
+- **The digest** gains the `{dictations}` block.
+- **The retention sweep** gains the Dictations' pass.
 
 ### Audit rows
 
 | Row | Category | When | Details |
 |---|---|---|---|
-| Dictation sent | Cases | Send to confirmed | the colleague's username, whether a file was attached; the object is the Recording; never the Memo |
+| Dictation sent | Recordings | Send to confirmed | the colleague's username, whether a file was attached; the object is the Recording; never the Memo |
+| Dictation taken back | Recordings | Take back | the colleague's username |
 | Email sent, kind `dictation_sent` | Email | the mailer, as for every kind | as the Email chapter fixes, plus `attached` |
+| Recording deleted, cause `retention` | Recordings | the sweep deletes a Dictation | the Recording's own row |
 
 ### Not in this phase
 
-- No typed addresses, no outside recipients: the directory is the only source, as the Email chapter fixed.
-- No Memo without the Transcript: the Memo is written from the finished Transcript, on request.
+- No typed addresses, no outside recipients.
+- No Memo without the Transcript.
 - No attachment on any other message.
+- No Recycle bin for a Dictation.
 
 ### Left to the build
 
-- The Dictation memo template's wording, in the shape of the shipped templates: what to keep, what to drop, how spoken punctuation ("new paragraph", "full stop", "quote") is honoured.
-- The Send to dialog's exact sentences, fixed in the app as the Share dialog's are.
+- The exact sentences of the Send to dialog, fixed in the app.
 - Whether a Dictation may be sent to more than one colleague at once (one at a time is the expectation).
+- How the Dictations page shows a Memo in progress (the queue line's words, the expectation).
 
 ## 3. Admin panel additions in Phase 3
 
-- **Features**: **Live recording**, On or Off, default Off, greyed while Folder management is Off (a Live recording needs a Case). Off hides Record everywhere and stops the Record page; a recording in progress finishes.
+- **Features**: **Live recording**, On or Off, default Off, greyed while Folder management is Off (a Live recording needs a Case). Off hides Record everywhere and stops the Record page; a recording in progress finishes. **Dictation**, On or Off, default Off, greyed while Live recording is Off. Off hides the Dictations tab and the Dictate page and keeps every Dictation.
 - **Limits**: **Longest live recording**, whole minutes, 10 to 480, default 180.
 - **Email**: **Dictation by email**, On or Off, default Off, greyed while mail is not configured; and the **Dictation sent** template beside the four.
 - **Templates**: the shipped **Dictation memo** template; **Recording types** ships with Dictation.
@@ -229,7 +250,7 @@ The admin setting **Dictation by email**: On or Off, default Off, on the Email p
 - **A draft on screen while recording**: ruled out (Principle 2). Transcription during the recording, above, is the finished-quality shape of the same wish.
 - **Phones and tablets**: ruled out for this phase; the office's computers only.
 - **Desk-phone capture**: ruled out; not the app's to solve.
-- **Recording in the app without a Case** (into the Workspace): ruled out; a Live recording is made to be kept.
+- **Recording in the app without a Case** (into the Workspace): ruled out; a Live recording is made to be kept. A Dictation is kept without a Case, on its own clock, which is the one exception, decided by the maintainer.
 - **Sending a Memo to a typed address**: ruled out; the directory is the only source of addresses.
 
 ## Appendix A. Audit rows added in Phase 3
@@ -238,7 +259,7 @@ The admin setting **Dictation by email**: On or Off, default Off, on the Email p
 |---|---|---|
 | Recordings | Live recording started; Live recording finished | Live recording |
 | Edits | Speakers named from taps | Live recording |
-| Cases | Dictation sent | Dictation and Send to |
+| Recordings | Dictation sent; Dictation taken back | Dictation and Send to |
 | Email | Email sent and Email failed, kind `dictation_sent` | Dictation and Send to |
 
 ## Appendix B. Settings added in Phase 3
@@ -246,6 +267,7 @@ The admin setting **Dictation by email**: On or Off, default Off, on the Email p
 | Setting | Page | Type | Default |
 |---|---|---|---|
 | Live recording | Features | On or Off; greyed while Folder management is Off | Off |
+| Dictation | Features | On or Off; greyed while Live recording is Off | Off |
 | Longest live recording | Limits | whole minutes, 10 to 480 | 180 |
 | Dictation by email | Email | On or Off; greyed while mail is not configured | Off |
 | Dictation sent (template) | Email | a Subject and a Body with `{name}`, `{by}`, `{case}`, `{title}`, `{link}` | the chapter's wording |

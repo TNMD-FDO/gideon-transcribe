@@ -120,16 +120,19 @@ A moment a person noted while recording, by one key, with an optional word. Show
 _Avoid_: bookmark, flag, tag
 
 **Dictation**:
-A Live recording of one person's speech, of the Recording type Dictation, whose product is a Memo. Phase 3.
+A Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless they add it to one, whose product is a Memo. Its Recording type is Dictation, and the office's Retention period applies to it on its own. Phase 3.
 _Avoid_: voice note, voice memo
+
+**Dictations page**:
+The tab where a person's Dictations are, newest first, with those colleagues have sent them under "Sent to you". Phase 3.
 
 **Memo**:
 The document a Dictation becomes: a Summary written by the shipped Dictation memo template, which writes the dictated words out as a memo rather than summarising a conversation. Phase 3.
 _Avoid_: transcript (that is the words as spoken), note
 
 **Send to**:
-Handing a Dictation to a colleague: the Case is shared with them inside the app, they are mailed that it is there, and, when the Dictation by email setting is On, the Memo rides with the mail as a Word file. Phase 3.
-_Avoid_: forward, share (that is the Case's), email (the mail is one part of it)
+Handing one Dictation to a colleague: they get it under "Sent to you" on their Dictations page, they are mailed that it is there, and, when the Dictation by email setting is On, the Memo rides with the mail as a Word file. Taking it back removes it from their page. Phase 3.
+_Avoid_: forward, share (that is a Case's), email (the mail is one part of it)
 
 ### Processing
 
