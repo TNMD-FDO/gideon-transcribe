@@ -51,6 +51,12 @@ def prepare_recording(recording_id: str) -> None:
         job = queue.make_job(recording)
         hand_over_job.defer(job_id=str(job.pk))
         make_playback_copy.defer(recording_id=str(recording.pk))
+    else:
+        # A Recording that failed here has ended, and may have been the last
+        # thing its Batch was waiting on.
+        from core import mail
+
+        mail.note_batch_progress(recording)
 
 
 @app.task(queue="media", name="prepare_audio_again")
@@ -327,11 +333,27 @@ def check_the_directory(timestamp: int) -> None:
 def watch_the_backups(timestamp: int) -> None:
     """The two overdue tests, once an hour: no Snapshot in 26 hours, a drill
     more than three days late. Each writes one audit row a day while it holds,
-    so the log shows the gap without filling with it; the Operator mail joins
-    when the Email chapter is built."""
+    so the log shows the gap without filling with it, and each sends the
+    Operator one message a day."""
     from core import backups
 
     backups.watch()
+
+
+@app.task(queue="default", name="send_email")
+def send_email(**fields) -> None:
+    """One message to the relay: three tries within thirty minutes, then dropped.
+
+    The first try is at once; the second 5 minutes on; the third 25 minutes
+    on. Each try is its own task, so a relay that is down does not hold the
+    worker, and the third failure writes the "Email failed" row.
+    """
+    from core import mail
+
+    wait = mail.attempt(**fields)
+    if wait is not None:
+        fields["tries"] = fields.get("tries", 1) + 1
+        send_email.configure(schedule_in={"minutes": wait}).defer(**fields)
 
 
 @app.task(queue="media", name="render_clip")

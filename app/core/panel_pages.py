@@ -28,6 +28,7 @@ from core import (
     cases,
     guides,
     lifecycle,
+    mail,
     settings_store,
     uploads,
     whisperx,
@@ -111,6 +112,9 @@ def status_lines(request: HttpRequest) -> JsonResponse:
             # The Backup line: the last Snapshot and the last drill, from the
             # row the nightly job's record commands write.
             "backup": backups.status_for_the_panel(),
+            # The Email line: not configured, or last sent and last failure,
+            # with the count of people who get no mail.
+            "email": mail.status_for_the_panel(),
             "storage": {
                 "free": uploads.as_gb(free),
                 "colour": "red"
@@ -417,9 +421,13 @@ def _reassign(person, to_whom, request) -> int:
     about.
     """
     moved = 0
+    from core import mail, retention
+
     for case in list(Case.objects.filter(owner=person)):
         case.owner = to_whom
         case.save(update_fields=["owner"])
+        # "Case handed to you", one per Case, naming the Admin who did it.
+        mail.case_handed(case, request.user, to_whom, retention.days_left(case))
         audit.write(
             cases.CATEGORY,
             "case reassigned",
@@ -442,7 +450,13 @@ def _reassign(person, to_whom, request) -> int:
 def users(request: HttpRequest) -> HttpResponse:
     """One row per account, and every action on it applies at once."""
     rows = []
-    for person in User.objects.order_by("username"):
+    # The one filter: people without an Email address, who get no mail and
+    # are fixed in the directory, never here.
+    no_email = bool(request.GET.get("no_email"))
+    people = User.objects.order_by("username")
+    if no_email:
+        people = people.filter(email="")
+    for person in people:
         theirs = Recording.objects.filter(user=person, case__isnull=True)
         size = sum(one.disk_bytes() for one in theirs)
         their_cases = Case.objects.filter(owner=person)
@@ -471,10 +485,17 @@ def users(request: HttpRequest) -> HttpResponse:
             }
         )
 
+    from core import mail
+
     return render(
         request,
         "panel/users.html",
-        {**furniture(request, "panel-users"), "rows": rows},
+        {
+            **furniture(request, "panel-users"),
+            "rows": rows,
+            "no_email": no_email,
+            "without_email": mail.people_without_email(),
+        },
     )
 
 
@@ -629,6 +650,7 @@ def create_local_admin(request: HttpRequest) -> HttpResponse:
     username = request.POST.get("username", "").strip()
     shown_name = request.POST.get("display_name", "").strip()
     password = request.POST.get("password", "")
+    email = request.POST.get("email", "").strip()[:254]
 
     if not username or not password:
         _tell(request, "A Local admin needs a username and a password.")
@@ -640,7 +662,10 @@ def create_local_admin(request: HttpRequest) -> HttpResponse:
     person = User.objects.create_local_admin(username, password)
     if shown_name:
         person.display_name = shown_name
-        person.save(update_fields=["display_name"])
+    # A Local admin has no directory record, so their Email address is the
+    # one typed address in the app; optional, and none by default.
+    person.email = email
+    person.save(update_fields=["display_name", "email"])
     audit.write(
         audit.Category.ACCOUNTS,
         "local admin created",
@@ -677,6 +702,18 @@ def local_admin_action(request: HttpRequest, username: str) -> HttpResponse:
             affected_user=person,
         )
         _tell(request, f"{person.username}'s password was changed.")
+
+    elif doing == "email":
+        address = request.POST.get("email", "").strip()[:254]
+        if address != person.email:
+            person.email = address
+            person.save(update_fields=["email"])
+            audit.email_address_updated(person, address, actor=request.user)
+        _tell(
+            request,
+            f"{person.username}'s email address is "
+            f"{'now ' + address if address else 'removed'}.",
+        )
 
     elif doing == "delete":
         if User.objects.filter(is_local=True).count() <= 1:
@@ -748,6 +785,33 @@ def _the_services_gpu() -> str:
 
 
 @admins_only
+@require_POST
+def test_mail(request: HttpRequest) -> HttpResponse:
+    """Test message: one message through the relay, now, and the relay's reply.
+
+    To the signed-in Admin, or to the Operator address when they have no
+    Email address. Sent within the request rather than through the queue, so
+    the reply is on the page when it comes back; one try, no retries.
+    """
+    to_address = request.user.email or mail.operator_email()
+    if not mail.configured() or not to_address:
+        request.session["email_said"] = (
+            "Nothing was sent: mail is not configured, or there is nobody to send to."
+        )
+        return redirect(reverse("panel-settings", args=[settings_store.EMAIL]))
+    try:
+        reply = mail.send_test(to_address, actor=request.user, request=request)
+    except mail.MailFailure as why:
+        request.session["email_said"] = (
+            f"The relay would not take the message ({why.reason_class}): "
+            f"{why.detail or 'no detail'}."
+        )
+    else:
+        request.session["email_said"] = f"Sent to {to_address}. The relay said: {reply}"
+    return redirect(reverse("panel-settings", args=[settings_store.EMAIL]))
+
+
+@admins_only
 def installation(request: HttpRequest) -> HttpResponse:
     """The read-only environment facts, for checking; never a secret's value."""
     # The names here are the specification's own. Four of them were not:
@@ -785,12 +849,22 @@ def installation(request: HttpRequest) -> HttpResponse:
     # The Backup's read-only rows: the target as account and host, the
     # schedule, the keep rule, and whether its two secrets are set.
     facts += backups.installation_rows()
+    # The mail keys, read-only; the password is a secret shown set or missing.
+    facts += [
+        ("Mail relay", mail.host() or "not set (no mail)"),
+        ("Mail relay port", os.environ.get("SMTP_PORT", "25")),
+        ("Mail TLS", mail.starttls_mode()),
+        ("Mail sign-in name", mail.user() or "none"),
+        ("Mail sender", mail.mail_from() or "not set"),
+        ("Operator address (mail)", mail.operator_email() or "not set"),
+    ]
 
     secrets = [
         ("Django key", os.environ.get("DJANGO_SECRET_KEY_FILE", "")),
         ("Database password", os.environ.get("POSTGRES_PASSWORD_FILE", "")),
         ("WhisperX Consumer token", os.environ.get("WHISPERX_TOKEN_FILE", "")),
         ("Engine token", os.environ.get("LLM_API_TOKEN_FILE", "")),
+        ("Mail relay password", os.environ.get("SMTP_PASSWORD_FILE", "")),
     ]
 
     return render(

@@ -279,6 +279,7 @@ urlpatterns = [
     path("panel/assistant/test", panel_pages.test_engine, name="panel-test-engine"),
     path("panel/templates", template_pages.templates, name="panel-templates"),
     path("panel/appearance/logo", panel.logo, name="panel-logo"),
+    path("panel/email/test", panel_pages.test_mail, name="panel-test-mail"),
     # The logo itself, for the sign-in page nobody has signed in to yet.
     path("branding/logo", views.logo, name="logo"),
     path(

@@ -182,6 +182,15 @@ services:
       BACKUP_TIME: "${BACKUP_TIME:-02:00}"
       DRILL_TIME: "${DRILL_TIME:-04:00}"
       OPERATOR_EMAIL: "${OPERATOR_EMAIL:-}"
+      # Mail (Phase 2, Email notifications): the office's relay, the sender,
+      # and the Operator address above. An empty SMTP_HOST means no mail at
+      # all. The relay's password, when it wants one, is a secret file.
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-25}"
+      SMTP_STARTTLS: "${SMTP_STARTTLS:-auto}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+      MAIL_FROM: "${MAIL_FROM:-}"
       # The office directory. Every value is this office's own and lives in
       # .env; the bind password is a secret file and the CA root is mounted
       # read-only, so neither is ever an environment value.
@@ -202,6 +211,8 @@ services:
       # Read here only to say "set" or "missing" on the panel. The web
       # container never talks to the engine; llm-worker does.
       - llm_api_token
+      # The test message is sent from here, within the request.
+      - smtp_password
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
     expose:
@@ -327,6 +338,8 @@ services:
       - whisperx_consumer_token
       - ldap_bind_password
       - ldap_ca_root
+      # Every Notification and every Operator message goes out from here.
+      - smtp_password
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
     healthcheck:
@@ -534,6 +547,9 @@ secrets:
     file: "${BACKUP_SSH_KEY_FILE:-./secrets/backup_ssh_key}"
   backup_known_hosts:
     file: "${BACKUP_KNOWN_HOSTS_FILE:-./secrets/backup_known_hosts}"
+  # The mail relay's password, when it wants one; an empty file otherwise.
+  smtp_password:
+    file: "${SMTP_PASSWORD_FILE:-./secrets/smtp_password}"
   # The engine's bearer token: a copy of the Shared engine's, or the one the
   # Local engine serves with. The file always exists, empty when there is no
   # engine, because a secret whose file is missing stops the whole stack;

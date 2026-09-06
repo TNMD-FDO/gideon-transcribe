@@ -304,19 +304,14 @@ def transfer(case, to_whom, actor, request=None) -> None:
 
 
 def _case_shared_mail(share: Share) -> None:
-    """The "case shared with you" Notification: the Email chapter's, not built.
+    """The "case shared with you" Notification, at once, to the new Collaborator."""
+    from core import mail
 
-    The event is counted in the log so the chapter has something to hook, and
-    nothing is sent. A Deactivated or Blocked Collaborator would not be mailed.
-    """
-    if share.person.status == "active":
-        log.info(
-            "a 'case shared with you' notification would go to %s",
-            share.person.username,
-        )
+    mail.case_shared(share.case, share.person, share.case.owner)
 
 
 def _case_handed_mail(case, was, to_whom) -> None:
-    """The "case handed to you" Notification, likewise waiting for the Email chapter."""
-    if to_whom.status == "active":
-        log.info("a 'case handed to you' notification would go to %s", to_whom.username)
+    """The "case handed to you" Notification, at once, to the new owner."""
+    from core import mail, retention
+
+    mail.case_handed(case, was, to_whom, retention.days_left(case))

@@ -80,12 +80,15 @@
               <span class="muted small">{{ row.unit }}</span>
             </span>
           {% else %}
-            <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}"{% if row.greyed %} disabled{% endif %}>{{ row.value }}</textarea>
+            <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}"{% if row.greyed %} disabled{% endif %}{% if row.resettable %} data-default="{{ row.raw_default }}"{% endif %}>{{ row.value }}</textarea>
+            {% if row.resettable and not row.greyed %}
+              <button type="button" class="ghost small reset-to-default" data-for="{{ row.key }}">Reset to default</button>
+            {% endif %}
           {% endif %}
 
           <div>
             {% if row.greyed %}
-              <span class="changedmark">Greyed while {{ row.needs_name }} is off; the value is kept.</span>
+              <span class="changedmark">{{ row.greyed_because }}</span>
               &middot;
             {% endif %}
             <span class="defmark">Default: {{ row.default }}</span>
@@ -126,6 +129,37 @@
       <div id="directory-said"></div>
     </div>
     <script src="{% static 'panel-directory.js' %}"></script>
+  {% endif %}
+
+  {% if email %}
+    <h2 style="margin-top: 28px">Test message</h2>
+    <p class="muted small">
+      Sends one message through the relay now, to you
+      ({{ email.to|default:"nobody: you have no email address and there is no Operator address" }}),
+      and shows the relay's reply. Each press is recorded in the audit log.
+      {% if email.configured %}
+        The relay is {{ email.host }}; the sender is {{ email.sender }}; replies go to {{ email.operator|default:"nobody (OPERATOR_EMAIL is empty)" }}.
+      {% else %}
+        Mail is not configured: set SMTP_HOST and MAIL_FROM in .env on the server (see the install guide).
+      {% endif %}
+    </p>
+    {% if email_said %}<p class="notice">{{ email_said }}</p>{% endif %}
+    {% if email.configured and email.to %}
+      <form method="post" action="{% url 'panel-test-mail' %}">
+        {% csrf_token %}
+        <button type="submit" class="small">Send a test message</button>
+      </form>
+    {% endif %}
+    <script>
+      (function () {
+        document.querySelectorAll(".reset-to-default").forEach(function (button) {
+          button.addEventListener("click", function () {
+            var field = document.getElementById(button.dataset.for);
+            if (field) { field.value = field.dataset.default || ""; field.dispatchEvent(new Event("input", { bubbles: true })); }
+          });
+        });
+      })();
+    </script>
   {% endif %}
 
   {% if appearance %}

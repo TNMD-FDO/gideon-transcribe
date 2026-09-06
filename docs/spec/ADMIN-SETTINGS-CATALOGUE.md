@@ -120,7 +120,7 @@ The Cases page of the rail, absent from the Phase 1 build. Sharing, Retention pe
 
 ## Email (Phase 2)
 
-The Email page of the Settings group, absent from the Phase 1 build.
+The Email page of the Settings group, absent from the Phase 1 build. Built in v1.21.0: keys `email_notifications`, `batch_finished_emails`, and the four templates as `digest_subject`/`digest_body`, `shared_subject`/`shared_body`, `handed_subject`/`handed_body`, `batch_subject`/`batch_body`; every row greyed while mail is not configured (`SMTP_HOST` or `MAIL_FROM` empty), the values kept; Reset to default puts the default in the field for the tray.
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|

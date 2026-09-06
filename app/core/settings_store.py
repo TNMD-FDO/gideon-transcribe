@@ -34,6 +34,7 @@ SIGN_IN = "sign-in"
 AUDIT = "audit"
 CASES = "cases"
 APPEARANCE = "appearance"
+EMAIL = "email"
 # Not a Settings page: these rows are edited on the Templates page, at once,
 # outside the tray, like the prompt templates beside them.
 TEMPLATES = "templates"
@@ -54,6 +55,7 @@ PAGES = [
     (AUDIT, "Audit log"),
     (CASES, "Cases"),
     (APPEARANCE, "Appearance"),
+    (EMAIL, "Email"),
 ]
 
 
@@ -78,6 +80,9 @@ class Definition:
     # A toggle this setting is greyed under while that toggle is off. The
     # value is kept; only the control is closed, and the page says so.
     needs: str = ""
+    # Greyed while mail is not configured (SMTP_HOST and MAIL_FROM in .env),
+    # which no toggle can turn on. The value is kept, as under `needs`.
+    needs_mail: bool = False
     aliases: tuple = field(default=(), repr=False)
 
 
@@ -251,6 +256,185 @@ def _rows() -> list[Definition]:
                 "the cover of every Word export. Empty shows the app's name alone."
             ),
             when_changed="The next page or export.",
+        ),
+        # The Email page (Phase 2, Email notifications): two switches and the
+        # four Notifications' wordings. Operator mail obeys .env alone.
+        Definition(
+            key="email_notifications",
+            page=EMAIL,
+            name="Email notifications",
+            kind=TOGGLE,
+            default=True,
+            needs_mail=True,
+            what_it_does=(
+                "The master switch for mail to people: the Retention digest, "
+                "a case shared or handed over, a batch finished."
+            ),
+            when_changed=(
+                "At once. Off stops every mail to people; Operator mail is unaffected."
+            ),
+        ),
+        Definition(
+            key="batch_finished_emails",
+            page=EMAIL,
+            name="Batch finished emails",
+            kind=TOGGLE,
+            default=True,
+            needs_mail=True,
+            what_it_does=(
+                "The optional mail when a batch finishes, which users ask for "
+                "with a tick on the Upload page."
+            ),
+            when_changed="At once. Off hides the tick on the Upload page.",
+        ),
+        Definition(
+            key="digest_subject",
+            page=EMAIL,
+            name="Retention digest: subject",
+            kind=TEXT,
+            lines=1,
+            default="Gideon Transcribe: cases deleting soon",
+            needs_mail=True,
+            what_it_does=(
+                "The nightly digest's subject. Placeholders: {name}, {cases}, "
+                "{shared}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="digest_body",
+            page=EMAIL,
+            name="Retention digest: body",
+            kind=TEXT,
+            lines=8,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                "These cases delete unless someone uses them:\n"
+                "{cases}\n"
+                "\n"
+                "{shared}\n"
+                "\n"
+                "Open a case, or press Keep on the Cases page, to start its clock "
+                "over: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "The nightly digest, one per person with a case in its last days. "
+                "{cases} is the list of their own cases, {shared} the cases shared "
+                "with them, both built by the app; {name} and {link} as above. "
+                "The footer is added by the app."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="shared_subject",
+            page=EMAIL,
+            name="Case shared with you: subject",
+            kind=TEXT,
+            lines=1,
+            default='Gideon Transcribe: {owner} shared the case "{case}" with you',
+            needs_mail=True,
+            what_it_does="Placeholders: {name}, {owner}, {case}, {link}.",
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="shared_body",
+            page=EMAIL,
+            name="Case shared with you: body",
+            kind=TEXT,
+            lines=6,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                '{owner} shared the case "{case}" with you. You can do everything '
+                "in it except share, rename, transfer, or delete it; recordings you "
+                "add count against {owner}'s space.\n"
+                "\n"
+                "Open it: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "Sent at once when a case is shared with somebody. Placeholders: "
+                "{name}, {owner}, {case}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="handed_subject",
+            page=EMAIL,
+            name="Case handed to you: subject",
+            kind=TEXT,
+            lines=1,
+            default='Gideon Transcribe: the case "{case}" is now yours',
+            needs_mail=True,
+            what_it_does="Placeholders: {name}, {by}, {case}, {days}, {link}.",
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="handed_body",
+            page=EMAIL,
+            name="Case handed to you: body",
+            kind=TEXT,
+            lines=6,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                '{by} handed you the case "{case}". It deletes in {days} days '
+                "unless used, so open it to start its clock over.\n"
+                "\n"
+                "Open it: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "Sent at once on Transfer or Reassign, to the new owner. "
+                "Placeholders: {name}, {by}, {case}, {days}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="batch_subject",
+            page=EMAIL,
+            name="Batch finished: subject",
+            kind=TEXT,
+            lines=1,
+            default=(
+                "Gideon Transcribe: your batch has finished ({done} done, "
+                "{failed} failed)"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "Placeholders: {name}, {count}, {done}, {failed}, {failed_list}, "
+                "{where}, {time}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="batch_body",
+            page=EMAIL,
+            name="Batch finished: body",
+            kind=TEXT,
+            lines=9,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                "Your batch of {count} recordings finished at {time}: {done} "
+                "transcribed, {failed} failed.\n"
+                "\n"
+                "{failed_list}\n"
+                "\n"
+                "The recordings are {where}.\n"
+                "\n"
+                "Open them: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "Sent when the last recording in a batch has ended, to a person "
+                "who ticked the box. {failed_list} is one line per failed "
+                "recording, built by the app; {where} is where the recordings "
+                "are; the rest as above."
+            ),
+            when_changed="The next message.",
         ),
         Definition(
             key="logo_on_exports",
@@ -834,7 +1018,36 @@ def check(key: str, value):
             )
         return wanted
 
-    return str(value)
+    text = str(value)
+    # A Notification's template may use its kind's placeholders and no
+    # other: the Email chapter's rule, kept here so every way in obeys it.
+    from core import mail
+
+    template_of = mail.template_kind_of(key)
+    if template_of:
+        why = mail.check_template(template_of, text)
+        if why:
+            raise ValueError(f"{known.name}: {why}")
+    return text
+
+
+def greyed_because(known: Definition) -> str:
+    """Why a setting's control is closed on the panel, or "" when it is open.
+
+    Under a toggle that is off, or while mail is not configured. The value is
+    kept either way, and a closed control is never read back as a change.
+    """
+    if known.needs and not get(known.needs):
+        return f"Greyed while {definition(known.needs).name} is off; the value is kept."
+    if known.needs_mail:
+        from core import mail
+
+        if not mail.configured():
+            return (
+                "Greyed while mail is not configured (SMTP_HOST and MAIL_FROM "
+                "in .env); the value is kept."
+            )
+    return ""
 
 
 def check_together(pending: dict) -> None:

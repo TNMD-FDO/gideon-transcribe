@@ -177,7 +177,10 @@
     }
     var intoCase = document.getElementById("add-to-case");
     var whatKind = document.getElementById("recording-type");
+    var mailMe = document.getElementById("email-when-done");
     return {
+      // Absent while the Admin's switch is off or mail is not configured.
+      email_when_done: !!(mailMe && !mailMe.disabled && mailMe.checked),
       diarize: document.getElementById("diarize").checked,
       speakers: speakers,
       translate: document.getElementById("translate").checked,
@@ -194,6 +197,8 @@
   }
 
   function writeRail(values) {
+    var mailMe = document.getElementById("email-when-done");
+    if (mailMe && !mailMe.disabled) { mailMe.checked = !!values.email_when_done; }
     document.getElementById("diarize").checked = !!values.diarize;
     document.getElementById("translate").checked = !!values.translate;
     document.getElementById("language").value = values.language || "";

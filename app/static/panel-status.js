@@ -157,6 +157,16 @@
       drillLine.textContent = state.backup.drill ? "Restore drill: " + state.backup.drill : "";
     }
 
+    // The Email line: not configured, or last sent and last failure; red
+    // while the most recent try failed.
+    var email = document.getElementById("email");
+    if (email && state.email) {
+      email.textContent = "Email: " + state.email.says;
+      email.className = state.email.colour === "red" ? "notice danger" : "notice";
+      document.getElementById("email-without").textContent =
+        "People without an email address: " + state.email.without_email;
+    }
+
     facts("versions", [
       ["Release", state.versions.release],
       ["Database migration", state.versions.migration],

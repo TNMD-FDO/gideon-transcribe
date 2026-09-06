@@ -253,6 +253,12 @@ stops the engine, frees the card, and leaves the app using no engine: the panel'
 
 Leave the target empty to run without backups; the Status page says so in red until one is set with `./transcribe install-backup`.
 
+### The mail
+
+After the backup, `./transcribe install` asks four plain questions: the relay's host and port; whether it needs a sign-in (then the name, and the password typed hidden into `secrets/smtp_password`); the sender address; and the Operator address. The relay is your office's own mail relay; it must accept mail from the server's address and let the sender address through, which `./transcribe check` proves by sending one test message to the Operator address. Before the install, fill the `mail` attribute for every member of the Sign-in group in the directory: that is the only place the app reads an email address from, and `check` counts who still lacks one.
+
+Leave the relay empty to run without mail. The install says what that loses: no retention digest, no other notification, and no Operator mail; the app's pages show everything a message would say. `./transcribe install-mail` asks the questions again later.
+
 ## 4. Check
 
 `./transcribe check` runs every smoke check and prints a plain report. Run it whenever something seems wrong; it never changes anything. Each line is `pass`, `amber`, or `FAIL`, and a failure says what to do.
@@ -297,6 +303,14 @@ Leave the target empty to run without backups; the Status page says so in red un
 | Line | What it means |
 |---|---|
 | the service answers | The transcription service is up, has its models, and can see the card. |
+
+**Email**
+
+| Line | What it means |
+|---|---|
+| the relay HOST accepted a test message to ADDRESS: REPLY | One message went through to the Operator address; the relay takes mail from this server and lets the sender through. A failure names the reason. |
+| every one of the Sign-in group's N members has a mail value | Everybody who may sign in can be mailed. Amber names who cannot; fix it in the directory. |
+| note SMTP_HOST is empty, so the app sends no mail | Mail is off; nothing else is checked. |
 
 The last line is either `Everything checked passed.` or a count of what did not.
 
@@ -485,7 +499,11 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `BACKUP_SSH_KEY_FILE`, `BACKUP_KEY_FILE`, `BACKUP_KNOWN_HOSTS_FILE` | The store account's private key, the repository password, and the store's host key, each a file under `secrets/`. The first two never ride in a backup: a fresh server gets them from the office's password manager. |
 | `BACKUP_KEEP_DAYS`, `BACKUP_LOCAL_DUMPS` | Nightly copies kept on the store (30) and dumps kept on the server (7). |
 | `BACKUP_TIME`, `DRILL_TIME` | When the nightly backup runs (02:00) and when the weekly check and the monthly drill run (04:00, Sundays). Written into the host's timers; after a change, `./transcribe install-timers`. |
-| `OPERATOR_EMAIL` | Who is told when a backup or a drill fails or a restore completes; empty means nobody. Mail arrives with the Email notifications chapter. |
+| `OPERATOR_EMAIL` | The Operator address: the backup reports, each night the cases whose owner has left, the test message, and the Reply-To on every message; empty means no Operator mail. |
+| `SMTP_HOST`, `SMTP_PORT` | The office's mail relay and its port (25). An empty host means the app sends no mail at all. |
+| `SMTP_STARTTLS` | `auto` (upgrade to TLS when the relay offers it, require it when a password is set), `always`, or `never`. |
+| `SMTP_USER`, `SMTP_PASSWORD_FILE` | The relay's sign-in, only when it wants one; the password lives in `secrets/smtp_password`, written by the install. |
+| `MAIL_FROM` | The sender, shown as "Gideon Transcribe <address>". Required when `SMTP_HOST` is set. |
 | `COMPOSE_FILE` | Which compose files Compose reads. Left out entirely for most offices; uncommented only for a shared engine. Never set empty: Compose reads an empty value as a path and refuses to start. |
 | `COMPOSE_PROFILES` | `llm` starts the Local engine in this stack; `./transcribe engine local on` sets it and `off` clears it. Empty means a shared engine, or none. |
 | `LLM_LOCAL_MODEL` | The model the Local engine loads, as Hugging Face names it. Default `Qwen/Qwen3.5-4B`, which fits in 20 GB with its cache. |
@@ -518,4 +536,4 @@ At install and upgrade only:
 | `huggingface.co` and `*.hf.co` | the models; `*.hf.co` covers the download hosts, which Hugging Face changes without notice |
 | `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `deb.debian.org` | only when an image is built on the server rather than pulled |
 
-At run time: your domain controllers on the LAN, and the engine's network inside Docker. Nothing phones home, and the app never checks for updates.
+At run time: your domain controllers on the LAN, the mail relay on `SMTP_PORT` when one is named, the backup store over SFTP when one is named, and the engine's network inside Docker. Nothing phones home, and the app never checks for updates.

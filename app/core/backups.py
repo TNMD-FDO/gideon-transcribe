@@ -258,6 +258,9 @@ def record_backup(
             reason_class=status.last_snapshot_reason,
             step=step,
         )
+        from core import mail
+
+        mail.backup_failed(step, status.last_snapshot_reason)
     _write_last_run(
         {
             "at": now.isoformat(),
@@ -288,6 +291,10 @@ def record_drill(*, ok: bool, step: str = "", duration: float = 0.0) -> BackupSt
         step=step,
         duration_seconds=round(duration, 1),
     )
+    if not ok:
+        from core import mail
+
+        mail.drill_failed(step)
     return status
 
 
@@ -390,6 +397,9 @@ def watch() -> list[str]:
             ),
         )
         said.append("snapshot")
+        from core import mail
+
+        mail.backup_overdue(status.last_good_snapshot_at)
     if status.last_drill_at is not None and now - status.last_drill_at > timedelta(
         days=31 + DRILL_OVERDUE_DAYS
     ):
@@ -402,6 +412,9 @@ def watch() -> list[str]:
             last_drill=status.last_drill_at.isoformat(),
         )
         said.append("drill")
+        from core import mail
+
+        mail.drill_overdue(status.last_drill_at)
     if said:
         status.overdue_said_on = today
         status.save(update_fields=["overdue_said_on"])
@@ -523,6 +536,9 @@ def after_restore(snapshot_id: str, snapshot_at) -> dict:
         **{key: value for key, value in report.items() if key != "snapshot_at"},
         snapshot_at=report["snapshot_at"],
     )
+    from core import mail
+
+    mail.restore_completed(report)
     return report
 
 
