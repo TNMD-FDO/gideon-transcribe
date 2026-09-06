@@ -141,11 +141,12 @@ def test_an_admins_template_joins_for_its_types_at_once(on, admin, client):
         },
     )
     added = SummaryTemplate.objects.get(name="Hearing brief")
-    assert added.recording_types == ["Hearing", "Interview"]
+    # Kept in the Recording types list's own order.
+    assert added.recording_types == ["Interview", "Hearing"]
     assert added in SummaryTemplate.for_type("Hearing")
     assert added in SummaryTemplate.for_type("Interview")
     row = Row.objects.filter(event="summary template added").get()
-    assert row.details["types"] == ["Hearing", "Interview"]
+    assert row.details["types"] == ["Interview", "Hearing"]
     assert "ruling" not in str(row.details)
 
     # Saving with other ticks changes what it is for, and says so.
