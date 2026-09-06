@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.8, 2026-09-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The Restore drill loaded its dump into a database that already had
+  one.** The teardown emptied the drill folder with a star after its name,
+  and that star is expanded by the shell of whoever runs the drill, who may
+  not look inside a folder that is the app's account's alone; so it expanded
+  to nothing, removed nothing, and every drill built on the last one's
+  leftovers, including a database already loaded. The folder is now emptied
+  by root, before the drill as well as after it, and a test keeps the star
+  out.
+
 ## v1.19.7, 2026-09-06
 
 ```

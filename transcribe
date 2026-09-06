@@ -1430,13 +1430,23 @@ cmd_restore_drill() {
     drill_teardown
     exit 1
   }
+  # The folder is emptied by root, never by a glob: a star after the folder
+  # is expanded by the shell of whoever runs this, who may not look inside a
+  # folder that is the app's account's alone, so it expanded to nothing and
+  # removed nothing, and every drill built on the last one's leftovers.
+  empty_the_drill_folder() {
+    sudo test -d "$drill" || return 0
+    sudo find "$drill" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+  }
   drill_teardown() {
     DRILL_DIR="$drill" docker compose -p transcribe-drill -f "$HERE/compose.yaml" -f "$HERE/compose.drill.yaml" down -v --remove-orphans >/dev/null 2>&1 || true
-    sudo rm -rf "$drill"/* 2>/dev/null || true
+    empty_the_drill_folder
   }
 
-  # 1. Room: the Snapshot's size plus the floor.
+  # 1. Room: the Snapshot's size plus the floor. The folder starts empty, so
+  # an earlier drill that was interrupted leaves nothing for this one to find.
   step="room"
+  drill_teardown
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$drill" "$drill/data" "$drill/data/backup" "$drill/data/cases"
   # Postgres runs as its own user inside its container and has to be able to
   # enter the folder it is given, so this one is root's at 0755, as Docker
