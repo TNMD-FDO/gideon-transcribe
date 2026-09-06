@@ -303,6 +303,10 @@ def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     # The image's entrypoint takes a management command as its first word,
     # so `run --rm app python manage.py ...` would run "python" as a command.
     assert "run --rm -T app python" not in script
+    # The drill folder is the app's account's alone, so a glob under sudo is
+    # expanded by the wrong shell and removes nothing.
+    assert 'rm -rf "$drill"/*' not in script
+    assert "empty_the_drill_folder()" in script
     assert "run --rm -T app ensure_roles" in script
     # The drill override keeps everything but Postgres and the app out.
     drill = (HERE / "compose.drill.yaml").read_text(encoding="utf-8")
