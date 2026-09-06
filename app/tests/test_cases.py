@@ -309,6 +309,7 @@ def test_a_case_opens_on_its_own_page_whatever_it_holds(person, a_case, client):
     a_transcript(newer)
     assert opens_at(a_case) == f"/case/{a_case.pk}"
 
+    settings_store.set_to("folder_management", True)
     signed_in(client, person)
     page = client.get("/cases").content.decode()
     assert f'data-open="/case/{a_case.pk}"' in page
