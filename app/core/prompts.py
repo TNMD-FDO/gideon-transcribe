@@ -134,6 +134,25 @@ SHIPPED_SUMMARIES = {
         'overlapping, or hard to follow, with their times. Write "None noticed" '
         "if there are none."
     ),
+    "meeting": (
+        "Write a summary of this meeting with these parts, in this order, using "
+        "these headings.\n"
+        "Overview: one short paragraph. What the meeting was about, who took "
+        "part, and how it ended.\n"
+        "What was decided: a bulleted list of every decision, each with who "
+        "made it and the time.\n"
+        "Who is to do what: a bulleted list of every task or follow-up agreed, "
+        "each with the person it fell to, the date if one was set, and the time "
+        'it was agreed. Write "None agreed" if there are none.\n'
+        "Questions left open: matters raised and not settled, each with the time.\n"
+        "What each person said: for each speaker, their main points in brief, "
+        "each with the time.\n"
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned, each with the time of its first mention.\n"
+        "Unclear parts: stretches where the recording is garbled, cut off, "
+        'overlapping, or hard to follow, with their times. Write "None noticed" '
+        "if there are none."
+    ),
     "dictation": (
         "This transcript is one person dictating a document. Write out the "
         "document they dictated, in their words, and do not summarise.\n"

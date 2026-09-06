@@ -1,9 +1,9 @@
-"""The Dictations page and its calls (Phase 3, Dictation).
+"""The Record tab and its calls (Phase 3, Dictation and the styles).
 
-One tab, one door: the person's Dictations, newest first, with what
-colleagues have sent them under "Sent to you"; New dictation; and, on each
-row, Open, the Memo, Send to, Add to a case, Delete. The Dictate page itself
-is the Record page in dictation mode.
+One tab, one door: everything the person recorded from it (dictations,
+meetings in the room, calls on the computer), newest first, with what
+colleagues have sent them under "Sent to you"; New recording; and, on each
+row, Open, the memo or summary, Send to, Add to a case, Delete.
 """
 
 from __future__ import annotations
@@ -56,6 +56,11 @@ def _memo_state(recording) -> tuple[str, str]:
     return ("done" if memo.text else "failed"), str(memo.pk)
 
 
+def _style_name(recording: Recording) -> str:
+    key = (recording.live or {}).get("style") or "dictation"
+    return live.STYLES.get(key, live.STYLES["dictation"])["name"]
+
+
 def _row(recording: Recording, viewer, mine: bool) -> dict:
     line = (
         live.line_for(recording)
@@ -83,11 +88,13 @@ def _row(recording: Recording, viewer, mine: bool) -> dict:
         ),
         "in_case": recording.case.name if recording.case_id else "",
         "mine": mine,
+        "style": _style_name(recording),
+        "product": dictation.product_of(recording),
     }
 
 
 @login_required
-def dictations(request: HttpRequest) -> HttpResponse:
+def record_tab(request: HttpRequest) -> HttpResponse:
     _on_or_404()
     mine = [_row(one, request.user, True) for one in dictation.mine(request.user)]
     received = [
@@ -97,9 +104,9 @@ def dictations(request: HttpRequest) -> HttpResponse:
     ]
     return render(
         request,
-        "dictations.html",
+        "record_tab.html",
         {
-            "page": "dictations",
+            "page": "record",
             "mine": mine,
             "received": received,
             "by_email": dictation.by_email(),
@@ -114,22 +121,18 @@ def dictations(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def dictate(request: HttpRequest) -> HttpResponse:
-    """The Record page in dictation mode: a title, and Record."""
-    _on_or_404()
-    return render(
-        request,
-        "record.html",
-        {
-            "page": "dictations",
-            "mode": "dictation",
-            "cases": [],
-            "chosen_case": "",
-            "types": [],
-            "languages": [("", "Automatic"), ("es", "Spanish"), ("en", "English")],
-            "longest_seconds": live.longest_seconds(),
-            "longest_minutes": live.longest_seconds() // 60,
-        },
-    )
+    """The old address of the Dictate page: the New recording page now."""
+    from django.shortcuts import redirect
+
+    return redirect(reverse("record-new"))
+
+
+@login_required
+def dictations(request: HttpRequest) -> HttpResponse:
+    """The old address of the Dictations page: the Record tab now."""
+    from django.shortcuts import redirect
+
+    return redirect(reverse("record"))
 
 
 @login_required

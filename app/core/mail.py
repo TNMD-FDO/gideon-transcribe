@@ -78,12 +78,12 @@ TEMPLATES = {
         "subject_key": "dictation_subject",
         "body_key": "dictation_body",
         "placeholders": {"name", "by", "title", "link"},
-        "subject": "Gideon Transcribe: {by} sent you a dictation",
+        "subject": "Gideon Transcribe: {by} sent you a recording",
         "body": (
             "Hello {name},\n"
             "\n"
-            '{by} sent you the dictation "{title}". It is under Sent to you on '
-            "your Dictations page.\n"
+            '{by} sent you the recording "{title}". It is under Sent to you on '
+            "your Record tab.\n"
             "\n"
             "Open it: {link}\n"
         ),
@@ -662,7 +662,7 @@ def people_without_email() -> int:
 
 KIND_WORDS = {
     DIGEST: "retention digest",
-    DICTATION: "dictation sent",
+    DICTATION: "recording sent",
     SHARED: "case shared",
     HANDED: "case handed over",
     BATCH: "batch finished",
@@ -796,7 +796,7 @@ def dictation_sent(recording, by, to_whom, attach_memo: bool = False) -> bool:
         name=to_whom.shown_name,
         by=by.shown_name,
         title=recording.title,
-        link=app_url("/dictations"),
+        link=app_url("/record"),
     )
     return send_to_person(
         DICTATION,

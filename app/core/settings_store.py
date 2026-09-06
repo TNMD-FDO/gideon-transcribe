@@ -48,6 +48,7 @@ SHIPPED_RECORDING_TYPES = "\n".join(
         "Interview",
         "Phone call",
         "Hearing",
+        "Meeting",
         "Dictation",
         "Other",
     ]
@@ -181,18 +182,19 @@ def _rows() -> list[Definition]:
         Definition(
             key="dictation",
             page=FEATURES,
-            name="Dictation",
+            name="Record tab",
             kind=TOGGLE,
             default=False,
             needs="live_recording",
             what_it_does=(
-                "People may dictate from a Dictations tab: a recording kept on "
-                "its own, with a memo written by the Dictation memo template, "
-                "sent to colleagues one at a time."
+                "People may record from a Record tab, choosing a dictation, a "
+                "meeting in the room, or a call on the computer: a recording "
+                "kept on its own, with a memo or summary one click away, sent "
+                "to colleagues one at a time."
             ),
             when_changed=(
-                "At once. Off hides the tab and the Dictate page; every "
-                "dictation is kept."
+                "At once. Off hides the tab and the New recording page; every "
+                "recording made there is kept."
             ),
         ),
         Definition(
@@ -350,20 +352,20 @@ def _rows() -> list[Definition]:
             default=False,
             needs_mail=True,
             what_it_does=(
-                "Send to attaches a dictation's memo, as a Word file, to the mail "
-                "that tells a colleague it is there. The one message the app "
-                "sends that carries content; the recipient is always a colleague "
-                "the directory knows."
+                "Send to attaches a recording's memo or summary, as a Word file, "
+                "to the mail that tells a colleague it is there. The one message "
+                "the app sends that carries content; the recipient is always a "
+                "colleague the directory knows."
             ),
             when_changed="The next Send to.",
         ),
         Definition(
             key="dictation_subject",
             page=EMAIL,
-            name="Dictation sent: subject",
+            name="Recording sent: subject",
             kind=TEXT,
             lines=1,
-            default="Gideon Transcribe: {by} sent you a dictation",
+            default="Gideon Transcribe: {by} sent you a recording",
             needs_mail=True,
             what_it_does="Placeholders: {name}, {by}, {title}, {link}.",
             when_changed="The next message.",
@@ -371,22 +373,23 @@ def _rows() -> list[Definition]:
         Definition(
             key="dictation_body",
             page=EMAIL,
-            name="Dictation sent: body",
+            name="Recording sent: body",
             kind=TEXT,
             lines=6,
             default=(
                 "Hello {name},\n"
                 "\n"
-                '{by} sent you the dictation "{title}". It is under Sent to you '
-                "on your Dictations page.\n"
+                '{by} sent you the recording "{title}". It is under Sent to you '
+                "on your Record tab.\n"
                 "\n"
                 "Open it: {link}\n"
             ),
             needs_mail=True,
             what_it_does=(
-                "Sent at once when a dictation is sent to somebody. "
-                "Placeholders: {name}, {by}, {title}, {link}. With Dictation by "
-                "email on, the memo is attached as a Word file."
+                "Sent at once when a recording from the Record tab is sent to "
+                "somebody. Placeholders: {name}, {by}, {title}, {link}. With "
+                "Dictation by email on, the memo or summary is attached as a "
+                "Word file."
             ),
             when_changed="The next message.",
         ),

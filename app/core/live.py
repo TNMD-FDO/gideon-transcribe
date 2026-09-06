@@ -38,6 +38,43 @@ FILENAME_SUFFIX = ".webm"
 ASSUMED_SPEED = 60.0
 SPEED_WINDOW = 20
 
+# The three styles the New recording page offers, each a preset: the
+# Recording type it takes, whether Speakers are told apart, whether the
+# computer's sound is recorded, and the word the row's button uses for the
+# product. A recording made from a Case page takes a style too.
+STYLES = {
+    "dictation": {
+        "name": "Dictation",
+        "line": "Just you. The product is the memo, written out as you dictated it.",
+        "type": "Dictation",
+        "diarize": False,
+        "computer": False,
+        "product": "memo",
+    },
+    "meeting": {
+        "name": "Meeting or interview in the room",
+        "line": (
+            "The microphone hears everyone. Tap who is talking and the transcript "
+            "names them; an Interview summary is one click away."
+        ),
+        "type": "Interview",
+        "diarize": True,
+        "computer": False,
+        "product": "summary",
+    },
+    "call": {
+        "name": "Call or meeting on this computer",
+        "line": (
+            "Zoom, Teams, a softphone, a jail call played here. The far side "
+            "becomes its own side of the transcript; a summary is one click away."
+        ),
+        "type": "Meeting",
+        "diarize": True,
+        "computer": True,
+        "product": "summary",
+    },
+}
+
 
 def on() -> bool:
     """Whether the Record page exists: the setting, under Folder management."""
@@ -63,6 +100,7 @@ def start(
     browser: str = "",
     with_computer: bool = False,
     dictation: bool = False,
+    style: str = "",
     request=None,
 ) -> Recording:
     """Make the Recording a Live recording will become, before a byte arrives.
@@ -92,8 +130,13 @@ def start(
         raise Refused(f"{whose} storage space is full, so nothing can be recorded.")
 
     when = timezone.localtime(timezone.now())
-    if dictation:
-        recording_type = "Dictation"
+    # The style presets the type, the diarization, and the computer's sound;
+    # a type chosen under More options wins over the style's.
+    chosen = STYLES.get(style) or (STYLES["dictation"] if dictation else None)
+    if chosen is not None:
+        recording_type = (recording_type or "").strip() or chosen["type"]
+        with_computer = with_computer or chosen["computer"]
+    diarize = chosen["diarize"] if chosen is not None else True
     title = (title or "").strip()[:300] or (
         f"{recording_type or 'Recording'} {when:%d %b %Y %H:%M}"
     )
@@ -109,12 +152,13 @@ def start(
         media_state=MediaState.UPLOADING,
         spoken_language=(language or "")[:10],
         translate=bool(translate),
-        diarize=not dictation,
+        diarize=diarize,
         preprocessing="standard",
         is_dictation=bool(dictation),
         last_used=when if dictation else None,
         live={
             "started": when.isoformat(),
+            "style": style if style in STYLES else ("dictation" if dictation else ""),
             "sources": sources,
             "browser": (browser or "")[:120],
             "pauses": [],
@@ -132,6 +176,7 @@ def start(
         object_label=recording.original_filename,
         case=case.name if case is not None else "",
         dictation=bool(dictation),
+        style=style if style in STYLES else "",
         sources=sources,
         language=language or "auto",
         translate=bool(translate),

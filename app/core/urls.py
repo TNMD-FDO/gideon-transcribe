@@ -158,10 +158,14 @@ urlpatterns = [
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     # The Record page (Phase 3): a Recording made in the browser.
-    path("record", live_pages.record, name="record"),
+    # The Record tab (everything recorded there), and the New recording page,
+    # which a Case page also opens with its case preset.
+    path("record", dictation_pages.record_tab, name="record"),
+    path("record/new", live_pages.record, name="record-new"),
     path("record/start", live_pages.start, name="record-start"),
     path("record/people", live_pages.people, name="record-people"),
     # Dictations (Phase 3): the tab, the Dictate page, and a row's acts.
+    # The old addresses, kept as redirects for a bookmark.
     path("dictations", dictation_pages.dictations, name="dictations"),
     path("dictate", dictation_pages.dictate, name="dictate"),
     path(

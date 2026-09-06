@@ -14,8 +14,31 @@
   if (!page || !window.tus) { return; }
 
   var csrf = page.dataset.csrf;
-  var DICTATION = page.dataset.mode === "dictation";
+  var CASE = page.dataset.case || "";
   var LONGEST = parseInt(page.dataset.longest, 10) || 10800;
+
+  // The style chosen: a dictation, a meeting in the room, a call on this
+  // computer. Each shows what it needs and no more.
+  function style() {
+    var chosen = document.querySelector("input[name='style']:checked");
+    return chosen ? chosen.value : "dictation";
+  }
+  function applyStyle() {
+    var which = style();
+    document.querySelectorAll(".styles .style").forEach(function (card) {
+      card.classList.toggle("on", card.querySelector("input").checked);
+    });
+    document.getElementById("people-field").hidden = which === "dictation";
+    document.getElementById("computer-help").hidden = which !== "call";
+    var tick = document.getElementById("record-computer");
+    if (which === "call") { tick.checked = true; tick.disabled = true; }
+    else { tick.disabled = false; if (tick.dataset.forced) { tick.checked = false; } }
+    tick.dataset.forced = which === "call" ? "1" : "";
+  }
+  document.querySelectorAll("input[name='style']").forEach(function (radio) {
+    radio.addEventListener("change", applyStyle);
+  });
+  applyStyle();
   // How much is gathered before a piece goes to the server: about ten
   // seconds of speech at the rate below.
   var PIECE = 64 * 1024;
@@ -107,7 +130,6 @@
 
   // Before: the people expected -----------------------------------------------
 
-  var caseChoice = document.getElementById("record-case");
   var expected = document.getElementById("people-expected");
 
   function drawPeople() {
@@ -118,13 +140,12 @@
   }
 
   function loadPeople() {
-    if (!caseChoice || !caseChoice.value) { people = []; drawPeople(); return; }
-    fetch("/record/people?case=" + encodeURIComponent(caseChoice.value))
+    if (!CASE) { people = []; drawPeople(); return; }
+    fetch("/record/people?case=" + encodeURIComponent(CASE))
       .then(function (answer) { return answer.json(); })
       .then(function (said) { people = said.people || []; drawPeople(); })
       .catch(function () { people = []; drawPeople(); });
   }
-  caseChoice.addEventListener("change", loadPeople);
   loadPeople();
 
   function addPerson() {
@@ -148,13 +169,12 @@
   // Before: Record -------------------------------------------------------------
 
   document.getElementById("start").addEventListener("click", function () {
-    var caseId = document.getElementById("record-case").value;
-    if (!caseId && !DICTATION) { problem("before-problem", "Choose a case to record into."); return; }
+    var caseId = CASE;
     problem("before-problem", "");
     var button = this;
     button.disabled = true;
 
-    var withComputer = document.getElementById("record-computer").checked;
+    var withComputer = document.getElementById("record-computer").checked || style() === "call";
 
     // The microphone first, so that a refused microphone makes no recording;
     // then the computer's sound, when asked for, which the browser offers
@@ -176,7 +196,8 @@
       .then(function () {
         return post("/record/start", {
           case: caseId,
-          dictation: DICTATION,
+          dictation: !caseId,
+          style: style(),
           recording_type: document.getElementById("record-type").value,
           title: document.getElementById("record-title").value,
           language: document.getElementById("record-language").value,

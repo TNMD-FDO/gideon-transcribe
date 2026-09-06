@@ -28,11 +28,12 @@ TYPE = "Dictation"
 
 # The words a person reads before sending, fixed in the app.
 SEND_WORDS = (
-    "They will see this dictation and its memo under Sent to you on their "
-    "Dictations page, and they will be mailed that it is there.",
+    "They will see this recording, its transcript, and its memo or summary "
+    "under Sent to you on their Record tab, and they will be mailed that it "
+    "is there.",
 )
 SEND_WORDS_WITH_FILE = SEND_WORDS + (
-    "The memo will be attached to that mail as a Word file.",
+    "The memo or summary will be attached to that mail as a Word file.",
 )
 
 
@@ -147,16 +148,33 @@ def memo_of(recording: Recording):
     return recording.summaries.order_by("-created").first()
 
 
+def product_of(recording: Recording) -> str:
+    """ "memo" for a dictation, "summary" for a meeting or a call."""
+    from core import live
+
+    style = (recording.live or {}).get("style") or "dictation"
+    return live.STYLES.get(style, live.STYLES["dictation"])["product"]
+
+
 def write_memo(recording: Recording, by, request=None):
-    """Ask for the Memo: one Summary with the Dictation memo template, at length."""
+    """Ask for the product: a Memo for a dictation, a summary for the others.
+
+    One Summary, with the template the viewer would choose for the
+    recording's type (the Dictation memo for a dictation, the Interview or
+    Meeting summary for the others), at the Detailed length for a memo so
+    nothing is cut short.
+    """
     from core import assistant, tasks
     from core.assistant import Summary, SummaryTemplate
 
+    word = product_of(recording)
     if not assistant.features()["summary"]:
-        raise Refused("The AI assistant is off, so no memo can be written. Ask IT.")
+        raise Refused(f"The AI assistant is off, so no {word} can be written. Ask IT.")
     if getattr(recording, "transcript", None) is None:
         raise Refused("The transcript is not there yet.")
-    template = memo_template() or SummaryTemplate.the_default()
+    template = SummaryTemplate.chosen_for(recording)
+    if word == "memo":
+        template = memo_template() or template
     summary = Summary.objects.create(
         recording=recording,
         asked_by=by,
@@ -164,7 +182,7 @@ def write_memo(recording: Recording, by, request=None):
         template_name=template.name,
         template_version=template.version,
         focus="",
-        length="detailed",
+        length="detailed" if word == "memo" else "standard",
     )
     tasks.write_summary.defer(summary_id=str(summary.pk))
     note_used(recording, by=by)
