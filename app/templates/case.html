@@ -19,7 +19,7 @@
 
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
-      {% if live_recording and role != "admin" %}<a href="{% url 'record' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
+      {% if live_recording and role != "admin" %}<a href="{% url 'record-new' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
     </div>
 

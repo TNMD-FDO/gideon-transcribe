@@ -123,8 +123,9 @@ _Avoid_: bookmark, flag, tag
 A Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless they add it to one, whose product is a Memo. Its Recording type is Dictation, and the office's Retention period applies to it on its own. Phase 3.
 _Avoid_: voice note, voice memo
 
-**Dictations page**:
-The tab where a person's Dictations are, newest first, with those colleagues have sent them under "Sent to you". Phase 3.
+**Record tab**:
+The tab where everything a person recorded from it is, newest first (dictations, meetings in the room, calls on the computer), with those colleagues have sent them under "Sent to you"; its New recording page asks what is being recorded and offers the three styles. Phase 3. The tab was called Dictations for one release.
+_Avoid_: Dictations page (the earlier name), recorder
 
 **Memo**:
 The document a Dictation becomes: a Summary written by the shipped Dictation memo template, which writes the dictated words out as a memo rather than summarising a conversation. Phase 3.

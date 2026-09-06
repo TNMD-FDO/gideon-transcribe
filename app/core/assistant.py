@@ -144,6 +144,13 @@ SHIPPED_TEMPLATES = (
         "The dictated words written out as the document, nothing summarised.",
         ("Dictation",),
     ),
+    (
+        "meeting",
+        "Meeting summary",
+        "What was decided, who is to do what, questions left open, what each "
+        "person said.",
+        ("Meeting",),
+    ),
 )
 
 

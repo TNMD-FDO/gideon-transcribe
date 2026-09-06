@@ -1,103 +1,109 @@
 {% extends "base.html" %}
 {% load static icons %}
-{% block title %}Record{% endblock %}
+{% block title %}New recording{% endblock %}
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
   {% comment %}
-    The Record page (Phase 3): one page in three states. Before: the case,
-    the type, the title, the language. During: the clock, the meter, Pause
-    and Stop. After: where the recording stands until the transcript opens.
-    The browser records and sends the sound to the server in pieces as it
-    goes; nothing is shown that is rougher than the finished transcript.
+    The New recording page (Phase 3): one question, then Record. The three
+    styles are presets over settings that exist: a dictation (just you, the
+    memo), a meeting in the room (people to tap, an Interview summary), a
+    call or meeting on this computer (the computer's sound as the far side,
+    a Meeting summary). From a case page the case is preset and the
+    recording lands in it; from the Record tab it is kept on its own. The
+    browser records and sends the sound as it goes; nothing rougher than
+    the finished transcript is ever shown.
   {% endcomment %}
   <div class="page roomy record" id="record"
        data-longest="{{ longest_seconds }}"
-       data-mode="{{ mode|default:'record' }}"
+       data-case="{{ chosen_case }}"
        data-csrf="{{ csrf_token }}">
     <p class="muted small" style="margin: 0 0 4px">
-      {% if mode == "dictation" %}<a href="{% url 'dictations' %}">Dictations</a>{% else %}<a href="{% url 'cases' %}">Cases</a>{% endif %}
+      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'record' %}">Record</a>{% endif %}
     </p>
     <div class="row">
-      <h1 class="grow">{% if mode == "dictation" %}Dictate{% else %}Record{% endif %}</h1>
+      <h1 class="grow">New recording</h1>
     </div>
 
-    <section id="before" class="card stack" style="max-width: 40rem">
-      {% if mode == "dictation" %}
-        <p class="muted">
-          Press Record and dictate. Say the punctuation and the layout as you go: "new paragraph", "full stop", "comma", "open quote". Press Stop, and the memo is one click on the Dictations page once the transcript is there.
-        </p>
+    <section id="before" class="stack" style="max-width: 44rem">
+      <p class="muted" style="margin: 0">What are you recording?</p>
+      <div class="styles" role="radiogroup" aria-label="What are you recording">
+        {% for key, style in styles %}
+          <label class="style card{% if forloop.first %} on{% endif %}">
+            <input type="radio" name="style" value="{{ key }}"{% if forloop.first %} checked{% endif %}>
+            <b>{{ style.name }}</b>
+            <span class="muted small">{{ style.line }}</span>
+          </label>
+        {% endfor %}
+      </div>
+
+      {% if chosen_case %}
+        <p class="muted small">Into the case <b>{{ case_name }}</b>. It is kept there under the case's clock.</p>
+      {% else %}
+        <p class="muted small">Kept on your Record tab, yours alone until you send it, for as long as the office keeps a case. You can add it to a case afterwards.</p>
       {% endif %}
-      <div class="field"{% if mode == "dictation" %} hidden{% endif %}>
-        <label for="record-case">Case</label>
-        <select id="record-case">
-          {% if not chosen_case %}<option value="">Choose a case</option>{% endif %}
-          {% for one in cases %}
-            <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
-          {% endfor %}
-        </select>
-        <p class="muted small" style="margin: 4px 0 0">
-          A recording is kept in its case after you sign out, for as long as the office's retention policy says.
-        </p>
-      </div>
 
-      <div class="field"{% if mode == "dictation" %} hidden{% endif %}>
-        <label for="record-type">Recording type</label>
-        <select id="record-type">
-          <option value="">No type</option>
-          {% for one in types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="record-title">Title</label>
-        <input type="text" id="record-title" maxlength="300" placeholder="{% if mode == 'dictation' %}Dictation and the date, unless you give one{% else %}The type and the date, unless you give one{% endif %}">
-      </div>
-
-      {% if mode == "dictation" %}<details id="more-options"><summary>More options</summary><div class="stack" style="margin-top: 10px">{% endif %}
-      <div class="row" style="gap: 18px; flex-wrap: wrap">
+      <div class="card stack">
         <div class="field">
-          <label for="record-language">Spoken language</label>
-          <select id="record-language">
-            {% for code, name in languages %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
-          </select>
+          <label for="record-title">Title (optional)</label>
+          <input type="text" id="record-title" maxlength="300" placeholder="The style and the date, unless you give one">
         </div>
-        <label class="row" style="align-self: end; padding-bottom: 6px">
-          <input type="checkbox" id="record-translate"> <b>Translate to English</b>
-        </label>
-      </div>
 
-      <div class="field">
-        <label for="record-person">People expected</label>
-        <p class="muted small" style="margin: 0 0 6px">
-          The case's people, and anyone else who will speak. While recording, tap a person as they start talking and the transcript names its speakers from that.
+        <div class="field" id="people-field" hidden>
+          <label for="record-person">People expected</label>
+          <p class="muted small" style="margin: 0 0 6px">
+            {% if chosen_case %}The case's people, and anyone else who will speak.{% else %}Anyone who will speak.{% endif %} While recording, tap a person as they start talking and the transcript names its speakers from that.
+          </p>
+          <div class="people-buttons" id="people-expected"></div>
+          <div class="row" style="gap: 6px; margin-top: 6px">
+            <input type="text" id="record-person" maxlength="60" class="grow" placeholder="Add a person">
+            <button type="button" class="btn small" id="add-person">Add</button>
+          </div>
+        </div>
+
+        <p class="muted small" id="computer-help" hidden>
+          The browser will ask which screen to share; choose the whole screen and tick <b>Share system audio</b> (Edge) or <b>Share audio</b> (Chrome). Only the sound is recorded, never the picture.
         </p>
-        <div class="people-buttons" id="people-expected"></div>
-        <div class="row" style="gap: 6px; margin-top: 6px">
-          <input type="text" id="record-person" maxlength="60" class="grow" placeholder="Add a person">
-          <button type="button" class="btn small" id="add-person">Add</button>
+
+        <details id="more-options">
+          <summary>More options</summary>
+          <div class="stack" style="margin-top: 10px">
+            <div class="row" style="gap: 18px; flex-wrap: wrap">
+              <div class="field">
+                <label for="record-language">Spoken language</label>
+                <select id="record-language">
+                  {% for code, name in languages %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                </select>
+              </div>
+              <label class="row" style="align-self: end; padding-bottom: 6px">
+                <input type="checkbox" id="record-translate"> <b>Translate to English</b>
+              </label>
+            </div>
+            <div class="field">
+              <label for="record-type">Recording type</label>
+              <select id="record-type">
+                <option value="">The style's own</option>
+                {% for one in types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
+              </select>
+              <p class="muted small" style="margin: 4px 0 0">Choose one to get its summary instead: a jail call played on this computer, for instance.</p>
+            </div>
+            <label class="row">
+              <input type="checkbox" id="record-computer"> <b>Also record what this computer plays</b>
+            </label>
+          </div>
+        </details>
+
+        <p class="muted small">
+          Sent to the office's server as it goes. Nothing leaves the building. The recording stops by itself after {{ longest_minutes }} minutes.
+        </p>
+        <p class="problem" id="before-problem" hidden></p>
+        <div class="row">
+          <button type="button" class="btn primary big" id="start">{% icon "mic" %} Record</button>
         </div>
-      </div>
-
-      <label class="row">
-        <input type="checkbox" id="record-computer"> <b>Also record what this computer plays</b>
-      </label>
-      <p class="muted small" id="computer-help">
-        For a call or a meeting on this computer: Zoom, Teams, a softphone, or a jail call played here. The browser will ask which screen to share; choose the whole screen and tick <b>Share system audio</b> (Edge) or <b>Share audio</b> (Chrome). Only the sound is recorded, never the picture, and the far side becomes its own side of the transcript.
-      </p>
-
-      {% if mode == "dictation" %}</div></details>{% endif %}
-
-      <p class="muted small">
-        Recorded from this computer's microphone and sent to the office's server as it goes. Nothing leaves the building. The recording stops by itself after {{ longest_minutes }} minutes.
-      </p>
-      <p class="problem" id="before-problem" hidden></p>
-      <div class="row">
-        <button type="button" class="btn primary big" id="start">{% icon "mic" %} Record</button>
       </div>
     </section>
 
-    <section id="during" class="card stack" hidden style="max-width: 40rem">
+    <section id="during" class="card stack" hidden style="max-width: 44rem">
       <div class="row">
         <span class="pill danger" id="rec-pill">Recording</span>
         <b class="grow" id="during-title"></b>
@@ -123,7 +129,7 @@
       </div>
     </section>
 
-    <section id="after" class="card stack" hidden style="max-width: 40rem">
+    <section id="after" class="card stack" hidden style="max-width: 44rem">
       <div class="row">
         <b class="grow" id="after-title"></b>
         <span class="pill warn" id="after-pill">Transcribing</span>
@@ -131,8 +137,8 @@
       <p id="after-line">Sending the last piece.</p>
       <div class="row">
         <a class="btn primary" id="open-viewer" hidden>Open the transcript</a>
-        <a class="btn" id="open-case">{% if mode == "dictation" %}Dictations{% else %}Case page{% endif %}</a>
-        <a class="btn ghost" href="{% if mode == 'dictation' %}{% url 'dictate' %}{% else %}{% url 'record' %}{% endif %}">{% if mode == "dictation" %}Dictate another{% else %}Record another{% endif %}</a>
+        <a class="btn" id="open-case">{% if chosen_case %}Case page{% else %}Record tab{% endif %}</a>
+        <a class="btn ghost" href="{% url 'record-new' %}{% if chosen_case %}?case={{ chosen_case }}{% endif %}">Record another</a>
       </div>
     </section>
   </div>

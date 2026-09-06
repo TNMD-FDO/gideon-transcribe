@@ -60,7 +60,7 @@
       post("/dictation/" + write.dataset.recording + "/memo").then(function (answer) {
         if (!answer.ok) {
           write.disabled = false;
-          UI.toast(answer.said.why || "The memo could not be started.", { problem: true, icon: "warning" });
+          UI.toast(answer.said.why || "That could not be started.", { problem: true, icon: "warning" });
           return;
         }
         var cell = write.closest(".memo-cell");
@@ -76,8 +76,8 @@
     var back = event.target.closest(".take-back");
     if (back) {
       UI.confirm({
-        title: "Take this dictation back from " + back.dataset.name + "?",
-        body: "It leaves their Dictations page. Nothing is mailed.",
+        title: "Take this recording back from " + back.dataset.name + "?",
+        body: "It leaves their Record tab. Nothing is mailed.",
         ok: "Take back",
         cancel: "Keep it",
         danger: true
@@ -94,8 +94,8 @@
     var remove = event.target.closest(".delete-dictation");
     if (remove) {
       UI.confirm({
-        title: "Delete the dictation " + remove.dataset.title + "?",
-        body: ["The recording, its transcript, and its memo go for good.", "Anyone you sent it to loses it too."],
+        title: "Delete the recording " + remove.dataset.title + "?",
+        body: ["The recording, its transcript, and its memo or summary go for good.", "Anyone you sent it to loses it too."],
         ok: "Delete",
         cancel: "Keep it",
         danger: true

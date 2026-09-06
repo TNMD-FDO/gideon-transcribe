@@ -73,20 +73,24 @@ def rows(event):
 
 def test_the_page_exists_only_under_its_setting(person, a_case, client):
     signed_in(client, person)
-    assert client.get(reverse("record")).status_code == 404
+    new = reverse("record-new") + f"?case={a_case.pk}"
+    assert client.get(new).status_code == 404
     settings_store.set_to("folder_management", True)
-    assert client.get(reverse("record")).status_code == 404
+    assert client.get(new).status_code == 404
     told = settings_store.definition("live_recording")
     assert told.needs == "folder_management" and told.default is False
     settings_store.set_to("live_recording", True)
-    page = client.get(reverse("record") + f"?case={a_case.pk}").content.decode()
+    page = client.get(new).content.decode()
     assert "Ramirez" in page and 'id="start"' in page and "180 minutes" in page
-    # Record sits beside Upload on the Cases page and beside Add recordings.
-    assert 'href="/record"' in client.get(reverse("cases")).content.decode()
+    # The three styles, and Record beside Add recordings on the case page.
+    for style in ("Dictation", "Meeting or interview in the room", "Call or meeting"):
+        assert style in page
     assert (
-        f"/record?case={a_case.pk}"
+        f"/record/new?case={a_case.pk}"
         in client.get(reverse("case", args=[a_case.pk])).content.decode()
     )
+    # Without the Record tab, a recording needs a case to land in.
+    assert client.get(reverse("record-new")).status_code == 404
 
 
 # Starting ------------------------------------------------------------------------
@@ -187,7 +191,7 @@ def test_the_computers_sound_makes_a_call_with_named_sides(on, person, a_case, c
     assert told["The computer's sound"].startswith("stopped at 1:30")
     # The page carries the tick and the second meter.
     signed_in(client, person)
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("record-new") + f"?case={a_case.pk}").content.decode()
     assert 'id="record-computer"' in page and 'id="meter-computer"' in page
 
 

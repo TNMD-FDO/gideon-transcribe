@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, live, uploads
+from core import cases, live
 from core.cases import Case
 from core.recordings import Recording
 
@@ -46,28 +46,32 @@ def _body(request) -> dict:
 
 @login_required
 def record(request: HttpRequest) -> HttpResponse:
-    """The Record page, before anything is recorded."""
+    """The New recording page: one question, then Record.
+
+    From a Case page (`?case=`) the Case is preset and the recording lands in
+    it; from the Record tab there is no Case and the recording is kept on its
+    own. Either way the three styles are the same presets.
+    """
     _on_or_404()
-    choices = []
-    for one in cases.cases_for(request.user):
-        theirs = one.owner_id != request.user.pk
-        choices.append(
-            {
-                "id": str(one.pk),
-                "name": one.name,
-                "shared_by": one.owner.shown_name if theirs else "",
-                "room": uploads.as_gb(uploads.room_left(one.owner)) if theirs else "",
-            }
-        )
+    from core import dictation
+
     asked = request.GET.get("case", "")
-    chosen = asked if any(one["id"] == asked for one in choices) else ""
+    case = None
+    if asked:
+        case = cases.cases_for(request.user).filter(pk=asked).first()
+        if case is None:
+            raise Http404("not a case this person may record into")
+    elif not dictation.on():
+        # Without the Record tab, a recording needs a Case to land in.
+        raise Http404("choose a case to record into")
     return render(
         request,
         "record.html",
         {
-            "page": "cases",
-            "cases": choices,
-            "chosen_case": chosen,
+            "page": "cases" if case is not None else "record",
+            "chosen_case": str(case.pk) if case is not None else "",
+            "case_name": case.name if case is not None else "",
+            "styles": list(live.STYLES.items()),
             "types": cases.recording_types(),
             "languages": LANGUAGES,
             "longest_seconds": live.longest_seconds(),
@@ -106,6 +110,7 @@ def start(request: HttpRequest) -> JsonResponse:
             browser=request.headers.get("User-Agent", "")[:120],
             with_computer=bool(wanted.get("with_computer")),
             dictation=is_dictation,
+            style=str(wanted.get("style") or ""),
             request=request,
         )
     except live.Refused as why:
@@ -119,7 +124,7 @@ def start(request: HttpRequest) -> JsonResponse:
             "case": (
                 reverse("case", args=[case.pk])
                 if case is not None
-                else reverse("dictations")
+                else reverse("record")
             ),
             "longest_seconds": live.longest_seconds(),
         }
@@ -210,6 +215,6 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     told["case"] = (
         reverse("case", args=[recording.case_id])
         if recording.case_id
-        else (reverse("dictations") if recording.is_dictation else "")
+        else (reverse("record") if recording.is_dictation else "")
     )
     return JsonResponse(told)

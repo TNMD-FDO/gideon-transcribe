@@ -1306,6 +1306,13 @@ body.no-speakers .seg .name { display: none; }
 .record .people-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .record .people-buttons .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .record .mark-box { margin-top: 6px; }
+/* The New recording page's three styles: cards that are radio buttons. */
+.record .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 720px) { .record .styles { grid-template-columns: 1fr; } }
+.record .style { display: grid; gap: 4px; cursor: pointer; border: 2px solid var(--line); padding: 12px 14px; }
+.record .style input { position: absolute; opacity: 0; pointer-events: none; }
+.record .style.on { border-color: var(--accent); background: var(--accent-soft); }
+.record .style:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* The Dictations page: the sent-to column's rows sit close. */
 .dictations .sent-cell .row { margin: 0 0 2px; }
 .dictations .tbl td { vertical-align: top; }

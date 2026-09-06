@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.27.0, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Dictations tab is the Record tab, and it asks one question.** New
+  recording opens on "What are you recording?" with three cards: a
+  dictation (just you; the memo), a meeting or interview in the room (tap
+  who is talking; an Interview summary), or a call or meeting on this
+  computer (Zoom, Teams, a softphone, a jail call played there; the far side
+  is its own side; a Meeting summary). Choosing a card sets everything, and
+  Record is the next click; language, Translate to English, the recording
+  type, and the computer's sound wait under More options. The tab lists
+  everything recorded from it with its style, and the row's button reads
+  Write the memo or Write the summary. Send to, Take back, Add to a case,
+  Delete, and the retention rule are unchanged. The old addresses redirect.
+- **A shipped Meeting recording type and Meeting summary template**: what
+  was decided, who is to do what, questions left open, what each person
+  said. The Features setting is named Record tab; the Send to mail reads
+  "sent you a recording".
+
 ## v1.26.0, 2026-09-07
 
 ```
