@@ -23,14 +23,11 @@
     <a class="brand" href="{% url 'home' %}"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></svg>Gideon Transcribe</a>
     {% if user.is_authenticated %}
       <span class="links">
+        <a href="{% url 'start' %}"{% if page == "start" or page == "upload" %} class="on"{% endif %}>Start</a>
         {% if folder_management %}
           <a href="{% url 'cases' %}"{% if page == "cases" %} class="on"{% endif %}>Cases</a>
         {% endif %}
-        <a href="{% url 'home' %}"{% if page == "recordings" %} class="on"{% endif %}>Recordings</a>
-        <a href="{% url 'upload' %}"{% if page == "upload" %} class="on"{% endif %}>Upload</a>
-        {% if dictation %}
-          <a href="{% url 'record' %}"{% if page == "record" %} class="on"{% endif %}>Record</a>
-        {% endif %}
+        <a href="{% url 'home' %}"{% if page == "recordings" %} class="on"{% endif %}>My recordings</a>
         {% if clips_available %}
           <a href="{% url 'clips' %}"{% if page == "clips" %} class="on"{% endif %}>Clips</a>
         {% endif %}

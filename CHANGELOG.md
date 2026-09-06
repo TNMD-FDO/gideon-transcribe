@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.29.0, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The top bar reads Start, Cases, My recordings, Clips, Panel, Help.**
+  Sign-in lands on the new **Start** page, which asks one question and
+  offers **Upload files**, **Record now** (when the office has it on), and
+  **Open a case** (when it uses cases). The Upload and Record tabs are gone
+  from the bar; Start is the door to both.
+- **My recordings is one page in two parts.** **Recorded here** is what the
+  Record tab held: everything recorded at the desk, with Play, the memo or
+  summary, Send to, Add to a case, and what colleagues have sent. **Uploaded
+  this session** is the recordings table as before. Each part says how long
+  it keeps things. Stop on a recording kept on its own lands here; the old
+  Record tab address redirects here.
+- **The Upload page asks what and where first.** Above the three steps,
+  **What are these?** offers a card for each recording type the office lists
+  (jail call, phone call, interview, body camera, hearing, meeting,
+  dictation) and Something else; one click presets the speaker settings, and
+  labels the recordings when they go into a case. **Where do they go?**
+  offers This session only or Into a case, when the office uses cases. Step
+  2 becomes "Anything else? (optional)". Done with these returns to Start.
+- **The setting Record tab is now Record now** (same key; nothing to change
+  on an installed server).
+
+### For the office that builds
+
+- **The Release workflow builds and publishes images only when the
+  repository variable `PUBLISH_IMAGES` is `yes`.** While the repository is
+  private its packages are too, so a server builds its own images and the
+  two builds per tag spent a quarter of an hour of free minutes for nobody.
+  The GitHub Release and its notes are made either way; without images the
+  notes say to install with `--build`, and `./transcribe upgrade`, finding
+  no digest record, already says the same. CI no longer runs a second time
+  on a tag push.
+
 ## v1.28.1, 2026-09-07
 
 ```

@@ -31,6 +31,14 @@ name: Release
 #
 # Larger runners need the Team plan and are billed by the minute, so they are
 # not available to this organisation.
+#
+# The images are built only while the repository variable PUBLISH_IMAGES is
+# "yes". While the repository is private its packages are private too, and a
+# server cannot pull them without a token it does not have, so it builds both
+# images itself and the two builds here (a quarter of an hour of the
+# organisation's free minutes per tag) serve nobody. The Release itself, with
+# its notes, is made either way; without images it says so, and
+# ./transcribe upgrade, finding no digest record, says to build.
 
 on:
   push:
@@ -43,6 +51,7 @@ permissions:
 
 jobs:
   images:
+    if: vars.PUBLISH_IMAGES == 'yes'
     runs-on: ubuntu-latest
     strategy:
       # One at a time. Two of these on one runner would race for the same
@@ -121,6 +130,8 @@ jobs:
 
   release:
     needs: images
+    # Made whether the images were built or skipped; not when a build failed.
+    if: ${{ !cancelled() && needs.images.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -157,6 +168,7 @@ jobs:
           fi
 
       - name: Sign in to ghcr.io
+        if: needs.images.result == 'success'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -170,6 +182,7 @@ jobs:
       # repository hands out its release assets only to a token, and a server
       # has none.
       - name: Record what the tags resolve to
+        if: needs.images.result == 'success'
         run: |
           tag="${{ github.ref_name }}"
           : > digests.txt
@@ -192,7 +205,20 @@ jobs:
             echo '```'
           } >> /tmp/notes.md
 
+      - name: Say that no images were published
+        if: needs.images.result != 'success'
+        run: |
+          {
+            echo
+            echo "### Images"
+            echo
+            echo "None published for this release: the repository builds its"
+            echo "images only when PUBLISH_IMAGES is set. Install or upgrade"
+            echo "with \`--build\`, which builds both from this tag's source."
+          } >> /tmp/notes.md
+
       - name: Leave the record where a server can fetch it
+        if: needs.images.result == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -210,8 +236,11 @@ jobs:
             v1.*|v2.*|v3.*) mark="" ;;
             *) mark="--prerelease" ;;
           esac
+          # The digest file is attached when the images were built.
+          attach=""
+          [ -f digests.txt ] && attach="digests.txt"
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --notes-file /tmp/notes.md \
             $mark \
-            digests.txt
+            $attach

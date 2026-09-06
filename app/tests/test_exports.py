@@ -111,7 +111,7 @@ def recording(**fields):
     fields.setdefault("size_bytes", 12 * 1024 * 1024)
     fields.setdefault("sha256", "a" * 64)
     fields.setdefault("created", datetime(2026, 9, 2, 9, 0))
-    fields.setdefault("user", Fake(username="dmeehan"))
+    fields.setdefault("user", Fake(username="rowe"))
     fields.setdefault("preprocessing", "standard")
     fields.setdefault("is_two_channel_call", False)
     one = Fake(**fields)
@@ -177,7 +177,7 @@ def test_the_head_is_four_lines_then_a_blank_one():
     assert lines[0] == "Call with the client"
     assert lines[1] == (
         "Transcript. jail-call.mp3, 25 min, uploaded 02 September 2026 by "
-        "dmeehan. Processed 03 September 2026 with Whisper large-v3-turbo."
+        "rowe. Processed 03 September 2026 with Whisper large-v3-turbo."
     )
     assert lines[2] == "Speakers: Speaker 1 (SPEAKER_00)"
     assert lines[3].startswith("Automatic transcription")

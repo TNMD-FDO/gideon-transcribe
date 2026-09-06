@@ -25,6 +25,7 @@ urlpatterns = [
     path("healthz", views.healthz, name="healthz"),
     path("", pages.recordings, name="home"),
     path("upload", pages.upload, name="upload"),
+    path("start", pages.start, name="start"),
     # The user guide, rendered from docs/user-guide.md (ADR 0012).
     path("help/", pages.user_guide, name="help"),
     path("upload/submit", pages.submit, name="submit"),
@@ -158,7 +159,7 @@ urlpatterns = [
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     # The Record page (Phase 3): a Recording made in the browser.
-    # The Record tab (everything recorded there), and the New recording page,
+    # Recorded here (its old tab address redirects home), and the New recording page,
     # which a Case page also opens with its case preset.
     path("record", dictation_pages.record_tab, name="record"),
     path("record/new", live_pages.record, name="record-new"),

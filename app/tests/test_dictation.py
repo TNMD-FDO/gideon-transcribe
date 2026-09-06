@@ -101,18 +101,21 @@ def rows(event):
 # The tab and the setting --------------------------------------------------------
 
 
-def test_the_tab_exists_only_under_its_setting(ana, client):
+def test_recording_exists_only_under_its_setting(ana, client):
     signed_in(client, ana)
-    assert 'href="/record"' in client.get(reverse("upload")).content.decode()
-    assert client.get(reverse("record")).status_code == 200
+    start = client.get(reverse("start")).content.decode()
+    assert "Record now" in start and 'href="/record/new"' in start
+    home = client.get(reverse("home")).content.decode()
+    assert "Recorded here" in home and "Uploaded this session" in home
     assert client.get(reverse("record-new")).status_code == 200
     # The old addresses lead to the new pages.
+    assert client.get(reverse("record")).status_code == 302
     assert client.get(reverse("dictations")).status_code == 302
     assert client.get(reverse("dictate")).status_code == 302
     settings_store.set_to("dictation", False)
-    assert client.get(reverse("record")).status_code == 404
     assert client.get(reverse("record-new")).status_code == 404
-    assert 'href="/record"' not in client.get(reverse("upload")).content.decode()
+    assert "Record now" not in client.get(reverse("start")).content.decode()
+    assert "Recorded here" not in client.get(reverse("home")).content.decode()
     told = settings_store.definition("dictation")
     assert told.needs == "live_recording" and told.default is False
 
@@ -126,19 +129,24 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
         reverse("record-start"), json.dumps({"dictation": True}), "application/json"
     )
     assert answer.status_code == 200, answer.content
-    assert answer.json()["case"] == "/record"
+    assert answer.json()["case"] == "/"
     recording = Recording.objects.get(pk=answer.json()["id"])
     assert recording.is_dictation and recording.case is None
     assert recording.recording_type == "Dictation" and not recording.diarize
     assert recording.title.startswith("Dictation") and recording.last_used is not None
     assert rows("Live recording started").get().details["dictation"] is True
-    # Not the Workspace's: not discarded at sign-out, not on the Recordings page.
+    # Not the Workspace's: not discarded at sign-out, and on the My recordings
+    # page under Recorded here rather than Uploaded this session.
     assert list(lifecycle.in_the_workspace(ana)) == []
     recording.media_state = MediaState.READY
     recording.save()
-    assert recording.title not in client.get(reverse("home")).content.decode()
-    page = client.get(reverse("record") + f"?new={recording.pk}").content.decode()
+    page = client.get(reverse("home") + f"?new={recording.pk}").content.decode()
     assert recording.title in page and "New recording" in page
+    assert (
+        page.index("Recorded here")
+        < page.index(recording.title)
+        < page.index("Uploaded this session")
+    )
     # The one just recorded is marked on top, with Play once its copy is there.
     assert "Just recorded" in page and "Press play to check" in page
     assert "play-row" not in page
@@ -146,7 +154,7 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
     recording.save()
     recording.folder.mkdir(parents=True, exist_ok=True)
     (recording.folder / "playback.m4a").write_bytes(b"x")
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("home")).content.decode()
     assert f'data-src="/media/{ana.pk}/{recording.pk}/playback.m4a"' in page
     # Without the setting a dictation cannot start.
     settings_store.set_to("dictation", False)
@@ -161,7 +169,7 @@ def test_the_new_recording_page_asks_one_question(ana, client):
     page = client.get(reverse("record-new")).content.decode()
     assert '<h1 class="grow">New recording</h1>' in page
     assert "What are you recording?" in page and "More options" in page
-    assert page.count('name="style"') == 3 and 'href="/record"' in page
+    assert page.count('name="style"') == 3 and ">My recordings</a>" in page
 
 
 def test_the_styles_preset_the_type_the_sides_and_the_product(ana):
@@ -199,7 +207,7 @@ def test_the_memo_is_one_click_with_the_shipped_template(ana, client, quiet_task
     assert template is not None and template.recording_types == ["Dictation"]
     assert "do not summarise" in template.text and "[unclear]" in template.text
     signed_in(client, ana)
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("home")).content.decode()
     assert "Write the memo" in page
     answer = client.post(reverse("dictation-memo", args=[recording.pk]))
     assert answer.status_code == 200
@@ -212,7 +220,7 @@ def test_the_memo_is_one_click_with_the_shipped_template(ana, client, quiet_task
     memo.state = "done"
     memo.text = "Dear colleague"
     memo.save()
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("home")).content.decode()
     assert (
         "Open the memo" in page and f"/recording/{recording.pk}?panel=summary" in page
     )
@@ -258,7 +266,7 @@ def test_send_to_gives_one_colleague_that_dictation(
     )
     # Ben sees it under Sent to you, reads it, and can do nothing more with it.
     signed_in(client, ben)
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("home")).content.decode()
     assert "Sent to you" in page and recording.title in page
     assert "Write the memo" not in page and "Send to" not in page
     assert client.get(reverse("viewer", args=[recording.pk])).status_code == 200
@@ -345,7 +353,7 @@ def test_the_offices_retention_takes_each_dictation_on_its_own(ana, client):
     recording.refresh_from_db()
     assert dictation.days_left(recording) == 5
     signed_in(client, ana)
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("home")).content.decode()
     assert "unless opened" in page and 'class="expiring"' in page
     assert dictation.for_tonights_digest() == {
         ana.pk: [{"title": recording.title, "days_left": 5}]

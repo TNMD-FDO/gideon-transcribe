@@ -21,7 +21,7 @@ def script(name):
 
 def test_the_upload_page_keeps_its_three_steps_and_gains_the_wide_shape():
     upload = page("upload.html")
-    assert 'class="page workbench"' in upload
+    assert 'class="page workbench upload"' in upload
     for step in ("step-1", "step-2", "step-3"):
         assert f'id="{step}"' in upload
     assert "<h2>1. Choose files</h2>" in upload
@@ -124,7 +124,7 @@ def test_the_panel_pages_spread_out_and_the_guides_have_their_rail():
 def test_help_lands_on_the_section_about_the_page():
     from core.templatetags.help_links import SECTIONS, help_url
 
-    assert help_url("recordings").endswith("/#your-recordings")
+    assert help_url("recordings").endswith("/#my-recordings")
     assert help_url("viewer").endswith("/#reading-a-transcript")
     assert help_url("panel").endswith("/panel/help")
     assert "#" not in help_url("help")

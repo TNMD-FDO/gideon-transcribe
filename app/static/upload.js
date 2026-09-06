@@ -127,6 +127,79 @@
     add(event.dataTransfer.files);
   });
 
+  // What are these, and where do they go ------------------------------------------
+  //
+  // The two questions above the steps. A kind presets the speaker settings
+  // in the rail and, when a case is chosen, the Recording type; the where
+  // cards drive the rail's Add to case box. The rail's controls carry the
+  // change listeners, so each write here fires "change" on what it wrote.
+
+  function fire(control) {
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function lightUp(group, value) {
+    Array.prototype.forEach.call(group.querySelectorAll(".style"), function (card) {
+      var radio = card.querySelector("input");
+      radio.checked = radio.value === value;
+      card.classList.toggle("on", radio.checked);
+    });
+  }
+
+  var kinds = document.getElementById("kinds");
+  var wheres = document.getElementById("wheres");
+  var whichCase = document.getElementById("which-case");
+  var hint = document.getElementById("hint");
+
+  function applyKind(radio) {
+    lightUp(kinds, radio.value);
+    var whatKind = document.getElementById("recording-type");
+    if (whatKind) { whatKind.value = radio.value; fire(whatKind); }
+    var diarize = document.getElementById("diarize");
+    diarize.checked = radio.dataset.diarize === "1";
+    fire(diarize);
+    hint.value = radio.dataset.hint || "";
+    document.getElementById("hint-a").value = radio.dataset.a;
+    document.getElementById("hint-b").value = radio.dataset.b;
+    fire(hint);
+  }
+
+  if (kinds) {
+    kinds.addEventListener("change", function (event) {
+      if (event.target.name === "kind") { applyKind(event.target); }
+    });
+  }
+
+  function applyWhere() {
+    var intoCase = document.getElementById("add-to-case");
+    if (!wheres || !intoCase) { return; }
+    var chosenWhere = wheres.querySelector('input[name="where"]:checked');
+    lightUp(wheres, chosenWhere ? chosenWhere.value : "");
+    intoCase.value = chosenWhere && chosenWhere.value === "case" ? whichCase.value : "";
+    fire(intoCase);
+    var kind = kinds.querySelector('input[name="kind"]:checked');
+    if (kind) {
+      var whatKind = document.getElementById("recording-type");
+      whatKind.value = kind.value;
+      fire(whatKind);
+    }
+  }
+
+  if (wheres) {
+    wheres.addEventListener("change", function (event) {
+      if (event.target.name === "where") { applyWhere(); }
+    });
+    whichCase.addEventListener("change", function () {
+      lightUp(wheres, "case");
+      applyWhere();
+    });
+    // Clicking into the select chooses Into a case, since that is what it is for.
+    whichCase.addEventListener("focus", function () {
+      wheres.querySelector('input[value="case"]').checked = true;
+      applyWhere();
+    });
+  }
+
   // The three steps -----------------------------------------------------------
 
   function show(number) {
@@ -150,8 +223,6 @@
       show(parseInt(button.getAttribute("data-back"), 10));
     });
   });
-
-  var hint = document.getElementById("hint");
 
   // The rail shows one set of settings at a time: the batch's, or one file's
   // own. A file's own start as null, meaning "same as the batch", and a copy
@@ -266,8 +337,27 @@
   if (chooseCase) {
     chooseCase.addEventListener("change", function () {
       document.getElementById("type-field").hidden = !this.value;
+      // The where cards follow the batch's box, so the two never disagree.
+      if (railFor === null && wheres) {
+        lightUp(wheres, this.value ? "case" : "");
+        if (this.value) { whichCase.value = this.value; }
+      }
+    });
+    // The rail's type box follows the cards; the cards follow it back.
+    document.getElementById("recording-type").addEventListener("change", function () {
+      if (railFor === null && kinds) {
+        var known = kinds.querySelector('input[value="' + this.value.replace(/"/g, "") + '"]');
+        lightUp(kinds, known ? this.value : "");
+      }
     });
   }
+
+  // The page opens with the cards' first answers already in the rail.
+  if (kinds) {
+    var startingKind = kinds.querySelector('input[name="kind"]:checked');
+    if (startingKind) { applyKind(startingKind); }
+  }
+  if (wheres) { applyWhere(); }
 
   function settings() {
     // The batch's own, read from the rail when the rail is showing them.

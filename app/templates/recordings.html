@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static icons %}
-{% block title %}{% if someone_elses %}{{ someone_elses.username }}'s recordings{% else %}Your recordings{% endif %}{% endblock %}
+{% block title %}{% if someone_elses %}{{ someone_elses.username }}'s recordings{% else %}My recordings{% endif %}{% endblock %}
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
@@ -14,19 +14,23 @@
   <div class="page list workbench">
     <div class="row">
       <h1 class="grow">
-        {% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}Your recordings{% endif %}
+        {% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}My recordings{% endif %}
       </h1>
+    </div>
+
+    {% if recorded_here %}
+      {% include "recorded_here.html" %}
+    {% endif %}
+
+    <div class="row" style="margin-top: {% if recorded_here %}30px{% else %}0{% endif %}">
+      <h2 class="grow" style="margin: 0">Uploaded this session</h2>
       {% if not someone_elses %}
-        {% if folder_management %}
-          <a href="{% url 'cases' %}" class="btn">Cases</a>
-        {% endif %}
         {% if recordings %}
           <button type="button" class="btn ghost danger clear-recordings">Clear my recordings</button>
         {% endif %}
-        <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
+        <a href="{% url 'upload' %}" class="btn primary">{% icon "upload" %} Upload files</a>
       {% endif %}
     </div>
-
     <p class="notice">{{ standing_line }}</p>
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
@@ -122,7 +126,7 @@
       {% if someone_elses %}
         {% include "empty.html" with icon="upload" title="No recordings" line="This person has nothing in their workspace at the moment." %}
       {% else %}
-        {% include "empty.html" with icon="upload" title="No recordings yet" line="Upload a recording and it is transcribed here. Your recordings stay until you sign out." action="Upload recordings" action_url="/upload" %}
+        <p class="muted">Nothing uploaded this session. <a href="{% url 'upload' %}">Upload files</a> and they are transcribed here; they stay until you sign out unless you move them to a case.</p>
       {% endif %}
     {% endif %}
   </div>
@@ -131,4 +135,5 @@
   <script src="{% static 'clearing.js' %}"></script>
   <script src="{% static 'again.js' %}"></script>
   {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
+  {% if recorded_here %}<script src="{% static 'dictations.js' %}"></script>{% endif %}
 {% endblock %}

@@ -182,18 +182,18 @@ def _rows() -> list[Definition]:
         Definition(
             key="dictation",
             page=FEATURES,
-            name="Record tab",
+            name="Record now",
             kind=TOGGLE,
             default=False,
             needs="live_recording",
             what_it_does=(
-                "People may record from a Record tab, choosing a dictation, a "
+                "People may record from the Start page, choosing a dictation, a "
                 "meeting in the room, or a call on the computer: a recording "
-                "kept on its own, with a memo or summary one click away, sent "
-                "to colleagues one at a time."
+                "kept on its own under Recorded here on My recordings, with a "
+                "memo or summary one click away, sent to colleagues one at a time."
             ),
             when_changed=(
-                "At once. Off hides the tab and the New recording page; every "
+                "At once. Off hides Record now and Recorded here; every "
                 "recording made there is kept."
             ),
         ),
@@ -399,13 +399,13 @@ def _rows() -> list[Definition]:
                 "Hello {name},\n"
                 "\n"
                 '{by} sent you the recording "{title}". It is under Sent to you '
-                "on your Record tab.\n"
+                "on your My recordings page.\n"
                 "\n"
                 "Open it: {link}\n"
             ),
             needs_mail=True,
             what_it_does=(
-                "Sent at once when a recording from the Record tab is sent to "
+                "Sent at once when a recording made with Record now is sent to "
                 "somebody. Placeholders: {name}, {by}, {title}, {link}. With "
                 "Dictation by email on, the memo or summary is attached as a "
                 "Word file."
