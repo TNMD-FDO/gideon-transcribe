@@ -64,91 +64,50 @@
 
     {% if cases %}
       {% comment %}
-        One table, one block of details per case. The chosen case's block sits
-        in the pane on the right on a wide window, or opens under its row on
-        a narrow one; recordings.js moves it between the two.
+        One table, one door: a row is the case, and clicking it anywhere
+        opens the case's page, which is where its recordings, search, clips,
+        speakers, chat and sharing all are. Nothing opens under a row and
+        nothing sits beside the table.
       {% endcomment %}
-      <div class="panes">
-        <div class="pane-list">
-          <table class="tbl" id="recordings">
-            <thead>
-              <tr>
-                <th>Name</th>
-                {% if who == "everyone" %}<th>Owner</th>{% endif %}
-                <th>Recordings</th><th>Size</th><th>Last activity</th><th>Retention</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in cases %}
-                <tr class="pick{% if row.warned %} expiring{% endif %}" tabindex="0"
-                    data-recording="{{ row.case.pk }}" data-open="{{ row.opens_at }}">
-                  <td>
-                    <b>{{ row.case.name }}</b>
-                    {% if row.shared_by %}
-                      <span class="pill">Shared by {{ row.shared_by }}</span>
-                      {% if row.is_new %}<span class="pill ok">New</span>{% endif %}
-                    {% endif %}
-                  </td>
-                  {% if who == "everyone" %}
-                    <td class="muted">
-                      {{ row.case.owner.shown_name }}
-                      {% if row.owner_deactivated %}<span class="pill warn">Owner deactivated</span>{% endif %}
-                    </td>
-                  {% endif %}
-                  <td>{{ row.recordings }}</td>
-                  <td class="muted">{{ row.size }}</td>
-                  <td class="muted">{{ row.case.last_activity|date:"d M Y H:i" }}</td>
-                  <td class="muted small">
-                    {% if row.warned %}<span class="deletes">{{ row.deletes_line }}</span>{% else %}{{ row.deletes_line }}{% endif %}
-                  </td>
-                  <td class="acts">
-                    {% comment %}
-                      Open goes to the newest recording that has a transcript,
-                      with the rest of the case beside it. A case with nothing
-                      to play yet opens its own page, where Add recordings is.
-                    {% endcomment %}
-                    <a href="{{ row.opens_at }}" class="btn primary small">Open</a>
-                  </td>
-                </tr>
-                <tr class="detail-row" hidden>
-                  <td colspan="{% if who == 'everyone' %}7{% else %}6{% endif %}">
-                    <div class="detail" id="detail-{{ row.case.pk }}">
-                      <h2>{{ row.case.name }}</h2>
-                      <dl class="kv">
-                        {% if who == "everyone" %}
-                          <dt>Owner</dt><dd>{{ row.case.owner.shown_name }}{% if row.owner_deactivated %}, deactivated{% endif %}</dd>
-                        {% elif row.shared_by %}
-                          <dt>Shared by</dt><dd>{{ row.shared_by }}</dd>
-                        {% endif %}
-                        <dt>Recordings</dt><dd>{{ row.recordings }}</dd>
-                        <dt>Size</dt><dd>{{ row.size }}</dd>
-                        <dt>Last activity</dt><dd>{{ row.case.last_activity|date:"d M Y H:i" }}</dd>
-                        <dt>Retention</dt>
-                        <dd>{% if row.warned %}<span class="deletes">{{ row.deletes_line }}</span>{% else %}{{ row.deletes_line }}{% endif %}</dd>
-                      </dl>
-                      <div class="row actions">
-                        <a href="{{ row.opens_at }}" class="btn primary">Open</a>
-                        <a href="{% url 'case' row.case.pk %}" class="btn">Case page</a>
-                        {% if row.warned %}
-                          <button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          <div class="hint" data-hint="cases-table" hidden>
-            {% icon "info" %}
-            <span class="grow">Click a case to see its details beside the table. The arrow keys move, Enter opens it.</span>
-            <button type="button" class="ghost tiny dismiss">Got it</button>
-          </div>
-        </div>
-        <aside class="pane-detail" id="detail-pane">
-          <p class="muted small" id="detail-none">Choose a case to see its details.</p>
-        </aside>
-      </div>
+      <table class="tbl" id="recordings">
+        <thead>
+          <tr>
+            <th>Name</th>
+            {% if who == "everyone" %}<th>Owner</th>{% endif %}
+            <th>Recordings</th><th>Size</th><th>Last activity</th><th>Retention</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in cases %}
+            <tr class="pick goes{% if row.warned %} expiring{% endif %}" tabindex="0"
+                data-open="{% url 'case' row.case.pk %}">
+              <td>
+                <a href="{% url 'case' row.case.pk %}" class="plain"><b>{{ row.case.name }}</b></a>
+                {% if row.shared_by %}
+                  <span class="pill">Shared by {{ row.shared_by }}</span>
+                  {% if row.is_new %}<span class="pill ok">New</span>{% endif %}
+                {% endif %}
+              </td>
+              {% if who == "everyone" %}
+                <td class="muted">
+                  {{ row.case.owner.shown_name }}
+                  {% if row.owner_deactivated %}<span class="pill warn">Owner deactivated</span>{% endif %}
+                </td>
+              {% endif %}
+              <td>{{ row.recordings }}</td>
+              <td class="muted">{{ row.size }}</td>
+              <td class="muted">{{ row.case.last_activity|date:"d M Y H:i" }}</td>
+              <td class="muted small">
+                {% if row.warned %}<span class="deletes">{{ row.deletes_line }}</span>{% else %}{{ row.deletes_line }}{% endif %}
+              </td>
+              <td class="acts">
+                {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
+                <a href="{% url 'case' row.case.pk %}" class="btn primary small">Open</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     {% elif expiring %}
       <p class="lead">{% if who == "everyone" %}No case is in its last days.{% else %}None of your cases is in its last days.{% endif %}</p>
     {% elif name_filter %}
@@ -160,6 +119,6 @@
     {% endif %}
   </div>
 
-  <script src="{% static 'recordings.js' %}"></script>
+  {% comment %} The rows open the case themselves (cases.js); no pane script here. {% endcomment %}
   <script src="{% static 'cases.js' %}"></script>
 {% endblock %}

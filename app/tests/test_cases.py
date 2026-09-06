@@ -296,27 +296,26 @@ def test_an_admin_looking_in_is_not_use(person, a_case, client):
 # Opening a case, and taking its transcripts away ---------------------------------
 
 
-def test_a_case_opens_on_its_newest_recording_with_a_transcript(person, a_case):
+def test_a_case_opens_on_its_own_page_whatever_it_holds(person, a_case, client):
     from core.case_pages import opens_at
 
-    older = a_recording(person, case=a_case)
-    a_transcript(older)
+    # One door: empty, holding something not yet transcribed, or holding
+    # transcripts, a case opens on its page, and the page is where a
+    # recording is opened from.
+    assert opens_at(a_case) == f"/case/{a_case.pk}"
+    a_recording(person, case=a_case)
+    assert opens_at(a_case) == f"/case/{a_case.pk}"
     newer = a_recording(person, case=a_case)
     a_transcript(newer)
-    # Newest first, and one still processing is passed over.
-    a_recording(person, case=a_case)
-
-    assert opens_at(a_case) == f"/recording/{newer.pk}"
-
-
-def test_a_case_with_nothing_to_play_opens_its_own_page(person, a_case):
-    from core.case_pages import opens_at
-
-    # Nothing in it at all, and then something not yet transcribed: both open
-    # the case page, which is where Add recordings is.
     assert opens_at(a_case) == f"/case/{a_case.pk}"
-    a_recording(person, case=a_case)
-    assert opens_at(a_case) == f"/case/{a_case.pk}"
+
+    signed_in(client, person)
+    page = client.get("/cases").content.decode()
+    assert f'data-open="/case/{a_case.pk}"' in page
+    assert "Case page" not in page and 'id="detail-pane"' not in page
+    # The viewer shows the way back to the case beside the title.
+    viewer = client.get(f"/recording/{newer.pk}").content.decode()
+    assert f'href="/case/{a_case.pk}"' in viewer and "Back to the case" in viewer
 
 
 def test_the_case_download_holds_every_transcript_in_it(person, a_case, client):

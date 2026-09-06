@@ -151,11 +151,11 @@ The Clips page is one table of every clip you have made this session, with the r
 
 ## Cases
 
-The Cases page has three tabs: **Mine**, **Everyone's** (Admins only), and the **Recycle bin**. Click a case and its details appear beside the table (under the row, on a laptop) with **Open** and **Case page**; the Retention column says when the clock would delete it. A case's own page puts what is in the case on the left, its recordings and their search, and what is about the case on the right: how many recordings, when it was last used, where its clock stands, and **Rename** and **Delete case**.
+The Cases page has three tabs: **Mine**, **Everyone's** (Admins only), and the **Recycle bin**. Click a case anywhere on its row and its page opens; the Retention column says when the clock would delete it, and **Keep** sits on a row in its last days. A case's page is the case: what is in it on the left, its recordings and their search, with the Clips, Speakers and Chat tabs; and what is about it on the right: how many recordings, when it was last used, where its clock stands, who it is shared with, and **Rename**, **Transfer** and **Delete case**. A recording opens from there into the viewer, which shows the case's name beside the back arrow and the rest of the case in a rail at the side.
 
 Your office may have Cases turned on. A case is a named page of recordings for one matter, and a recording in a case is kept after you sign out, for as long as the office's retention policy says.
 
-The Cases page lists your cases. **New case** makes one; there is nothing to type but its name. Clicking a case opens its newest transcript in the viewer, with the rest of the case beside it; a case with nothing to play yet opens its own page, which is where **Add recordings** is. Each row also has a quiet **Case page** link, for renaming, deleting, searching the case's transcripts, and **Download all transcripts** for the whole case.
+The Cases page lists your cases. **New case** makes one; there is nothing to type but its name. Clicking a case opens its page, which is where **Add recordings**, the search over its transcripts, and **Download all transcripts** for the whole case are.
 
 A recording goes into a case either at upload, with **Add to case**, or afterwards with **Move to case**, from the Recordings page, from the viewer's Details, or from the sign-out dialog. Moving is instant whatever the size, and it takes the transcript, the clips and the corrections along. Nothing ever moves back out of a case; the only way a recording leaves one is **Delete**.
 

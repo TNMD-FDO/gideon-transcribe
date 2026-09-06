@@ -25,7 +25,12 @@
     {% endcomment %}
     <div class="dockhead">
         <div class="head">
-          <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
+          {% if recording.case_id and in_case %}
+            <a href="{% url 'case' recording.case_id %}" title="Back to the case {{ recording.case.name }}" class="btn ghost icon">{% icon "back" %}</a>
+            <span class="crumb muted small"><a href="{% url 'case' recording.case_id %}">{{ recording.case.name }}</a></span>
+          {% else %}
+            <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
+          {% endif %}
           <h1>{{ recording.title }}</h1>
           {% if recording.is_two_channel_call %}
             <span class="pill side">Two-channel call: {{ sides|length }} sides</span>

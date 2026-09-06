@@ -192,15 +192,15 @@ def _their_binned_case(request, case_id) -> Case:
 
 
 def opens_at(case: Case) -> str:
-    """Where clicking a Case takes somebody.
+    """Where clicking a Case takes somebody: its own page, always.
 
-    Straight into the player, on the newest Recording with a Transcript, with
-    the rest of the Case beside it. A Case with nothing to play yet opens its
-    own page instead, which is where Add recordings is.
+    It used to open the newest Recording in the viewer, with a rail of the
+    Case beside it, and keep the Case page behind a quieter link; people
+    landed in a player when they expected the case, and the page with the
+    Case's recordings, search, clips, speakers, chat and sharing was one
+    they might never find. One door: the page is the case, and a Recording
+    opens from it.
     """
-    for one in case.recordings.order_by("-created"):
-        if hasattr(one, "transcript"):
-            return reverse("viewer", args=[one.pk])
     return reverse("case", args=[case.pk])
 
 

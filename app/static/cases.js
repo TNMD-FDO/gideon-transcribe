@@ -38,6 +38,18 @@
     if (element) { element.hidden = !on; }
   }
 
+  // A row that goes somewhere: a click anywhere on it, or Enter, opens the
+  // case. A click on a button inside it (Keep) is that button's.
+  document.querySelectorAll("tr.goes[data-open]").forEach(function (row) {
+    row.addEventListener("click", function (event) {
+      if (event.target.closest("a, button")) { return; }
+      window.location = row.dataset.open;
+    });
+    row.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") { window.location = row.dataset.open; }
+    });
+  });
+
   // The Cases page's New case box -------------------------------------------
 
   var openNew = document.getElementById("open-new");
