@@ -28,6 +28,9 @@
           {% if recording.case_id and in_case %}
             <a href="{% url 'case' recording.case_id %}" title="Back to the case {{ recording.case.name }}" class="btn ghost icon">{% icon "back" %}</a>
             <span class="crumb muted small"><a href="{% url 'case' recording.case_id %}">{{ recording.case.name }}</a></span>
+          {% elif recording.is_dictation %}
+            <a href="{% url 'dictations' %}" title="Back to your dictations" class="btn ghost icon">{% icon "back" %}</a>
+            <span class="crumb muted small"><a href="{% url 'dictations' %}">Dictations</a></span>
           {% else %}
             <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
           {% endif %}

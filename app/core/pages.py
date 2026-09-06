@@ -54,7 +54,7 @@ def recordings(request: HttpRequest) -> HttpResponse:
         {
             "page": "recordings",
             "recordings": _with_their_state(
-                request.user.recordings.order_by("-created")
+                request.user.recordings.filter(is_dictation=False).order_by("-created")
             ),
             "standing_line": standing_line(),
             "storage_warning": uploads.storage_warning(request.user),

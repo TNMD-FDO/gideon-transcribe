@@ -13,16 +13,22 @@
   {% endcomment %}
   <div class="page roomy record" id="record"
        data-longest="{{ longest_seconds }}"
+       data-mode="{{ mode|default:'record' }}"
        data-csrf="{{ csrf_token }}">
     <p class="muted small" style="margin: 0 0 4px">
-      <a href="{% url 'cases' %}">Cases</a>
+      {% if mode == "dictation" %}<a href="{% url 'dictations' %}">Dictations</a>{% else %}<a href="{% url 'cases' %}">Cases</a>{% endif %}
     </p>
     <div class="row">
-      <h1 class="grow">Record</h1>
+      <h1 class="grow">{% if mode == "dictation" %}Dictate{% else %}Record{% endif %}</h1>
     </div>
 
     <section id="before" class="card stack" style="max-width: 40rem">
-      <div class="field">
+      {% if mode == "dictation" %}
+        <p class="muted">
+          Press Record and dictate. Say the punctuation and the layout as you go: "new paragraph", "full stop", "comma", "open quote". Press Stop, and the memo is one click on the Dictations page once the transcript is there.
+        </p>
+      {% endif %}
+      <div class="field"{% if mode == "dictation" %} hidden{% endif %}>
         <label for="record-case">Case</label>
         <select id="record-case">
           {% if not chosen_case %}<option value="">Choose a case</option>{% endif %}
@@ -35,7 +41,7 @@
         </p>
       </div>
 
-      <div class="field">
+      <div class="field"{% if mode == "dictation" %} hidden{% endif %}>
         <label for="record-type">Recording type</label>
         <select id="record-type">
           <option value="">No type</option>
@@ -45,9 +51,10 @@
 
       <div class="field">
         <label for="record-title">Title</label>
-        <input type="text" id="record-title" maxlength="300" placeholder="The type and the date, unless you give one">
+        <input type="text" id="record-title" maxlength="300" placeholder="{% if mode == 'dictation' %}Dictation and the date, unless you give one{% else %}The type and the date, unless you give one{% endif %}">
       </div>
 
+      {% if mode == "dictation" %}<details id="more-options"><summary>More options</summary><div class="stack" style="margin-top: 10px">{% endif %}
       <div class="row" style="gap: 18px; flex-wrap: wrap">
         <div class="field">
           <label for="record-language">Spoken language</label>
@@ -78,6 +85,8 @@
       <p class="muted small" id="computer-help">
         For a call or a meeting on this computer: Zoom, Teams, a softphone, or a jail call played here. The browser will ask which screen to share; choose the whole screen and tick <b>Share system audio</b> (Edge) or <b>Share audio</b> (Chrome). Only the sound is recorded, never the picture, and the far side becomes its own side of the transcript.
       </p>
+
+      {% if mode == "dictation" %}</div></details>{% endif %}
 
       <p class="muted small">
         Recorded from this computer's microphone and sent to the office's server as it goes. Nothing leaves the building. The recording stops by itself after {{ longest_minutes }} minutes.
@@ -122,8 +131,8 @@
       <p id="after-line">Sending the last piece.</p>
       <div class="row">
         <a class="btn primary" id="open-viewer" hidden>Open the transcript</a>
-        <a class="btn" id="open-case">Case page</a>
-        <a class="btn ghost" href="{% url 'record' %}">Record another</a>
+        <a class="btn" id="open-case">{% if mode == "dictation" %}Dictations{% else %}Case page{% endif %}</a>
+        <a class="btn ghost" href="{% if mode == 'dictation' %}{% url 'dictate' %}{% else %}{% url 'record' %}{% endif %}">{% if mode == "dictation" %}Dictate another{% else %}Record another{% endif %}</a>
       </div>
     </section>
   </div>

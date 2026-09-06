@@ -37,6 +37,7 @@ DIGEST = "retention_digest"
 SHARED = "case_shared"
 HANDED = "case_handed"
 BATCH = "batch_finished"
+DICTATION = "dictation_sent"
 OPERATOR = "operator"
 TEST = "test"
 
@@ -57,7 +58,7 @@ TEMPLATES = {
     DIGEST: {
         "subject_key": "digest_subject",
         "body_key": "digest_body",
-        "placeholders": {"name", "cases", "shared", "link"},
+        "placeholders": {"name", "cases", "shared", "dictations", "link"},
         "subject": "Gideon Transcribe: cases deleting soon",
         "body": (
             "Hello {name},\n"
@@ -67,8 +68,24 @@ TEMPLATES = {
             "\n"
             "{shared}\n"
             "\n"
+            "{dictations}\n"
+            "\n"
             "Open a case, or press Keep on the Cases page, to start its clock "
             "over: {link}\n"
+        ),
+    },
+    DICTATION: {
+        "subject_key": "dictation_subject",
+        "body_key": "dictation_body",
+        "placeholders": {"name", "by", "title", "link"},
+        "subject": "Gideon Transcribe: {by} sent you a dictation",
+        "body": (
+            "Hello {name},\n"
+            "\n"
+            '{by} sent you the dictation "{title}". It is under Sent to you on '
+            "your Dictations page.\n"
+            "\n"
+            "Open it: {link}\n"
         ),
     },
     SHARED: {
@@ -315,8 +332,14 @@ def with_footer(body: str) -> str:
 # Sending -----------------------------------------------------------------------------
 
 
-def build(to_address: str, subject: str, body: str) -> EmailMessage:
-    """One plain-text message, marked automatic so nothing auto-replies to it."""
+def build(
+    to_address: str, subject: str, body: str, attachment: tuple | None = None
+) -> EmailMessage:
+    """One plain-text message, marked automatic so nothing auto-replies to it.
+
+    `attachment` is (filename, bytes) for the one message that carries a
+    file: a dictation's Memo, when the office has turned that on.
+    """
     message = EmailMessage()
     message["From"] = formataddr(("Gideon Transcribe", mail_from()))
     message["To"] = to_address
@@ -331,10 +354,20 @@ def build(to_address: str, subject: str, body: str) -> EmailMessage:
     message["X-Auto-Response-Suppress"] = "All"
     message["Precedence"] = "bulk"
     message.set_content(body)
+    if attachment is not None:
+        filename, data = attachment
+        message.add_attachment(
+            data,
+            maintype="application",
+            subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=filename,
+        )
     return message
 
 
-def deliver(to_address: str, subject: str, body: str) -> str:
+def deliver(
+    to_address: str, subject: str, body: str, attachment: tuple | None = None
+) -> str:
     """Hand one message to the relay, now, and return the relay's reply.
 
     Raises MailFailure with the reason class when the relay will not take it.
@@ -343,7 +376,7 @@ def deliver(to_address: str, subject: str, body: str) -> str:
     """
     if not configured():
         raise MailFailure(SMTP_UNREACHABLE, "mail is not configured")
-    message = build(to_address, subject, body)
+    message = build(to_address, subject, body, attachment)
     try:
         with smtplib.SMTP(host(), port(), timeout=TIMEOUT_SECONDS) as relay:
             relay.ehlo()
@@ -490,8 +523,15 @@ def attempt(
     """
     details = details or {}
     status = MailStatus.the_one()
+    attachment = None
+    if details.get("attach_memo"):
+        # The one attachment: a dictation's Memo, built now from its Summary,
+        # so the file is the Memo as it stands when the mail goes.
+        attachment = _memo_file(details.get("attach_memo"))
+        details = {key: value for key, value in details.items() if key != "attach_memo"}
+        details["attached"] = attachment is not None
     try:
-        reply = deliver(to_address, subject, body)
+        reply = deliver(to_address, subject, body, attachment)
     except MailFailure as why:
         if tries < TRIES:
             log.info(
@@ -539,6 +579,24 @@ def attempt(
     status.save()
     log.info("mail (%s) to %s accepted: %s", kind, recipient, reply)
     return None
+
+
+def _memo_file(recording_id) -> tuple | None:
+    """A dictation's Memo as a Word file, or None when there is no Memo yet."""
+    from core import dictation, exports
+    from core.recordings import Recording
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None:
+        return None
+    memo = dictation.memo_of(recording)
+    if memo is None or not memo.text:
+        return None
+    name = "".join(ch for ch in recording.title if ch.isalnum() or ch in " -_")[:80]
+    return (
+        f"{name.strip() or 'Dictation'} - memo.docx",
+        exports.summary_word(memo, "mail"),
+    )
 
 
 # The test message -----------------------------------------------------------------
@@ -604,6 +662,7 @@ def people_without_email() -> int:
 
 KIND_WORDS = {
     DIGEST: "retention digest",
+    DICTATION: "dictation sent",
     SHARED: "case shared",
     HANDED: "case handed over",
     BATCH: "batch finished",
@@ -663,23 +722,32 @@ def _digest_line(line: dict) -> str:
     return f"deletes in {days} unless used"
 
 
-def send_digests(digests: dict) -> int:
+def send_digests(digests: dict, dictations: dict | None = None) -> int:
     """The night's Retention digests, one per person, and the Operator's message.
 
     `digests` is retention.digests_for_tonight()'s answer: per person, their
-    lines, an owner's own and the ones shared with them (marked shared_by).
-    Deactivated and Blocked people are never mailed; their own Cases go to
-    the Operator address instead, so an Admin can Reassign or Keep.
+    lines, an owner's own and the ones shared with them (marked shared_by);
+    `dictations` is dictation.for_tonights_digest()'s, per person. Deactivated
+    and Blocked people are never mailed; their own Cases go to the Operator
+    address instead, so an Admin can Reassign or Keep.
     """
     from core.models import User
 
+    dictations = dictations or {}
     sent = 0
-    for user_id, lines in digests.items():
+    for user_id in set(digests) | set(dictations):
+        lines = digests.get(user_id, [])
         person = User.objects.filter(pk=user_id).first()
         if person is None or not person.is_active:
             continue
         own = [one for one in lines if not one.get("shared_by")]
         shared = [one for one in lines if one.get("shared_by")]
+        theirs = dictations.get(user_id, [])
+        dictation_block = ""
+        if theirs:
+            dictation_block = "Dictations deleting soon:\n" + "\n".join(
+                f"- {one['title']}: {_digest_line(one)}" for one in theirs
+            ).replace("unless used", "unless opened")
         cases_block = "\n".join(
             f"- {one['case']}: {_digest_line(one)} (last used "
             f"{timezone.localtime(one['last_used']):%Y-%m-%d}, "
@@ -696,11 +764,14 @@ def send_digests(digests: dict) -> int:
                 f"- {one['case']} (owner: {one['shared_by']}): {_digest_line(one)}"
                 for one in shared
             )
+        if not own and not shared and theirs:
+            cases_block = "- (none)"
         subject, body = render(
             DIGEST,
             name=person.shown_name,
             cases=cases_block,
             shared=shared_block,
+            dictations=dictation_block,
             link=app_url("/cases"),
         )
         if send_to_person(
@@ -712,9 +783,31 @@ def send_digests(digests: dict) -> int:
             object_label="digest",
             own=len(own),
             shared=len(shared),
+            dictations=len(theirs),
         ):
             sent += 1
     return sent
+
+
+def dictation_sent(recording, by, to_whom, attach_memo: bool = False) -> bool:
+    """ "Dictation sent", at once, to the colleague; the Memo attached when asked."""
+    subject, body = render(
+        DICTATION,
+        name=to_whom.shown_name,
+        by=by.shown_name,
+        title=recording.title,
+        link=app_url("/dictations"),
+    )
+    return send_to_person(
+        DICTATION,
+        to_whom,
+        subject,
+        body,
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        **({"attach_memo": str(recording.pk)} if attach_memo else {}),
+    )
 
 
 def send_owner_left(lines: list) -> bool:

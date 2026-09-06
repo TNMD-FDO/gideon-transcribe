@@ -247,6 +247,11 @@ class Recording(models.Model):
     speaker_taps = models.JSONField(default=list, blank=True)
     marks = models.JSONField(default=list, blank=True)
 
+    # A Dictation (Phase 3): kept past sign-out on its own, in no Case unless
+    # added to one, on its own clock (last_used) while it has no Case.
+    is_dictation = models.BooleanField(default=False)
+    last_used = models.DateTimeField(null=True, blank=True)
+
     @property
     def is_live(self) -> bool:
         return bool(self.live)

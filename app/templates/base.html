@@ -28,6 +28,9 @@
         {% endif %}
         <a href="{% url 'home' %}"{% if page == "recordings" %} class="on"{% endif %}>Recordings</a>
         <a href="{% url 'upload' %}"{% if page == "upload" %} class="on"{% endif %}>Upload</a>
+        {% if dictation %}
+          <a href="{% url 'dictations' %}"{% if page == "dictations" %} class="on"{% endif %}>Dictations</a>
+        {% endif %}
         {% if clips_available %}
           <a href="{% url 'clips' %}"{% if page == "clips" %} class="on"{% endif %}>Clips</a>
         {% endif %}

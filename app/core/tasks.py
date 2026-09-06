@@ -276,9 +276,11 @@ def retention_sweep(timestamp: int) -> None:
     not matter, because a binned Case keeps every row and the disk sweeper
     removes only what no row claims.
     """
-    from core import retention
+    from core import dictation, retention
 
     retention.sweep()
+    # The Dictations' own pass, whatever Folder management says.
+    dictation.sweep()
 
 
 @app.periodic(cron="30 3 * * *")

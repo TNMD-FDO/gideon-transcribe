@@ -134,6 +134,23 @@ SHIPPED_SUMMARIES = {
         'overlapping, or hard to follow, with their times. Write "None noticed" '
         "if there are none."
     ),
+    "dictation": (
+        "This transcript is one person dictating a document. Write out the "
+        "document they dictated, in their words, and do not summarise.\n"
+        "Keep every fact, name, date, number, and instruction; add nothing that "
+        "was not said.\n"
+        "Remove false starts, repeated words, filler, and asides to the typist, "
+        'such as "scratch that" or "delete the last sentence", and do what '
+        "they ask.\n"
+        "Honour spoken punctuation and layout: new paragraph, full stop or "
+        "period, comma, colon, question mark, open quote and close quote, "
+        "bullet or number one, heading. Where the speaker gives a heading, make "
+        "it a heading.\n"
+        "Do not shorten, reorder, or add a greeting, sign-off, or date unless "
+        "it was dictated.\n"
+        'Where a word is unclear in the transcript, keep it and add "[unclear]" '
+        "after it. No timestamps."
+    ),
     "hearing": (
         "Write a summary of this court hearing with these parts, in this order, "
         "using these headings.\n"

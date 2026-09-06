@@ -7,6 +7,7 @@ from core import (
     case_chat_pages,
     case_pages,
     clip_pages,
+    dictation_pages,
     exports,
     live_pages,
     media_access,
@@ -160,6 +161,32 @@ urlpatterns = [
     path("record", live_pages.record, name="record"),
     path("record/start", live_pages.start, name="record-start"),
     path("record/people", live_pages.people, name="record-people"),
+    # Dictations (Phase 3): the tab, the Dictate page, and a row's acts.
+    path("dictations", dictation_pages.dictations, name="dictations"),
+    path("dictate", dictation_pages.dictate, name="dictate"),
+    path(
+        "dictation/<uuid:recording_id>/state",
+        dictation_pages.state,
+        name="dictation-state",
+    ),
+    path(
+        "dictation/<uuid:recording_id>/memo",
+        dictation_pages.memo,
+        name="dictation-memo",
+    ),
+    path(
+        "dictation/<uuid:recording_id>/who", dictation_pages.who, name="dictation-who"
+    ),
+    path(
+        "dictation/<uuid:recording_id>/send",
+        dictation_pages.send,
+        name="dictation-send",
+    ),
+    path(
+        "dictation/<uuid:recording_id>/take-back",
+        dictation_pages.take_back,
+        name="dictation-take-back",
+    ),
     path(
         "record/<uuid:recording_id>/upload",
         live_pages.note_upload,
