@@ -21,6 +21,7 @@
 #                             prove the newest Snapshot restores, in a throwaway copy
 #   ./transcribe install-backup
 #                             the backup questions, keys, repository and timers again
+#   ./transcribe install-mail the mail questions again: relay, sender, Operator address
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
 #   ./transcribe rollback TAG go back to a release, restoring the dump if need be
 #   ./transcribe logs [name]  follow the logs of one service, or of all of them
@@ -431,6 +432,7 @@ print(', '.join(served) or 'nothing')
 
   echo
   check_the_backup
+  check_the_mail
 
   if [ "$FAILURES" -eq 0 ]; then
     green "Everything checked passed."
@@ -486,6 +488,7 @@ cmd_install() {
   ask_the_hugging_face_token
   cmd_engine
   ask_the_backup
+  ask_the_mail
   make_the_data_folders
 
   echo
@@ -1640,6 +1643,110 @@ cmd_install_backup() {
   echo "Then, with the stack up:  ./transcribe backup   and   ./transcribe restore-drill"
 }
 
+# Mail (Phase 2, Email notifications) -------------------------------------------------
+
+ask_the_mail() {
+  cat <<'WORDS'
+
+Email
+-----
+The app can send plain-text mail through the office's relay: a nightly note to
+each person whose cases are about to be deleted, a note when a case is shared
+with or handed to them, a note when a batch finishes if they asked for one, and
+reports to the Operator address about backups. Leave the relay empty to run
+without mail: the app's pages show everything a message would say, but nobody
+is warned by mail before a case is deleted.
+
+WORDS
+  local relay
+  relay="$(ask "The mail relay's host name, or empty for no mail" "$(env_value SMTP_HOST)")"
+  set_env SMTP_HOST "$relay"
+  [ -n "$(env_value SMTP_PORT)" ] || set_env SMTP_PORT 25
+  [ -n "$(env_value SMTP_STARTTLS)" ] || set_env SMTP_STARTTLS auto
+  [ -n "$(env_value SMTP_PASSWORD_FILE)" ] || set_env SMTP_PASSWORD_FILE ./secrets/smtp_password
+  # The password file always exists, empty when the relay wants none, because
+  # a Compose secret whose file is missing stops the whole stack.
+  local file
+  file="$(backup_secret_file "$(env_value SMTP_PASSWORD_FILE)")"
+  sudo test -e "$file" || write_secret "$file" ""
+  if [ -z "$relay" ]; then
+    own_the_secrets
+    amber "  No relay: the app sends no mail at all. No retention digest, no other"
+    amber "  notification, and no Operator mail. Run ./transcribe install-mail to add one."
+    return 0
+  fi
+  local port
+  port="$(ask "The relay's port" "$(env_value SMTP_PORT)")"
+  set_env SMTP_PORT "$port"
+  local answer
+  answer="$(ask "Does the relay need a sign-in? (yes, or no)" "$( [ -n "$(env_value SMTP_USER)" ] && echo yes || echo no )")"
+  if [ "$answer" = "yes" ]; then
+    local user
+    user="$(ask "The relay's sign-in name" "$(env_value SMTP_USER)")"
+    set_env SMTP_USER "$user"
+    local password="" again=""
+    printf 'The relay'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
+    read -rs password
+    echo >&2
+    if [ -n "$password" ]; then
+      printf 'And again: ' >&2
+      read -rs again
+      echo >&2
+      if [ "$password" != "$again" ]; then
+        red "Those did not match. Nothing was written."
+        return 1
+      fi
+      write_secret "$file" "$password"
+    fi
+  else
+    set_env SMTP_USER ""
+  fi
+  own_the_secrets
+  local sender
+  sender="$(ask "The sender address, shown as \"Gideon Transcribe <address>\"" "$(env_value MAIL_FROM)")"
+  set_env MAIL_FROM "$sender"
+  local operator
+  operator="$(ask "The Operator address: replies and IT reports go there (empty for none)" "$(env_value OPERATOR_EMAIL)")"
+  set_env OPERATOR_EMAIL "$operator"
+  echo
+  echo "With the stack up, ./transcribe check sends a test message to the Operator address."
+}
+
+cmd_install_mail() {
+  need_env
+  ask_the_mail
+  echo
+  echo "Then, with the stack up:  ./transcribe check   (it sends a test message), or"
+  echo "Panel, Settings, Email, Send a test message."
+}
+
+# The check's two mail lines: the relay takes a message from this server and
+# lets the sender through, proven by sending one to the Operator address; and
+# the Sign-in group's members without a mail value, as a warning.
+check_the_mail() {
+  echo
+  echo "Email"
+  if [ -z "$(env_value SMTP_HOST)" ]; then
+    amber "  note  SMTP_HOST is empty, so the app sends no mail"
+    return 0
+  fi
+  local said
+  said="$(app_command mail_check test 2>/dev/null | grep -v procrastinate | tail -1)" || true
+  case "$said" in
+    OK:*) pass "${said#OK: }" ;;
+    NOTE:*) note "${said#NOTE: }" ;;
+    "") fail "the app did not answer; is the stack up?" ;;
+    *) fail "${said#FAIL: }" ;;
+  esac
+  said="$(app_command mail_check count 2>/dev/null | grep -v procrastinate | tail -1)" || true
+  case "$said" in
+    OK:*) pass "${said#OK: }" ;;
+    NOTE:*) note "${said#NOTE: }" ;;
+    "") ;;
+    *) fail "${said#FAIL: }" ;;
+  esac
+}
+
 install_timers() {
   # The three timers and their services, from the repository's unit files
   # with the install home and the times filled in. Nothing else is put on the
@@ -2020,7 +2127,7 @@ cmd_restore_dump() {
 # ------------------------------------------------------------------------------
 
 usage() {
-  sed -n '3,31p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '3,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in
@@ -2038,6 +2145,7 @@ restore) shift && cmd_restore "$@" ;;
 restore-drill) shift && cmd_restore_drill "$@" ;;
 install-backup) shift && cmd_install_backup "$@" ;;
 install-timers) shift && cmd_install_timers "$@" ;;
+install-mail) shift && cmd_install_mail "$@" ;;
 upgrade) shift && cmd_upgrade "$@" ;;
 rollback) shift && cmd_rollback "$@" ;;
 restore-dump) shift && cmd_restore_dump "$@" ;;

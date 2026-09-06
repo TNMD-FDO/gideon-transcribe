@@ -17,11 +17,17 @@
   {% endcomment %}
   <div class="panes users">
     <div class="pane-list">
+  <div class="row" style="margin: 0 0 8px; gap: 8px">
+    <a href="{% url 'panel-users' %}" class="btn small{% if not no_email %} primary{% endif %}">Everyone</a>
+    <a href="{% url 'panel-users' %}?no_email=1" class="btn small{% if no_email %} primary{% endif %}">No email address{% if without_email %} ({{ without_email }}){% endif %}</a>
+    <span class="muted small">A missing address is fixed in the directory, never here; the next sign-in or directory check brings it in.</span>
+  </div>
   <div class="card" style="overflow-x: auto">
     <table class="tbl">
       <thead>
         <tr>
           <th>User</th>
+          <th>Email</th>
           <th>Role</th><th>Status</th>
           <th>Workspace</th><th>Recordings</th><th>Quota</th><th>Last sign-in</th>
         </tr>
@@ -32,7 +38,10 @@
             <td>
               <b>{{ row.user.username }}</b>
               {% if row.user.display_name %}<div class="small">{{ row.user.display_name }}</div>{% endif %}
-              {% if row.user.directory_address %}<div class="muted small">{{ row.user.directory_address }}</div>{% endif %}
+              {% if row.user.directory_address %}<div class="muted small">Directory address: {{ row.user.directory_address }}</div>{% endif %}
+            </td>
+            <td class="small">
+              {% if row.user.email %}{{ row.user.email }}{% else %}<span class="pill warn">No email address</span>{% endif %}
             </td>
             <td>
               {% if row.user.is_admin %}<span class="pill">Admin</span>{% else %}User{% endif %}
@@ -54,7 +63,7 @@
             <td class="muted">{{ row.user.last_sign_in|default:"never" }}</td>
           </tr>
           <tr>
-            <td colspan="7" style="padding-bottom: 14px">
+            <td colspan="8" style="padding-bottom: 14px">
               <form method="post" action="{% url 'panel-user' row.user.username %}" class="row">
                 {% csrf_token %}
                 <a href="{% url 'panel-workspace' row.user.username %}" class="btn small">Open their Workspace</a>
@@ -123,6 +132,14 @@
                   <button type="submit" name="action" value="delete" class="small ghost danger"
                           data-confirm-title="Delete the local admin {{ row.user.username }}?" data-confirm="They can no longer sign in. Their recordings go with them." data-confirm-ok="Delete" data-danger>Delete</button>
                 </form>
+                <form method="post" action="{% url 'panel-local-admin' row.user.username %}"
+                      class="row small" style="margin-top: 6px">
+                  {% csrf_token %}
+                  <label class="muted" for="email-{{ row.user.username }}">Email</label>
+                  <input type="email" id="email-{{ row.user.username }}" name="email"
+                         value="{{ row.user.email }}" autocomplete="off" placeholder="none">
+                  <button type="submit" name="action" value="email" class="small">Set</button>
+                </form>
               {% endif %}
             </td>
           </tr>
@@ -145,6 +162,8 @@
       <input type="text" name="username" autocomplete="off"></label>
     <label class="field"><span>Display name</span>
       <input type="text" name="display_name" autocomplete="off"></label>
+    <label class="field"><span>Email (optional)</span>
+      <input type="email" name="email" autocomplete="off"></label>
     <label class="field"><span>Password</span>
       <input type="password" name="password" autocomplete="new-password"></label>
     <button type="submit" class="primary">Create</button>

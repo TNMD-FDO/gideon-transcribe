@@ -135,6 +135,11 @@ class Batch(models.Model):
     # say "Processing again" rather than showing it as a new upload.
     is_reprocessing = models.BooleanField(default=False)
 
+    # "Email me when this batch finishes", ticked on the Upload page; and when
+    # that message went, so it is sent once and never resent.
+    email_when_done = models.BooleanField(default=False)
+    mail_sent_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ["-created"]
 

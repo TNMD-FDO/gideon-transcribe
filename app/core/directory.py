@@ -612,9 +612,17 @@ def _bring_into_line(person, found, allowed, in_admin_group, actor) -> list[str]
             "email": found.get("mail", ""),
         }
         if any(getattr(person, name) != value for name, value in fresh.items()):
+            mail_changed = person.email != fresh["email"]
             for name, value in fresh.items():
                 setattr(person, name, value)
             person.save(update_fields=list(fresh))
+            if mail_changed:
+                audit.email_address_updated(
+                    person,
+                    fresh["email"],
+                    actor=actor,
+                    system=None if actor is not None else "directory check",
+                )
 
     return changes
 

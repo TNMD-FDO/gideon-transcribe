@@ -70,6 +70,7 @@ class Category:
     LLM = "llm"
     ADMIN = "admin"
     SYSTEM = "system"
+    EMAIL = "email"
 
 
 class Outcome:
@@ -94,6 +95,26 @@ class Reason:
     LLM_TOO_LONG = "llm_too_long"
     LLM_BAD_OUTPUT = "llm_bad_output"
     LLM_ERROR = "llm_error"
+    # The mailer's three, from the Email notifications chapter's table.
+    SMTP_UNREACHABLE = "smtp_unreachable"
+    SMTP_REFUSED = "smtp_refused"
+    SMTP_AUTH_FAILED = "smtp_auth_failed"
+
+
+def email_address_updated(person, address: str, actor=None, system=None):
+    """The Accounts row when the directory's mail value changes, or is removed.
+
+    The new address is in the details block: it is where the app's mail
+    goes, and an Admin reading the log should be able to see it.
+    """
+    return write(
+        Category.ACCOUNTS,
+        "Email address updated",
+        actor=actor,
+        system=system,
+        affected_user=person,
+        email=address or "(none)",
+    )
 
 
 class Row(models.Model):

@@ -161,6 +161,10 @@ def _from_the_directory(request, username: str, password: str, address) -> User:
         # lifted here rather than waiting for the night.
         deactivated_at=None,
     )
+    # The directory's mail value is the Email address, and a change to it,
+    # its removal included, is written down: it is where the app's mail goes.
+    if known is not None and known.email != answer["email"]:
+        audit.email_address_updated(user, answer["email"], system="sign-in")
     return user
 
 

@@ -245,6 +245,41 @@ def test_the_local_engine_switch_is_in_the_script_and_the_guides():
     assert (HERE / "docs" / "research" / "local-engine-model.md").exists()
 
 
+def test_email_is_in_the_script_the_compose_file_and_the_guides():
+    """The Email chapter's install questions, check lines, keys, and guides."""
+    script = SCRIPT.read_text(encoding="utf-8")
+    for name in ("ask_the_mail()", "check_the_mail()", "cmd_install_mail()"):
+        assert name in script, name
+    assert "  ask_the_mail\n" in script and "  check_the_mail\n" in script
+    assert "install-mail) shift && cmd_install_mail" in script
+    assert "mail_check test" in script and "mail_check count" in script
+    example = (HERE / ".env.example").read_text(encoding="utf-8")
+    for key in (
+        "SMTP_HOST=",
+        "SMTP_PORT=25",
+        "SMTP_STARTTLS=auto",
+        "SMTP_USER=",
+        "SMTP_PASSWORD_FILE=./secrets/smtp_password",
+        "MAIL_FROM=",
+    ):
+        assert key in example, key
+    compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
+    assert "SMTP_PASSWORD_FILE: /run/secrets/smtp_password" in compose
+    assert (
+        '  smtp_password:\n    file: "${SMTP_PASSWORD_FILE:-./secrets/smtp_password}"'
+        in compose
+    )
+    assert compose.count("- smtp_password") == 2  # the app and the worker
+    ci = (HERE / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert ": > secrets/smtp_password" in ci
+    admin = (HERE / "docs" / "admin-guide.md").read_text(encoding="utf-8")
+    assert "## Email" in admin and "Email failed" in admin
+    user = (HERE / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    assert "Email me when this batch finishes" in user and "retention digest" in user
+    install = (HERE / "docs" / "install.md").read_text(encoding="utf-8")
+    assert "### The mail" in install and "`SMTP_HOST`" in install
+
+
 def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     script = (HERE / "transcribe").read_text(encoding="utf-8")
     for command in (

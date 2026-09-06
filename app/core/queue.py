@@ -199,6 +199,7 @@ def merge(job: Job) -> Job:
     job.merging = False
     job.finished = timezone.now()
     job.save()
+    _the_batch_may_have_finished(job)
 
     seconds = (job.finished - job.created).total_seconds()
     audit.write(
@@ -397,6 +398,13 @@ def _speaker_names(
     return names
 
 
+def _the_batch_may_have_finished(job: Job) -> None:
+    """The "Batch finished" mail, if this Job was the last thing in its Batch."""
+    from core import mail
+
+    mail.note_batch_progress(job.recording)
+
+
 def fail(job: Job, reason_class: str) -> Job:
     """End a Job with one reason class, and say so in the log.
 
@@ -407,6 +415,7 @@ def fail(job: Job, reason_class: str) -> Job:
     job.failure_class = reason_class
     job.finished = timezone.now()
     job.save()
+    _the_batch_may_have_finished(job)
 
     audit.write(
         audit.Category.JOBS,

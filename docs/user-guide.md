@@ -33,6 +33,7 @@ The settings apply to the whole batch. Click **Same as batch** on a file to give
 - **Context.** One line about what the recording is, in plain words. It helps the model choose between words that sound alike.
 - **Audio clean-up.** Which preparation the sound gets before transcription. The default suits most recordings; **Phone** is for calls where it is offered.
 - **Add to case** and **Recording type** appear when your office uses Cases. A recording added to a case is kept after you sign out; one without a case goes when you do.
+- **Email me when this batch finishes** appears when your office sends mail. Tick it and one message comes when the last recording has ended: how many transcribed, how many failed and why, and where the recordings are. Never a word of a transcript. The tick is remembered from your last batch. If it is greyed with "No email address on your account; ask IT", the office directory has no address for you.
 
 ### 3. Check and start
 
@@ -196,11 +197,17 @@ A case is kept for as long as somebody uses it. Every use starts its clock over:
 
 The office sets how long a case may go unused, thirty days unless your Admin has changed it. During the last days before that, seven by default, the case's row on the Cases page turns amber and reads **Deletes in N days unless used**, with a **Keep** button beside it. Keep starts the clock over without opening anything; so does opening the case. The **Expiring** button above the list shows only the cases in their last days.
 
+When your office sends mail, those same days bring one email a night, the **retention digest**: every case of yours in its last days, and under "Shared with you" every case shared with you, each with its days left. It is a safety message, one a night at most, and Keep or opening the case is what stops it. The last one is the final warning on the night before deletion; nothing is sent about the deletion itself, and the Recycle bin page is where you learn of it.
+
 The night a case reaches the limit, it goes whole to the **Recycle bin**: its recordings, transcripts, corrections and clips together. Nothing in it can be opened until it comes back. From the bin, reached from the Cases page, you can **Restore** it exactly as it was, which starts its clock over, or **Delete permanently**. A case left in the bin is wiped for good after another thirty days, unless your Admin has set it differently. A case in the bin still counts against your quota, because it is still on the disk; **Empty recycle bin** is how you make that room at once.
 
 Your own **Delete** of a case does not go to the bin. It is final, as the confirmation says. The bin is for what the clock takes, so that nothing is lost to neglect that somebody still wanted.
 
 Days while the office has cases turned off do not count against any case.
+
+## Emails the app sends
+
+If your office has set up mail, the app sends four kinds of message, all plain text, none with an attachment, and none quoting a transcript, a summary, a chat, a speaker's name or a clip: the nightly **retention digest** about cases in their last days; **a case shared with you**, at once, when a colleague shares one; **a case handed to you**, at once, when a case is transferred or reassigned to you, with its days left; and **your batch has finished**, when you ticked the box on the Upload page. Every message names things and says where to go; the app's pages already show everything a message says, so a person without an email address misses the message and nothing else. There is no opt-out: the messages exist for safety and come at most one a night, and the batch tick is the one choice that is yours. Replies go to your office's IT mailbox.
 
 ## Signing out, and what happens to your recordings
 

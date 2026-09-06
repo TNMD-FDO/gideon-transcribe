@@ -118,6 +118,20 @@
                 </div>
               {% endif %}
 
+              {% if batch_mail.offered %}
+                <label class="row">
+                  <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>
+                  <b>Email me when this batch finishes</b>
+                </label>
+                <p class="muted small">
+                  {% if batch_mail.address %}
+                    One message with the counts and any failures; never a word of a transcript.
+                  {% else %}
+                    No email address on your account; ask IT.
+                  {% endif %}
+                </p>
+              {% endif %}
+
               <label class="row">
                 <input type="checkbox" id="diarize"> <b>Diarize</b>
               </label>

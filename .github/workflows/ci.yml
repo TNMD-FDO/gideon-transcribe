@@ -99,6 +99,7 @@ jobs:
           : > secrets/backup_password
           : > secrets/backup_ssh_key
           : > secrets/backup_known_hosts
+          : > secrets/smtp_password
           mkdir -p tls ca whisperx-service/secrets
           touch whisperx-service/.env
           docker compose config --quiet

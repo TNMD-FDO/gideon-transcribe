@@ -171,11 +171,25 @@ def sweep(now: datetime | None = None) -> dict | None:
     log.info("the retention sweep ran: %s", counts)
 
     # Once it has marked and deleted, the sweep hands the worker the night's
-    # digests. The Email notifications chapter owns sending them and is not
-    # built, so tonight they are counted and go no further.
+    # digests, one per person, and the Operator the Cases whose owner has
+    # left. Nothing here waits for a message.
+    from core import mail
+
     digests = digests_for_tonight(in_the_window)
     if digests:
-        log.info("%d retention digest(s) would go out tonight", len(digests))
+        sent = mail.send_digests(digests)
+        log.info("%d retention digest(s) queued tonight", sent)
+    left = [
+        {
+            "case": case.name,
+            "owner": case.owner.shown_name,
+            "days_left": left_days,
+        }
+        for case, left_days in in_the_window
+        if not case.owner.is_active
+    ]
+    if left:
+        mail.send_owner_left(left)
     return counts
 
 

@@ -204,8 +204,9 @@ def test_a_clip_span_is_read_as_clocks_and_words():
 def test_the_users_table_fits_beside_its_pane():
     users = (TEMPLATES / "panel" / "users.html").read_text(encoding="utf-8")
     head = users[users.index("<thead>") : users.index("</thead>")]
-    assert head.count("<th>") == 7
-    assert 'colspan="7"' in users and 'colspan="10"' not in users
+    # Eight since the Email column joined (Phase 2, Email notifications).
+    assert head.count("<th>") == 8
+    assert 'colspan="8"' in users and 'colspan="10"' not in users
 
 
 def test_every_template_that_draws_an_icon_loads_the_tag():

@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.21.0, 2026-09-06
+
+```
+Models: unchanged
+Database: migrates (0025_mail: the Email status row, and the Batch's tick)
+```
+
+### Added
+
+- **Email notifications (Phase 2, chapter 8).** With a relay named in
+  `.env` (the install asks; `./transcribe install-mail` asks again), the app
+  sends plain-text mail through it: a nightly **retention digest** to every
+  person with a case in its last days, their own and the ones shared with
+  them; **a case shared with you** and **a case handed to you** at once;
+  **your batch has finished** for a person who ticked the new box on the
+  Upload page; and Operator mail to one IT mailbox: the cases whose owner
+  has left, the backup reports, and the test message. Every message names
+  things and never quotes content, is marked automatic, and is tried three
+  times within thirty minutes before an "Email failed" row. Nothing waits
+  for mail.
+- **The Email settings page**: the Email notifications and Batch finished
+  emails switches, the four templates with Reset to default, all greyed
+  while mail is not configured, and Send a test message, which shows the
+  relay's reply.
+- **The email address** is the directory's `mail` value, refreshed at each
+  sign-in and by the directory check, with an "Email address updated" row
+  on change; the Users page gains an Email column, a No email address mark
+  and filter, and an Email field for Local admins; the Status page an Email
+  line and the count of people without an address; the Installation page
+  the seven mail keys. `./transcribe check` sends a test message and counts
+  the Sign-in group's members without a mail value.
+
 ## v1.20.0, 2026-09-06
 
 ```

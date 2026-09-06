@@ -210,11 +210,18 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
                     else (known.default or "(empty)")
                 ),
                 "changed": not settings_store.is_at_default(known.key),
-                # Greyed under a toggle that is off: the value is kept and
-                # shown, the control is closed, and the row says why.
-                "greyed": bool(known.needs) and not settings_store.get(known.needs),
-                "needs_name": (
-                    settings_store.definition(known.needs).name if known.needs else ""
+                # Greyed under a toggle that is off, or while mail is not
+                # configured: the value is kept and shown, the control is
+                # closed, and the row says why.
+                "greyed": bool(settings_store.greyed_because(known)),
+                "greyed_because": settings_store.greyed_because(known),
+                # A Notification's template offers Reset to default, which
+                # puts the default in the field for the tray to carry.
+                "resettable": (
+                    bool(known.needs_mail) and known.kind == settings_store.TEXT
+                ),
+                "raw_default": (
+                    known.default if known.kind == settings_store.TEXT else ""
                 ),
             }
         )
@@ -233,6 +240,20 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             "file": os.environ.get("LLM_API_TOKEN_FILE", "./secrets/llm_api_token"),
         }
 
+    # The Email page carries the Test message button, outside the tray, and
+    # says whether mail is configured and where the Operator address is.
+    email = None
+    if page == settings_store.EMAIL:
+        from core import mail
+
+        email = {
+            "configured": mail.configured(),
+            "host": mail.host(),
+            "sender": mail.mail_from(),
+            "operator": mail.operator_email(),
+            "to": request.user.email or mail.operator_email(),
+        }
+
     return render(
         request,
         "panel/settings.html",
@@ -241,6 +262,8 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             "title": dict(settings_store.PAGES)[page],
             "rows": rows,
             "token": token,
+            "email": email,
+            "email_said": request.session.pop("email_said", ""),
             "fixed_rules": FIXED_RULES,
             "directory": _directory_facts() if page == settings_store.SIGN_IN else None,
             # The Appearance page carries the logo, which is a file and not a
@@ -260,6 +283,10 @@ def edit(request: HttpRequest, page: str) -> HttpResponse:
     problems = []
 
     for known in settings_store.page_settings(page):
+        # A closed control is not submitted, and an absent toggle would read
+        # as Off: a greyed row is never read back.
+        if settings_store.greyed_because(known):
+            continue
         if known.kind == settings_store.TOGGLE:
             wanted = known.key in request.POST
         elif known.key not in request.POST:

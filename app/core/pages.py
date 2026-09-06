@@ -163,6 +163,18 @@ def upload(request: HttpRequest) -> HttpResponse:
         if any(one["id"] == asked for one in to_a_case):
             chosen_case = asked
 
+    # "Email me when this batch finishes": offered while the Admin's switch
+    # is on and mail is configured, greyed for a person with no address, and
+    # remembered from their last Batch.
+    from core import mail
+
+    last_batch = Batch.objects.filter(user=request.user, is_reprocessing=False).first()
+    batch_mail = {
+        "offered": mail.batch_mail_on(),
+        "address": bool(request.user.email),
+        "ticked": bool(last_batch is not None and last_batch.email_when_done),
+    }
+
     return render(
         request,
         "upload.html",
@@ -172,6 +184,7 @@ def upload(request: HttpRequest) -> HttpResponse:
             "standing_line": standing_line(),
             "to_a_case": to_a_case,
             "chosen_case": chosen_case,
+            "batch_mail": batch_mail,
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
@@ -236,7 +249,16 @@ def submit(request: HttpRequest) -> JsonResponse:
             status=400,
         )
 
-    batch = Batch.objects.create(user=request.user)
+    from core import mail
+
+    batch = Batch.objects.create(
+        user=request.user,
+        email_when_done=bool(
+            mail.batch_mail_on()
+            and request.user.email
+            and (wanted.get("batch") or {}).get("email_when_done")
+        ),
+    )
     made = []
     for one in files:
         settings_for_file = _settings_from(one, wanted.get("batch") or {})
