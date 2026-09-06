@@ -268,8 +268,8 @@ def test_taps_name_the_speakers_and_marks_are_kept(on, person, a_case, client):
     recording.save()
     told = client.get(reverse("details", args=[recording.pk])).json()
     assert told["marks"] == [
-        {"at": 5.0, "clock": "0:05", "word": ""},
-        {"at": 33.3, "clock": "0:33", "word": "the threat"},
+        {"at": 5.0, "clock": "00:00:05", "word": ""},
+        {"at": 33.3, "clock": "00:00:33", "word": "the threat"},
     ]
 
 
