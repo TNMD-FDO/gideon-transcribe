@@ -1437,7 +1437,11 @@ cmd_restore_drill() {
 
   # 1. Room: the Snapshot's size plus the floor.
   step="room"
-  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$drill" "$drill/data" "$drill/data/backup" "$drill/data/cases" "$drill/postgres"
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$drill" "$drill/data" "$drill/data/backup" "$drill/data/cases"
+  # Postgres runs as its own user inside its container and has to be able to
+  # enter the folder it is given, so this one is root's at 0755, as Docker
+  # would have made it; the app's account never needs to look inside.
+  sudo install -d -m 0755 "$drill/postgres"
   local need free floor_gb
   need="$(restic_ro stats latest --mode restore-size --json 2>/dev/null | grep -o '"total_size":[0-9]*' | head -1 | cut -d: -f2)" || true
   free="$(df --output=avail -B1 "$data" | tail -1 | tr -d ' ')"
@@ -1465,7 +1469,12 @@ cmd_restore_drill() {
   $dc up -d postgres >/dev/null 2>&1 || drill_failed "$step"
   local tries=0
   until $dc exec -T postgres pg_isready -U "$(env_value POSTGRES_USER)" -d postgres >/dev/null 2>&1; do
-    tries=$((tries + 1)); [ "$tries" -gt 60 ] && drill_failed "$step: Postgres did not come up"; sleep 2
+    tries=$((tries + 1))
+    if [ "$tries" -gt 60 ]; then
+      echo "Postgres's last words:"; $dc logs --tail 8 postgres 2>&1 | tail -8
+      drill_failed "$step: Postgres did not come up"
+    fi
+    sleep 2
   done
 
   # 4. Load, migrate, check.
