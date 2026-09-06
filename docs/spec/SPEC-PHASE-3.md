@@ -73,6 +73,8 @@ The page never navigates away on its own while recording, and leaving it, closin
 
 **After.** The Recording goes to the front of the queue: its Job is made with a priority above every uploaded one, so a live recording is transcribed before the night's batches whatever is waiting. The viewer opens it when the Transcript is there; the Case page shows it with its step meanwhile, as it shows an uploaded Recording.
 
+**The queue line.** The service reports every job's position and the minutes of audio ahead of it, and the page says so in words rather than showing a spinner: "2 recordings ahead, about 4 minutes", then "Transcribing", then the link. The Case page's row for a Recording still in the queue says the same. The estimate is the audio ahead divided by the service's measured speed (the last twenty jobs' ratio of audio length to time taken, kept by the app; the published figure of about sixty times real time until there are twenty), rounded up to the minute, and never promised: "about".
+
 ### What the recording is
 
 - One Recording, in the Case, uploaded through the sidecar as pieces arrive, with the title, the type, the language, the translate choice, and the Case's Speaker hint (the people expected, as the number of speakers).
@@ -122,9 +124,22 @@ A Mark is a moment and an optional word, stored on the Recording (`marks`), show
 
 The ordinary rows follow: Batch submitted, Job completed, Recording opened, and the rest.
 
+### Transcription during the recording
+
+The finished Transcript, sooner: while a recording continues, every closed stretch of it is transcribed at finished quality, so that at Stop only the last stretch remains. This is how a five o'clock pile-up of hour-long meetings clears in minutes rather than the GPU meeting all of them at once, and it never shows a draft: nothing appears on the Record page while it records, and the Transcript appears whole when it is done.
+
+- **A stretch** is five minutes of recorded audio, closed when the next begins or at Stop; a pause closes one. Each closed stretch is sent to the service as a job of its own (a Run of the Recording), at the live priority, as soon as it closes; the media step prepares each stretch as it prepared whole Recordings.
+- **At Stop**, the last stretch is sent, and the whole Recording is prepared once for playback and for diarization: the Speaker labels are found over the whole audio in one pass, so a speaker keeps one label across the stretches, and the taps name them as above. The stretches' Segments are merged into the one Transcript by time, as the Sides of a Two-channel call are merged today, and the alignment is each stretch's own.
+- **What the person sees**: nothing until the Transcript is whole; then the viewer as for any Recording. The queue line during the last stretch says "Finishing: about 1 minute".
+- **What it costs**: the same GPU minutes, spread over the hour; and a diarization pass over the whole audio at the end, which is a fraction of the transcription.
+- **Ordering**: a stretch of a recording in progress goes ahead of a whole Recording that has ended, which goes ahead of an uploaded one, so the recording that ends next is the one whose last stretch is transcribed first.
+- **Provenance** says "transcribed in N stretches while recording".
+
+Built as the fifth step, after the four of the order of work, once a week of live recordings has shown the queue.
+
 ### Not in this phase
 
-- No draft on the screen while recording: the finished Transcript or nothing (Principle 2). A future phase may transcribe each closed stretch while the recording continues, at finished quality, so that only the last minutes are left at Stop; nothing here prevents it.
+- No draft on the screen while recording: the finished Transcript or nothing (Principle 2).
 - No phones or tablets, and no Firefox for the computer's sound: Edge and Chrome on the office's computers.
 - No recording of a desk phone: a call on a desk phone never touches the computer. The jail's own recordings of those calls upload as before.
 - No consent notice, no warning, no refusal of a source: the attorney decides.
@@ -208,9 +223,10 @@ The admin setting **Dictation by email**: On or Off, default Off, on the Email p
 - **Templates**: the shipped **Dictation memo** template; **Recording types** ships with Dictation.
 - **Status page**: no new line; a Live recording is a Recording in the queue.
 
-## 4. Deferred and ruled out
+## 4. Deferred, open, and ruled out
 
-- **A draft on screen while recording**: deferred, and shaped as finished-quality transcription of each closed stretch during the recording, never a rougher draft.
+- **A second transcription worker** (a second GPU, or two workers side by side on the same card beside the Local engine): **open, not decided.** The service's contract says it is a change inside the service that every Consumer inherits without code of its own, and the office's second card has room for it. It is not spent until a week of live recordings, with the queue line showing the waits, says the one worker is not enough. Nothing in this phase assumes either answer.
+- **A draft on screen while recording**: ruled out (Principle 2). Transcription during the recording, above, is the finished-quality shape of the same wish.
 - **Phones and tablets**: ruled out for this phase; the office's computers only.
 - **Desk-phone capture**: ruled out; not the app's to solve.
 - **Recording in the app without a Case** (into the Workspace): ruled out; a Live recording is made to be kept.
