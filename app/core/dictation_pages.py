@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, dictation, exports, live, retention
+from core import cases, dictation, exports, live, media_access, retention
 from core.dictation import DictationShare
 from core.recordings import Recording
 
@@ -69,10 +69,15 @@ def _row(recording: Recording, viewer, mine: bool) -> dict:
     )
     memo_state, memo_id = _memo_state(recording)
     left = dictation.days_left(recording) if not recording.case_id else None
+    playback = recording.playback_path() if recording.playback_ready else None
     return {
         "recording": recording,
         "line": line,
         "ready": hasattr(recording, "transcript"),
+        # Play, to check it is the right recording before sending it on.
+        "media_url": (
+            f"{media_access.media_root(recording)}/{playback.name}" if playback else ""
+        ),
         "length": exports.clock(recording.duration_seconds or 0),
         "memo_state": memo_state,
         "memo_id": memo_id,
@@ -109,6 +114,8 @@ def record_tab(request: HttpRequest) -> HttpResponse:
             "page": "record",
             "mine": mine,
             "received": received,
+            # The recording just made, marked on top so the person finds it.
+            "new_id": request.GET.get("new", ""),
             "by_email": dictation.by_email(),
             "send_words": (
                 dictation.SEND_WORDS_WITH_FILE

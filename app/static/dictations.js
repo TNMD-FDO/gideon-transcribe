@@ -53,7 +53,39 @@
     watch(row.dataset.recording, null, function (said) { return said.memo === "done" || said.memo === "failed"; });
   });
 
+  // Play: one player for the page; a row's button starts its recording and
+  // stops any other. The same button pauses it.
+  var player = document.getElementById("row-player");
+  var playing = null;
+  function stopPlaying() {
+    if (!player) { return; }
+    player.pause();
+    if (playing) { playing.classList.remove("on"); playing.setAttribute("aria-label", playing.getAttribute("aria-label").replace(/^Pause/, "Play")); }
+    playing = null;
+  }
+  if (player) {
+    player.addEventListener("ended", stopPlaying);
+    player.addEventListener("pause", function () { if (player.ended || player.currentTime === 0) { stopPlaying(); } });
+  }
+
   page.addEventListener("click", function (event) {
+    var play = event.target.closest(".play-row");
+    if (play && player) {
+      if (playing === play) { stopPlaying(); return; }
+      stopPlaying();
+      player.src = play.dataset.src;
+      player.hidden = false;
+      player.controls = true;
+      var row = play.closest("tr");
+      var cell = row.querySelector(".play-cell");
+      cell.appendChild(player);
+      player.play().catch(function () {});
+      playing = play;
+      play.classList.add("on");
+      play.setAttribute("aria-label", play.getAttribute("aria-label").replace(/^Play/, "Pause"));
+      return;
+    }
+
     var write = event.target.closest(".write-memo");
     if (write) {
       write.disabled = true;
