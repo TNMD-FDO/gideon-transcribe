@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.6, 2026-09-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The Restore drill's Postgres never came up.** The drill made the folder
+  for its throwaway database the way it makes every other drill folder, for
+  the app's account alone; but Postgres runs as its own user inside its
+  container and could not enter it. The folder is now root's at 0755, as
+  Docker would have made it, and when Postgres fails to start the drill
+  prints its last log lines instead of waiting in silence. Found on the
+  second drill against the office's store, which restored the Snapshot and
+  stopped there.
+
 ## v1.19.5, 2026-09-06
 
 ```
