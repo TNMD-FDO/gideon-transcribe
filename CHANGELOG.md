@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.2, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **`./transcribe check` stopped silently after "key-only sign-in works".**
+  Under the script's strict mode a `grep` that finds nothing returns failure,
+  and the root-listing test's assignment aborted the whole command. Every such
+  assignment in the backup commands now treats an empty result as an answer.
+  Also: a directory Docker leaves where the container's passwd file goes is
+  cleared before the file is written.
+
 ## v1.19.1, 2026-09-05
 
 ```
