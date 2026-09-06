@@ -4,7 +4,7 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  {% if not is_owner %}
+  {% if role == "admin" %}
     <p class="banner">
       Viewing <b>{{ case.owner.shown_name }}</b>'s case as an Admin. This access
       is recorded in the audit log, and it does not count as the owner having
@@ -360,7 +360,11 @@
       <aside class="pane-detail about-case">
         <h2>About this case</h2>
         <dl class="kv">
-          {% if not is_owner %}<dt>Owner</dt><dd>{{ case.owner.shown_name }}</dd>{% endif %}
+          {% if role == "collaborator" %}
+            <dt>Shared by</dt><dd>{{ case.owner.shown_name }}</dd>
+          {% elif not is_owner %}
+            <dt>Owner</dt><dd>{{ case.owner.shown_name }}</dd>
+          {% endif %}
           <dt>Recordings</dt><dd>{{ recordings|length }}, {{ size }}</dd>
           <dt>Last activity</dt><dd>{{ case.last_activity|date:"d M Y H:i" }}</dd>
           <dt>Retention</dt>
@@ -369,10 +373,55 @@
         <div class="row actions">
           <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
           {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
-          <button type="button" class="btn" id="rename">Rename</button>
-          <span class="grow"></span>
-          <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
+          {% if role != "collaborator" %}
+            <button type="button" class="btn" id="rename">Rename</button>
+            <span class="grow"></span>
+            <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
+          {% endif %}
         </div>
+
+        {% if sharing_on %}
+          {% comment %}
+            Sharing. The owner and Admins see who the case is shared with,
+            when each was added and last opened it, and Remove beside each;
+            a collaborator reads who else is on the case and may leave it.
+          {% endcomment %}
+          <div class="shared-with" id="shared-with"
+               data-share-words="{{ share_words|join:' ' }}"
+               data-transfer-words="{{ transfer_words|join:' ' }}">
+            <h3>Shared with</h3>
+            {% if may_share %}
+              <table class="tbl small" id="shares"{% if not shares %} hidden{% endif %}>
+                <thead><tr><th>Who</th><th>Added</th><th>Last opened</th><th></th></tr></thead>
+                <tbody>
+                  {% for share in shares %}
+                    <tr data-share="{{ share.pk }}"{% if share.status %} class="muted"{% endif %}>
+                      <td>{{ share.person.shown_name }}{% if share.status %} <span class="pill warn">{{ share.status }}</span>{% endif %}</td>
+                      <td class="muted">{{ share.added_on|date:"d M Y" }}</td>
+                      <td class="muted">{% if share.last_opened %}{{ share.last_opened|date:"d M Y H:i" }}{% else %}not yet{% endif %}</td>
+                      <td class="acts"><button type="button" class="small ghost unshare" data-share="{{ share.pk }}" data-name="{{ share.person.shown_name }}">Remove</button></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <p class="muted small" id="nobody-yet"{% if shares %} hidden{% endif %}>Nobody yet. Whoever you share this case with can work in it as you do.</p>
+              <div class="row actions" style="margin-top: 8px">
+                <button type="button" class="btn" id="share">Share</button>
+                {% if may_transfer %}<button type="button" class="btn ghost" id="transfer">Transfer</button>{% endif %}
+              </div>
+            {% else %}
+              <ul class="plain" id="colleagues">
+                {% for share in colleagues %}
+                  <li{% if share.status %} class="muted"{% endif %}>{{ share.person.shown_name }}{% if share.person_id == user.pk %} (you){% endif %}{% if share.status %} <span class="pill warn">{{ share.status }}</span>{% endif %}</li>
+                {% endfor %}
+              </ul>
+              {% for share in colleagues %}{% if share.person_id == user.pk %}
+                <button type="button" class="btn ghost small unshare" data-share="{{ share.pk }}" data-name="you" data-leave="1">Leave this case</button>
+              {% endif %}{% endfor %}
+            {% endif %}
+          </div>
+        {% endif %}
+
         <div id="rename-box" class="card" hidden style="margin-top: 12px">
           <label for="new-name">Name</label>
           <div class="row" style="gap: 6px">

@@ -54,6 +54,9 @@ class Refusal:
     TOO_LARGE = "too_large"
     TOO_LONG = "too_long"
     QUOTA_EXCEEDED = "quota_exceeded"
+    # The wording key for the same refusal on somebody else's Case; the
+    # reason class stays QUOTA_EXCEEDED.
+    QUOTA_EXCEEDED_THEIRS = "quota_exceeded_theirs"
     LIMIT_EXCEEDED = "limit_exceeded"
     BATCH_IN_PROGRESS = "batch_in_progress"
     SERVICE_UNREACHABLE = "service_unreachable"
@@ -96,6 +99,13 @@ class Refusal:
         TOO_LARGE: "Over the size limit ({limit})",
         TOO_LONG: "Over the length limit ({limit})",
         ALREADY_UPLOADED: "You already have this file in your recordings as {title}",
+        # Not a reason class of its own: the same refusal, worded for an
+        # upload into somebody else's Case, which counts against their space.
+        "quota_exceeded_theirs": (
+            "This batch would go over {owner}'s storage space ({used} of "
+            "{quota}), which recordings added to their case count against. "
+            "Remove some files, or ask them to make room."
+        ),
         QUOTA_EXCEEDED: (
             "This batch would go over your storage space ({used} of {quota}). "
             "Remove some files, or delete recordings you no longer need. IT can "

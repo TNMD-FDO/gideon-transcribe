@@ -34,12 +34,11 @@ def clips_are_on() -> bool:
 
 def _their_recording(request, recording_id) -> Recording | None:
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
-    if recording is None or not cases.reachable(recording):
-        # A Recording in a binned Case is nobody's until the Case is restored.
+    if recording is None or not cases.standing(recording, request.user):
+        # Not theirs, not a Case they are in, not an Admin; or a Recording in
+        # a binned Case, which is nobody's until the Case is restored.
         return None
-    if recording.user_id == request.user.pk or request.user.is_admin:
-        return recording
-    return None
+    return recording
 
 
 def _their_clip(request, clip_id) -> Clip | None:
@@ -48,11 +47,19 @@ def _their_clip(request, clip_id) -> Clip | None:
         .select_related("recording", "recording__user", "user")
         .first()
     )
-    if clip is None or not cases.reachable(clip.recording):
+    if clip is None or not cases.standing(clip.recording, request.user):
         return None
-    if clip.recording.user_id == request.user.pk or request.user.is_admin:
-        return clip
-    return None
+    return clip
+
+
+def _may_change(clip: Clip, asker) -> bool:
+    """Who may adjust, re-render, or delete a Clip.
+
+    The uploader and every member of the Case, because a Clip can be redone
+    and nothing inside a shared Case is one person's. An Admin who is not on
+    the Case plays and downloads and no more.
+    """
+    return asker is None or cases.standing(clip.recording, asker) == "own"
 
 
 def spell(seconds: float) -> str:
@@ -76,7 +83,7 @@ def _row(clip: Clip, here=None, asker=None) -> dict:
     else, in a Case as in a Workspace.
     """
     in_a_case = bool(clip.recording.case_id)
-    may_change = asker is None or clip.recording.user_id == asker.pk
+    may_change = _may_change(clip, asker)
     return {
         "here": here is None or clip.recording_id == here.pk,
         "in_a_case": in_a_case,
@@ -280,7 +287,7 @@ def change_clip(request: HttpRequest, clip_id) -> JsonResponse:
     clip = _their_clip(request, clip_id)
     if clip is None:
         return JsonResponse({"error": "no such clip"}, status=404)
-    if clip.recording.user_id != request.user.pk:
+    if not _may_change(clip, request.user):
         # An Admin plays and downloads another person's Clip and no more.
         return JsonResponse({"error": "this clip is not yours"}, status=403)
 
@@ -327,7 +334,7 @@ def rerender_clip(request: HttpRequest, clip_id) -> JsonResponse:
     clip = _their_clip(request, clip_id)
     if clip is None:
         return JsonResponse({"error": "no such clip"}, status=404)
-    if clip.recording.user_id != request.user.pk:
+    if not _may_change(clip, request.user):
         return JsonResponse({"error": "this clip is not yours"}, status=403)
 
     _start_render(clip)
@@ -341,7 +348,7 @@ def delete_clip(request: HttpRequest, clip_id) -> JsonResponse:
     clip = _their_clip(request, clip_id)
     if clip is None:
         return JsonResponse({"error": "no such clip"}, status=404)
-    if clip.recording.user_id != request.user.pk:
+    if not _may_change(clip, request.user):
         return JsonResponse({"error": "this clip is not yours"}, status=403)
 
     _record(request, clip, "Clip deleted")

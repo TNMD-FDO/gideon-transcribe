@@ -815,28 +815,25 @@ def _may_open(request, recording_id):
     if recording is None:
         return None
 
-    # Nothing in a Case that is in the Recycle bin is exported by anybody.
+    # Nothing in a Case that is in the Recycle bin is exported by anybody;
+    # the uploader, the Case's members, and an Admin may take it out.
     from core import cases
 
-    if not cases.reachable(recording):
+    if not cases.standing(recording, request.user):
         return None
-    if recording.user_id == request.user.pk or request.user.is_admin:
-        return recording
-    return None
+    return recording
 
 
 def record_export(request, recording, kind) -> None:
     """One "export made" row per file, naming the kind and never any text."""
-    from core import audit
+    from core import audit, cases
 
     audit.write(
         audit.Category.EXPORTS,
         "export made",
         actor=request.user,
         request=request,
-        affected_user=(
-            recording.user if recording.user_id != request.user.pk else None
-        ),
+        affected_user=cases.affected_by(recording, request.user),
         object_type="recording",
         object_id=recording.pk,
         object_label=recording.original_filename,

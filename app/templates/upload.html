@@ -98,7 +98,7 @@
                   <select id="add-to-case">
                     <option value="">This session only</option>
                     {% for one in to_a_case %}
-                      <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}</option>
+                      <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
                     {% endfor %}
                   </select>
                   <p class="muted small" style="margin: 4px 0 0">

@@ -169,6 +169,143 @@
     });
   }
 
+  // Sharing: Share, Remove, Transfer, Leave ---------------------------------
+  //
+  // One dialog for Share and one for Transfer, each a prompt over the list of
+  // colleagues the case may go to, with the fixed words above the field so
+  // the person reads what they are agreeing to before they confirm.
+
+  var sharedWith = document.getElementById("shared-with");
+  if (sharedWith) {
+    var colleagueList = document.createElement("datalist");
+    colleagueList.id = "colleague-list";
+    document.body.appendChild(colleagueList);
+
+    function loadColleagues() {
+      return fetch("/case/" + caseId + "/share/who")
+        .then(function (answer) { return answer.json(); })
+        .then(function (said) {
+          colleagueList.innerHTML = "";
+          (said.people || []).forEach(function (one) {
+            var option = document.createElement("option");
+            option.value = one.username;
+            option.label = one.name === one.username ? one.name : one.name + " (" + one.username + ")";
+            colleagueList.appendChild(option);
+          });
+          return said.people || [];
+        });
+    }
+
+    function askWho(options) {
+      return loadColleagues().then(function (people) {
+        if (!people.length) {
+          return UI.alert({
+            title: options.title,
+            body: "Nobody can be added yet. A colleague appears here once they have signed in to the app."
+          }).then(function () { return null; });
+        }
+        return UI.prompt({
+          title: options.title,
+          body: options.body,
+          placeholder: "A colleague's name or username",
+          list: "colleague-list",
+          ok: options.ok
+        });
+      });
+    }
+
+    function addShareRow(share) {
+      var table = document.getElementById("shares");
+      var row = document.createElement("tr");
+      row.dataset.share = share.id;
+      row.innerHTML =
+        "<td>" + escaped(share.name) + "</td>" +
+        "<td class='muted'>" + escaped(share.added_on) + "</td>" +
+        "<td class='muted'>" + (share.last_opened ? escaped(share.last_opened) : "not yet") + "</td>" +
+        "<td class='acts'><button type='button' class='small ghost unshare' data-share='" + share.id +
+        "' data-name='" + escaped(share.name) + "'>Remove</button></td>";
+      table.querySelector("tbody").appendChild(row);
+      show(table, true);
+      show(document.getElementById("nobody-yet"), false);
+    }
+
+    var share = document.getElementById("share");
+    if (share) {
+      share.addEventListener("click", function () {
+        askWho({
+          title: "Share this case",
+          body: sharedWith.dataset.shareWords.split(". ").map(function (line, i, all) {
+            return i < all.length - 1 ? line + "." : line;
+          }),
+          ok: "Share"
+        }).then(function (who) {
+          if (!who) { return; }
+          post("/case/" + caseId + "/share", { who: who }).then(function (answer) {
+            if (!answer.ok) {
+              UI.toast(answer.said.why || "That person could not be added.", { problem: true, icon: "warning" });
+              return;
+            }
+            addShareRow(answer.said.share);
+            UI.toast("Shared with " + answer.said.share.name + ".", { icon: "ok" });
+          });
+        });
+      });
+    }
+
+    var transfer = document.getElementById("transfer");
+    if (transfer) {
+      transfer.addEventListener("click", function () {
+        askWho({
+          title: "Hand this case to a colleague",
+          body: sharedWith.dataset.transferWords.split(". ").map(function (line, i, all) {
+            return i < all.length - 1 ? line + "." : line;
+          }),
+          ok: "Transfer"
+        }).then(function (who) {
+          if (!who) { return; }
+          post("/case/" + caseId + "/transfer", { who: who }).then(function (answer) {
+            if (!answer.ok) {
+              UI.toast(answer.said.why || "That case could not be handed over.", { problem: true, icon: "warning" });
+              return;
+            }
+            window.location.reload();
+          });
+        });
+      });
+    }
+
+    sharedWith.addEventListener("click", function (event) {
+      var remove = event.target.closest(".unshare");
+      if (!remove) { return; }
+      var leaving = !!remove.dataset.leave;
+      UI.confirm({
+        title: leaving ? "Leave this case?" : "Remove " + remove.dataset.name + "?",
+        body: leaving
+          ? "You will no longer see this case. Anything you added stays in it."
+          : remove.dataset.name + " will no longer see this case. Anything they added stays in it.",
+        ok: leaving ? "Leave" : "Remove",
+        cancel: "Keep it",
+        danger: true
+      }).then(function (yes) {
+        if (!yes) { return; }
+        post("/case/" + caseId + "/unshare", { share: remove.dataset.share }).then(function (answer) {
+          if (!answer.ok) {
+            UI.toast("That could not be done.", { problem: true, icon: "warning" });
+            return;
+          }
+          if (answer.said.left) { window.location = answer.said.where; return; }
+          var row = sharedWith.querySelector("tr[data-share='" + remove.dataset.share + "']");
+          if (row) { row.remove(); }
+          var table = document.getElementById("shares");
+          if (table && !table.querySelector("tbody tr")) {
+            show(table, false);
+            show(document.getElementById("nobody-yet"), true);
+          }
+        });
+      });
+    });
+  }
+
   // The Retention policy: Keep on a warned row, and the Recycle bin's Restore,
   // Delete permanently, and Empty --------------------------------------------
 
@@ -284,6 +421,9 @@
       .then(function (said) {
         var choices = said.cases.filter(function (one) {
           return one.id !== thisCase;
+        }).map(function (one) {
+          // A case shared with the person says whose it is.
+          return one.shared_by ? Object.assign({}, one, { name: one.name + " (shared by " + one.shared_by + ")" }) : one;
         });
         draw(recordingId, title, choices, said.types);
       });

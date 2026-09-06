@@ -98,26 +98,23 @@ def may_serve(request: HttpRequest) -> HttpResponse:
     if recording is None or holder_of(recording) != owner_id:
         return HttpResponse(status=404)
 
-    # Nothing in a Case that is in the Recycle bin is served to anybody.
+    # Nothing in a Case that is in the Recycle bin is served to anybody; the
+    # uploader and the members of the Recording's Case have it as their own;
+    # an Admin looking in is audited; nobody else is told it is there.
     from core import cases
 
-    if not cases.reachable(recording):
+    standing = cases.standing(recording, request.user)
+    if not standing:
         return HttpResponse(status=404)
-
-    if recording.user_id == request.user.pk:
+    if standing == "own":
         return HttpResponse(status=200)
-
-    if not request.user.is_admin:
-        # Not theirs, and not an Admin. Told it is not there rather than that
-        # they may not have it.
-        return HttpResponse(status=404)
 
     audit.write(
         audit.Category.ADMIN,
         "Playback copy served to an Admin",
         actor=request.user,
         request=request,
-        affected_user=recording.user,
+        affected_user=cases.affected_by(recording, request.user),
         object_type="recording",
         object_id=recording.pk,
         object_label=recording.original_filename,

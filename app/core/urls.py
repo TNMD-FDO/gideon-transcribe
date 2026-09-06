@@ -156,6 +156,13 @@ urlpatterns = [
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
+    # Sharing: the people a Case may be shared with, Share, Remove, Transfer.
+    path("case/<uuid:case_id>/share/who", case_pages.share_who, name="share-who"),
+    path("case/<uuid:case_id>/share", case_pages.share_case, name="share-case"),
+    path("case/<uuid:case_id>/unshare", case_pages.unshare_case, name="unshare-case"),
+    path(
+        "case/<uuid:case_id>/transfer", case_pages.transfer_case, name="transfer-case"
+    ),
     # The Speakers tab's acts: add a Person, and rename, edit, merge or delete one.
     path("case/<uuid:case_id>/people", people_pages.add_person, name="add-person"),
     # The Chat tab: the Case Chat's state, New chat, Ask, Delete, Export.

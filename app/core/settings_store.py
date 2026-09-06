@@ -148,6 +148,20 @@ def _rows() -> list[Definition]:
                 "nothing is deleted."
             ),
         ),
+        Definition(
+            key="sharing",
+            page=CASES,
+            name="Sharing",
+            kind=TOGGLE,
+            default=False,
+            needs="folder_management",
+            what_it_does="Owners may share Cases with named colleagues.",
+            when_changed=(
+                "At once. Off hides the Share button, the Shared with panel, "
+                "and shared Cases from Collaborators' lists while keeping "
+                "every Share; On restores them."
+            ),
+        ),
         # The Retention policy's three, greyed while Folder management is off.
         # One office-wide number each: there is no per-Case value anywhere.
         Definition(

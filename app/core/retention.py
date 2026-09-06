@@ -187,16 +187,26 @@ def digests_for_tonight(in_the_window: list[tuple[Case, int]]) -> dict:
     Recordings it holds. Cases whose owner is deactivated or blocked are the
     Operator address's, which that chapter names.
     """
+    from core import sharing
+
     by_person: dict = {}
     for case, left in in_the_window:
-        by_person.setdefault(case.owner_id, []).append(
-            {
-                "case": case.name,
-                "line": deletes_line(left),
-                "days_left": left,
-                "last_used": case.last_activity,
-                "recordings": case.recordings.count(),
-                "owner_active": case.owner.is_active,
-            }
-        )
+        line = {
+            "case": case.name,
+            "line": deletes_line(left),
+            "days_left": left,
+            "last_used": case.last_activity,
+            "recordings": case.recordings.count(),
+            "owner_active": case.owner.is_active,
+        }
+        by_person.setdefault(case.owner_id, []).append(line)
+        # Owner and Collaborators alike are warned, each in their own digest
+        # under "Shared with you", with the owner's name; a Deactivated or
+        # Blocked Collaborator is not mailed.
+        if sharing.on():
+            for share in sharing.collaborators(case):
+                if share.person.is_active:
+                    by_person.setdefault(share.person_id, []).append(
+                        {**line, "shared_by": case.owner.shown_name}
+                    )
     return by_person
