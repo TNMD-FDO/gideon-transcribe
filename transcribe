@@ -1111,6 +1111,9 @@ backup_prepare() {
   folder="$(env_value APP_DATA_DIR)/backup"
   uid="$(env_value APP_UID)"; gid="$(env_value APP_GID)"
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" "$folder/.restic-cache" 2>/dev/null || true
+  # Docker makes a missing bind-mount source as a directory; one left by a
+  # run that reached the container first is removed so the file can be written.
+  if sudo test -d "$folder/.passwd"; then sudo rmdir "$folder/.passwd" 2>/dev/null || sudo rm -rf "$folder/.passwd"; fi
   printf 'root:x:0:0:root:/root:/bin/sh\ntranscribe:x:%s:%s:Gideon Transcribe:/tmp:/bin/sh\n' "$uid" "$gid" \
     | sudo tee "$folder/.passwd" >/dev/null
   sudo chown "$APP_USER:$APP_USER" "$folder/.passwd"; sudo chmod 0644 "$folder/.passwd"
