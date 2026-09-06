@@ -400,7 +400,7 @@ def _rows() -> list[Definition]:
             needs_mail=True,
             what_it_does=(
                 "The nightly digest's subject. Placeholders: {name}, {cases}, "
-                "{shared}, {link}."
+                "{shared}, {dictations}, {link}."
             ),
             when_changed="The next message.",
         ),
@@ -418,15 +418,18 @@ def _rows() -> list[Definition]:
                 "\n"
                 "{shared}\n"
                 "\n"
+                "{dictations}\n"
+                "\n"
                 "Open a case, or press Keep on the Cases page, to start its clock "
                 "over: {link}\n"
             ),
             needs_mail=True,
             what_it_does=(
-                "The nightly digest, one per person with a case in its last days. "
-                "{cases} is the list of their own cases, {shared} the cases shared "
-                "with them, both built by the app; {name} and {link} as above. "
-                "The footer is added by the app."
+                "The nightly digest, one per person with a case or a dictation in "
+                "its last days. {cases} is the list of their own cases, {shared} "
+                "the cases shared with them, {dictations} their dictations, all "
+                "built by the app; {name} and {link} as above. The footer is "
+                "added by the app."
             ),
             when_changed="The next message.",
         ),

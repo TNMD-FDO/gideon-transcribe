@@ -92,13 +92,12 @@ def start(
         raise Refused(f"{whose} storage space is full, so nothing can be recorded.")
 
     when = timezone.localtime(timezone.now())
+    if dictation:
+        recording_type = "Dictation"
     title = (title or "").strip()[:300] or (
         f"{recording_type or 'Recording'} {when:%d %b %Y %H:%M}"
     )
     sources = ["microphone", "computer"] if with_computer else ["microphone"]
-    if dictation:
-        recording_type = "Dictation"
-        title = title or f"Dictation {when:%d %b %Y %H:%M}"
     batch = Batch.objects.create(user=user, is_live=True)
     recording = Recording.objects.create(
         batch=batch,
