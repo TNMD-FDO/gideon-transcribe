@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.5, 2026-09-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The first real Restore drill restored the Snapshot and then said it had
+  no dump.** Everything under the drill folder belongs to the app's account,
+  and the script looked for the restored folders as the person running it,
+  who is not allowed to see inside; so the dump was never moved into place.
+  `./transcribe restore-drill` and `./transcribe restore` now make every such
+  check through sudo, and a test keeps a bare check off those paths. The
+  same fault would have stopped a real restore at the same step. Found on the
+  first drill against the office's store, whose restore of 3.6 GB took 33
+  seconds.
+
 ## v1.19.4, 2026-09-05
 
 ```

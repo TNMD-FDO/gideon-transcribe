@@ -1359,14 +1359,14 @@ WORDS
   sudo chown "$APP_USER:$APP_USER" "$work"
   restic_rw "$work" restore "$snapshot" --target /restore --include /backup/config --quiet
   local got="$work/backup/config"
-  [ -f "$got/env" ] && sudo install -m 0600 "$got/env" "$ENV_FILE"
+  sudo test -f "$got/env" && sudo install -m 0600 "$got/env" "$ENV_FILE"
   for name in $(sudo ls "$got/secrets" 2>/dev/null); do
     case "$name" in backup_password|backup_ssh_key) ;; *) sudo install -m 0400 "$got/secrets/$name" "$SECRETS/$name" ;; esac
   done
-  [ -d "$got/tls" ] && sudo cp -a "$got/tls/." "$HERE/tls/" 2>/dev/null
-  [ -d "$got/ca" ] && sudo cp -a "$got/ca/." "$HERE/ca/" 2>/dev/null
-  [ -f "$got/whisperx-env" ] && sudo install -m 0600 "$got/whisperx-env" "$HERE/whisperx-service/.env"
-  [ -d "$got/whisperx-secrets" ] && sudo cp -a "$got/whisperx-secrets/." "$HERE/whisperx-service/secrets/" 2>/dev/null
+  sudo test -d "$got/tls" && sudo cp -a "$got/tls/." "$HERE/tls/" 2>/dev/null
+  sudo test -d "$got/ca" && sudo cp -a "$got/ca/." "$HERE/ca/" 2>/dev/null
+  sudo test -f "$got/whisperx-env" && sudo install -m 0600 "$got/whisperx-env" "$HERE/whisperx-service/.env"
+  sudo test -d "$got/whisperx-secrets" && sudo cp -a "$got/whisperx-secrets/." "$HERE/whisperx-service/secrets/" 2>/dev/null
   own_the_secrets
 
   # cases/ in full, and the dump into backup/.
@@ -1374,11 +1374,11 @@ WORDS
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" "$folder/.restic-cache" "$data/cases"
   restic_rw "$data" restore "$snapshot" --target /restore --include /backup/cases --include /backup/backup --quiet
   # restic keeps the path as it was inside the container: /restore/backup/cases -> data/backup/cases.
-  if [ -d "$data/backup/cases" ]; then
+  if sudo test -d "$data/backup/cases"; then
     sudo rsync -a --delete "$data/backup/cases/" "$data/cases/" 2>/dev/null || sudo cp -a "$data/backup/cases/." "$data/cases/"
     sudo rm -rf "$data/backup/cases"
   fi
-  if [ -d "$data/backup/backup" ]; then
+  if sudo test -d "$data/backup/backup"; then
     sudo cp -a "$data/backup/backup/." "$folder/"
     sudo rm -rf "$data/backup/backup"
   fi
@@ -1450,7 +1450,7 @@ cmd_restore_drill() {
   step="restore into the drill folder"
   restic_rw "$drill/data" restore latest --target /restore --include /backup/backup --include /backup/cases --quiet || drill_failed "$step"
   sudo mv "$drill/data/backup/cases" "$drill/data/cases-restored" 2>/dev/null && sudo rm -rf "$drill/data/cases" && sudo mv "$drill/data/cases-restored" "$drill/data/cases"
-  if [ -d "$drill/data/backup/backup" ]; then
+  if sudo test -d "$drill/data/backup/backup"; then
     sudo cp -a "$drill/data/backup/backup/." "$drill/data/backup/" && sudo rm -rf "$drill/data/backup/backup"
   fi
   sudo chown -R "$APP_USER:$APP_USER" "$drill/data"
