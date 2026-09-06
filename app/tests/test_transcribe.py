@@ -291,6 +291,13 @@ def test_backup_and_restore_are_in_the_script_the_compose_file_and_the_guides():
     assert "stage_config()" in script and "backup/config:/backup/config:ro" in compose
     assert "./secrets:/backup/config" not in compose
     assert "backup_password|backup_ssh_key) ;;" in script
+    # Anything under the App data folder, the drill folder, or a restore's
+    # work folder belongs to the app's account at 0700, so the script asks
+    # about those paths through sudo: a bare test there always says no.
+    import re
+
+    bare = re.findall(r'\[ -[dfe] "\$(?:data|drill|got|folder)/[^"]*"', script)
+    assert bare == [], bare
     for name in ("backup_password", "backup_ssh_key", "backup_known_hosts"):
         assert f"  {name}:\n    file:" in compose, name
     # The drill override keeps everything but Postgres and the app out.
