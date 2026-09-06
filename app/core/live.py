@@ -62,23 +62,31 @@ def start(
     translate: bool = False,
     browser: str = "",
     with_computer: bool = False,
+    dictation: bool = False,
     request=None,
 ) -> Recording:
     """Make the Recording a Live recording will become, before a byte arrives.
 
     Its own Batch, marked live so it never holds up the person's uploads; in
-    the Case from the first moment; Uploading until the recording ends. The
-    room checked is the Case owner's, as for an upload into the Case.
+    the Case from the first moment, or in none for a Dictation; Uploading
+    until the recording ends. The room checked is the Case owner's, as for
+    an upload into the Case, or the person's own for a Dictation.
     """
     from core import uploads
 
     if not on():
         raise Refused("Live recording is off.")
-    if not case.member(user) and not getattr(user, "is_admin", False):
+    if case is None and not dictation:
+        raise Refused("Choose a case to record into.")
+    if (
+        case is not None
+        and not case.member(user)
+        and not getattr(user, "is_admin", False)
+    ):
         raise Refused("That case is not yours to record into.")
     if uploads.free_disk_bytes() < settings_store.minimum_free_disk_bytes():
         raise Refused("The server is low on space, so nothing can be recorded. Ask IT.")
-    owner = case.owner
+    owner = case.owner if case is not None else user
     if uploads.room_left(owner) <= 0:
         whose = "Your" if owner.pk == user.pk else f"{owner.shown_name}'s"
         raise Refused(f"{whose} storage space is full, so nothing can be recorded.")
@@ -88,6 +96,9 @@ def start(
         f"{recording_type or 'Recording'} {when:%d %b %Y %H:%M}"
     )
     sources = ["microphone", "computer"] if with_computer else ["microphone"]
+    if dictation:
+        recording_type = "Dictation"
+        title = title or f"Dictation {when:%d %b %Y %H:%M}"
     batch = Batch.objects.create(user=user, is_live=True)
     recording = Recording.objects.create(
         batch=batch,
@@ -99,8 +110,10 @@ def start(
         media_state=MediaState.UPLOADING,
         spoken_language=(language or "")[:10],
         translate=bool(translate),
-        diarize=True,
+        diarize=not dictation,
         preprocessing="standard",
+        is_dictation=bool(dictation),
+        last_used=when if dictation else None,
         live={
             "started": when.isoformat(),
             "sources": sources,
@@ -118,12 +131,14 @@ def start(
         object_type="recording",
         object_id=recording.pk,
         object_label=recording.original_filename,
-        case=case.name,
+        case=case.name if case is not None else "",
+        dictation=bool(dictation),
         sources=sources,
         language=language or "auto",
         translate=bool(translate),
     )
-    cases.note_activity(case, by=user)
+    if case is not None:
+        cases.note_activity(case, by=user)
     return recording
 
 

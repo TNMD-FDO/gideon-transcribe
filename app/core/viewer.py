@@ -66,6 +66,10 @@ def open_recording(request: HttpRequest, recording_id) -> Recording | None:
         return None
 
     if standing == "own":
+        if recording.is_dictation:
+            from core import dictation
+
+            dictation.note_used(recording, by=request.user)
         # A Collaborator's opening names the owner as the affected user, so
         # the log's "Access to their material" filter shows it beside Admins'.
         audit.write(

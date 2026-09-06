@@ -14,6 +14,7 @@
   if (!page || !window.tus) { return; }
 
   var csrf = page.dataset.csrf;
+  var DICTATION = page.dataset.mode === "dictation";
   var LONGEST = parseInt(page.dataset.longest, 10) || 10800;
   // How much is gathered before a piece goes to the server: about ten
   // seconds of speech at the rate below.
@@ -117,7 +118,7 @@
   }
 
   function loadPeople() {
-    if (!caseChoice.value) { people = []; drawPeople(); return; }
+    if (!caseChoice || !caseChoice.value) { people = []; drawPeople(); return; }
     fetch("/record/people?case=" + encodeURIComponent(caseChoice.value))
       .then(function (answer) { return answer.json(); })
       .then(function (said) { people = said.people || []; drawPeople(); })
@@ -148,7 +149,7 @@
 
   document.getElementById("start").addEventListener("click", function () {
     var caseId = document.getElementById("record-case").value;
-    if (!caseId) { problem("before-problem", "Choose a case to record into."); return; }
+    if (!caseId && !DICTATION) { problem("before-problem", "Choose a case to record into."); return; }
     problem("before-problem", "");
     var button = this;
     button.disabled = true;
@@ -175,6 +176,7 @@
       .then(function () {
         return post("/record/start", {
           case: caseId,
+          dictation: DICTATION,
           recording_type: document.getElementById("record-type").value,
           title: document.getElementById("record-title").value,
           language: document.getElementById("record-language").value,

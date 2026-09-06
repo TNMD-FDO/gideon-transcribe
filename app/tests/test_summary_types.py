@@ -71,12 +71,13 @@ def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):
         "interview": ["Interview"],
         "phone_call": ["Phone call"],
         "hearing": ["Hearing"],
+        "dictation": ["Dictation"],
     }
-    assert SummaryTemplate.objects.filter(built_in=True, enabled=True).count() == 6
+    assert SummaryTemplate.objects.filter(built_in=True, enabled=True).count() == 7
     assert SummaryTemplate.the_default().key == "standard"
     # Made once: asking again makes nothing.
     SummaryTemplate.shipped()
-    assert SummaryTemplate.objects.count() == 6
+    assert SummaryTemplate.objects.count() == 7
     for one in SummaryTemplate.objects.exclude(key="standard"):
         assert one.text == prompts.SHIPPED_SUMMARIES[one.key]
         assert "Unclear parts" in one.text and "Overview" in one.text

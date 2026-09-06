@@ -57,7 +57,10 @@ def is_busy(user) -> bool:
     if in_the_workspace(user).filter(media_state__in=BUSY_MEDIA).exists():
         return True
     if Job.objects.filter(
-        recording__user=user, recording__case__isnull=True, state__in=JobState.LIVE
+        recording__user=user,
+        recording__case__isnull=True,
+        recording__is_dictation=False,
+        state__in=JobState.LIVE,
     ).exists():
         return True
     return (
@@ -98,7 +101,7 @@ def in_the_workspace(user):
     sign-out, it does not hold a session open, and the Discard leaves it
     alone. Phase 1 carried this skip with nothing to skip.
     """
-    return Recording.objects.filter(user=user, case__isnull=True)
+    return Recording.objects.filter(user=user, case__isnull=True, is_dictation=False)
 
 
 def discard_due_at(user) -> datetime | None:

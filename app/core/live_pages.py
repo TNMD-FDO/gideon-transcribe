@@ -82,10 +82,16 @@ def start(request: HttpRequest) -> JsonResponse:
     """Record pressed: the Recording is made, and the browser may upload into it."""
     _on_or_404()
     wanted = _body(request)
+    is_dictation = bool(wanted.get("dictation"))
+    if is_dictation:
+        from core import dictation
+
+        if not dictation.on():
+            return JsonResponse({"ok": False, "why": "Dictation is off."}, status=400)
     case = Case.objects.filter(
         pk=wanted.get("case") or None, deleted_on__isnull=True
     ).first()
-    if case is None:
+    if case is None and not is_dictation:
         return JsonResponse(
             {"ok": False, "why": "Choose a case to record into."}, status=400
         )
@@ -99,6 +105,7 @@ def start(request: HttpRequest) -> JsonResponse:
             translate=bool(wanted.get("translate")),
             browser=request.headers.get("User-Agent", "")[:120],
             with_computer=bool(wanted.get("with_computer")),
+            dictation=is_dictation,
             request=request,
         )
     except live.Refused as why:
@@ -109,7 +116,11 @@ def start(request: HttpRequest) -> JsonResponse:
             "id": str(recording.pk),
             "title": recording.title,
             "filename": recording.original_filename,
-            "case": reverse("case", args=[case.pk]),
+            "case": (
+                reverse("case", args=[case.pk])
+                if case is not None
+                else reverse("dictations")
+            ),
             "longest_seconds": live.longest_seconds(),
         }
     )
@@ -197,6 +208,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
         reverse("viewer", args=[recording.pk]) if told["state"] == "ready" else ""
     )
     told["case"] = (
-        reverse("case", args=[recording.case_id]) if recording.case_id else ""
+        reverse("case", args=[recording.case_id])
+        if recording.case_id
+        else (reverse("dictations") if recording.is_dictation else "")
     )
     return JsonResponse(told)

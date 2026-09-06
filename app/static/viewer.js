@@ -1592,6 +1592,11 @@
       openSheet("details");
       return;
     }
+    // A dictation's memo: the Dictations page opens the viewer on the Summary panel.
+    if (asked.get("panel") === "summary" && document.querySelector('[data-panel="summary"]')) {
+      openSheet("summary");
+      return;
+    }
 
   }
 

@@ -1306,6 +1306,9 @@ body.no-speakers .seg .name { display: none; }
 .record .people-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .record .people-buttons .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .record .mark-box { margin-top: 6px; }
+/* The Dictations page: the sent-to column's rows sit close. */
+.dictations .sent-cell .row { margin: 0 0 2px; }
+.dictations .tbl td { vertical-align: top; }
 /* The viewer's Marks: a time that seeks, its word, Make a clip. */
 .marks li { padding: 2px 0; }
 .marks .cite { font-family: var(--mono); }

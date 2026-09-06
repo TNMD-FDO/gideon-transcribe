@@ -138,6 +138,12 @@ SHIPPED_TEMPLATES = (
         "Rulings and dates, arguments, testimony, what the defendant says, next steps.",
         ("Hearing",),
     ),
+    (
+        "dictation",
+        "Dictation memo",
+        "The dictated words written out as the document, nothing summarised.",
+        ("Dictation",),
+    ),
 )
 
 

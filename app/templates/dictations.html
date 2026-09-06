@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Dictations{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The Dictations page (Phase 3): one tab, one door. New dictation at the
+    top; the person's dictations, newest first, each with Open, the memo,
+    Send to, Add to a case, Delete; and, under them, what colleagues have
+    sent. A dictation in its last days carries the amber mark.
+  {% endcomment %}
+  <div class="page roomy dictations" id="dictations"
+       data-send-words="{{ send_words|join:' ' }}">
+    <div class="row">
+      <h1 class="grow">Dictations</h1>
+      <a href="{% url 'dictate' %}" class="btn primary">{% icon "mic" %} New dictation</a>
+    </div>
+    <p class="lead">
+      Dictate, and the words come back written out as the document you dictated. A dictation is yours until you send it to a colleague; it is kept for as long as the office keeps a case, counted from the last time it was opened.
+    </p>
+
+    {% if mine %}
+      <table class="tbl" id="my-dictations">
+        <thead>
+          <tr><th>Title</th><th>When</th><th>Length</th><th>Memo</th><th>Sent to</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for row in mine %}
+            <tr data-recording="{{ row.recording.pk }}"{% if row.warned %} class="expiring"{% endif %}>
+              <td>
+                <b>{{ row.recording.title }}</b>
+                {% if row.in_case %}<div class="muted small">In the case {{ row.in_case }}</div>{% endif %}
+                {% if row.warned %}<div class="small"><span class="deletes">{{ row.deletes_line }}</span></div>{% endif %}
+                {% if not row.ready %}<div class="muted small queue-line">{{ row.line.says }}</div>{% endif %}
+              </td>
+              <td class="muted">{{ row.recording.created|date:"d M Y H:i" }}</td>
+              <td class="muted">{{ row.length }}</td>
+              <td class="memo-cell">
+                {% if row.memo_state == "done" %}
+                  <a href="{% url 'viewer' row.recording.pk %}?panel=summary" class="btn small">Open the memo</a>
+                {% elif row.memo_state == "queued" or row.memo_state == "running" %}
+                  <span class="pill warn">Writing</span>
+                {% elif row.ready %}
+                  <button type="button" class="btn small primary write-memo" data-recording="{{ row.recording.pk }}">Write the memo</button>
+                  {% if row.memo_state == "failed" %}<div class="small muted">The last try failed.</div>{% endif %}
+                {% else %}
+                  <span class="muted small">after the transcript</span>
+                {% endif %}
+              </td>
+              <td class="small sent-cell">
+                {% for share in row.sent_to %}
+                  <div class="row" style="gap: 6px">
+                    <span>{{ share.person.shown_name }}{% if share.attached %} <span class="muted">(memo attached)</span>{% endif %}</span>
+                    <button type="button" class="ghost tiny take-back" data-recording="{{ row.recording.pk }}" data-share="{{ share.pk }}" data-name="{{ share.person.shown_name }}">Take back</button>
+                  </div>
+                {% empty %}
+                  <span class="muted">nobody yet</span>
+                {% endfor %}
+              </td>
+              <td class="acts">
+                {% if row.ready %}<a href="{% url 'viewer' row.recording.pk %}" class="btn small">Open</a>{% endif %}
+                <button type="button" class="btn small send-to" data-recording="{{ row.recording.pk }}" data-title="{{ row.recording.title }}">Send to</button>
+                {% if row.ready and not row.in_case %}
+                  <button type="button" class="btn small ghost move" data-recording="{{ row.recording.pk }}" data-title="{{ row.recording.title }}">Add to a case</button>
+                {% endif %}
+                <button type="button" class="btn small ghost danger delete-dictation" data-recording="{{ row.recording.pk }}" data-title="{{ row.recording.title }}">Delete</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "empty.html" with icon="mic" title="No dictations yet" line="Press New dictation, talk, press Stop. The words come back written out as the document you dictated, ready to send to a colleague." action="New dictation" action_url="/dictate" %}
+    {% endif %}
+
+    {% if received %}
+      <h2 style="margin-top: 28px">Sent to you</h2>
+      <table class="tbl" id="received-dictations">
+        <thead><tr><th>Title</th><th>From</th><th>Sent</th><th>Length</th><th></th></tr></thead>
+        <tbody>
+          {% for row in received %}
+            <tr>
+              <td><b>{{ row.recording.title }}</b>{% if not row.ready %}<div class="muted small">{{ row.line.says }}</div>{% endif %}</td>
+              <td class="muted">{{ row.share.sent_by.shown_name|default:row.recording.user.shown_name }}</td>
+              <td class="muted">{{ row.share.sent_on|date:"d M Y H:i" }}</td>
+              <td class="muted">{{ row.length }}</td>
+              <td class="acts">
+                {% if row.ready %}
+                  <a href="{% url 'viewer' row.recording.pk %}" class="btn small">Open</a>
+                  {% if row.memo_state == "done" %}<a href="{% url 'viewer' row.recording.pk %}?panel=summary" class="btn small primary">Open the memo</a>{% endif %}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+
+  <script src="{% static 'cases.js' %}"></script>
+  <script src="{% static 'dictations.js' %}"></script>
+{% endblock %}

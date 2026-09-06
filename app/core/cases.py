@@ -163,6 +163,11 @@ def standing(recording, user) -> str:
         return "own"
     if recording.case_id and recording.case.member(user):
         return "own"
+    if getattr(recording, "is_dictation", False):
+        from core import dictation
+
+        if dictation.is_recipient(recording, user):
+            return "own"
     return "admin" if getattr(user, "is_admin", False) else ""
 
 

@@ -217,6 +217,16 @@ Your own **Delete** of a case does not go to the bin. It is final, as the confir
 
 Days while the office has cases turned off do not count against any case.
 
+## Dictations
+
+When your office has Dictation on, **Dictations** is in the top bar. It is the one place for dictating: press **New dictation**, talk, press **Stop**. Say the punctuation and the layout as you go: "new paragraph", "full stop", "comma", "open quote", "heading". Nothing appears while you talk; a minute or two after Stop the transcript is ready and **Write the memo** appears on the row. One click writes the memo: your words written out as the document you dictated, with the false starts and the "scratch that" taken out and nothing added. **Open the memo** shows it in the viewer beside the recording, where **Export to Word** keeps it as a file.
+
+A dictation is yours. **Send to** hands it to a colleague: pick them from the list, and they see it under **Sent to you** on their own Dictations page and get an email saying it is there; if your office has turned it on, the memo comes attached to that email as a Word file. **Take back** removes it from their page. A colleague you send to can read, play, and export, and nothing more. **Add to a case** puts a dictation that belongs to a matter into its case afterwards; it stays on your Dictations page with the case's name, and follows the case's clock from then on.
+
+A dictation is kept for as long as the office keeps a case, counted from the last time you or a colleague opened it, wrote its memo, or sent it. In its last days the row turns amber and reads "deletes in N days unless opened", your nightly email lists it, and opening it starts the clock over. There is no recycle bin for a dictation: when the clock runs out it is gone. **Delete** on the row is final too.
+
+For a meeting or a call you want to dictate notes on afterwards, **More options** on the Dictate page has the spoken language, "also record what this computer plays", and the people expected, exactly as the Record page has them.
+
 ## Emails the app sends
 
 If your office has set up mail, the app sends four kinds of message, all plain text, none with an attachment, and none quoting a transcript, a summary, a chat, a speaker's name or a clip: the nightly **retention digest** about cases in their last days; **a case shared with you**, at once, when a colleague shares one; **a case handed to you**, at once, when a case is transferred or reassigned to you, with its days left; and **your batch has finished**, when you ticked the box on the Upload page. Every message names things and says where to go; the app's pages already show everything a message says, so a person without an email address misses the message and nothing else. There is no opt-out: the messages exist for safety and come at most one a night, and the batch tick is the one choice that is yours. Replies go to your office's IT mailbox.

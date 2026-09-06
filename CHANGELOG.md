@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.26.0, 2026-09-07
+
+```
+Models: unchanged
+Database: migrates (0029_dictation: the Recording's dictation mark and clock, and the DictationShare)
+```
+
+### Added
+
+- **Dictations, a tab of their own (Phase 3, step four).** With the new
+  **Dictation** setting on (Features page, under Live recording), a
+  Dictations tab is in the top bar: New dictation, talk, Stop, and when the
+  transcript is ready **Write the memo** turns the words into the document
+  dictated, by the shipped Dictation memo template, with the false starts
+  taken out and nothing added. A dictation is kept on its own, past
+  sign-out and outside any case, and can be added to a case afterwards
+  from its row. **Send to** hands one dictation to one colleague, who sees
+  it under Sent to you and is mailed that it is there; **Take back**
+  removes it. The office's Retention period applies to each dictation on
+  its own, from its last use, with the amber mark, the nightly digest's
+  new "Dictations deleting soon" block, and no recycle bin.
+- **Dictation by email** (Email page, off by default): the Send to mail
+  carries the memo as a Word file. The one message the app sends that
+  carries content, to a colleague the directory knows and never a typed
+  address, as the maintainer decided for the office's legal assistants.
+
 ## v1.25.0, 2026-09-07
 
 ```

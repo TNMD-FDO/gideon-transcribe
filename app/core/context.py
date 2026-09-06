@@ -27,4 +27,9 @@ def workspace(request) -> dict:
             settings_store.get("folder_management")
             and settings_store.get("live_recording")
         ),
+        "dictation": bool(
+            settings_store.get("folder_management")
+            and settings_store.get("live_recording")
+            and settings_store.get("dictation")
+        ),
     }

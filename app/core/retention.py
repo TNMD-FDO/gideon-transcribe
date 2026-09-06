@@ -173,11 +173,12 @@ def sweep(now: datetime | None = None) -> dict | None:
     # Once it has marked and deleted, the sweep hands the worker the night's
     # digests, one per person, and the Operator the Cases whose owner has
     # left. Nothing here waits for a message.
-    from core import mail
+    from core import dictation, mail
 
     digests = digests_for_tonight(in_the_window)
-    if digests:
-        sent = mail.send_digests(digests)
+    dictations = dictation.for_tonights_digest()
+    if digests or dictations:
+        sent = mail.send_digests(digests, dictations)
         log.info("%d retention digest(s) queued tonight", sent)
     left = [
         {
