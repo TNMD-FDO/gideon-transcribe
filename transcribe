@@ -1505,10 +1505,20 @@ WORDS
   local key_file pub
   key_file="$(backup_secret_file "$(env_value BACKUP_SSH_KEY_FILE)")"
   if ! secret_present "$key_file"; then
+    echo
+    amber "No key at secrets/backup_ssh_key. If the store already knows a key for this app,"
+    echo "  stop here (Ctrl+C), place it with:"
+    echo "    sudo install -o $APP_USER -g $APP_USER -m 0400 <the key file> $key_file"
+    echo "  and run this again. Otherwise a new one is made now."
+    printf 'Make a new key? (yes to make one, anything else to stop): '
+    read -r make_one
+    [ "$make_one" = "yes" ] || { echo "Nothing was changed."; exit 0; }
     local tmp
     tmp="$(mktemp -d)"
     ssh-keygen -q -t ed25519 -N "" -C "gideon-transcribe-backup" -f "$tmp/key"
-    write_secret "$key_file" "$(cat "$tmp/key")"
+    # Copied as a file, not through a variable: a private key needs its final
+    # line break, which $(...) would strip, and ssh then calls it no key at all.
+    sudo install -m 0600 "$tmp/key" "$key_file"
     pub="$(cat "$tmp/key.pub")"
     rm -rf "$tmp"
     own_the_secrets

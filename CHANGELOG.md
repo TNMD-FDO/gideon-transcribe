@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.19.1, 2026-09-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Key-only sign-in to the store failed from the backup container.** Two
+  causes, found on the first real `./transcribe check` against a Synology
+  store. ssh will not run as a user its passwd file does not know, and the
+  container runs as the app's account, which Alpine's file does not list
+  ("No user exists for uid"): `./transcribe` now writes a one-line passwd file
+  for the container before every restic run and mounts it. And a key the
+  install generated was written without its final line break, which ssh calls
+  no key at all: it is copied as a file now. The install also stops to ask
+  before making a new key when none is in place, so an office whose store
+  already knows a key places that one instead of getting a second the store
+  has never seen.
+
 ## v1.19.0, 2026-09-05
 
 ```
