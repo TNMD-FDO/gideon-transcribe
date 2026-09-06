@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.22.1, 2026-09-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **A case has one door.** Clicking a case anywhere on its row opens the
+  case's page, which is where its recordings, search, clips, speakers,
+  chat and sharing are. The details pane beside the Cases table and its
+  two buttons are gone; Keep sits on a row in its last days. Before,
+  Open jumped into the viewer on the newest recording and the case page
+  hid behind a quieter link, so people landed in a player when they
+  expected the case. The viewer now shows the case's name beside its
+  back arrow, which returns to the case page.
+
 ## v1.22.0, 2026-09-06
 
 ```

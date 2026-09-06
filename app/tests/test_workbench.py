@@ -69,7 +69,10 @@ def test_the_stylesheet_has_both_shapes_for_the_pages():
 def test_the_cases_pages_share_the_strip_and_the_chooser():
     cases = page("cases.html")
     assert '{% include "cases-tabs.html" %}' in cases
-    assert 'id="recordings"' in cases and 'id="detail-pane"' in cases
+    # One door since the maintainer's ask: the Cases table has no pane and
+    # no details under a row; a row opens the case.
+    assert 'id="recordings"' in cases and 'id="detail-pane"' not in cases
+    assert 'class="pick goes' in cases
     assert "Everyone else's" not in cases
     strip = page("cases-tabs.html")
     for view in ("mine", "everyone", "bin"):
