@@ -129,6 +129,17 @@ The Email page of the Settings group, absent from the Phase 1 build. Built in v1
 | Notification templates (four, one per Notification kind: the Retention digest, a Case shared, a Case handed over, a Batch finished) | a Subject and a Body each, plain text with a fixed set of placeholders per kind, Reset to default; no versions | the Email notifications chapter's wordings | 2 | The text of each Notification. | Saved through the tray, so the Setting changed row holds the old and new text; Apply refuses an unknown placeholder. |
 | Test message | an action outside the tray, not a setting | - | 2 | Mails the signed-in Admin and shows the relay's reply. | At once. |
 
+## Phase 3: Live recording
+
+Three rows and a template, absent from the Phase 2 build, specified in `docs/spec/SPEC-PHASE-3.md`.
+
+| Setting | Type | Default | Phase | What it does | When changed |
+|---|---|---|---|---|---|
+| Live recording (Features page) | On or Off; greyed while Folder management is Off | Off | 3 | People may make a Recording in the browser on an office computer, from the microphone and what the computer plays, into a Case. | At once. Off hides Record everywhere; a recording in progress finishes. |
+| Longest live recording (Limits page) | whole minutes, 10 to 480 | 180 | 3 | The Record page stops a recording at this length. | The next recording. |
+| Dictation by email (Email page) | On or Off; greyed while mail is not configured | Off | 3 | Send to attaches a Dictation's Memo, as a Word file, to the mail that tells a colleague it is there. The one message the app sends that carries content; the recipient is always a colleague the directory knows. | The next Send to. |
+| Dictation sent (Email page, a template beside the four) | a Subject and a Body with `{name}`, `{by}`, `{case}`, `{title}`, `{link}` | the Phase 3 wording | 3 | The mail Send to sends. | The next message. |
+
 ## Rules that apply to every setting
 
 - **The tray.** A setting never applies as it is edited. Edits collect in a tray fixed at the bottom of the panel and kept across pages, listed as the setting's name with its old and new value, with one optional note for the audit log (a ticket number or the reason). Apply writes every change in one step; Cancel all drops them; leaving the panel with a tray that is not empty asks whether to apply or drop. No setting asks "are you sure"; the tray is the confirmation.

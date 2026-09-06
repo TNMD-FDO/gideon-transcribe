@@ -107,6 +107,30 @@ The viewer's right-hand column on a window 1280 pixels or wider: the video at th
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.
 
+**Live recording**:
+A Recording made on the Record page in the browser, on an office computer, rather than uploaded as a file: the microphone and, when asked, what the computer plays (the far side of a Zoom, Teams, or jail call), joining a Case as it starts and transcribed at the front of the queue when it ends. Once it ends it is a Recording like any other, marked as recorded live in its Provenance. Phase 3.
+_Avoid_: live transcription (nothing is transcribed while it records: the finished Transcript follows), streaming, session recording
+
+**Record page**:
+The page a Live recording is made on: the Case and Recording type it will join, what to record, the language, the people expected, and Record, Pause, and Stop. Phase 3.
+_Avoid_: recorder, capture page
+
+**Mark**:
+A moment a person noted while recording, by one key, with an optional word. Shown in the viewer as a list of times, each a Citation; a Mark can be made a Clip. Phase 3.
+_Avoid_: bookmark, flag, tag
+
+**Dictation**:
+A Live recording of one person's speech, of the Recording type Dictation, whose product is a Memo. Phase 3.
+_Avoid_: voice note, voice memo
+
+**Memo**:
+The document a Dictation becomes: a Summary written by the shipped Dictation memo template, which writes the dictated words out as a memo rather than summarising a conversation. Phase 3.
+_Avoid_: transcript (that is the words as spoken), note
+
+**Send to**:
+Handing a Dictation to a colleague: the Case is shared with them inside the app, they are mailed that it is there, and, when the Dictation by email setting is On, the Memo rides with the mail as a Word file. Phase 3.
+_Avoid_: forward, share (that is the Case's), email (the mail is one part of it)
+
 ### Processing
 
 **Batch**:
