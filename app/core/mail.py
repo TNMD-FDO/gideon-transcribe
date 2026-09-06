@@ -622,7 +622,7 @@ def _attachments_for(recording_id) -> tuple[list, str]:
     memo = _memo_file(recording_id)
     if memo is not None:
         files.append(memo)
-    path = recording.playback_path or (
+    path = recording.playback_path() or (
         recording.original_path if recording.original_path.exists() else None
     )
     if path is None or not path.exists():
