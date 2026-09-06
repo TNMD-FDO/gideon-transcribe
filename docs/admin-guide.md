@@ -41,7 +41,7 @@ Every setting has a table in the settings catalogue in the repository (`docs/spe
 - **Sign-in and directory**: the idle timeout, eight hours by default, after which a login session ends and the person's recordings go; and the hour of the nightly directory check. The directory's own facts are shown read-only here, because they are set at install and not in the panel.
 - **Audit log**: how many months of audit rows are kept, three by default. See the audit log below for what that means.
 - **Appearance**: the **Office name**, shown under the logo on the sign-in page and on the cover of every Word export, and the **Logo on Word exports** toggle. The same page holds the **office logo** itself, uploaded and removed at once rather than through the tray: a PNG or JPEG up to 2 MB, a wide mark reads best. It appears large on the sign-in page as soon as it is uploaded, and at the head of every export's cover once the toggle is on. It is kept with the app's own data, so a backup carries it, and it never leaves the server.
-- **Cases**: the **Folder management** toggle that turns Cases on for the whole office, the list of **Recording types** a person may label a recording with, and the list of **Speaker roles** a person in a case may be given (Defendant, Witness, Officer and the rest; one per line, a removed role stays on the people that hold it). Off hides every case from everyone, Admins included, and deletes nothing; on brings them all back as they were. Beside them, greyed while Folder management is off, the Retention policy's three numbers: the **Retention period**, thirty days by default; the **Warning before deletion**, seven days and always shorter than the period; and the **Recycle bin**, thirty days. See the Retention policy below.
+- **Cases**: the **Folder management** toggle that turns Cases on for the whole office, the **Sharing** toggle that lets owners share a case with named colleagues (greyed while Folder management is off; off hides the Share button, the Shared with panel and shared cases from collaborators' lists, and keeps every share, so on brings them back), the list of **Recording types** a person may label a recording with, and the list of **Speaker roles** a person in a case may be given (Defendant, Witness, Officer and the rest; one per line, a removed role stays on the people that hold it). Off hides every case from everyone, Admins included, and deletes nothing; on brings them all back as they were. Beside them, greyed while Folder management is off, the Retention policy's three numbers: the **Retention period**, thirty days by default; the **Warning before deletion**, seven days and always shorter than the period; and the **Recycle bin**, thirty days. See the Retention policy below.
 
 ## The Status page
 
@@ -76,7 +76,7 @@ For each person:
 - **Admin flag** makes them an Admin, or takes it back. It cannot take admin status from a member of the Admin group.
 - **Set quota** gives them a quota of their own instead of the default.
 - **Open workspace** shows you their recordings, as they see them. This is recorded in the audit log every time, with your name and theirs, and it is not use: it does not keep their session alive. Do it when there is a reason, because the log will show it.
-- **Reassign** moves a person's recordings to somebody else, for when someone has left. **Delete data** removes them.
+- **Reassign** moves a person's recordings to somebody else, for when someone has left. The shares on the cases go with them as they are; Reassign adds nobody. **Delete data** removes them, and with their cases every share on those cases.
 
 A person who has left the sign-in group is shown as **Deactivated** after the next directory check and cannot sign in. Putting them back in the group and running **Check directory now** reactivates them.
 
@@ -96,11 +96,17 @@ The Audit log page shows the rows newest first and filters them by date, person,
 
 **Integrity.** Every row carries a hash of itself and of the row before it, so a row that is changed or removed afterwards breaks the chain. **Integrity check** on the Status page walks the chain and says whether it holds. Rows are written through a database role that can only insert, and removed only by the sweep's own role; the app's ordinary role can do neither.
 
+## Sharing
+
+With **Sharing** on (Cases page of the settings, under Folder management), a case's owner shares it with named colleagues from the case page: people who have signed in at least once and are active, never local admins, never anyone outside the office. Everyone shared with can edit; a collaborator may not share, rename, transfer or delete the case, and may delete or reprocess only the recordings they added. The audit log writes **Share granted** and **Share revoked** in the Cases category, naming the collaborator's username, with the owner as affected user when you act on somebody else's case. A collaborator opening a recording writes the usual **Recording opened** row with the owner as affected user, so the log's "Access to their material" filter shows collaborators' openings beside Admins'.
+
+You may share and remove shares on any case, under the audit banner as for any other act on somebody else's case. An Admin who is themselves a collaborator on a case is a colleague there: no banner, no Admin access row, and their use counts as the case's activity. Off never deletes a share.
+
 ## The Retention policy and the Recycle bin
 
 Once Folder management is on, the app deletes cases by itself, on one rule for the whole office, with a Recycle bin behind it. Nothing in a Workspace is touched by this; a Workspace keeps nothing past its session anyway.
 
-**The clock.** Every case has one: whole days since it was last used. Use is anything its owner does in it, opening it included; looking at the list of cases is not, and neither is your own audited opening of somebody else's case. Days while Folder management is off are left out of every count, so a case with ten days left when you turn it off still has ten days left when you turn it back on.
+**The clock.** Every case has one: whole days since it was last used. Use is anything its owner or a collaborator does in it, opening it included; looking at the list of cases is not, and neither is your own audited opening of somebody else's case. Days while Folder management is off are left out of every count, so a case with ten days left when you turn it off still has ten days left when you turn it back on.
 
 **The three settings**, on the Cases page and greyed while Folder management is off:
 

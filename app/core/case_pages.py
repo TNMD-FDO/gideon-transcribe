@@ -18,7 +18,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import audit, cases, exports, pages, retention, settings_store, uploads
+from core import (
+    audit,
+    cases,
+    exports,
+    pages,
+    retention,
+    settings_store,
+    sharing,
+    uploads,
+)
 from core.cases import Case
 from core.jobs import Segment
 from core.recordings import Recording
@@ -34,11 +43,16 @@ def _on_or_404() -> None:
 
 
 def _their_case(request, case_id) -> Case:
-    """The Case, if this person may open it, and the Admin access row if not theirs."""
+    """The Case, if this person may open it, and the Admin access row if not theirs.
+
+    The owner and a Collaborator open it as their own. An Admin who is
+    neither opens it under the Admin access rule.
+    """
     case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
-    if not case.may_be_opened_by(request.user):
+    role = case.role_of(request.user)
+    if not role:
         raise Http404("not this person's case")
-    if case.owner_id != request.user.pk:
+    if role == "admin":
         # ADR 0004: an Admin opening somebody else's work is recorded, and it
         # is not use, so the Retention clock does not move.
         audit.write(
@@ -54,12 +68,23 @@ def _their_case(request, case_id) -> Case:
     return case
 
 
+def _case_they_run(request, case_id) -> Case:
+    """The Case, if this person may rename, share, transfer, or delete it.
+
+    The owner and Admins. A Collaborator is told it is not there, as they
+    are told about anybody else's Case: the page never offers them the button.
+    """
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
+    if not case.may_be_run_by(request.user):
+        raise Http404("not this person's case")
+    return case
+
+
 @login_required
 def cases_page(request: HttpRequest) -> HttpResponse:
-    """Where a person lands when Cases are on: their own, and nothing else.
+    """Where a person lands when Cases are on: their own, and the ones shared with them.
 
     Admins see every Case, because they must be able to act on a leaver's.
-    The Cases shared with a person are the Sharing chapter's and are not here.
     """
     _on_or_404()
 
@@ -92,7 +117,9 @@ def cases_page(request: HttpRequest) -> HttpResponse:
         if request.GET.get("who") == "everyone" and request.user.is_admin
         else "mine"
     )
-    rows = [_as_row(one) for one in (others if who == "everyone" else mine)]
+    rows = [
+        _as_row(one, request.user) for one in (others if who == "everyone" else mine)
+    ]
     if expiring:
         rows = [one for one in rows if one["warned"]]
 
@@ -117,10 +144,17 @@ def cases_page(request: HttpRequest) -> HttpResponse:
     )
 
 
-def _as_row(case: Case) -> dict:
+def _as_row(case: Case, viewer=None) -> dict:
     left = retention.days_left(case)
+    # A Case shared with the person carries its owner's name and is New until
+    # they first open it; the Share remembers.
+    share = None
+    if viewer is not None and case.owner_id != viewer.pk and sharing.on():
+        share = case.shares.filter(person=viewer).first()
     return {
         "case": case,
+        "shared_by": case.owner.shown_name if share is not None else "",
+        "is_new": share is not None and share.last_opened is None,
         "recordings": case.recordings.count(),
         "size": uploads.as_gb(case.disk_bytes()),
         "opens_at": opens_at(case),
@@ -181,6 +215,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     _on_or_404()
     case = _their_case(request, case_id)
     cases.note_activity(case, by=request.user)
+    role = case.role_of(request.user)
+    if role == "collaborator":
+        sharing.note_opened(case, request.user)
 
     asked = request.GET.get("q", "").strip()
     # The four tabs the chapter gives this page; Chat only while the Case
@@ -214,7 +251,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "case_chat_available": chat_here,
             "add_recordings_url": reverse("add-recordings", args=[case.pk]),
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
-            "is_owner": case.owner_id == request.user.pk,
+            "is_owner": role == "owner",
+            "role": role,
+            **_sharing_context(case, role),
             "recordings": _rows_for(case),
             "asked": asked,
             "hits": _search(case, asked) if asked else None,
@@ -222,6 +261,27 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "size": uploads.as_gb(case.disk_bytes()),
         },
     )
+
+
+def _sharing_context(case: Case, role: str) -> dict:
+    """What the Case page says about Shares, by who is looking.
+
+    The owner and Admins get the "Shared with" panel and the Share button; a
+    Collaborator reads who shared the Case and who else is on it. Nothing
+    while Sharing is off: the Shares are kept and not shown.
+    """
+    if not sharing.on():
+        return {"sharing_on": False, "shares": [], "colleagues": []}
+    shares = list(sharing.collaborators(case))
+    return {
+        "sharing_on": True,
+        "may_share": role in ("owner", "admin"),
+        "may_transfer": role == "owner",
+        "shares": shares,
+        "colleagues": [one for one in shares],
+        "share_words": sharing.WORDS,
+        "transfer_words": sharing.TRANSFER_WORDS,
+    }
 
 
 def _clips_in(case: Case, asker) -> list:
@@ -352,7 +412,7 @@ def new_case(request: HttpRequest) -> JsonResponse:
 @require_POST
 def rename_case(request: HttpRequest, case_id) -> JsonResponse:
     _on_or_404()
-    case = _their_case(request, case_id)
+    case = _case_they_run(request, case_id)
     name = request.POST.get("name", "").strip()
     if not name:
         return JsonResponse({"ok": False, "why": "A case needs a name."}, status=400)
@@ -375,7 +435,7 @@ def rename_case(request: HttpRequest, case_id) -> JsonResponse:
 def delete_case(request: HttpRequest, case_id) -> JsonResponse:
     """Final. There is no recycle bin for a person's own delete."""
     _on_or_404()
-    case = _their_case(request, case_id)
+    case = _case_they_run(request, case_id)
     recordings, gigabytes = cases.delete(case, actor=request.user, request=request)
     return JsonResponse(
         {
@@ -427,7 +487,7 @@ def keep_case(request: HttpRequest, case_id) -> JsonResponse:
     """
     _on_or_404()
     case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
-    if case.owner_id != request.user.pk and not request.user.is_admin:
+    if not case.may_be_opened_by(request.user):
         raise Http404("not this person's case")
     cases.keep(case, actor=request.user, request=request)
     return JsonResponse({"ok": True, "days_left": retention.days_left(case)})
@@ -541,7 +601,13 @@ def where_it_could_go(request: HttpRequest) -> JsonResponse:
     return JsonResponse(
         {
             "cases": [
-                {"id": str(one.pk), "name": one.name}
+                {
+                    "id": str(one.pk),
+                    "name": one.name,
+                    "shared_by": (
+                        one.owner.shown_name if one.owner_id != request.user.pk else ""
+                    ),
+                }
                 for one in cases.cases_for(request.user)
             ],
             "types": cases.recording_types(),
@@ -561,10 +627,7 @@ def move_to_case(request: HttpRequest, recording_id) -> JsonResponse:
     _on_or_404()
     recording = get_object_or_404(Recording, pk=recording_id)
 
-    may_move = recording.user_id == request.user.pk or (
-        recording.case is not None and recording.case.owner_id == request.user.pk
-    )
-    if not may_move and not request.user.is_admin:
+    if not cases.may_throw_away(recording, request.user):
         raise Http404("not this person's recording")
 
     if not hasattr(recording, "transcript"):
@@ -582,7 +645,7 @@ def move_to_case(request: HttpRequest, recording_id) -> JsonResponse:
     case = get_object_or_404(
         Case, pk=request.POST.get("case", ""), deleted_on__isnull=True
     )
-    if not case.may_be_opened_by(request.user):
+    if not case.member(request.user) and not request.user.is_admin:
         raise Http404("not this person's case")
 
     cases.move_recording(
@@ -676,6 +739,96 @@ def download_case_clips(request: HttpRequest, case_id) -> HttpResponse:
         exports.zip_name(f"{case.name} clips"),
         "application/zip",
     )
+
+
+# Sharing: who may be shared with, Share, Remove, Transfer ---------------------------
+
+
+@login_required
+def share_who(request: HttpRequest, case_id) -> JsonResponse:
+    """The colleagues this Case may be shared with, for the dialog's list."""
+    _on_or_404()
+    case = _case_they_run(request, case_id)
+    if not sharing.on():
+        raise Http404("Sharing is off")
+    return JsonResponse(
+        {
+            "people": [
+                {"username": one.username, "name": one.shown_name}
+                for one in sharing.candidates(case)
+            ]
+        }
+    )
+
+
+@login_required
+@require_POST
+def share_case(request: HttpRequest, case_id) -> JsonResponse:
+    """Share the Case with the person named. The dialog said what that means."""
+    _on_or_404()
+    case = _case_they_run(request, case_id)
+    if not sharing.on():
+        raise Http404("Sharing is off")
+    try:
+        person = sharing.find(case, request.POST.get("who", ""))
+    except sharing.NotFound as why:
+        return JsonResponse({"ok": False, "why": str(why)}, status=400)
+    share = sharing.grant(case, person, actor=request.user, request=request)
+    return JsonResponse({"ok": True, "share": _share_json(share)})
+
+
+@login_required
+@require_POST
+def unshare_case(request: HttpRequest, case_id) -> JsonResponse:
+    """Remove one Share. What the Collaborator added stays in the Case.
+
+    The owner or an Admin removes anybody's; a Collaborator may remove their
+    own, which is how the old owner leaves a Case they handed over.
+    """
+    _on_or_404()
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
+    if not sharing.on():
+        raise Http404("Sharing is off")
+    share = get_object_or_404(
+        sharing.Share, pk=request.POST.get("share", ""), case=case
+    )
+    if not case.may_be_run_by(request.user) and share.person_id != request.user.pk:
+        raise Http404("not this person's share")
+    sharing.revoke(share, actor=request.user, request=request)
+    return JsonResponse(
+        {"ok": True, "left": share.person_id == request.user.pk, "where": "/cases"}
+    )
+
+
+@login_required
+@require_POST
+def transfer_case(request: HttpRequest, case_id) -> JsonResponse:
+    """The owner hands the Case to a colleague and stays on it as a Collaborator."""
+    _on_or_404()
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
+    if case.owner_id != request.user.pk:
+        raise Http404("not this person's case")
+    if not sharing.on():
+        raise Http404("Sharing is off")
+    try:
+        person = sharing.find(case, request.POST.get("who", ""))
+    except sharing.NotFound as why:
+        return JsonResponse({"ok": False, "why": str(why)}, status=400)
+    sharing.transfer(case, person, actor=request.user, request=request)
+    return JsonResponse({"ok": True, "owner": person.shown_name})
+
+
+def _share_json(share) -> dict:
+    return {
+        "id": share.pk,
+        "name": share.person.shown_name,
+        "username": share.person.username,
+        "status": share.status,
+        "added_on": share.added_on.strftime("%d %b %Y"),
+        "last_opened": (
+            share.last_opened.strftime("%d %b %Y %H:%M") if share.last_opened else ""
+        ),
+    }
 
 
 @login_required

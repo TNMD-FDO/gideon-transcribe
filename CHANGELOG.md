@@ -21,6 +21,46 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.20.0, 2026-09-06
+
+```
+Models: unchanged
+Database: migrates (0024_share: the Share table)
+```
+
+### Added
+
+- **Sharing (Phase 2, chapter 2).** With the new **Sharing** setting on
+  (Cases page, under Folder management, off by default), a case's owner
+  shares it with named colleagues from the case page. The Share dialog
+  offers everyone who has signed in at least once and says, before the
+  owner confirms, what the person will be able to do. A collaborator works
+  in the case as the owner does: opens, plays, searches, exports, adds
+  recordings, corrects, names speakers, asks for summaries and chats, saves
+  clips; and may not share, rename, transfer or delete the case, nor throw
+  away a recording somebody else brought in. A shared case sits in the
+  collaborator's own Cases list marked "Shared by" and "New" until first
+  opened; the owner's "Shared with" panel lists each collaborator with when
+  they were added and last opened it, and Remove beside each. Recordings a
+  collaborator adds count against the owner's space, which the Upload page
+  and the Move picker show, and an upload over it is refused naming whose
+  space is full. A collaborator's use moves the retention clock, they see
+  the amber warning and may press Keep, and their own nightly digest will
+  list the case under "Shared with you". Off hides every share and deletes
+  none. New audit rows: Share granted, Share revoked; a collaborator's
+  opening writes Recording opened with the owner as affected user.
+- **Transfer.** The owner hands a case to a colleague from the case page;
+  the new owner takes it over and the old one stays on it as a
+  collaborator, and may leave. Writes "case reassigned" and "Share granted".
+- **Leave this case**, for a collaborator who no longer needs it.
+
+### Fixed
+
+- **A reassigned case's new owner could not play what somebody else had
+  uploaded**: the media gate asked who uploaded a recording and never whose
+  case it was in. Every recording-level page now asks one question, whether
+  the person is the uploader, a member of the case, or an Admin looking in.
+
 ## v1.19.8, 2026-09-06
 
 ```

@@ -151,6 +151,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 
 - From the Case folder ticket, to the Cases group and the Limits group: Recording types added; the quota's Phase 2 description.
 - From the sharing ticket, to the Cases group: Sharing fixed (On or Off, default Off, greyed while Folder management is Off, Off hiding and never deleting).
+- Built in v1.20.0: the Sharing row is live, key `sharing`, greyed through the `needs` mechanism like the Retention policy's three.
 - From the Retention policy ticket, to the Cases group: Retention period, Warning before deletion, and Recycle bin defined with their ranges and defaults.
 - From the Speaker management panel ticket, to the Cases group: Speaker roles added.
 - From the toggle transitions ticket, to the Cases group: Folder management fixed, its tray counts, and what greys and hides while it is Off.

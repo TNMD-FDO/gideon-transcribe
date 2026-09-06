@@ -392,6 +392,13 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .pill.side { border: 1px dashed var(--line); background: transparent; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
 .pill.role { font-size: 0.72em; padding: 0 6px; margin-left: 4px; }
+
+/* The Case page's Shared with panel, under the facts about the case. */
+.shared-with { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.shared-with h3 { margin: 0 0 8px; font-size: var(--t-body); }
+.shared-with .tbl.small td, .shared-with .tbl.small th { padding: 4px 6px; }
+.shared-with ul.plain { list-style: none; margin: 0 0 8px; padding: 0; }
+.shared-with ul.plain li { padding: 2px 0; }
 .person-acts form { flex-wrap: wrap; }
 
 .card {

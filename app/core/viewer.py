@@ -16,7 +16,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit
+from core import assistant, audit, cases
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -50,31 +50,35 @@ def open_recording(request: HttpRequest, recording_id) -> Recording | None:
     naming the Admin, the item, and the owner. The banner on the page says the
     same thing to the Admin.
     """
-    recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
+    recording = (
+        Recording.objects.filter(pk=recording_id)
+        .select_related("user", "case", "case__owner")
+        .first()
+    )
     if recording is None:
         return None
 
     # A Recording in a Case the Retention policy has put in the Recycle bin is
     # nobody's to open, an Admin's included, until the Case is restored.
-    from core import cases
 
-    if not cases.reachable(recording):
+    standing = cases.standing(recording, request.user)
+    if not standing:
         return None
 
-    if recording.user_id == request.user.pk:
+    if standing == "own":
+        # A Collaborator's opening names the owner as the affected user, so
+        # the log's "Access to their material" filter shows it beside Admins'.
         audit.write(
             audit.Category.RECORDINGS,
             "Recording opened",
             actor=request.user,
             request=request,
+            affected_user=cases.affected_by(recording, request.user),
             object_type="recording",
             object_id=recording.pk,
             object_label=recording.original_filename,
         )
         return recording
-
-    if not request.user.is_admin:
-        return None
 
     audit.write(
         audit.Category.ADMIN,
@@ -97,7 +101,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     if recording is None:
         return redirect(reverse("home"))
 
-    from core import cases, exports
+    from core import exports
 
     # Opening a Recording in a Case is use of that Case, so its Retention
     # clock moves. An Admin looking into somebody else's does not count.
@@ -164,7 +168,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             ),
             "sides": list(recording.sides.all()),
             "job": job,
-            "is_someone_elses": recording.user_id != request.user.pk,
+            "is_someone_elses": cases.standing(recording, request.user) == "admin",
             "being_replaced": being_replaced(recording),
             "media_url": (
                 f"{media_root(recording)}/{playback.name}" if playback else ""
@@ -190,9 +194,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
 def segments(request: HttpRequest, recording_id) -> JsonResponse:
     """The Transcript itself, as the page reads it."""
     recording = Recording.objects.filter(pk=recording_id).first()
-    if recording is None or (
-        recording.user_id != request.user.pk and not request.user.is_admin
-    ):
+    if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
 
     transcript = getattr(recording, "transcript", None)
@@ -249,12 +251,8 @@ def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
     Transcript it belongs to.
     """
     recording = Recording.objects.filter(pk=recording_id).first()
-    if recording is None or (
-        recording.user_id != request.user.pk and not request.user.is_admin
-    ):
+    if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
-
-    from core import cases
 
     cases.used(recording, by=request.user)
 
@@ -307,12 +305,8 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     name is on the never-logged list.
     """
     recording = Recording.objects.filter(pk=recording_id).first()
-    if recording is None or (
-        recording.user_id != request.user.pk and not request.user.is_admin
-    ):
+    if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
-
-    from core import cases
 
     cases.used(recording, by=request.user)
 
@@ -371,14 +365,9 @@ def media_state(request: HttpRequest, recording_id) -> JsonResponse:
     writes no audit row: an Admin's opening was recorded when the page was
     opened, and a poll is not another opening.
     """
-    from core import cases
 
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
-    if (
-        recording is None
-        or not cases.reachable(recording)
-        or (recording.user_id != request.user.pk and not request.user.is_admin)
-    ):
+    if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
     return JsonResponse({"ready": recording.playback_ready})
 
@@ -395,9 +384,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     recording = (
         Recording.objects.filter(pk=recording_id).select_related("user", "case").first()
     )
-    if recording is None or (
-        recording.user_id != request.user.pk and not request.user.is_admin
-    ):
+    if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
 
     transcript = getattr(recording, "transcript", None)
@@ -523,7 +510,7 @@ def _the_rest_of_the_case(recording) -> list:
     Empty for a Recording in no Case, and empty while Folder management is
     off, so the rail simply is not drawn.
     """
-    from core import cases, exports
+    from core import exports
 
     if not recording.case_id or not cases.folder_management_on():
         return []

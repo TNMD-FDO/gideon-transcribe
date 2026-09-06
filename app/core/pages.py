@@ -142,8 +142,21 @@ def upload(request: HttpRequest) -> HttpResponse:
     to_a_case = []
     chosen_case = ""
     if cases.folder_management_on():
+        # A Case shared with the person shows its owner's name and the
+        # owner's remaining room, since that is the space the upload takes.
         to_a_case = [
-            {"id": str(one.pk), "name": one.name}
+            {
+                "id": str(one.pk),
+                "name": one.name,
+                "shared_by": (
+                    one.owner.shown_name if one.owner_id != request.user.pk else ""
+                ),
+                "room": (
+                    uploads.as_gb(uploads.room_left(one.owner))
+                    if one.owner_id != request.user.pk
+                    else ""
+                ),
+            }
             for one in cases.cases_for(request.user)
         ]
         asked = request.GET.get("case", "")
@@ -578,8 +591,8 @@ def retry(request: HttpRequest, recording_id) -> JsonResponse:
     back into the line, and one that failed earlier goes through the media
     steps again from where it stopped.
     """
-    recording = Recording.objects.filter(pk=recording_id, user=request.user).first()
-    if recording is None:
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.may_throw_away(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
 
     job = recording.jobs.order_by("-created").first()
@@ -648,8 +661,8 @@ def process_again(request: HttpRequest, recording_id) -> JsonResponse:
     meanwhile: a Correction to text that is about to be replaced would be lost
     without anybody being told. Cancelling unlocks it untouched.
     """
-    recording = Recording.objects.filter(pk=recording_id, user=request.user).first()
-    if recording is None:
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.may_throw_away(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
     if not hasattr(recording, "transcript"):
         return JsonResponse(
@@ -738,12 +751,18 @@ def delete_recording(request: HttpRequest, recording_id) -> JsonResponse:
     something anybody wants.
     """
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
-    if recording is None or (
-        recording.user_id != request.user.pk and not request.user.is_admin
-    ):
+    if recording is None or not cases.may_throw_away(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
 
-    cause = "owner" if recording.user_id == request.user.pk else "admin"
+    # Whose act: the uploader's own, the Case owner's on a Collaborator's
+    # Recording, or an Admin's. The chapter's sources name owner and admin;
+    # "case owner" is the build's word for the third.
+    if recording.user_id == request.user.pk:
+        cause = "owner"
+    elif recording.case_id and recording.case.owner_id == request.user.pk:
+        cause = "case owner"
+    else:
+        cause = "admin"
 
     live = list(recording.jobs.filter(state__in=JobState.LIVE))
     for job in live:

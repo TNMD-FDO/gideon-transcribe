@@ -23,6 +23,7 @@ from pathlib import Path
 
 from django.conf import settings as django_settings
 from django.db import models, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from core import audit, settings_store
@@ -97,19 +98,43 @@ class Case(models.Model):
             path.stat().st_size for path in self.folder.rglob("*") if path.is_file()
         )
 
+    def member(self, user) -> str:
+        """What this person is inside the Case: "owner", "collaborator", or "".
+
+        A member's use is the Case's activity and needs no Admin access row.
+        A Collaborator is one only while Sharing is on.
+        """
+        if self.owner_id == user.pk:
+            return "owner"
+        from core import sharing
+
+        return "collaborator" if sharing.is_collaborator(self, user) else ""
+
+    def role_of(self, user) -> str:
+        """How this person stands to the Case: owner, collaborator, admin, or "".
+
+        An Admin who is a member is a colleague on this Case, not an Admin
+        looking in: no banner, no Admin access row, and their use counts.
+        """
+        return self.member(user) or (
+            "admin" if getattr(user, "is_admin", False) else ""
+        )
+
     def may_be_opened_by(self, user) -> bool:
         """Who may open this Case.
 
-        The owner, and an Admin under the Admin access rule (ADR 0004), which
-        writes its own row and does not count as activity. Collaborators are
-        the Sharing chapter's and are not built. Nobody may open a Case in the
-        Recycle bin: it is restored first, or it is gone.
+        The owner, a Collaborator, and an Admin under the Admin access rule
+        (ADR 0004), which writes its own row and does not count as activity.
+        Nobody may open a Case in the Recycle bin: it is restored first, or it
+        is gone.
         """
         if self.is_binned:
             return False
-        if self.owner_id == user.pk:
-            return True
-        return bool(getattr(user, "is_admin", False))
+        return bool(self.role_of(user))
+
+    def may_be_run_by(self, user) -> bool:
+        """Who may rename, share, transfer, or delete the Case: the owner and Admins."""
+        return self.owner_id == user.pk or bool(getattr(user, "is_admin", False))
 
 
 def reachable(recording) -> bool:
@@ -120,6 +145,50 @@ def reachable(recording) -> bool:
     binned Case is nobody's until the Case is restored, an Admin's included.
     """
     return not recording.case_id or not recording.case.is_binned
+
+
+def standing(recording, user) -> str:
+    """How this person stands to a Recording: "own", "admin", or "".
+
+    "own" is the person who uploaded it, or a member of its Case (the owner
+    or a Collaborator): they work in it as their own, and nothing is written
+    about their looking. "admin" is an Admin looking into somebody else's
+    material under the Admin access rule (ADR 0004), which writes a row each
+    time. "" is nobody, told "not found" rather than "not yours". A Recording
+    in a binned Case is "" to everybody until the Case is restored.
+    """
+    if not reachable(recording):
+        return ""
+    if recording.user_id == user.pk:
+        return "own"
+    if recording.case_id and recording.case.member(user):
+        return "own"
+    return "admin" if getattr(user, "is_admin", False) else ""
+
+
+def may_throw_away(recording, user) -> bool:
+    """Who may delete a Recording, process it again, or move it elsewhere.
+
+    An action that throws away somebody else's work belongs to the owner of
+    the Case, an Admin, or the person who brought that Recording in. A
+    Collaborator may do it only to the Recordings they added themselves.
+    """
+    if not reachable(recording):
+        return False
+    if recording.user_id == user.pk or getattr(user, "is_admin", False):
+        return True
+    return bool(recording.case_id and recording.case.owner_id == user.pk)
+
+
+def affected_by(recording, user):
+    """Whose material an act on this Recording touches, for the audit row.
+
+    The Case's owner when the Recording is in a Case (a Collaborator's or an
+    Admin's act on a shared Case names the owner), else the uploader; and
+    nobody when it is the actor's own.
+    """
+    whose = recording.case.owner if recording.case_id else recording.user
+    return whose if whose.pk != user.pk else None
 
 
 class OffSpell(models.Model):
@@ -181,12 +250,13 @@ def _start_the_clock_over(case: Case) -> None:
 def note_activity(case: Case, by=None) -> None:
     """Move the Retention clock, for the acts the specification counts.
 
-    An Admin looking into somebody else's Case is not use, so it does not
-    count, matching the Workspace rule. Nothing else here decides: every caller
-    is a place the chapter names. Any activity also lifts the warning, so the
-    next approach to the edge is warned about afresh.
+    The owner's use and a Collaborator's use both count. An Admin looking
+    into somebody else's Case is not use, so it does not count, matching the
+    Workspace rule. Nothing else here decides: every caller is a place the
+    chapter names. Any activity also lifts the warning, so the next approach
+    to the edge is warned about afresh.
     """
-    if by is not None and case.owner_id != by.pk:
+    if by is not None and not case.member(by):
         return
     _start_the_clock_over(case)
 
@@ -236,9 +306,23 @@ def recording_types() -> list[str]:
 def cases_for(user):
     """The Cases this person may put a Recording into.
 
-    Their own today, and none that is in the Recycle bin. The Sharing chapter
-    adds the Cases shared with them.
+    Their own and the ones shared with them, and none that is in the Recycle
+    bin. Their own come first.
     """
+    from core import sharing
+
+    own = Q(owner=user)
+    if sharing.on():
+        own = own | Q(shares__person=user)
+    return (
+        Case.objects.filter(own, deleted_on__isnull=True)
+        .distinct()
+        .select_related("owner")
+    )
+
+
+def own_cases_for(user):
+    """This person's own Cases, out of the Recycle bin."""
     return Case.objects.filter(owner=user, deleted_on__isnull=True)
 
 

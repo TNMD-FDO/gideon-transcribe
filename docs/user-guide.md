@@ -160,6 +160,18 @@ A recording goes into a case either at upload, with **Add to case**, or afterwar
 
 Deleting a case asks first and names what it is taking. It cannot be undone.
 
+### Sharing a case
+
+When your office has Sharing on, a case's page has a **Shared with** panel under the facts about the case, and a **Share** button. Share asks for a colleague's name or username, offering everyone in the office who has signed in to the app at least once, and says, before you confirm, what they will be able to do: everything in the case except share, rename, or delete it (add recordings, correct transcripts, name speakers, ask for summaries and chats, save clips), and that recordings they add count against your storage space. There is one kind of sharing; everyone you share with can edit.
+
+The panel lists each person the case is shared with, when they were added, and when they last opened it, with **Remove** beside each. Removing somebody takes the case out of their list; anything they added stays in it. A colleague who has left the office shows greyed with their status.
+
+A case shared with you sits in your own Cases list marked **Shared by** the owner's name, and **New** until you first open it. Inside it you work as the owner does. Nothing in a shared case is private: everyone in it sees the same transcripts, corrections, speaker names, people, summaries, chats and clips. You may delete, process again, or move only the recordings you added yourself; the owner may do that to any. When you add a recording to somebody else's case, at upload or with Move to case, the picker shows how much of their space is left, and an upload that would go over it is refused with their name. **Leave this case**, on its page, takes you off it.
+
+**Transfer**, beside Share, hands the case to a colleague: they become its owner, it counts against their space, and you stay on it as a collaborator until you leave. A case that changes hands keeps its clock where it was.
+
+Using a shared case starts its retention clock over for everyone, and the amber **Keep** button works for collaborators too.
+
 ### The Speakers tab
 
 A case's page has a **Speakers** tab beside its recordings and clips. Inside a case a name means a person, so the tab lists the case's **people**: everyone who has been named in any of its recordings, with their **role** (Defendant, Officer, Interpreter and the others your office uses), the first line of any notes, and "in N recordings", which opens to the recording titles, each a link that plays from that person's first words there. A person also comes to be when you accept a suggestion, when a recording with named speakers is moved into the case, or when you type one in with **Add person**; a name already in the case joins that person rather than making a second.

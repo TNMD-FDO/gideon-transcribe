@@ -101,13 +101,22 @@ def as_size(figure: int) -> str:
     return f"{figure} bytes"
 
 
+def room_left(user: User) -> int:
+    """What this person may still add, in bytes; never below zero."""
+    return max(0, quota_bytes(user) - used_bytes(user))
+
+
 def check_before_upload(
-    user: User, batch: Batch, size_bytes: int, files_in_batch: int
+    user: User, batch: Batch, size_bytes: int, files_in_batch: int, into=None
 ) -> Refused | None:
     """Everything the app can decide before a single byte arrives.
 
     Asked by the Upload page so a person is told early, and again by the
     sidecar's pre-create hook so the answer holds whatever the page did.
+
+    `into` is the Case the file is going to, when known. A Recording added to
+    somebody else's Case counts against that owner's space, so the space
+    tested is theirs and the refusal names whose it is.
     """
     if free_disk_bytes() < settings_store.minimum_free_disk_bytes():
         return Refused(Refusal.MESSAGES[Refusal.DISK_FULL], Refusal.DISK_FULL)
@@ -131,15 +140,19 @@ def check_before_upload(
             Refusal.LIMIT_EXCEEDED,
         )
 
-    quota = quota_bytes(user)
-    after = used_bytes(user) + size_bytes
+    whose = into.owner if into is not None and into.owner_id != user.pk else user
+    quota = quota_bytes(whose)
+    after = used_bytes(whose) + size_bytes
     if after > quota:
-        return Refused(
-            Refusal.MESSAGES[Refusal.QUOTA_EXCEEDED].format(
+        if whose.pk != user.pk:
+            message = Refusal.MESSAGES[Refusal.QUOTA_EXCEEDED_THEIRS].format(
+                owner=whose.shown_name, used=as_gb(after), quota=as_gb(quota)
+            )
+        else:
+            message = Refusal.MESSAGES[Refusal.QUOTA_EXCEEDED].format(
                 used=as_gb(after), quota=as_gb(quota)
-            ),
-            Refusal.QUOTA_EXCEEDED,
-        )
+            )
+        return Refused(message, Refusal.QUOTA_EXCEEDED)
 
     return None
 
@@ -328,11 +341,17 @@ def _pre_create(event: dict, upload: dict) -> JsonResponse:
             Refusal.BATCH_IN_PROGRESS,
         )
 
+    # The Recording this upload is for was made at the Batch's start, with
+    # its Case, so the space tested is that Case's owner's.
+    recording = Recording.objects.filter(
+        pk=(upload.get("MetaData") or {}).get("recording", ""), batch=batch
+    ).first()
     refusal = check_before_upload(
         session.user,
         batch,
         int(upload.get("Size") or 0),
         batch.recordings.count() + 1,
+        into=recording.case if recording is not None else None,
     )
     if refusal is not None:
         return _reject(refusal.message, refusal.reason_class)

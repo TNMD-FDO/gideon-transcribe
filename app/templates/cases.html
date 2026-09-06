@@ -82,7 +82,13 @@
               {% for row in cases %}
                 <tr class="pick{% if row.warned %} expiring{% endif %}" tabindex="0"
                     data-recording="{{ row.case.pk }}" data-open="{{ row.opens_at }}">
-                  <td><b>{{ row.case.name }}</b></td>
+                  <td>
+                    <b>{{ row.case.name }}</b>
+                    {% if row.shared_by %}
+                      <span class="pill">Shared by {{ row.shared_by }}</span>
+                      {% if row.is_new %}<span class="pill ok">New</span>{% endif %}
+                    {% endif %}
+                  </td>
                   {% if who == "everyone" %}
                     <td class="muted">
                       {{ row.case.owner.shown_name }}
@@ -111,6 +117,8 @@
                       <dl class="kv">
                         {% if who == "everyone" %}
                           <dt>Owner</dt><dd>{{ row.case.owner.shown_name }}{% if row.owner_deactivated %}, deactivated{% endif %}</dd>
+                        {% elif row.shared_by %}
+                          <dt>Shared by</dt><dd>{{ row.shared_by }}</dd>
                         {% endif %}
                         <dt>Recordings</dt><dd>{{ row.recordings }}</dd>
                         <dt>Size</dt><dd>{{ row.size }}</dd>

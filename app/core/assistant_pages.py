@@ -33,9 +33,7 @@ LENGTHS = ("short", "standard", "detailed")
 
 def _recording(request, recording_id) -> Recording | None:
     recording = Recording.objects.filter(pk=recording_id).select_related("user").first()
-    if recording is None or not cases.reachable(recording):
-        return None
-    if recording.user_id != request.user.pk and not request.user.is_admin:
+    if recording is None or not cases.standing(recording, request.user):
         return None
     return recording
 
@@ -54,7 +52,7 @@ def _role_of(recording, name: str) -> str:
 
 
 def _affected(request, recording):
-    return recording.user if recording.user_id != request.user.pk else None
+    return cases.affected_by(recording, request.user)
 
 
 def _summary_json(summary: Summary, transcript) -> dict:
