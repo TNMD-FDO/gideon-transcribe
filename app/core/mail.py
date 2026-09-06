@@ -877,7 +877,7 @@ def backup_failed(step: str, reason: str) -> bool:
             "the server to try again and see what it says, and check the "
             "Status page's Backup line.\n"
         ),
-        event="backup_failed",
+        about="backup_failed",
         step=step,
         reason=reason,
     )
@@ -895,7 +895,7 @@ def backup_overdue(last_good) -> bool:
             "Run ./transcribe backup on the server to see what stops it. This "
             "message comes once a day until a Snapshot succeeds.\n"
         ),
-        event="backup_overdue",
+        about="backup_overdue",
     )
 
 
@@ -909,7 +909,7 @@ def drill_failed(step: str) -> bool:
             "The backups may still be sound; the drill is what proves it. Run "
             "./transcribe restore-drill on the server to see what it says.\n"
         ),
-        event="drill_failed",
+        about="drill_failed",
         step=step,
     )
 
@@ -925,7 +925,7 @@ def drill_overdue(last_drill) -> bool:
             "Run ./transcribe restore-drill on the server, and check that its "
             "timer is on: systemctl list-timers transcribe-backup-drill.timer\n"
         ),
-        event="drill_overdue",
+        about="drill_overdue",
     )
 
 
@@ -942,5 +942,5 @@ def restore_completed(report: dict) -> bool:
             "GB. Everybody was signed out, and every workspace was discarded. "
             f"Audit log chain unbroken: {report.get('integrity_unbroken')}.\n"
         ),
-        event="restore_completed",
+        about="restore_completed",
     )

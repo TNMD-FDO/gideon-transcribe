@@ -167,7 +167,7 @@ def test_the_owner_shares_and_the_row_names_the_colleague(
     answer = client.post(reverse("share-case", args=[a_case.pk]), {"who": "Ben Cole"})
     assert answer.status_code == 200 and answer.json()["share"]["name"] == "Ben Cole"
     row = rows("Share granted").get()
-    assert row.details["collaborator"] == "ben" and row.affected_user is None
+    assert row.details["collaborator"] == "ben" and row.affected_user_id is None
     assert a_case.member(friend) == "collaborator"
 
     # Sharing again changes nothing and writes nothing.
@@ -181,7 +181,7 @@ def test_an_admin_shares_somebody_elses_case_naming_the_owner(
     signed_in(client, admin)
     answer = client.post(reverse("share-case", args=[a_case.pk]), {"who": "ben"})
     assert answer.status_code == 200
-    assert rows("Share granted").get().affected_user == owner
+    assert rows("Share granted").get().affected_user_id == owner.pk
 
 
 def test_a_bystander_cannot_share_or_see_the_list(a_case, friend, client):
@@ -248,7 +248,7 @@ def test_a_collaborator_works_in_the_case_as_their_own(a_case, owner, friend, cl
     # shows it beside Admins' openings.
     assert client.get(reverse("viewer", args=[recording.pk])).status_code == 200
     opened = rows("Recording opened").get()
-    assert opened.actor == friend and opened.affected_user == owner
+    assert opened.actor_user_id == friend.pk and opened.affected_user_id == owner.pk
     assert rows("another user's item opened").count() == 0
     assert client.get(reverse("segments", args=[recording.pk])).status_code == 200
     assert client.get(reverse("details", args=[recording.pk])).status_code == 200
@@ -358,7 +358,7 @@ def test_keep_and_the_clock_are_a_collaborators_too(
     Case.objects.filter(pk=a_case.pk).update(last_activity=ago)
     signed_in(client, friend)
     assert client.post(reverse("keep-case", args=[a_case.pk])).status_code == 200
-    assert rows("case kept").get().affected_user == owner
+    assert rows("case kept").get().affected_user_id == owner.pk
 
 
 def test_an_admin_on_the_case_is_a_colleague_there(a_case, owner, admin, client):
@@ -405,7 +405,7 @@ def test_transfer_keeps_the_old_owner_on(a_case, owner, friend, client):
     assert a_case.owner == friend
     assert a_case.member(owner) == "collaborator" and a_case.member(friend) == "owner"
     handed = rows("case reassigned").get()
-    assert handed.affected_user == owner and handed.details["to"] == "ben"
+    assert handed.affected_user_id == owner.pk and handed.details["to"] == "ben"
     assert handed.details["cause"] == "transfer"
     assert rows("Share granted").get().details["collaborator"] == "ana"
 

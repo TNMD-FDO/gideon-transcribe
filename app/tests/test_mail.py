@@ -343,15 +343,15 @@ def test_the_digest_goes_to_owners_and_collaborators_and_the_operator(
         )
     retention.sweep()
     # Ana's own case; Ben's under Shared with you; the leaver's to the Operator.
-    to_ana = [one for one in FakeRelay.sent if "To: ana@example.org" in one][0]
+    to_ana = [one for one in FakeRelay.sent if "\nTo: ana@example.org" in one][0]
     assert "- US v. Smith: deletes in 3 days unless used (last used" in to_ana
     assert "Shared with you" not in to_ana
-    to_ben = [one for one in FakeRelay.sent if "To: ben@example.org" in one][0]
+    to_ben = [one for one in FakeRelay.sent if "\nTo: ben@example.org" in one][0]
     assert "- (none of your own)" in to_ben
     assert "Shared with you:" in to_ben and "(owner: Ana Ruiz)" in to_ben
-    to_it = [one for one in FakeRelay.sent if "To: it@example.org" in one][0]
+    to_it = [one for one in FakeRelay.sent if "\nTo: it@example.org" in one][0]
     assert "People v. Doe (owner: Cy Ng)" in to_it
-    assert not any("To: cy@example.org" in one for one in FakeRelay.sent)
+    assert not any("\nTo: cy@example.org" in one for one in FakeRelay.sent)
     digest_rows = rows("Email sent").filter(details__kind=mail.DIGEST)
     assert digest_rows.count() == 2
     # Nothing in a message but names, counts, dates, and one link.
@@ -402,7 +402,13 @@ def test_a_batch_that_finishes_mails_once_when_asked(db, owner, sent_now):
     assert len(FakeRelay.sent) == 1
 
 
-def test_the_upload_page_offers_the_tick_and_remembers_it(db, owner, client):
+def test_the_upload_page_offers_the_tick_and_remembers_it(
+    db, owner, client, monkeypatch
+):
+    from core import uploads, whisperx
+
+    monkeypatch.setattr(whisperx, "is_alive", lambda: True)
+    monkeypatch.setattr(uploads, "free_disk_bytes", lambda: 10**15)
     signed_in(client, owner)
     page = client.get(reverse("upload")).content.decode()
     assert (
@@ -465,7 +471,8 @@ def test_a_changed_address_writes_its_row_at_sign_in(db, monkeypatch, client):
     user = signin._from_the_directory(request, "dee", "pw", "10.0.0.1")
     assert user.email == "new@example.org"
     row = rows("Email address updated").get()
-    assert row.details["email"] == "new@example.org" and row.affected_user == user
+    assert row.details["email"] == "new@example.org"
+    assert row.affected_user_id == user.pk
 
 
 def test_the_users_page_shows_the_column_and_the_filter(db, owner, client):
