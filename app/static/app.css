@@ -1313,6 +1313,11 @@ body.no-speakers .seg .name { display: none; }
 .record .style input { position: absolute; opacity: 0; pointer-events: none; }
 .record .style.on { border-color: var(--accent); background: var(--accent-soft); }
 .record .style:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The Record tab: the row just recorded, and the play button with its player. */
+.dictations tr.new td { background: var(--accent-soft); }
+.dictations .play-cell { width: 2.4rem; white-space: nowrap; }
+.dictations .play-row.on { color: var(--accent); }
+.dictations #row-player { display: block; width: 16rem; max-width: 60vw; margin-top: 6px; }
 /* The Dictations page: the sent-to column's rows sit close. */
 .dictations .sent-cell .row { margin: 0 0 2px; }
 .dictations .tbl td { vertical-align: top; }

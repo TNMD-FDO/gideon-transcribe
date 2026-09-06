@@ -137,8 +137,17 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
     recording.media_state = MediaState.READY
     recording.save()
     assert recording.title not in client.get(reverse("home")).content.decode()
-    page = client.get(reverse("record")).content.decode()
+    page = client.get(reverse("record") + f"?new={recording.pk}").content.decode()
     assert recording.title in page and "New recording" in page
+    # The one just recorded is marked on top, with Play once its copy is there.
+    assert "Just recorded" in page and "Press play to check" in page
+    assert "play-row" not in page
+    recording.playback_ready = True
+    recording.save()
+    recording.folder.mkdir(parents=True, exist_ok=True)
+    (recording.folder / "playback.m4a").write_bytes(b"x")
+    page = client.get(reverse("record")).content.decode()
+    assert f'data-src="/media/{ana.pk}/{recording.pk}/playback.m4a"' in page
     # Without the setting a dictation cannot start.
     settings_store.set_to("dictation", False)
     answer = client.post(

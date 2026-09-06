@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.28.1, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **Stop lands on the Record tab.** A recording made from the tab now
+  returns there when its transcript is ready, marked "Just recorded" on
+  top, rather than opening the viewer; a recording made from a case still
+  opens in the viewer beside its case. Every row on the tab gains a play
+  button that plays the recording in place, so a person can check it is
+  the right one before Write the memo and Send to.
+
 ## v1.28.0, 2026-09-07
 
 ```

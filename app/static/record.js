@@ -460,7 +460,10 @@
             open.href = said.viewer;
             open.hidden = false;
             window.clearInterval(watching);
-            window.location = said.viewer;
+            // A recording kept on its own lands on the Record tab, on top,
+            // with Play to check it and Send to beside it; a case's opens in
+            // the viewer with the case at its side.
+            window.location = CASE ? said.viewer : "/record?new=" + recording.id;
           } else if (said.state === "failed") {
             pill.textContent = "Failed";
             pill.className = "pill danger";

@@ -21,16 +21,27 @@
       A dictation, a meeting in the room, or a call on this computer, recorded here and kept on its own: the transcript comes back finished, and the memo or summary is one click. A recording is yours until you send it to a colleague, and is kept for as long as the office keeps a case, counted from the last time it was opened.
     </p>
 
+    {% if new_id %}
+      <p class="notice" id="just-recorded">Recorded. Press play to check it is the right one, then Write the memo or summary and Send to a colleague.</p>
+    {% endif %}
+    <audio id="row-player" preload="none" hidden></audio>
+
     {% if mine %}
       <table class="tbl" id="my-dictations">
         <thead>
-          <tr><th>Title</th><th>When</th><th>Length</th><th>Memo or summary</th><th>Sent to</th><th></th></tr>
+          <tr><th></th><th>Title</th><th>When</th><th>Length</th><th>Memo or summary</th><th>Sent to</th><th></th></tr>
         </thead>
         <tbody>
           {% for row in mine %}
-            <tr data-recording="{{ row.recording.pk }}"{% if row.warned %} class="expiring"{% endif %}>
+            <tr data-recording="{{ row.recording.pk }}" class="{% if row.warned %}expiring{% endif %}{% if new_id == row.recording.pk|stringformat:'s' %} new{% endif %}">
+              <td class="play-cell">
+                {% if row.media_url %}
+                  <button type="button" class="btn ghost icon play-row" data-src="{{ row.media_url }}" title="Play, to check it is the right recording" aria-label="Play {{ row.recording.title }}">{% icon "play" %}</button>
+                {% endif %}
+              </td>
               <td>
                 <b>{{ row.recording.title }}</b> <span class="pill">{{ row.style }}</span>
+                {% if new_id == row.recording.pk|stringformat:'s' %}<span class="pill ok">Just recorded</span>{% endif %}
                 {% if row.in_case %}<div class="muted small">In the case {{ row.in_case }}</div>{% endif %}
                 {% if row.warned %}<div class="small"><span class="deletes">{{ row.deletes_line }}</span></div>{% endif %}
                 {% if not row.ready %}<div class="muted small queue-line">{{ row.line.says }}</div>{% endif %}
@@ -78,10 +89,15 @@
     {% if received %}
       <h2 style="margin-top: 28px">Sent to you</h2>
       <table class="tbl" id="received-dictations">
-        <thead><tr><th>Title</th><th>From</th><th>Sent</th><th>Length</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Title</th><th>From</th><th>Sent</th><th>Length</th><th></th></tr></thead>
         <tbody>
           {% for row in received %}
             <tr>
+              <td class="play-cell">
+                {% if row.media_url %}
+                  <button type="button" class="btn ghost icon play-row" data-src="{{ row.media_url }}" title="Play" aria-label="Play {{ row.recording.title }}">{% icon "play" %}</button>
+                {% endif %}
+              </td>
               <td><b>{{ row.recording.title }}</b> <span class="pill">{{ row.style }}</span>{% if not row.ready %}<div class="muted small">{{ row.line.says }}</div>{% endif %}</td>
               <td class="muted">{{ row.share.sent_by.shown_name|default:row.recording.user.shown_name }}</td>
               <td class="muted">{{ row.share.sent_on|date:"d M Y H:i" }}</td>
