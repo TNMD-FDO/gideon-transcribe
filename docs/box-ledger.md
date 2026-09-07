@@ -1,9 +1,9 @@
 # The box ledger
 
-**Rules version:** 2026-09-06.2 (sections 1 to 11)
+**Rules version:** 2026-09-06.3 (sections 1 to 11)
 **Copies:** `docs/box-ledger.md` in `TNMD-FDO/GIDEON` and `docs/box-ledger.md` in `TNMD-FDO/gideon-transcribe`. Sections 1 to 11 are one text in both; section 12 is a log with one subsection per project, each written only by that project. Nobody writes into the other project's repository: each project fetches the other's copy and merges it (§11).
 
-Two projects run on one server and in one GitHub organisation: GIDEON, the platform and legal-AI product, and Gideon Transcribe, the transcription app. Each has its own repository, install home, release rule, and operator. They share the hardware, the Docker daemon, the host firewall, the nightly hours, and the organisation's pool of hosted-runner minutes. This ledger records who owns each shared thing, what each project may do with it, the events one project must announce to the other, and, in its log, what each project changed and what it recommends to the other. It states keys, defaults, paths, and units. It never states an office value: no hostname, address, network range, account name, or storage target appears here, because both repositories are written as if public.
+Two projects run on one server and in one GitHub organisation: GIDEON, the platform and legal-AI product, and Gideon Transcribe, the transcription app. Each has its own repository, install home, release rule, and operator. GIDEON is the authoritative service on the server, the one it is provisioned and sized for; Gideon Transcribe is a secondary service, for transcription, that fits into the room GIDEON's allocation leaves. They share the hardware, the Docker daemon, the host firewall, the nightly hours, and the organisation's pool of hosted-runner minutes. This ledger records who owns each shared thing, what each project may do with it, the events one project must announce to the other, and, in its log, what each project changed and what it recommends to the other. It states keys, defaults, paths, and units. It never states an office value: no hostname, address, network range, account name, or storage target appears here, because both repositories are written as if public.
 
 The facts below were read from the two repositories and from the running server on the ledger's date. A number marked *observed* is what the server showed that day, not a commitment.
 
@@ -13,11 +13,14 @@ The facts below were read from the two repositories and from the running server 
 |---|---|---|
 | Repository | `TNMD-FDO/GIDEON` | `TNMD-FDO/gideon-transcribe` |
 | What it is | the platform (host provisioning, rendering, apply, backups, observability) and the legal-AI branches | a Django app, a pinned WhisperX service, and workers for transcription, translation, and diarisation |
+| Standing on the server | the authoritative service: the host is provisioned, sized, and scheduled for it, and its allocation comes first | a secondary service for transcription, fitted into what GIDEON's allocation leaves free |
 | Install home | `/opt/gideon` when a release is installed; the development checkout under the operator's home today | `/opt/gideon-transcribe` |
 | Operator command | `python3 -m gideon …` | `./transcribe …` |
 | Compose project | `gideon` (plus `gideon-drill` during a drill and `gideon-ci-contract` during CI) | `transcribe` (plus a drill project under its own directory) |
 | Release rule | code reaches the server only at a tag, through `upgrade` | the same rule, suspended for this one server until its `v1.0.0` (its ADR 0007) |
 | Where its agents learn of this ledger | `CLAUDE.md` (the shared server paragraph), the architecture map §17, the plan template's Documentation Impact, the release skill's `box-ledger-sync` block | `CLAUDE.md` (the shared server section) and its ADR 0003, which names the shared engine as the one coupling |
+
+**Precedence.** GIDEON is the authoritative service on this server and Gideon Transcribe a secondary one. Where the two need the same thing, a card's memory, a night's hour, the hosted-minute pool, a port, a directory, the disk, GIDEON's need is met first and Transcribe fits into what remains. GIDEON's specification, decision records, and locks are the authority for the host, and this ledger's tables are read in that light: a reserve GIDEON's plan writes for Transcribe is what Transcribe may count on, and anything beyond it is on loan until GIDEON needs it. Precedence is not licence to break Transcribe without notice: the announce-before list (§8) stands, taking back a loan is a rules change here first with the notice a maintenance window gets, and a secondary service that is running is left running until its stop or its replacement is agreed.
 
 ## 2. Who owns the host
 
@@ -55,7 +58,7 @@ Two cards, each about 96 GB. Both projects reserve a card through the container 
 | GIDEON's plan (spec §5) | the generator, the whole card | its supporting models from the corpus slice (tag `v0.4.0`): embed 24 GB, rerank-1 6 GB, rerank-2 16 GB, a bulk-embed profile of 24 GB off by default, and a **20 GB reserve written for Transcribe's speech recognition** |
 | Transcribe today | no memory; may become a client of GIDEON's engine over Docker (its `compose.shared-engine.yaml`, keys `LLM_NETWORK` and `LLM_API_TOKEN_FILE`) | its WhisperX service, about 0.5 GB idle and up to about 20 GB while transcribing; and its own local vLLM under the `llm` Compose profile at fraction `LLM_LOCAL_GPU_FRACTION`, 0.21, about 21 GB (*observed*, profile on) |
 
-**The collision ahead.** GIDEON's spec reserves 20 GB of GPU 1 for Transcribe's speech recognition and nothing for a second engine. With Transcribe's local vLLM on, Transcribe holds about 41 GB of GPU 1 at peak, and GIDEON's planned 66 GB plus that is more than the card. Nothing breaks today because GIDEON's supporting models are not running yet. The decision is open item 1 (§10) and must be made before GIDEON's `v0.4.0`. The two shapes: Transcribe turns its local engine off (`./transcribe engine local off`) and uses GIDEON's engine on GPU 0 as a client, which frees 21 GB and costs nothing on GPU 0; or GIDEON's reserve rises to 41 GB and its bulk-embed profile stays off, which is a spec change on GIDEON's side.
+**The collision ahead.** GIDEON's spec reserves 20 GB of GPU 1 for Transcribe's speech recognition and nothing for a second engine. With Transcribe's local vLLM on, Transcribe holds about 41 GB of GPU 1 at peak, and GIDEON's planned 66 GB plus that is more than the card. Nothing breaks today because GIDEON's supporting models are not running yet. The decision is open item 1 (§10) and must be made before GIDEON's `v0.4.0`. The two shapes: Transcribe turns its local engine off (`./transcribe engine local off`) and uses GIDEON's engine on GPU 0 as a client, which frees 21 GB and costs nothing on GPU 0; or GIDEON's reserve rises to 41 GB and its bulk-embed profile stays off, which is a spec change on GIDEON's side. Under the precedence rule (§1) the default is the first shape: the 20 GB reserve is what Transcribe may count on, the local engine's 21 GB is on loan until GIDEON's supporting models need the card, and GIDEON raises the reserve only if it chooses to.
 
 **Rules**
 
@@ -210,7 +213,7 @@ An announcement is a message to the other operator before the event, with the ho
 
 | # | Item | Owner | Record | By |
 |---|---|---|---|---|
-| 1 | GPU 1 budget: Transcribe's local vLLM against GIDEON's supporting models and its 20 GB reserve (§3) | both | a decision line here, then GIDEON's spec if the reserve changes, or Transcribe's `.env` if the local engine goes | before GIDEON `v0.4.0` |
+| 1 | GPU 1 budget: Transcribe's local vLLM against GIDEON's supporting models and its 20 GB reserve (§3) | both | a decision line here (the default under §1's precedence is the shared engine), then GIDEON's spec if the reserve changes, or Transcribe's `.env` if the local engine goes | before GIDEON `v0.4.0` |
 | 2 | The `DOCKER-USER` block covers ports 443 and 5000 only; 8443 relies on Caddy's allow-list (§4) | GIDEON | a slice ticket: drop off-LAN traffic into any Docker bridge for every published port, the registry's exception kept | next GIDEON cycle |
 | 3 | The containerd image store keeps images and the build cache on the root filesystem, not on the Docker volume (§6) | GIDEON | a slice ticket on the `docker-engine` step; meanwhile Transcribe keeps two WhisperX tags and prunes its build cache | next GIDEON cycle |
 | 4 | Transcribe's CI and Release workflows on hosted runners drained the month's minutes (§9) | Transcribe | its workflows: CI narrowed, image builds on a schedule or dispatch with layer caching; the Actions budget set | this week |
@@ -245,6 +248,7 @@ One subsection per project, newest entry first, written only by that project in 
   3. Keep two WhisperX tags on the server and prune your build cache after a build on it (open item 3).
   4. Read sections 1 to 10 for anything wrong about Transcribe and correct it in your subsection; GIDEON will fold the correction into the rules at its next fetch.
   5. Until open item 2 lands, the LAN bind address and Caddy's allow-list are the only guard on port 8443.
+  6. GIDEON's operator ruled on 2026-09-06 that GIDEON is the authoritative service on the server and Transcribe a secondary service for transcription (the precedence paragraph in §1). The default answer to line 1 follows from it: the 20 GB reserve is what Transcribe may count on, and the local engine's memory is on loan.
 
 ### Gideon Transcribe
 
