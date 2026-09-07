@@ -28,15 +28,21 @@
     return box.innerHTML;
   }
 
-  // Rows still on their way, or writing a memo, ask where they stand.
-  function watch(recordingId, cell, until) {
+  // Rows still on their way, or writing a memo, ask where they stand. The
+  // page is reloaded once the row has reached an end it was not already at
+  // when the page was drawn; a row drawn at an end is never asked, and one
+  // that answers with the state it started in is left alone, so a failed
+  // recording does not reload the page every four seconds for ever.
+  function watch(recordingId, cell, ended, startedAt) {
     var tries = 0;
     var timer = window.setInterval(function () {
       tries += 1;
       fetch("/dictation/" + recordingId + "/state", { cache: "no-store" })
         .then(function (answer) { return answer.json(); })
         .then(function (said) {
-          if (until(said)) { window.clearInterval(timer); window.location.reload(); return; }
+          var now = ended(said);
+          if (now && now !== startedAt) { window.clearInterval(timer); window.location.reload(); return; }
+          if (now) { window.clearInterval(timer); return; }
           if (cell && said.says) { cell.textContent = said.says; }
           if (tries > 900) { window.clearInterval(timer); }
         })
@@ -46,11 +52,17 @@
 
   document.querySelectorAll("tr[data-recording] .queue-line").forEach(function (line) {
     var row = line.closest("tr");
-    watch(row.dataset.recording, line, function (said) { return said.state === "ready" || said.state === "failed"; });
+    var startedAt = line.dataset.state || "";
+    if (startedAt === "ready" || startedAt === "failed") { return; }
+    watch(row.dataset.recording, line, function (said) {
+      return said.state === "ready" || said.state === "failed" ? said.state : "";
+    }, startedAt);
   });
   document.querySelectorAll(".memo-cell .pill.warn").forEach(function (pill) {
     var row = pill.closest("tr");
-    watch(row.dataset.recording, null, function (said) { return said.memo === "done" || said.memo === "failed"; });
+    watch(row.dataset.recording, null, function (said) {
+      return said.memo === "done" || said.memo === "failed" ? said.memo : "";
+    }, "");
   });
 
   // Play: one player for the page; a row's button starts its recording and

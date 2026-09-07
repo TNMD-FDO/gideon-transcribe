@@ -37,7 +37,11 @@
                 {% if new_id == row.recording.pk|stringformat:'s' %}<span class="pill ok">Just recorded</span>{% endif %}
                 {% if row.in_case %}<div class="muted small">In the case {{ row.in_case }}</div>{% endif %}
                 {% if row.warned %}<div class="small"><span class="deletes">{{ row.deletes_line }}</span></div>{% endif %}
-                {% if not row.ready %}<div class="muted small queue-line">{{ row.line.says }}</div>{% endif %}
+                {% if row.line.state == "failed" %}
+                  <div class="small failed-line">{{ row.line.says }}</div>
+                {% elif not row.ready %}
+                  <div class="muted small queue-line" data-state="{{ row.line.state }}">{{ row.line.says }}</div>
+                {% endif %}
               </td>
               <td class="muted">{{ row.recording.created|date:"d M Y H:i" }}</td>
               <td class="muted">{{ row.length }}</td>
@@ -91,7 +95,7 @@
                   <button type="button" class="btn ghost icon play-row" data-src="{{ row.media_url }}" title="Play" aria-label="Play {{ row.recording.title }}">{% icon "play" %}</button>
                 {% endif %}
               </td>
-              <td><b>{{ row.recording.title }}</b> <span class="pill">{{ row.style }}</span>{% if not row.ready %}<div class="muted small">{{ row.line.says }}</div>{% endif %}</td>
+              <td><b>{{ row.recording.title }}</b> <span class="pill">{{ row.style }}</span>{% if row.line.state == "failed" %}<div class="small failed-line">{{ row.line.says }}</div>{% elif not row.ready %}<div class="muted small">{{ row.line.says }}</div>{% endif %}</td>
               <td class="muted">{{ row.share.sent_by.shown_name|default:row.recording.user.shown_name }}</td>
               <td class="muted">{{ row.share.sent_on|date:"d M Y H:i" }}</td>
               <td class="muted">{{ row.length }}</td>

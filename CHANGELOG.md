@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.32.3, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **My recordings refreshed itself every few seconds** when a recording
+  under Recorded here had failed (for instance one that ended before any
+  sound arrived), which closed the Send to dialog and everything else as
+  soon as it opened. A failed recording now says why in its row and is not
+  watched; a recording still on its way is watched as before, and the page
+  reloads only when its state has actually changed.
+
 ## v1.32.2, 2026-09-07
 
 ```

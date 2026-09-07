@@ -164,6 +164,25 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
     assert answer.status_code == 400
 
 
+def test_a_failed_recording_says_why_and_is_not_watched(ana, client):
+    recording = live.start(ana, None, dictation=True)
+    recording.media_state = MediaState.REJECTED
+    recording.failure_message = "The file is empty"
+    recording.save()
+    signed_in(client, ana)
+    page = client.get(reverse("home")).content.decode()
+    # The row says what went wrong, in its own words, and nothing on it asks
+    # the server where it stands: a final state drawn is a final state kept.
+    assert 'class="small failed-line">The file is empty</div>' in page
+    assert "queue-line" not in page
+    # A recording still on its way is watched, and says the state it started in.
+    waiting = live.start(ana, None, dictation=True)
+    waiting.media_state = MediaState.READY
+    waiting.save()
+    page = client.get(reverse("home")).content.decode()
+    assert 'class="muted small queue-line" data-state="preparing"' in page
+
+
 def test_the_new_recording_page_asks_one_question(ana, client):
     signed_in(client, ana)
     page = client.get(reverse("record-new")).content.decode()
