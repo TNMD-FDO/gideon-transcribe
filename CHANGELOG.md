@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.32.1, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Export to Word failed for a recording transcribed in stretches.** v1.32.0
+  wrote the count of stretches into the transcript's provenance beside the
+  per-run entries, and the exporter read it as a run. The count is no longer
+  written there, and every reader skips anything that is not a run's entry,
+  so a recording made under v1.32.0 exports too.
+
 ## v1.32.0, 2026-09-07
 
 ```

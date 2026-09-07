@@ -441,7 +441,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     ]
 
     if transcript is not None:
-        runs = list((transcript.provenance or {}).values())
+        runs = exports.runs_of(transcript)
         used = (runs[0].get("settings_used") if runs else {}) or {}
         service = (runs[0].get("service") if runs else {}) or {}
         timings = (runs[0].get("timings_seconds") if runs else {}) or {}

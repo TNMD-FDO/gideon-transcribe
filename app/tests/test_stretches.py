@@ -393,7 +393,17 @@ def test_the_stretches_merge_by_time_with_the_speakers_matched_by_voice(
     # The words moved with their segment.
     late = transcript.segments.get(text="yes")
     assert late.words == [{"word": "yes", "start": 301.0, "end": 304.0}]
-    assert transcript.provenance["stretches"] == 2
+    # The provenance is one entry per Run and nothing else: the exporter
+    # reads every entry as a Run's.
+    assert set(transcript.provenance) == {str(first.pk), str(second.pk)}
+    from core import exports
+
+    assert exports.model_of(transcript) == ""
+    # A provenance from v1.32.0, with the count written beside the Runs,
+    # still exports.
+    transcript.provenance["stretches"] = 2
+    transcript.save()
+    assert exports.model_of(transcript) == "" and len(exports.runs_of(transcript)) == 2
     assert ("Transcribed while recording", "in 2 stretches, the last at Stop") in (
         live.provenance_rows(recording)
     )

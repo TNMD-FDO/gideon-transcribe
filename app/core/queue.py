@@ -347,11 +347,6 @@ def _store(job: Job, results: dict) -> Transcript:
                     words=words,
                 )
             )
-    if in_stretches:
-        transcript.provenance["stretches"] = len(
-            {run.stretch for run in runs.values() if run.stretch}
-        )
-        transcript.save(update_fields=["provenance"])
 
     segments.sort(key=lambda one: one.start)
     shared = _the_stretch_on_both_sides(segments, job.recording)

@@ -174,8 +174,18 @@ def _fill(notice: str, **filling) -> str:
     return notice
 
 
+def runs_of(transcript) -> list[dict]:
+    """The per-Run provenance entries, and only those: v1.32.0 wrote a
+    stretch count beside them, which every reader here skips."""
+    return [
+        one
+        for one in (getattr(transcript, "provenance", None) or {}).values()
+        if isinstance(one, dict)
+    ]
+
+
 def model_of(transcript: Transcript) -> str:
-    for run in (transcript.provenance or {}).values():
+    for run in runs_of(transcript):
         model = (run.get("settings_used") or {}).get("model")
         if model:
             return model
@@ -533,7 +543,7 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
 
     The raw ffprobe output stays in the Details panel and is not printed.
     """
-    runs = list((transcript.provenance or {}).values())
+    runs = runs_of(transcript)
     first = runs[0] if runs else {}
     used = first.get("settings_used") or {}
     service = first.get("service") or {}
