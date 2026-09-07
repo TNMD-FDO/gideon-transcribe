@@ -149,10 +149,16 @@ services:
             - driver: cdi
               capabilities: ["gpu"]
               device_ids:
-                - "nvidia.com/gpu=${WHISPERX_FAST_GPU_UUID:?set WHISPERX_FAST_GPU_UUID in .env}"
+                # Defaults rather than demands: Compose reads every service's
+                # variables whether or not its profile is on, and a server
+                # whose .env predates the lane must still bring the stack
+                # up. `./transcribe fast-lane on` writes both before the
+                # profile is ever started, so the defaults are never used by
+                # a running lane.
+                - "nvidia.com/gpu=${WHISPERX_FAST_GPU_UUID:-unset}"
     volumes:
       - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
-      - "${WHISPERX_FAST_STATE_DIR:?set WHISPERX_FAST_STATE_DIR in .env}:/srv/state"
+      - "${WHISPERX_FAST_STATE_DIR:-/var/tmp/whisperx-fast-unset}:/srv/state"
 
 secrets:
   hf_token:

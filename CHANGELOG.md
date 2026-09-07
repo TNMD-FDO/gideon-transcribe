@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.31.1, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The upgrade to v1.31.0 stopped on a server without the fast lane's two
+  keys.** Compose reads every service's variables whether or not its profile
+  is on, and the lane's were demanded rather than defaulted. They now
+  default until `./transcribe fast-lane on` writes them, so the stack comes
+  up as before. A server that hit this: run the upgrade again.
+- CI keeps its Python packages between runs.
+
 ## v1.31.0, 2026-09-07
 
 ```
