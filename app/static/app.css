@@ -1318,9 +1318,9 @@ body.no-speakers .seg .name { display: none; }
 /* The Upload page's questions sit above the steps; the kinds wrap to as many
    columns as fit. */
 .upload .asks { display: grid; gap: 16px; margin-bottom: 18px; }
-.upload .kinds { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
 .upload .wheres { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 40rem; }
-@media (max-width: 720px) { .upload .kinds, .upload .wheres { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .upload .wheres { grid-template-columns: 1fr; } }
+.upload #diarize-warning { margin: 6px 0 10px; }
 /* The My clips page: a heading row for each place a clip lives. */
 .tbl tr.group td { background: var(--surface-2); padding: 8px 10px; border-top: 2px solid var(--line); }
 .tbl tr.group a { text-decoration: none; }

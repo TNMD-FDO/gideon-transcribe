@@ -18,7 +18,7 @@
       <a class="start-card card" href="{% url 'upload' %}">
         {% icon "upload" %}
         <b>Upload files</b>
-        <span class="muted small">Recordings you already have: jail calls, body camera, interviews, hearings. Say what they are and they are transcribed.</span>
+        <span class="muted small">One recording or a whole batch: jail calls, body camera, interviews, hearings. Drop them in and the transcripts come back.</span>
       </a>
       {% if can_record %}
         <a class="start-card card" href="{% url 'record-new' %}">

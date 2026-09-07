@@ -127,12 +127,11 @@
     add(event.dataTransfer.files);
   });
 
-  // What are these, and where do they go ------------------------------------------
+  // Where do they go ---------------------------------------------------------------
   //
-  // The two questions above the steps. A kind presets the speaker settings
-  // in the rail and, when a case is chosen, the Recording type; the where
-  // cards drive the rail's Add to case box. The rail's controls carry the
-  // change listeners, so each write here fires "change" on what it wrote.
+  // The one question above the steps, asked only when the office uses cases:
+  // this session, or into a case. The cards drive the rail's Add to case box,
+  // whose change listener does the rest, so each write here fires "change".
 
   function fire(control) {
     control.dispatchEvent(new Event("change", { bubbles: true }));
@@ -146,29 +145,9 @@
     });
   }
 
-  var kinds = document.getElementById("kinds");
   var wheres = document.getElementById("wheres");
   var whichCase = document.getElementById("which-case");
   var hint = document.getElementById("hint");
-
-  function applyKind(radio) {
-    lightUp(kinds, radio.value);
-    var whatKind = document.getElementById("recording-type");
-    if (whatKind) { whatKind.value = radio.value; fire(whatKind); }
-    var diarize = document.getElementById("diarize");
-    diarize.checked = radio.dataset.diarize === "1";
-    fire(diarize);
-    hint.value = radio.dataset.hint || "";
-    document.getElementById("hint-a").value = radio.dataset.a;
-    document.getElementById("hint-b").value = radio.dataset.b;
-    fire(hint);
-  }
-
-  if (kinds) {
-    kinds.addEventListener("change", function (event) {
-      if (event.target.name === "kind") { applyKind(event.target); }
-    });
-  }
 
   function applyWhere() {
     var intoCase = document.getElementById("add-to-case");
@@ -177,12 +156,6 @@
     lightUp(wheres, chosenWhere ? chosenWhere.value : "");
     intoCase.value = chosenWhere && chosenWhere.value === "case" ? whichCase.value : "";
     fire(intoCase);
-    var kind = kinds.querySelector('input[name="kind"]:checked');
-    if (kind) {
-      var whatKind = document.getElementById("recording-type");
-      whatKind.value = kind.value;
-      fire(whatKind);
-    }
   }
 
   if (wheres) {
@@ -199,6 +172,15 @@
       applyWhere();
     });
   }
+
+  // Speaker separation is off until the person turns it on, and the warning
+  // under the box is shown while it is on, for the batch or for one file.
+  var diarizeBox = document.getElementById("diarize");
+  var diarizeWarning = document.getElementById("diarize-warning");
+  function showDiarizeWarning() {
+    if (diarizeWarning) { diarizeWarning.hidden = !diarizeBox.checked; }
+  }
+  diarizeBox.addEventListener("change", showDiarizeWarning);
 
   // The three steps -----------------------------------------------------------
 
@@ -271,6 +253,7 @@
     var mailMe = document.getElementById("email-when-done");
     if (mailMe && !mailMe.disabled) { mailMe.checked = !!values.email_when_done; }
     document.getElementById("diarize").checked = !!values.diarize;
+    showDiarizeWarning();
     document.getElementById("translate").checked = !!values.translate;
     document.getElementById("language").value = values.language || "";
     document.getElementById("vocabulary").value =
@@ -343,20 +326,9 @@
         if (this.value) { whichCase.value = this.value; }
       }
     });
-    // The rail's type box follows the cards; the cards follow it back.
-    document.getElementById("recording-type").addEventListener("change", function () {
-      if (railFor === null && kinds) {
-        var known = kinds.querySelector('input[value="' + this.value.replace(/"/g, "") + '"]');
-        lightUp(kinds, known ? this.value : "");
-      }
-    });
   }
 
-  // The page opens with the cards' first answers already in the rail.
-  if (kinds) {
-    var startingKind = kinds.querySelector('input[name="kind"]:checked');
-    if (startingKind) { applyKind(startingKind); }
-  }
+  // The page opens with the cards' answer already in the rail.
   if (wheres) { applyWhere(); }
 
   function settings() {

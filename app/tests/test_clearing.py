@@ -223,10 +223,10 @@ def test_the_start_page_greets_and_asks_one_question(client):
     assert ">Upload</a>" not in page and ">Recordings</a>" not in page
 
 
-def test_the_upload_page_asks_what_and_where(client, monkeypatch):
+def test_the_upload_page_asks_where_and_chooses_nothing_else(client, monkeypatch):
     from core import uploads, whisperx
 
-    # The questions are asked only while uploading is possible at all.
+    # The question is asked only while uploading is possible at all.
     monkeypatch.setattr(whisperx, "is_alive", lambda: True)
     monkeypatch.setattr(uploads, "free_disk_bytes", lambda: 10**15)
     settings_store.set_to("folder_management", True)
@@ -238,16 +238,17 @@ def test_the_upload_page_asks_what_and_where(client, monkeypatch):
     page = client.get(reverse("upload")).content.decode()
 
     assert "<h1>Upload files</h1>" in page
-    assert "What are these?" in page and "Where do they go?" in page
-    # One card per Recording type the office lists, and Something else.
-    assert page.count('name="kind"') == len(cases.recording_types()) + 1
-    assert 'value="Jail call" data-diarize="1" data-hint="exactly" data-a="2"' in page
-    assert 'value="Dictation" data-diarize="0"' in page
-    assert "Something else" in page and "This session only" in page
-    # Without Cases there is nowhere else for them to go, so no second question.
+    assert "Where do they go?" in page and "This session only" in page
+    # No mode cards: nothing is chosen for the person, speaker separation
+    # least of all, and the warning waits under its box for when it is on.
+    assert 'name="kind"' not in page and "What are these?" not in page
+    assert '<input type="checkbox" id="diarize">' in page
+    assert 'id="diarize-warning" hidden' in page
+    assert "not always right" in page
+    # Without Cases there is nowhere else for them to go, so no question at all.
     settings_store.set_to("folder_management", False)
     page = client.get(reverse("upload")).content.decode()
-    assert "What are these?" in page and "Where do they go?" not in page
+    assert "Where do they go?" not in page
     # The line that answers the question every new user of this app has.
     assert "Nothing leaves this building" in page
 

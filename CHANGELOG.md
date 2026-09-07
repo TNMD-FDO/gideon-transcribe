@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.30.1, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Upload page chooses nothing for you.** The "What are these?" cards
+  and their presets are gone. The page asks where the files go, when the
+  office uses cases, and then takes the files; a plain transcript needs no
+  settings. **Tell the speakers apart** (Diarize) is off until you turn it
+  on, and while it is on the page says plainly that speaker separation is
+  not always right and the labels are guesses until checked against the
+  audio.
+- **The Start page's upload door says a batch is fine**: one recording or a
+  whole batch.
+
 ## v1.30.0, 2026-09-07
 
 ```

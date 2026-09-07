@@ -5,17 +5,18 @@
 
 {% block content %}
   {% comment %}
-    The Upload page has the New recording page's shape: say what the files
-    are, say where they go, then choose them. The cards preset the speaker
-    settings, which wait under step 2 for anyone who wants to change them.
+    One plain page: where the files go (when the office uses cases), the
+    files, the settings, the check. Nothing is chosen for the person; in
+    particular speaker separation is off until they turn it on, and the page
+    says plainly that it is not always right when they do.
   {% endcomment %}
   <div class="page workbench upload">
     <header class="welcome">
       <span class="crumb muted small"><a href="{% url 'start' %}">Start</a></span>
       <h1>Upload files</h1>
       <p class="lead">
-        Recordings you already have. Say what they are, choose the files, and
-        you get transcripts back, the whole batch in one download.
+        One recording or a whole batch. Drop the files in, press start, and
+        the transcripts come back, all of them in one download.
       </p>
     </header>
 
@@ -32,19 +33,6 @@
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
     <section class="asks">
-      <div class="ask">
-        <p class="muted" style="margin: 0 0 6px">What are these?</p>
-        <div class="styles kinds" id="kinds" role="radiogroup" aria-label="What are these">
-          {% for kind in kinds %}
-            <label class="style card{% if not kind.name %} on{% endif %}">
-              <input type="radio" name="kind" value="{{ kind.name }}" data-diarize="{{ kind.diarize|yesno:'1,0' }}" data-hint="{{ kind.hint }}" data-a="{{ kind.a }}" data-b="{{ kind.b }}"{% if not kind.name %} checked{% endif %}>
-              <b>{{ kind.name|default:"Something else" }}</b>
-              <span class="muted small">{{ kind.line }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </div>
-
       {% if to_a_case %}
         <div class="ask">
           <p class="muted" style="margin: 0 0 6px">Where do they go?</p>
@@ -57,7 +45,7 @@
             <label class="style card{% if chosen_case %} on{% endif %}">
               <input type="radio" name="where" value="case"{% if chosen_case %} checked{% endif %}>
               <b>Into a case</b>
-              <span class="muted small">Kept with the case, shared with its people, labelled with the type above.</span>
+              <span class="muted small">Kept with the case, shared with its people.</span>
               <select id="which-case" aria-label="Which case" style="margin-top: 6px">
                 {% for one in to_a_case %}
                   <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
@@ -96,10 +84,10 @@
       </li>
 
       <li id="step-2" class="card" hidden>
-        <h2>2. Anything else? <span class="muted">(optional)</span></h2>
+        <h2>2. Settings <span class="muted">(optional)</span></h2>
         <p class="muted small">
-          The speaker settings are already set from what you said the files
-          are. Change them here, or give one file its own.
+          Nothing here needs changing for a plain transcript. Set what you
+          want for the batch, or give one file its own.
         </p>
 
         <div class="two-panes">
@@ -182,11 +170,16 @@
               {% endif %}
 
               <label class="row">
-                <input type="checkbox" id="diarize"> <b>Diarize</b>
+                <input type="checkbox" id="diarize"> <b>Tell the speakers apart</b>
               </label>
               <p class="muted small">
-                Tells the speakers apart and labels each line. It is sometimes
-                wrong, so check the names against the audio.
+                Labels each line with who is speaking. Off unless you turn it on.
+              </p>
+              <p class="notice warn" id="diarize-warning" hidden>
+                Speaker separation is not always right. It can run two people
+                together or split one person in two, and the labels are guesses
+                until somebody checks them against the audio. Use it when you
+                need who said what, and read the result with that in mind.
               </p>
 
               <div id="hint-wrap" style="margin-left: 24px">

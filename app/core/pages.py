@@ -159,63 +159,6 @@ def greeting() -> str:
     return "Good evening"
 
 
-# What each Recording type usually is, so the Upload page can preset the
-# speaker settings from one click. Keyed by the type's name in lower case; a
-# type the Admin added that is not here gets diarization with the count left
-# to the app. The line is what the card says under its name.
-KIND_PRESETS = {
-    "jail call": ("A recorded call from a jail. Two speakers.", True, "exactly", 2, 2),
-    "phone call": ("A call, recorded. Two speakers.", True, "exactly", 2, 2),
-    "interview": (
-        "An interview or a statement; an interpreter counts.",
-        True,
-        "between",
-        2,
-        3,
-    ),
-    "body camera": (
-        "Body camera or dash camera footage. Anyone may speak.",
-        True,
-        "",
-        2,
-        4,
-    ),
-    "hearing": ("A hearing or a trial day. Several speakers.", True, "between", 2, 8),
-    "meeting": ("A meeting or a proffer. Several speakers.", True, "between", 2, 8),
-    "dictation": ("One voice, to be written up. No speaker labels.", False, "", 2, 4),
-}
-OTHER_KIND = (
-    "Anything else, or a mixed batch. Set the speakers yourself.",
-    False,
-    "",
-    2,
-    4,
-)
-UNKNOWN_KIND = ("Speakers told apart, the count left to the app.", True, "", 2, 4)
-
-
-def kinds() -> list[dict]:
-    """The cards on the Upload page: the office's Recording types, and Other."""
-
-    def card(name, preset):
-        line, diarize, hint, a, b = preset
-        return {
-            "name": name,
-            "line": line,
-            "diarize": diarize,
-            "hint": hint,
-            "a": a,
-            "b": b,
-        }
-
-    cards = [
-        card(name, KIND_PRESETS.get(name.lower(), UNKNOWN_KIND))
-        for name in cases.recording_types()
-    ]
-    cards.append(card("", OTHER_KIND))
-    return cards
-
-
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
     """Say what the files are and where they go, choose them, and start."""
@@ -269,7 +212,6 @@ def upload(request: HttpRequest) -> HttpResponse:
             "chosen_case": chosen_case,
             "batch_mail": batch_mail,
             "recording_types": cases.recording_types() if to_a_case else [],
-            "kinds": kinds(),
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
             "limits": {

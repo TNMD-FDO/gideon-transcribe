@@ -16,7 +16,7 @@ You have one login session at a time. Signing in from a second browser ends the 
 
 A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. **Upload files** on the Start page opens the Upload page.
 
-The page starts with two questions. **What are these?** offers a card for each kind of recording your office lists, a jail call, a phone call, an interview, body camera footage, a hearing, a meeting, a dictation, and **Something else** for anything else or a mixed batch. Choose one and the speaker settings are set for you: a jail call is two speakers told apart, a hearing is between two and eight, a dictation is one voice with no speaker labels. **Where do they go?** appears when your office uses cases: **This session only**, or **Into a case**, with the case chosen beside it. A recording put into a case is labelled with the kind you chose.
+When your office uses cases, the page starts with one question, **Where do they go?**: **This session only**, or **Into a case**, with the case chosen beside it. Nothing else is chosen for you: a plain transcript needs no settings at all.
 
 Then the three steps. On a wide monitor they are on the page together, files on the left and the settings and the start button on the right; on a laptop they come one at a time, with **Next** between them.
 
@@ -26,11 +26,11 @@ Drop the files on the Upload page, or click **choose files**. Most recordings wo
 
 The page tells you the limits your Admin has set: how many files a batch may hold, how big one file may be, and how long one recording may run. A file over a limit is refused when you try to start, with the reason beside it, and the rest of the batch goes ahead.
 
-### 2. Anything else?
+### 2. Settings
 
-This step is optional: the speaker settings are already set from what you said the files are. Change them here if you know better, or give one file its own. The settings apply to the whole batch. Click **Same as batch** on a file to give that one file different settings; every other file keeps the batch's.
+This step is optional: nothing here needs changing for a plain transcript. The settings apply to the whole batch. Click **Same as batch** on a file to give that one file different settings; every other file keeps the batch's.
 
-- **Speakers.** Whether to separate the voices. Leave it on unless the recording is one person. If you know how many people are talking, saying so helps: **Exactly** two for a phone call, for instance, or **Between** two and four for an interview. **Let the app decide** is right when you do not know.
+- **Tell the speakers apart.** Off unless you turn it on. It labels each line with who is speaking, and it is not always right: it can run two people together or split one person in two, and the labels are guesses until somebody checks them against the audio. The page says so when you tick it. Turn it on when you need who said what. If you know how many people are talking, saying so helps: **Exactly** two for a phone call, for instance, or **Between** two and four for an interview. **Let the app decide** is right when you do not know.
 - **Translate to English.** For a recording in another language, or with more than one. The transcript comes back in English and the original-language text is not kept. A translated transcript is marked in the viewer and carries a notice on every export.
 - **Spoken language.** Leave it on **Automatic** unless the app has guessed wrong before on this kind of recording.
 - **Vocabulary.** Names and terms the recording is likely to contain, one per line: people, places, case-specific words. The app tries these spellings first. Your Admin may have set an office-wide list; yours is added to it.
