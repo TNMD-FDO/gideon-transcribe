@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.29.2, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Captions burned into a clip now show.** The clip was cut after the
+  captions were drawn, so the captions were timed for the start of the
+  recording rather than the start of the clip and fell before it. The cut
+  now seeks first, which is just as exact, faster, and lines the captions
+  up. A clip made with captions before this release shows "Captions out of
+  date" once its transcript is touched; making it again draws them.
+
 ## v1.29.1, 2026-09-07
 
 ```

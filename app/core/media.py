@@ -744,13 +744,21 @@ def cut_clip(
 ) -> None:
     """A span of the Playback copy as its own file, cut frame-accurately.
 
-    Seeking is done after the input rather than before it, which is slower and
-    exact: a Clip that starts half a second late is no use to somebody playing
-    it at a hearing. The picture is re-encoded for the same reason, and
-    because captions burned in cannot be copied through.
+    The seek is given before the input, and the length after it. Since the
+    picture is re-encoded, ffmpeg decodes from the keyframe before the point
+    and drops every frame up to it, so the cut is exact: a Clip that starts
+    half a second late is no use to somebody playing it at a hearing. It also
+    makes the frames' clock start at zero, which is what the burned captions
+    are timed from. A seek after the input keeps the source's clock, and the
+    captions, timed from zero, then fall before the clip and never draw;
+    that was the first version of this, and a Clip with "captions" that
+    showed none. The picture is re-encoded because captions burned in cannot
+    be copied through.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     video = target.suffix == ".mp4"
+    begin = max(0.0, start)
+    length = max(0.0, end - begin)
 
     arguments = [
         "ffmpeg",
@@ -758,18 +766,18 @@ def cut_clip(
         "-y",
         "-v",
         "error",
+        "-ss",
+        f"{begin:.3f}",
         "-i",
         str(source),
-        "-ss",
-        f"{max(0.0, start):.3f}",
-        "-to",
-        f"{max(0.0, end):.3f}",
+        "-t",
+        f"{length:.3f}",
     ]
 
     if video:
         if captions is not None:
-            # The caption file's times already start at zero, and the trim
-            # above makes the output start at zero too, so they line up.
+            # The caption file's times start at zero, as the frames' clock
+            # does after the seek above, so they line up.
             escaped = str(captions).replace("\\", "/").replace(":", r"\:")
             arguments += ["-vf", f"subtitles='{escaped}':force_style='{CAPTION_STYLE}'"]
         arguments += [
