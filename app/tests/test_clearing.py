@@ -231,6 +231,8 @@ def test_the_upload_page_asks_what_and_where(client, monkeypatch):
     monkeypatch.setattr(uploads, "free_disk_bytes", lambda: 10**15)
     settings_store.set_to("folder_management", True)
     person = a_person()
+    # The second question needs somewhere else for the files to go.
+    cases.Case.objects.create(owner=person, name="Ramirez")
     signed_in(client, person)
 
     page = client.get(reverse("upload")).content.decode()
