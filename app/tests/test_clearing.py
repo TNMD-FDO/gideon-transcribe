@@ -223,7 +223,12 @@ def test_the_start_page_greets_and_asks_one_question(client):
     assert ">Upload</a>" not in page and ">Recordings</a>" not in page
 
 
-def test_the_upload_page_asks_what_and_where(client):
+def test_the_upload_page_asks_what_and_where(client, monkeypatch):
+    from core import uploads, whisperx
+
+    # The questions are asked only while uploading is possible at all.
+    monkeypatch.setattr(whisperx, "is_alive", lambda: True)
+    monkeypatch.setattr(uploads, "free_disk_bytes", lambda: 10**15)
     settings_store.set_to("folder_management", True)
     person = a_person()
     signed_in(client, person)
