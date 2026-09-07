@@ -82,6 +82,40 @@ its own private planning repository.
 - This repository's Issues are for other offices' reports, not for the
   build's own task list.
 
+## The server is shared
+
+The office's server and its GitHub organisation are shared with the office's
+other project, GIDEON (`TNMD-FDO/GIDEON`), which provisions the server and
+owns its operating-system layer: the graphics driver, Docker, the firewall,
+the `/data` layout, the time zone, and the self-hosted runner. This app
+consumes that layer and owns only its own install home, data directory,
+units, Compose project, networks, and images.
+
+`docs/box-ledger.md` is the record both projects keep. It says who owns each
+graphics card, port, data directory, and timer, what each project may do with
+the Docker daemon and the hosted-runner minutes, the open items between the
+two, and, in its section 12, a log with one subsection per project where each
+writes what it changed and lines addressed to the other. An identical copy
+lives in GIDEON's repository. Nobody writes into the other repository: fetch
+GIDEON's copy with the command in the ledger's section 11 and merge it before
+any change to a shared thing (a port, graphics-card memory, a `/data`
+directory, a timer, a workflow trigger that moves hosted-minute load, the
+engine's network or token) and at every Release. Write only the Gideon
+Transcribe subsection of the log.
+
+This app bends to GIDEON. GIDEON is the authoritative service on the server
+and this app a secondary one, and the ledger's section 1 says what that
+means: where a GIDEON design change recorded in the ledger touches the shared
+server or the organisation, this app adapts to it, and a GIDEON line
+addressed to Transcribe in the log is a direction, not a suggestion. Fit the
+next change to it and answer it by number with what changed and when. When a
+direction cannot be followed, answer with the reason instead, before the
+change GIDEON announced, so the two operators can settle it; never ignore a
+line. A line this app addresses to GIDEON ("For GIDEON") is a request, which
+GIDEON weighs and answers. This app's own product decisions stay its own
+where they touch nothing shared. The rule above against self-hosted runners is recorded in the
+ledger's section 9 and changes there first, if it ever does.
+
 ## Building and running
 
 - Docker only, free tools only, and everything pinned: images by tag and
