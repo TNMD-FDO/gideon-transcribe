@@ -105,6 +105,8 @@ def status_lines(request: HttpRequest) -> JsonResponse:
         {
             "services": _services(),
             "service": _whisperx(),
+            # The fast lane, when the office turned it on at install.
+            "fast_lane": _fast_lane(),
             # The AI assistant's line: what llm-worker's last check found,
             # and the last Test connection. Read from the status row; this
             # container is not on the engine's network and never asks it.
@@ -241,12 +243,19 @@ def _worker(queue: str) -> dict:
     }
 
 
-def _whisperx() -> dict:
+def _whisperx(lane: str = "") -> dict:
     """The service's own status endpoint, rendered for an Admin."""
     try:
-        return {"up": True, **whisperx.status()}
+        return {"up": True, **whisperx.status(lane)}
     except Exception as problem:  # noqa: BLE001 - any failure is "not reachable"
         return {"up": False, "says": str(problem)}
+
+
+def _fast_lane() -> dict:
+    """The fast lane's line on the Status page: off, up, or not answering."""
+    if not whisperx.fast_lane_configured():
+        return {"configured": False}
+    return {"configured": True, **_whisperx(whisperx.FAST)}
 
 
 def _workspaces() -> dict:
@@ -394,7 +403,7 @@ def cancel_job(request: HttpRequest, job_id) -> JsonResponse:
         return JsonResponse({"error": "no such job"}, status=404)
 
     for run in job.runs.exclude(service_job_id=""):
-        whisperx.delete(run.service_job_id)
+        whisperx.delete(run.service_job_id, run.lane)
     job.state = JobState.CANCELLED
     job.finished = timezone.now()
     job.save(update_fields=["state", "finished"])

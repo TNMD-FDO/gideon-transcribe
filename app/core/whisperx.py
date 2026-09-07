@@ -6,6 +6,11 @@ back into either an answer or one of the contract's reason classes.
 
 No title, file name, or user name ever travels to the service. It gets audio,
 settings, and the Run's own id as a reference.
+
+There may be two copies of the service: the batch one at WHISPERX_URL, and
+the fast lane at WHISPERX_FAST_URL, an office's choice at install, for what
+must not wait behind a long job. Every call here names its lane ("" for the
+batch service, "fast" for the lane), and a Run remembers which it went to.
 """
 
 from __future__ import annotations
@@ -29,6 +34,34 @@ SUBMIT_TIMEOUT = 600
 ASK_TIMEOUT = 30
 
 
+FAST = "fast"
+
+
+def base_url(lane: str = "") -> str:
+    return settings.WHISPERX_FAST_URL if lane == FAST else settings.WHISPERX_URL
+
+
+def fast_lane_configured() -> bool:
+    """Whether the office turned the lane on at install."""
+    return bool(settings.WHISPERX_FAST_URL)
+
+
+def lane_for(recording) -> str:
+    """Where this Recording's Runs go: the lane for a Live recording, if it is
+    there and answering; the batch service otherwise.
+
+    A lane that is configured but down is not waited for: the Run goes to the
+    batch service at the live priority, as it did before there was a lane,
+    and the log says so.
+    """
+    if not recording.is_live or not fast_lane_configured():
+        return ""
+    if is_alive(FAST):
+        return FAST
+    log.warning("the fast lane is not answering; the run goes to the batch service")
+    return ""
+
+
 class ServiceError(Exception):
     """The service could not be reached, or refused this app."""
 
@@ -50,9 +83,10 @@ def _request(
     body: bytes | None = None,
     content_type: str | None = None,
     timeout: int = ASK_TIMEOUT,
+    lane: str = "",
 ) -> tuple[int, Any]:
     request = urllib.request.Request(
-        f"{settings.WHISPERX_URL}{path}", data=body, method=method
+        f"{base_url(lane)}{path}", data=body, method=method
     )
     request.add_header("Authorization", f"Bearer {settings.WHISPERX_TOKEN}")
     if content_type:
@@ -75,10 +109,12 @@ def _request(
         ) from None
 
 
-def is_alive() -> bool:
+def is_alive(lane: str = "") -> bool:
     """The unauthenticated liveness check, asked before a Batch is made."""
+    if lane == FAST and not fast_lane_configured():
+        return False
     try:
-        request = urllib.request.Request(f"{settings.WHISPERX_URL}/healthz")
+        request = urllib.request.Request(f"{base_url(lane)}/healthz")
         with urllib.request.urlopen(request, timeout=5) as answer:
             return answer.status == 200
     except Exception:  # noqa: BLE001 - any failure is the same answer
@@ -107,7 +143,7 @@ def _multipart(audio: Path, request: dict[str, Any]) -> tuple[bytes, str]:
     return b"".join(pieces), f"multipart/form-data; boundary={boundary}"
 
 
-def submit(audio: Path, request: dict[str, Any]) -> Submitted:
+def submit(audio: Path, request: dict[str, Any], lane: str = "") -> Submitted:
     """Hand one Side to the service and take its place in the line.
 
     A submission whose reference the service already knows comes back as that
@@ -116,7 +152,7 @@ def submit(audio: Path, request: dict[str, Any]) -> Submitted:
     """
     body, content_type = _multipart(audio, request)
     status, answer = _request(
-        "POST", "/v1/jobs", body, content_type, timeout=SUBMIT_TIMEOUT
+        "POST", "/v1/jobs", body, content_type, timeout=SUBMIT_TIMEOUT, lane=lane
     )
 
     if status in (200, 202) and answer:
@@ -140,13 +176,13 @@ def submit(audio: Path, request: dict[str, Any]) -> Submitted:
     raise ServiceError(f"the service answered {status}", "service_refused")
 
 
-def jobs() -> list[dict[str, Any]]:
-    """Every one of this app's own jobs, in one call.
+def jobs(lane: str = "") -> list[dict[str, Any]]:
+    """Every one of this app's own jobs at one service, in one call.
 
     The contract's intended use: one request every three seconds gets the
     state of every Run rather than one request per Run.
     """
-    status, answer = _request("GET", "/v1/jobs")
+    status, answer = _request("GET", "/v1/jobs", lane=lane)
     if status == 200 and answer:
         return answer.get("jobs", [])
     if status == 401:
@@ -156,10 +192,10 @@ def jobs() -> list[dict[str, Any]]:
     raise ServiceError(f"the service answered {status}", "service_refused")
 
 
-def result(job_id: str) -> dict[str, Any]:
+def result(job_id: str, lane: str = "") -> dict[str, Any]:
     """The finished result, or why there is not one."""
     status, answer = _request(
-        "GET", f"/v1/jobs/{job_id}/result", timeout=SUBMIT_TIMEOUT
+        "GET", f"/v1/jobs/{job_id}/result", timeout=SUBMIT_TIMEOUT, lane=lane
     )
     if status == 200 and answer is not None:
         return answer
@@ -172,23 +208,23 @@ def result(job_id: str) -> dict[str, Any]:
     raise ServiceError(f"the service answered {status}", "service_refused")
 
 
-def delete(job_id: str) -> None:
+def delete(job_id: str, lane: str = "") -> None:
     """Give the service its space back, and free the card if it is running.
 
     A job nobody deletes is run when its turn comes even if its Consumer has
     stopped caring, so abandoning one is not a way to cancel it.
     """
     try:
-        _request("DELETE", f"/v1/jobs/{job_id}")
+        _request("DELETE", f"/v1/jobs/{job_id}", lane=lane)
     except ServiceError:
         # Best effort: the service clears its own jobs after a day anyway, and
         # failing to tidy up is not worth failing a Job over.
         log.warning("could not delete service job %s", job_id)
 
 
-def status() -> dict[str, Any]:
+def status(lane: str = "") -> dict[str, Any]:
     """What the service says about itself, for the admin status page."""
-    code, answer = _request("GET", "/v1/status")
+    code, answer = _request("GET", "/v1/status", lane=lane)
     if code == 200 and answer:
         return answer
     raise ServiceError(f"the service answered {code}", "service_refused")

@@ -167,6 +167,10 @@ class Run(models.Model):
     # reference is this Run's id, which is what makes a repeated submission
     # return the job that already exists rather than a second one.
     service_job_id = models.CharField(max_length=64, blank=True, default="")
+    # Which copy of the service holds it: "" for the batch service, "fast"
+    # for the fast lane. Asked for at hand-over and kept, so a poll, a fetch,
+    # and a delete go to the copy that has the job.
+    lane = models.CharField(max_length=10, blank=True, default="")
 
     state = models.CharField(max_length=20, default="pending")
     stage = models.CharField(max_length=30, blank=True, default="")

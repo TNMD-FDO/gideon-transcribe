@@ -104,6 +104,20 @@ A recording made with the computer's sound is a two-channel call by the fact of 
 
 The service's contract gained a `priority` field for this (service 0.2.0); a job's position and the minutes of audio ahead of it count what runs before it under the rule.
 
+## The fast lane
+
+A second copy of the transcription service, beside the first on the same card, for what must not wait behind a long job: a recording made in the app (which already goes to the front of the line, but the front of the line is still behind whatever is running), and later the pieces of one transcribed while it records, and the Interpreter. It is a copy of the same image with the same model, so what it transcribes is of the same quality; it shares the model folder and has a state folder of its own. It needs about eight gigabytes of the card's memory for the default model.
+
+The installer asks whether to turn it on, no by default. Later:
+
+```bash
+./transcribe fast-lane on
+```
+
+names the card (the service's own unless the service `.env` says otherwise), makes the state folder, writes the lane's address into `.env`, turns the `fast` Compose profile on, and starts it. `./transcribe fast-lane off` stops it and frees the memory. The Status page has a **Fast lane** card, off, up, or not answering, and `./transcribe check` asks it. A lane that is on but not answering is not waited for: a recording made in the app goes to the one service at the front of its line, and the worker's log says so.
+
+An office with one modest card leaves it off and loses nothing but the waiting.
+
 ## Record now
 
 With **Record now** on (Features page, under Live recording), the Start page offers **Record now**, and the My recordings page opens with **Recorded here**, everything a person recorded from the New recording page, above **Uploaded this session**. The New recording page asks one question, what the person is recording, and offers three styles that preset everything: **Dictation** (one voice, no speaker separation, the recording type Dictation, the memo as the product), **Meeting or interview in the room** (the people to tap, the type Interview, an Interview summary), and **Call or meeting on this computer** (the computer's sound as the far side, the type Meeting, a Meeting summary). A type chosen under More options wins over the style's, so a jail call played on the computer can get the Jail call summary. A recording made there is kept on its own: past sign-out, in no case unless the person adds it to one afterwards, counted against their space. **Write the memo** or **Write the summary** makes one summary with the template the viewer would choose for the recording's type; the shipped **Dictation memo** writes the dictated words out as the document dictated and never summarises, and the shipped **Meeting summary** gives what was decided, who is to do what, questions left open, and what each person said; review their wording on the Templates page. **Send to** gives one colleague that one recording, under "Sent to you" on their page, with a mail saying it is there; a recipient reads, plays, and exports, and cannot send, add, or delete. **Take back** removes it. The rows: **Dictation sent** and **Dictation taken back** (the colleague's username, and whether a file went with the mail; never the content).

@@ -155,6 +155,10 @@ SCRATCH_DIR = DATA_DIR / "scratch"
 # The WhisperX service, on its own Docker network. The token makes this app a
 # Consumer of it.
 WHISPERX_URL = os.environ.get("WHISPERX_URL", "http://whisperx:8000")
+# The fast lane: a second copy of the service for what must not wait behind
+# a long job (a Live recording, and later its stretches and the Interpreter's
+# Turns). Empty when the office has not turned it on; the same token opens it.
+WHISPERX_FAST_URL = os.environ.get("WHISPERX_FAST_URL", "").strip()
 WHISPERX_TOKEN = secret("WHISPERX_TOKEN_FILE", default="")
 
 # Directory sign-in over LDAPS. Off until the office's bind account and the two

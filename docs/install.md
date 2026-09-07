@@ -223,6 +223,20 @@ docker compose run --rm app create-local-admin
 
 Section 4 says what each line of that means. When every line passes, the app is installed.
 
+### The fast lane
+
+A second copy of the transcription service for what must not wait behind a long job: a recording made in the app, and later the interpreter. The install asks whether to turn it on; the answer is no unless you say yes, and nothing is lost without it but the waiting. It needs about eight gigabytes of the card's memory. Later, or to change your mind:
+
+```bash
+./transcribe fast-lane on
+```
+
+```bash
+./transcribe fast-lane off
+```
+
+The admin guide's "The fast lane" section says what it does and what the Status page shows.
+
 ### The Local engine
 
 The AI assistant needs a language-model engine. If your office already runs a vLLM, `./transcribe engine` points the app at it. If not, the stack can run a small one itself, on the same card as the transcription service, within a share of that card's memory:

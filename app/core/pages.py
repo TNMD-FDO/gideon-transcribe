@@ -606,7 +606,7 @@ def cancel_batch(request: HttpRequest, batch_id) -> JsonResponse:
     for recording in found.recordings.all():
         for job in recording.jobs.filter(state__in=JobState.LIVE):
             for run in job.runs.exclude(service_job_id=""):
-                whisperx.delete(run.service_job_id)
+                whisperx.delete(run.service_job_id, run.lane)
             job.state = JobState.CANCELLED
             job.finished = timezone.now()
             job.save()
@@ -817,7 +817,7 @@ def delete_recording(request: HttpRequest, recording_id) -> JsonResponse:
     live = list(recording.jobs.filter(state__in=JobState.LIVE))
     for job in live:
         for run in job.runs.exclude(service_job_id=""):
-            whisperx.delete(run.service_job_id)
+            whisperx.delete(run.service_job_id, run.lane)
         job.state = JobState.CANCELLED
         job.finished = timezone.now()
         job.save()

@@ -146,6 +146,8 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
       WHISPERX_URL: "${WHISPERX_URL:-http://whisperx:8000}"
+      # The fast lane's address, empty when the office has none.
+      WHISPERX_FAST_URL: "${WHISPERX_FAST_URL:-}"
       WHISPERX_TOKEN_FILE: /run/secrets/whisperx_consumer_token
       TZ: "${TZ:-UTC}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"

@@ -125,6 +125,35 @@ services:
     logging:
       driver: journald
 
+  # The fast lane: the same service a second time, for what must not wait
+  # behind a long job (the app's Live recordings, and later the pieces of one
+  # being transcribed while it records, and the Interpreter's Turns). Off
+  # unless the `fast` profile is on, which `./transcribe fast-lane on` sets
+  # after asking; an office with one modest card leaves it off and loses
+  # nothing but the waiting. It shares the model folder (read once, cached
+  # twice) and has a state folder of its own, because two copies writing one
+  # job database would corrupt it. Same card unless the .env says otherwise,
+  # about eight gigabytes of it for the default model; a smaller memory limit
+  # because it holds one short job at a time. Reached at
+  # http://whisperx-fast:8000 from the app's containers, under the same token.
+  whisperx-fast:
+    extends:
+      service: whisperx
+    profiles: ["fast"]
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          devices:
+            - driver: cdi
+              capabilities: ["gpu"]
+              device_ids:
+                - "nvidia.com/gpu=${WHISPERX_FAST_GPU_UUID:?set WHISPERX_FAST_GPU_UUID in .env}"
+    volumes:
+      - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
+      - "${WHISPERX_FAST_STATE_DIR:?set WHISPERX_FAST_STATE_DIR in .env}:/srv/state"
+
 secrets:
   hf_token:
     file: "${HF_TOKEN_FILE:-./secrets/hf_token}"

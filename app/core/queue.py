@@ -102,15 +102,17 @@ def hand_over(job: Job) -> Job:
     interleaved between its Sides. The Job's place in the line is its first
     Run's.
     """
+    lane = whisperx.lane_for(job.recording)
     for run in job.runs.all().order_by("side__number"):
         if run.service_job_id:
             continue
         try:
-            submitted = whisperx.submit(run.side.asr_path, request_for(run))
+            submitted = whisperx.submit(run.side.asr_path, request_for(run), lane)
         except whisperx.ServiceError as problem:
             return fail(job, problem.reason_class)
 
         run.service_job_id = submitted.id
+        run.lane = lane
         run.state = "queued"
         run.position = submitted.position
         run.audio_minutes_ahead = submitted.audio_minutes_ahead
@@ -154,7 +156,7 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
         # give the card back rather than left to run for nobody.
         for run in runs:
             if run.service_job_id and run is not failed:
-                whisperx.delete(run.service_job_id)
+                whisperx.delete(run.service_job_id, run.lane)
         return fail(job, failed.failure_class)
 
     if any(run.state == "running" for run in runs) and job.started is None:
@@ -185,7 +187,7 @@ def merge(job: Job) -> Job:
     try:
         results = {}
         for run in job.runs.all():
-            results[run.pk] = whisperx.result(run.service_job_id)
+            results[run.pk] = whisperx.result(run.service_job_id, run.lane)
     except whisperx.ServiceError as problem:
         return fail(job, problem.reason_class)
 
@@ -207,7 +209,7 @@ def merge(job: Job) -> Job:
             )
 
     for run in job.runs.all():
-        whisperx.delete(run.service_job_id)
+        whisperx.delete(run.service_job_id, run.lane)
 
     job.state = JobState.DONE
     job.merging = False

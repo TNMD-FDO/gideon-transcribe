@@ -12,6 +12,9 @@
 #   ./transcribe engine       point the AI assistant at the office's engine
 #   ./transcribe engine local on|off
 #                             start or stop the Local engine, a small model on this server
+#   ./transcribe fast-lane on|off
+#                             start or stop the fast lane, a second copy of the transcription
+#                             service for what must not wait behind a long job
 #   ./transcribe folders      make the app data folders, owned by the app account
 #   ./transcribe backup-db    a dump of the database into the app data folder
 #   ./transcribe backup       the nightly job: dump, manifest, Snapshot to the store
@@ -114,6 +117,29 @@ ask() {
 
 compose() {
   docker compose "$@"
+}
+
+# The Compose profiles in .env are a comma-separated list: `llm` for the
+# Local engine, `fast` for the fast lane. Each is added and removed on its
+# own, so turning one on never turns the other off.
+profile_on() {
+  env_value COMPOSE_PROFILES | tr ',' '\n' | grep -qx "$1"
+}
+
+profile_add() {
+  local now
+  now="$(env_value COMPOSE_PROFILES)"
+  if ! profile_on "$1"; then
+    set_env COMPOSE_PROFILES "${now:+$now,}$1"
+  fi
+}
+
+profile_remove() {
+  local kept
+  # `|| true`: grep says 1 when nothing is left, and under pipefail that
+  # would stop the script on the way to writing an empty list.
+  kept="$(env_value COMPOSE_PROFILES | tr ',' '\n' | grep -vx "$1" | grep -v '^$' | paste -sd, - || true)"
+  set_env COMPOSE_PROFILES "$kept"
 }
 
 # status -----------------------------------------------------------------------
@@ -379,6 +405,18 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
   else
     fail "the service does not answer"
   fi
+  if fast_lane_is_on; then
+    if compose exec -T app python -c "
+from core import whisperx
+raise SystemExit(0 if whisperx.is_alive(whisperx.FAST) else 1)
+" >/dev/null 2>&1; then
+      pass "the fast lane answers"
+    else
+      fail "the fast lane is on but does not answer; ./transcribe logs whisperx-fast"
+    fi
+  else
+    note "the fast lane is off (./transcribe fast-lane on)"
+  fi
 
   # The AI assistant's engine: only llm-worker is on its network, so the one
   # question that matters is asked from inside that container. An office with
@@ -390,7 +428,7 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
   if ! secret_present "$SECRETS/llm_api_token"; then
     note "no engine token is stored, so the AI assistant is off"
   elif [ -z "$network" ] || [ "$network" = "transcribe-llm" ]; then
-    if grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"; then
+    if profile_on llm; then
       pass "the Local engine profile is on ($(env_value LLM_LOCAL_MODEL) as local-engine)"
       if compose ps --status running --services 2>/dev/null | grep -qx vllm; then
         if [ "$(docker inspect --format '{{.State.Health.Status}}' "$(compose ps -q vllm)" 2>/dev/null)" = "healthy" ]; then
@@ -483,6 +521,7 @@ cmd_install() {
 
   ask_the_office_facts
   ask_the_gpu
+  ask_the_fast_lane
   make_the_secrets
   cmd_directory
   ask_the_hugging_face_token
@@ -920,7 +959,7 @@ panel_set() {
 }
 
 local_engine_is_on() {
-  grep -q '^COMPOSE_PROFILES=llm' "$ENV_FILE"
+  profile_on llm
 }
 
 least_busy_gpu() {
@@ -971,7 +1010,7 @@ WORDS
   set_env LLM_LOCAL_MODEL "$model"
   set_env LLM_LOCAL_GPU_FRACTION "$share"
   set_env LLM_NETWORK "transcribe-llm"
-  set_env COMPOSE_PROFILES "llm"
+  profile_add llm
   # The Local engine lives on the project network, so the shared-engine file
   # has nothing to add; commented rather than deleted, so the shape stays visible.
   if grep -q '^COMPOSE_FILE=' "$ENV_FILE"; then
@@ -1025,7 +1064,106 @@ stop_the_local_engine() {
     compose --profile llm stop vllm 2>/dev/null || true
     compose --profile llm rm -f vllm 2>/dev/null || true
   fi
-  set_env COMPOSE_PROFILES ""
+  profile_remove llm
+}
+
+# fast-lane ---------------------------------------------------------------------
+
+fast_lane_is_on() {
+  profile_on fast
+}
+
+cmd_fast_lane() {
+  case "${1:-}" in
+    on) cmd_fast_lane_on ;;
+    off) cmd_fast_lane_off ;;
+    *)
+      red "fast-lane takes 'on' or 'off'."
+      exit 1
+      ;;
+  esac
+}
+
+ask_the_fast_lane() {
+  # Asked at install, after the card: one question, and no by default.
+  echo
+  echo "The fast lane is a second copy of the transcription service, for what"
+  echo "must not wait behind a long job: a recording made in the app, and later"
+  echo "the interpreter. It needs about eight gigabytes of the card's memory."
+  echo "Without it those still work, at the front of the one service's line."
+  local answer
+  answer="$(ask "Turn on the fast lane? (yes or no)" "$( fast_lane_is_on && echo yes || echo no)")"
+  case "$answer" in
+    y|Y|yes|YES|Yes) turn_the_fast_lane_on quiet ;;
+    *) ;;
+  esac
+}
+
+turn_the_fast_lane_on() {
+  need_env
+  local gpu state
+  gpu="$(service_env_value WHISPERX_GPU_UUID)"
+  # The same card as the service unless the .env already names another.
+  if [ -z "$(service_env_value WHISPERX_FAST_GPU_UUID)" ] \
+    || [ "$(service_env_value WHISPERX_FAST_GPU_UUID)" = "<GPU UUID>" ]; then
+    set_service_env WHISPERX_FAST_GPU_UUID "$gpu"
+  fi
+  state="$(service_env_value WHISPERX_FAST_STATE_DIR)"
+  case "$state" in
+    ""|/replace/with/*)
+      state="$(service_env_value WHISPERX_STATE_DIR)-fast"
+      set_service_env WHISPERX_FAST_STATE_DIR "$state"
+      ;;
+  esac
+  # Docker would make a missing state folder as root, and the service could
+  # then never write into it; made here with the service's own owner.
+  if [ -n "$state" ] && ! look test -d "$state"; then
+    sudo install -d -m 0750 -o "$(service_env_value WHISPERX_UID)" -g "$(service_env_value WHISPERX_GID)" "$state" 2>/dev/null \
+      || amber "Could not make $state; make it, owned by the service's account, before starting."
+  fi
+  set_env WHISPERX_FAST_URL "http://whisperx-fast:8000"
+  profile_add fast
+  if [ "${1:-}" != "quiet" ]; then
+    echo
+    echo "Starting the fast lane..."
+    compose up -d
+    echo
+    green "The fast lane is on, beside the service on card $(service_env_value WHISPERX_FAST_GPU_UUID)."
+    echo "  Watch it come up with:   ./transcribe logs whisperx-fast"
+    echo "  The Panel's Status page has a Fast lane card; ./transcribe check asks it."
+    echo "  ./transcribe fast-lane off stops it and frees the memory."
+  else
+    green "The fast lane is on; it starts with the stack."
+  fi
+}
+
+cmd_fast_lane_on() {
+  cat <<'WORDS'
+The fast lane
+-------------
+A second copy of the transcription service, beside the first on the same
+card, for what must not wait behind a long job: a recording made in the app,
+and later the pieces of one transcribed while it records, and the
+interpreter. About eight gigabytes of the card's memory for the default
+model. It shares the model folder and has a state folder of its own.
+
+WORDS
+  turn_the_fast_lane_on
+}
+
+cmd_fast_lane_off() {
+  need_env
+  if fast_lane_is_on; then
+    compose --profile fast stop whisperx-fast 2>/dev/null || true
+    compose --profile fast rm -f whisperx-fast 2>/dev/null || true
+  fi
+  profile_remove fast
+  set_env WHISPERX_FAST_URL ""
+  # The app's containers read the address at start, so they are brought up
+  # again to forget it; nothing else changes.
+  compose up -d
+  green "The fast lane is off and its memory is free. Recordings made in the app"
+  echo "  go to the front of the one service's line, as they did before."
 }
 
 cmd_folders() {
@@ -2139,6 +2277,7 @@ status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
 directory) shift && cmd_directory "$@" ;;
 engine) shift && cmd_engine "$@" ;;
+fast-lane) shift && cmd_fast_lane "$@" ;;
 folders) shift && cmd_folders "$@" ;;
 backup-db) shift && cmd_backup_db "$@" ;;
 backup) shift && cmd_backup "$@" ;;

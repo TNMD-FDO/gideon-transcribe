@@ -132,6 +132,14 @@ def poll_service(attempt: int = 1) -> None:
 
     try:
         states = {one["id"]: one for one in whisperx.jobs()}
+        if whisperx.fast_lane_configured():
+            # The lane's jobs too, in the same answer. A lane that does not
+            # answer leaves its Runs where they were this time round; the
+            # batch service's silence is what gives up on everything.
+            try:
+                states.update({one["id"]: one for one in whisperx.jobs(whisperx.FAST)})
+            except whisperx.ServiceError:
+                log.warning("the fast lane did not answer the poll")
     except whisperx.ServiceError as problem:
         if attempt >= queue.POLLS_BEFORE_GIVING_UP:
             log.warning("the service has not answered twice; failing what is out there")

@@ -74,6 +74,25 @@
       ]);
     }
 
+    var lane = state.fast_lane || {};
+    if (!lane.configured) {
+      facts("fast-lane", [["Fast lane", "off (turn it on with ./transcribe fast-lane on)"]]);
+    } else if (!lane.up) {
+      facts("fast-lane", [["Reachable", "no: " + (lane.says || "")]]);
+    } else {
+      var laneLoaded = lane.model_loaded || {};
+      var laneLine = lane.queue || {};
+      var laneGpu = lane.gpu || {};
+      facts("fast-lane", [
+        ["Model loaded", laneLoaded.model || "none"],
+        ["GPU", (laneGpu.name || "") + " " + (laneGpu.uuid || "")],
+        ["VRAM", laneGpu.vram_used_mb === undefined ? "" :
+          laneGpu.vram_used_mb + " MB used"],
+        ["In line", (laneLine.length === undefined ? "?" : laneLine.length) + " job(s)"],
+        ["Running now", lane.current_job ? lane.current_job.stage : "nothing"]
+      ]);
+    }
+
     var storage = document.getElementById("storage");
     storage.textContent = state.storage.free + " free (the floor is " +
       state.storage.floor + ")";

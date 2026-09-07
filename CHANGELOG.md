@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.31.0, 2026-09-07
+
+```
+Models: unchanged
+Database: migrates (0030, a Run remembers which copy of the service holds it)
+```
+
+### Added
+
+- **The fast lane.** A second copy of the transcription service, beside the
+  first on the same card, for what must not wait behind a long job: a
+  recording made in the app today, and the pieces of one transcribed while
+  it records and the Interpreter when they come. Same image, same model,
+  its own state folder, about eight gigabytes of the card. The installer
+  asks whether to turn it on; `./transcribe fast-lane on` and `off` do it
+  later; the Status page has a Fast lane card and `./transcribe check` asks
+  it. A lane that is on but not answering is not waited for. An office
+  without one loses nothing but the waiting.
+
+### For the office that builds
+
+- `COMPOSE_PROFILES` in `.env` is now a comma-separated list (`llm`, `fast`),
+  and the installer adds and removes each on its own. Nothing to change on
+  an installed server.
+
 ## v1.30.1, 2026-09-07
 
 ```
