@@ -1326,7 +1326,7 @@ body.no-speakers .seg .name { display: none; }
 .tbl tr.group a { text-decoration: none; }
 .tbl tr.group a:hover { text-decoration: underline; }
 /* Recorded here: a recording that failed says why, in the row, and is not polled. */
-.dictations .failed-line { color: var(--danger, #b3261e); }
+.dictations .failed-line { color: var(--danger); }
 /* The Start page: three doors. */
 .start .starts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 56rem; }
 @media (max-width: 760px) { .start .starts { grid-template-columns: 1fr; } }

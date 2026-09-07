@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.32.4, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- The red of a failed row under Recorded here now comes from the theme's
+  token alone, as every colour in the stylesheet must; v1.32.3 had written
+  a fallback colour into the rule, which the stylesheet test refuses and
+  which left the main branch's checks red.
+
 ## v1.32.3, 2026-09-07
 
 ```
