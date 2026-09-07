@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.33.0, 2026-09-07
+
+```
+Models: unchanged
+Database: migrates (0032, a Session's Turns; a Segment's language and translation)
+```
+
+### Added
+
+- **The Interpreter, text only** (Phase 3, chapter 3, first slice). With the
+  new **Interpreter** toggle on (Features, under Live recording, and an
+  engine configured), the New recording page offers a door to a Session
+  between a staff member and a visitor who speaks another language. Each
+  turn is heard by the transcription service the moment the person stops
+  talking, on the fast lane when there is one, and translated by the engine
+  a second or two later; the page shows both in two columns, the visitor's
+  on the side facing them. Hold-to-talk buttons for a loud room, Type
+  instead, quick phrases, a notice in both languages, and a language the
+  app can hear for itself. The session is kept as a recording with a
+  transcript in both languages, in the viewer and the Word export. Never a
+  substitute for a certified interpreter, and the page says so. Voices come
+  in a later release.
+- **The Interpreter settings page**: Languages offered (Spanish at install),
+  Turn-taking, Readback, Quick phrases, The notice.
+- **Two research notes** behind it: which languages each tool covers, and
+  the voice engine and its licences.
+
 ## v1.32.4, 2026-09-07
 
 ```

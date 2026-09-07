@@ -239,6 +239,16 @@ A recording made here is yours. **Send to** hands it to a colleague: pick them f
 
 A recording made here is kept for as long as the office keeps a case, counted from the last time you or a colleague opened it, wrote its memo or summary, or sent it. In its last days the row turns amber and reads "deletes in N days unless opened", your nightly email lists it, and opening it starts the clock over. There is no recycle bin for these: when the clock runs out it is gone. **Delete** on the row is final too.
 
+## The Interpreter
+
+When your office has it on, the New recording page offers **Open the Interpreter** for a visitor who speaks another language and no interpreter is at hand. It is not an interpreter: it is for intake, scheduling, directions, and getting the gist of what somebody has come about while a real one is arranged. Anything with legal consequence waits for a certified interpreter, and the notice at the top of the page says so in both languages.
+
+Choose the visitor's language, or leave it on **Let the app hear it** and the first thing they say settles it. Press **Start** and talk. The screen splits into two columns, the visitor's on the side facing them (**Swap sides** turns them round). Each time somebody finishes speaking, their words appear in their own column as the app heard them, and the translation appears a second or two later in large type for the other side to read. Two large buttons, **Visitor** and **Staff**, are there for a loud room: hold one while speaking and release when done. **Type instead** sends a name, a number, or an address as words, and the **quick phrases** ("Please wait a moment", "We are arranging an interpreter", and the rest) go to the visitor in their language with one press.
+
+A misheard word is easy to see, since each person's own words are shown back to them; say it again. **Pause** and **Stop** work as on any recording. The whole session is kept as a recording under **Recorded here** on My recordings, or in the case it was started from, with a transcript that carries both languages: each line as heard, with its translation under it, in the viewer and in the Word export. The Details panel says the session was interpreted by the machine and how many turns it had.
+
+Voices, so that the visitor hears the translation spoken, are coming in a later release; for now the translation is read from the screen.
+
 ## Emails the app sends
 
 If your office has set up mail, the app sends four kinds of message, all plain text, none with an attachment, and none quoting a transcript, a summary, a chat, a speaker's name or a clip: the nightly **retention digest** about cases in their last days; **a case shared with you**, at once, when a colleague shares one; **a case handed to you**, at once, when a case is transferred or reassigned to you, with its days left; and **your batch has finished**, when you ticked the box on the Upload page. Every message names things and says where to go; the app's pages already show everything a message says, so a person without an email address misses the message and nothing else. There is no opt-out: the messages exist for safety and come at most one a night, and the batch tick is the one choice that is yours. Replies go to your office's IT mailbox.

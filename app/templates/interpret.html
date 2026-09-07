@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Interpreter{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The Interpreter's Session page (Phase 3, chapter 3), in three states.
+    Before: the Visitor's language and Start. During: two columns, the
+    Visitor's on the side facing them, each Turn as heard and translated;
+    hold-to-talk buttons for a loud room; Type instead; the quick phrases;
+    Stop. After: where the recording went. Text only in this first slice;
+    the voices come next.
+  {% endcomment %}
+  <div class="page roomy record interpret" id="interpret"
+       data-longest="{{ longest }}"
+       data-case="{{ chosen_case }}"
+       data-csrf="{{ csrf_token }}"
+       data-turn-taking="{{ turn_taking }}"
+       data-readback="{% if readback %}1{% else %}0{% endif %}">
+    <p class="crumb muted small">
+      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'record-new' %}">New recording</a>{% endif %}
+    </p>
+    <div class="row">
+      <h1 class="grow">Interpreter</h1>
+    </div>
+
+    <section id="before" class="stack" style="max-width: 44rem">
+      <p class="notice warn" id="notice-before">
+        {% for line in notice %}<span class="notice-line">{{ line }}</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      </p>
+      <div class="card stack">
+        <div class="field">
+          <label for="visitor-language">The visitor's language</label>
+          <select id="visitor-language">
+            <option value="">Let the app hear it</option>
+            {% for one in languages %}
+              <option value="{{ one.code }}"{% if languages|length == 1 %} selected{% endif %}>{{ one.name }} ({{ one.own }})</option>
+            {% endfor %}
+          </select>
+          <p class="muted small" style="margin: 4px 0 0">
+            Staff speak English. With "Let the app hear it", the first thing the visitor says settles the language, and the screen says what it decided.
+          </p>
+        </div>
+        <div class="field">
+          <label for="session-title">Title (optional)</label>
+          <input type="text" id="session-title" maxlength="300" placeholder="Interpreter, the language, the date and time, unless you give one">
+        </div>
+        {% if chosen_case %}
+          <p class="muted small">Into the case <b>{{ case_name }}</b>, under the case's clock.</p>
+        {% else %}
+          <p class="muted small">Kept under Recorded here on My recordings, yours until you send it, for as long as the office keeps a case.</p>
+        {% endif %}
+        <div class="row">
+          <button type="button" class="btn primary big" id="start">{% icon "mic" %} Start</button>
+          <span class="muted small">Not an interpreter: for intake, scheduling, and the gist while a real one is arranged.</span>
+        </div>
+        <p class="problem" id="before-problem" hidden></p>
+      </div>
+    </section>
+
+    <section id="during" hidden>
+      <p class="notice warn" id="notice-during"></p>
+      <div class="row" style="margin: 6px 0 10px">
+        <span class="pill danger" id="rec-pill">Recording</span>
+        <span class="mono time" id="clock">00:00</span>
+        <span class="muted small" id="language-line"></span>
+        <span class="grow"></span>
+        <button type="button" class="btn small ghost" id="swap-columns" title="Put the visitor's column on the other side">Swap sides</button>
+        <button type="button" class="btn small" id="pause">Pause</button>
+        <button type="button" class="btn small danger" id="stop">Stop</button>
+      </div>
+      <div class="meter"><div class="meter-bar" id="meter"></div></div>
+
+      <div class="sides" id="columns">
+        <div class="side-column visitor" id="col-visitor">
+          <h2 class="small muted" id="visitor-heading">Visitor</h2>
+          <ol class="turns" id="turns-visitor"></ol>
+        </div>
+        <div class="side-column staff" id="col-staff">
+          <h2 class="small muted">Staff (English)</h2>
+          <ol class="turns" id="turns-staff"></ol>
+        </div>
+      </div>
+
+      <div class="talk-row">
+        <button type="button" class="btn big hold" id="hold-visitor" data-side="visitor">{% icon "mic" %} Visitor</button>
+        <button type="button" class="btn big hold" id="hold-staff" data-side="staff">{% icon "mic" %} Staff</button>
+        <span class="muted small" id="talk-help"></span>
+      </div>
+
+      <div class="card stack" style="margin-top: 10px">
+        <div class="row" style="gap: 6px">
+          <select id="type-side" aria-label="Who is typing">
+            <option value="staff">Staff types</option>
+            <option value="visitor">Visitor types</option>
+          </select>
+          <input type="text" id="type-text" class="grow" maxlength="2000" placeholder="Type instead: a name, a number, an address">
+          <button type="button" class="btn" id="type-send">Send</button>
+        </div>
+        <div class="phrases" id="phrases">
+          {% for phrase in phrases %}
+            <button type="button" class="btn small ghost phrase" data-phrase="{{ phrase }}">{{ phrase }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      <p class="problem" id="during-problem" hidden></p>
+    </section>
+
+    <section id="after" class="stack" style="max-width: 44rem" hidden>
+      <h2 id="after-title"></h2>
+      <p class="muted" id="after-line">The session has ended. The recording and its transcript, in both languages, are being finished.</p>
+      <div class="row">
+        <a class="btn primary" id="open-after">My recordings</a>
+        <a class="btn ghost" href="{% url 'interpret' %}{% if chosen_case %}?case={{ chosen_case }}{% endif %}">Another session</a>
+      </div>
+    </section>
+  </div>
+
+  <script src="{% static 'vendor/tus.min.js' %}"></script>
+  <script src="{% static 'interpret.js' %}"></script>
+{% endblock %}

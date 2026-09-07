@@ -77,6 +77,25 @@ STYLES = {
 }
 
 
+# The Interpreter's style (chapter 3): a Session between a visitor and staff.
+# Not in STYLES, which is the New recording page's radio group of three; the
+# Session page is its own door. The presets are the same shape.
+INTERPRETER_STYLE = {
+    "name": "Interpreter",
+    "line": "A visitor who speaks another language, heard and translated turn by turn.",
+    "type": "Interview",
+    "diarize": False,
+    "computer": False,
+    "product": "summary",
+}
+
+
+def style_of(style: str) -> dict | None:
+    if style == "interpreter":
+        return INTERPRETER_STYLE
+    return STYLES.get(style)
+
+
 def on() -> bool:
     """Whether the Record page exists: the setting, under Folder management."""
     return cases.folder_management_on() and bool(settings_store.get("live_recording"))
@@ -133,7 +152,7 @@ def start(
     when = timezone.localtime(timezone.now())
     # The style presets the type, the diarization, and the computer's sound;
     # a type chosen under More options wins over the style's.
-    chosen = STYLES.get(style) or (STYLES["dictation"] if dictation else None)
+    chosen = style_of(style) or (STYLES["dictation"] if dictation else None)
     if chosen is not None:
         recording_type = (recording_type or "").strip() or chosen["type"]
         with_computer = with_computer or chosen["computer"]
@@ -159,7 +178,11 @@ def start(
         last_used=when if dictation else None,
         live={
             "started": when.isoformat(),
-            "style": style if style in STYLES else ("dictation" if dictation else ""),
+            "style": (
+                style
+                if style_of(style) is not None
+                else ("dictation" if dictation else "")
+            ),
             "sources": sources,
             "browser": (browser or "")[:120],
             "pauses": [],
@@ -177,7 +200,7 @@ def start(
         object_label=recording.original_filename,
         case=case.name if case is not None else "",
         dictation=bool(dictation),
-        style=style if style in STYLES else "",
+        style=style if style_of(style) is not None else "",
         sources=sources,
         language=language or "auto",
         translate=bool(translate),

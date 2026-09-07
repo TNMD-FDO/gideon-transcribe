@@ -278,6 +278,10 @@ class Segment(models.Model):
     # export's Appearances table prints both and a rename must not lose the
     # label the Provenance refers to.
     speaker_label = models.CharField(max_length=60, blank=True, default="")
+    # An interpreted Session's Segment (Phase 3, chapter 3): the language the
+    # words were spoken in, and their translation into the other side's.
+    language = models.CharField(max_length=10, blank=True, default="")
+    translation = models.TextField(blank=True, default="")
 
     # Word timings, when the language could be aligned. A word the aligner
     # could not place keeps its word and loses its times.

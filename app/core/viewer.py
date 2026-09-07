@@ -221,6 +221,10 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
                     "speaker": segment.speaker,
                     "corrected": segment.corrected,
                     "words": segment.words or [],
+                    # An interpreted Session's Segments carry the words as
+                    # heard and their translation (Phase 3, chapter 3).
+                    "language": segment.language,
+                    "translation": segment.translation,
                 }
                 # The second copy of what both Sides heard is kept in the
                 # database and left out of the reading, so the announcement at
@@ -524,9 +528,9 @@ def _plainly(seconds: float) -> str:
 
 def _live_rows(recording) -> list:
     """The Provenance's lines for a Live recording; none for an uploaded one."""
-    from core import live
+    from core import interpreter, live
 
-    return live.provenance_rows(recording)
+    return live.provenance_rows(recording) + interpreter.provenance_rows(recording)
 
 
 def _the_rest_of_the_case(recording) -> list:

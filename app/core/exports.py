@@ -461,6 +461,15 @@ def word(recording: Recording, exported_by: str) -> bytes:
         run = line.add_run(f"[{clock(segment.start)}]{mark} {name}{segment.text}")
         run.font.name = "Consolas"
         run.font.size = Pt(10)
+        if segment.translation:
+            # An interpreted Session: the translation under the words as heard.
+            under = document.add_paragraph()
+            under.paragraph_format.space_after = Pt(6)
+            under.paragraph_format.left_indent = Pt(24)
+            shown = under.add_run(segment.translation)
+            shown.font.name = "Consolas"
+            shown.font.size = Pt(10)
+            shown.italic = True
 
     if not segments:
         document.add_paragraph("This transcript has no segments.")
@@ -550,10 +559,11 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
     vad = used.get("vad") or {}
     sides = list(recording.sides.all())
 
-    from core import live
+    from core import interpreter, live
 
     rows = [
         *live.provenance_rows(recording),
+        *interpreter.provenance_rows(recording),
         ("Original name", recording.original_filename),
         ("Size", f"{recording.size_bytes / 1024 / 1024:.1f} MB"),
         ("SHA-256", recording.sha256),

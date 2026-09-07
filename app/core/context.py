@@ -32,4 +32,15 @@ def workspace(request) -> dict:
             and settings_store.get("live_recording")
             and settings_store.get("dictation")
         ),
+        # The Interpreter (Phase 3, chapter 3): under Live recording, with an engine.
+        "interpreter": _interpreter_on(),
     }
+
+
+def _interpreter_on() -> bool:
+    from core import interpreter
+
+    try:
+        return interpreter.on()
+    except Exception:  # noqa: BLE001 - a page must render whatever the engine says
+        return False

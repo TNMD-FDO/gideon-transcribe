@@ -282,6 +282,7 @@ from core.cases import Case, OffSpell  # noqa: E402, F401
 from core.clips import Clip  # noqa: E402, F401
 from core.dictation import DictationShare  # noqa: E402, F401
 from core.engine import EngineStatus  # noqa: E402, F401
+from core.interpreter import Turn  # noqa: E402, F401
 from core.jobs import Job, Run, Segment, Transcript  # noqa: E402, F401
 from core.mail import MailStatus  # noqa: E402, F401
 from core.people import Person  # noqa: E402, F401
