@@ -90,6 +90,8 @@ jobs:
           : > whisperx-service/secrets/hf_token
           : > whisperx-service/secrets/tokens
           docker compose -f whisperx-service/compose.yaml config --quiet
+          # The fast lane, which is the service a second time under a profile.
+          docker compose -f whisperx-service/compose.yaml --profile fast config --quiet
 
       - name: The whole stack's compose file is valid
         if: hashFiles('compose.yaml') != ''
@@ -116,6 +118,7 @@ jobs:
           LLM_NETWORK=some-engine-network \
             docker compose -f compose.yaml -f compose.shared-engine.yaml config --quiet
           docker compose --profile llm config --quiet
+          docker compose --profile fast config --quiet
           rm -rf .env secrets whisperx-service/.env whisperx-service/secrets
 
       - name: The Caddyfile asks before it serves
