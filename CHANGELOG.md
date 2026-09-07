@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.35.0, 2026-09-07
+
+```
+Models: unchanged
+Database: migrates (0033, the Interpreter's tables and fields are removed)
+```
+
+### Removed
+
+- **The Interpreter**, built in v1.33.0 to v1.34.0, is withdrawn at the
+  maintainer's decision: the office is not ready to take it on and does not
+  expect it to be used much. The page, its settings, the door on the New
+  recording page, and the media worker's place on the service's network are
+  gone; the app is as it was at v1.32.4. A session recorded while it was on
+  keeps its recording and its transcript; the translations under the lines
+  and the turn rows are dropped. The chapter stays in the specification as
+  deferred, and the two research notes stay, so the work can be picked up
+  if the need appears.
+
 ## v1.34.0, 2026-09-07
 
 ```

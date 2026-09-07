@@ -225,13 +225,6 @@
       said.className = "txt";
       said.innerHTML = wordsOf(segment);
       body.appendChild(said);
-      if (segment.translation) {
-        // An interpreted Session: the translation under the words as heard.
-        var translated = document.createElement("p");
-        translated.className = "txt translation muted";
-        translated.textContent = segment.translation;
-        body.appendChild(translated);
-      }
 
       row.appendChild(when);
       row.appendChild(body);

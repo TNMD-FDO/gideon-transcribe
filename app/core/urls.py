@@ -9,7 +9,6 @@ from core import (
     clip_pages,
     dictation_pages,
     exports,
-    interpreter_pages,
     live_pages,
     media_access,
     pages,
@@ -164,17 +163,6 @@ urlpatterns = [
     # which a Case page also opens with its case preset.
     path("record", dictation_pages.record_tab, name="record"),
     path("record/new", live_pages.record, name="record-new"),
-    # The Interpreter (Phase 3, chapter 3): the Session page and its calls.
-    path("record/interpret", interpreter_pages.session, name="interpret"),
-    path("record/interpret/start", interpreter_pages.start, name="interpret-start"),
-    path(
-        "record/<uuid:recording_id>/turn", interpreter_pages.turn, name="interpret-turn"
-    ),
-    path(
-        "record/<uuid:recording_id>/turns",
-        interpreter_pages.turns,
-        name="interpret-turns",
-    ),
     path("record/start", live_pages.start, name="record-start"),
     path("record/people", live_pages.people, name="record-people"),
     # Dictations (Phase 3): the tab, the Dictate page, and a row's acts.

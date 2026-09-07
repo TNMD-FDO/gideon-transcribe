@@ -46,15 +46,9 @@ def prepare_recording(recording_id: str) -> None:
     if recording.media_state == MediaState.READY:
         # The line first: a Recording joins it the moment it is Ready, and the
         # Playback copy is made beside the transcription rather than before it.
-        from core import interpreter, live, queue
+        from core import live, queue
 
-        if interpreter.is_session(recording):
-            # An interpreted Session: every Turn was heard and translated as
-            # it ended, so the Transcript is built from the Turns and nothing
-            # goes to the service now.
-            interpreter.finish(recording)
-            job = None
-        elif live.stretches_of(recording):
+        if live.stretches_of(recording):
             # Transcribed in stretches while it recorded: only the tail is
             # left, on the Job that has been open since the first stretch.
             job = live.finish_stretches(recording)
@@ -157,37 +151,6 @@ def prepare_stretch(recording_id: str, number: int, attempt: int = 1) -> None:
     live.runs_for_stretch(recording, number)
     live.mark_stretch(recording, number, "sent")
     hand_over_job.defer(job_id=str(live.open_job(recording).pk))
-
-
-@app.task(queue="media", name="hear_turn")
-def hear_turn(turn_id: str, attempt: int = 1) -> None:
-    """One Turn of an interpreted Session: prepared, heard, its side decided.
-
-    Waits on the service inside the task, since a Turn is seconds of speech
-    and the fast lane answers in about one; the media queue has four slots.
-    A service that is away is asked again a few times (the attempt).
-    """
-    from core import interpreter
-
-    turn = (
-        interpreter.Turn.objects.filter(pk=turn_id).select_related("recording").first()
-    )
-    if turn is None or turn.state != interpreter.Turn.HEARING:
-        return
-    interpreter.hear(turn, attempt=attempt)
-
-
-@app.task(queue="llm", name="translate_turn")
-def translate_turn(turn_id: str) -> None:
-    """One Turn's translation, from the one container that can reach the engine."""
-    from core import interpreter
-
-    turn = (
-        interpreter.Turn.objects.filter(pk=turn_id).select_related("recording").first()
-    )
-    if turn is None or turn.state != interpreter.Turn.TRANSLATING:
-        return
-    interpreter.translate(turn)
 
 
 @app.task(queue="default", name="poll_service")

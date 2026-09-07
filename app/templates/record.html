@@ -36,11 +36,6 @@
           </label>
         {% endfor %}
       </div>
-      {% if interpreter %}
-        <p class="muted small" id="interpreter-door">
-          A visitor who speaks another language? <a href="{% url 'interpret' %}{% if chosen_case %}?case={{ chosen_case }}{% endif %}">Open the Interpreter</a>: heard and translated turn by turn, kept in both languages.
-        </p>
-      {% endif %}
 
       {% if chosen_case %}
         <p class="muted small">Into the case <b>{{ case_name }}</b>. It is kept there under the case's clock.</p>

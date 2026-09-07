@@ -215,19 +215,6 @@ CASE_CHAT = (
     "reply: I can only answer from the transcripts in this case."
 )
 
-# The Interpreter (Phase 3, chapter 3): one Turn, translated and nothing
-# else. The register is fixed neutral and polite, since the words are read
-# by a visitor at the front desk, and nothing is added or explained.
-TRANSLATE = (
-    "You are a translation engine inside Gideon Transcribe, used at the front "
-    "desk of a public defender office to talk with a visitor. Translate the "
-    "message into {target}. Reply with the translation only: no quotation "
-    "marks, no notes, no explanation, no alternatives. Keep the meaning exact "
-    "and the register neutral and polite. Keep names, numbers, dates, times, "
-    "and addresses as they are. If the message is already in {target}, reply "
-    "with it unchanged."
-)
-
 SUGGESTIONS = (
     "Some speakers in this transcript have no name yet. For each of them, work "
     "out from what is said who they are: a name, if someone says it or is "

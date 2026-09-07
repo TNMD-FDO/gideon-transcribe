@@ -35,7 +35,6 @@ AUDIT = "audit"
 CASES = "cases"
 APPEARANCE = "appearance"
 EMAIL = "email"
-INTERPRETER = "interpreter"
 # Not a Settings page: these rows are edited on the Templates page, at once,
 # outside the tray, like the prompt templates beside them.
 TEMPLATES = "templates"
@@ -66,7 +65,6 @@ PAGES = [
     (CASES, "Cases"),
     (APPEARANCE, "Appearance"),
     (EMAIL, "Email"),
-    (INTERPRETER, "Interpreter"),
 ]
 
 
@@ -1055,99 +1053,6 @@ def _rows() -> list[Definition]:
                 "says plainly that an Admin access is forgotten after this."
             ),
             when_changed=("The next sweep. Shortening it removes rows the same night."),
-        ),
-        # The Interpreter (Phase 3, chapter 3) ----------------------------------
-        Definition(
-            key="interpreter",
-            page=FEATURES,
-            name="Interpreter",
-            kind=TOGGLE,
-            default=False,
-            needs="live_recording",
-            what_it_does=(
-                "People may hold an interpreted session with a visitor who speaks "
-                "another language: heard by the transcription service, translated "
-                "by the AI assistant's engine, turn by turn, and kept as a "
-                "recording in both languages. Never a substitute for a certified "
-                "interpreter. Needs an engine; without one the page is not there."
-            ),
-            when_changed=(
-                "At once. Off hides the page; a session in progress finishes."
-            ),
-        ),
-        Definition(
-            key="interpreter_languages",
-            page=INTERPRETER,
-            name="Languages offered",
-            kind=TEXT,
-            default="es",
-            what_it_does=(
-                "The visitor languages staff may choose, one code per line, as "
-                "Whisper names them (es, vi, ar, zh, pt, fr, ru, uk, ko, so, sw, "
-                "am, hi, ht). Offer a language only once a bilingual reader has "
-                "read a translated sample and called it usable; the app cannot "
-                "judge that itself. English is staff's and is never offered."
-            ),
-            when_changed=("The next session."),
-        ),
-        Definition(
-            key="interpreter_turn_taking",
-            page=INTERPRETER,
-            name="Turn-taking",
-            kind=CHOICE,
-            default="tap",
-            choices=("tap", "hold"),
-            what_it_does=(
-                "Tap: one of the two buttons is always lit; tap yours, speak, and "
-                "the turn ends when you pause. Hold: hold a button while speaking "
-                "and let go when done, for a loud room."
-            ),
-            when_changed=("The next session."),
-        ),
-        Definition(
-            key="interpreter_readback",
-            page=INTERPRETER,
-            name="Readback",
-            kind=TOGGLE,
-            default=True,
-            what_it_does=(
-                "Each person sees their own words as the app heard them, in "
-                "their own language, beside the translation, so a misheard word "
-                "is seen and said again."
-            ),
-            when_changed=("The next session."),
-        ),
-        Definition(
-            key="interpreter_phrases",
-            page=INTERPRETER,
-            name="Quick phrases",
-            kind=TEXT,
-            default=(
-                "Please wait a moment.\nWe are arranging an interpreter.\n"
-                "Do you understand?\nPlease say that again.\n"
-                "This conversation is being recorded.\nWe are finished for today."
-            ),
-            what_it_does=(
-                "The staff side's ready-made lines, one per line, translated and "
-                "shown to the visitor with one press."
-            ),
-            when_changed=("The next session."),
-        ),
-        Definition(
-            key="interpreter_notice",
-            page=INTERPRETER,
-            name="The notice",
-            kind=TEXT,
-            default=(
-                "This computer is translating what we say to each other. It is "
-                "not an interpreter, and it makes mistakes. A recording is kept."
-            ),
-            what_it_does=(
-                "Shown at the top of the session page in English and, for "
-                "Spanish, in Spanish. The person starting the session reads it, "
-                "or has it read, before pressing Start."
-            ),
-            when_changed=("The next session."),
         ),
     ]
 

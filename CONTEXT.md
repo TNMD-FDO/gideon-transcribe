@@ -128,7 +128,7 @@ Five minutes of a Live recording, transcribed while the next five record (Phase 
 _Avoid_: chunk, segment (taken), partial transcript
 
 **Interpreter**:
-The door on the New recording page beside the three styles, and the feature as a whole: a Session between a Visitor who speaks another language and Staff, heard by Whisper, translated by the office's engine, and (when built) spoken by a Voice on the server, Turn by Turn, kept as a Recording with both languages. Never a substitute for a certified interpreter. Phase 3 chapter 3; the text-only Session built in v1.33.0, the Voices to come.
+The door on the New recording page beside the three styles, and the feature as a whole: a Session between a Visitor who speaks another language and Staff, heard by Whisper, translated by the office's engine, and (when built) spoken by a Voice on the server, Turn by Turn, kept as a Recording with both languages. Never a substitute for a certified interpreter. Phase 3 chapter 3; built text-only in v1.33.0 to v1.34.0 and withdrawn in v1.35.0 at the maintainer's decision (deferred); the words stay for the chapter.
 _Avoid_: translator, bot
 
 **Session**:
