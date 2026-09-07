@@ -482,6 +482,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | Key | Meaning |
 |---|---|
 | `WHISPERX_URL` | Where the service answers, on its own Docker network. It publishes no port and has no hostname. |
+| `WHISPERX_FAST_URL` | The fast lane's address, `http://whisperx-fast:8000` while it is on, empty otherwise. `./transcribe fast-lane on` and `off` write it. |
 
 **The office directory.** Set at install, shown read-only in the panel, never edited there.
 
