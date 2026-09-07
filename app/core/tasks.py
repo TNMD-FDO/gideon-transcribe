@@ -160,11 +160,12 @@ def prepare_stretch(recording_id: str, number: int, attempt: int = 1) -> None:
 
 
 @app.task(queue="media", name="hear_turn")
-def hear_turn(turn_id: str) -> None:
+def hear_turn(turn_id: str, attempt: int = 1) -> None:
     """One Turn of an interpreted Session: prepared, heard, its side decided.
 
     Waits on the service inside the task, since a Turn is seconds of speech
     and the fast lane answers in about one; the media queue has four slots.
+    A service that is away is asked again a few times (the attempt).
     """
     from core import interpreter
 
@@ -173,7 +174,7 @@ def hear_turn(turn_id: str) -> None:
     )
     if turn is None or turn.state != interpreter.Turn.HEARING:
         return
-    interpreter.hear(turn)
+    interpreter.hear(turn, attempt=attempt)
 
 
 @app.task(queue="llm", name="translate_turn")

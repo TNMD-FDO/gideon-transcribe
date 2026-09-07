@@ -40,6 +40,37 @@ TURN_POLL_SECONDS = 0.5
 # The translation is a sentence or two; a cap far above it, and short.
 TRANSLATION_CAP = 800
 TRANSLATION_TIMEOUT = 45
+# A service that was away (restarting, mid-upgrade) is asked again a few
+# times before a Turn is written off.
+HEAR_TRIES = 4
+HEAR_RETRY_SECONDS = 5
+# What Whisper says when it hears nothing much: a short quiet clip comes back
+# as thanks, in several languages, or as the sign-off of a video. A Turn
+# whose whole text is one of these was nothing said, and is shown as such
+# rather than translated. Compared with punctuation and case stripped.
+HALLUCINATIONS = frozenset(
+    {
+        "thank you",
+        "thanks",
+        "thank you very much",
+        "thanks for watching",
+        "thank you for watching",
+        "gracias",
+        "muchas gracias",
+        "subtitulos por la comunidad de amaracom",
+        "subtitulos realizados por la comunidad de amaracom",
+        "you",
+        "bye",
+        "okay",
+        "ok",
+        "hmm",
+        "mm",
+        "uh",
+        "um",
+        "si",
+        "sí",
+    }
+)
 
 # The languages the app can name on the page, by Whisper's code. English is
 # Staff's and is never offered. The table the research note built
@@ -267,7 +298,13 @@ def turn_arrived(
     return turn
 
 
-def hear(turn: Turn) -> Turn:
+def is_filler(text: str) -> bool:
+    """Whether the words are one of Whisper's made-up thanks and sign-offs."""
+    plain = "".join(ch.lower() if ch.isalnum() or ch.isspace() else " " for ch in text)
+    return " ".join(plain.split()) in HALLUCINATIONS
+
+
+def hear(turn: Turn, attempt: int = 1) -> Turn:
     """The media worker's part: prepare the Turn's audio, hand it to the
     service, wait for the words, and decide whose Turn it was."""
     from core import media, whisperx
@@ -301,6 +338,18 @@ def hear(turn: Turn) -> Turn:
     try:
         submitted = whisperx.submit(turn.asr_path, request, lane)
     except whisperx.ServiceError as problem:
+        if problem.reason_class == "service_unreachable" and attempt < HEAR_TRIES:
+            # The service is away for a moment: ask again shortly, and leave
+            # the Turn as "hearing" so the page keeps waiting for it.
+            from core.tasks import hear_turn
+
+            hear_turn.configure(schedule_in={"seconds": HEAR_RETRY_SECONDS}).defer(
+                turn_id=str(turn.pk), attempt=attempt + 1
+            )
+            log.info(
+                "turn %d of %s: service away, asking again", turn.number, recording.pk
+            )
+            return turn
         return _failed(turn, problem.reason_class)
     turn.service_job_id = submitted.id
     turn.lane = lane
@@ -313,6 +362,9 @@ def hear(turn: Turn) -> Turn:
     text = " ".join(
         (one.get("text") or "").strip() for one in result.get("segments", [])
     ).strip()
+    if is_filler(text):
+        # Nothing was said; the engine made something up. Shown as nothing.
+        text = ""
     heard_language = (result.get("language") or {}).get("detected") or language
     turn.heard = text
     turn.language = heard_language[:10]

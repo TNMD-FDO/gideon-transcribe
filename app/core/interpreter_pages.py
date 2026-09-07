@@ -65,7 +65,7 @@ def session(request: HttpRequest) -> HttpResponse:
                 offered[0]["code"] if len(offered) == 1 else ""
             ),
             "phrases": interpreter.phrases(),
-            "turn_taking": settings_store.get("interpreter_turn_taking") or "automatic",
+            "turn_taking": settings_store.get("interpreter_turn_taking") or "tap",
             "readback": bool(settings_store.get("interpreter_readback")),
             "longest": live.longest_seconds(),
             "csrf": request.META.get("CSRF_COOKIE", ""),

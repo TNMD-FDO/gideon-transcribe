@@ -9,6 +9,7 @@ one Segment per Turn, with the words as heard and their translation.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace as NS
 
 import pytest
 from core import (
@@ -313,6 +314,75 @@ def test_the_language_is_settled_by_the_first_visitor_turn_when_left_to_be_heard
     rows = interpreter.rows(session, since=0)
     assert [one["side"] for one in rows] == ["staff", "visitor"]
     assert rows[1]["state"] == "translating" and rows[1]["heard"] == "Buenos días."
+
+
+def test_a_filler_whisper_made_up_is_nothing_heard_and_a_service_away_is_asked_again(
+    on, person, quiet, monkeypatch, settings
+):
+    session = a_session(person)
+    monkeypatch.setattr(
+        media, "make_asr_audio", lambda src, dst, track, **k: dst.write_bytes(b"w")
+    )
+    settings.WHISPERX_FAST_URL = ""
+
+    # The service is away: the Turn stays "hearing" and is asked again later.
+    def away(audio, request, lane=""):
+        raise whisperx.ServiceError("down", "service_unreachable")
+
+    monkeypatch.setattr(whisperx, "submit", away)
+    again = []
+    monkeypatch.setattr(
+        tasks.hear_turn,
+        "configure",
+        lambda **c: NS(defer=lambda **f: again.append({**f, **c})),
+    )
+    turn = interpreter.turn_arrived(session, start_at=0, end_at=2, audio=b"x" * 10)
+    interpreter.hear(turn, attempt=1)
+    turn.refresh_from_db()
+    assert turn.state == Turn.HEARING
+    assert again == [
+        {
+            "turn_id": str(turn.pk),
+            "attempt": 2,
+            "schedule_in": {"seconds": interpreter.HEAR_RETRY_SECONDS},
+        }
+    ]
+    # The last try fails plainly.
+    interpreter.hear(turn, attempt=interpreter.HEAR_TRIES)
+    turn.refresh_from_db()
+    assert turn.state == Turn.FAILED and turn.failure == "service_unreachable"
+
+    # "Gracias." from a clip of nothing is nothing heard, not a Turn to translate.
+    monkeypatch.setattr(
+        whisperx,
+        "submit",
+        lambda audio, request, lane="": whisperx.Submitted(
+            id="t3", position=0, audio_minutes_ahead=0.0
+        ),
+    )
+    monkeypatch.setattr(
+        whisperx, "jobs", lambda lane="": [{"id": "t3", "state": "done"}]
+    )
+    monkeypatch.setattr(whisperx, "delete", lambda job_id, lane="": None)
+    monkeypatch.setattr(
+        whisperx,
+        "result",
+        lambda job_id, lane="": {
+            "segments": [{"text": " Gracias. "}],
+            "language": {"detected": "es"},
+        },
+    )
+    quiet["translate"].clear()
+    filler = interpreter.turn_arrived(
+        session, start_at=3, end_at=4, side="visitor", audio=b"x" * 10
+    )
+    interpreter.hear(filler)
+    filler.refresh_from_db()
+    assert filler.state == Turn.DONE and filler.heard == "" and not quiet["translate"]
+    assert interpreter.is_filler("Thank you.") and interpreter.is_filler(
+        "¡Muchas gracias!"
+    )
+    assert not interpreter.is_filler("Gracias por venir hoy.")
 
 
 def test_the_page_posts_turns_and_polls_them(on, person, client, quiet):

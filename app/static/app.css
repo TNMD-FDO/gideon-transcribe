@@ -1303,6 +1303,12 @@ body.no-speakers .seg .name { display: none; }
 .interpret .sides.swapped .side-column.visitor { order: 2; }
 .interpret .side-column { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; max-height: 52vh; overflow-y: auto; background: var(--surface); }
 .interpret .side-column.visitor { border-color: var(--accent); }
+/* The lit side: whose turn it is, said by the frame and the words "Speak now". */
+.interpret .side-column.live { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
+.interpret .side-column.hearing .speak-now { color: var(--danger); }
+.interpret .speak-now { font-weight: 650; color: var(--accent); white-space: nowrap; }
+.interpret .hold.tap { min-width: 14rem; }
+.interpret .hold.tap.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .interpret .turns { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .interpret .turn .heard { font-size: 1.05rem; }
 .interpret .turn .said.big { font-size: 1.35rem; line-height: 1.35; color: var(--ink); }

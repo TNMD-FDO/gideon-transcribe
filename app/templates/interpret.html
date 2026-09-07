@@ -74,17 +74,24 @@
 
       <div class="sides" id="columns">
         <div class="side-column visitor" id="col-visitor">
-          <h2 class="small muted" id="visitor-heading">Visitor</h2>
+          <div class="row">
+            <h2 class="small muted grow" id="visitor-heading">Visitor</h2>
+            <span class="speak-now" id="speak-visitor"></span>
+          </div>
           <ol class="turns" id="turns-visitor"></ol>
         </div>
         <div class="side-column staff" id="col-staff">
-          <h2 class="small muted">Staff (English)</h2>
+          <div class="row">
+            <h2 class="small muted grow">Staff (English)</h2>
+            <span class="speak-now" id="speak-staff"></span>
+          </div>
           <ol class="turns" id="turns-staff"></ol>
         </div>
       </div>
 
+      <p class="muted small" style="margin: 10px 0 4px">Who is speaking? Tap before you talk.</p>
       <div class="talk-row">
-        <button type="button" class="btn big hold" id="hold-visitor" data-side="visitor">{% icon "mic" %} Visitor</button>
+        <button type="button" class="btn big hold" id="hold-visitor" data-side="visitor">{% icon "mic" %} Visitor <span class="small">· Visitante</span></button>
         <button type="button" class="btn big hold" id="hold-staff" data-side="staff">{% icon "mic" %} Staff</button>
         <span class="muted small" id="talk-help"></span>
       </div>

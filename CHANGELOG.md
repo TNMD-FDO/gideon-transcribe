@@ -21,6 +21,34 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.34.0, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Interpreter says whose turn it is.** One of the two buttons, Visitor
+  or Staff, is always lit; tap yours and speak, and the lit column reads
+  "Speak now" in its language. Nothing is guessed from the language heard
+  any more, and the recogniser is told the language for every turn. The
+  Turn-taking setting's choices are Tap (the default) and Hold.
+- **Turns are cut from a rolling buffer** of the microphone's own samples,
+  with half a second of lead-in, so the first syllable is never lost and the
+  recogniser gets a clean clip. Before, a second recorder started at the
+  onset and missed the start of every turn.
+
+### Fixed
+
+- **"Gracias" or "Thank you" whatever was said.** The recogniser makes those
+  up from a short quiet clip. Such a result is now "nothing heard; please
+  say it again", never a turn to translate.
+- **A turn arriving while the service was away** (restarting, mid-upgrade)
+  is asked again a few times before it is written off, instead of failing
+  at once with "service unreachable".
+
 ## v1.33.1, 2026-09-07
 
 ```

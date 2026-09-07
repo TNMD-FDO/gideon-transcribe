@@ -1,13 +1,17 @@
 // The Interpreter's Session page (Phase 3, chapter 3), text only.
 //
-// The microphone is recorded twice at once: one recorder streams the whole
-// session to the sidecar as the Live recording (as record.js does), and a
-// second is started and stopped per Turn, so each Turn's audio reaches the
-// server the moment the person stops talking and comes back heard and
-// translated a second or two later. Turns end automatically at a pause (the
-// level meter falls quiet for three quarters of a second), or by hand with
-// the two hold-to-talk buttons. Nothing rougher than the Turn as heard is
-// ever shown, and the notice at the top says what the machine is.
+// Two things happen to the microphone at once. One MediaRecorder streams the
+// whole session to the sidecar as the Live recording, as record.js does. And
+// the raw samples are read continuously into a rolling buffer, so that each
+// Turn is cut from it the moment the person stops talking, with half a second
+// of lead-in so the first syllable is never lost, and sent as a small WAV the
+// server can hear at once.
+//
+// Whose Turn it is is never guessed. One of the two big buttons is always lit,
+// Visitor or Staff; tap yours and speak. The lit side's column says "Speak
+// now" in its own language, a Turn ends at a pause, and the side tells the
+// server which language to listen for. Hold to talk is the other mode: hold
+// a button while speaking.
 
 (function () {
   "use strict";
@@ -18,16 +22,24 @@
   var csrf = page.dataset.csrf;
   var CASE = page.dataset.case || "";
   var LONGEST = parseInt(page.dataset.longest, 10) || 3 * 3600;
-  var AUTOMATIC = page.dataset.turnTaking !== "hold";
+  var HOLD_MODE = page.dataset.turnTaking === "hold";
   var READBACK = page.dataset.readback === "1";
 
   var PIECE = 64 * 1024;
-  // A Turn ends after this much quiet, and is sent only if it lasted this long.
-  var PAUSE_MS = 750;
-  var SHORTEST_TURN_MS = 500;
-  // The meter's level above which somebody is talking (0 to 1). Tuned in the
-  // room; the meter bar shows the level, so a room's floor is visible.
-  var TALK_LEVEL = 0.06;
+  // The sound: 16 kHz mono, which is what the service expects, cut from a
+  // rolling buffer that keeps a little of the past.
+  var RATE = 16000;
+  var LEAD_IN_MS = 500;
+  var TAIL_MS = 300;
+  // A Turn ends after this much quiet, and is sent only if it held this much
+  // speech. The level is the frame's RMS against a floor learnt from the room.
+  var PAUSE_MS = 700;
+  var SHORTEST_SPEECH_MS = 700;
+  var START_FRAMES = 3;          // frames of speech before a Turn begins
+  var FRAME_MS = 50;
+  var FLOOR_GAIN = 3.0;          // speech is this many times the room's floor
+  var LEVEL_MIN = 0.012;         // and at least this loud
+  var LONGEST_TURN_MS = 60000;   // a Turn that runs on is cut here
 
   function post(url, body) {
     return fetch(url, {
@@ -51,7 +63,6 @@
     return (m < 10 ? "0" : "") + m + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
   }
 
-  // The stream source the tus client reads pieces from.
   function pieceSource() {
     var pieces = [];
     var waiting = null;
@@ -77,15 +88,11 @@
     [before, during, after].forEach(function (one) { one.hidden = one !== section; });
   }
 
-  var session = null;     // { id, title, after }
+  var session = null;
   var stream = null;
-  var recorder = null;    // the whole session, streamed
+  var recorder = null;
   var source = null;
   var upload = null;
-  var turnRecorder = null; // the Turn in progress
-  var turnStartedAt = 0;   // recorded seconds
-  var turnSide = "";       // "visitor" or "staff" while a button is held
-  var turnPieces = [];
   var startedAt = 0;
   var recordedBefore = 0;
   var paused = false;
@@ -96,7 +103,10 @@
   var uploadDone = false;
   var audio = null;
   var lastNumber = 0;
-  var known = {};          // number -> turn as last drawn
+  var known = {};
+  var side = "staff";        // whose Turn it is: the lit button
+  var holding = "";          // the button held, in hold mode
+  var visitorName = "";      // the Visitor's language, once known
 
   function elapsed() {
     if (!recorder) { return 0; }
@@ -110,7 +120,7 @@
     problem("before-problem", "");
     var language = document.getElementById("visitor-language").value;
     var title = document.getElementById("session-title").value;
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
       .then(function (mic) {
         stream = mic;
         return post("/record/interpret/start", { case: CASE, language: language, title: title });
@@ -157,9 +167,11 @@
 
     drawNotice(session.notice);
     languageLine(session.language_name);
-    document.getElementById("talk-help").textContent = AUTOMATIC
-      ? "Just talk: a turn ends at a pause. Hold a button instead when the room is loud."
-      : "Hold a button while speaking, release when done.";
+    document.getElementById("talk-help").textContent = HOLD_MODE
+      ? "Hold your button while speaking; let go when done."
+      : "Tap your button, then speak. A turn ends when you pause.";
+    document.querySelectorAll(".hold").forEach(function (b) { b.classList.toggle("tap", !HOLD_MODE); });
+    setSide("staff");
     show(during);
     listen();
     ticker = window.setInterval(tick, 500);
@@ -179,9 +191,33 @@
   }
 
   function languageLine(name) {
+    visitorName = name || "";
     document.getElementById("language-line").textContent = name
       ? "Visitor: " + name : "Visitor: language not heard yet";
     document.getElementById("visitor-heading").textContent = name ? "Visitor (" + name + ")" : "Visitor";
+    speakNowLines();
+  }
+
+  // Whose Turn it is. In tap mode the lit button stays lit until the other is
+  // tapped; a Turn in progress is cut at the switch, so nothing is lost.
+  function setSide(which) {
+    if (speaking) { endTurn(true); }
+    side = which;
+    document.querySelectorAll(".hold").forEach(function (b) {
+      b.classList.toggle("on", !HOLD_MODE && b.dataset.side === which);
+    });
+    document.getElementById("col-visitor").classList.toggle("live", which === "visitor");
+    document.getElementById("col-staff").classList.toggle("live", which === "staff");
+    speakNowLines();
+  }
+
+  var SPEAK_NOW = { es: "Hable ahora", pt: "Fale agora", fr: "Parlez maintenant", vi: "Xin hãy nói", ar: "تكلم الآن", ru: "Говорите", uk: "Говоріть", zh: "请说话", ko: "말씀하세요", hi: "अब बोलें", ht: "Pale kounye a", so: "Hadal hadda", sw: "Sema sasa", de: "Sprechen Sie jetzt", it: "Parli ora", tl: "Magsalita na", pl: "Proszę mówić", tr: "Konuşun", fa: "صحبت کنید", ja: "話してください", am: "አሁን ይናገሩ", pa: "ਹੁਣ ਬੋਲੋ" };
+  function speakNowLines() {
+    var code = session && session.language ? session.language : (known.__language || "");
+    var own = SPEAK_NOW[code] || "";
+    document.getElementById("speak-visitor").textContent = side === "visitor"
+      ? "Speak now" + (own ? " · " + own : "") : "";
+    document.getElementById("speak-staff").textContent = side === "staff" ? "Speak now" : "";
   }
 
   function tick() {
@@ -190,118 +226,173 @@
     if (seconds >= LONGEST) { endNow("limit"); }
   }
 
-  // Turns --------------------------------------------------------------------------------
+  // The sound ---------------------------------------------------------------------------
   //
-  // The level meter decides when a Turn starts and ends in automatic mode; a
-  // held button decides in both modes and names the side.
+  // Raw samples from the microphone, resampled to 16 kHz, kept in a rolling
+  // buffer. The level of each frame is measured against the room's floor;
+  // speech begins after a few loud frames and ends after a pause, and the
+  // Turn is cut from a little before the first loud frame to a little after
+  // the last, as one WAV.
 
-  var analyser = null;
-  var data = null;
-  var talking = false;
-  var quietSince = 0;
-  var talkingSince = 0;
+  var ring = [];               // Float32Array frames, oldest first
+  var ringMs = 0;
+  var RING_MAX_MS = LONGEST_TURN_MS + LEAD_IN_MS + 1000;
+  var speaking = false;
+  var speechFrames = [];       // frames of the Turn in progress
+  var loudRun = 0;
+  var quietMs = 0;
+  var speechMs = 0;
+  var turnStartedAt = 0;
+  var floor = 0.004;           // the room's quiet, learnt as it goes
+  var processor = null;
 
   function listen() {
     try {
       if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); }
-      analyser = audio.createAnalyser();
-      analyser.fftSize = 1024;
-      audio.createMediaStreamSource(stream).connect(analyser);
-      data = new Uint8Array(analyser.fftSize);
-    } catch (error) { analyser = null; }
-    (function frame() {
-      if (!recorder) { return; }
-      var level = 0;
-      if (analyser) {
-        analyser.getByteTimeDomainData(data);
-        var sum = 0;
-        for (var i = 0; i < data.length; i++) { var v = (data[i] - 128) / 128; sum += v * v; }
-        level = Math.sqrt(sum / data.length);
-      }
-      document.getElementById("meter").style.width = Math.min(100, level * 300) + "%";
-      if (AUTOMATIC && !paused && !turnSide) { automatic(level); }
-      window.requestAnimationFrame(frame);
-    })();
+      var input = audio.createMediaStreamSource(stream);
+      processor = audio.createScriptProcessor(4096, 1, 1);
+      var ratio = audio.sampleRate / RATE;
+      var carry = [];
+      processor.onaudioprocess = function (event) {
+        var data = event.inputBuffer.getChannelData(0);
+        // Resample by picking every ratio-th sample (the microphone's own
+        // noise suppression has already low-passed it; speech survives).
+        var out = new Float32Array(Math.floor(data.length / ratio));
+        for (var i = 0; i < out.length; i++) { out[i] = data[Math.floor(i * ratio)]; }
+        carry = carry.concat(Array.prototype.slice.call(out));
+        var frameSize = RATE * FRAME_MS / 1000;
+        while (carry.length >= frameSize) {
+          var frame = new Float32Array(carry.splice(0, frameSize));
+          frameArrived(frame);
+        }
+      };
+      input.connect(processor);
+      processor.connect(audio.destination);
+    } catch (error) {
+      problem("during-problem", "The microphone could not be read for turns: " + (error && error.message ? error.message : error));
+    }
   }
 
-  function automatic(level) {
-    var now = performance.now();
-    if (level >= TALK_LEVEL) {
-      quietSince = 0;
-      if (!talking) { talking = true; talkingSince = now; beginTurn(""); }
+  function frameArrived(frame) {
+    var sum = 0;
+    for (var i = 0; i < frame.length; i++) { sum += frame[i] * frame[i]; }
+    var level = Math.sqrt(sum / frame.length);
+    document.getElementById("meter").style.width = Math.min(100, level * 400) + "%";
+
+    ring.push(frame);
+    ringMs += FRAME_MS;
+    while (ringMs > RING_MAX_MS) { ring.shift(); ringMs -= FRAME_MS; }
+
+    if (paused) { return; }
+    // The floor follows the quiet; speech is well above it.
+    if (!speaking) { floor = Math.min(0.05, floor * 0.97 + level * 0.03); }
+    var threshold = Math.max(LEVEL_MIN, floor * FLOOR_GAIN);
+    var loud = level >= threshold;
+
+    if (HOLD_MODE && !holding) { return; }
+
+    if (!speaking) {
+      loudRun = loud ? loudRun + 1 : 0;
+      if (loudRun >= START_FRAMES) { beginTurn(); }
       return;
     }
-    if (!talking) { return; }
-    if (!quietSince) { quietSince = now; return; }
-    if (now - quietSince >= PAUSE_MS) {
-      talking = false;
-      quietSince = 0;
-      endTurn(now - talkingSince >= SHORTEST_TURN_MS + PAUSE_MS);
-    }
+    speechFrames.push(frame);
+    speechMs += FRAME_MS;
+    if (loud) { quietMs = 0; } else { quietMs += FRAME_MS; }
+    if (quietMs >= PAUSE_MS || speechMs >= LONGEST_TURN_MS) { endTurn(speechMs - quietMs >= SHORTEST_SPEECH_MS); }
   }
 
-  function beginTurn(side) {
-    if (turnRecorder || !stream) { return; }
-    turnPieces = [];
-    turnStartedAt = Math.max(0, elapsed() - 0.3);
-    turnRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 32000 });
-    turnRecorder.addEventListener("dataavailable", function (event) {
-      if (event.data && event.data.size) { turnPieces.push(event.data); }
-    });
-    turnRecorder.start();
-    if (side) { document.getElementById("hold-" + side).classList.add("on"); }
+  function beginTurn() {
+    speaking = true;
+    quietMs = 0;
+    speechMs = 0;
+    loudRun = 0;
+    // The lead-in: the last half second of the ring, which holds the frames
+    // that were loud before the Turn was declared, and the breath before them.
+    var lead = Math.floor(LEAD_IN_MS / FRAME_MS);
+    speechFrames = ring.slice(Math.max(0, ring.length - lead));
+    turnStartedAt = Math.max(0, elapsed() - LEAD_IN_MS / 1000);
+    document.getElementById("col-" + side).classList.add("hearing");
   }
 
   function endTurn(worthSending) {
-    if (!turnRecorder) { return; }
-    var side = turnSide;
+    if (!speaking) { return; }
+    speaking = false;
+    document.querySelectorAll(".side-column.hearing").forEach(function (c) { c.classList.remove("hearing"); });
+    var frames = speechFrames;
+    speechFrames = [];
+    if (!worthSending) { return; }
+    // Trim the pause off the end, keeping a short tail.
+    var drop = Math.max(0, Math.floor((quietMs - TAIL_MS) / FRAME_MS));
+    if (drop) { frames = frames.slice(0, frames.length - drop); }
     var endedAt = Math.round(elapsed() * 10) / 10;
     var startAt = Math.round(turnStartedAt * 10) / 10;
-    var finishing = turnRecorder;
-    turnRecorder = null;
-    finishing.addEventListener("stop", function () {
-      document.querySelectorAll(".hold.on").forEach(function (b) { b.classList.remove("on"); });
-      if (!worthSending || !turnPieces.length) { return; }
-      var blob = new Blob(turnPieces, { type: "audio/webm" });
-      var form = new FormData();
-      form.append("audio", blob, "turn.webm");
-      form.append("start", String(startAt));
-      form.append("end", String(endedAt));
-      form.append("side", side);
-      fetch("/record/" + session.id + "/turn", { method: "POST", headers: { "X-CSRFToken": csrf }, body: form })
-        .then(function (answer) { if (!answer.ok) { problem("during-problem", "A turn could not be sent."); } })
-        .catch(function () { problem("during-problem", "A turn could not be sent."); });
-    });
-    try { finishing.stop(); } catch (error) { /* already stopped */ }
+    var blob = wavOf(frames);
+    var form = new FormData();
+    form.append("audio", blob, "turn.wav");
+    form.append("start", String(startAt));
+    form.append("end", String(endedAt));
+    form.append("side", holding || side);
+    fetch("/record/" + session.id + "/turn", { method: "POST", headers: { "X-CSRFToken": csrf }, body: form })
+      .then(function (answer) { if (!answer.ok) { problem("during-problem", "A turn could not be sent."); } })
+      .catch(function () { problem("during-problem", "A turn could not be sent."); });
   }
 
-  // Hold to talk: the button names the side and brackets the Turn.
+  function wavOf(frames) {
+    var length = frames.reduce(function (n, f) { return n + f.length; }, 0);
+    var buffer = new ArrayBuffer(44 + length * 2);
+    var view = new DataView(buffer);
+    function ascii(offset, text) { for (var i = 0; i < text.length; i++) { view.setUint8(offset + i, text.charCodeAt(i)); } }
+    ascii(0, "RIFF"); view.setUint32(4, 36 + length * 2, true); ascii(8, "WAVE");
+    ascii(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, RATE, true); view.setUint32(28, RATE * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    ascii(36, "data"); view.setUint32(40, length * 2, true);
+    var offset = 44;
+    frames.forEach(function (frame) {
+      for (var i = 0; i < frame.length; i++) {
+        var s = Math.max(-1, Math.min(1, frame[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+    });
+    return new Blob([buffer], { type: "audio/wav" });
+  }
+
+  // The buttons: tap to make a side live, or hold to talk.
   document.querySelectorAll(".hold").forEach(function (button) {
-    function down(event) {
+    var which = button.dataset.side;
+    if (!HOLD_MODE) {
+      button.addEventListener("click", function () { setSide(which); });
+      return;
+    }
+    button.addEventListener("pointerdown", function (event) {
       event.preventDefault();
-      if (paused || turnSide) { return; }
-      if (talking) { talking = false; quietSince = 0; endTurn(true); }
-      turnSide = button.dataset.side;
-      beginTurn(turnSide);
+      if (paused || holding) { return; }
+      holding = which;
+      side = which;
+      button.classList.add("on");
+      document.getElementById("col-" + which).classList.add("live");
+      speakNowLines();
+      beginTurn();
+    });
+    function release() {
+      if (holding !== which) { return; }
+      endTurn(speechMs >= SHORTEST_SPEECH_MS);
+      holding = "";
+      button.classList.remove("on");
+      document.getElementById("col-" + which).classList.remove("live");
+      speakNowLines();
     }
-    function up() {
-      if (!turnSide) { return; }
-      var held = performance.now() - turnStartedAtMs;
-      endTurn(held >= SHORTEST_TURN_MS);
-      turnSide = "";
-    }
-    var turnStartedAtMs = 0;
-    button.addEventListener("pointerdown", function (event) { turnStartedAtMs = performance.now(); down(event); });
-    button.addEventListener("pointerup", up);
-    button.addEventListener("pointerleave", up);
-    button.addEventListener("pointercancel", up);
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointerleave", release);
+    button.addEventListener("pointercancel", release);
   });
 
   // Typed Turns and the quick phrases: words instead of sound, same path after.
-  function sendTyped(side, text) {
+  function sendTyped(which, text) {
     if (!text.trim()) { return; }
     var at = Math.round(elapsed() * 10) / 10;
-    post("/record/" + session.id + "/turn", { typed: text.trim(), side: side, start: at, end: at })
+    post("/record/" + session.id + "/turn", { typed: text.trim(), side: which, start: at, end: at })
       .then(function (answer) { if (!answer.ok) { problem("during-problem", answer.said.why || "That could not be sent."); } });
   }
   document.getElementById("type-send").addEventListener("click", function () {
@@ -325,6 +416,7 @@
       .then(function (answer) { return answer.json(); })
       .then(function (said) {
         (said.turns || []).forEach(draw);
+        if (said.language && !session.language) { session.language = said.language; }
         if (said.language_name) { languageLine(said.language_name); }
         if (said.notice) { drawNotice(said.notice); }
       })
@@ -332,8 +424,8 @@
       .then(function () { if (recorder || document.querySelector(".turn.waiting")) { window.setTimeout(poll, 1000); } });
   }
 
-  function rowFor(number, side) {
-    var list = document.getElementById(side === "staff" ? "turns-staff" : "turns-visitor");
+  function rowFor(number, which) {
+    var list = document.getElementById(which === "staff" ? "turns-staff" : "turns-visitor");
     var row = document.getElementById("turn-" + number);
     if (!row) {
       row = document.createElement("li");
@@ -347,15 +439,11 @@
     return row;
   }
 
-  // Each Turn is drawn once per state, in its own column: what the person
-  // said as heard (the Readback, in their own language), and under it the
-  // translation for the other side. A Turn whose side is not yet known waits
-  // in the Visitor's column until the language says.
   function draw(turn) {
     var was = known[turn.number];
     if (was && was.state === turn.state && was.translation === turn.translation && was.side === turn.side) { return; }
     known[turn.number] = turn;
-    lastNumber = Math.max(lastNumber, turn.state === "done" || turn.state === "failed" ? turn.number : lastNumber);
+    if (turn.state === "done" || turn.state === "failed") { lastNumber = Math.max(lastNumber, turn.number); }
     var row = rowFor(turn.number, turn.side || "visitor");
     row.classList.toggle("waiting", turn.state !== "done" && turn.state !== "failed");
     row.classList.toggle("typed", !!turn.typed);
@@ -367,8 +455,8 @@
     said.classList.toggle("big", !!turn.translation);
     if (turn.state === "hearing") { state.textContent = "hearing"; }
     else if (turn.state === "translating") { state.textContent = "translating"; }
-    else if (turn.state === "failed") { state.textContent = "could not be " + (turn.heard ? "translated" : "heard") + (turn.failure ? " (" + turn.failure + ")" : "") + ". Say it again."; }
-    else if (!turn.heard && !turn.typed) { state.textContent = "nothing heard"; }
+    else if (turn.state === "failed") { state.textContent = "could not be " + (turn.heard ? "translated" : "heard") + ". Please say it again."; }
+    else if (!turn.heard && !turn.typed) { state.textContent = "nothing heard; please say it again"; }
     else { state.textContent = clock(turn.start); }
     var column = document.getElementById(turn.side === "staff" ? "turns-staff" : "turns-visitor");
     column.parentNode.scrollTop = column.parentNode.scrollHeight;
@@ -383,7 +471,7 @@
   document.getElementById("pause").addEventListener("click", function () {
     if (!recorder) { return; }
     if (!paused) {
-      if (talking) { talking = false; endTurn(true); }
+      if (speaking) { endTurn(true); }
       recordedBefore = elapsed();
       recorder.pause();
       paused = true;
@@ -405,11 +493,12 @@
   function endNow(how) {
     if (ended || !recorder) { return; }
     ended = true;
-    if (talking || turnRecorder) { talking = false; endTurn(true); }
+    if (speaking) { endTurn(true); }
     var seconds = elapsed();
     window.clearInterval(ticker);
     if (paused) { pauses.push({ at: recordedBefore, seconds: Math.round((performance.now() - pauseBegan) / 100) / 10 }); }
     try { recorder.stop(); } catch (error) { source.end(); }
+    if (processor) { try { processor.disconnect(); } catch (error) { /* gone */ } }
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); }
     recorder = null;
     post("/record/" + session.id + "/ended", { how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10, taps: [], marks: [] })

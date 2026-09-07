@@ -1095,12 +1095,12 @@ def _rows() -> list[Definition]:
             page=INTERPRETER,
             name="Turn-taking",
             kind=CHOICE,
-            default="automatic",
-            choices=("automatic", "hold"),
+            default="tap",
+            choices=("tap", "hold"),
             what_it_does=(
-                "Automatic: a turn ends at a pause and the language heard says "
-                "who spoke; the two buttons remain for a loud room. Hold: turns "
-                "are taken only by holding a button."
+                "Tap: one of the two buttons is always lit; tap yours, speak, and "
+                "the turn ends when you pause. Hold: hold a button while speaking "
+                "and let go when done, for a loud room."
             ),
             when_changed=("The next session."),
         ),
