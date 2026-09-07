@@ -317,6 +317,9 @@ services:
           cpus: "40"
     networks:
       - transcribe
+      # The Interpreter's turns are heard from here (v1.33.0), so this worker
+      # reaches the WhisperX service and the fast lane as the worker does.
+      - whisperx
     logging:
       driver: journald
 

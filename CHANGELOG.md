@@ -21,6 +21,19 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.33.1, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Every turn in an interpreted session failed with "service_unreachable".**
+  The media worker, which hears the turns, was not on the transcription
+  service's network; only the main worker was. It is now.
+
 ## v1.33.0, 2026-09-07
 
 ```
