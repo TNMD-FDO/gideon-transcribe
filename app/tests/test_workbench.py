@@ -91,9 +91,10 @@ def test_the_cases_pages_share_the_strip_and_the_chooser():
 def test_the_clips_page_is_one_table_with_a_player():
     clips = page("clips.html")
     assert 'id="clip-filter"' in clips
-    assert 'data-of="{{ clip.recording.pk }}"' in clips
+    assert 'data-of="{{ group.key }}"' in clips
     assert 'class="clipplayer" src="{{ clip.url }}"' in clips
-    assert "{% for group in groups %}" not in clips
+    # One table still: the places are heading rows inside it, not tables.
+    assert clips.count("<table") == 1 and 'class="group"' in clips
     js = script("clips.js")
     assert 'new Event("rows-changed")' in js
 

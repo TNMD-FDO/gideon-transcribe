@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.30.0, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Clips page is My clips, organised by where each clip lives.** One
+  table of every clip you saved, with a heading row for each case, one for
+  Recorded here, and one for This session, the place you touched last on
+  top. A clip made inside a case now shows here under that case's name as
+  well as on the case's own Clips tab, and the heading opens that tab.
+  Download all takes every clip on the page. Before this the page listed
+  only the session's clips, so a clip made in a case seemed to vanish.
+
 ## v1.29.2, 2026-09-07
 
 ```

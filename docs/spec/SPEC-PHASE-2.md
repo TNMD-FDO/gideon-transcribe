@@ -1207,6 +1207,7 @@ Clips: model, lifecycle, and management (its Phase 2 section, and the facts it r
 - From the Clips ticket to the Sharing rules: a Collaborator's Clips appear on the Case's tab only; an Admin who is not a Collaborator downloads under the banner.
 - From the Clips ticket to the Retention policy rules: downloading a Clip in a Case is Last activity.
 - From the Clips ticket to the admin settings rules: "Clips available" Off also hides the Case's Clips tab.
+- **From the maintainer, on the v1.29.2 build, to "listed in one place":** a Clip made inside a Case seemed to vanish, because the Clips page in the navigation listed the Workspace's only and people expected their own clips there too. Amended in v1.30.0: the Clips page is **My clips**, one table of every Clip the person saved, with a heading row for each place it lives (a Case, Recorded here, This session), the place touched last on top; a Clip in a Case is listed there under the Case's name and on the Case's Clips tab both, and the heading opens that tab. The Case's tab remains the Case's list, colleagues' Clips included; My clips is the person's own. Download all on My clips takes every Clip on the page. A Clip in a binned Case is left out until the Case is restored.
 
 
 ## 7. Case Chat

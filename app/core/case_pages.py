@@ -288,8 +288,8 @@ def _sharing_context(case: Case, role: str) -> dict:
 def _clips_in(case: Case, asker) -> list:
     """Every Clip of every Recording in the Case, oldest Recording first.
 
-    The Clips page in the navigation stays the Workspace's own list, so a Clip
-    is listed in one place and not two.
+    Colleagues' Clips included: this is the Case's list. My clips in the
+    navigation lists the person's own, under the Case's name, and links here.
     """
     from core.clip_pages import _row
     from core.clips import Clip

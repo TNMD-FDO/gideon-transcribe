@@ -234,7 +234,7 @@ def test_the_sign_out_download_leaves_a_case_alone(person, a_case, client):
     assert in_a_case is not None
 
 
-def test_the_clips_page_is_the_workspaces_own(person, a_case, client):
+def test_the_clips_page_groups_clips_under_where_they_live(person, a_case, client):
     from core.clips import Clip
 
     in_a_case = a_recording(person, case=a_case)
@@ -248,8 +248,19 @@ def test_the_clips_page_is_the_workspaces_own(person, a_case, client):
 
     signed_in(client, person)
     page = client.get("/clips").content.decode()
-    assert "Clip in the session" in page
-    assert "Clip in a case" not in page
+    # Both are listed, each under its place, the place touched last on top.
+    assert "Clip in the session" in page and "Clip in a case" in page
+    assert page.index("This session") < page.index("Clip in the session")
+    assert page.index(a_case.name) < page.index("Clip in a case")
+    assert page.index("This session") < page.index(a_case.name)
+    assert f'href="/case/{a_case.pk}?tab=clips"' in page
+    # A clip in a binned case is nobody's until the case comes back.
+    from django.utils import timezone
+
+    a_case.deleted_on = timezone.now().date()
+    a_case.save()
+    page = client.get("/clips").content.decode()
+    assert "Clip in a case" not in page and "Clip in the session" in page
 
 
 # The Retention clock -----------------------------------------------------------

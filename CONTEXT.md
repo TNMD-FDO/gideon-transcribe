@@ -123,6 +123,10 @@ _Avoid_: bookmark, flag, tag
 A Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless they add it to one, whose product is a Memo. Its Recording type is Dictation, and the office's Retention period applies to it on its own. Phase 3.
 _Avoid_: voice note, voice memo
 
+**My clips**:
+The Clips page in the top bar: one table of every Clip the person saved, under a heading row for each place it lives (a Case, Recorded here, This session), the place touched last on top. A Clip in a Case is here and on the Case's Clips tab both. Before v1.30.0 the page listed the Workspace's Clips only.
+_Avoid_: Your clips, clip library
+
 **Start page**:
 Where sign-in lands: one question, what do you want to do, and three doors, Upload files, Record now (with the Record now setting on), Open a case (with Folder management on). Nothing else is on it. The top bar reads Start, Cases, My recordings, Clips, Panel, Help.
 _Avoid_: home, dashboard, landing page, menu

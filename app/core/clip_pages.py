@@ -383,12 +383,10 @@ def download_clip(request: HttpRequest, clip_id) -> HttpResponse:
 
 @login_required
 def download_all_clips(request: HttpRequest) -> HttpResponse:
-    """Every Ready Clip in the Workspace, flat, with no zip inside a zip."""
+    """Every Ready Clip on the My clips page, flat, with no zip inside a zip."""
     clips = [
         one
-        for one in Clip.objects.filter(
-            recording__user=request.user, recording__case__isnull=True
-        ).select_related("recording", "recording__user")
+        for one in my_clips(request.user)
         if one.state == RenderState.READY and one.path.exists()
     ]
 
@@ -411,37 +409,89 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-def clips_page(request: HttpRequest) -> HttpResponse:
-    """Every Clip in the Workspace, grouped by Recording in upload order.
+def my_clips(user) -> list:
+    """Every Clip this person saved that they can still reach, newest first.
 
-    The Workspace's only: a Clip of a Recording in a Case is listed on that
-    Case's own page, so a Clip appears in one place and not two. The Case's
-    Clips tab is the Clips in Cases chapter's and is not built, so those Clips
-    have no list yet; their files are made and kept either way.
+    A Clip of a Recording in a binned Case is nobody's until the Case is
+    restored, so it is left out, as the viewer leaves the Recording out.
+    """
+    return [
+        one
+        for one in Clip.objects.filter(user=user)
+        .select_related("recording", "recording__case", "recording__user")
+        .order_by("-created")
+        if cases.reachable(one.recording)
+    ]
+
+
+def groups_of(clips: list, user, standing: str) -> list:
+    """The Clips grouped under where each lives, the group touched last on top.
+
+    Three kinds of place: a Case (kept with it, shared with its people), the
+    Recordings made with Record now and kept on their own ("Recorded here"),
+    and the Workspace ("This session", gone at sign-out). A person looking
+    for a clip they made in a case finds it under that case's name; the
+    heading says how long that place keeps things and opens it.
+    """
+    by_key: dict = {}
+    for one in clips:
+        recording = one.recording
+        if recording.case_id:
+            case = recording.case
+            key = ("case", case.pk)
+            heading = {
+                "name": case.name,
+                "url": reverse("case", args=[case.pk]) + "?tab=clips",
+                "line": "Kept with the case, with its people.",
+                "kind": "case",
+            }
+        elif recording.is_dictation:
+            key = ("here", user.pk)
+            heading = {
+                "name": "Recorded here",
+                "url": reverse("home"),
+                "line": (
+                    "Clips of your own recordings, kept for as long as the "
+                    "office keeps a case."
+                ),
+                "kind": "here",
+            }
+        else:
+            key = ("session", user.pk)
+            heading = {
+                "name": "This session",
+                "url": reverse("home"),
+                "line": standing,
+                "kind": "session",
+            }
+        group = by_key.setdefault(
+            key, {**heading, "key": f"{key[0]}-{key[1]}", "clips": []}
+        )
+        group["clips"].append(one)
+    # Newest clip first within a group already; the groups by their newest.
+    return sorted(by_key.values(), key=lambda g: g["clips"][0].created, reverse=True)
+
+
+@login_required
+def clips_page(request: HttpRequest) -> HttpResponse:
+    """My clips: every Clip the person saved, grouped under where each lives.
+
+    One table, one row per Clip, with a heading row for each place: a Case,
+    Recorded here, or This session. A Clip made inside a Case is under that
+    Case's name here and on the Case's own Clips tab, so a person finds it
+    wherever they look; the Case's tab also shows what colleagues saved there.
     """
     if not clips_are_on():
         return redirect(reverse("home"))
 
     from core.pages import standing_line
 
-    # One table for every clip, in the order of the recordings' upload and
-    # the clips' start inside each, with the recording as a column and a
-    # filter by recording above. Each clip knows its file's address so the
-    # page can play it where it is chosen.
-    recordings = list(
-        Recording.objects.filter(
-            user=request.user, case__isnull=True, clips__isnull=False
-        )
-        .distinct()
-        .order_by("created")
-    )
-    clips = []
+    clips = my_clips(request.user)
     total = 0
-    for recording in recordings:
-        for one in recording.clips.all():
-            one.url = f"{media_root(recording)}/clips/{one.pk}{one.suffix}"
-            total += one.size_bytes
-            clips.append(one)
+    for one in clips:
+        one.url = f"{media_root(one.recording)}/clips/{one.pk}{one.suffix}"
+        total += one.size_bytes
+    groups = groups_of(clips, request.user, standing_line())
 
     return render(
         request,
@@ -449,7 +499,7 @@ def clips_page(request: HttpRequest) -> HttpResponse:
         {
             "page": "clips",
             "clips": clips,
-            "recordings": recordings,
+            "groups": groups,
             "total": f"{total / 1024 / 1024:.1f} MB",
             "any_ready": any(one.state == RenderState.READY for one in clips),
             "standing_line": standing_line(),

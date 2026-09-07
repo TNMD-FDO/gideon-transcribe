@@ -155,7 +155,7 @@ In the viewer, **New clip** opens the clip tool. Mark the start and the end by d
 
 A clip is part of the recording it came from. Deleting the recording deletes its clips, and so does signing out, unless the recording is in a case.
 
-The Clips page is one table of every clip you have made this session, with the recording each came from. Click a clip and it plays beside the table (under its row, on a laptop), with its details and **Download**, **Open in viewer** and **Delete**. Pick a recording at the top to see only its clips.
+**My clips** in the top bar is one table of every clip you have saved, under the place each belongs to: a heading row for each case, one for **Recorded here**, and one for **This session**, the place you touched last on top. A clip you made inside a case is under that case's name, and the heading opens the case's own Clips tab, which also shows what colleagues saved there. Click a clip and it plays beside the table (under its row, on a laptop), with its details and **Download**, **Open in viewer** and **Delete**. Pick a place at the top to see only its clips; **Download all** takes every clip on the page.
 
 ## Cases
 

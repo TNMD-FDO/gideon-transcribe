@@ -41,8 +41,8 @@
   });
 })();
 
-// The filter by recording on the Clips page: the rows of other recordings
-// are hidden, their details with them, and the chooser is told.
+// The filter by place on the My clips page: the rows of other places are
+// hidden, heading rows and details with them, and the chooser is told.
 (function () {
   "use strict";
 
@@ -54,6 +54,9 @@
     var wanted = filter.value;
     Array.prototype.forEach.call(table.querySelectorAll("tr.pick"), function (row) {
       row.hidden = !!wanted && row.dataset.of !== wanted;
+    });
+    Array.prototype.forEach.call(table.querySelectorAll("tr.group"), function (row) {
+      row.hidden = !!wanted && row.dataset.group !== wanted;
     });
     table.dispatchEvent(new Event("rows-changed"));
   });
