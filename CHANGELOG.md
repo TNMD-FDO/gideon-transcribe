@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.32.0, 2026-09-07
+
+```
+Models: unchanged
+Database: migrates (0031, a Job may stay open for more Runs; a Run knows its stretch)
+```
+
+### Added
+
+- **Transcription during the recording** (Phase 3, step five). A recording
+  made in the app is transcribed while it records: every five minutes, and
+  what came before a pause, is cut from the pieces already on the server and
+  sent to the service at once, ahead of everything else; at Stop only the
+  last stretch is left, so the transcript is ready about a minute later
+  however long the meeting ran. Each stretch is transcribed at finished
+  quality, the speakers are matched across stretches by their voices, and
+  the taps name them as before. Nothing is shown before the transcript is
+  whole; the page says "Finishing: about a minute". The Details panel says
+  how many stretches there were. With the fast lane on, the stretches never
+  wait behind an upload.
+
+### For the office that builds
+
+- A stretch of a recording still in progress asks the service for priority
+  100, a recording that has ended 90, an upload 0.
+
 ## v1.31.1, 2026-09-07
 
 ```

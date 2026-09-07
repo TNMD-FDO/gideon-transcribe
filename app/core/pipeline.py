@@ -134,6 +134,11 @@ def _find_sides(recording: Recording) -> None:
     probed = media.probe(recording.original_path)
     track = probed.best_track
 
+    # A Live recording transcribed in stretches made its Sides at the first
+    # stretch, and its Runs hang off them; they are kept, not remade.
+    if recording.is_live and recording.sides.exists():
+        return
+
     recording.sides.all().delete()
 
     # A Live recording made with the computer's sound is a call by the fact of

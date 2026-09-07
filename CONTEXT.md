@@ -123,6 +123,10 @@ _Avoid_: bookmark, flag, tag
 A Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless they add it to one, whose product is a Memo. Its Recording type is Dictation, and the office's Retention period applies to it on its own. Phase 3.
 _Avoid_: voice note, voice memo
 
+**Stretch**:
+Five minutes of a Live recording, transcribed while the next five record (Phase 3, step five): cut from the pieces already on the server, prepared on its own, and sent as a Run of the recording's one open Job; a pause closes one, and the last is sent at Stop. Nothing is shown before the Transcript is whole.
+_Avoid_: chunk, segment (taken), partial transcript
+
 **Interpreter**:
 The style on the New recording page, beside Dictation, Meeting, and Call, and the feature as a whole: a Session between a Visitor who speaks another language and Staff, heard by Whisper, translated by the office's engine, and spoken by a Voice on the server, Turn by Turn, kept as a Recording with both languages. Never a substitute for a certified interpreter. Phase 3 chapter 3, specified 2026-09-07, not yet built.
 _Avoid_: translator, bot

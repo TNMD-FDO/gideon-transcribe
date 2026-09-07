@@ -140,6 +140,21 @@ def note_upload(request: HttpRequest, recording_id) -> JsonResponse:
 
 @login_required
 @require_POST
+def stretch(request: HttpRequest, recording_id) -> JsonResponse:
+    """A stretch of the recording has closed at `end` seconds of recorded
+    time, and its pieces have reached the server: cut it and send it (Phase
+    3, step five). A stretch too short to close runs on, and says so."""
+    recording = _their_live_recording(request, recording_id)
+    try:
+        end = float(_body(request).get("end") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "end?"}, status=400)
+    closed = live.stretch_closed(recording, end, request=request)
+    return JsonResponse({"ok": True, "closed": closed is not None, "stretch": closed})
+
+
+@login_required
+@require_POST
 def ended(request: HttpRequest, recording_id) -> JsonResponse:
     """The recording ended: by Stop, the limit, or the page closing (a beacon).
 

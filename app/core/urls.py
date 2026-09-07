@@ -198,6 +198,9 @@ urlpatterns = [
         name="record-upload",
     ),
     path("record/<uuid:recording_id>/ended", live_pages.ended, name="record-ended"),
+    path(
+        "record/<uuid:recording_id>/stretch", live_pages.stretch, name="record-stretch"
+    ),
     path("record/<uuid:recording_id>/state", live_pages.state, name="record-state"),
     path("case/<uuid:case_id>/rename", case_pages.rename_case, name="rename-case"),
     # Sharing: the people a Case may be shared with, Share, Remove, Transfer.

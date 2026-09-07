@@ -46,10 +46,16 @@ def prepare_recording(recording_id: str) -> None:
     if recording.media_state == MediaState.READY:
         # The line first: a Recording joins it the moment it is Ready, and the
         # Playback copy is made beside the transcription rather than before it.
-        from core import queue
+        from core import live, queue
 
-        job = queue.make_job(recording)
-        hand_over_job.defer(job_id=str(job.pk))
+        if live.stretches_of(recording):
+            # Transcribed in stretches while it recorded: only the tail is
+            # left, on the Job that has been open since the first stretch.
+            job = live.finish_stretches(recording)
+        else:
+            job = queue.make_job(recording)
+        if job is not None:
+            hand_over_job.defer(job_id=str(job.pk))
         make_playback_copy.defer(recording_id=str(recording.pk))
     else:
         # A Recording that failed here has ended, and may have been the last
@@ -111,6 +117,40 @@ def hand_over_job(job_id: str) -> None:
     job = queue.hand_over(job)
     if job.state in JobState.LIVE:
         _poll_again(1, when=0)
+
+
+@app.task(queue="media", name="prepare_stretch")
+def prepare_stretch(recording_id: str, number: int, attempt: int = 1) -> None:
+    """Cut one closed stretch of a Live recording and send it to the service.
+
+    The pieces the stretch needs may still be arriving when the page says it
+    has closed, so a cut that comes back short is tried again in a few
+    seconds, a few times; after that, what there is goes, and the Provenance
+    keeps the stretch's length either way.
+    """
+    from core import live, media
+    from core.recordings import Recording
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None:
+        return
+    try:
+        got = live.cut_stretch(recording, number)
+    except media.MediaError:
+        log.exception("stretch %d of %s could not be cut", number, recording_id)
+        live.mark_stretch(recording, number, "failed")
+        return
+    if got == "gone":
+        live.mark_stretch(recording, number, "failed")
+        return
+    if got == "short" and attempt < live.STRETCH_TRIES:
+        prepare_stretch.configure(
+            schedule_in={"seconds": live.STRETCH_RETRY_SECONDS}
+        ).defer(recording_id=recording_id, number=number, attempt=attempt + 1)
+        return
+    live.runs_for_stretch(recording, number)
+    live.mark_stretch(recording, number, "sent")
+    hand_over_job.defer(job_id=str(live.open_job(recording).pk))
 
 
 @app.task(queue="default", name="poll_service")

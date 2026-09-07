@@ -343,7 +343,28 @@ def looks_like_a_call(path: Path, track: Track) -> bool:
 # The ASR audio ---------------------------------------------------------------
 
 
-def _measure_loudness(path: Path, track: Track | None, channel: int | None) -> dict:
+def _span_arguments(span: tuple[float, float] | None) -> list[str]:
+    """The seek and the length for one stretch of the source, before the
+    input so the decoder starts near it, and the length after it."""
+    if span is None:
+        return []
+    start, end = span
+    return ["-ss", f"{max(0.0, start):.3f}"]
+
+
+def _span_length(span: tuple[float, float] | None) -> list[str]:
+    if span is None:
+        return []
+    start, end = span
+    return ["-t", f"{max(0.0, end - max(0.0, start)):.3f}"]
+
+
+def _measure_loudness(
+    path: Path,
+    track: Track | None,
+    channel: int | None,
+    span: tuple[float, float] | None = None,
+) -> dict:
     """The first loudness pass, whose figures the second pass carries.
 
     Two passes in linear mode keep the change a pure volume scale. In dynamic
@@ -357,8 +378,10 @@ def _measure_loudness(path: Path, track: Track | None, channel: int | None) -> d
             "-v",
             "info",
             *forced_decoder(track),
+            *_span_arguments(span),
             "-i",
             str(path),
+            *_span_length(span),
             "-af",
             # The same chain the second pass runs, so the figures describe the
             # signal that is actually written.
@@ -393,6 +416,7 @@ def make_asr_audio(
     track: Track | None,
     channel: int | None = None,
     profile: str = "standard",
+    span: tuple[float, float] | None = None,
 ) -> None:
     """One Side, as the service expects it: WAV, 16 kHz, mono, 16-bit PCM.
 
@@ -400,12 +424,18 @@ def make_asr_audio(
     service untouched. Nothing here trims, removes silence, or drops a track;
     the only thing that can leave speech out is a voice-activity decision, and
     that happens inside the service where it is recorded as a setting.
+
+    `span` is the one exception, and it is not a trim: a stretch of a Live
+    recording transcribed while it records (Phase 3, step five) is that span
+    of the source, from its start to its end, and the rest is other stretches.
+    The loudness is measured over the span, so each stretch is normalised on
+    its own, as a whole recording is.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     filters = f"{KEEP_THE_CLOCK},{_channel_filter(channel)}{HIGH_PASS}"
 
     if profile == "standard":
-        measured = _measure_loudness(source, track, channel)
+        measured = _measure_loudness(source, track, channel, span)
         if measured:
             filters += (
                 f",{LOUDNORM}:linear=true"
@@ -430,8 +460,10 @@ def make_asr_audio(
             "-v",
             "error",
             *forced_decoder(track),
+            *_span_arguments(span),
             "-i",
             str(source),
+            *_span_length(span),
             "-af",
             filters,
             "-ar",

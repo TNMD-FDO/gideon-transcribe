@@ -116,11 +116,12 @@ def test_a_recording_starts_in_its_case_with_its_own_batch(on, person, a_case, c
     assert row.details["case"] == "Ramirez" and row.details["language"] == "es"
     # A Live recording never holds up the person's uploads.
     assert Batch.unfinished_for(person) is None
-    # And the service is asked to put it first.
+    # And the service is asked to put it ahead of every upload (a stretch of
+    # one still recording goes ahead of it in turn, at 100).
     side = Side.objects.create(recording=recording, number=1)
     job = Job.objects.create(recording=recording, batch=recording.batch)
     run = Run.objects.create(job=job, side=side)
-    assert queue.request_for(run)["priority"] == 100
+    assert queue.request_for(run)["priority"] == 90
 
 
 def test_starting_is_refused_without_room_or_a_case_of_ones_own(

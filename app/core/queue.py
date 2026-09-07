@@ -29,7 +29,12 @@ POLLS_BEFORE_GIVING_UP = 2
 
 
 def make_job(recording: Recording) -> Job:
-    """A Job for a Ready Recording, with one Run per Side."""
+    """A Job for a Ready Recording, with one Run per Side, over the whole.
+
+    A Live recording transcribed in stretches has its Job made stretch by
+    stretch instead (core.live); this is the whole-file path, and Process
+    again on such a recording comes back through it.
+    """
     job = Job.objects.create(recording=recording, batch=recording.batch)
     for side in recording.sides.all().order_by("number"):
         Run.objects.create(job=job, side=side)
@@ -74,9 +79,17 @@ def request_for(run: Run) -> dict:
         # submission it has seen comes back as that job rather than a second.
         "client_reference": str(run.id),
         # A Live recording goes ahead of every uploaded one: a meeting that
-        # has just ended is transcribed before the batches waiting.
-        "priority": 100 if recording.is_live else 0,
+        # has just ended is transcribed before the batches waiting. A stretch
+        # of one still recording goes ahead of a recording that has ended,
+        # so the recording that ends next is the one whose last stretch is
+        # transcribed first.
+        "priority": (100 if run.stretch else 90) if recording.is_live else 0,
     }
+
+    if run.stretch and recording.diarize:
+        # Each stretch is labelled on its own; the voices are what match the
+        # labels across stretches when the Transcript is put together.
+        request["return_speaker_embeddings"] = True
 
     if not recording.translate and not recording.spoken_language:
         # Only meaningful on a detected transcribe. With the setting off, or
@@ -107,7 +120,7 @@ def hand_over(job: Job) -> Job:
         if run.service_job_id:
             continue
         try:
-            submitted = whisperx.submit(run.side.asr_path, request_for(run), lane)
+            submitted = whisperx.submit(run.audio_path, request_for(run), lane)
         except whisperx.ServiceError as problem:
             return fail(job, problem.reason_class)
 
@@ -149,6 +162,25 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
 
     runs = list(job.runs.all())
 
+    if job.open:
+        # A stretch that fails while the recording continues does not fail
+        # the recording: it is written off for now and cut again at Stop,
+        # from the whole file, when the tail is sent.
+        from core import live
+
+        for run in [one for one in runs if one.failure_class and one.stretch]:
+            log.warning(
+                "stretch %d of recording %s failed (%s); again at Stop",
+                run.stretch,
+                job.recording_id,
+                run.failure_class,
+            )
+            live.mark_stretch(job.recording, run.stretch, "failed")
+            if run.service_job_id:
+                whisperx.delete(run.service_job_id, run.lane)
+            run.delete()
+        runs = list(job.runs.all())
+
     failed = next((run for run in runs if run.failure_class), None)
     if failed is not None:
         # One Run failing fails the Job as a whole, with that Run's reason.
@@ -167,7 +199,7 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
         job.state = JobState.RUNNING
         job.save(update_fields=["state"])
 
-    if runs and all(run.state == "done" for run in runs):
+    if runs and all(run.state == "done" for run in runs) and not job.open:
         return merge(job)
 
     return job
@@ -273,25 +305,53 @@ def _store(job: Job, results: dict) -> Transcript:
     )
 
     runs = {run.pk: run for run in job.runs.all()}
-    many_sides = len(runs) > 1
+    many_sides = len({run.side_id for run in runs.values()}) > 1
+    in_stretches = any(run.stretch for run in runs.values())
+    across = (
+        _names_across_stretches(results, runs, many_sides, job.recording.diarize)
+        if in_stretches
+        else {}
+    )
 
     segments = []
     for run_id, result in results.items():
         run = runs[run_id]
-        names = _speaker_names(result, run.side, many_sides, job.recording.diarize)
+        names = (
+            across[run_id]
+            if in_stretches
+            else _speaker_names(result, run.side, many_sides, job.recording.diarize)
+        )
+        # A stretch's times start at zero; the Recording's clock starts at
+        # the stretch's own offset.
+        shift = run.offset_seconds if run.stretch else 0.0
         for segment in result.get("segments", []):
+            words = segment.get("words") or []
+            if shift:
+                words = [
+                    {
+                        **word,
+                        **({"start": word["start"] + shift} if "start" in word else {}),
+                        **({"end": word["end"] + shift} if "end" in word else {}),
+                    }
+                    for word in words
+                ]
             segments.append(
                 Segment(
                     transcript=transcript,
                     side=run.side,
-                    start=segment.get("start") or 0.0,
-                    end=segment.get("end") or 0.0,
+                    start=(segment.get("start") or 0.0) + shift,
+                    end=(segment.get("end") or 0.0) + shift,
                     text=(segment.get("text") or "").strip(),
                     speaker=names.get(segment.get("speaker", ""), names.get("", "")),
                     speaker_label=segment.get("speaker", "") or "",
-                    words=segment.get("words") or [],
+                    words=words,
                 )
             )
+    if in_stretches:
+        transcript.provenance["stretches"] = len(
+            {run.stretch for run in runs.values() if run.stretch}
+        )
+        transcript.save(update_fields=["provenance"])
 
     segments.sort(key=lambda one: one.start)
     shared = _the_stretch_on_both_sides(segments, job.recording)
@@ -382,6 +442,69 @@ def _the_stretch_on_both_sides(segments: list, recording) -> int:
         kept.speaker = BOTH_SIDES
         copy.same_as_other_side = True
     return len(pairs)
+
+
+def _cosine(a: list, b: list) -> float:
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    return dot / (na * nb) if na and nb else 0.0
+
+
+def _names_across_stretches(
+    results: dict, runs: dict, many_sides: bool, diarized: bool
+) -> dict:
+    """Speaker names for a Transcript put together from stretches.
+
+    The engine labels each stretch on its own, SPEAKER_00 and on, so the same
+    label in two stretches may be two people and two labels one person. The
+    voice embeddings the stretches were asked for say which: a label whose
+    voice is close enough to one already named is that person; a new voice is
+    the next Speaker. Stretches are taken in order, on each Side, so the
+    numbering follows the order people first spoke. A stretch with no
+    embeddings (an engine that gave none, or separation off) keeps its own
+    labels numbered after the rest.
+    """
+    from core import live
+
+    names: dict = {}
+    voices: dict = {}  # side_id -> [(name, embedding)]
+    count: dict = {}  # side_id -> speakers named so far
+    for run_id, run in sorted(
+        runs.items(), key=lambda pair: (pair[1].side.number, pair[1].stretch)
+    ):
+        result = results[run_id]
+        side = run.side
+        labels = sorted(result.get("speakers", {}).get("labels", []))
+        spoken = result.get("speakers", {})
+        embeddings = (spoken.get("embeddings") or {}) if diarized else {}
+        mapping = {"": side.name if many_sides else ""}
+        if not diarized or not labels:
+            names[run_id] = mapping
+            continue
+        for label in labels:
+            vector = embeddings.get(label)
+            found = None
+            if vector:
+                best = 0.0
+                for name, known in voices.setdefault(side.pk, []):
+                    close = _cosine(vector, known)
+                    if close > best:
+                        best, found = close, name
+                if best < live.SAME_VOICE:
+                    found = None
+            if found is None:
+                count[side.pk] = count.get(side.pk, 0) + 1
+                found = (
+                    f"{side.name} Speaker {count[side.pk]}"
+                    if many_sides
+                    else f"Speaker {count[side.pk]}"
+                )
+                if vector:
+                    voices.setdefault(side.pk, []).append((found, vector))
+            mapping[label] = found
+        names[run_id] = mapping
+    return names
 
 
 def _speaker_names(

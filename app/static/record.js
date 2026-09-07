@@ -122,6 +122,31 @@
   var taps = [];          // { at, name }
   var marks = [];         // { at, word }
 
+  // Transcription during the recording: every five minutes of recorded
+  // time, and at a pause, a stretch closes. It is posted to the server once
+  // the piece that holds its end has been pushed to the upload and the
+  // upload has sent that many bytes, so the server has all of it to cut.
+  var STRETCH = 300;
+  var SHORTEST_STRETCH = 20;
+  var lastClosed = 0;     // recorded seconds at the last closed stretch
+  var pendingStretches = []; // { end, bytes|null }
+  var pushedBytes = 0;
+  var sentBytes = 0;
+
+  function closeStretchAt(seconds) {
+    if (seconds - lastClosed < SHORTEST_STRETCH) { return; }
+    lastClosed = seconds;
+    pendingStretches.push({ end: Math.round(seconds * 10) / 10, bytes: null });
+  }
+
+  function stretchesMayGo() {
+    pendingStretches = pendingStretches.filter(function (one) {
+      if (one.bytes === null || sentBytes < one.bytes) { return true; }
+      post("/record/" + recording.id + "/stretch", { end: one.end }).catch(function () {});
+      return false;
+    });
+  }
+
   function elapsed() {
     if (!recorder) { return 0; }
     if (paused) { return recordedBefore; }
@@ -265,7 +290,17 @@
     recorder = new MediaRecorder(mixed, { mimeType: mime, audioBitsPerSecond: computer ? BITS_PER_SECOND * 2 : BITS_PER_SECOND });
     recorder.addEventListener("dataavailable", function (event) {
       if (event.data && event.data.size) {
-        event.data.arrayBuffer().then(function (buffer) { source.push(new Uint8Array(buffer)); });
+        event.data.arrayBuffer().then(function (buffer) {
+          var bytes = new Uint8Array(buffer);
+          source.push(bytes);
+          pushedBytes += bytes.length;
+          // A stretch closed before this piece is held whole once this
+          // piece is on the server.
+          pendingStretches.forEach(function (one) {
+            if (one.bytes === null) { one.bytes = pushedBytes; }
+          });
+          stretchesMayGo();
+        });
       }
     });
     recorder.addEventListener("stop", function () {
@@ -282,6 +317,10 @@
       onError: function (error) {
         problem("during-problem", "The server stopped taking the recording: " + (error && error.message ? error.message : error) + ". What was sent is kept.");
         endNow("disk");
+      },
+      onProgress: function (bytesSent) {
+        sentBytes = bytesSent;
+        stretchesMayGo();
       },
       onSuccess: function () {
         uploadDone = true;
@@ -309,6 +348,7 @@
   function tick() {
     var seconds = elapsed();
     document.getElementById("clock").textContent = clock(seconds);
+    if (!paused && seconds - lastClosed >= STRETCH) { closeStretchAt(seconds); }
     if (seconds >= LONGEST) { endNow("limit"); }
   }
 
@@ -390,6 +430,8 @@
       recorder.pause();
       paused = true;
       pauseBegan = performance.now();
+      // A pause closes the stretch, when there is enough of it to send.
+      closeStretchAt(recordedBefore);
       this.textContent = "Resume";
       document.getElementById("rec-pill").textContent = "Paused";
       document.getElementById("rec-pill").className = "pill warn";

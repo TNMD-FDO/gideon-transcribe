@@ -19,10 +19,11 @@ import shutil
 from pathlib import Path
 
 from django.conf import settings as django_settings
+from django.db import transaction
 from django.utils import timezone
 
 from core import audit, cases, settings_store
-from core.recordings import Batch, MediaState, Recording
+from core.recordings import Batch, MediaState, Recording, Side
 
 log = logging.getLogger(__name__)
 
@@ -186,12 +187,274 @@ def start(
     return recording
 
 
+# Transcription during the recording (Phase 3, step five) ----------------------------
+#
+# While a recording continues, every closed stretch of it is transcribed at
+# finished quality, so that at Stop only the last stretch remains. A stretch
+# is five minutes of recorded audio, closed when the next begins, at a pause,
+# or at Stop; each is cut from the pieces already on the server, prepared as
+# a Side is, and sent to the service as a Run of the Recording's one open Job
+# at the live priority. Nothing is shown until the Transcript is whole.
+
+STRETCH_SECONDS = 300
+# A pause closes a stretch only when it is long enough to be worth a job of
+# its own; a shorter one runs on into the next.
+SHORTEST_STRETCH = 20.0
+# The cut may come back short while the last pieces are still arriving; it
+# is tried again a few times before what there is goes.
+STRETCH_TRIES = 6
+STRETCH_RETRY_SECONDS = 10
+# Speakers across stretches: the engine labels each stretch on its own, and
+# the labels are matched across stretches by their voice embeddings. Two
+# labels this close are one person.
+SAME_VOICE = 0.72
+
+
+def stretches_of(recording: Recording) -> list:
+    return list((recording.live or {}).get("stretches") or [])
+
+
+def change_live(recording: Recording, change) -> dict:
+    """Change the recording's live facts under a row lock, on a fresh copy.
+
+    The page (a web process) and the media worker both write into the one
+    JSON field while a recording runs: the page adds a stretch, the worker
+    marks one sent. Each reads the row afresh, locked, so neither writes
+    over the other's change with a stale copy of the whole. `change` is
+    given the facts and edits them in place; what it returns is returned.
+    """
+    with transaction.atomic():
+        fresh = Recording.objects.select_for_update().get(pk=recording.pk)
+        live = dict(fresh.live or {})
+        told = change(live)
+        fresh.live = live
+        fresh.save(update_fields=["live"])
+    recording.live = live
+    return told
+
+
+def stretch_path(recording: Recording, number: int, side_number: int) -> Path:
+    """Where one stretch of one Side lives, prepared for the service."""
+    return recording.folder / "stretches" / f"{number:03d}-{side_number}.wav"
+
+
+def stretch_closed(
+    recording: Recording, end_seconds: float, request=None
+) -> dict | None:
+    """The page says a stretch has closed at `end_seconds` of recorded time.
+
+    Written down and handed to the media worker, which cuts and sends it. A
+    stretch shorter than the shortest is not closed: it runs on. Nothing is
+    closed on a recording that has ended, which the tail handles itself.
+    """
+    if recording.media_state != MediaState.UPLOADING:
+        return None
+    end = round(float(end_seconds), 1)
+
+    def close(live: dict):
+        if live.get("ended"):
+            return None
+        stretches = list(live.get("stretches") or [])
+        start = float(stretches[-1]["end"]) if stretches else 0.0
+        if end - start < SHORTEST_STRETCH:
+            return None
+        one = {
+            "number": len(stretches) + 1,
+            "start": start,
+            "end": end,
+            "state": "cutting",
+        }
+        stretches.append(one)
+        live["stretches"] = stretches
+        return one
+
+    one = change_live(recording, close)
+    if one is None:
+        return None
+
+    from core.tasks import prepare_stretch
+
+    prepare_stretch.defer(
+        recording_id=str(recording.pk), number=one["number"], attempt=1
+    )
+    log.info(
+        "recording %s: stretch %d closed at %.1f s", recording.pk, one["number"], end
+    )
+    return one
+
+
+def _live_sides(recording: Recording) -> list:
+    """The Sides a Live recording has by how it was made: two for a call
+    with the computer's sound, one otherwise. Made once, kept after."""
+    if recording.sides.exists():
+        return list(recording.sides.order_by("number"))
+    if "computer" in ((recording.live or {}).get("sources") or []):
+        recording.is_two_channel_call = True
+        recording.tracks_distinct = 1
+        for number, name in zip((1, 2), ("This side", "The other side"), strict=True):
+            Side.objects.create(
+                recording=recording, number=number, kind=Side.CHANNEL, name=name
+            )
+    else:
+        recording.is_two_channel_call = False
+        recording.tracks_distinct = 1
+        Side.objects.create(recording=recording, number=1, kind=Side.WHOLE, name="")
+    recording.save(update_fields=["is_two_channel_call", "tracks_distinct"])
+    return list(recording.sides.order_by("number"))
+
+
+def _source_for_stretches(recording: Recording) -> Path | None:
+    """The bytes to cut from: the sidecar's growing file while it records,
+    the original once it has ended and been taken."""
+    if recording.original_path.exists():
+        return recording.original_path
+    tus_id = (recording.live or {}).get("tus_id", "")
+    arrived = Path(django_settings.UPLOADS_DIR) / tus_id if tus_id else None
+    return arrived if arrived is not None and arrived.exists() else None
+
+
+def cut_stretch(recording: Recording, number: int) -> str:
+    """Cut one stretch from what has arrived and prepare it for the service.
+
+    Returns "ready" when the cut is the length the page said, "short" when
+    the last pieces have not arrived yet (the caller tries again), and
+    "gone" when there is nothing to cut from.
+    """
+    from core import media
+
+    one = next((s for s in stretches_of(recording) if s["number"] == number), None)
+    if one is None:
+        return "gone"
+    source = _source_for_stretches(recording)
+    if source is None:
+        return "gone"
+    start, end = float(one["start"]), float(one["end"])
+    probed = media.probe(source)
+    track = probed.best_track
+    shortest = None
+    for side in _live_sides(recording):
+        channel = side.number - 1 if side.kind == Side.CHANNEL else None
+        target = stretch_path(recording, number, side.number)
+        media.make_asr_audio(
+            source,
+            target,
+            track,
+            channel=channel,
+            profile=recording.preprocessing,
+            span=(start, end),
+        )
+        got = media.probe(target).duration_seconds or 0.0
+        shortest = got if shortest is None else min(shortest, got)
+    if shortest is not None and shortest < (end - start) - 2.0:
+        return "short"
+    return "ready"
+
+
+def open_job(recording: Recording):
+    """The one Job a recording in stretches has, open until its last stretch."""
+    from core.jobs import Job, JobState
+
+    job = Job.objects.filter(recording=recording, open=True).first()
+    if job is None:
+        job = Job.objects.create(
+            recording=recording, batch=recording.batch, open=True, state=JobState.QUEUED
+        )
+    return job
+
+
+def runs_for_stretch(recording: Recording, number: int) -> list:
+    """One Run per Side for a stretch that is cut, on the recording's open Job."""
+    from core.jobs import Run
+
+    one = next(s for s in stretches_of(recording) if s["number"] == number)
+    job = open_job(recording)
+    made = []
+    for side in _live_sides(recording):
+        run, _ = Run.objects.get_or_create(
+            job=job,
+            side=side,
+            stretch=number,
+            defaults={
+                "offset_seconds": float(one["start"]),
+                "seconds": float(one["end"]) - float(one["start"]),
+            },
+        )
+        made.append(run)
+    return made
+
+
+def mark_stretch(recording: Recording, number: int, state: str) -> None:
+    def mark(live: dict):
+        for one in live.get("stretches") or []:
+            if one["number"] == number:
+                one["state"] = state
+
+    change_live(recording, mark)
+
+
+def finish_stretches(recording: Recording):
+    """At Stop, once the whole file is in: the last stretch, and the Job closed.
+
+    The tail runs from the last closed stretch to the end; a tail too short
+    to be a job of its own (a person who pressed Stop a moment after a
+    stretch closed) is still sent, since the words in it are the words that
+    ended the meeting. A Job with no Runs at all (every stretch failed to
+    cut) is closed and left to fail plainly.
+    """
+    from core import media
+    from core.jobs import JobState
+
+    stretches = stretches_of(recording)
+    if not stretches:
+        return None
+    seconds = float(recording.duration_seconds or 0.0)
+    last_end = float(stretches[-1]["end"])
+    job = open_job(recording)
+    # A stretch that failed while recording gets one more try now that the
+    # whole file is in and nothing is still arriving.
+    for one in stretches:
+        if one.get("state") == "failed":
+            try:
+                cut_stretch(recording, one["number"])
+            except media.MediaError:
+                number = one["number"]
+                log.exception("stretch %d failed again (%s)", number, recording.pk)
+                continue
+            runs_for_stretch(recording, one["number"])
+            mark_stretch(recording, one["number"], "sent")
+    if seconds - last_end > 0.5:
+        number = len(stretches) + 1
+
+        def add_tail(live: dict):
+            live["stretches"] = list(live.get("stretches") or []) + [
+                {
+                    "number": number,
+                    "start": last_end,
+                    "end": round(seconds, 1),
+                    "state": "cutting",
+                }
+            ]
+
+        change_live(recording, add_tail)
+        try:
+            cut_stretch(recording, number)
+        except media.MediaError:
+            log.exception("the tail of recording %s could not be cut", recording.pk)
+            mark_stretch(recording, number, "failed")
+        else:
+            runs_for_stretch(recording, number)
+            mark_stretch(recording, number, "sent")
+    job.open = False
+    if not job.runs.exists():
+        job.state = JobState.FAILED
+        job.failure_class = "media_failed"
+    job.save(update_fields=["open", "state", "failure_class"])
+    return job
+
+
 def note_upload(recording: Recording, tus_id: str) -> None:
     """The sidecar upload this recording's pieces go into, remembered."""
-    live = dict(recording.live or {})
-    live["tus_id"] = (tus_id or "")[:80]
-    recording.live = live
-    recording.save(update_fields=["live"])
+    change_live(recording, lambda live: live.update(tus_id=(tus_id or "")[:80]))
 
 
 def ended(
@@ -212,24 +475,31 @@ def ended(
     down; when it has not (the page closed, the browser died), the pieces on
     the server are taken as the file and the pipeline starts from them.
     """
-    live = dict(recording.live or {})
-    if live.get("ended"):
+    if (recording.live or {}).get("ended"):
         return
-    live["ended"] = how if how in ("stop", "limit", "closed", "disk") else "closed"
-    live["ended_at"] = timezone.localtime(timezone.now()).isoformat()
-    live["pauses"] = [
-        {"at": float(one.get("at", 0)), "seconds": float(one.get("seconds", 0))}
-        for one in (pauses or [])
-        if isinstance(one, dict)
-    ][:200]
-    if seconds is not None:
-        live["seconds"] = round(float(seconds), 1)
-    if computer_ended_at is not None:
-        live["computer_ended_at"] = round(float(computer_ended_at), 1)
-    recording.live = live
+
+    def end(live: dict):
+        if live.get("ended"):
+            return False
+        live["ended"] = how if how in ("stop", "limit", "closed", "disk") else "closed"
+        live["ended_at"] = timezone.localtime(timezone.now()).isoformat()
+        live["pauses"] = [
+            {"at": float(one.get("at", 0)), "seconds": float(one.get("seconds", 0))}
+            for one in (pauses or [])
+            if isinstance(one, dict)
+        ][:200]
+        if seconds is not None:
+            live["seconds"] = round(float(seconds), 1)
+        if computer_ended_at is not None:
+            live["computer_ended_at"] = round(float(computer_ended_at), 1)
+        return True
+
+    if not change_live(recording, end):
+        return
+    live = recording.live
     recording.speaker_taps = _clean_taps(taps)
     recording.marks = _clean_marks(marks)
-    recording.save(update_fields=["live", "speaker_taps", "marks"])
+    recording.save(update_fields=["speaker_taps", "marks"])
 
     if recording.media_state == MediaState.UPLOADING and how != "stop":
         _take_what_arrived(recording)
@@ -248,6 +518,7 @@ def ended(
         pauses=len(live["pauses"]),
         taps=len(recording.speaker_taps),
         marks=len(recording.marks),
+        stretches=len(live.get("stretches") or []),
     )
 
 
@@ -345,10 +616,7 @@ def name_from_taps(recording: Recording, transcript) -> int:
             object_label=recording.original_filename,
             labels_named=named,
         )
-        live = dict(recording.live or {})
-        live["named_from_taps"] = named
-        recording.live = live
-        recording.save(update_fields=["live"])
+        change_live(recording, lambda live: live.update(named_from_taps=named))
     return named
 
 
@@ -431,6 +699,18 @@ def line_for(recording: Recording) -> dict:
     job = recording.jobs.order_by("-created").first()
     if job is None or job.state not in (JobState.QUEUED, JobState.RUNNING):
         return {"state": "preparing", "says": "Preparing the sound."}
+    if job.in_stretches:
+        # Most of it was transcribed while it recorded; what is left is the
+        # last stretch, which is minutes at most.
+        left = job.runs.exclude(state="done").order_by("-stretch").first()
+        if left is None:
+            return {"state": "transcribing", "says": "Finishing."}
+        wait = max(1.0, left.seconds) / measured_speed()
+        about = max(1, int(wait) + (1 if wait > int(wait) else 0))
+        return {
+            "state": "transcribing",
+            "says": f"Finishing: about {about} minute{'s' if about != 1 else ''}.",
+        }
     run = job.runs.order_by("side__number").first()
     if job.state == JobState.RUNNING or (run is not None and run.state == "running"):
         return {"state": "transcribing", "says": "Transcribing."}
@@ -474,6 +754,15 @@ def provenance_rows(recording) -> list[tuple[str, str]]:
     )
     ending = ENDINGS.get(facts.get("ended", ""), "ended")
     rows = [("Recorded live", f"On the Record page, from {said}; {ending}")]
+    stretches = facts.get("stretches") or []
+    if stretches:
+        count = len(stretches)
+        rows.append(
+            (
+                "Transcribed while recording",
+                f"in {count} stretch{'es' if count != 1 else ''}, the last at Stop",
+            )
+        )
     if facts.get("named_from_taps"):
         count = facts["named_from_taps"]
         rows.append(

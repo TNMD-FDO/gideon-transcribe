@@ -110,6 +110,10 @@ class Job(models.Model):
         max_length=20, choices=JobState.CHOICES, default=JobState.QUEUED
     )
     merging = models.BooleanField(default=False)
+    # More Runs are still to come (a Live recording being transcribed in
+    # stretches while it records), so the Runs that are done are not merged
+    # yet. Closed by the last stretch, at Stop.
+    open = models.BooleanField(default=False)
 
     failure_class = models.CharField(max_length=40, blank=True, default="")
 
@@ -127,6 +131,11 @@ class Job(models.Model):
     @property
     def is_live(self) -> bool:
         return self.state in JobState.LIVE
+
+    @property
+    def in_stretches(self) -> bool:
+        """Whether this Job's Runs are stretches rather than whole Sides."""
+        return self.runs.filter(stretch__gt=0).exists()
 
     @property
     def failure_message(self) -> str:
@@ -171,6 +180,12 @@ class Run(models.Model):
     # for the fast lane. Asked for at hand-over and kept, so a poll, a fetch,
     # and a delete go to the copy that has the job.
     lane = models.CharField(max_length=10, blank=True, default="")
+    # A stretch of a Live recording transcribed while it records (Phase 3,
+    # step five): which stretch, where it starts in the recording, and how
+    # long it is. Zero and zero for a Run over the whole Side.
+    stretch = models.IntegerField(default=0)
+    offset_seconds = models.FloatField(default=0.0)
+    seconds = models.FloatField(default=0.0)
 
     state = models.CharField(max_length=20, default="pending")
     stage = models.CharField(max_length=30, blank=True, default="")
@@ -187,6 +202,16 @@ class Run(models.Model):
     settings_used = models.JSONField(default=dict, blank=True)
     service_versions = models.JSONField(default=dict, blank=True)
     timings = models.JSONField(default=dict, blank=True)
+
+    @property
+    def audio_path(self):
+        """What is sent to the service: the Side's prepared file, or, for a
+        stretch, the stretch's own cut of it."""
+        if self.stretch:
+            from core import live
+
+            return live.stretch_path(self.job.recording, self.stretch, self.side.number)
+        return self.side.asr_path
 
     class Meta:
         ordering = ["side__number"]
