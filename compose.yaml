@@ -307,7 +307,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G
+          # The stack's limits add up to about 39 GB, the line Transcribe
+          # answered for in the box ledger (§12); the working sets peak near
+          # 11 GB, so each limit is a ceiling against a runaway, not a plan.
+          memory: 6G
           # Four media jobs of eight ffmpeg threads each, and room to spare.
           # The only CPU cap in the stack: transcodes are the one thing here
           # that will take every core they are given.
@@ -353,7 +356,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G
+          memory: 4G
     networks:
       - transcribe
       - whisperx
@@ -466,6 +469,12 @@ services:
       TZ: "${TZ:-UTC}"
     deploy:
       resources:
+        limits:
+          # Host memory, bounded while the engine runs: the box ledger (§12,
+          # line 11) asks that the engine sit inside Transcribe's line, on
+          # loan with its card memory. The model's weights load through host
+          # memory once; 16 GB holds that with room.
+          memory: 16G
         reservations:
           devices:
             - driver: cdi

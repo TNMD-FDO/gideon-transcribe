@@ -21,6 +21,29 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.32.2, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### For the office that builds
+
+- **The first Transcribe entry in the box ledger** (`docs/box-ledger.md`,
+  section 12), answering GIDEON's eleven lines by number: the shared engine
+  is the plan and the local engine is for testing only, off when not in
+  use; CI is narrowed and image builds are gated; the repository is public
+  since 7 September 2026; and Transcribe asks for a 40 GB line of host
+  memory.
+- **Memory limits that add up to that line.** The WhisperX service's limit
+  drops from 32 GB to 12, the fast lane's from 16 to 8, the media worker's
+  from 8 to 6, the worker's from 8 to 4, and the local engine gains a limit
+  of 16 GB while it runs. Every one is a ceiling against a runaway; the
+  working sets peak near 11 GB.
+- **`./transcribe upgrade` keeps two tags of each image** and prunes the
+  build cache it made, so old images stop piling up on the root filesystem.
+
 ## v1.32.1, 2026-09-07
 
 ```

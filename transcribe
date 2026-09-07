@@ -2063,9 +2063,25 @@ verify_the_pull() {
   fi
 }
 
+# The box ledger (§5, §6, and its line 3 to Transcribe): the containerd image
+# store keeps images and the build cache on the root filesystem, so an upgrade
+# keeps two tags of each of this repository's images, the one it starts and
+# the one it left, and prunes the build cache it made. "dev" is kept for a
+# checkout that is not at a Release.
+tidy_the_images() {
+  local keep="$1" previous="$2" image
+  for image in ghcr.io/tnmd-fdo/gideon-transcribe-whisperx ghcr.io/tnmd-fdo/gideon-transcribe-app; do
+    docker images --format '{{.Repository}}:{{.Tag}}' "$image" 2>/dev/null \
+      | grep -v -e ":${keep}\$" -e ":${previous}\$" -e ':dev$' -e ':<none>$' \
+      | xargs -r docker image rm >/dev/null 2>&1 || true
+  done
+  docker builder prune -f >/dev/null 2>&1 || true
+}
+
 cmd_upgrade() {
   need_env
-  local tag="" build=no
+  local tag="" build=no before
+  before="$(env_value RELEASE_TAG)"
   for one in "$@"; do
     case "$one" in
     --build) build=yes ;;
@@ -2157,6 +2173,7 @@ cmd_upgrade() {
     fi
   fi
   compose up -d
+  tidy_the_images "$tag" "$before"
 
   # Caddy's configuration is a file mounted into it, not part of its image,
   # so `up -d` leaves it running with whatever it read at startup: a changed

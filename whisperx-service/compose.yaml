@@ -48,8 +48,11 @@ services:
     deploy:
       resources:
         limits:
-          # A starting value, tuned at the Phase 1 benchmark gate.
-          memory: 32G
+          # Host memory. Was 32 GB, a starting value from before anything was
+          # measured; the service's working set peaks in single figures of
+          # gigabytes on an eight-hour file, and the box ledger (§12) counts
+          # every limit against Transcribe's line, so it is a ceiling now.
+          memory: 12G
         reservations:
           devices:
             - driver: cdi
@@ -143,7 +146,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 16G
+          memory: 8G
         reservations:
           devices:
             - driver: cdi
