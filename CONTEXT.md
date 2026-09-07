@@ -123,6 +123,34 @@ _Avoid_: bookmark, flag, tag
 A Recording made on the Dictate page, kept past sign-out, the person's alone until sent, in no Case unless they add it to one, whose product is a Memo. Its Recording type is Dictation, and the office's Retention period applies to it on its own. Phase 3.
 _Avoid_: voice note, voice memo
 
+**Interpreter**:
+The style on the New recording page, beside Dictation, Meeting, and Call, and the feature as a whole: a Session between a Visitor who speaks another language and Staff, heard by Whisper, translated by the office's engine, and spoken by a Voice on the server, Turn by Turn, kept as a Recording with both languages. Never a substitute for a certified interpreter. Phase 3 chapter 3, specified 2026-09-07, not yet built.
+_Avoid_: translator, bot
+
+**Session**:
+One use of the Interpreter, from Start to Stop: a Live recording of that style. Phase 3.
+_Avoid_: conversation (say Session for the recording, conversation for what the people had)
+
+**Turn**:
+One stretch of speech by one Side in a Session, ended by the pause, with its language, what the app heard, and its translation; a Session's Segments are its Turns. Phase 3.
+_Avoid_: utterance, message
+
+**Readback**:
+A person's own Turn shown back to them in their own language, as heard, beside its translation, so a misheard word is seen and said again. Phase 3.
+_Avoid_: echo, confirmation
+
+**Fast lane**:
+A second, smaller transcription service beside the batch one, optional at install, for what must come back in about a second: a Turn, or a piece of a Live recording transcribed during the recording. Phase 3.
+_Avoid_: realtime worker, streaming service
+
+**Voice**:
+A text-to-speech voice installed on the server for one language, fetched at install and never at run time; a language with no Voice is text-only. Phase 3.
+_Avoid_: TTS model (in pages), speaker (taken)
+
+**Quick phrase**:
+A ready-made line on the Staff side of a Session, translated once and shown or spoken with one press. Phase 3.
+_Avoid_: canned response, macro
+
 **My clips**:
 The Clips page in the top bar: one table of every Clip the person saved, under a heading row for each place it lives (a Case, Recorded here, This session), the place touched last on top. A Clip in a Case is here and on the Case's Clips tab both. Before v1.30.0 the page listed the Workspace's Clips only.
 _Avoid_: Your clips, clip library

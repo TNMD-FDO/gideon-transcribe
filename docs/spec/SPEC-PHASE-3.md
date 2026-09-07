@@ -18,6 +18,7 @@ Everything the app transcribes today arrives as a file. Phase 3 lets a person ma
 - **Speaker buttons and Marks**: while recording, the people in the room are one tap each, so the finished Transcript names its Speakers; and one key drops a Mark at the moment that mattered.
 - **Dictation**: a recording of one person's speech, made from a tab of its own and kept on its own, whose product is a Memo, written by a shipped Summary template, and handed to a colleague with Send to.
 - **Dictation by email**: the one message the app sends that carries content, Off by default, so that a legal assistant gets the Memo in their mailbox when the office decides so.
+- **The Interpreter** (chapter 3, written after the rest was built and in use, not yet built): a Session between a visitor who speaks another language and a staff member, heard, translated, and spoken on the office's own server, turn by turn, with the whole Session kept as a Recording in both languages. Never a substitute for a certified interpreter.
 
 It adds four admin settings, six audit rows, and no environment key.
 
@@ -25,8 +26,9 @@ It adds four admin settings, six audit rows, and no environment key.
 
 1. Live recording
 2. Dictation and Send to
-3. Admin panel additions in Phase 3
-4. Deferred and ruled out
+3. The Interpreter (written 2026-09-07, not yet built)
+4. Admin panel additions in Phase 3
+5. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 3. B. Settings added in Phase 3.
 
@@ -236,7 +238,132 @@ Each Dictation not in a Case has its own clock: `last_used`, moved by opening it
 - Whether a Dictation may be sent to more than one colleague at once (one at a time is the expectation).
 - How the Dictations page shows a Memo in progress (the queue line's words, the expectation).
 
-## 3. Admin panel additions in Phase 3
+## 3. The Interpreter
+
+Written 2026-09-07 at the maintainer's ask, after the Record page, Dictation, and Send to were built and in use. **Not yet built.** It depends on two things this document already names as coming: transcription during the recording (chapter 1, step five) and the fast lane that makes it quick (below). Build those first.
+
+### Principles
+
+1. **It is not an interpreter.** A certified interpreter is required for anything with legal consequence: advising a person of their rights, discussing a plea, taking a sworn statement, anything an attorney would not do through an untrained bilingual passer-by. The Interpreter is for intake, scheduling, directions, and getting the gist of what somebody has come about while a real interpreter is arranged. The page says so, in both languages, and the office's policy says when it may be used. The app does not enforce the policy; it makes it easy to follow.
+2. **Nothing leaves the building.** Hearing, translating, and speaking all happen on the office's server: Whisper hears, the office's engine translates, a voice on the server speaks. No service outside the office hears a word, which is the same rule as every other chapter and the reason the app can be used with a client at all.
+3. **An interpreter session is a Recording.** It is kept, with both languages in its Transcript and each Turn's language written down, under the same rules as every recording made at the desk: Recorded here, Add to a case, the Retention clock, Send to, the Summary, Clips, exports, Case Chat, the audit log, the backup. Nothing about it is a new kind of thing.
+4. **Readback before trust.** Each person sees their own words as the app heard them, in their own language, beside the translation. A misheard word is seen and said again. This is what makes a machine in the room usable: the person can tell when it is wrong.
+5. **As close to a conversation as the machine allows.** No button in the ordinary case: the app hears the pause at the end of a Turn and answers at once, and it tells the two sides apart by the language it heard. Words appear as they arrive; the voice speaks as the sentence completes; the voice stops when somebody starts talking. The honest limit is a good phone interpreter with a two-second delay.
+6. **The office decides how much of it is on.** Every part is a setting: whether it exists, which languages, whether it speaks and to whom, which voice, how turns are taken. Defaults are conservative and one screen changes them.
+
+### Words
+
+- **Interpreter**: the style on the New recording page, beside Dictation, Meeting, and Call, and the feature as a whole. Its product is a bilingual Transcript, an Interpreted conversation Summary, and the recording.
+- **Session**: one use of the Interpreter, from Start to Stop: a Live recording of the style Interpreter.
+- **Turn**: one stretch of speech by one side, from when they start to the pause that ends it, with its language, what the app heard, and its translation. The Transcript's Segments in a Session are its Turns.
+- **Side**: the two parties, the **Visitor** (the person who speaks the other language) and **Staff** (the office's person). The Interpreter uses the word for the two people; a two-channel call's two Sides are the same idea heard from two sources.
+- **Readback**: a person's own Turn shown back to them in their own language, as heard, beside its translation.
+- **Fast lane**: a second, smaller transcription service beside the batch one, for pieces of audio that must come back in about a second: a Turn, or a piece of a Live recording being transcribed during the recording. Optional at install.
+- **Voice**: a text-to-speech voice installed on the server for one language. A language with no Voice is text-only.
+- **Quick phrase**: a ready-made line on the Staff side, translated once and spoken or shown with one press.
+
+_Avoid_: translator (for the feature; "translate" stays the word for the Transcript setting), interpretation (say translation), bot, assistant (taken), caption (taken).
+
+### The Session page
+
+Reached from the New recording page, as the style **Interpreter**, shown only while the Interpreter setting is On; and from a Case page's Record button with that style. It is the Record page in a fourth shape, and it has the same three states.
+
+**Before.** The person chooses:
+
+- the **Visitor's language**, from the office's offered list (the Languages setting), or **Let the app hear it**, which is the default: the first Turn settles the language, the screen says what it decided, and one click changes it. Staff's language is English, always; a Session in which neither side speaks English is not in this phase.
+- the **Case**, when started from a Case, as any Live recording; otherwise the Session is kept on its own, under Recorded here, and can be added to a case afterwards.
+- a **title**, optional, as any Live recording; the default is "Interpreter, <language>, <date and time>".
+
+Under More options: the Recording type (Interview unless changed), and whether to speak (the office's Spoken output setting, which a person may turn down but not up: if the office says Off, there is no voice to turn on).
+
+The notice at the top of the page, in English and in the Visitor's language, is the office's wording from the Notice setting. The shipped wording: "This computer is translating what we say to each other. It is not an interpreter, and it makes mistakes. A recording is kept." The person starting the Session is expected to read it, or have it read, before pressing Start; the app does not ask for consent (chapter 1, principle 5).
+
+**During.** Two columns, the Visitor's language on the side of the screen facing the Visitor (a control swaps the columns), large type. Each Turn appears in both columns as it arrives: the person's own words as heard (Readback) and, opposite, the translation. Below the columns:
+
+- **Visitor** and **Staff**, two large hold-to-talk buttons, for when Automatic turn-taking is Off or a room is too loud for it: hold, speak, release. Holding either button also tells the app which side spoke, whatever it hears.
+- **Say it**, beside every translated Turn, which speaks it through the computer's speakers; and, while the office's Spoken output is on, the Turn is spoken as it completes without pressing anything. **Stop talking** silences the voice at once, and so does anybody speaking.
+- **Type instead**, a box on each side, for a name, a number, an address, or a room too loud to be heard: a typed Turn is translated and spoken like a spoken one, and marked as typed in the Transcript.
+- **Quick phrases**, the Staff side's ready lines, one press each: shown in the Visitor's language and spoken when speaking is on. Shipped: "Please wait a moment." "We are arranging an interpreter." "Do you understand?" "Please say that again." "This conversation is being recorded." "We are finished for today." The Admin edits the list; each line is translated once, when it is saved or the language is first used, and kept.
+- **Mark**, as on the Record page, for the moment to come back to.
+- the clock, the level meter, **Pause**, and **Stop**.
+
+**Automatic turn-taking.** The browser listens for speech and for the pause that ends it, about three quarters of a second of quiet, and sends the Turn at once; it does not wait for a five-second piece to fill. The fast lane transcribes the Turn and reports its language; the app files it under the side that language belongs to. Two people talking at once come through as one Turn, which the Readback shows and the people sort out by saying it again. While the voice is speaking, the microphone is held closed, so the app never transcribes itself; when somebody speaks over the voice, the voice stops and the microphone opens. Both are required, not nice to have.
+
+**What arrives when.** A Turn of a few seconds is transcribed by the fast lane in well under a second and translated by the engine as a stream, so its first words are on screen about a second after the person stops and the whole Turn a second or two later; the voice begins as the translation completes. The page shows the words as they arrive. When the fast lane is not installed, the Turn goes to the batch worker at the front of the queue and takes as long as the job ahead of it takes to reach a pause between steps: usable, and slower behind a long recording. The page says which it has: "Fast lane" or "Shared with the queue" in small type at the top, so a slow Session is understood rather than a mystery.
+
+**Which way it translates.** Visitor to English: Whisper does both at once, hearing the language and writing English, and the Readback in the Visitor's language is Whisper's plain transcription of the same audio, so the Turn is transcribed twice, both on the fast lane. English to the Visitor's language: Whisper writes the English and the office's engine (the AI assistant's engine, local or shared, exactly as Summary uses it) translates it, with a fixed prompt that asks for the translation and nothing else, no commentary, register neutral and polite. The engine is the only part of the app that translates out of English, and a Session needs the AI assistant to be configured; without an engine the Interpreter setting is greyed.
+
+**After.** Stop ends the Live recording as any other; there is nothing to wait for, since every Turn was transcribed as it went, and the Session opens in the viewer at once (or lands under Recorded here, as the maintainer chose for the other styles; left to the build to make the same choice). The Transcript's Segments are the Turns, each with its Side as the Speaker (Visitor, Staff, or the People's names if they were given), its spoken language, the text as heard, and its translation. The viewer shows the translation under each Segment, with the original above it, and Export to Word offers a side-by-side bilingual layout for a Session. The Summary offers the shipped **Interpreted conversation** template first: what the visitor came about, what they were told, what was agreed, what needs an interpreter to be done properly, in that shape, with times.
+
+### What the Session reuses
+
+Everything. The Session is a Live recording of a new style, so: Recorded here and My recordings, Play to check it, Add to a case, the case's clock or the dictation clock, Send to with the Summary and the recording attached under the Email settings, Clips with the translation as captions, Marks, People (the two sides are known, so no diarization runs), Case Chat and the case's search once it is in a case, the audit rows of a Live recording, the backup. Two things are new work: the bilingual Word export and the shipped template's wording.
+
+### Languages
+
+Three layers, so the choice is wide without being confusing:
+
+1. **What the app can do**, a table shipped in the app and shown on the Languages settings page, one row per language: hears it (Whisper); translates into it (the engine, marked well, fair, or poorly by the research note); a Voice exists for it; and which Voices are installed. Whisper hears about a hundred languages; the engine translates the widely spoken ones well and the rare ones poorly; Voices exist for about thirty. The table is a fact about the tools and lives in `docs/research/interpreter-languages.md`, with the sources it was read from, written before the build.
+2. **What the office offers**, the Admin's ticks. Spanish is ticked at install; the installer downloads its Voice. A language with no Voice is offered text-only and says so.
+3. **What is chosen in the room**, from the office's list, or heard.
+
+Each Turn carries its language, and Whisper's own detection can be wrong for a short Turn; the Session's chosen language is what the Readback is written in, and a Turn heard in a third language is shown as heard with a note, not translated.
+
+### The fast lane
+
+A second transcription service, from the same WhisperX image the office already builds, run as a Compose service under a profile (`fast`, as the Local engine is under `llm`), with a smaller model and a small share of the GPU: about eight gigabytes. It serves the Turns of a Session and the pieces of a Live recording being transcribed during the recording (chapter 1, step five), and nothing else; the batch worker never waits for it and it never waits for the batch worker. The installer asks one question, "Turn on the fast lane for live recording and the interpreter? It needs about eight gigabytes of GPU memory", and writes the answer, the model, and the memory share into `.env`; an office that says no gets the same features through the batch worker at the front of its queue. `./transcribe check` reports whether the lane is up, and the Status page shows it as a line beside the engine. The model is downloaded at install beside the others and pinned as they are. Nothing about the lane is an admin setting: it is a fact about the hardware.
+
+### Voices
+
+Piper, a free text-to-speech tool that runs on the CPU, with one Voice file per language and dialect, small enough to fetch at install. The app image carries the tool; the Voice files live beside the Whisper models, fetched by the installer for the languages the office ticked and pinned by hash; `./transcribe voices add <language>` fetches another later, and `./transcribe voices` lists what is installed. The app never fetches a Voice at run time. Speaking happens on the server and the sound is played by the browser, so no software is installed on the office's computers. The research note names the tool's version, licence, and the Voices chosen per language, with sources, before the build.
+
+### Settings
+
+On a page of their own, **Interpreter**, under Features, greyed while Live recording is Off or the AI assistant has no engine:
+
+| Setting | Choices | Default |
+|---|---|---|
+| Interpreter | On, Off | Off |
+| Languages offered | ticks against the app's language table | Spanish |
+| Spoken output | Off; Speak to the visitor only; Speak both directions | Speak to the visitor only |
+| When to speak | As soon as the sentence is ready; Only when Say it is pressed | As soon as ready |
+| Voice, per offered language | the Voices installed for that language | the first installed |
+| Speaking speed | Slower, Normal, Faster | Normal |
+| Turn-taking | Automatic; Hold to talk only | Automatic |
+| Readback | On, Off | On |
+| Quick phrases | one line per row, the Staff side's | the six shipped |
+| The notice | text, shown in English and translated once into each offered language | the shipped wording |
+
+Every one takes effect at once; a Session in progress keeps the settings it started with. Off hides the style and stops nothing that is running.
+
+### Audit rows
+
+- **Interpreter session started** and **finished** (Recordings): the Live recording rows, with the style; the Visitor's language; whether spoken output was on; the fast lane or the queue; the count of Turns. Never a word of a Turn.
+- **Language settled** (Recordings): when the app heard the language rather than being told it, which language, at which Turn.
+- No row per Turn, per Say it, or per Quick phrase: they are the conversation, not events.
+
+### Not in this phase
+
+- **A translated voice into a call.** Sending the voice down a Zoom, Teams, or phone call needs a virtual microphone installed on the computer, outside the browser's reach, and would fight the real one. On a call, the far side's Turns are translated on screen (the computer's sound is already the far side) and the staff member reads the translation aloud. Ruled out for this phase, not for ever.
+- **Two languages neither of which is English.** The engine could, Whisper cannot in one step; ruled out until asked for.
+- **A visitor-facing device of their own** (a tablet handed across the desk): the office's computers only, chapter 1, principle 4. A second monitor turned toward the visitor is the shape.
+- **Handing the Visitor the recording or the transcript.** A policy line for the office, not a build: the chapter names it so the office decides before the first Session.
+
+### Left to the build
+
+- The pause that ends a Turn (about three quarters of a second) and the shortest Turn that is sent (about half a second), both tuned in the room.
+- Whether Stop opens the viewer or lands under Recorded here, made the same as the other styles.
+- The engine prompt for translation, kept in `prompts.py` beside the shipped summaries, with the register fixed as neutral and polite.
+- How a typed Turn is marked in the Transcript.
+- The bilingual export's layout.
+
+### Sources and amendments
+
+- The maintainer's ask of 2026-09-07: a two-way translator for a visitor with no interpreter available and for calls; granular settings ("I may want to change the spoken output or turn off spoken output altogether"); the fast lane, "this should be able to be installed easily by other offices"; staff choosing among the many languages available; "as close to a two way conversation as possible"; and "record the sessions and utilize some of the features we already worked on".
+- Chapter 1 of this document (Live recording, the Record page, the styles, step five) and chapter 2 (Dictation, Recorded here, Send to), which the Session inherits.
+- Phase 1 chapter 10 (the AI assistant and its engine), which translates; and the research notes to be written before the build: `docs/research/interpreter-languages.md` and `docs/research/piper-voices.md`.
+
+## 4. Admin panel additions in Phase 3
 
 - **Features**: **Live recording**, On or Off, default Off, greyed while Folder management is Off (a Live recording needs a Case). Off hides Record everywhere and stops the Record page; a recording in progress finishes. **Dictation**, On or Off, default Off, greyed while Live recording is Off. Off hides the Dictations tab and the Dictate page and keeps every Dictation.
 - **Limits**: **Longest live recording**, whole minutes, 10 to 480, default 180.
@@ -244,14 +371,15 @@ Each Dictation not in a Case has its own clock: `last_used`, moved by opening it
 - **Templates**: the shipped **Dictation memo** template; **Recording types** ships with Dictation.
 - **Status page**: no new line; a Live recording is a Recording in the queue.
 
-## 4. Deferred, open, and ruled out
+## 5. Deferred, open, and ruled out
 
-- **A second transcription worker** (a second GPU, or two workers side by side on the same card beside the Local engine): **open, not decided.** The service's contract says it is a change inside the service that every Consumer inherits without code of its own, and the office's second card has room for it. It is not spent until a week of live recordings, with the queue line showing the waits, says the one worker is not enough. Nothing in this phase assumes either answer.
+- **A second transcription worker** (a second GPU, or two workers side by side on the same card beside the Local engine): **open, not decided**, though the fast lane (chapter 3) is the shape it takes for live pieces and Turns, and settles the live half of the question. The service's contract says it is a change inside the service that every Consumer inherits without code of its own, and the office's second card has room for it. It is not spent until a week of live recordings, with the queue line showing the waits, says the one worker is not enough. Nothing in this phase assumes either answer.
 - **A draft on screen while recording**: ruled out (Principle 2). Transcription during the recording, above, is the finished-quality shape of the same wish.
 - **Phones and tablets**: ruled out for this phase; the office's computers only.
 - **Desk-phone capture**: ruled out; not the app's to solve.
 - **Recording in the app without a Case** (into the Workspace): ruled out; a Live recording is made to be kept. A Dictation is kept without a Case, on its own clock, which is the one exception, decided by the maintainer.
 - **Sending a Memo to a typed address**: ruled out; the directory is the only source of addresses.
+- **A translated voice into a call**, and **two languages neither of which is English**: ruled out for this phase (chapter 3).
 
 ## Appendix A. Audit rows added in Phase 3
 
@@ -261,6 +389,7 @@ Each Dictation not in a Case has its own clock: `last_used`, moved by opening it
 | Edits | Speakers named from taps | Live recording |
 | Recordings | Dictation sent; Dictation taken back | Dictation and Send to |
 | Email | Email sent and Email failed, kind `dictation_sent` | Dictation and Send to |
+| Recordings | Interpreter session started; Interpreter session finished; Language settled | The Interpreter (not yet built) |
 
 ## Appendix B. Settings added in Phase 3
 
@@ -271,6 +400,7 @@ Each Dictation not in a Case has its own clock: `last_used`, moved by opening it
 | Longest live recording | Limits | whole minutes, 10 to 480 | 180 |
 | Dictation by email | Email | On or Off; greyed while mail is not configured | Off |
 | Dictation sent (template) | Email | a Subject and a Body with `{name}`, `{by}`, `{case}`, `{title}`, `{link}` | the chapter's wording |
+| Interpreter, and its page of ten (not yet built) | Features, Interpreter page | see chapter 3's table | Off; Spanish; Speak to the visitor only; As soon as ready; first Voice; Normal; Automatic; On; six phrases; the shipped notice |
 
 ## Amendments applied
 
