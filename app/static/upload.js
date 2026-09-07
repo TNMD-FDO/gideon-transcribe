@@ -377,6 +377,10 @@
     document.getElementById("back-to-batch").hidden = true;
     document.getElementById("use-batch-line").hidden = true;
     document.getElementById("file-title-line").hidden = true;
+    // The batch's case is chosen on the where cards above the steps; the
+    // rail's own box is for one file that goes somewhere else.
+    var caseField = document.getElementById("case-field");
+    if (caseField) { caseField.hidden = true; }
     enableSettings(true);
     writeRail(batchSettings || readRail());
     drawExceptions();
@@ -389,6 +393,8 @@
     document.getElementById("back-to-batch").hidden = false;
     document.getElementById("use-batch-line").hidden = false;
     document.getElementById("file-title-line").hidden = false;
+    var caseField = document.getElementById("case-field");
+    if (caseField) { caseField.hidden = false; }
     fileTitle.value = one.title;
     useBatch.checked = !one.own;
     enableSettings(!!one.own);

@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.29.1, 2026-09-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The Upload page's case dropdown stayed inside its card**, and the batch
+  settings no longer repeat the Add to case choice the "Where do they go?"
+  cards already make. The box still appears for one file given its own
+  settings, where it is the way to send that file somewhere else.
+
 ## v1.29.0, 2026-09-07
 
 ```
