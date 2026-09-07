@@ -49,6 +49,12 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.13"
+          # The packages are kept between runs, keyed on the requirement
+          # files, so the install step repeats only when a pin changes.
+          cache: pip
+          cache-dependency-path: |
+            app/requirements-dev.txt
+            whisperx-service/requirements-dev.txt
 
       # python-ldap has no wheel: it is built here, and its build needs the
       # OpenLDAP and Cyrus SASL headers. The package that carries the OpenLDAP
