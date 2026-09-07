@@ -408,7 +408,6 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
 # The Clips page ----------------------------------------------------------------
 
 
-@login_required
 def my_clips(user) -> list:
     """Every Clip this person saved that they can still reach, newest first.
 
