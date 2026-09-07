@@ -520,7 +520,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `SMTP_USER`, `SMTP_PASSWORD_FILE` | The relay's sign-in, only when it wants one; the password lives in `secrets/smtp_password`, written by the install. |
 | `MAIL_FROM` | The sender, shown as "Gideon Transcribe <address>". Required when `SMTP_HOST` is set. |
 | `COMPOSE_FILE` | Which compose files Compose reads. Left out entirely for most offices; uncommented only for a shared engine. Never set empty: Compose reads an empty value as a path and refuses to start. |
-| `COMPOSE_PROFILES` | `llm` starts the Local engine in this stack; `./transcribe engine local on` sets it and `off` clears it. Empty means a shared engine, or none. |
+| `COMPOSE_PROFILES` | A comma-separated list. `llm` starts the Local engine in this stack (`./transcribe engine local on` and `off`); `fast` starts the fast lane (`./transcribe fast-lane on` and `off`). Empty means neither. |
 | `LLM_LOCAL_MODEL` | The model the Local engine loads, as Hugging Face names it. Default `Qwen/Qwen3.5-4B`, which fits in 20 GB with its cache. |
 | `LLM_LOCAL_GPU_UUID` | Which card the Local engine uses, by UUID; `engine local on` asks and offers the least busy one. |
 | `LLM_LOCAL_GPU_FRACTION` | The share of that card's memory the engine may take, leaving the rest for transcription. Default 0.21, which is 20 GB of a 96 GB card. |
