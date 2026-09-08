@@ -93,6 +93,31 @@
           </div>
         </details>
 
+        {% comment %}
+          The microphone, checked before Record: which one, and whether sound
+          is reaching the app from it. A Remote Desktop session can leave
+          Windows recording from "Remote Audio", which carries nothing once
+          somebody sits at the machine; the bar not moving says so before a
+          recording is made, and the chooser is the way round it.
+        {% endcomment %}
+        <div class="field mic-check" id="mic-field">
+          <label for="mic-choice">Microphone</label>
+          <div class="row" style="gap: 8px">
+            <select id="mic-choice" class="grow" aria-label="Which microphone">
+              <option value="">The computer's default microphone</option>
+            </select>
+            <button type="button" class="btn small" id="mic-check">Check</button>
+          </div>
+          <div class="row small muted" style="gap: 8px; margin-top: 6px">
+            <span style="width: 7rem">Level</span>
+            <div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter-before"></div></div>
+          </div>
+          <p class="muted small" id="mic-line" style="margin: 4px 0 0">
+            Say a few words: the bar should move. If it does not, choose another microphone here, or in Windows Sound settings. After a Remote Desktop session Windows can be left on "Remote Audio", which carries no sound at the machine itself.
+          </p>
+          <p class="notice warn" id="mic-silent" hidden>No sound is reaching the app from this microphone. Choose another, or check it in Windows Sound settings.</p>
+        </div>
+
         <p class="muted small">
           Sent to the office's server as it goes. Nothing leaves the building. The recording stops by itself after {{ longest_minutes }} minutes.
         </p>

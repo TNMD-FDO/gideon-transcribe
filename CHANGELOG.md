@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.35.1, 2026-09-08
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Added
+
+- **The microphone check** on the New recording page: a chooser naming the
+  computer's microphones, a live level bar before Record, and a plain
+  warning when nothing reaches the app for a few seconds, before and in
+  the first seconds of a recording. The choice is remembered per computer.
+  A Remote Desktop session can leave Windows recording from "Remote Audio",
+  which carries no sound at the machine itself; the page names it when it
+  sees it. Found by the maintainer, whose taskbar showed the microphone in
+  use while the app's bar stayed flat.
+
 ## v1.35.0, 2026-09-07
 
 ```

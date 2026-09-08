@@ -193,18 +193,141 @@
 
   // Before: Record -------------------------------------------------------------
 
+  // The microphone check ---------------------------------------------------------
+  //
+  // Which microphone, and whether sound reaches the app from it, before a
+  // recording is made. The chooser lists the computer's microphones once the
+  // browser has been allowed to use one; the choice is remembered on this
+  // computer. A bar that stays flat for a few seconds while somebody talks
+  // is the warning, on this page and again in the first seconds of a
+  // recording, so a silent recording is never a surprise afterwards.
+
+  var micChoice = document.getElementById("mic-choice");
+  var micSilent = document.getElementById("mic-silent");
+  var MIC_KEY = "record-microphone";
+  var testStream = null;
+  var testTimer = null;
+  var quietSince = 0;
+  var SILENT_AFTER_MS = 5000;
+
+  function remembered() {
+    try { return window.localStorage.getItem(MIC_KEY) || ""; } catch (error) { return ""; }
+  }
+  function remember(id) {
+    try { if (id) { window.localStorage.setItem(MIC_KEY, id); } else { window.localStorage.removeItem(MIC_KEY); } } catch (error) { /* no store */ }
+  }
+
+  function micConstraints() {
+    var chosen = micChoice ? micChoice.value : "";
+    return chosen ? { channelCount: 1, deviceId: { exact: chosen } } : { channelCount: 1 };
+  }
+
+  // The chooser: every microphone the browser can name. Names are blank
+  // until the site has been allowed to use one, so the list fills after the
+  // first check and is kept up to date when a device comes or goes.
+  function listMicrophones() {
+    if (!micChoice || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) { return Promise.resolve(false); }
+    return navigator.mediaDevices.enumerateDevices().then(function (devices) {
+      var mics = devices.filter(function (d) { return d.kind === "audioinput"; });
+      var named = mics.filter(function (d) { return d.label; });
+      var want = micChoice.value || remembered();
+      micChoice.innerHTML = "";
+      var first = document.createElement("option");
+      first.value = "";
+      first.textContent = "The computer's default microphone";
+      micChoice.appendChild(first);
+      named.forEach(function (d) {
+        if (d.deviceId === "default" || d.deviceId === "communications") { return; }
+        var option = document.createElement("option");
+        option.value = d.deviceId;
+        option.textContent = d.label;
+        micChoice.appendChild(option);
+      });
+      micChoice.value = Array.prototype.some.call(micChoice.options, function (o) { return o.value === want; }) ? want : "";
+      var label = micChoice.options[micChoice.selectedIndex] ? micChoice.options[micChoice.selectedIndex].textContent : "";
+      var defaultLabel = (named.find(function (d) { return d.deviceId === "default"; }) || {}).label || "";
+      if (/remote audio/i.test(label) || (!micChoice.value && /remote audio/i.test(defaultLabel))) {
+        document.getElementById("mic-line").textContent = "This is the Remote Desktop's microphone. At the machine itself, choose the real one here, or in Windows Sound settings.";
+      }
+      return named.length > 0;
+    }).catch(function () { return false; });
+  }
+
+  function stopTest() {
+    if (testTimer) { window.cancelAnimationFrame(testTimer); testTimer = null; }
+    if (testStream) { testStream.getTracks().forEach(function (t) { t.stop(); }); testStream = null; }
+  }
+
+  // The check: open the microphone, list the others, and draw its level
+  // until Record is pressed or the page is left.
+  function checkMicrophone() {
+    stopTest();
+    if (micSilent) { micSilent.hidden = true; }
+    return navigator.mediaDevices.getUserMedia({ audio: micConstraints() })
+      .then(function (got) {
+        testStream = got;
+        return listMicrophones().then(function () { levelOf(got, document.getElementById("meter-before"), function (silent) {
+          if (micSilent) { micSilent.hidden = !silent; }
+        }); });
+      })
+      .catch(function (error) {
+        if (micChoice && micChoice.value) {
+          // The remembered microphone has gone: back to the default.
+          micChoice.value = "";
+          remember("");
+          return checkMicrophone();
+        }
+        problem("before-problem", "The microphone could not be opened: " + (error && error.message ? error.message : error) + ". Allow the microphone for this site, or choose another.");
+      });
+  }
+
+  // The level of a stream drawn on a bar, and a word when it stays flat.
+  function levelOf(of, bar, whenSilent) {
+    try {
+      if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); }
+      var analyser = audio.createAnalyser();
+      analyser.fftSize = 512;
+      audio.createMediaStreamSource(of).connect(analyser);
+      var data = new Uint8Array(analyser.frequencyBinCount);
+      quietSince = performance.now();
+      (function draw() {
+        if (testStream !== of) { return; }
+        analyser.getByteTimeDomainData(data);
+        var peak = 0;
+        for (var i = 0; i < data.length; i += 1) { peak = Math.max(peak, Math.abs(data[i] - 128)); }
+        bar.style.width = Math.min(100, Math.round((peak / 128) * 140)) + "%";
+        if (peak >= 3) { quietSince = performance.now(); }
+        if (whenSilent) { whenSilent(performance.now() - quietSince >= SILENT_AFTER_MS); }
+        testTimer = window.requestAnimationFrame(draw);
+      })();
+    } catch (error) { /* no meter, no harm */ }
+  }
+
+  if (micChoice) {
+    document.getElementById("mic-check").addEventListener("click", checkMicrophone);
+    micChoice.addEventListener("change", function () { remember(micChoice.value); checkMicrophone(); });
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+      navigator.mediaDevices.addEventListener("devicechange", function () { listMicrophones(); });
+    }
+    // Already allowed on this computer: the check runs by itself, so the
+    // bar is moving, or plainly not, before anybody presses Record.
+    listMicrophones().then(function (allowed) { if (allowed) { checkMicrophone(); } });
+    window.addEventListener("pagehide", stopTest);
+  }
+
   document.getElementById("start").addEventListener("click", function () {
     var caseId = CASE;
     problem("before-problem", "");
     var button = this;
     button.disabled = true;
+    stopTest();
 
     var withComputer = document.getElementById("record-computer").checked || style() === "call";
 
     // The microphone first, so that a refused microphone makes no recording;
     // then the computer's sound, when asked for, which the browser offers
     // only as part of sharing a screen: the picture is dropped at once.
-    navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } })
+    navigator.mediaDevices.getUserMedia({ audio: micConstraints() })
       .then(function (got) {
         stream = got;
         if (!withComputer) { return null; }
@@ -363,14 +486,23 @@
         audio.createMediaStreamSource(pair[0]).connect(analyser);
         return { analyser: analyser, bar: pair[1], data: new Uint8Array(analyser.frequencyBinCount) };
       });
+      // The first seconds of a recording with nothing reaching the app say
+      // so on the page; the recording goes on, since the words may yet come.
+      var heardSince = performance.now();
+      var warned = false;
       (function draw() {
         if (!recorder) { return; }
-        live.forEach(function (one) {
+        live.forEach(function (one, index) {
           one.analyser.getByteTimeDomainData(one.data);
           var peak = 0;
           for (var i = 0; i < one.data.length; i += 1) { peak = Math.max(peak, Math.abs(one.data[i] - 128)); }
           one.bar.style.width = Math.min(100, Math.round((peak / 128) * 140)) + "%";
+          if (index === 0 && peak >= 3) { heardSince = performance.now(); warned = false; problem("during-problem", ""); }
         });
+        if (!paused && !warned && performance.now() - heardSince >= 8000) {
+          warned = true;
+          problem("during-problem", "No sound is reaching the app from the microphone. The recording continues; check the microphone, or stop and choose another.");
+        }
         window.requestAnimationFrame(draw);
       })();
     } catch (error) { /* no meter, no harm */ }
