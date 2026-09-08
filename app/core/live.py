@@ -70,7 +70,10 @@ STYLES = {
             "becomes its own side of the transcript; a summary is one click away."
         ),
         "type": "Meeting",
-        "diarize": True,
+        # The two Sides are the two speakers. Telling voices apart within a
+        # side is asked for under More options, since on a call it splits one
+        # person into several as often as it finds a second (v1.36.0).
+        "diarize": False,
         "computer": True,
         "product": "summary",
     },
@@ -102,6 +105,7 @@ def start(
     with_computer: bool = False,
     dictation: bool = False,
     style: str = "",
+    diarize: bool | None = None,
     request=None,
 ) -> Recording:
     """Make the Recording a Live recording will become, before a byte arrives.
@@ -137,7 +141,9 @@ def start(
     if chosen is not None:
         recording_type = (recording_type or "").strip() or chosen["type"]
         with_computer = with_computer or chosen["computer"]
-    diarize = chosen["diarize"] if chosen is not None else True
+    if diarize is None:
+        diarize = chosen["diarize"] if chosen is not None else True
+    diarize = bool(diarize)
     title = (title or "").strip()[:300] or (
         f"{recording_type or 'Recording'} {when:%d %b %Y %H:%M}"
     )

@@ -130,3 +130,26 @@
   // A plain resize as well: not every browser fires the change above.
   window.addEventListener("resize", settle);
 })();
+
+// Rename a recording from its row: the new title is what every page and
+// export shows; the file keeps its own name.
+(function () {
+  "use strict";
+  function cookie(name) {
+    var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+    return found ? found.pop() : "";
+  }
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".rename-recording");
+    if (!button || !window.UI) { return; }
+    UI.prompt({ title: "Rename this recording", body: "The new title is what every page and export shows.", value: button.dataset.title, ok: "Rename" })
+      .then(function (now) {
+        if (!now || now.trim() === button.dataset.title) { return; }
+        return fetch("/recording/" + button.dataset.recording + "/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+          body: JSON.stringify({ title: now.trim() })
+        }).then(function (answer) { if (answer.ok) { window.location.reload(); } });
+      });
+  });
+})();

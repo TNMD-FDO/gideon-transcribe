@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.0, 2026-09-08
+
+```
+Models: unchanged
+Database: migrates (0034, a transcript remembers its speaker changes)
+```
+
+### Added
+
+- **Undo in the Speakers panel.** Renaming a speaker or merging two can be
+  undone: the line under the names says what it would undo and puts exactly
+  those lines back under their old name, one change at a time, newest
+  first. Found by the maintainer, who merged the wrong two and had no way
+  back.
+- **Rename a recording** after the fact: the pencil beside the title in the
+  viewer, and Rename on a recording's row under My recordings. The file
+  keeps its own name.
+
+### Changed
+
+- **A call recorded in the app has two speakers, its two sides**, unless
+  "Tell the speakers apart" is turned on under More options. Separating
+  voices within each side of a Teams call split one person into several
+  and filled the Speakers panel with cards. A meeting in the room still
+  separates them, since the people buttons name the voices.
+
 ## v1.35.1, 2026-09-08
 
 ```

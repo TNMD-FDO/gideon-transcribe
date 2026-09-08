@@ -2579,6 +2579,8 @@ The Audit log chapter fixes each row's name and contents. The viewer writes a ro
 | Correction | A Correction is saved (Ctrl + Enter) |
 | Speaker renamed | A rename is confirmed in the Speakers panel |
 | Speakers merged | A merge is confirmed, by drag or by the Merge control |
+| Speaker change undone | Undo in the Speakers panel puts the last rename or merge back (v1.36.0) |
+| Recording renamed | A new title is confirmed, in the viewer or on My recordings (v1.36.0) |
 | Suggestion accepted | ✓ on a Speaker suggestion, in the panel or on the inline pill |
 | Suggestion rejected | ✗ on a Speaker suggestion, in the panel or on the inline pill |
 | Export (Word, plain text, or Captions) | An export file is produced from the Export entries |
@@ -2617,6 +2619,7 @@ No environment key belongs to this chapter.
 Transcript viewer and synced player; Clips: model, lifecycle, and management (its amendment to the viewer and the facts it records from the Word export ticket).
 
 ### Amendments applied
+- From the maintainer, on the first Teams call (v1.35.1), to the Speakers panel, built in v1.36.0: a rename or a merge is remembered on the Transcript (`speaker_changes`, the moved Segment ids, kept to the last twenty) and **Undo** under the chips puts exactly those Segments back under their old name, newest change first, touching only Segments that still carry the given name; a **Rename** control beside the title lets the people who work in a Recording (standing "own", not an Admin looking in) give it a new title, the file name kept, writing "Recording renamed" without the title.
 
 - From the LLM features ticket, recorded on the viewer ticket, to the queued page: the Running line reads `Diarization follows`.
 - From the LLM features ticket to the Speakers panel: the `Want name suggestions from what people say?` line and the `Suggest names` button; suggestions appear only after the click.
@@ -3701,7 +3704,7 @@ Rows other chapters add (settings and templates, Cases, Shares, the Retention po
 | Recordings | Recording deleted | the owner; an Admin; `system` for the Discard; whoever cancelled | cause: owner, admin, discard, or cancel |
 | Batch and Jobs | Batch submitted | the user | per Recording: Diarization choice and speaker-count hint, Translation, whether Vocabulary was given, preprocessing profile, model |
 | Batch and Jobs | Job completed; Job failed; Job cancelled | `system` for completed and failed; who cancelled | duration; the failure's reason class (from the fixed list the Queue and Jobs chapter holds; `media_failed` when the media step failed); who cancelled. Queued and started are Job states, not audit rows |
-| Viewer edits | Segment corrected; Speaker renamed; Speakers merged; Speaker suggestion accepted or rejected | the user, or an Admin acting with the owner's powers | Segment or Speaker ids and time ranges only; never the text or the names |
+| Viewer edits | Segment corrected; Speaker renamed; Speakers merged; Speaker change undone; Speaker suggestion accepted or rejected; Recording renamed | the user, or an Admin acting with the owner's powers (Recording renamed: the people who work in it only) | Segment or Speaker ids and time ranges only; never the text, the names, or the title |
 | Exports | export made | the user, or an Admin | kind: Word or plain text; one row per file inside any zip |
 | Clips | Clip created; re-rendered; downloaded; deleted | the user, or an Admin | Clip id, time range, the two options; never the title or note. One "Clip downloaded" row per Clip inside any zip. An Admin downloading another user's Clip writes the usual row with the affected user and never sets the owner's downloaded mark. A Rename (title, note) writes no row |
 | LLM | Chat turn; Summary generated; Speaker suggestions generated | the user | feature, model name, endpoint host, prompt template version, input and output token counts, duration, outcome; never the question, the prompt, or the answer |
@@ -4264,7 +4267,7 @@ Every row uses the fixed field set of the Audit log and logging chapter and hold
 | Accounts | admin flag set, admin flag cleared; blocked, unblocked; deactivated, reactivated; Directory check ran (snapshot), Directory check refused, one row per change made; Local admin created; Local admin password changed; user data deleted by an Admin | Sign-in, accounts, and roles; Audit log and logging |
 | Recordings | upload accepted; upload rejected (reason class); Recording opened; Recording deleted (cause: owner, admin, discard, cancel) | Media handling; Workspace lifecycle; Audit log and logging |
 | Batch and Jobs | Batch submitted (settings per Recording); Job completed (duration); Job failed (reason class); Job cancelled (by whom) | Queue and Jobs |
-| Viewer edits | Segment corrected; Speaker renamed; Speakers merged; Speaker suggestion accepted; Speaker suggestion rejected | Transcript viewer and player |
+| Viewer edits | Segment corrected; Speaker renamed; Speakers merged; Speaker change undone; Speaker suggestion accepted; Speaker suggestion rejected; Recording renamed | Transcript viewer and player |
 | Exports | export made (kind: transcript Word, combined, transcript text, captions, summary, chat; one row per file inside any zip) | Exports |
 | Clips | Clip created; Clip re-rendered; Clip downloaded (one per Clip inside any zip; an Admin's carries the affected user); Clip deleted; Clip render failed (`clip_render_failed`) | Clips |
 | LLM | AI assistant call (feature `chat_turn`, `summary`, or `speaker_suggestions`; model, endpoint host, template versions, token counts, duration, outcome) | AI assistant |

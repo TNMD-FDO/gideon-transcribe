@@ -34,7 +34,13 @@
     if (which === "call") { tick.checked = true; tick.disabled = true; }
     else { tick.disabled = false; if (tick.dataset.forced) { tick.checked = false; } }
     tick.dataset.forced = which === "call" ? "1" : "";
+    // Speaker separation follows the style until the person changes it:
+    // on for a meeting in the room, off for a dictation and for a call.
+    var apart = document.getElementById("record-diarize");
+    if (apart && !apart.dataset.touched) { apart.checked = which === "meeting"; }
   }
+  var apartTick = document.getElementById("record-diarize");
+  if (apartTick) { apartTick.addEventListener("change", function () { apartTick.dataset.touched = "1"; }); }
   document.querySelectorAll("input[name='style']").forEach(function (radio) {
     radio.addEventListener("change", applyStyle);
   });
@@ -350,7 +356,8 @@
           title: document.getElementById("record-title").value,
           language: document.getElementById("record-language").value,
           translate: document.getElementById("record-translate").checked,
-          with_computer: !!computer
+          with_computer: !!computer,
+          diarize: document.getElementById("record-diarize").checked
         });
       })
       .then(function (answer) {

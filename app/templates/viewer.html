@@ -34,7 +34,10 @@
           {% else %}
             <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
           {% endif %}
-          <h1>{{ recording.title }}</h1>
+          <h1 id="recording-title">{{ recording.title }}</h1>
+          {% if not is_someone_elses %}
+            <button type="button" class="btn ghost icon" id="rename-title" title="Rename this recording" aria-label="Rename this recording">{% icon "correct" %}</button>
+          {% endif %}
           {% if recording.is_two_channel_call %}
             <span class="pill side">Two-channel call: {{ sides|length }} sides</span>
           {% endif %}
@@ -204,6 +207,10 @@
                   </li>
                 {% endfor %}
               </ul>
+              <p class="small muted" id="speakers-undo-line"{% if not last_change %} hidden{% endif %}>
+                <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
+                <span id="speakers-undo-what">{{ last_change }}</span>
+              </p>
             {% else %}
               <p><span class="pill">Not diarized</span></p>
             {% endif %}

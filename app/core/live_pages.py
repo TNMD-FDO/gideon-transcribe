@@ -111,6 +111,7 @@ def start(request: HttpRequest) -> JsonResponse:
             with_computer=bool(wanted.get("with_computer")),
             dictation=is_dictation,
             style=str(wanted.get("style") or ""),
+            diarize=(bool(wanted.get("diarize")) if "diarize" in wanted else None),
             request=request,
         )
     except live.Refused as why:

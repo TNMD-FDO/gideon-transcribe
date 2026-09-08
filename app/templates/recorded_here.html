@@ -70,6 +70,7 @@
               <td class="acts">
                 {% if row.ready %}<a href="{% url 'viewer' row.recording.pk %}" class="btn small">Open</a>{% endif %}
                 <button type="button" class="btn small send-to" data-recording="{{ row.recording.pk }}" data-title="{{ row.recording.title }}">Send to</button>
+                <button type="button" class="btn small ghost rename-recording" data-recording="{{ row.recording.pk }}" data-title="{{ row.recording.title }}">Rename</button>
                 {% if row.ready and not row.in_case %}
                   <button type="button" class="btn small ghost move" data-recording="{{ row.recording.pk }}" data-title="{{ row.recording.title }}">Add to a case</button>
                 {% endif %}

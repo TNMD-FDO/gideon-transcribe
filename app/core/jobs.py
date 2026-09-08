@@ -251,6 +251,11 @@ class Transcript(models.Model):
 
     # Every setting the service echoed, its version, and its pins.
     provenance = models.JSONField(default=dict, blank=True)
+    # The renames and merges made in the viewer, newest last: what was
+    # renamed to what and which Segments moved, so the last can be undone
+    # exactly. Kept to the last twenty; nothing here reaches the audit log,
+    # since a Speaker's name is on the never-logged list.
+    speaker_changes = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["-created"]

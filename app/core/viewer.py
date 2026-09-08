@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core import assistant, audit, cases
@@ -173,6 +174,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
             "sides": list(recording.sides.all()),
             "job": job,
             "is_someone_elses": cases.standing(recording, request.user) == "admin",
+            # What Undo in the Speakers panel would undo, in words.
+            "last_change": last_change_line(transcript) if transcript else "",
             "being_replaced": being_replaced(recording),
             "media_url": (
                 f"{media_root(recording)}/{playback.name}" if playback else ""
@@ -337,7 +340,22 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
         return JsonResponse({"error": "both names are needed"}, status=400)
 
     merging = transcript.segments.filter(speaker=now).exists()
-    changed = transcript.segments.filter(speaker=was).update(speaker=now)
+    moved = list(transcript.segments.filter(speaker=was).values_list("pk", flat=True))
+    changed = transcript.segments.filter(pk__in=moved).update(speaker=now)
+    # Remembered on the Transcript, so a merge made by mistake can be undone
+    # later, exactly: these Segments go back to that name and no others do.
+    changes = list(transcript.speaker_changes or [])
+    changes.append(
+        {
+            "from": was,
+            "to": now,
+            "segments": moved,
+            "merged": merging,
+            "at": timezone.now().isoformat(),
+        }
+    )
+    transcript.speaker_changes = changes[-20:]
+    transcript.save(update_fields=["speaker_changes"])
     # Inside a Case, a name means a person: the new name joins or makes one.
     from core import people
 
@@ -358,7 +376,108 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
         object_label=recording.original_filename,
         segments_changed=changed,
     )
-    return JsonResponse({"changed": changed, "merged": merging})
+    return JsonResponse(
+        {"changed": changed, "merged": merging, "undo": last_change_line(transcript)}
+    )
+
+
+def last_change_line(transcript) -> str:
+    """What Undo would undo, in words, or nothing."""
+    changes = transcript.speaker_changes or []
+    if not changes:
+        return ""
+    last = changes[-1]
+    if last.get("merged"):
+        return f"the merge of {last['from']} into {last['to']}"
+    return f"renaming {last['from']} to {last['to']}"
+
+
+@login_required
+@require_POST
+def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
+    """Undo the last rename or merge: the Segments it moved take their old name.
+
+    Only those Segments, and only if they still carry the name they were
+    given, so a later rename of the same people is not disturbed.
+    """
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None or not transcript.speaker_changes:
+        return JsonResponse({"error": "nothing to undo"}, status=404)
+    if being_replaced(recording):
+        return JsonResponse({"error": "the transcript is being replaced"}, status=409)
+
+    changes = list(transcript.speaker_changes)
+    last = changes.pop()
+    restored = transcript.segments.filter(
+        pk__in=last.get("segments") or [], speaker=last.get("to", "")
+    ).update(speaker=last.get("from", ""))
+    transcript.speaker_changes = changes
+    transcript.save(update_fields=["speaker_changes"])
+    if recording.case_id:
+        from core import people
+
+        people.on_named(
+            recording,
+            last.get("from", ""),
+            by=request.user,
+            how="undo in the viewer",
+            request=request,
+        )
+    audit.write(
+        audit.Category.EDITS,
+        "Speaker change undone",
+        actor=request.user,
+        request=request,
+        affected_user=(
+            recording.user if recording.user_id != request.user.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        segments_changed=restored,
+        was_merge=bool(last.get("merged")),
+    )
+    return JsonResponse({"restored": restored, "undo": last_change_line(transcript)})
+
+
+@login_required
+@require_POST
+def rename(request: HttpRequest, recording_id) -> JsonResponse:
+    """Give a Recording a new title, after the fact.
+
+    The people who work in it may (the uploader, a case's members); an Admin
+    looking in may not. The file's own name is kept: the title is what pages
+    and exports show, the file name is what arrived.
+    """
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or cases.standing(recording, request.user) != "own":
+        return JsonResponse({"error": "no such recording"}, status=404)
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "that could not be read"}, status=400)
+    title = str(wanted.get("title") or "").strip()[:300]
+    if not title:
+        return JsonResponse({"error": "a title is needed"}, status=400)
+    recording.title = title
+    recording.save(update_fields=["title"])
+    cases.used(recording, by=request.user)
+    audit.write(
+        audit.Category.EDITS,
+        "Recording renamed",
+        actor=request.user,
+        request=request,
+        affected_user=(
+            recording.user if recording.user_id != request.user.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+    )
+    return JsonResponse({"title": recording.title})
 
 
 @login_required

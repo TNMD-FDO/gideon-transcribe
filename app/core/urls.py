@@ -67,6 +67,14 @@ urlpatterns = [
         name="media-state",
     ),
     path(
+        "recording/<uuid:recording_id>/speakers/undo",
+        viewer.speakers_undo,
+        name="speakers-undo",
+    ),
+    path(
+        "recording/<uuid:recording_id>/rename", viewer.rename, name="rename-recording"
+    ),
+    path(
         "recording/<uuid:recording_id>/speakers",
         viewer.speakers,
         name="speakers",

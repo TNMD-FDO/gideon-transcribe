@@ -87,6 +87,11 @@
                         {% if recording.transcript %}
                           <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
                         {% endif %}
+                        {% if not someone_elses %}
+                          <button type="button" class="small rename-recording"
+                                  data-recording="{{ recording.pk }}"
+                                  data-title="{{ recording.title }}">Rename</button>
+                        {% endif %}
                         {% if recording.transcript and not recording.being_replaced %}
                           <button type="button" class="small process-again"
                                   data-recording="{{ recording.pk }}"

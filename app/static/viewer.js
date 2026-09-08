@@ -1056,6 +1056,47 @@
     }).then(function () { window.location.reload(); });
   }
 
+  // Undo the last rename or merge: the lines it moved take their old name.
+  var undoButton = document.getElementById("speakers-undo");
+  if (undoButton) {
+    undoButton.addEventListener("click", function () {
+      var what = document.getElementById("speakers-undo-what").textContent;
+      UI.confirm({ title: "Undo " + what + "?", body: "The lines that were moved take their old name back. Nothing else changes.", ok: "Undo" })
+        .then(function (yes) {
+          if (!yes) { return; }
+          fetch("/recording/" + window.VIEWER.recording + "/speakers/undo", {
+            method: "POST",
+            headers: { "X-CSRFToken": cookie("csrftoken") }
+          }).then(function () { window.location.reload(); });
+        });
+    });
+  }
+
+  // Rename the recording itself, after the fact.
+  var renameTitle = document.getElementById("rename-title");
+  if (renameTitle) {
+    renameTitle.addEventListener("click", function () {
+      var heading = document.getElementById("recording-title");
+      UI.prompt({ title: "Rename this recording", body: "The new title is what every page and export shows. The file keeps its own name.", value: heading.textContent.trim(), ok: "Rename" })
+        .then(function (now) {
+          if (!now || now.trim() === heading.textContent.trim()) { return; }
+          fetch("/recording/" + window.VIEWER.recording + "/rename", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+            body: JSON.stringify({ title: now.trim() })
+          }).then(function (answer) { return answer.json(); }).then(function (said) {
+            if (said.title) {
+              heading.textContent = said.title;
+              document.title = document.title.replace(/^[^·]*·/, said.title + " ·");
+              UI.toast("Renamed.", { icon: "ok" });
+            } else {
+              UI.toast(said.error || "That could not be renamed.", { problem: true, icon: "warning" });
+            }
+          });
+        });
+    });
+  }
+
   // Searching -----------------------------------------------------------------
 
   var search = document.getElementById("search");
