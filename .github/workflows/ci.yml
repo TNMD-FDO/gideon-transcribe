@@ -63,7 +63,13 @@ jobs:
       - name: Install the headers python-ldap builds against
         if: hashFiles('app/requirements-dev.txt') != ''
         run: |
-          sudo apt-get update
+          # The runner image carries package sources this build never uses
+          # (Google Chrome's among them), and one of them failing to download
+          # fails the whole update. Drop the known stray, and take the update
+          # as it comes: the Ubuntu index the two installs need is either fresh
+          # or the image's own, and both carry these headers.
+          sudo rm -f /etc/apt/sources.list.d/google-chrome*.list /etc/apt/sources.list.d/google-chrome*.sources
+          sudo apt-get update || echo "apt-get update did not finish cleanly; installing from what it has"
           sudo apt-get install -y libsasl2-dev
           sudo apt-get install -y libldap-dev || sudo apt-get install -y libldap2-dev
 
