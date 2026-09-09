@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.1, 2026-09-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The rename box lists the case's people in the open.** Inside a case,
+  clicking a speaker's name is meant to offer the case's people; the
+  browser's own suggestion list did that, but it filters by the field's
+  text, and the field holds the speaker's current name, so the list stayed
+  empty until the name was cleared (the maintainer: "the dropdown isn't
+  working"). The people are now buttons under the field: one click names
+  the speaker, typing narrows the list, and a name that matches nobody
+  makes a new person as before.
+
 ## v1.36.0, 2026-09-08
 
 ```

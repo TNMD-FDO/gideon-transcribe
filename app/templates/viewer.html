@@ -179,22 +179,33 @@
               </div>
               {% if in_case %}
                 {% comment %}
-                  Inside a case the rename box offers the case's People as the
-                  person types; a name that matches one joins it. It changes
-                  this recording only; the Speakers tab renames everywhere.
+                  Inside a case the rename box lists the case's People under
+                  the field, in the open: one click names the speaker after
+                  one of them, and typing narrows the list or makes a new
+                  person. The browser's own suggestion list (a datalist) was
+                  used until v1.36.1; it filters by the field's text, which
+                  holds the speaker's current name, so it offered nothing
+                  until the field was cleared. The box changes this recording
+                  only; the Speakers tab renames everywhere.
                 {% endcomment %}
                 <div id="rename-box" class="card" hidden style="margin: 6px 0">
                   <label for="rename-input" class="small" id="rename-label">Rename</label>
                   <div class="row" style="gap: 6px">
-                    <input type="text" id="rename-input" list="people-list" maxlength="60" class="grow" autocomplete="off">
+                    <input type="text" id="rename-input" maxlength="60" class="grow" autocomplete="off" placeholder="Type a name, or pick one below">
                     <button type="button" class="primary small" id="rename-save">Save</button>
                     <button type="button" class="ghost small" id="rename-cancel">Cancel</button>
                   </div>
-                  <datalist id="people-list">
-                    {% for one in people %}
-                      <option value="{{ one.name }}">{{ one.name }}{% if one.role %} ({{ one.role }}){% endif %}, in {{ one.count }} recording{{ one.count|pluralize }}</option>
-                    {% endfor %}
-                  </datalist>
+                  {% if people %}
+                    <p class="small muted" style="margin: 8px 0 2px">People in this case</p>
+                    <ul id="people-pick" class="people-pick">
+                      {% for one in people %}
+                        <li><button type="button" class="pick" data-name="{{ one.name }}">{{ one.name }}{% if one.role %} <span class="pill role">{{ one.role }}</span>{% endif %} <span class="muted">in {{ one.count }} recording{{ one.count|pluralize }}</span></button></li>
+                      {% endfor %}
+                    </ul>
+                    <p class="small muted" id="people-none" hidden style="margin: 4px 0 0">Nobody in this case matches; Save makes a new person.</p>
+                  {% else %}
+                    <p class="small muted" style="margin: 8px 0 0">This case has no people yet; Save makes the first.</p>
+                  {% endif %}
                   <p class="muted small" style="margin: 6px 0 0">Changes this recording only. To rename in every recording, use the <a href="{% url 'case' recording.case_id %}?tab=speakers">case's Speakers tab</a>.</p>
                 </div>
               {% endif %}

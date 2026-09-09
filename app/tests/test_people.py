@@ -271,8 +271,15 @@ def test_the_role_shows_in_the_viewer_and_the_rename_box_offers_the_people(
     signed_in(client, owner)
     text = client.get(f"/recording/{recording.pk}").content.decode()
     assert '<span class="pill role">Agent</span>' in text
-    assert 'id="rename-box"' in text and 'list="people-list"' in text
-    assert "Detective Ruiz (Agent), in 1 recording" in text
+    assert 'id="rename-box"' in text and 'id="people-pick"' in text
+    # The people are listed in the open, one button each, not in the
+    # browser's own suggestion list (which hid them behind the current name).
+    assert "datalist" not in text
+    assert (
+        '<button type="button" class="pick" data-name="Detective Ruiz">'
+        'Detective Ruiz <span class="pill role">Agent</span> '
+        '<span class="muted">in 1 recording</span></button>'
+    ) in text
     assert f"/case/{a_case.pk}?tab=speakers" in text
 
 

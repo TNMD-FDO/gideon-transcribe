@@ -100,7 +100,7 @@ A video can be popped out into its own window, so the transcript can have the wh
 
 Each speaker has a colour, used for their name and their lines. Click a speaker's name in the **Speakers** list to give them a real one; every segment they spoke is renamed. Drag one speaker onto another when two labels turn out to be the same person, and confirm the merge. A rename or a merge can be taken back: **Undo** under the list says what it would undo ("the merge of Speaker 2 into Speaker 1") and puts exactly those lines back under their old name. Each Undo takes back one more change, newest first.
 
-Inside a case, a name means a person: every speaker in the case's recordings given the same name is the same person. Click a speaker's name and a box opens under the list; as you type it offers the case's people, each with their role and how many recordings they are in, so you pick the person or type a new name. The box changes this recording only. A small badge after a name is the person's role. To rename someone in every recording at once, use the case's **Speakers** tab, described under Cases.
+Inside a case, a name means a person: every speaker in the case's recordings given the same name is the same person. Click a speaker's name and a box opens under the list with the case's people under it, each with their role and how many recordings they are in: click a person to give the speaker that name at once, or type a name, which narrows the list as you go and makes a new person if it matches nobody. The box changes this recording only. A small badge after a name is the person's role. To rename someone in every recording at once, use the case's **Speakers** tab, described under Cases.
 
 ### Correcting
 

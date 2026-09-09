@@ -1060,6 +1060,21 @@ body.no-speakers .seg .name { display: none; }
   background: var(--speaker, var(--muted));
 }
 .speakerchip.over { outline: 2px dashed var(--accent); }
+/* The case's people under the rename box, one button each. */
+.people-pick { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.people-pick .pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.85em;
+  cursor: pointer;
+}
+.people-pick .pick:hover, .people-pick .pick:focus-visible { border-color: var(--accent); }
+.people-pick .pick .muted { font-size: 0.9em; }
 
 .followpill {
   position: sticky;

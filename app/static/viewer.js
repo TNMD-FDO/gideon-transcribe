@@ -975,6 +975,24 @@
     // typed; elsewhere the browser's own prompt does, as it always did.
     var renameBox = document.getElementById("rename-box");
     var renaming = null;
+    // The case's people under the field: all of them until the person types
+    // something other than the speaker's current name, then those that
+    // contain what was typed.
+    function showPeople() {
+      var list = document.getElementById("people-pick");
+      if (!list) { return; }
+      var typed = document.getElementById("rename-input").value.trim().toLowerCase();
+      var narrowing = typed && typed !== (renaming || "").toLowerCase();
+      var shown = 0;
+      list.querySelectorAll("li").forEach(function (row) {
+        var name = row.querySelector(".pick").dataset.name.toLowerCase();
+        var on = !narrowing || name.indexOf(typed) !== -1;
+        row.hidden = !on;
+        if (on) { shown += 1; }
+      });
+      var none = document.getElementById("people-none");
+      if (none) { none.hidden = shown > 0; }
+    }
     chips.addEventListener("click", function (event) {
       var chip = event.target.closest(".speakerchip");
       if (!chip) { return; }
@@ -984,6 +1002,7 @@
         var box = document.getElementById("rename-input");
         box.value = renaming;
         renameBox.hidden = false;
+        showPeople();
         box.focus();
         box.select();
         return;
@@ -1007,6 +1026,17 @@
         if (event.key === "Enter") { event.preventDefault(); document.getElementById("rename-save").click(); }
         if (event.key === "Escape") { renameBox.hidden = true; }
       });
+      document.getElementById("rename-input").addEventListener("input", showPeople);
+      var picks = document.getElementById("people-pick");
+      if (picks) {
+        picks.addEventListener("click", function (event) {
+          var pick = event.target.closest(".pick");
+          if (!pick) { return; }
+          var now = pick.dataset.name;
+          if (now === renaming) { renameBox.hidden = true; return; }
+          rename(renaming, now);
+        });
+      }
     }
 
     var dragged = null;
