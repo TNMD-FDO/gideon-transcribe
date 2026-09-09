@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.2, 2026-09-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The chat's waiting dot flashed instead of breathing.** While an answer
+  was on its way the chat redrew its whole body once a second to advance
+  the seconds counter, and every redraw made a fresh dot whose pulse
+  restarted from dim. The counter now advances in place, and the dot's
+  pulse is slower and gentler. Found by the maintainer on the first day the
+  assistant ran on the shared engine.
+
 ## v1.36.1, 2026-09-09
 
 ```

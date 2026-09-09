@@ -1292,8 +1292,10 @@ body.no-speakers .seg .name { display: none; }
 .chat-ui .cite.play:hover { background: var(--accent); color: var(--accent-ink); }
 .chat-ui .cite.removed { color: var(--muted); text-decoration: line-through; }
 .chat-ui .waiting { display: flex; align-items: center; gap: 8px; color: var(--muted); padding: 4px 2px; }
-.chat-ui .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: chat-pulse 1.4s ease-in-out infinite; flex: none; }
-@keyframes chat-pulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+/* A slow breath, not a throb: the dot is the one moving thing on the page
+   while an answer is on its way, so it is kept gentle. */
+.chat-ui .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: chat-pulse 2s ease-in-out infinite; flex: none; }
+@keyframes chat-pulse { 0%, 100% { opacity: 0.35; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1); } }
 .chat-ui .notice.quiet { background: transparent; border-left-width: 2px; padding: 2px 8px; margin: 0; color: var(--muted); }
 .chat-ui .foot-hint { margin: 4px 0 0; }
 .tiny { font-size: 0.78em; }

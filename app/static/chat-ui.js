@@ -88,6 +88,7 @@
     var currentChat = null;
     var pending = {};        // question asked, not yet in the state, by chat id
     var startedAt = {};      // when a running turn was first seen, by turn id
+    var pendingSince = 0;    // when the question not yet in the state was sent
     var ticker = null;
     var followBottom = true;
 
@@ -153,21 +154,36 @@
       askBox.style.height = Math.min(160, askBox.scrollHeight) + "px";
     }
 
-    function elapsed(turn) {
+    function sinceOf(turn) {
+      if (!turn) { return pendingSince || Date.now(); }
       var since = startedAt[turn.id] || (turn.asked_at ? new Date(turn.asked_at).getTime() : Date.now());
       startedAt[turn.id] = since;
+      return since;
+    }
+
+    function secondsSince(since) {
       return Math.max(0, Math.round((Date.now() - since) / 1000));
     }
 
+    // The seconds counter beside the waiting dot, advanced in place once a
+    // second. Redrawing the whole body for it made a fresh dot each second,
+    // whose pulse restarted from dim: a flash, not a breath.
+    function tick() {
+      bodyBox.querySelectorAll(".waiting .seconds").forEach(function (one) {
+        one.textContent = secondsSince(Number(one.dataset.since));
+      });
+    }
+
     function waiting(turn) {
-      var seconds = turn ? elapsed(turn) : 0;
+      var since = sinceOf(turn);
       var line = (turn && turn.reading) || options.readingLine(state);
       var expect = (turn && turn.parts_done !== undefined && turn.parts)
         ? "Part " + turn.parts_done + " of " + turn.parts + " read"
         : options.expectation;
       return "<div class='waiting'><span class='pulse' aria-hidden='true'></span>" +
         "<span class='grow'>" + escape(line) + "</span>" +
-        "<span class='muted tiny'>" + (expect ? escape(expect) + " &middot; " : "") + seconds + " s</span></div>";
+        "<span class='muted tiny'>" + (expect ? escape(expect) + " &middot; " : "") +
+        "<span class='seconds' data-since='" + since + "'>" + secondsSince(since) + "</span> s</span></div>";
     }
 
     function drawList(chat) {
@@ -250,11 +266,12 @@
         : (options.placeholder || "Ask anything about this recording");
       var running = busy || (chat && chat.turns.some(function (one) { return one.state === "queued" || one.state === "running"; }));
       window.clearInterval(ticker);
-      ticker = running ? window.setInterval(draw, 1000) : null;
+      ticker = running ? window.setInterval(tick, 1000) : null;
     }
 
     function send(chatId, question) {
       pending[chatId] = question;
+      pendingSince = Date.now();
       askBox.value = "";
       grow();
       followBottom = true;
@@ -271,6 +288,7 @@
       var chat = theChat();
       if (chat) { send(chat.id, question); return; }
       pending.__new = question;
+      pendingSince = Date.now();
       askBox.value = "";
       draw();
       options.newChat().then(function (id) {
