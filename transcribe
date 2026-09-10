@@ -26,6 +26,7 @@
 #                             the backup questions, keys, repository and timers again
 #   ./transcribe install-mail the mail questions again: relay, sender, Operator address
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
+#   ./transcribe tidy         remove this project's old images and build cache
 #   ./transcribe rollback TAG go back to a release, restoring the dump if need be
 #   ./transcribe logs [name]  follow the logs of one service, or of all of them
 #
@@ -2068,6 +2069,22 @@ verify_the_pull() {
 # keeps two tags of each of this repository's images, the one it starts and
 # the one it left, and prunes the build cache it made. "dev" is kept for a
 # checkout that is not at a Release.
+# The words this repository's two Dockerfiles leave in the build cache's
+# records, and no other project's Dockerfile does: the cache is shared with the
+# rest of the server (box ledger, section 5), so only records carrying one of
+# these are pruned, never the whole cache.
+BUILD_CACHE_WORDS="requirements|audiowaveform|g729|/opt/app|/opt/service|collectstatic|user-guide|VIRTUAL_ENV|python3-venv|libsasl2"
+
+# A WhisperX build needs room for its 13.8 GB image and about as much cache
+# again on the root filesystem, where the image store lives (box ledger, open
+# item 3). Building with less than this free fills the disk and stops every
+# container on the server, not only ours (2026-09-10).
+ROOT_GB_TO_BUILD=40
+
+root_gb_free() {
+  df -BG --output=avail /var/lib/docker 2>/dev/null | tail -1 | tr -d ' G'
+}
+
 tidy_the_images() {
   local keep="$1" previous="$2" image
   for image in ghcr.io/tnmd-fdo/gideon-transcribe-whisperx ghcr.io/tnmd-fdo/gideon-transcribe-app; do
@@ -2075,7 +2092,50 @@ tidy_the_images() {
       | grep -v -e ":${keep}\$" -e ":${previous}\$" -e ':dev$' -e ':<none>$' \
       | xargs -r docker image rm >/dev/null 2>&1 || true
   done
-  docker builder prune -f >/dev/null 2>&1 || true
+  # A bare `docker builder prune -f` removes only what buildx calls dangling,
+  # and the records that matter (the torch install, 11.5 GB per WhisperX
+  # build) are not dangling: nine of them sat on the root filesystem until it
+  # filled. Pruned by this project's own words instead.
+  docker builder prune -f --filter "description~=${BUILD_CACHE_WORDS}" >/dev/null 2>&1 || true
+}
+
+build_the_images() {
+  # A build that fails has to stop the upgrade: carrying on to `up -d` starts
+  # the old image over a database the new code has already migrated, and
+  # says nothing.
+  local free
+  free="$(root_gb_free)"
+  if [ -n "$free" ] && [ "$free" -lt "$ROOT_GB_TO_BUILD" ]; then
+    echo
+    red "The root filesystem has ${free} GB free, and a build needs about ${ROOT_GB_TO_BUILD} GB."
+    echo "  Building now would fill the disk, which stops every container on"
+    echo "  the server. Make room first: './transcribe tidy' prunes this"
+    echo "  project's build cache and its old images; 'docker system df' shows"
+    echo "  what else is there. Then run the upgrade again."
+    echo "  To put the checkout back: ./transcribe rollback"
+    exit 1
+  fi
+  if ! compose build; then
+    echo
+    red "The build failed, so the upgrade stops here."
+    echo "  The old containers are still running and nothing was replaced."
+    echo "  The message above says what went wrong."
+    echo "  To put the checkout back: ./transcribe rollback"
+    exit 1
+  fi
+}
+
+cmd_tidy() {
+  # By hand, between upgrades: this project's old image tags and its build
+  # cache records, nothing of anybody else's.
+  need_env
+  local tag before
+  tag="$(env_value RELEASE_TAG)"
+  before="$(git -C "$HERE" describe --tags --abbrev=0 "${tag}^" 2>/dev/null || echo "")"
+  echo "Before: $(root_gb_free) GB free on the root filesystem"
+  tidy_the_images "$tag" "$before"
+  echo "After:  $(root_gb_free) GB free on the root filesystem"
+  echo "Kept: ${tag}${before:+ and ${before}}"
 }
 
 cmd_upgrade() {
@@ -2146,7 +2206,7 @@ cmd_upgrade() {
 
   echo
   if [ "$build" = "yes" ]; then
-    compose build
+    build_the_images
   elif compose pull --quiet; then
     pass "the images came from the registry"
     verify_the_pull "$tag"
@@ -2154,23 +2214,11 @@ cmd_upgrade() {
     # Nothing may be published yet, or the registry may be out of reach, and
     # both are fine: compose.yaml carries build: beside image: for both of
     # this repository's images, so they are built here instead.
-    #
-    # A build that fails has to stop the upgrade. This line used to read
-    # `compose build 2>/dev/null || true`, which threw away the reason and
-    # the failure both, and carried on to `up -d`. That starts the old image
-    # over a database the new code has already migrated, and says nothing.
     echo
     amber "The registry had nothing to give, so the images are built here."
     echo "  The WhisperX one takes ten to twenty minutes the first time."
     echo
-    if ! compose build; then
-      echo
-      red "The build failed, so the upgrade stops here."
-      echo "  The old containers are still running and nothing was replaced."
-      echo "  The message above says what went wrong."
-      echo "  To put the checkout back: ./transcribe rollback"
-      exit 1
-    fi
+    build_the_images
   fi
   compose up -d
   tidy_the_images "$tag" "$before"
@@ -2306,6 +2354,7 @@ install-backup) shift && cmd_install_backup "$@" ;;
 install-timers) shift && cmd_install_timers "$@" ;;
 install-mail) shift && cmd_install_mail "$@" ;;
 upgrade) shift && cmd_upgrade "$@" ;;
+tidy) cmd_tidy ;;
 rollback) shift && cmd_rollback "$@" ;;
 restore-dump) shift && cmd_restore_dump "$@" ;;
 logs) shift && cmd_logs "$@" ;;

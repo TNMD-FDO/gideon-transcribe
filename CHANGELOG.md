@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.4, 2026-09-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The upgrade's tidy step now frees the build cache it made.** It ran
+  `docker builder prune -f`, which removes only what buildx calls dangling,
+  and the records that matter (the torch install, 11.5 GB per WhisperX
+  build) are not dangling: nine of them sat on the server's root filesystem
+  until it filled during the v1.36.3 upgrade, which stopped every container
+  on the server. The step now prunes by the words this repository's own
+  Dockerfiles leave in the records, and nothing of any other project's.
+- **A build refuses to start on a nearly full disk**, with less than 40 GB
+  free where Docker keeps its images, and says how to make room. A failed
+  build stops the upgrade with the same message whether `--build` was given
+  or not.
+
+### Added
+
+- **`./transcribe tidy`**: this app's old image tags and build cache records
+  removed by hand between upgrades, with the free space before and after.
+
 ## v1.36.3, 2026-09-10
 
 ```
