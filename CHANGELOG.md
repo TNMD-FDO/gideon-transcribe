@@ -33,9 +33,11 @@ Database: unchanged
 - **The tidy step's filtered prune did nothing in v1.36.4.** It went
   through the older `docker builder prune`, which takes the filter flag
   without a word and then prunes only the dangling records anyway. The
-  step now goes through `docker buildx prune`, which reads the pattern the
-  way `docker buildx du` does; on the office's server that names 81
-  records and about 104 GB, none of any other project's.
+  step now goes through `docker buildx prune -a`, which reads the pattern
+  the way `docker buildx du` does and, with `-a`, takes the records marked
+  shared with the image store, which a plain prune keeps; with the filter
+  it still touches nothing outside it. On the office's server that freed
+  111.7 GB in one go, none of it any other project's.
 
 ## v1.36.4, 2026-09-10
 

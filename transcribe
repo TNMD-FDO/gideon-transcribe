@@ -2099,7 +2099,12 @@ tidy_the_images() {
   # prune`: the older `docker builder prune` takes the same flag, says
   # nothing, and prunes only the dangling records anyway (v1.36.4 used it and
   # freed nothing); `buildx` reads the pattern, as `docker buildx du` does.
-  docker buildx prune -f --filter "description~=${BUILD_CACHE_WORDS}" >/dev/null 2>&1 || true
+  # `-a` because the records are marked shared with the image store, and
+  # without it a filtered prune keeps every shared record and frees nothing
+  # either; with the filter, `-a` still touches nothing outside it. The
+  # records of the build just done go too: a later build was seen not to
+  # reuse them (nine copies of one install), and the images carry the layers.
+  docker buildx prune -a -f --filter "description~=${BUILD_CACHE_WORDS}" >/dev/null 2>&1 || true
 }
 
 build_the_images() {
