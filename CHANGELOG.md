@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.3, 2026-09-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The chat's waiting dot still flickered in light mode.** v1.36.2 stopped
+  the one-second redraw, but the page also polls the assistant every two
+  seconds while an answer runs, and each poll rebuilt the chat body and
+  restarted the dot's pulse; on a light surface the faint end of the pulse
+  made every restart a blink. A poll that changes nothing now redraws
+  nothing, and the dot never fades below half.
+
 ## v1.36.2, 2026-09-09
 
 ```

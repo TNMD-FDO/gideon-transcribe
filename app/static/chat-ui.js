@@ -89,6 +89,7 @@
     var pending = {};        // question asked, not yet in the state, by chat id
     var startedAt = {};      // when a running turn was first seen, by turn id
     var pendingSince = 0;    // when the question not yet in the state was sent
+    var lastHtml = "";       // what the body holds, so a poll that changes nothing redraws nothing
     var ticker = null;
     var followBottom = true;
 
@@ -183,7 +184,7 @@
       return "<div class='waiting'><span class='pulse' aria-hidden='true'></span>" +
         "<span class='grow'>" + escape(line) + "</span>" +
         "<span class='muted tiny'>" + (expect ? escape(expect) + " &middot; " : "") +
-        "<span class='seconds' data-since='" + since + "'>" + secondsSince(since) + "</span> s</span></div>";
+        "<span class='seconds' data-since='" + since + "'></span> s</span></div>";
     }
 
     function drawList(chat) {
@@ -250,7 +251,15 @@
       } else if (pending.__new) {
         html += "<div class='turn'><div class='bubble you'><p>" + escape(pending.__new) + "</p></div>" + waiting(null) + "</div>";
       }
-      bodyBox.innerHTML = html;
+      // The page polls every two seconds while an answer runs; rebuilding the
+      // body on every poll made a fresh waiting dot each time, whose pulse
+      // restarted. The body is rebuilt only when what it shows has changed
+      // (the seconds counter is filled in afterwards, so it never counts).
+      if (html !== lastHtml) {
+        bodyBox.innerHTML = html;
+        lastHtml = html;
+      }
+      tick();
       if (atBottom || followBottom) { bodyBox.scrollTop = bodyBox.scrollHeight; followBottom = false; }
 
       tools.hidden = !chat;
