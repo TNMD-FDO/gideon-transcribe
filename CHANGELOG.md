@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.6, 2026-09-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The chat's waiting sign is three dots fading in turn**, in place of one
+  dot that grew and shrank. The single dot still shimmered on a light
+  ground after the redraws were fixed in v1.36.2 and v1.36.3: a ten-pixel
+  circle drawn at fractional sizes every frame flickers at its edge, and a
+  dark dot on white shows it where a light dot on dark hides it. The new
+  sign changes only its opacity, which the browser fades without redrawing
+  the shape.
+
 ## v1.36.5, 2026-09-10
 
 ```

@@ -181,7 +181,7 @@
       var expect = (turn && turn.parts_done !== undefined && turn.parts)
         ? "Part " + turn.parts_done + " of " + turn.parts + " read"
         : options.expectation;
-      return "<div class='waiting'><span class='pulse' aria-hidden='true'></span>" +
+      return "<div class='waiting'><span class='thinking' aria-hidden='true'><i></i><i></i><i></i></span>" +
         "<span class='grow'>" + escape(line) + "</span>" +
         "<span class='muted tiny'>" + (expect ? escape(expect) + " &middot; " : "") +
         "<span class='seconds' data-since='" + since + "'></span> s</span></div>";

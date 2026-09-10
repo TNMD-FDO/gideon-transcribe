@@ -1292,10 +1292,15 @@ body.no-speakers .seg .name { display: none; }
 .chat-ui .cite.play:hover { background: var(--accent); color: var(--accent-ink); }
 .chat-ui .cite.removed { color: var(--muted); text-decoration: line-through; }
 .chat-ui .waiting { display: flex; align-items: center; gap: 8px; color: var(--muted); padding: 4px 2px; }
-/* A slow breath, not a throb: the dot is the one moving thing on the page
-   while an answer is on its way, so it is kept gentle. */
-.chat-ui .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: chat-pulse 2s ease-in-out infinite; flex: none; }
-@keyframes chat-pulse { 0%, 100% { opacity: 0.5; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1); } }
+/* Three small dots fading in turn while an answer is on its way. Opacity
+   only, never size: a single dot that grew and shrank was redrawn at
+   fractional sizes every frame and shimmered at its edge, plainly on a light
+   ground (v1.36.6). The browser fades opacity without redrawing the shape. */
+.chat-ui .thinking { display: inline-flex; gap: 4px; align-items: center; flex: none; }
+.chat-ui .thinking i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: 0.25; will-change: opacity; animation: chat-thinking 1.5s ease-in-out infinite; }
+.chat-ui .thinking i:nth-child(2) { animation-delay: 0.25s; }
+.chat-ui .thinking i:nth-child(3) { animation-delay: 0.5s; }
+@keyframes chat-thinking { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
 .chat-ui .notice.quiet { background: transparent; border-left-width: 2px; padding: 2px 8px; margin: 0; color: var(--muted); }
 .chat-ui .foot-hint { margin: 4px 0 0; }
 .tiny { font-size: 0.78em; }
