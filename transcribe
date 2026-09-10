@@ -2095,8 +2095,11 @@ tidy_the_images() {
   # A bare `docker builder prune -f` removes only what buildx calls dangling,
   # and the records that matter (the torch install, 11.5 GB per WhisperX
   # build) are not dangling: nine of them sat on the root filesystem until it
-  # filled. Pruned by this project's own words instead.
-  docker builder prune -f --filter "description~=${BUILD_CACHE_WORDS}" >/dev/null 2>&1 || true
+  # filled. Pruned by this project's own words instead, through `docker buildx
+  # prune`: the older `docker builder prune` takes the same flag, says
+  # nothing, and prunes only the dangling records anyway (v1.36.4 used it and
+  # freed nothing); `buildx` reads the pattern, as `docker buildx du` does.
+  docker buildx prune -f --filter "description~=${BUILD_CACHE_WORDS}" >/dev/null 2>&1 || true
 }
 
 build_the_images() {

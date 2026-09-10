@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.36.5, 2026-09-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The tidy step's filtered prune did nothing in v1.36.4.** It went
+  through the older `docker builder prune`, which takes the filter flag
+  without a word and then prunes only the dangling records anyway. The
+  step now goes through `docker buildx prune`, which reads the pattern the
+  way `docker buildx du` does; on the office's server that names 81
+  records and about 104 GB, none of any other project's.
+
 ## v1.36.4, 2026-09-10
 
 ```
