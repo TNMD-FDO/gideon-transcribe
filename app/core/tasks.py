@@ -312,6 +312,14 @@ def suggest_names(run_id: str) -> None:
     assistant.suggest_names(run_id)
 
 
+@app.task(queue="llm", name="describe_moment")
+def describe_moment(moment_id: str) -> None:
+    """One Moment: the clip cut here, on this worker, and shown to the engine."""
+    from core import assistant
+
+    assistant.describe_moment(moment_id)
+
+
 @app.periodic(cron="30 3 * * *")
 @app.task(queue="default", name="retention_sweep")
 def retention_sweep(timestamp: int) -> None:

@@ -1,5 +1,5 @@
-// The AI assistant in the viewer: the Summary and Chat panels on the Bench and
-// Suggest names in the Speakers panel. Everything here reads one state answer
+// The AI assistant in the viewer: the Summary, Chat and Moments panels on the
+// Bench and Suggest names in the Speakers panel. Everything here reads one state answer
 // from the app and sends one request per thing a person does; the calls
 // themselves run on llm-worker and this page polls every two seconds while
 // anything is in progress, then stops. Nothing is streamed: an answer arrives
@@ -17,6 +17,9 @@
   var summaryList = document.getElementById("summary-list");
   var suggestLine = document.getElementById("suggest-line");
   var suggestionList = document.getElementById("suggestions");
+  var momentList = document.getElementById("moment-list");
+  var cueList = document.getElementById("cue-list");
+  var describeNow = document.getElementById("describe-now");
 
   var state = null;
   var timer = null;
@@ -297,12 +300,190 @@
     });
   }
 
+  // Moments -------------------------------------------------------------------------
+  // What the camera showed at a time. The tab lists the Moments and the cue
+  // lines; the rows carry a camera button each, a "Camera?" pill on a cue
+  // line, and a camera line under the row nearest each described Moment.
+
+  var momentsOn = !!(features.moments && window.VIEWER.isVideo);
+
+  function describe(body) {
+    return post("/recording/" + recording + "/moments", body).then(function (answer) {
+      if (!answer.ok && answer.said && answer.said.error) {
+        UI.toast(answer.said.error, { problem: true, icon: "warning" });
+      }
+      return refresh();
+    });
+  }
+
+  function drawMoments() {
+    if (!momentsOn || !state) { return; }
+    if (describeNow) { unavailable(describeNow); }
+    var moments = state.moments || [];
+    if (momentList) {
+      momentList.innerHTML = moments.length ? moments.map(function (one) {
+        var head = "<div class='row'><a href='#' class='cite' data-seconds='" + one.at + "'><b>" + escape(one.clock) + "</b></a>" +
+          "<span class='muted small grow'>" + (one.source === "cue" ? "from a cue" : "asked for") +
+          (one.edited ? " · edited" : "") + (one.when ? " · " + escape(one.when.slice(0, 16).replace("T", " ")) : "") + "</span></div>";
+        var body;
+        if (one.state === "queued" || one.state === "running") {
+          body = "<p class='muted'>Looking at the clip...</p>";
+        } else if (one.state === "failed") {
+          body = "<p class='problem'>" + escape(one.said) + "</p>";
+        } else {
+          body = (one.notice ? "<p class='notice small'>" + escape(one.notice) + "</p>" : "") +
+            "<div class='answer'>" + paragraphs(one.text, {}) + "</div>";
+        }
+        var tools = "<div class='row' style='margin-top:6px'>" +
+          (one.state === "done" ? "<button type='button' class='small edit-moment' data-moment='" + one.id + "'>Edit</button>" : "") +
+          "<button type='button' class='small moment-again' data-moment='" + one.id + "'>Again</button>" +
+          "<span class='grow'></span>" +
+          "<button type='button' class='small ghost danger delete-moment' data-moment='" + one.id + "'>Delete</button></div>";
+        return "<div class='card moment' data-moment='" + one.id + "'>" + head + body + tools + "</div>";
+      }).join("") : "<p class='muted small'>No moments yet. Press Describe this moment, or the camera button on any line.</p>";
+      Array.prototype.forEach.call(momentList.querySelectorAll(".moment-again"), unavailable);
+    }
+    if (cueList) {
+      var cues = state.cues || [];
+      cueList.innerHTML = cues.length ? cues.map(function (one) {
+        return "<li class='suggestion'><span class='grow'>" +
+          "<a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
+          "<span class='muted small'>“" + escape(one.phrase) + "”</span></span>" +
+          "<button type='button' class='small accept-cue' data-segment='" + one.segment_id + "' data-at='" + one.start + "' data-cue='" + escape(one.phrase) + "'>Describe</button></li>";
+      }).join("") : "<li class='muted small'>No line points at anything.</li>";
+      Array.prototype.forEach.call(cueList.querySelectorAll(".accept-cue"), unavailable);
+    }
+    decorateRows();
+  }
+
+  // The rows: a camera button each, a pill on a cue line, and the camera
+  // lines under the rows nearest the described Moments. Rebuilt after every
+  // state and whenever viewer.js redraws the transcript.
+  function decorateRows() {
+    if (!momentsOn || !state) { return; }
+    var rows = document.querySelectorAll("#transcript .seg");
+    var segments = window.VIEWER.segments() || [];
+    Array.prototype.forEach.call(document.querySelectorAll("#transcript .camera-line, #transcript .pill.cue"), function (old) {
+      old.remove();
+    });
+    Array.prototype.forEach.call(rows, function (row) {
+      var actions = row.querySelector(".actions");
+      if (actions && !actions.querySelector(".camera-row")) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "ghost tiny camera-row";
+        button.title = "Describe what the camera shows here";
+        button.innerHTML = window.VIEWER.icon("camera") + " camera";
+        actions.appendChild(button);
+      }
+    });
+    var bySegment = {};
+    Array.prototype.forEach.call(rows, function (row) {
+      var segment = segments[parseInt(row.dataset.index, 10)];
+      if (segment) { bySegment[segment.id] = row; }
+    });
+    (state.cues || []).forEach(function (one) {
+      var row = bySegment[one.segment_id];
+      if (!row) { return; }
+      var name = row.querySelector(".name");
+      var pill = document.createElement("span");
+      pill.className = "pill side cue";
+      pill.textContent = "Camera?";
+      pill.title = "\u201C" + one.phrase + "\u201D: describe what the camera shows here";
+      pill.dataset.segment = one.segment_id;
+      pill.dataset.at = one.start;
+      pill.dataset.cue = one.phrase;
+      name.parentNode.insertBefore(pill, name.nextSibling);
+    });
+    (state.moments || []).forEach(function (one) {
+      if (one.state === "failed") { return; }
+      var index = rowFor(segments, one.at);
+      if (index < 0 || !rows[index]) { return; }
+      var line = document.createElement("p");
+      line.className = "camera-line" + (one.state === "done" ? "" : " waiting");
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "Camera";
+      line.appendChild(tag);
+      var cite = document.createElement("a");
+      cite.href = "#";
+      cite.className = "cite";
+      cite.dataset.seconds = one.at;
+      cite.textContent = one.clock;
+      line.appendChild(cite);
+      line.appendChild(document.createTextNode(" " + (one.state === "done" ? one.text : "looking at the clip...")));
+      var txt = rows[index].querySelector(".txt");
+      if (txt) { txt.parentNode.insertBefore(line, txt.nextSibling); }
+    });
+  }
+
+  // The row a time belongs to: the last one that starts at or before it.
+  function rowFor(segments, seconds) {
+    var found = -1;
+    for (var i = 0; i < segments.length; i += 1) {
+      if (segments[i].start <= seconds) { found = i; } else { break; }
+    }
+    return found < 0 && segments.length ? 0 : found;
+  }
+
+  if (momentsOn) {
+    if (describeNow) {
+      describeNow.addEventListener("click", function () {
+        describe({ at: window.VIEWER.at(), source: "asked" });
+      });
+    }
+    document.addEventListener("click", function (event) {
+      var camera = event.target.closest("#transcript .camera-row");
+      var pill = event.target.closest("#transcript .pill.cue");
+      if (camera) {
+        var row = camera.closest(".seg");
+        var segment = (window.VIEWER.segments() || [])[parseInt(row.dataset.index, 10)];
+        if (segment) { describe({ at: segment.start, segment: segment.id, source: "asked" }); }
+        return;
+      }
+      if (pill) {
+        describe({ at: parseFloat(pill.dataset.at), segment: pill.dataset.segment, source: "cue", cue: pill.dataset.cue });
+        return;
+      }
+      var accept = event.target.closest("#cue-list .accept-cue");
+      if (accept) {
+        accept.disabled = true;
+        describe({ at: parseFloat(accept.dataset.at), segment: accept.dataset.segment, source: "cue", cue: accept.dataset.cue });
+        return;
+      }
+      var edit = event.target.closest("#moment-list .edit-moment");
+      if (edit) {
+        var card = edit.closest(".moment");
+        var current = (state.moments || []).filter(function (one) { return one.id === edit.dataset.moment; })[0];
+        UI.prompt({ title: "Edit this description", body: "Your words replace the model's. The line then says it was edited.", value: current ? current.text : "", ok: "Save" })
+          .then(function (text) {
+            if (!text || !text.trim()) { return; }
+            post("/moment/" + edit.dataset.moment + "/edit", { text: text.trim() }).then(refresh);
+          });
+        if (card) { card.classList.add("editing"); }
+        return;
+      }
+      var again = event.target.closest("#moment-list .moment-again");
+      if (again) {
+        UI.confirm({ title: "Describe this moment again?", body: "The description here is replaced by a new one from the same clip.", ok: "Describe again" })
+          .then(function (yes) { if (yes) { post("/moment/" + again.dataset.moment + "/again").then(refresh); } });
+        return;
+      }
+      var gone = event.target.closest("#moment-list .delete-moment");
+      if (gone) {
+        UI.confirm({ title: "Delete this moment?", body: "Its description goes from the viewer and the exports.", ok: "Delete moment", danger: true })
+          .then(function (yes) { if (yes) { post("/moment/" + gone.dataset.moment + "/delete").then(refresh); } });
+      }
+    });
+  }
+
   // Polling -------------------------------------------------------------------------
 
   function draw() {
     drawSummaries();
     drawChat();
     drawSuggestions();
+    drawMoments();
   }
 
   function refresh() {
@@ -324,7 +505,7 @@
 
   // The transcript rows are drawn by viewer.js once the segments arrive; the
   // suggestion pills go on after that, and again whenever the rows are redrawn.
-  document.addEventListener("transcript-drawn", function () { drawSuggestions(); });
+  document.addEventListener("transcript-drawn", function () { drawSuggestions(); decorateRows(); });
 
   refresh();
 })();

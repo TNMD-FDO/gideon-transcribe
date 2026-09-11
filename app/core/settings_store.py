@@ -1150,6 +1150,116 @@ def _rows() -> list[Definition]:
             ),
             when_changed="The next Case Chat question.",
         ),
+        # Moments (Phase 4) ----------------------------------------------------
+        Definition(
+            key="moments_available",
+            page=ASSISTANT,
+            name="Moments",
+            kind=TOGGLE,
+            default=False,
+            what_it_does=(
+                "Describing what the camera shows at a chosen time of a video "
+                "recording, on request, from a short clip and the words spoken in "
+                "it. Off by default: it needs an engine that takes video, and an "
+                "office tries it and judges before leaving it on."
+            ),
+            when_changed=(
+                "Off hides the Moments tab and the camera buttons; existing "
+                "Moments are hidden, not deleted."
+            ),
+        ),
+        Definition(
+            key="moments_in_answers",
+            page=ASSISTANT,
+            name="Moments in answers",
+            kind=TOGGLE,
+            default=True,
+            needs="moments_available",
+            what_it_does=(
+                "Hand a recording's Moments to Summary and Chat as labelled camera "
+                "lines, so a summary can say what was seen as well as what was said."
+            ),
+            when_changed="The next Summary or question.",
+        ),
+        Definition(
+            key="moments_answer_tokens",
+            page=ASSISTANT,
+            name="Moment answer cap",
+            kind=NUMBER,
+            default=400,
+            least=100,
+            most=4000,
+            unit="tokens",
+            needs="moments_available",
+            what_it_does="The most a Moment's description may run to: a few sentences.",
+            when_changed="The next Moment.",
+        ),
+        Definition(
+            key="moments_time_seconds",
+            page=ASSISTANT,
+            name="Moment time limit",
+            kind=NUMBER,
+            default=120,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="moments_available",
+            what_it_does=(
+                "How long one Moment's call may take, the cut of the clip included. "
+                "A Moment never lets the model think, so this is never doubled."
+            ),
+            when_changed="The next Moment.",
+        ),
+        Definition(
+            key="moment_span_seconds",
+            page=ASSISTANT,
+            name="Moment clip length",
+            kind=NUMBER,
+            default=10,
+            least=4,
+            most=30,
+            unit="seconds",
+            needs="moments_available",
+            what_it_does=(
+                "How much of the recording the engine is shown for one Moment: half "
+                "before the chosen time and half after."
+            ),
+            when_changed="The next Moment.",
+        ),
+        Definition(
+            key="moment_frames_per_second",
+            page=ASSISTANT,
+            name="Moment frames a second",
+            kind=NUMBER,
+            default=2,
+            least=1,
+            most=4,
+            unit="a second",
+            needs="moments_available",
+            what_it_does=(
+                "How many frames of each second the clip keeps. Two catches most "
+                "movement; more costs the engine more for little gain."
+            ),
+            when_changed="The next Moment.",
+        ),
+        Definition(
+            key="moment_frame_height",
+            page=ASSISTANT,
+            name="Moment frame height",
+            kind=NUMBER,
+            default=360,
+            least=180,
+            most=720,
+            unit="pixels",
+            needs="moments_available",
+            what_it_does=(
+                "The height the clip's frames are scaled to before the engine sees "
+                "them; a frame is never scaled up. Each 640 by 360 frame costs the "
+                "engine about 150 tokens, so a ten-second clip at two frames a "
+                "second is about 3,000."
+            ),
+            when_changed="The next Moment.",
+        ),
         Definition(
             key="engine_address",
             page=ASSISTANT,
@@ -1555,6 +1665,7 @@ def time_limit_seconds(feature: str) -> int:
         "chat_turn": "chat_time_seconds",
         "summary": "summary_time_seconds",
         "speaker_suggestions": "suggestions_time_seconds",
+        "moment": "moments_time_seconds",
     }[feature]
     return get(key)
 
@@ -1585,3 +1696,22 @@ def case_chat_combined_cap() -> int:
 
 def case_chat_question_seconds() -> int:
     return get("case_chat_question_minutes") * 60
+
+
+# The Moments' shape (Phase 4).
+
+
+def moments_answer_cap() -> int:
+    return get("moments_answer_tokens")
+
+
+def moment_span_seconds() -> int:
+    return get("moment_span_seconds")
+
+
+def moment_frames_per_second() -> int:
+    return get("moment_frames_per_second")
+
+
+def moment_frame_height() -> int:
+    return get("moment_frame_height")

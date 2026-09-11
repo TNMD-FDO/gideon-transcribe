@@ -17,15 +17,17 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, exports, settings_store, tasks
+from core import assistant, audit, cases, exports, prompts, settings_store, tasks
 from core.assistant import (
     Chat,
     ChatTurn,
+    Moment,
     Suggestion,
     SuggestionRun,
     Summary,
     SummaryTemplate,
 )
+from core.jobs import Segment
 from core.recordings import Recording
 
 LENGTHS = ("short", "standard", "detailed")
@@ -133,6 +135,45 @@ def _chat_json(chat: Chat, transcript) -> dict:
     }
 
 
+def _moment_json(one: Moment) -> dict:
+    return {
+        "id": str(one.pk),
+        "at": one.at,
+        "clock": exports.clock(one.at),
+        "span_start": one.span_start,
+        "span_end": one.span_end,
+        "source": one.source,
+        "segment": str(one.segment_id) if one.segment_id else "",
+        "state": one.state,
+        "said": assistant.what_to_say(one.reason_class) if one.reason_class else "",
+        "text": one.text,
+        "edited": one.edited,
+        "model": one.model,
+        "notice": (
+            assistant.notice(one.model, one.described_at) if one.described_at else ""
+        ),
+        "when": one.described_at.isoformat() if one.described_at else "",
+    }
+
+
+def _moments_and_cues(recording, transcript, features) -> tuple[list, list]:
+    """The Moments and the Cues of a Transcript, or nothing while Moments are off."""
+    if transcript is None or not features["moments"]:
+        return [], []
+    moments = list(transcript.moments.all())
+    taken = {one.segment_id for one in moments if one.state != assistant.FAILED}
+    cues = [
+        {
+            **cue,
+            "segment_id": str(cue["segment_id"]),
+            "clock": exports.clock(cue["start"]),
+        }
+        for cue in prompts.cues_in(prompts.lines_of(transcript))
+        if cue["segment_id"] not in taken
+    ]
+    return [_moment_json(one) for one in moments], cues
+
+
 @login_required
 def state(request: HttpRequest, recording_id) -> JsonResponse:
     """Everything the tabs and the Speakers panel show, in one answer."""
@@ -144,6 +185,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
 
     summaries = [_summary_json(one, transcript) for one in recording.summaries.all()]
     chats = [_chat_json(one, transcript) for one in recording.chats.all()]
+    moments, cues = _moments_and_cues(recording, transcript, features)
 
     suggestions, run = [], None
     unnamed: list[str] = []
@@ -198,6 +240,9 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     busy = busy or (
         run is not None and run["state"] in (assistant.QUEUED, assistant.RUNNING)
     )
+    busy = busy or any(
+        one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in moments
+    )
 
     return JsonResponse(
         {
@@ -205,6 +250,10 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             "busy": busy,
             "summaries": summaries,
             "chats": chats,
+            # What the camera showed, and the lines that point at something.
+            "moments": moments,
+            "cues": cues,
+            "video": assistant.playable_video(recording),
             # The office's starter questions for an empty chat; none by default.
             "starters": settings_store.lines_of("chat_starters"),
             "templates": [
@@ -293,6 +342,133 @@ def delete_summary(request: HttpRequest, summary_id) -> JsonResponse:
     audit.write(
         audit.Category.EDITS,
         "Summary deleted",
+        actor=request.user,
+        request=request,
+        affected_user=_affected(request, recording),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+    )
+    return JsonResponse({"ok": True})
+
+
+# Moments ------------------------------------------------------------------------------
+
+
+def _moment(request, moment_id):
+    moment = get_object_or_404(
+        Moment.objects.select_related("transcript", "transcript__recording"),
+        pk=moment_id,
+    )
+    recording = _recording(request, moment.transcript.recording_id)
+    return moment, recording
+
+
+@login_required
+@require_POST
+def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
+    """A Moment asked for at a time, by a person or from a Cue they accepted."""
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if not assistant.features()["moments"]:
+        return JsonResponse({"error": "Moments are off"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=409)
+    if not assistant.playable_video(recording):
+        return JsonResponse(
+            {"error": "the video is still being prepared, or this is sound only"},
+            status=409,
+        )
+    wanted = _body(request)
+    try:
+        at = float(wanted.get("at", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "a time is needed"}, status=400)
+    length = float(recording.duration_seconds or 0.0)
+    at = min(max(0.0, at), length) if length > 0 else max(0.0, at)
+    segment = None
+    if wanted.get("segment"):
+        segment = Segment.objects.filter(
+            pk=wanted["segment"], transcript=transcript
+        ).first()
+    source = Moment.CUE if wanted.get("source") == Moment.CUE else Moment.ASKED
+    if transcript.moments.filter(
+        state__in=(assistant.QUEUED, assistant.RUNNING),
+        at__gte=at - 1,
+        at__lte=at + 1,
+    ).exists():
+        return JsonResponse({"error": "that moment is being described"}, status=409)
+    cases.used(recording, by=request.user)
+    moment = Moment.objects.create(
+        transcript=transcript,
+        segment=segment,
+        at=at,
+        source=source,
+        cue_text=str(wanted.get("cue", ""))[:80] if source == Moment.CUE else "",
+        asked_by=request.user,
+    )
+    tasks.describe_moment.defer(moment_id=str(moment.pk))
+    return JsonResponse({"id": str(moment.pk)})
+
+
+@login_required
+@require_POST
+def moment_again(request: HttpRequest, moment_id) -> JsonResponse:
+    moment, recording = _moment(request, moment_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if not assistant.playable_video(recording):
+        return JsonResponse({"error": "the video is not ready"}, status=409)
+    moment.state = assistant.QUEUED
+    moment.reason_class = ""
+    moment.text = ""
+    moment.edited = False
+    moment.asked_by = request.user
+    moment.save()
+    tasks.describe_moment.defer(moment_id=str(moment.pk))
+    return JsonResponse({"id": str(moment.pk)})
+
+
+@login_required
+@require_POST
+def edit_moment(request: HttpRequest, moment_id) -> JsonResponse:
+    """A person's own words for the Moment; the row says only that it changed."""
+    moment, recording = _moment(request, moment_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    text = str(_body(request).get("text", "")).strip()[:2000]
+    if not text:
+        return JsonResponse({"error": "some words are needed"}, status=400)
+    moment.text = text
+    moment.edited = True
+    moment.state = assistant.DONE
+    moment.reason_class = ""
+    moment.save(update_fields=["text", "edited", "state", "reason_class"])
+    audit.write(
+        audit.Category.EDITS,
+        "Moment edited",
+        actor=request.user,
+        request=request,
+        affected_user=_affected(request, recording),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+    )
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
+def delete_moment(request: HttpRequest, moment_id) -> JsonResponse:
+    moment, recording = _moment(request, moment_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    moment.delete()
+    audit.write(
+        audit.Category.EDITS,
+        "Moment deleted",
         actor=request.user,
         request=request,
         affected_user=_affected(request, recording),

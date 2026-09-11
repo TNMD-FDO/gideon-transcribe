@@ -259,6 +259,37 @@ SUGGESTIONS_FORMAT = (
     "or Side 1 Speaker 2, is never a name or a role."
 )
 
+# A Moment: what the camera showed at one time (Phase 4). The template is the
+# editable part; the format line and the words the app adds are not. Written
+# against what the BodyCam-VQA study found vision models get wrong on this
+# kind of footage (docs/research/moments-vision-engine.md): guessing at what
+# a thing is, and filling in what was not visible.
+MOMENT = (
+    "Describe only what is visible in this short clip from a body-worn or fixed "
+    "camera. Say what the camera shows: the setting, the people by their "
+    "clothing, position, and actions, never by name even if a name is spoken, "
+    "their hands, any vehicles, and any object handled, shown, or pointed at. "
+    "Say where in the clip each thing happens by its second, as (at 3 s). "
+    "Do not guess at who anyone is, what they intend, or what a substance or "
+    "object is: say a small bag, not drugs; say a dark object in the right "
+    "hand, not a gun, unless it is plainly one. When something is unclear, "
+    "dark, blurred, or out of frame, say not visible rather than filling it "
+    "in. The words spoken are given only so you can tell which thing is being "
+    "pointed at; do not repeat or summarise them."
+)
+
+MOMENT_FORMAT = (
+    "Answer in plain text, two to five sentences, no headings and no list. "
+    "Refer to seconds as the clip runs, from 0 at its start. Never give a "
+    "[hh:mm:ss] time."
+)
+MOMENT_CAP = 400
+
+# What the camera showed, as Summary and Chat are told it: a block after the
+# transcript, labelled so the model and the reader both know it is a
+# description and not the words.
+CAMERA_HEADING = "What the camera showed (a model's descriptions, not the transcript):"
+
 LENGTH_LINES = {
     "short": "Keep the whole summary under about 250 words.",
     "standard": "Keep the whole summary to about 600 words.",
@@ -441,17 +472,22 @@ def nature_line(recording, transcript) -> str:
 TIME = re.compile(r"\[(\d{1,2}):(\d{2}):(\d{2})\]")
 
 
-def citations(text: str, lines: list[Line]) -> dict[str, float]:
+def citations(
+    text: str, lines: list[Line], moments: list | tuple = ()
+) -> dict[str, float]:
     """The times in an answer that match a real Segment's start, and their seconds.
 
     A time is matched when some Segment starts within the same whole second,
     the expected case since the prompts ask the model to copy the start time
     of the line it cites. A time that matches nothing is not a Citation and is
-    left as plain text.
+    left as plain text. A Moment's time counts as well, since the camera lines
+    carry it and an answer may cite what was seen.
     """
     starts: dict[int, float] = {}
     for line in lines:
         starts.setdefault(int(line.start), line.start)
+    for moment in moments:
+        starts.setdefault(int(moment.at), moment.at)
     found: dict[str, float] = {}
     for match in TIME.finditer(text):
         hours, minutes, seconds = (int(part) for part in match.groups())
@@ -485,15 +521,150 @@ def suggestions_input(unnamed: list[str], known: list[str]) -> str:
     )
 
 
-def fits(*texts: str, answer_cap: int, window: int | None = None) -> bool:
+def fits(
+    *texts: str, answer_cap: int, window: int | None = None, extra: int = 0
+) -> bool:
     """Whether the prompt and the answer fit the engine's window, by the estimate.
 
     The window is the Engine window setting as the caller read it; without
-    one, the chapter's starting value.
+    one, the chapter's starting value. `extra` is what the estimate cannot
+    read from text: a Moment's frames, counted by video_tokens().
     """
     if window is None:
         window = ENGINE_WINDOW
-    return sum(tokens(text) for text in texts) + answer_cap <= window
+    return sum(tokens(text) for text in texts) + extra + answer_cap <= window
+
+
+# The camera (Phase 4) ----------------------------------------------------------------
+#
+# The engine reads a clip as frames, each cut into patches of 28 by 28 pixels
+# and every two frames taken together, so a frame's cost is its patches and a
+# clip's cost is half its frames' worth. Read from the Qwen3-VL report and
+# checked against the office's engine, which charged 226 tokens for a three
+# second clip of 320 by 180 at two frames a second.
+PATCH = 28
+
+
+def video_tokens(frames: int, height: int, width: int | None = None) -> int:
+    """The app's estimate of what a clip costs the engine, never its count."""
+    if frames <= 0 or height <= 0:
+        return 0
+    width = width or round(height * 16 / 9)
+    patches = math.ceil(height / PATCH) * math.ceil(width / PATCH)
+    return math.ceil(frames / 2) * patches
+
+
+def moment_input(lines: list[Line], span_start: float, span_end: float) -> str:
+    """The words spoken in the clip, as the model is told them, with the span."""
+    head = (
+        f"This clip runs from {clock(span_start)} to {clock(span_end)} of the "
+        "recording."
+    )
+    if not lines:
+        return f"{head} No words were transcribed in this clip."
+    return f"{head} The words spoken in this clip were:\n{render(lines)}"
+
+
+def lines_in_span(lines: list[Line], span_start: float, span_end: float) -> list[Line]:
+    """The lines that start inside the span; the neighbours when none does."""
+    inside = [line for line in lines if span_start <= line.start < span_end]
+    if inside:
+        return inside
+    before = [line for line in lines if line.start < span_start]
+    after = [line for line in lines if line.start >= span_end]
+    return before[-1:] + after[:1]
+
+
+def camera_lines(moments) -> str:
+    """The Moments as Summary and Chat are told them, or nothing."""
+    said = [f"{clock(one.at)} [camera] {one.text.strip()}" for one in moments]
+    if not said:
+        return ""
+    return CAMERA_HEADING + "\n" + "\n".join(said)
+
+
+# Cues, found before anyone asks (Phase 4) ---------------------------------------------
+#
+# A Cue is a line whose words point at something the camera saw: "look at
+# that", "there's the". The list is the app's, in English and the Spanish the
+# office's calls carry; a line is a Cue when it holds any phrase whole. Found
+# by a pattern over the lines, never stored, so it costs nothing to change.
+CUES = (
+    "look at that",
+    "look at this",
+    "look at him",
+    "look at her",
+    "look what",
+    "there's the",
+    "there is the",
+    "there it is",
+    "there they are",
+    "see this",
+    "see that",
+    "you see that",
+    "what is that",
+    "what's that",
+    "what is this",
+    "what's this",
+    "that right there",
+    "right there",
+    "right here",
+    "put that down",
+    "drop it",
+    "drop the",
+    "show me",
+    "is that a",
+    "is this a",
+    "what's in",
+    "what is in",
+    "hands where",
+    "show me your hands",
+    "step out",
+    "get out of the",
+    "on the ground",
+    "he's got a",
+    "she's got a",
+    "in his hand",
+    "in her hand",
+    "in his pocket",
+    "in her pocket",
+    "over there",
+    "check the",
+    "open the",
+    "mira eso",
+    "mira esto",
+    "ahi esta",
+    "ahí está",
+    "que es eso",
+    "qué es eso",
+    "ensename",
+    "enséñame",
+    "las manos",
+)
+CUE = re.compile(
+    r"(?<![\w'])(?:" + "|".join(re.escape(phrase) for phrase in CUES) + r")(?![\w'])",
+    re.IGNORECASE,
+)
+
+
+def cues_in(lines: list[Line], limit: int = 60) -> list[dict]:
+    """The lines that carry a cue phrase, the first `limit`, oldest first."""
+    found = []
+    for line in lines:
+        match = CUE.search(line.text.replace("\u2019", "'"))
+        if match is None:
+            continue
+        found.append(
+            {
+                "segment_id": line.segment_id,
+                "start": line.start,
+                "line": line.number,
+                "phrase": match.group(0),
+            }
+        )
+        if len(found) >= limit:
+            break
+    return found
 
 
 def history_that_fits(

@@ -3129,6 +3129,7 @@ This chapter depends on these rows of the admin settings catalogue, by their cat
 | AI assistant call, feature `chat_turn` | once per Chat question, whether it succeeded, failed, or was refused | model name; endpoint host; the Ground rules version and the feature template's name and version (for example "ground-rules v3; Chat v1"); input and output token counts from the engine's usage figures; duration; outcome (ok or the reason class). Never the question, the prompt, or the answer. |
 | AI assistant call, feature `summary` | once per Summary written or regenerated, whether it succeeded, failed, or was refused | as above (for example "ground-rules v3; Standard summary v2") |
 | AI assistant call, feature `speaker_suggestions` | once per Suggest names run | as above |
+| AI assistant call, feature `moment` (Phase 4) | once per Moment described, whether it succeeded, failed, or was refused | as above ("ground-rules v3; Moment v1"), and whether the Moment was asked for or accepted from a Cue; never the description, the phrase, or the clip |
 | Viewer-edit rows of the Audit log and logging chapter | Accept or Reject of a suggestion; Delete of a Summary or Chat | as that chapter fixes; never a name or any text |
 | Export rows of the Exports chapter | Export to Word of a Summary or Chat | as that chapter fixes |
 | Setting changed rows of the admin settings catalogue | each provider setting or toggle applied through the tray | old and new value, the optional note |
@@ -3145,6 +3146,7 @@ Reason classes added to the catalogue (the Audit log and logging chapter):
 | `llm_too_long` | the app's token estimate exceeds the engine's window |
 | `llm_bad_output` | invalid suggestion JSON after one retry |
 | `llm_error` | anything else |
+| `llm_no_vision` | a Moment asked of an engine that takes text only (Phase 4) |
 
 ### Not in this phase
 
@@ -3632,6 +3634,7 @@ Never logged anywhere, in the audit log or in any other log:
 - Speaker names
 - Clip titles
 - Clip notes
+- a Moment's description, the phrase that cued it, and the clip shown to the engine (Phase 4)
 
 The Recording's original file name is kept. It is the Snapshot label, a Provenance fact the app already shows Admins, and the only way to recognise a Recording after it is discarded. Settings are never content, so a setting's old and new values are logged, with one exception: Office Vocabulary is content, so its row says only that it changed.
 
@@ -3708,7 +3711,7 @@ Rows other chapters add (settings and templates, Cases, Shares, the Retention po
 | Viewer edits | Segment corrected; Speaker renamed; Speakers merged; Speaker change undone; Speaker suggestion accepted or rejected; Recording renamed | the user, or an Admin acting with the owner's powers (Recording renamed: the people who work in it only) | Segment or Speaker ids and time ranges only; never the text, the names, or the title |
 | Exports | export made | the user, or an Admin | kind: Word or plain text; one row per file inside any zip |
 | Clips | Clip created; re-rendered; downloaded; deleted | the user, or an Admin | Clip id, time range, the two options; never the title or note. One "Clip downloaded" row per Clip inside any zip. An Admin downloading another user's Clip writes the usual row with the affected user and never sets the owner's downloaded mark. A Rename (title, note) writes no row |
-| LLM | Chat turn; Summary generated; Speaker suggestions generated | the user | feature, model name, endpoint host, prompt template version, input and output token counts, duration, outcome; never the question, the prompt, or the answer |
+| LLM | Chat turn; Summary generated; Speaker suggestions generated; Moment described (Phase 4) | the user | feature, model name, endpoint host, prompt template version, input and output token counts, duration, outcome; never the question, the prompt, the answer, or a Moment's description |
 | Admin | setting changed | an Admin | setting name, old value, new value, and the optional note typed in the panel's tray; one row per setting in an Apply; Office Vocabulary says only that it changed. The settings chapter holds the template and test rows |
 | Admin | another user's Workspace opened; another user's item opened (Recording, Transcript, Chat, Summary, Clip); Playback copy served to an Admin for another user's Recording | an Admin | the ADR 0004 rows; the affected user is always filled |
 | Admin | Integrity check run | an Admin, from the status page button | the outcome, with the reason class on failure |
@@ -4271,7 +4274,7 @@ Every row uses the fixed field set of the Audit log and logging chapter and hold
 | Viewer edits | Segment corrected; Speaker renamed; Speakers merged; Speaker change undone; Speaker suggestion accepted; Speaker suggestion rejected; Recording renamed | Transcript viewer and player |
 | Exports | export made (kind: transcript Word, combined, transcript text, captions, summary, chat; one row per file inside any zip) | Exports |
 | Clips | Clip created; Clip re-rendered; Clip downloaded (one per Clip inside any zip; an Admin's carries the affected user); Clip deleted; Clip render failed (`clip_render_failed`) | Clips |
-| LLM | AI assistant call (feature `chat_turn`, `summary`, or `speaker_suggestions`; model, endpoint host, template versions, token counts, duration, outcome) | AI assistant |
+| LLM | AI assistant call (feature `chat_turn`, `summary`, `speaker_suggestions`, or `moment`; model, endpoint host, template versions, token counts, duration, outcome) | AI assistant; Moments (Phase 4) |
 | Admin | setting changed (one per setting per Apply, with the tray's note); Template saved; Template reset; Summary template added; Summary template deleted; Summary template flag changed; Directory tested; Directory check run now; Engine tested; Integrity check run; another user's Workspace opened; another user's item opened (Recording, Transcript, Chat, Summary, Clip); Playback copy served to an Admin for another user's Recording | Admin panel; Audit log and logging; Media handling |
 | System | Workspace discarded (N recordings, X GB); daily sweeper ran; quota refused an upload; audit retention sweep ran; Integrity check ran | Workspace lifecycle; Audit log and logging |
 
@@ -4287,7 +4290,7 @@ A reason class is the fixed short identifier a row records when something is ref
 | Upload refused | `too_large`; `too_long`; `quota_exceeded`; `limit_exceeded`; `batch_in_progress`; `service_unreachable`; `disk_full`; and one class each for no audio track, undecodable audio, empty file, duplicate file, and archive (identifiers left to the build) | Media handling; Queue and Jobs; Workspace lifecycle |
 | Job failed, from the service | `bad_input`; `too_large`; `too_long`; `model_unavailable`; `gpu_error` (retried once by the service); `timeout`; `cancelled`; `service_restarted`; `internal` | the WhisperX service API document |
 | Job failed, the app's own | `media_failed`; `service_unreachable`; `service_refused`; `result_expired`; `merge_failed` | Queue and Jobs |
-| AI assistant | `llm_unreachable`; `llm_timeout`; `llm_refused`; `llm_too_long`; `llm_bad_output`; `llm_error` | AI assistant |
+| AI assistant | `llm_unreachable`; `llm_timeout`; `llm_refused`; `llm_too_long`; `llm_bad_output`; `llm_error`; `llm_no_vision` (Phase 4) | AI assistant |
 | Clip render failed | `clip_render_failed` | Clips |
 | Directory check refused; Directory tested; Engine tested; Integrity check run | a reason class on failure (identifiers left to the build) | Sign-in, accounts, and roles; Admin panel |
 

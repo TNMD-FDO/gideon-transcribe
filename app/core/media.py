@@ -38,6 +38,8 @@ TEST_DECODE_SECONDS = 10
 # generous, and exist so that a broken file cannot hold a worker for ever.
 PROBE_TIMEOUT = 120
 DECODE_TIMEOUT = 60 * 60
+# A Moment's clip is seconds long and small; two minutes is generous.
+DESCRIPTION_TIMEOUT = 120
 
 # The Standard preparation, as the Media handling chapter fixes it: remove the
 # DC offset, resample, and normalise loudness in two linear passes so the
@@ -757,8 +759,60 @@ def make_waveform(
 
 # Clips ------------------------------------------------------------------------
 
+
 # White with a dark outline at the bottom of the picture, one cue per Segment.
 # Fixed in code, with no setting: a caption style is a thing to get right once.
+def cut_for_description(
+    source: Path,
+    target: Path,
+    start: float,
+    end: float,
+    *,
+    fps: int,
+    height: int,
+    timeout: int = DESCRIPTION_TIMEOUT,
+) -> None:
+    """A few seconds of the Playback copy as a small silent video for the engine.
+
+    Seek before the input, as cut_clip does, so the cut is exact and its clock
+    starts at zero; the frames are thinned to `fps` and scaled to `height` (never
+    up) so the engine is handed as little as tells the story; no sound, since
+    the words go as text. The file is the caller's to delete: it is content and
+    never kept.
+    """
+    span = (start, end)
+    arguments = [
+        "ffmpeg",
+        "-nostdin",
+        "-y",
+        "-v",
+        "error",
+        *_span_arguments(span),
+        "-i",
+        str(source),
+        *_span_length(span),
+        "-an",
+        "-vf",
+        f"fps={int(fps)},scale=-2:'min({int(height)},ih)'",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "28",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(target),
+    ]
+    finished = _run(arguments, timeout=timeout)
+    if finished.returncode != 0 or not target.exists() or target.stat().st_size == 0:
+        raise MediaError(
+            "The clip could not be cut for the camera description", "media_failed"
+        )
+
+
 CAPTION_STYLE = (
     "FontName=DejaVu Sans,Fontsize=22,PrimaryColour=&H00FFFFFF,"
     "OutlineColour=&H80000000,BorderStyle=1,Outline=2,Shadow=0,"

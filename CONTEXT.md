@@ -321,7 +321,7 @@ _Avoid_: reminder, alert
 ### LLM features
 
 **AI assistant**:
-The app's three language-model features together: Summary, Chat, and Speaker suggestions. Each runs only when a user asks, never by itself, and works from one Transcript, or from every Transcript in a Case as a Case Chat, and nothing else.
+The app's four language-model features together: Summary, Chat, Speaker suggestions, and Moments. Each runs only when a user asks, never by itself, and works from one Transcript, or from every Transcript in a Case as a Case Chat, and nothing else.
 _Avoid_: the LLM, the model (in anything a user reads)
 
 **Summary**:
@@ -349,8 +349,19 @@ One pass of the AI assistant over whole Transcripts that fit together in one cal
 **Speaker suggestion**:
 A name or role the AI assistant proposes for an unnamed Speaker when a user asks, with the Segment that shows why. Nothing changes until the user accepts it. Inside a Case, the AI assistant is told the Case's People, so it can recognise a Person already named elsewhere.
 
+**Moment**:
+A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4.
+_Avoid_: frame, snapshot, scene, screenshot
+
+**Cue**:
+A Transcript line whose words point at something the camera saw ("look at that", "there's the"), marked as a suggested Moment. Found by pattern and never stored; nothing runs until a person accepts it.
+_Avoid_: trigger, keyword, hit
+
+**Camera line**:
+How a Moment appears among Transcript lines: marked Camera, in italic, in the viewer, in the exports, and in what the AI assistant is told. A Camera line is never a Segment.
+
 **Prompt template**:
-An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, and every Summary template. Each carries a version.
+An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, the Moment instructions, and every Summary template. Each carries a version.
 
 **AI notice**:
 The admin-set wording shown at the top of every Summary and Chat and printed on their exports, saying the text is AI-generated and unverified.

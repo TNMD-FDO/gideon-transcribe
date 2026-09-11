@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.38.0, 2026-09-11
+
+```
+Models: unchanged
+Database: migrates (0035, Moments: what the camera showed)
+```
+
+### Added
+
+- **Moments** (Phase 4, `docs/spec/SPEC-PHASE-4.md`). On a video
+  recording, the AI assistant describes what the camera showed at a chosen
+  time: a camera button on every transcript line, **Describe this moment**
+  in a new Moments tab for wherever the player is, and **Camera?** pills on
+  lines whose words point at something ("look at that", "there's the"),
+  listed as suggested moments and described only when asked. The app cuts
+  about ten seconds of the playback copy around the time, shows it to the
+  engine with the words spoken in it, keeps the description and deletes
+  the clip. A description appears under its line marked Camera, in the
+  Moments tab, in Details, and in the Word and plain-text exports with a
+  legend; with **Moments in answers** on it reaches Summary and Chat as
+  labelled camera lines. Edit, Again and Delete on each. Off by default:
+  it needs an engine that takes video (the shared engine's Qwen3.8 does).
+  Seven settings on the AI assistant page, the Moment prompt template on
+  the Templates page, the audit row "AI assistant call" with feature
+  `moment`, and the rows "Moment edited" and "Moment deleted", none
+  carrying a word. Asked for by the maintainer: "when 'look at that' or
+  'there's the drugs' is said, the model would look at the snip".
+- **Every engine request carries priority 1**, as the box ledger's
+  shared-engine paragraph asks of a client; GIDEON's line 17 is closed.
+- **`llm_no_vision`**, a seventh reason class: an engine handed a clip it
+  cannot read answers "This engine cannot look at video."
+
 ## v1.37.0, 2026-09-11
 
 ```

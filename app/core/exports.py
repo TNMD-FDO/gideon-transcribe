@@ -36,6 +36,37 @@ log = logging.getLogger("transcribe.exports")
 
 CORRECTED_LEGEND_TEXT = "Lines marked (corrected) were corrected by staff."
 CORRECTED_LEGEND_WORD = "Segments marked * were corrected by staff."
+# A Moment among the lines: a model's description of what the picture showed.
+CAMERA_LEGEND = (
+    "Lines marked Camera are a model's description of what the picture showed "
+    "at that time, not the transcript."
+)
+CAMERA_TAG = "Camera (a model's description, not transcript)"
+
+
+def camera_moments(transcript) -> list:
+    """The described Moments of a Transcript, in time order, for the exports."""
+    if transcript is None or not hasattr(transcript, "moments"):
+        return []
+    from core import assistant
+
+    return list(transcript.moments.filter(state=assistant.DONE).exclude(text=""))
+
+
+def with_camera_lines(segments, moments):
+    """The Segments and the Moments together in time order.
+
+    Yields ("segment", segment) and ("camera", moment): a Moment goes before
+    the first Segment that starts after it, and after the last otherwise.
+    """
+    waiting = list(moments)
+    for segment in segments:
+        while waiting and waiting[0].at <= segment.start:
+            yield "camera", waiting.pop(0)
+        yield "segment", segment
+    for moment in waiting:
+        yield "camera", moment
+
 
 # What both parties of a call heard: the recorded announcement before it
 # connects is on both channels, so both Sides transcribe it. The app prints it
@@ -303,11 +334,18 @@ def plain_text(recording: Recording) -> str:
     shared = both_sides_legend(transcript)
     if shared:
         notice += " " + shared
+    moments = camera_moments(transcript)
+    if moments:
+        notice += " " + CAMERA_LEGEND
     head.append(notice)
     head.append("")
 
     lines = []
-    for segment in segments:
+    for kind, one in with_camera_lines(segments, moments):
+        if kind == "camera":
+            lines.append(f"[{clock(one.at)}] {CAMERA_TAG}: {one.text}")
+            continue
+        segment = one
         name = segment.speaker
         if name and segment.corrected:
             name = f"{name} (corrected)"
@@ -441,6 +479,10 @@ def word(recording: Recording, exported_by: str) -> bytes:
     if shared:
         both = document.add_paragraph(shared)
         both.runs[0].italic = True
+    moments = camera_moments(transcript)
+    if moments:
+        camera = document.add_paragraph(CAMERA_LEGEND)
+        camera.runs[0].italic = True
 
     if who:
         document.add_paragraph()
@@ -453,11 +495,22 @@ def word(recording: Recording, exported_by: str) -> bytes:
     _number_the_lines(talk)
     _running_head(talk, title, kind, recording.sha256, Pt, RGBColor)
 
-    for segment in segments:
-        mark = "*" if segment.corrected else " "
-        name = f"{segment.speaker.upper()}: " if segment.speaker else ""
+    for kind, one in with_camera_lines(segments, moments):
         line = document.add_paragraph()
         line.paragraph_format.space_after = Pt(6)
+        if kind == "camera":
+            tag = line.add_run(f"[{clock(one.at)}]  Camera: ")
+            tag.bold = True
+            tag.font.name = "Consolas"
+            tag.font.size = Pt(10)
+            said = line.add_run(one.text)
+            said.italic = True
+            said.font.name = "Consolas"
+            said.font.size = Pt(10)
+            continue
+        segment = one
+        mark = "*" if segment.corrected else " "
+        name = f"{segment.speaker.upper()}: " if segment.speaker else ""
         run = line.add_run(f"[{clock(segment.start)}]{mark} {name}{segment.text}")
         run.font.name = "Consolas"
         run.font.size = Pt(10)
@@ -622,9 +675,23 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
         ("Processed", f"{transcript.created:{DAY_AND_TIME}}"),
         ("Segments", str(len(segments))),
         ("Corrections", str(corrections)),
+        ("Camera moments", camera_moments_row(transcript)),
         ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
     ]
     return [(label, value) for label, value in rows if str(value).strip()]
+
+
+def camera_moments_row(transcript) -> str:
+    """How many Moments the export carries, by which model, or nothing."""
+    moments = camera_moments(transcript)
+    if not moments:
+        return ""
+    models = sorted({one.model for one in moments if one.model})
+    edited = sum(1 for one in moments if one.edited)
+    row = f"{len(moments)} described by {', '.join(models) or 'the engine'}"
+    if edited:
+        row += f", {edited} edited by staff"
+    return row
 
 
 def _number_the_lines(section) -> None:

@@ -336,6 +336,9 @@
         {% if assistant.chat and transcript %}
           <button type="button" class="sheet-tab" data-panel="chat">Chat</button>
         {% endif %}
+        {% if assistant.moments and transcript and is_video %}
+          <button type="button" class="sheet-tab" data-panel="moments">Moments</button>
+        {% endif %}
         <button type="button" class="sheet-tab" data-panel="details">Details</button>
         <span class="grow"></span>
         <button type="button" class="ghost small" id="expand-sheet" hidden title="Give the panel the height of the window">{% icon "expand" %} Expand</button>
@@ -431,6 +434,27 @@
               </div>
             </div>
             <div id="summary-list" class="assistant-list"></div>
+          </div>
+        {% endif %}
+
+        {% if assistant.moments and transcript and is_video %}
+          {% comment %}
+            Moments: what the camera showed at a chosen time. A short clip
+            around the time is shown to the assistant, which describes what is
+            visible; the words are a description, never the transcript. The
+            camera buttons on the rows and the "Camera?" pills on cue lines
+            are put on by assistant.js once the rows exist.
+          {% endcomment %}
+          <div class="panel" data-panel="moments" hidden>
+            <div class="row">
+              <h2 class="grow">Moments</h2>
+              <button type="button" class="small primary" id="describe-now" title="Describe what the camera shows at the playhead">{% icon "camera" %} Describe this moment</button>
+            </div>
+            <p class="muted small" style="margin: 4px 0 0">A short clip around the time is shown to the assistant, which describes what is visible. Its words are a description of the picture, never the transcript. The camera button on any line does the same for that line.</p>
+            <div id="moment-list" class="assistant-list"></div>
+            <h3 class="small" style="margin: 14px 0 2px">Suggested moments</h3>
+            <p class="muted small" style="margin: 0 0 4px">Lines where someone points at something. Nothing is described until you ask.</p>
+            <ul id="cue-list" class="suggestions"></ul>
           </div>
         {% endif %}
 
@@ -530,7 +554,8 @@
       batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %},
       inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %},
       caseChatUrl: {% if case_chat_url %}"{{ case_chat_url }}"{% else %}null{% endif %},
-      assistant: {% if assistant.assistant and transcript %}{ summary: {% if assistant.summary %}true{% else %}false{% endif %}, chat: {% if assistant.chat %}true{% else %}false{% endif %}, suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %} }{% else %}null{% endif %}
+      isVideo: {% if is_video %}true{% else %}false{% endif %},
+      assistant: {% if assistant.assistant and transcript %}{ summary: {% if assistant.summary %}true{% else %}false{% endif %}, chat: {% if assistant.chat %}true{% else %}false{% endif %}, suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, moments: {% if assistant.moments %}true{% else %}false{% endif %} }{% else %}null{% endif %}
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>

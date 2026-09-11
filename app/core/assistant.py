@@ -28,7 +28,12 @@ STATES = [(QUEUED, "queued"), (RUNNING, "running"), (DONE, "done"), (FAILED, "fa
 
 # Starting values for the build gate, held in code, never settings: the time
 # limits in seconds (doubled while the model may think), and the sampling.
-TIME_LIMITS = {"summary": 300, "chat_turn": 120, "speaker_suggestions": 180}
+TIME_LIMITS = {
+    "summary": 300,
+    "chat_turn": 120,
+    "speaker_suggestions": 180,
+    "moment": 120,
+}
 SAMPLING = {"temperature": 0.3, "top_p": 0.9}
 SUGGESTION_SAMPLING = {"temperature": 0.0, "top_p": 1.0}
 
@@ -58,11 +63,13 @@ class PromptTemplate(models.Model):
 
     GROUND_RULES, CHAT, SUGGESTIONS = "ground_rules", "chat", "suggestions"
     CASE_CHAT = "case_chat"
+    MOMENT = "moment"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
         SUGGESTIONS: ("Speaker suggestions", prompts.SUGGESTIONS),
         CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
+        MOMENT: ("Moment", prompts.MOMENT),
     }
 
     key = models.CharField(max_length=30, unique=True)
@@ -393,11 +400,55 @@ class SuggestionRun(models.Model):
         ordering = ["-created"]
 
 
+class Moment(models.Model):
+    """What the camera showed at one time of a video Recording, as a model described it.
+
+    Hangs on the Transcript, as a Suggestion does, so Process again takes it
+    with the old Transcript. Its text is a description and never the
+    Transcript; the clip it was made from is never kept.
+    """
+
+    ASKED, CUE = "asked", "cue"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="moments"
+    )
+    segment = models.ForeignKey(
+        "core.Segment", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    # The chosen second, and the span of the clip shown around it.
+    at = models.FloatField()
+    span_start = models.FloatField(default=0.0)
+    span_end = models.FloatField(default=0.0)
+    # Asked for by a person, or accepted from a Cue; the phrase is content.
+    source = models.CharField(max_length=10, default=ASKED)
+    cue_text = models.CharField(max_length=80, blank=True, default="")
+    state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
+    reason_class = models.CharField(max_length=40, blank=True, default="")
+    text = models.TextField(blank=True, default="")
+    edited = models.BooleanField(default=False)
+    model = models.CharField(max_length=120, blank=True, default="")
+    # How many frames the engine was shown, for the Details panel.
+    frames = models.IntegerField(default=0)
+    asked_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    described_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["at", "created"]
+
+    def __str__(self) -> str:
+        return f"moment at {self.at:.1f}s of {self.transcript_id}"
+
+
 # What is on and what is reachable ----------------------------------------------
 
 
 def features() -> dict:
-    """Which of the three features a page may show, and whether the engine answers."""
+    """Which of the four features a page may show, and whether the engine answers."""
     on = bool(settings_store.get("assistant_available"))
     reachable = engine.is_reachable() if on else False
     return {
@@ -405,6 +456,7 @@ def features() -> dict:
         "summary": on and bool(settings_store.get("summary_available")),
         "chat": on and bool(settings_store.get("chat_available")),
         "suggestions": on and bool(settings_store.get("suggestions_available")),
+        "moments": on and bool(settings_store.get("moments_available")),
         "reachable": reachable,
         "unavailable_line": engine.WHAT_TO_SAY.get(engine.UNREACHABLE, ""),
     }
@@ -472,8 +524,12 @@ def _record(
     started: float,
     outcome: str,
     reason: str = "",
+    **more,
 ):
-    """The one audit row a call writes, metadata only, whatever happened."""
+    """The one audit row a call writes, metadata only, whatever happened.
+
+    `more` is a Moment's source (asked, or from a cue), never a word of it.
+    """
     host = urlparse(engine.address()).hostname or ""
     audit.write(
         audit.Category.LLM,
@@ -496,6 +552,7 @@ def _record(
         input_tokens=usage.get("input_tokens", 0),
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),
+        **more,
     )
 
 
@@ -535,15 +592,19 @@ def write_summary(summary_id) -> None:
             raise problem
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
+        seen = moments_for_answers(transcript)
         system = prompts.system_message(
             ground.text, template.text, prompts.SUMMARY_FORMAT
         )
         user = "\n\n".join(
-            [
+            part
+            for part in [
                 prompts.nature_line(recording, transcript),
                 rendered,
+                prompts.camera_lines(seen),
                 prompts.summary_input(summary.focus, summary.length),
             ]
+            if part
         )
         wanted = settings_store.summary_answer_cap(summary.length)
         if not prompts.fits(system, user, answer_cap=cap(wanted), window=window()):
@@ -557,7 +618,7 @@ def write_summary(summary_id) -> None:
         )
         usage = answer
         summary.text = answer["text"].strip()
-        summary.citations = prompts.citations(summary.text, lines)
+        summary.citations = prompts.citations(summary.text, lines, seen)
         if thought_it_away(answer):
             raise ThoughtItAway()
         summary.cut_short = answer["finish_reason"] == "length"
@@ -624,6 +685,7 @@ def answer_turn(turn_id) -> None:
             raise problem
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
+        seen = moments_for_answers(transcript)
         system = prompts.system_message(ground.text, template.text, prompts.CHAT_FORMAT)
         earlier = [
             (one.question, one.answer)
@@ -633,7 +695,14 @@ def answer_turn(turn_id) -> None:
             earlier, settings_store.chat_history_tokens()
         )
         user = "\n\n".join(
-            [prompts.nature_line(recording, transcript), rendered, turn.question]
+            part
+            for part in [
+                prompts.nature_line(recording, transcript),
+                rendered,
+                prompts.camera_lines(seen),
+                turn.question,
+            ]
+            if part
         )
         history_text = "\n".join(q + "\n" + a for q, a in history)
         chat_cap = settings_store.chat_answer_cap()
@@ -650,7 +719,7 @@ def answer_turn(turn_id) -> None:
         )
         usage = answer
         turn.answer = answer["text"].strip()
-        turn.citations = prompts.citations(turn.answer, lines)
+        turn.citations = prompts.citations(turn.answer, lines, seen)
         if thought_it_away(answer):
             raise ThoughtItAway()
         turn.cut_short = answer["finish_reason"] == "length"
@@ -687,6 +756,198 @@ def answer_turn(turn_id) -> None:
             outcome=problem.reason,
             reason=problem.reason,
         )
+
+
+# Moments (Phase 4) --------------------------------------------------------------------
+#
+# What the camera showed at one time of a video Recording, on request. The
+# clip is cut here, on llm-worker, which runs the app image with its ffmpeg:
+# a few seconds from the Playback copy into a file of the container's own,
+# read once into the request and deleted whatever happens. Nothing image-like
+# ever touches the data directory, and the description is content: shown,
+# exported, handed to Summary and Chat, and never logged.
+
+# Two reasons of the Moment's own, beside the engine's table.
+MEDIA_NOT_READY = "media_not_ready"
+MEDIA_FAILED = "media_failed"
+MOMENT_SAYS = {
+    MEDIA_NOT_READY: "The video is still being prepared. Try again in a minute.",
+    MEDIA_FAILED: "The clip could not be cut from the recording. Try again.",
+}
+
+
+def moments_for_answers(transcript) -> list:
+    """The Moments Summary and Chat are told about, or none.
+
+    Only while Moments are on and the office hands them to answers; a Moment
+    that failed or is still being described is not a description.
+    """
+    if not settings_store.get("moments_in_answers") or not features()["moments"]:
+        return []
+    return list(transcript.moments.filter(state=DONE).exclude(text=""))
+
+
+def playable_video(recording) -> bool:
+    """Whether the Playback copy exists and carries a picture."""
+    playback = recording.playback_path()
+    return bool(
+        recording.playback_ready and playback is not None and playback.suffix == ".mp4"
+    )
+
+
+def moment_span(recording, at: float) -> tuple[float, float]:
+    """The clip's span around a time: half the setting either side, inside the file."""
+    half = settings_store.moment_span_seconds() / 2
+    length = float(recording.duration_seconds or 0.0)
+    start = max(0.0, at - half)
+    end = at + half
+    if length > 0:
+        end = min(length, end)
+    return round(start, 3), round(max(end, start), 3)
+
+
+def describe_moment(moment_id) -> None:
+    """One Moment: a clip cut from the Playback copy, shown with its words."""
+    import base64
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from core import media
+
+    moment = (
+        Moment.objects.filter(pk=moment_id)
+        .select_related("transcript", "transcript__recording")
+        .first()
+    )
+    if moment is None:
+        return
+    transcript = moment.transcript
+    recording = transcript.recording
+    started = time.monotonic()
+    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
+    template = PromptTemplate.named(PromptTemplate.MOMENT)
+    templates_line = f"ground-rules v{ground.version}; Moment v{template.version}"
+    moment.state = RUNNING
+    moment.save(update_fields=["state"])
+
+    usage: dict = {}
+    clip = None
+    try:
+        problem = _unreachable()
+        if problem:
+            raise problem
+        if not playable_video(recording):
+            raise engine.Problem(MEDIA_NOT_READY, "no playback copy with a picture")
+        span_start, span_end = moment_span(recording, moment.at)
+        moment.span_start, moment.span_end = span_start, span_end
+        fps = settings_store.moment_frames_per_second()
+        height = settings_store.moment_frame_height()
+        frames = max(1, round((span_end - span_start) * fps))
+
+        lines = prompts.lines_of(transcript)
+        spoken = prompts.lines_in_span(lines, span_start, span_end)
+        system = prompts.system_message(
+            ground.text, template.text, prompts.MOMENT_FORMAT
+        )
+        text = "\n\n".join(
+            [
+                prompts.nature_line(recording, transcript),
+                prompts.moment_input(spoken, span_start, span_end),
+            ]
+        )
+        answer_cap = settings_store.moments_answer_cap()
+        if not prompts.fits(
+            system,
+            text,
+            answer_cap=answer_cap,
+            window=window(),
+            extra=prompts.video_tokens(frames, height),
+        ):
+            raise engine.Problem(engine.TOO_LONG, "the clip would not fit")
+
+        handle, name = tempfile.mkstemp(suffix=".mp4", prefix="moment-")
+        os.close(handle)
+        clip = Path(name)
+        try:
+            media.cut_for_description(
+                recording.playback_path(),
+                clip,
+                span_start,
+                span_end,
+                fps=fps,
+                height=height,
+            )
+        except media.MediaError as why:
+            raise engine.Problem(MEDIA_FAILED, str(why)[:200]) from why
+        data_url = "data:video/mp4;base64," + base64.b64encode(
+            clip.read_bytes()
+        ).decode("ascii")
+        clip.unlink(missing_ok=True)
+        clip = None
+
+        messages = [
+            {"role": "system", "content": system},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": text},
+                    {"type": "video_url", "video_url": {"url": data_url}},
+                ],
+            },
+        ]
+        # Never thinking: the frames are billed against the same budget, a
+        # small model thinks at length over a picture, and a description is
+        # perception, not deduction.
+        answer = engine.complete(
+            messages,
+            max_completion_tokens=answer_cap,
+            thinking=False,
+            timeout=settings_store.time_limit_seconds("moment"),
+            **SAMPLING,
+        )
+        usage = answer
+        said = answer["text"].strip()
+        if not said:
+            raise engine.Problem(engine.BAD_OUTPUT, "an empty description")
+        moment.text = said
+        moment.model = answer["model"]
+        moment.frames = frames
+        moment.state = DONE
+        moment.reason_class = ""
+        moment.edited = False
+        moment.described_at = timezone.now()
+        moment.save()
+        _record(
+            "moment",
+            recording,
+            actor=moment.asked_by,
+            templates=templates_line,
+            model=moment.model,
+            usage=usage,
+            started=started,
+            outcome="ok",
+            source=moment.source,
+        )
+    except engine.Problem as problem:
+        moment.state = FAILED
+        moment.reason_class = problem.reason
+        moment.save(update_fields=["state", "reason_class", "span_start", "span_end"])
+        _record(
+            "moment",
+            recording,
+            actor=moment.asked_by,
+            templates=templates_line,
+            model="",
+            usage=usage,
+            started=started,
+            outcome=problem.reason,
+            reason=problem.reason,
+            source=moment.source,
+        )
+    finally:
+        if clip is not None:
+            clip.unlink(missing_ok=True)
 
 
 def unnamed_speakers(transcript) -> list[str]:
@@ -843,4 +1104,6 @@ def what_to_say(reason: str) -> str:
     """The person's line for a failed call, from the engine's own table."""
     if reason == THOUGHT_AWAY:
         return THOUGHT_IT_AWAY
+    if reason in MOMENT_SAYS:
+        return MOMENT_SAYS[reason]
     return engine.WHAT_TO_SAY.get(reason, engine.WHAT_TO_SAY.get(engine.ERROR, ""))

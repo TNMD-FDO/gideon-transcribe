@@ -142,6 +142,25 @@ urlpatterns = [
         assistant_pages.decide,
         name="decide-suggestion",
     ),
+    # Moments: what the camera showed at a time (Phase 4).
+    path(
+        "recording/<uuid:recording_id>/moments",
+        assistant_pages.new_moment,
+        name="new-moment",
+    ),
+    path(
+        "moment/<uuid:moment_id>/again",
+        assistant_pages.moment_again,
+        name="moment-again",
+    ),
+    path(
+        "moment/<uuid:moment_id>/edit", assistant_pages.edit_moment, name="edit-moment"
+    ),
+    path(
+        "moment/<uuid:moment_id>/delete",
+        assistant_pages.delete_moment,
+        name="delete-moment",
+    ),
     # The sign-out dialog's two downloads, across the whole Workspace.
     path(
         "download/<str:shape>",

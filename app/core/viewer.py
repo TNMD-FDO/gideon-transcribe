@@ -600,6 +600,13 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
             ("Segments", str(transcript.segments.count())),
         ]
 
+    # The Moments described so far, as a count; their words are content and
+    # stay in the Moments tab and the exports.
+    if transcript is not None:
+        camera = exports.camera_moments_row(transcript)
+        if camera:
+            rows.append(("Camera moments", camera))
+
     # One line per Clip that exists now; a deleted Clip simply drops out.
     for clip in recording.clips.all():
         rows.append(

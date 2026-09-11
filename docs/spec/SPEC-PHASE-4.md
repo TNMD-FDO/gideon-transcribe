@@ -1,0 +1,139 @@
+# Gideon Transcribe, Phase 4 specification
+
+The Moments release, published as `v1.38.0`.
+
+## About this document
+
+This is the build specification for Phase 4 of Gideon Transcribe: what the camera showed. A transcript carries what was said; a body-worn camera or interview video has moments the words only point at ("look at that", "there's the bag", a handover, a scuffle). Phase 4 lets a person ask the AI assistant to describe such a moment from the picture, beside the words, on request and never by itself. It builds on Phase 1 (`docs/spec/SPEC-PHASE-1.md`, the AI assistant chapter above all), Phase 2 (`docs/spec/SPEC-PHASE-2.md`), and Phase 3 (`docs/spec/SPEC-PHASE-3.md`), and changes nothing in them beyond what "What changes from earlier phases" lists.
+
+Read it with the same companions: `CONTEXT.md` (the glossary, with the Phase 4 terms Moment, Cue, and Camera line), `docs/spec/ADMIN-SETTINGS-CATALOGUE.md` (the seven Phase 4 settings), and `docs/research/moments-vision-engine.md` (what the engine can see, what a clip costs, and the probes that showed it).
+
+Nothing in this document is office-specific. No new environment key is needed and no new service: the engine the office already talks to is a vision model, and the app's worker already carries ffmpeg. The conventions of the Phase 1 document apply here unchanged.
+
+## What Phase 4 adds
+
+- **Moments**: a model's description of what the camera showed at one chosen time of a video Recording, made from a short clip around that time and the words spoken in it, shown beside the Transcript at its time, in Details, in the exports, and, labelled, handed to Summary and Chat.
+- **Cues**: the Transcript lines whose words point at something, marked as suggested Moments, described only when a person asks.
+- **The engine's priority**: every request the app sends the engine carries a priority, as the shared server's ledger asks of a client.
+
+It adds seven admin settings, one prompt template, one audit row's feature and two Viewer-edit rows, one reason class, one table (migration 0035), and no environment key.
+
+## Contents
+
+1. Moments
+2. Deferred and ruled out
+
+Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
+
+## 1. Moments
+
+Written 2026-09-11 at the maintainer's ask: "when something occurs in a video transcript that is abrupt and not explainable by words, a VLM could explain that time snip; or when 'look at that' or 'there's the drugs' is said, the VLM would look at the snip for a description." The maintainer decided the shape on the same day: on demand plus suggested cues, never an automatic sweep; the description counts in the viewer, the exports, and the assistant's answers, always labelled as a description; the input a clip of about ten seconds. Built in v1.38.0.
+
+### Principles
+
+1. **On request only.** A Moment exists because a person pressed a button. Nothing looks at a picture by itself, at upload, at transcription, or on a timer; a Cue is an invitation, not an act.
+2. **A description, never the Transcript.** A Moment's words are what a model saw, marked as such everywhere they appear: under the line, in the tab, in the exports, and in what Summary and Chat are told. A Camera line is never a Segment, is never counted among them, and never carries a Speaker.
+3. **Nothing image-like is kept.** The clip shown to the engine is cut to a temporary file of the worker's own, read once into the request, and deleted whatever happens. The data directory never holds a frame, a thumbnail, or a clip made for a Moment; the viewer shows the player at that time instead.
+4. **Honest about what it cannot see.** The shipped instructions forbid naming people, guessing at a substance or an object ("a small bag", not "drugs"), and filling in what was dark, blurred, or out of frame ("not visible"). An engine that takes text only fails the Moment with "This engine cannot look at video", and a Moment asked before the Playback copy exists says the video is still being prepared.
+5. **Content is content.** A Moment's description, the phrase that cued it, and the clip are on the never-logged list. The audit row for a Moment is the AI assistant's usual metadata row and no more.
+6. **The engine is the one the app already has.** No second model, no GPU memory of the app's own, no new service: the shared engine's model and the Local engine's default both read video through the same chat-completions call, one video part inside the engine's default limits. Every request carries `priority` 1.
+
+### Words
+
+**Moment**, **Cue**, and **Camera line**, as `CONTEXT.md` defines them. A Moment is **asked for** (a person pressed the camera button on a line, or Describe this moment at the playhead) or **accepted from a Cue**; the difference is recorded as its source and shown in the tab, and nothing else differs.
+
+### The viewer
+
+On a video Recording with a Transcript, while Moments is On:
+
+- **The Moments tab** joins the Bench beside Summary and Chat (on a laptop, a tab of the sheet). Its head has **Describe this moment**, which asks for the playhead's time. Under it the Moments are listed newest last, each with its time as a citation, whether it was asked for or came from a Cue, when it was described, the AI notice, its text, and Edit, Again, and Delete. While a Moment is being described the card says "Looking at the clip..."; a failed one says why in the assistant's words. Under the list, **Suggested moments** lists the Cues: each line's time, the phrase in quotes, and Describe.
+- **The rows.** Every transcript row gains a small camera button among its actions, "Describe what the camera shows here", which asks for that line's start. A Cue's row carries a dashed **Camera?** pill after the Speaker's name, which does the same. A described Moment appears as a Camera line under the row nearest its time: the tag Camera, the time as a citation, and the description in italic; while it is being described the line says "looking at the clip...".
+- **Details** gains a row, "Camera moments: N described by <model>, M edited by staff", when any exist.
+- The buttons grey with the assistant's unavailable line while the engine fails the minute check, as the other features' do. No tab and no buttons on a sound-only Recording, and none while Moments is Off.
+
+### The call
+
+- **The span.** Half the **Moment clip length** setting either side of the chosen time (5 s each side by default), clamped to the Recording; the span is kept on the Moment and shown as the clip's bounds.
+- **The clip.** Cut on `llm-worker` from the Playback copy with ffmpeg: seek before the input so the cut is exact and its clock starts at zero, the span's length, no sound, the frames thinned to **Moment frames a second** and scaled to **Moment frame height** (never up), H.264 at the fastest preset, into a temporary file; read into the request as a `data:video/mp4;base64,` URL and deleted in every path.
+- **The words.** The system message is the Ground rules, the **Moment** prompt template, and a fixed answer format (plain text, two to five sentences, seconds as the clip runs, never a `[hh:mm:ss]` time). The user message is one text part, the nature line and "This clip runs from [hh:mm:ss] to [hh:mm:ss] of the recording. The words spoken in this clip were:" with the rendered lines that start inside the span (the neighbours either side when none does), then one video part.
+- **The budget.** The app's estimate of the clip, `ceil(frames / 2)` times the frame's 28-pixel patches, is added to the text's estimate and the answer cap before the window check, so a Moment is refused before the call when it would not fit. The answer cap is **Moment answer cap**; the time limit **Moment time limit**, which is never doubled: **a Moment never lets the model think**, whatever the Let the model think setting says, because the frames are billed against the same budget, a small model thinks at length over a picture, and a description is perception rather than deduction. Sampling is the assistant's usual.
+- **What comes back** is stored whole as the Moment's text, with the model and the time; an empty answer is `llm_bad_output`. The one audit row is "AI assistant call" with feature `moment`, the usual metadata, and whether the Moment was asked for or came from a Cue.
+
+### Cues
+
+A Cue is found by a fixed list of phrases matched whole in a line's words, in English and the Spanish the office's calls carry ("look at that", "there's the", "right there", "put that down", "show me your hands", "in his hand", "mira eso", "ahí está", and the rest of `prompts.CUES`), with a curly apostrophe read as a straight one. The list is the app's, not a setting, so it costs nothing to change and never varies between offices. Cues are computed when the viewer asks for the assistant's state and never stored: a Cue disappears from the suggestions the moment its line carries a Moment that has not failed, and the first sixty are listed.
+
+### Exports and the assistant
+
+- **The Word and plain-text Transcript exports** carry each described Moment as a Camera line in time order, before the first line that starts after it and after the last line otherwise: in plain text `[hh:mm:ss] Camera (a model's description, not transcript): ...`; in Word a bold "Camera:" run and the description in italic in the transcript's own type, so the line numbering runs on unbroken. When any Moment is present the notice gains the legend "Lines marked Camera are a model's description of what the picture showed at that time, not the transcript", and the Processing record gains the row "Camera moments". A Summary's export carries whatever the Summary said and nothing more.
+- **Summary and Chat** are told the Moments while **Moments in answers** is On (and Moments itself is On): a block after the rendered Transcript, headed "What the camera showed (a model's descriptions, not the transcript):", one line per described Moment as `[hh:mm:ss] [camera] ...`. The block counts in the window check. A time cited from it is a Citation that seeks the player, matched to the Moment's time as a Segment's start would be. The Case Chat is not told (Not in this phase).
+- **Edit** replaces the description with a person's own words and marks the Moment edited; **Again** describes the same span afresh; **Delete** removes it. Each writes its Viewer-edit row without a word.
+
+### What changes from earlier phases
+
+- The Phase 1 AI assistant chapter's "three features" are four; its audit-row table gains the `moment` feature; its reason-class table gains `llm_no_vision`; the never-logged list gains a Moment's description, its cue phrase, and its clip; the Shared engine paragraph's "the app sends no `priority`" is overturned: every request carries `priority` 1, as the box ledger's shared-engine paragraph asks, and `engine.complete` takes an `extra` mapping merged into the request's vLLM-only fields.
+- Prompt helpers take the budget they are handed: `fits()` an `extra` count for what the estimate cannot read from text, `citations()` the Moments whose times may be cited.
+- The Transcript exports interleave Camera lines; nothing about Segments changes.
+- A Moment hangs on the Transcript, as a Suggestion does, so Process again takes it with the old Transcript.
+
+### Audit rows
+
+| Category | Row | When | Carries |
+|---|---|---|---|
+| LLM | AI assistant call, feature `moment` | once per Moment described, whether it succeeded, failed, or was refused | the usual: model, endpoint host, "ground-rules vN; Moment vN", token counts, duration, outcome; and the source, asked or cue; never the description, the phrase, or the clip |
+| Viewer edits | Moment edited; Moment deleted | Edit saved; Delete confirmed | the Recording; never the words |
+
+### Settings
+
+Seven on the AI assistant page, in the catalogue: **Moments** (Off), **Moments in answers** (On), **Moment answer cap** (400 tokens), **Moment time limit** (120 s), **Moment clip length** (10 s), **Moment frames a second** (2), **Moment frame height** (360 pixels); all but the first greyed while Moments is Off, each with its default beside it and Reset to default. The **Moment** prompt template joins the Templates page.
+
+### Not in this phase
+
+- An automatic sweep that describes a whole video at intervals, or every Cue without asking. Under the ledger a batch of the app's own over the shared engine belongs in the quiet window, and Principle 1 says nothing looks by itself.
+- Dismissing a Cue; a Cue that is not wanted is simply not accepted.
+- Camera lines in the Case Chat.
+- Still frames as the input, or a choice of span per Moment; the settings shape every Moment alike.
+- A Moment as a Clip, or a Clip's captions carrying a Moment.
+- Sound in the clip: the words go as text.
+
+### Left to the build
+
+- The cue phrase list (`prompts.CUES`); the app's, extended as the office's recordings show what people say.
+- The exact ffmpeg arguments and the temporary file's home (`media.cut_for_description`, `tempfile.mkstemp` on the worker).
+- The estimate of a clip's cost (`prompts.video_tokens`), read from the Qwen3-VL report and checked against the office's engine.
+- The words that mark an engine's 400 as `llm_no_vision` (`engine.NO_VISION_WORDS`).
+
+## 2. Deferred and ruled out
+
+- **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
+- **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
+- **Describing the whole video** (a timeline of what was seen): deferred; if wanted, it is a batch and takes the quiet window.
+- **Reading text in the picture** (a plate, a label, a document): not asked for; the shipped instructions neither ask nor forbid it, and an office edits them.
+
+## Appendix A. Audit rows added in Phase 4
+
+| Category | Row | Chapter |
+|---|---|---|
+| LLM | AI assistant call, feature `moment` | Moments |
+| Viewer edits | Moment edited; Moment deleted | Moments |
+
+## Appendix B. Settings added in Phase 4
+
+| Setting | Page | Type | Default |
+|---|---|---|---|
+| Moments | AI assistant | On or Off | Off |
+| Moments in answers | AI assistant | On or Off; greyed while Moments is Off | On |
+| Moment answer cap | AI assistant | tokens, 100 to 4,000; greyed while Moments is Off | 400 |
+| Moment time limit | AI assistant | seconds, 30 to 3,600; greyed while Moments is Off | 120 |
+| Moment clip length | AI assistant | seconds, 4 to 30; greyed while Moments is Off | 10 |
+| Moment frames a second | AI assistant | 1 to 4; greyed while Moments is Off | 2 |
+| Moment frame height | AI assistant | pixels, 180 to 720; greyed while Moments is Off | 360 |
+| Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
+
+## Sources
+
+The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-engine.md` (the model card, vLLM's multimodal guide and recipe, the Qwen3-VL report, BodyCam-VQA, and the probes against the office's engine); the Phase 1 AI assistant chapter; the box ledger's shared-engine paragraph and GIDEON's line 17.
+
+## Amendments applied
+
+- None yet.

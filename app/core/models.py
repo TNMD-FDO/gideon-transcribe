@@ -268,6 +268,7 @@ class SignInAttempt(models.Model):
 from core.assistant import (  # noqa: E402, F401
     Chat,
     ChatTurn,
+    Moment,
     PromptTemplate,
     Suggestion,
     SuggestionRun,
