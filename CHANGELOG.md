@@ -21,6 +21,34 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.37.0, 2026-09-11
+
+```
+Models: unchanged
+Database: unchanged (settings are rows in the Setting table)
+```
+
+### Added
+
+- **The AI assistant's budgets are settings**, on the AI assistant page,
+  each with the value the app was built with as its default: the answer
+  caps (Chat; Summary Short, Standard, Detailed; Speaker suggestions), the
+  thinking allowance, the three time limits, the chat history, the engine
+  window, and the Case Chat's Reading size, Readings at once, two answer
+  caps, and question time limit. An office tunes them to its engine and
+  puts them back. Asked for by the maintainer after the shared engine's
+  large model spent the whole thinking allowance thinking.
+- **Reset to default on every number** on every settings page, beside the
+  field while it differs from the default, and **Reset every number on
+  this page** under the form. Both put defaults in the fields for the tray
+  to carry, so nothing applies until Apply.
+
+### Changed
+
+- The specification's "never settings" line for the caps and time limits
+  is overturned to that extent, recorded in the AI assistant and Case Chat
+  chapters and the settings catalogue. Sampling stays in code.
+
 ## v1.36.6, 2026-09-10
 
 ```

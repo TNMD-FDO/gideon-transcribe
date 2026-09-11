@@ -76,8 +76,11 @@
           {% elif row.kind == "number" %}
             <span class="row">
               <input type="number" id="{{ row.key }}" name="{{ row.key }}"
-                     value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}"{% if row.greyed %} disabled{% endif %}>
+                     value="{{ row.value }}" min="{{ row.least }}" max="{{ row.most }}"{% if row.greyed %} disabled{% endif %} data-default="{{ row.raw_default }}">
               <span class="muted small">{{ row.unit }}</span>
+              {% if not row.greyed %}
+                <button type="button" class="ghost small reset-to-default" data-for="{{ row.key }}"{% if not row.changed and not row.waiting %} hidden{% endif %}>Reset to default</button>
+              {% endif %}
             </span>
           {% else %}
             <textarea id="{{ row.key }}" name="{{ row.key }}" rows="{{ row.lines }}"{% if row.greyed %} disabled{% endif %}{% if row.resettable %} data-default="{{ row.raw_default }}"{% endif %}>{{ row.value }}</textarea>
@@ -104,10 +107,51 @@
       </div>
     {% endfor %}
 
-    <div class="dialog">
+    <div class="dialog row" style="gap: 12px; align-items: center">
       <button type="submit" class="primary">Put changes in the tray</button>
+      <button type="button" class="ghost small" id="reset-page" hidden>Reset every number on this page to its default</button>
+      <span class="muted small" id="reset-page-note" hidden>Toggles and choices are left as they are; the tray carries the rest.</span>
     </div>
   </form>
+  <script>
+    (function () {
+      // Reset to default on a number: the default goes into the field for
+      // the tray to carry, and the button shows only while the field differs
+      // from it. One button under the form does every number at once.
+      var numbers = Array.prototype.slice.call(document.querySelectorAll("input[type='number'][data-default]"));
+      function settle() {
+        var any = false;
+        numbers.forEach(function (field) {
+          var button = document.querySelector(".reset-to-default[data-for='" + field.id + "']");
+          var differs = String(field.value) !== String(field.dataset.default);
+          if (button) { button.hidden = !differs; }
+          if (differs && !field.disabled) { any = true; }
+        });
+        var all = document.getElementById("reset-page");
+        var note = document.getElementById("reset-page-note");
+        if (all) { all.hidden = !any; }
+        if (note) { note.hidden = !any; }
+      }
+      numbers.forEach(function (field) { field.addEventListener("input", settle); });
+      document.querySelectorAll(".reset-to-default").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var field = document.getElementById(button.dataset.for);
+          if (field) { field.value = field.dataset.default || ""; field.dispatchEvent(new Event("input", { bubbles: true })); }
+        });
+      });
+      var all = document.getElementById("reset-page");
+      if (all) {
+        all.addEventListener("click", function () {
+          numbers.forEach(function (field) {
+            if (field.disabled) { return; }
+            field.value = field.dataset.default || "";
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+          });
+        });
+      }
+      settle();
+    })();
+  </script>
 
   {% if directory %}
     <h2 style="margin-top: 28px">Directory connection</h2>
@@ -150,16 +194,6 @@
         <button type="submit" class="small">Send a test message</button>
       </form>
     {% endif %}
-    <script>
-      (function () {
-        document.querySelectorAll(".reset-to-default").forEach(function (button) {
-          button.addEventListener("click", function () {
-            var field = document.getElementById(button.dataset.for);
-            if (field) { field.value = field.dataset.default || ""; field.dispatchEvent(new Event("input", { bubbles: true })); }
-          });
-        });
-      })();
-    </script>
   {% endif %}
 
   {% if appearance %}

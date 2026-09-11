@@ -215,13 +215,15 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
                 # closed, and the row says why.
                 "greyed": bool(settings_store.greyed_because(known)),
                 "greyed_because": settings_store.greyed_because(known),
-                # A Notification's template offers Reset to default, which
-                # puts the default in the field for the tray to carry.
-                "resettable": (
-                    bool(known.needs_mail) and known.kind == settings_store.TEXT
-                ),
+                # Every number and a Notification's template offer Reset to
+                # default, which puts the default in the field for the tray to
+                # carry; the page offers one for all of them at once.
+                "resettable": known.kind == settings_store.NUMBER
+                or (bool(known.needs_mail) and known.kind == settings_store.TEXT),
                 "raw_default": (
-                    known.default if known.kind == settings_store.TEXT else ""
+                    known.default
+                    if known.kind in (settings_store.TEXT, settings_store.NUMBER)
+                    else ""
                 ),
             }
         )

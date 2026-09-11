@@ -415,12 +415,17 @@ def thinking() -> bool:
 
 
 def time_limit(feature: str) -> int:
-    return TIME_LIMITS[feature] * (2 if thinking() else 1)
+    """The feature's time limit as set, doubled while the model may think."""
+    return settings_store.time_limit_seconds(feature) * (2 if thinking() else 1)
 
 
 def cap(answer_tokens: int) -> int:
     """The answer cap as sent: the feature's, plus room to think when thinking is on."""
-    return answer_tokens + (THINKING_ALLOWANCE if thinking() else 0)
+    return answer_tokens + (settings_store.thinking_allowance() if thinking() else 0)
+
+
+def window() -> int:
+    return settings_store.engine_window_tokens()
 
 
 class ThoughtItAway(engine.Problem):
@@ -540,10 +545,8 @@ def write_summary(summary_id) -> None:
                 prompts.summary_input(summary.focus, summary.length),
             ]
         )
-        wanted = prompts.ANSWER_CAPS.get(
-            summary.length, prompts.ANSWER_CAPS["standard"]
-        )
-        if not prompts.fits(system, user, answer_cap=cap(wanted)):
+        wanted = settings_store.summary_answer_cap(summary.length)
+        if not prompts.fits(system, user, answer_cap=cap(wanted), window=window()):
             raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
         answer = engine.complete(
             _messages(system, user),
@@ -626,18 +629,21 @@ def answer_turn(turn_id) -> None:
             (one.question, one.answer)
             for one in chat.turns.filter(state=DONE, number__lt=turn.number)
         ]
-        history = prompts.history_that_fits(earlier)
+        history = prompts.history_that_fits(
+            earlier, settings_store.chat_history_tokens()
+        )
         user = "\n\n".join(
             [prompts.nature_line(recording, transcript), rendered, turn.question]
         )
         history_text = "\n".join(q + "\n" + a for q, a in history)
+        chat_cap = settings_store.chat_answer_cap()
         if not prompts.fits(
-            system, user, history_text, answer_cap=cap(prompts.CHAT_CAP)
+            system, user, history_text, answer_cap=cap(chat_cap), window=window()
         ):
             raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
         answer = engine.complete(
             _messages(system, user, history),
-            max_completion_tokens=cap(prompts.CHAT_CAP),
+            max_completion_tokens=cap(chat_cap),
             thinking=thinking(),
             timeout=time_limit("chat_turn"),
             **SAMPLING,
@@ -753,14 +759,17 @@ def suggest_names(run_id) -> None:
                 prompts.evidence_lines(found),
             ]
         )
-        if not prompts.fits(system, user, answer_cap=prompts.SUGGESTIONS_CAP):
+        suggestions_cap = settings_store.suggestions_answer_cap()
+        if not prompts.fits(
+            system, user, answer_cap=cap(suggestions_cap), window=window()
+        ):
             raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
 
         raw = None
         for attempt in (1, 2):
             answer = engine.complete(
                 _messages(system, user),
-                max_completion_tokens=cap(prompts.SUGGESTIONS_CAP),
+                max_completion_tokens=cap(suggestions_cap),
                 thinking=thinking(),
                 timeout=time_limit("speaker_suggestions"),
                 schema=prompts.suggestions_schema(unnamed),

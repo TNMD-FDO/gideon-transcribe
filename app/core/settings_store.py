@@ -901,6 +901,255 @@ def _rows() -> list[Definition]:
                 "suggestions 6. The next call."
             ),
         ),
+        # The budgets ----------------------------------------------------------
+        #
+        # The AI assistant chapter's starting values, held in code until v1.37.0
+        # and settings since, at the maintainer's decision: an office tunes them
+        # to its engine and puts them back with Reset to default. The defaults
+        # are the code values (core/assistant.py, core/prompts.py,
+        # core/case_chat.py keep the same figures as their own constants, and a
+        # test holds the pairs together).
+        Definition(
+            key="chat_answer_tokens",
+            page=ASSISTANT,
+            name="Chat answer cap",
+            kind=NUMBER,
+            default=1500,
+            least=200,
+            most=16000,
+            unit="tokens",
+            what_it_does=(
+                "The most a Chat answer may run to: 1,500 tokens is about a "
+                "thousand words. An answer that hits the cap is shown as it is, "
+                'with "The answer was cut short."'
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="summary_short_tokens",
+            page=ASSISTANT,
+            name="Summary answer cap, Short",
+            kind=NUMBER,
+            default=600,
+            least=100,
+            most=16000,
+            unit="tokens",
+            what_it_does="The most a Short Summary may run to.",
+            when_changed="The next Summary.",
+        ),
+        Definition(
+            key="summary_standard_tokens",
+            page=ASSISTANT,
+            name="Summary answer cap, Standard",
+            kind=NUMBER,
+            default=1200,
+            least=100,
+            most=16000,
+            unit="tokens",
+            what_it_does="The most a Standard Summary may run to.",
+            when_changed="The next Summary.",
+        ),
+        Definition(
+            key="summary_detailed_tokens",
+            page=ASSISTANT,
+            name="Summary answer cap, Detailed",
+            kind=NUMBER,
+            default=2500,
+            least=100,
+            most=16000,
+            unit="tokens",
+            what_it_does="The most a Detailed Summary may run to.",
+            when_changed="The next Summary.",
+        ),
+        Definition(
+            key="suggestions_answer_tokens",
+            page=ASSISTANT,
+            name="Speaker suggestions answer cap",
+            kind=NUMBER,
+            default=1500,
+            least=200,
+            most=16000,
+            unit="tokens",
+            what_it_does=(
+                "The most the suggestions answer, a small JSON list, may run to."
+            ),
+            when_changed="The next Suggest names.",
+        ),
+        Definition(
+            key="thinking_allowance_tokens",
+            page=ASSISTANT,
+            name="Thinking allowance",
+            kind=NUMBER,
+            default=8000,
+            least=500,
+            most=64000,
+            unit="tokens",
+            needs="assistant_thinks",
+            what_it_does=(
+                "Added to every answer cap while the model may think, since its "
+                "thinking is billed against the same budget. A large model that "
+                "spends the whole allowance thinking never begins the answer, and "
+                "the page says so; raise this, or turn thinking off."
+            ),
+            when_changed="The next call.",
+        ),
+        Definition(
+            key="chat_time_seconds",
+            page=ASSISTANT,
+            name="Chat time limit",
+            kind=NUMBER,
+            default=120,
+            least=30,
+            most=3600,
+            unit="seconds",
+            what_it_does=(
+                "How long one Chat call may take, and each Reading of a Case Chat. "
+                "Doubled while the model may think."
+            ),
+            when_changed=(
+                'The next question. On timeout: "The AI assistant took too long."'
+            ),
+        ),
+        Definition(
+            key="summary_time_seconds",
+            page=ASSISTANT,
+            name="Summary time limit",
+            kind=NUMBER,
+            default=300,
+            least=30,
+            most=3600,
+            unit="seconds",
+            what_it_does=(
+                "How long one Summary call may take. Doubled while the model may think."
+            ),
+            when_changed="The next Summary.",
+        ),
+        Definition(
+            key="suggestions_time_seconds",
+            page=ASSISTANT,
+            name="Speaker suggestions time limit",
+            kind=NUMBER,
+            default=180,
+            least=30,
+            most=3600,
+            unit="seconds",
+            what_it_does=(
+                "How long one Suggest names call may take. Doubled while the model "
+                "may think."
+            ),
+            when_changed="The next Suggest names.",
+        ),
+        Definition(
+            key="chat_history_tokens",
+            page=ASSISTANT,
+            name="Chat history",
+            kind=NUMBER,
+            default=16000,
+            least=0,
+            most=200000,
+            unit="tokens",
+            what_it_does=(
+                "How much of the same Chat's earlier questions and answers goes "
+                "back to the model with each question, oldest dropped first. The "
+                "Transcript itself is never dropped. Zero sends none."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="engine_window_tokens",
+            page=ASSISTANT,
+            name="Engine window",
+            kind=NUMBER,
+            default=131072,
+            least=4096,
+            most=4000000,
+            unit="tokens",
+            what_it_does=(
+                "The most the engine can read at once, by its own setting "
+                "(vLLM's max model length). The app estimates each prompt at four "
+                "characters a token with a ten percent margin and refuses a call "
+                "that would not fit, saying the transcript is too long. The "
+                "default is the Local engine's; enter the shared engine's if it "
+                "is larger, and no more than it truly offers."
+            ),
+            when_changed="The next call.",
+        ),
+        Definition(
+            key="reading_tokens",
+            page=ASSISTANT,
+            name="Reading size",
+            kind=NUMBER,
+            default=100000,
+            least=2000,
+            most=2000000,
+            unit="tokens",
+            what_it_does=(
+                "How much rendered transcript one Reading of a Case Chat holds, "
+                "whole transcripts packed together up to this much: 100,000 is "
+                "about six hours of talk. A case over one Reading is read in "
+                "parts and the answers combined. Kept well under the engine "
+                "window on purpose: models use the middle of a long context badly."
+            ),
+            when_changed="The next Case Chat question.",
+        ),
+        Definition(
+            key="readings_at_once",
+            page=ASSISTANT,
+            name="Readings at once",
+            kind=NUMBER,
+            default=2,
+            least=1,
+            most=4,
+            unit="",
+            what_it_does=(
+                "How many Readings of one Case Chat question run at the same "
+                "time, inside the assistant's four lanes, so one case never "
+                "fills them."
+            ),
+            when_changed="The next Case Chat question.",
+        ),
+        Definition(
+            key="case_chat_part_tokens",
+            page=ASSISTANT,
+            name="Case chat answer cap, each part",
+            kind=NUMBER,
+            default=1500,
+            least=200,
+            most=16000,
+            unit="tokens",
+            what_it_does="The most each Reading's answer may run to.",
+            when_changed="The next Case Chat question.",
+        ),
+        Definition(
+            key="case_chat_combined_tokens",
+            page=ASSISTANT,
+            name="Case chat answer cap, combined",
+            kind=NUMBER,
+            default=2000,
+            least=200,
+            most=16000,
+            unit="tokens",
+            what_it_does=(
+                "The most the combined answer to a question read in parts may run to."
+            ),
+            when_changed="The next Case Chat question.",
+        ),
+        Definition(
+            key="case_chat_question_minutes",
+            page=ASSISTANT,
+            name="Case chat question time limit",
+            kind=NUMBER,
+            default=15,
+            least=2,
+            most=120,
+            unit="minutes",
+            what_it_does=(
+                "How long a whole Case Chat question may take across its Readings, "
+                "on top of each call's own Chat time limit. Doubled while the "
+                "model may think."
+            ),
+            when_changed="The next Case Chat question.",
+        ),
         Definition(
             key="engine_address",
             page=ASSISTANT,
@@ -1273,3 +1522,66 @@ def default_quota_bytes() -> int:
 
 def minimum_free_disk_bytes() -> int:
     return get("minimum_free_disk_gb") * GB
+
+
+# The AI assistant's budgets, read at every call so a change applies to the
+# next one. Each default is the chapter's starting value, which the modules
+# that used to hold them keep as their own constants.
+
+
+def chat_answer_cap() -> int:
+    return get("chat_answer_tokens")
+
+
+def summary_answer_cap(length: str) -> int:
+    key = {
+        "short": "summary_short_tokens",
+        "standard": "summary_standard_tokens",
+        "detailed": "summary_detailed_tokens",
+    }.get(length, "summary_standard_tokens")
+    return get(key)
+
+
+def suggestions_answer_cap() -> int:
+    return get("suggestions_answer_tokens")
+
+
+def thinking_allowance() -> int:
+    return get("thinking_allowance_tokens")
+
+
+def time_limit_seconds(feature: str) -> int:
+    key = {
+        "chat_turn": "chat_time_seconds",
+        "summary": "summary_time_seconds",
+        "speaker_suggestions": "suggestions_time_seconds",
+    }[feature]
+    return get(key)
+
+
+def chat_history_tokens() -> int:
+    return get("chat_history_tokens")
+
+
+def engine_window_tokens() -> int:
+    return get("engine_window_tokens")
+
+
+def reading_tokens() -> int:
+    return get("reading_tokens")
+
+
+def readings_at_once() -> int:
+    return get("readings_at_once")
+
+
+def case_chat_part_cap() -> int:
+    return get("case_chat_part_tokens")
+
+
+def case_chat_combined_cap() -> int:
+    return get("case_chat_combined_tokens")
+
+
+def case_chat_question_seconds() -> int:
+    return get("case_chat_question_minutes") * 60

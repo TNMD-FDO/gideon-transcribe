@@ -235,18 +235,23 @@ def reading_of(recording, transcript) -> dict:
     }
 
 
-def pack(rendered: list[tuple[int, str]]) -> list[list[int]]:
+def pack(
+    rendered: list[tuple[int, str]], reading_tokens: int | None = None
+) -> list[list[int]]:
     """Whole Transcripts into as few Readings as they fit, in order, never cut.
 
     Each item is (index, text). A Transcript larger than a Reading is alone in
-    its own; the window check for that one is the caller's.
+    its own; the window check for that one is the caller's. The Reading size
+    is the setting as the caller read it; without one, the chapter's value.
     """
+    if reading_tokens is None:
+        reading_tokens = READING_TOKENS
     readings: list[list[int]] = []
     current: list[int] = []
     used = 0
     for index, text in rendered:
         cost = prompts.tokens(text)
-        if current and used + cost > READING_TOKENS:
+        if current and used + cost > reading_tokens:
             readings.append(current)
             current, used = [], 0
         current.append(index)
@@ -371,10 +376,13 @@ def answer_case_turn(turn_id) -> None:
             (one.question, one.answer)
             for one in chat.turns.filter(state=DONE, number__lt=turn.number)
         ]
-        history = prompts.history_that_fits(earlier)
+        history = prompts.history_that_fits(
+            earlier, settings_store.chat_history_tokens()
+        )
         history_text = "\n".join(q + "\n" + a for q, a in history)
 
-        groups = pack(rendered)
+        part_cap = settings_store.case_chat_part_cap()
+        groups = pack(rendered, settings_store.reading_tokens())
         by_number = dict(rendered)
         # A Transcript that would not fit the window even alone names itself.
         for group in groups:
@@ -386,7 +394,8 @@ def answer_case_turn(turn_id) -> None:
                     body,
                     history_text,
                     turn.question,
-                    answer_cap=cap(PART_CAP),
+                    answer_cap=cap(part_cap),
+                    window=settings_store.engine_window_tokens(),
                 ):
                     which = read[group[0] - 1]
                     turn.reason_detail = (
@@ -408,13 +417,16 @@ def answer_case_turn(turn_id) -> None:
             return answer["text"].strip()
 
         if len(groups) == 1:
-            text = ask_reading(groups[0], PART_CAP)
+            text = ask_reading(groups[0], part_cap)
         else:
-            # Two at a time; the parts are counted here, on this thread, as
-            # each returns, so nothing but the engine call runs in a thread.
-            with ThreadPoolExecutor(max_workers=READINGS_AT_ONCE) as pool:
+            # A few at a time (the Readings at once setting; two by default);
+            # the parts are counted here, on this thread, as each returns, so
+            # nothing but the engine call runs in a thread.
+            with ThreadPoolExecutor(
+                max_workers=settings_store.readings_at_once()
+            ) as pool:
                 futures = [
-                    pool.submit(ask_reading, group, PART_CAP) for group in groups
+                    pool.submit(ask_reading, group, part_cap) for group in groups
                 ]
                 for future in as_completed(futures):
                     future.result()
@@ -426,7 +438,10 @@ def answer_case_turn(turn_id) -> None:
                 for n, part in enumerate(parts, start=1)
             )
             user = "\n\n".join([prompts.COMBINING, turn.question, labelled])
-            answer = one_call(_messages(ground.text, user, history), COMBINED_CAP)
+            answer = one_call(
+                _messages(ground.text, user, history),
+                settings_store.case_chat_combined_cap(),
+            )
             turn.cut_short = answer["finish_reason"] == "length"
             text = answer["text"].strip()
 
@@ -469,7 +484,7 @@ def answer_case_turn(turn_id) -> None:
 
 
 def time_limit_for_the_question() -> int:
-    return QUESTION_LIMIT * (2 if thinking() else 1)
+    return settings_store.case_chat_question_seconds() * (2 if thinking() else 1)
 
 
 def _messages(system: str, user: str, history: list[tuple[str, str]]):

@@ -219,7 +219,7 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
     for n in range(3):
         a_recording(owner, a_case, f"Call {n + 1}")
     # Each Transcript fills a Reading on its own, so three parts and one combining call.
-    monkeypatch.setattr(case_chat, "READING_TOKENS", 10)
+    monkeypatch.setattr(settings_store, "reading_tokens", lambda: 10)
     # The Readings run two at a time, so the fake answers by what it was
     # asked, not by the order the calls arrive in.
     by_content = {
@@ -311,7 +311,7 @@ def test_the_hours_ceiling_refuses_with_its_figures(owner, a_case, monkeypatch):
 @pytest.mark.django_db
 def test_a_transcript_too_long_even_alone_names_itself(owner, a_case, monkeypatch):
     a_recording(owner, a_case, "Dense call")
-    monkeypatch.setattr(prompts, "ENGINE_WINDOW", 100)
+    monkeypatch.setattr(settings_store, "engine_window_tokens", lambda: 100)
     reachable(monkeypatch, ["never"])
     chat = CaseChat.objects.create(case=a_case, asked_by=owner)
     turn = CaseChatTurn.objects.create(chat=chat, number=1, question="Anything?")

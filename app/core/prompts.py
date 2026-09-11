@@ -485,18 +485,28 @@ def suggestions_input(unnamed: list[str], known: list[str]) -> str:
     )
 
 
-def fits(*texts: str, answer_cap: int) -> bool:
-    """Whether the prompt and the answer fit the engine's window, by the estimate."""
-    return sum(tokens(text) for text in texts) + answer_cap <= ENGINE_WINDOW
+def fits(*texts: str, answer_cap: int, window: int | None = None) -> bool:
+    """Whether the prompt and the answer fit the engine's window, by the estimate.
+
+    The window is the Engine window setting as the caller read it; without
+    one, the chapter's starting value.
+    """
+    if window is None:
+        window = ENGINE_WINDOW
+    return sum(tokens(text) for text in texts) + answer_cap <= window
 
 
-def history_that_fits(turns: list[tuple[str, str]]) -> list[tuple[str, str]]:
+def history_that_fits(
+    turns: list[tuple[str, str]], budget: int | None = None
+) -> list[tuple[str, str]]:
     """The last question-and-answer pairs within the budget, oldest dropped first."""
+    if budget is None:
+        budget = HISTORY_TOKENS
     kept: list[tuple[str, str]] = []
     used = 0
     for question, answer in reversed(turns):
         cost = tokens(question) + tokens(answer)
-        if used + cost > HISTORY_TOKENS:
+        if used + cost > budget:
             break
         kept.insert(0, (question, answer))
         used += cost
