@@ -265,25 +265,50 @@ SUGGESTIONS_FORMAT = (
 # kind of footage (docs/research/moments-vision-engine.md): guessing at what
 # a thing is, and filling in what was not visible.
 MOMENT = (
-    "Describe only what is visible in this short clip from a body-worn or fixed "
-    "camera. Say what the camera shows: the setting, the people by their "
-    "clothing, position, and actions, never by name even if a name is spoken, "
-    "their hands, any vehicles, and any object handled, shown, or pointed at. "
-    "Say where in the clip each thing happens by its second, as (at 3 s). "
-    "Do not guess at who anyone is, what they intend, or what a substance or "
-    "object is: say a small bag, not drugs; say a dark object in the right "
-    "hand, not a gun, unless it is plainly one. When something is unclear, "
-    "dark, blurred, or out of frame, say not visible rather than filling it "
-    "in. The words spoken are given only so you can tell which thing is being "
-    "pointed at; do not repeat or summarise them."
+    "You are shown a short clip from a body-worn or fixed camera, and the words "
+    "spoken in it. Say what the camera shows, plainly and briefly, leading with "
+    "the thing the words point at. Name people by their clothing, position, "
+    "and actions, never by name even if a name is spoken; say what is in their "
+    "hands, what vehicles and objects are in view, and what is handled, shown, "
+    "or pointed at. Concrete nouns and plain verbs; no preamble, no repeating "
+    "the setting, no summary of the words. Do not guess at who anyone is, what "
+    "they intend, or what a substance or object is: say a small bag, not drugs; "
+    "say a dark object in the right hand, not a gun, unless it is plainly one. "
+    "When something is unclear, dark, blurred, or out of frame, say not "
+    "visible rather than filling it in. Give a second in the clip, as (3 s), "
+    "only when it matters which moment you mean."
 )
 
-MOMENT_FORMAT = (
-    "Answer in plain text, two to five sentences, no headings and no list. "
-    "Refer to seconds as the clip runs, from 0 at its start. Never give a "
-    "[hh:mm:ss] time."
+# The two styles the Moment style setting chooses between; the template above
+# is the editable part and these are the app's.
+MOMENT_FORMAT_BRIEF = (
+    "Answer in plain text, one to three short sentences, no headings and no "
+    "list. Never give a [hh:mm:ss] time."
 )
-MOMENT_CAP = 400
+MOMENT_FORMAT_FULL = (
+    "Answer in plain text, two to five sentences, no headings and no list, "
+    "the setting first in one clause. Refer to seconds as the clip runs, from "
+    "0 at its start. Never give a [hh:mm:ss] time."
+)
+MOMENT_FORMAT = MOMENT_FORMAT_BRIEF
+MOMENT_CAP = 250
+
+# A question about a moment: the same rules, and a fixed shape for the answer,
+# so an attorney's "is that a gun?" comes back as what can and cannot be seen.
+QUESTION = (
+    "You are shown a few frames from a body-worn or fixed camera at one moment, "
+    "the words spoken around it, and a question about the picture. Answer only "
+    "from what is visible. Say what is visible: the shape, colour, size, "
+    "position, and how it is held or placed. Then say what that is consistent "
+    "with, naming the likeliest things plainly, and what cannot be told from "
+    "these frames and why (too small, too dark, blurred, hidden, out of frame). "
+    "Never name a person. Never state as fact what the frames cannot settle."
+)
+QUESTION_FORMAT = (
+    "Answer in plain text in three short parts, each a sentence or two, "
+    "labelled exactly: Visible: ... Consistent with: ... Cannot be told: ... "
+    "No headings, no list, never a [hh:mm:ss] time."
+)
 
 # What the camera showed, as Summary and Chat are told it: a block after the
 # transcript, labelled so the model and the reader both know it is a
@@ -565,6 +590,26 @@ def moment_input(lines: list[Line], span_start: float, span_end: float) -> str:
     return f"{head} The words spoken in this clip were:\n{render(lines)}"
 
 
+def question_input(
+    lines: list[Line], at: float, span_start: float, span_end: float, question: str
+) -> str:
+    """The frames' time, the words around it, and the question, as the model is told."""
+    head = (
+        f"The frames are from {clock(at)} of the recording; the words spoken "
+        f"from {clock(span_start)} to {clock(span_end)} were:"
+    )
+    words = render(lines) if lines else "(none transcribed)"
+    return f"{head}\n{words}\n\nThe question: {question.strip()}"
+
+
+def still_tokens(frames: int, height: int, width: int | None = None) -> int:
+    """What a few separate frames cost: each its own patches, none paired."""
+    if frames <= 0 or height <= 0:
+        return 0
+    width = width or round(height * 16 / 9)
+    return frames * math.ceil(height / PATCH) * math.ceil(width / PATCH)
+
+
 def lines_in_span(lines: list[Line], span_start: float, span_end: float) -> list[Line]:
     """The lines that start inside the span; the neighbours when none does."""
     inside = [line for line in lines if span_start <= line.start < span_end]
@@ -575,9 +620,16 @@ def lines_in_span(lines: list[Line], span_start: float, span_end: float) -> list
     return before[-1:] + after[:1]
 
 
+def camera_line_text(moment) -> str:
+    """A Moment's words with its question in front, when it answered one."""
+    question = (getattr(moment, "question", "") or "").strip()
+    text = (moment.text or "").strip()
+    return f'(asked "{question}") {text}' if question else text
+
+
 def camera_lines(moments) -> str:
     """The Moments as Summary and Chat are told them, or nothing."""
-    said = [f"{clock(one.at)} [camera] {one.text.strip()}" for one in moments]
+    said = [f"{clock(one.at)} [camera] {camera_line_text(one)}" for one in moments]
     if not said:
         return ""
     return CAMERA_HEADING + "\n" + "\n".join(said)

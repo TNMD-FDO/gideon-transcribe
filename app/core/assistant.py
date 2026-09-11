@@ -424,6 +424,9 @@ class Moment(models.Model):
     # Asked for by a person, or accepted from a Cue; the phrase is content.
     source = models.CharField(max_length=10, default=ASKED)
     cue_text = models.CharField(max_length=80, blank=True, default="")
+    # A question about the moment, answered from still frames; empty means a
+    # description of the clip. Content, never logged.
+    question = models.TextField(blank=True, default="")
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     text = models.TextField(blank=True, default="")
@@ -442,6 +445,10 @@ class Moment(models.Model):
 
     def __str__(self) -> str:
         return f"moment at {self.at:.1f}s of {self.transcript_id}"
+
+    @property
+    def is_question(self) -> bool:
+        return bool((self.question or "").strip())
 
 
 # What is on and what is reachable ----------------------------------------------
@@ -806,10 +813,29 @@ def moment_span(recording, at: float) -> tuple[float, float]:
     return round(start, 3), round(max(end, start), 3)
 
 
+def question_times(at: float, frames: int, length: float) -> list[float]:
+    """The seconds a question's frames are taken at, spread a second either side."""
+    frames = max(1, frames)
+    if frames == 1:
+        times = [at]
+    else:
+        step = 2.0 / (frames - 1)
+        times = [at - 1.0 + step * n for n in range(frames)]
+    times = [round(max(0.0, t), 3) for t in times]
+    if length > 0:
+        times = [min(t, round(length, 3)) for t in times]
+    return times
+
+
 def describe_moment(moment_id) -> None:
-    """One Moment: a clip cut from the Playback copy, shown with its words."""
+    """One Moment: a clip cut from the Playback copy, shown with its words.
+
+    Or, when the Moment carries a question, a few still frames at the camera's
+    own detail with the question, answered in a fixed shape.
+    """
     import base64
     import os
+    import shutil
     import tempfile
     from pathlib import Path
 
@@ -833,6 +859,7 @@ def describe_moment(moment_id) -> None:
 
     usage: dict = {}
     clip = None
+    stills = None
     try:
         problem = _unreachable()
         if problem:
@@ -841,60 +868,102 @@ def describe_moment(moment_id) -> None:
             raise engine.Problem(MEDIA_NOT_READY, "no playback copy with a picture")
         span_start, span_end = moment_span(recording, moment.at)
         moment.span_start, moment.span_end = span_start, span_end
-        fps = settings_store.moment_frames_per_second()
-        height = settings_store.moment_frame_height()
-        frames = max(1, round((span_end - span_start) * fps))
-
         lines = prompts.lines_of(transcript)
         spoken = prompts.lines_in_span(lines, span_start, span_end)
-        system = prompts.system_message(
-            ground.text, template.text, prompts.MOMENT_FORMAT
-        )
-        text = "\n\n".join(
-            [
-                prompts.nature_line(recording, transcript),
-                prompts.moment_input(spoken, span_start, span_end),
-            ]
-        )
         answer_cap = settings_store.moments_answer_cap()
+
+        if moment.is_question:
+            # A question: a few frames at the camera's own detail, and the
+            # question's fixed shape; the editable template still applies.
+            height = settings_store.moment_question_height()
+            times = question_times(
+                moment.at,
+                settings_store.moment_question_frames(),
+                float(recording.duration_seconds or 0.0),
+            )
+            frames = len(times)
+            system = prompts.system_message(
+                ground.text,
+                template.text + "\n\n" + prompts.QUESTION,
+                prompts.QUESTION_FORMAT,
+            )
+            text = "\n\n".join(
+                [
+                    prompts.nature_line(recording, transcript),
+                    prompts.question_input(
+                        spoken, moment.at, span_start, span_end, moment.question
+                    ),
+                ]
+            )
+            extra = prompts.still_tokens(frames, height)
+        else:
+            fps = settings_store.moment_frames_per_second()
+            height = settings_store.moment_frame_height()
+            frames = max(1, round((span_end - span_start) * fps))
+            style = (
+                prompts.MOMENT_FORMAT_FULL
+                if settings_store.moment_style() == "full"
+                else prompts.MOMENT_FORMAT_BRIEF
+            )
+            system = prompts.system_message(ground.text, template.text, style)
+            text = "\n\n".join(
+                [
+                    prompts.nature_line(recording, transcript),
+                    prompts.moment_input(spoken, span_start, span_end),
+                ]
+            )
+            extra = prompts.video_tokens(frames, height)
         if not prompts.fits(
-            system,
-            text,
-            answer_cap=answer_cap,
-            window=window(),
-            extra=prompts.video_tokens(frames, height),
+            system, text, answer_cap=answer_cap, window=window(), extra=extra
         ):
             raise engine.Problem(engine.TOO_LONG, "the clip would not fit")
 
-        handle, name = tempfile.mkstemp(suffix=".mp4", prefix="moment-")
-        os.close(handle)
-        clip = Path(name)
-        try:
-            media.cut_for_description(
-                recording.playback_path(),
-                clip,
-                span_start,
-                span_end,
-                fps=fps,
-                height=height,
-            )
-        except media.MediaError as why:
-            raise engine.Problem(MEDIA_FAILED, str(why)[:200]) from why
-        data_url = "data:video/mp4;base64," + base64.b64encode(
-            clip.read_bytes()
-        ).decode("ascii")
-        clip.unlink(missing_ok=True)
-        clip = None
+        parts: list[dict] = [{"type": "text", "text": text}]
+        if moment.is_question:
+            stills = Path(tempfile.mkdtemp(prefix="moment-"))
+            try:
+                taken = media.grab_frames(
+                    recording.playback_path(), stills, times, height=height
+                )
+            except media.MediaError as why:
+                raise engine.Problem(MEDIA_FAILED, str(why)[:200]) from why
+            for frame in taken:
+                parts.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/jpeg;base64,"
+                            + base64.b64encode(frame.read_bytes()).decode("ascii")
+                        },
+                    }
+                )
+            shutil.rmtree(stills, ignore_errors=True)
+            stills = None
+        else:
+            handle, name = tempfile.mkstemp(suffix=".mp4", prefix="moment-")
+            os.close(handle)
+            clip = Path(name)
+            try:
+                media.cut_for_description(
+                    recording.playback_path(),
+                    clip,
+                    span_start,
+                    span_end,
+                    fps=fps,
+                    height=height,
+                )
+            except media.MediaError as why:
+                raise engine.Problem(MEDIA_FAILED, str(why)[:200]) from why
+            data_url = "data:video/mp4;base64," + base64.b64encode(
+                clip.read_bytes()
+            ).decode("ascii")
+            clip.unlink(missing_ok=True)
+            clip = None
+            parts.append({"type": "video_url", "video_url": {"url": data_url}})
 
         messages = [
             {"role": "system", "content": system},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": text},
-                    {"type": "video_url", "video_url": {"url": data_url}},
-                ],
-            },
+            {"role": "user", "content": parts},
         ]
         # Never thinking: the frames are billed against the same budget, a
         # small model thinks at length over a picture, and a description is
@@ -928,6 +997,7 @@ def describe_moment(moment_id) -> None:
             started=started,
             outcome="ok",
             source=moment.source,
+            kind="question" if moment.is_question else "description",
         )
     except engine.Problem as problem:
         moment.state = FAILED
@@ -944,10 +1014,13 @@ def describe_moment(moment_id) -> None:
             outcome=problem.reason,
             reason=problem.reason,
             source=moment.source,
+            kind="question" if moment.is_question else "description",
         )
     finally:
         if clip is not None:
             clip.unlink(missing_ok=True)
+        if stills is not None:
+            shutil.rmtree(stills, ignore_errors=True)
 
 
 def unnamed_speakers(transcript) -> list[str]:

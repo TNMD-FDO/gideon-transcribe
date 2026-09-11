@@ -106,18 +106,53 @@ def _failed(clip: Clip, reason: str, why: str) -> Clip:
 # What comes down with a Clip ---------------------------------------------------
 
 
+# How long a Camera caption stays on screen inside a Clip, at most.
+CAMERA_CAPTION_SECONDS = 4.0
+
+
 def srt_for(clip: Clip) -> str:
-    """The cues inside the span, shifted so the file starts at zero."""
+    """The cues inside the span, shifted so the file starts at zero.
+
+    A described Moment inside the span is a cue as well, marked Camera, so a
+    Clip made for the courtroom carries what the picture showed with what was
+    said (Phase 4).
+    """
+    timed = [
+        (segment.start, min(segment.end, clip.end), None, segment)
+        for segment in clip.segments()
+    ]
+    for moment in camera_moments_in(clip):
+        timed.append(
+            (moment.at, min(moment.at + CAMERA_CAPTION_SECONDS, clip.end), moment, None)
+        )
+    timed.sort(key=lambda one: one[0])
     cues = []
-    for number, segment in enumerate(clip.segments(), start=1):
-        text = f"{segment.speaker}: {segment.text}" if segment.speaker else segment.text
+    for number, (start, end, moment, segment) in enumerate(timed, start=1):
+        if moment is not None:
+            text = "Camera: " + exports.camera_text(moment)
+        else:
+            text = (
+                f"{segment.speaker}: {segment.text}"
+                if segment.speaker
+                else segment.text
+            )
         cues.append(
             f"{number}\r\n"
-            f"{exports.srt_time(segment.start - clip.start)} --> "
-            f"{exports.srt_time(min(segment.end, clip.end) - clip.start)}\r\n"
+            f"{exports.srt_time(start - clip.start)} --> "
+            f"{exports.srt_time(end - clip.start)}\r\n"
             f"{text}\r\n"
         )
     return "\r\n".join(cues)
+
+
+def camera_moments_in(clip: Clip) -> list:
+    """The described Moments whose time falls inside the Clip, in order."""
+    transcript = getattr(clip.recording, "transcript", None)
+    return [
+        one
+        for one in exports.camera_moments(transcript)
+        if clip.start <= one.at < clip.end
+    ]
 
 
 def excerpt_for(clip: Clip) -> str:

@@ -113,7 +113,7 @@ def test_the_moment_template_and_its_settings_start_as_the_chapter_says():
     for key, default in (
         ("moments_available", False),
         ("moments_in_answers", True),
-        ("moments_answer_tokens", 400),
+        ("moments_answer_tokens", 250),
         ("moments_time_seconds", 120),
         ("moment_span_seconds", 10),
         ("moment_frames_per_second", 2),
@@ -328,7 +328,7 @@ def test_a_moment_is_described_from_the_clip_and_the_words(
     assert video_part["type"] == "video_url"
     assert video_part["video_url"]["url"].startswith("data:video/mp4;base64,AAAAGGZ0")
     assert call["thinking"] is False and call["timeout"] == 120
-    assert call["max_completion_tokens"] == 400
+    assert call["max_completion_tokens"] == 250
 
     row = Row.objects.filter(category="llm").latest("at")
     assert row.event == "AI assistant call" and row.details["feature"] == "moment"
@@ -360,7 +360,7 @@ def test_a_moment_never_thinks_even_when_the_office_lets_the_model_think(
     assistant.describe_moment(moment.pk)
     moment.refresh_from_db()
     assert moment.state == assistant.DONE
-    assert asked[0]["thinking"] is False and asked[0]["max_completion_tokens"] == 400
+    assert asked[0]["thinking"] is False and asked[0]["max_completion_tokens"] == 250
     # The span is clamped to the start of the file: 0 to 15, at one frame a second.
     assert (moment.span_start, moment.span_end) == (0.0, 15.0) and moment.frames == 15
 
@@ -661,3 +661,129 @@ def test_the_details_panel_counts_the_moments(ready, person, client):
     rows = dict(client.get(f"/recording/{ready.pk}/details").json()["rows"])
     assert rows["Camera moments"] == "1 described by the-model"
     assert "doorway" not in json.dumps(rows)
+
+
+# Questions, styles, and clips (v1.39.0) ----------------------------------------------
+
+
+def test_question_frames_are_spread_a_second_either_side():
+    assert assistant.question_times(12.4, 3, 900.0) == [11.4, 12.4, 13.4]
+    assert assistant.question_times(12.4, 1, 900.0) == [12.4]
+    assert assistant.question_times(0.2, 3, 900.0) == [0.0, 0.2, 1.2]
+    assert assistant.question_times(899.5, 3, 900.0) == [898.5, 899.5, 900.0]
+    assert prompts.still_tokens(3, 720) == 3 * 26 * 46
+    said = prompts.question_input([], 12.4, 7.4, 17.4, "  is that a gun?  ")
+    assert said.startswith("The frames are from [00:00:12]")
+    assert said.endswith("The question: is that a gun?")
+
+
+@pytest.mark.django_db
+def test_a_question_is_answered_from_close_frames(ready, person, client, monkeypatch):
+    asked = reachable(
+        monkeypatch,
+        "Visible: a dark, flat object on the seat. Consistent with: a phone or a "
+        "handgun. Cannot be told: which, the frame is too small.",
+    )
+    grabbed = []
+
+    def grab(source, folder, times, *, height, timeout=120):
+        grabbed.append({"times": times, "height": height})
+        written = []
+        for n, _ in enumerate(times, start=1):
+            frame = Path(folder) / f"frame-{n}.jpg"
+            frame.write_bytes(b"\xff\xd8\xff\xe0JFIF")
+            written.append(frame)
+        return written
+
+    monkeypatch.setattr(media, "grab_frames", grab)
+    swallow_defer(monkeypatch)
+    signed_in(client, person)
+    answer = client.post(
+        f"/recording/{ready.pk}/moments",
+        data=json.dumps({"at": 12.4, "question": " Is that a gun on the seat? "}),
+        content_type="application/json",
+    )
+    assert answer.status_code == 200, answer.content
+    moment = Moment.objects.get(pk=answer.json()["id"])
+    assert moment.question == "Is that a gun on the seat?" and moment.is_question
+
+    assistant.describe_moment(moment.pk)
+    moment.refresh_from_db()
+    assert moment.state == assistant.DONE and moment.frames == 3
+    assert moment.text.startswith("Visible:")
+    assert grabbed == [{"times": [11.4, 12.4, 13.4], "height": 720}]
+    system, user = asked[0]["messages"]
+    assert prompts.QUESTION in system["content"]
+    assert prompts.QUESTION_FORMAT in system["content"]
+    parts = user["content"]
+    assert parts[0]["type"] == "text"
+    assert "The question: Is that a gun" in parts[0]["text"]
+    assert [one["type"] for one in parts[1:]] == ["image_url"] * 3
+    assert parts[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+    assert asked[0]["thinking"] is False
+    import tempfile
+
+    assert not list(Path(tempfile.gettempdir()).glob("moment-*"))
+    row = Row.objects.filter(category="llm").latest("at")
+    assert row.details["kind"] == "question" and "gun" not in json.dumps(row.details)
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["moments"][0]["question"] == "Is that a gun on the seat?"
+    # A question does not block a description at the same time, and the
+    # camera line carries the question in front of the answer.
+    assert (
+        client.post(
+            f"/recording/{ready.pk}/moments",
+            data=json.dumps({"at": 12.4}),
+            content_type="application/json",
+        ).status_code
+        == 200
+    )
+    text = exports.plain_text(ready)
+    assert '(asked "Is that a gun on the seat?") Visible:' in text
+
+
+@pytest.mark.django_db
+def test_the_style_setting_chooses_the_answer_shape(ready, person, monkeypatch):
+    asked = reachable(monkeypatch, "A doorway.")
+    a_cut(monkeypatch)
+    moment = Moment.objects.create(transcript=ready.transcript, at=5.0, asked_by=person)
+    assistant.describe_moment(moment.pk)
+    assert prompts.MOMENT_FORMAT_BRIEF in asked[0]["messages"][0]["content"]
+    settings_store.set_to("moment_style", "full")
+    moment = Moment.objects.create(transcript=ready.transcript, at=5.0, asked_by=person)
+    assistant.describe_moment(moment.pk)
+    assert prompts.MOMENT_FORMAT_FULL in asked[1]["messages"][0]["content"]
+    with pytest.raises(ValueError):
+        settings_store.set_to("moment_style", "verbose")
+
+
+@pytest.mark.django_db
+def test_a_clip_carries_the_camera_line_as_a_caption(ready, person):
+    from core import clip_work
+    from core.clips import Clip
+
+    Moment.objects.create(
+        transcript=ready.transcript,
+        at=12.4,
+        state=assistant.DONE,
+        text="A hand holds a small bag.",
+        model="the-model",
+    )
+    Moment.objects.create(
+        transcript=ready.transcript,
+        at=300.0,
+        state=assistant.DONE,
+        text="Outside the span.",
+        model="the-model",
+    )
+    clip = Clip.objects.create(
+        recording=ready, user=person, title="The bag", start=10.0, end=20.0
+    )
+    captions = clip_work.srt_for(clip)
+    cues = captions.split("\r\n\r\n")
+    assert any("Camera: A hand holds a small bag." in cue for cue in cues)
+    assert not any("Outside the span" in cue for cue in cues)
+    camera = [cue for cue in cues if "Camera:" in cue][0]
+    assert "00:00:02,400 --> 00:00:06,400" in camera
+    # The spoken cue at 12.4 is there too, after the camera cue's number.
+    assert any("Speaker 2: Look at that, right there." in cue for cue in cues)

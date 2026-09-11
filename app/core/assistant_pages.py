@@ -143,6 +143,7 @@ def _moment_json(one: Moment) -> dict:
         "span_start": one.span_start,
         "span_end": one.span_end,
         "source": one.source,
+        "question": one.question,
         "segment": str(one.segment_id) if one.segment_id else "",
         "state": one.state,
         "said": assistant.what_to_say(one.reason_class) if one.reason_class else "",
@@ -394,11 +395,16 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
             pk=wanted["segment"], transcript=transcript
         ).first()
     source = Moment.CUE if wanted.get("source") == Moment.CUE else Moment.ASKED
-    if transcript.moments.filter(
-        state__in=(assistant.QUEUED, assistant.RUNNING),
-        at__gte=at - 1,
-        at__lte=at + 1,
-    ).exists():
+    question = str(wanted.get("question", "")).strip()[:500]
+    if (
+        not question
+        and transcript.moments.filter(
+            state__in=(assistant.QUEUED, assistant.RUNNING),
+            question="",
+            at__gte=at - 1,
+            at__lte=at + 1,
+        ).exists()
+    ):
         return JsonResponse({"error": "that moment is being described"}, status=409)
     cases.used(recording, by=request.user)
     moment = Moment.objects.create(
@@ -406,6 +412,7 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
         segment=segment,
         at=at,
         source=source,
+        question=question,
         cue_text=str(wanted.get("cue", ""))[:80] if source == Moment.CUE else "",
         asked_by=request.user,
     )

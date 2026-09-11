@@ -316,6 +316,22 @@
     });
   }
 
+  // One box for both: empty means describe the clip, words mean a question
+  // answered from a few frames at the camera's own detail.
+  function askOrDescribe(body) {
+    UI.prompt({
+      title: "Describe this moment, or ask about it",
+      body: "Leave the box empty to have the camera's view described. Or ask a question about the picture, such as \"what is on the passenger seat?\", and the assistant answers from a few close frames with what is visible, what it is consistent with, and what cannot be told.",
+      value: "",
+      ok: "Go"
+    }).then(function (text) {
+      if (text === null || text === undefined) { return; }
+      var question = String(text).trim();
+      if (question) { body.question = question; }
+      describe(body);
+    });
+  }
+
   function drawMoments() {
     if (!momentsOn || !state) { return; }
     if (describeNow) { unavailable(describeNow); }
@@ -323,11 +339,12 @@
     if (momentList) {
       momentList.innerHTML = moments.length ? moments.map(function (one) {
         var head = "<div class='row'><a href='#' class='cite' data-seconds='" + one.at + "'><b>" + escape(one.clock) + "</b></a>" +
-          "<span class='muted small grow'>" + (one.source === "cue" ? "from a cue" : "asked for") +
-          (one.edited ? " · edited" : "") + (one.when ? " · " + escape(one.when.slice(0, 16).replace("T", " ")) : "") + "</span></div>";
+          "<span class='muted small grow'>" + (one.question ? "a question" : (one.source === "cue" ? "from a cue" : "asked for")) +
+          (one.edited ? " · edited" : "") + (one.when ? " · " + escape(one.when.slice(0, 16).replace("T", " ")) : "") + "</span></div>" +
+          (one.question ? "<p class='question'><b>Asked:</b> " + escape(one.question) + "</p>" : "");
         var body;
         if (one.state === "queued" || one.state === "running") {
-          body = "<p class='muted'>Looking at the clip...</p>";
+          body = "<p class='muted'>" + (one.question ? "Looking closely..." : "Looking at the clip...") + "</p>";
         } else if (one.state === "failed") {
           body = "<p class='problem'>" + escape(one.said) + "</p>";
         } else {
@@ -337,10 +354,11 @@
         var tools = "<div class='row' style='margin-top:6px'>" +
           (one.state === "done" ? "<button type='button' class='small edit-moment' data-moment='" + one.id + "'>Edit</button>" : "") +
           "<button type='button' class='small moment-again' data-moment='" + one.id + "'>Again</button>" +
+          (one.state === "done" && window.CLIPS ? "<button type='button' class='small moment-clip' data-moment='" + one.id + "'>Make a clip</button>" : "") +
           "<span class='grow'></span>" +
           "<button type='button' class='small ghost danger delete-moment' data-moment='" + one.id + "'>Delete</button></div>";
         return "<div class='card moment' data-moment='" + one.id + "'>" + head + body + tools + "</div>";
-      }).join("") : "<p class='muted small'>No moments yet. Press Describe this moment, or the camera button on any line.</p>";
+      }).join("") : "<p class='muted small'>No moments yet. Press Describe this moment, or the camera button on any line; either can take a question.</p>";
       Array.prototype.forEach.call(momentList.querySelectorAll(".moment-again"), unavailable);
     }
     if (cueList) {
@@ -411,7 +429,9 @@
       cite.dataset.seconds = one.at;
       cite.textContent = one.clock;
       line.appendChild(cite);
-      line.appendChild(document.createTextNode(" " + (one.state === "done" ? one.text : "looking at the clip...")));
+      var words = one.state === "done" ? one.text : (one.question ? "looking closely..." : "looking at the clip...");
+      if (one.question) { words = "(asked \u201C" + one.question + "\u201D) " + words; }
+      line.appendChild(document.createTextNode(" " + words));
       var txt = rows[index].querySelector(".txt");
       if (txt) { txt.parentNode.insertBefore(line, txt.nextSibling); }
     });
@@ -429,7 +449,7 @@
   if (momentsOn) {
     if (describeNow) {
       describeNow.addEventListener("click", function () {
-        describe({ at: window.VIEWER.at(), source: "asked" });
+        askOrDescribe({ at: window.VIEWER.at(), source: "asked" });
       });
     }
     document.addEventListener("click", function (event) {
@@ -438,7 +458,20 @@
       if (camera) {
         var row = camera.closest(".seg");
         var segment = (window.VIEWER.segments() || [])[parseInt(row.dataset.index, 10)];
-        if (segment) { describe({ at: segment.start, segment: segment.id, source: "asked" }); }
+        if (segment) { askOrDescribe({ at: segment.start, segment: segment.id, source: "asked" }); }
+        return;
+      }
+      var clipOf = event.target.closest("#moment-list .moment-clip");
+      if (clipOf && window.CLIPS) {
+        var chosen = (state.moments || []).filter(function (one) { return one.id === clipOf.dataset.moment; })[0];
+        if (!chosen) { return; }
+        var from = chosen.span_end > chosen.span_start ? chosen.span_start : Math.max(0, chosen.at - 5);
+        var to = chosen.span_end > chosen.span_start ? chosen.span_end : chosen.at + 5;
+        window.CLIPS.mark(from, to);
+        var title = document.getElementById("clip-title");
+        var note = document.getElementById("clip-note");
+        if (title && !title.value) { title.value = chosen.question ? chosen.question.slice(0, 120) : "Camera at " + chosen.clock; }
+        if (note && !note.value) { note.value = chosen.text.slice(0, 1000); }
         return;
       }
       if (pill) {

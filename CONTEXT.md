@@ -350,7 +350,7 @@ One pass of the AI assistant over whole Transcripts that fit together in one cal
 A name or role the AI assistant proposes for an unnamed Speaker when a user asks, with the Segment that shows why. Nothing changes until the user accepts it. Inside a Case, the AI assistant is told the Case's People, so it can recognise a Person already named elsewhere.
 
 **Moment**:
-A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4.
+A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it, or its answer to a question about the picture from a few close frames. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4.
 _Avoid_: frame, snapshot, scene, screenshot
 
 **Cue**:

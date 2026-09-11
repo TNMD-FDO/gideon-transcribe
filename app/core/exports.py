@@ -53,6 +53,13 @@ def camera_moments(transcript) -> list:
     return list(transcript.moments.filter(state=assistant.DONE).exclude(text=""))
 
 
+def camera_text(moment) -> str:
+    """A Moment's words for an export, its question in front when it answered one."""
+    from core import prompts
+
+    return prompts.camera_line_text(moment)
+
+
 def with_camera_lines(segments, moments):
     """The Segments and the Moments together in time order.
 
@@ -343,7 +350,7 @@ def plain_text(recording: Recording) -> str:
     lines = []
     for kind, one in with_camera_lines(segments, moments):
         if kind == "camera":
-            lines.append(f"[{clock(one.at)}] {CAMERA_TAG}: {one.text}")
+            lines.append(f"[{clock(one.at)}] {CAMERA_TAG}: {camera_text(one)}")
             continue
         segment = one
         name = segment.speaker
@@ -503,7 +510,7 @@ def word(recording: Recording, exported_by: str) -> bytes:
             tag.bold = True
             tag.font.name = "Consolas"
             tag.font.size = Pt(10)
-            said = line.add_run(one.text)
+            said = line.add_run(camera_text(one))
             said.italic = True
             said.font.name = "Consolas"
             said.font.size = Pt(10)

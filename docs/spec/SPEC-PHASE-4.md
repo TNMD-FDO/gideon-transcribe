@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`.
+The Moments release, published as `v1.38.0`, and its second chapter in `v1.39.0`.
 
 ## About this document
 
@@ -15,13 +15,15 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **Moments**: a model's description of what the camera showed at one chosen time of a video Recording, made from a short clip around that time and the words spoken in it, shown beside the Transcript at its time, in Details, in the exports, and, labelled, handed to Summary and Chat.
 - **Cues**: the Transcript lines whose words point at something, marked as suggested Moments, described only when a person asks.
 - **The engine's priority**: every request the app sends the engine carries a priority, as the shared server's ledger asks of a client.
+- **Questions and clips** (chapter 2, v1.39.0): a Moment answers a question about the picture from a few close frames, in a fixed shape that says what is visible, what it is consistent with, and what cannot be told; descriptions are brief unless the office chooses full; and a Moment becomes a Clip with its words as the note and as a caption.
 
-It adds seven admin settings, one prompt template, one audit row's feature and two Viewer-edit rows, one reason class, one table (migration 0035), and no environment key.
+It adds ten admin settings, one prompt template, one audit row's feature and two Viewer-edit rows, one reason class, one table (migrations 0035 and 0036), and no environment key.
 
 ## Contents
 
 1. Moments
-2. Deferred and ruled out
+2. Questions, clearer words, and clips
+3. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -103,7 +105,56 @@ Seven on the AI assistant page, in the catalogue: **Moments** (Off), **Moments i
 - The estimate of a clip's cost (`prompts.video_tokens`), read from the Qwen3-VL report and checked against the office's engine.
 - The words that mark an engine's 400 as `llm_no_vision` (`engine.NO_VISION_WORDS`).
 
-## 2. Deferred and ruled out
+## 2. Questions, clearer words, and clips
+
+Written 2026-09-11 after the first Moments on the office's own footage. The maintainer: attorneys and investigators "will want to know was that a baggy of weed in the car or was that a gun in the car"; descriptions "read more clearly, not such verbose explanations"; and "close the loop to the courtroom". Built in v1.39.0.
+
+### Principles
+
+1. **A pointed question gets a shaped answer, not a verdict.** Asked "is that a gun?", the model says what is visible (shape, colour, size, position, how it is held), what that is consistent with, naming the likeliest things plainly, and what cannot be told from the frames and why. It never states as fact what the frames cannot settle, and it never names a person. The reader decides; the app gives them the best look it can.
+2. **Look closer, not longer.** A question is answered from a few still frames at the camera's own detail, not the small clip: a bag on a seat is a handful of pixels at 360 and legible at 720 or 1080. The clip stays for descriptions, where motion matters.
+3. **Brief by default.** A description leads with the thing pointed at, in one to three short sentences of concrete nouns and plain verbs, without the setting restated or the words summarised; the full style, with the setting and the seconds, is a choice.
+4. **The courtroom form is a Clip.** A Moment becomes a Clip in one click, its words the note and, when captions are burned, a caption marked Camera inside the picture. Nothing new is stored for it: a Clip is a Clip.
+
+### Words
+
+A **question** is a Moment that carries one; its answer is its text, and it appears, exported, and told to the assistant like any Moment, with the question in front: `(asked "is that a gun?") Visible: ...`. The Moment's **kind** in the audit row is `question` or `description`, never its words.
+
+### The viewer
+
+- The camera button on a row and **Describe this moment** at the playhead open one box: leave it empty to have the clip described, or type a question. A **Camera?** pill describes at once, since the Cue is the question.
+- A question's card in the Moments tab shows "Asked:" and the question above the answer, "a question" in its head, and "Looking closely..." while it runs; a camera line under the row carries `(asked "...")` before the answer.
+- **Make a clip** on a described Moment's card marks the Moment's span in the Clips tool and prefills the title ("Camera at hh:mm:ss", or the question) and the note (the description); the person saves it as any Clip. When the Clip burns captions, each described Moment inside its span is a caption marked Camera, shown for up to four seconds from its time.
+
+### The call
+
+- **A question**: the frames are taken at **Look closer frames** times spread a second either side of the chosen time (three by default: one second before, at, one second after), each scaled to **Look closer frame height** (720 by default, never up), as JPEGs from the Playback copy into a temporary folder of the worker's own, sent as image parts and deleted whatever happens. The system message is the Ground rules, the Moment template, the question rules, and the question's fixed shape (Visible, Consistent with, Cannot be told). The user text is the frames' time, the words spoken in the span, and the question. The estimate for the window check counts each frame's patches whole, since stills are not paired. Thinking off, as for every Moment. The answer cap and time limit are the Moment's.
+- **A description**: as chapter 1, with the **Moment style** setting choosing the app's format line, brief or full; the Moment template holds the rules both follow, and its shipped wording is the brief one. The shipped answer cap is 250 tokens (chapter 1 shipped 400).
+- **The audit row** gains the kind, `question` or `description`; the question itself is content and on the never-logged list with the description.
+
+### What changes from chapter 1
+
+- The Moment table gains `question` (migration 0036). A question does not block a description at the same time, and a description does not block a question.
+- The Moment template's shipped wording is rewritten for brevity; an office that edited it keeps its own words and its version.
+- The camera lines everywhere (viewer, exports, Summary and Chat) carry `(asked "...")` before a question's answer.
+- A Clip's burned captions carry Camera cues.
+
+### Settings
+
+Three more on the AI assistant page, greyed while Moments is Off: **Moment style** (brief or full; brief), **Look closer frame height** (pixels, 360 to 1,080; 720), **Look closer frames** (1 to 5; 3). **Moment answer cap** ships at 250.
+
+### Not in this phase
+
+- A chat over one moment (question after question with memory); each question is its own Moment.
+- Pointing at a region of the frame; the frames go whole.
+- A Clip made by itself for every Moment; the person makes each one.
+
+### Left to the build
+
+- The spread of the frames' times (`assistant.question_times`), and the JPEG quality (`media.grab_frames`, q 3).
+- The caption's length inside a Clip (`clip_work.CAMERA_CAPTION_SECONDS`, four seconds).
+
+## 3. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
@@ -123,11 +174,14 @@ Seven on the AI assistant page, in the catalogue: **Moments** (Off), **Moments i
 |---|---|---|---|
 | Moments | AI assistant | On or Off | Off |
 | Moments in answers | AI assistant | On or Off; greyed while Moments is Off | On |
-| Moment answer cap | AI assistant | tokens, 100 to 4,000; greyed while Moments is Off | 400 |
+| Moment answer cap | AI assistant | tokens, 100 to 4,000; greyed while Moments is Off | 250 (400 in v1.38.0) |
 | Moment time limit | AI assistant | seconds, 30 to 3,600; greyed while Moments is Off | 120 |
 | Moment clip length | AI assistant | seconds, 4 to 30; greyed while Moments is Off | 10 |
 | Moment frames a second | AI assistant | 1 to 4; greyed while Moments is Off | 2 |
 | Moment frame height | AI assistant | pixels, 180 to 720; greyed while Moments is Off | 360 |
+| Moment style | AI assistant | brief or full; greyed while Moments is Off | brief |
+| Look closer frame height | AI assistant | pixels, 360 to 1,080; greyed while Moments is Off | 720 |
+| Look closer frames | AI assistant | 1 to 5; greyed while Moments is Off | 3 |
 | Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 
 ## Sources
@@ -136,4 +190,4 @@ The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-
 
 ## Amendments applied
 
-- None yet.
+- From the maintainer, on the v1.38.0 build, chapter 2 (v1.39.0): questions answered from close frames in a fixed shape, the brief style as the default with the answer cap at 250, and Moment to Clip with Camera captions.

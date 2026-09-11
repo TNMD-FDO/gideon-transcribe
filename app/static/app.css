@@ -1329,6 +1329,7 @@ body.no-speakers .seg .name { display: none; }
 }
 .camera-line.waiting { color: var(--muted); }
 .moment .answer { font-style: italic; }
+.moment .question { margin: 4px 0 2px; }
 
 /* The Workbench pages ---------------------------------------------------------
    A list beside its detail from 1280 pixels, stacked below that. The viewer's

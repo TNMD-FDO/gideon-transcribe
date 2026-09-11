@@ -813,6 +813,54 @@ def cut_for_description(
         )
 
 
+def grab_frames(
+    source: Path,
+    folder: Path,
+    times: list[float],
+    *,
+    height: int,
+    timeout: int = DESCRIPTION_TIMEOUT,
+) -> list[Path]:
+    """One JPEG per time from the Playback copy, scaled to `height` and never up.
+
+    For a question about a moment: a few frames at the camera's own detail,
+    where the small clip would lose a thing on a seat. The files are the
+    caller's to delete; they are content and never kept.
+    """
+    written = []
+    for number, at in enumerate(times, start=1):
+        target = folder / f"frame-{number}.jpg"
+        arguments = [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-ss",
+            f"{max(0.0, at):.3f}",
+            "-i",
+            str(source),
+            "-frames:v",
+            "1",
+            "-vf",
+            f"scale=-2:'min({int(height)},ih)'",
+            "-q:v",
+            "3",
+            str(target),
+        ]
+        finished = _run(arguments, timeout=timeout)
+        if (
+            finished.returncode != 0
+            or not target.exists()
+            or target.stat().st_size == 0
+        ):
+            raise MediaError(
+                "A frame could not be taken for the camera question", "media_failed"
+            )
+        written.append(target)
+    return written
+
+
 CAPTION_STYLE = (
     "FontName=DejaVu Sans,Fontsize=22,PrimaryColour=&H00FFFFFF,"
     "OutlineColour=&H80000000,BorderStyle=1,Outline=2,Shadow=0,"

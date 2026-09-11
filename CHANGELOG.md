@@ -21,6 +21,36 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.39.0, 2026-09-11
+
+```
+Models: unchanged
+Database: migrates (0036, a Moment may answer a question)
+```
+
+### Added
+
+- **Ask about this moment.** The camera button on a line and Describe this
+  moment now open one box: empty for a description, or a question about
+  the picture, "is that a gun on the seat?". A question is answered from
+  a few still frames at the camera's own detail (Look closer frames, 3,
+  at Look closer frame height, 720 pixels) in a fixed shape: what is
+  visible, what it is consistent with, and what cannot be told from the
+  frames and why. The answer appears as a camera line with the question
+  in front, everywhere a description would.
+- **Make a clip** on a Moment's card marks its span in the Clips tool
+  with the description as the note; a Clip with burned captions carries
+  each Moment inside its span as a caption marked Camera.
+
+### Changed
+
+- **Descriptions are brief.** The shipped Moment template leads with the
+  thing pointed at in one to three short sentences, concrete nouns and
+  plain verbs, no restated setting; the answer cap ships at 250 tokens
+  (was 400). A new **Moment style** setting brings back the full style.
+  Asked for by the maintainer after the first Moments on the office's
+  own footage: "meaningful explanations".
+
 ## v1.38.0, 2026-09-11
 
 ```

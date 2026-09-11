@@ -1186,7 +1186,7 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Moment answer cap",
             kind=NUMBER,
-            default=400,
+            default=250,
             least=100,
             most=4000,
             unit="tokens",
@@ -1259,6 +1259,56 @@ def _rows() -> list[Definition]:
                 "second is about 3,000."
             ),
             when_changed="The next Moment.",
+        ),
+        Definition(
+            key="moment_style",
+            page=ASSISTANT,
+            name="Moment style",
+            kind=CHOICE,
+            default="brief",
+            choices=("brief", "full"),
+            needs="moments_available",
+            what_it_does=(
+                '"brief": one to three short sentences leading with the thing '
+                'pointed at. "full": two to five sentences with the setting and '
+                "the seconds in the clip. The Moment template on the Templates "
+                "page holds the rules both follow."
+            ),
+            when_changed="The next Moment.",
+        ),
+        Definition(
+            key="moment_question_height",
+            page=ASSISTANT,
+            name="Look closer frame height",
+            kind=NUMBER,
+            default=720,
+            least=360,
+            most=1080,
+            unit="pixels",
+            needs="moments_available",
+            what_it_does=(
+                "A question about a moment is answered from a few still frames at "
+                "this height rather than the small clip, so a small object on a "
+                "seat can be made out; never scaled up. A 1280 by 720 frame costs "
+                "the engine about 1,200 tokens."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="moment_question_frames",
+            page=ASSISTANT,
+            name="Look closer frames",
+            kind=NUMBER,
+            default=3,
+            least=1,
+            most=5,
+            unit="frames",
+            needs="moments_available",
+            what_it_does=(
+                "How many still frames a question is answered from, spread over "
+                "about a second either side of the chosen time."
+            ),
+            when_changed="The next question.",
         ),
         Definition(
             key="engine_address",
@@ -1715,3 +1765,15 @@ def moment_frames_per_second() -> int:
 
 def moment_frame_height() -> int:
     return get("moment_frame_height")
+
+
+def moment_style() -> str:
+    return str(get("moment_style") or "brief")
+
+
+def moment_question_height() -> int:
+    return get("moment_question_height")
+
+
+def moment_question_frames() -> int:
+    return get("moment_question_frames")
