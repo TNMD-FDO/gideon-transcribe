@@ -18,7 +18,7 @@ Everything the app transcribes today arrives as a file. Phase 3 lets a person ma
 - **Speaker buttons and Marks**: while recording, the people in the room are one tap each, so the finished Transcript names its Speakers; and one key drops a Mark at the moment that mattered.
 - **Dictation**: a recording of one person's speech, made from a tab of its own and kept on its own, whose product is a Memo, written by a shipped Summary template, and handed to a colleague with Send to.
 - **Dictation by email**: the one message the app sends that carries content, Off by default, so that a legal assistant gets the Memo in their mailbox when the office decides so.
-- **The Interpreter** (chapter 3, written after the rest was built and in use, not yet built): a Session between a visitor who speaks another language and a staff member, heard, translated, and spoken on the office's own server, turn by turn, with the whole Session kept as a Recording in both languages. Never a substitute for a certified interpreter.
+- **The Interpreter** (chapter 3, written after the rest was built and in use; built in v1.33.0 to v1.34.0 and withdrawn in v1.35.0, deferred at the maintainer's decision): a Session between a visitor who speaks another language and a staff member, heard, translated, and spoken on the office's own server, turn by turn, with the whole Session kept as a Recording in both languages. Never a substitute for a certified interpreter.
 
 It adds four admin settings, six audit rows, and no environment key.
 
@@ -26,7 +26,7 @@ It adds four admin settings, six audit rows, and no environment key.
 
 1. Live recording
 2. Dictation and Send to
-3. The Interpreter (written 2026-09-07, not yet built)
+3. The Interpreter (written 2026-09-07; built and withdrawn the same day, deferred)
 4. Admin panel additions in Phase 3
 5. Deferred and ruled out
 
@@ -373,7 +373,7 @@ Every one takes effect at once; a Session in progress keeps the settings it star
 
 ## 5. Deferred, open, and ruled out
 
-- **A second transcription worker** (a second GPU, or two workers side by side on the same card beside the Local engine): **open, not decided**, though the fast lane (chapter 3) is the shape it takes for live pieces and Turns, and settles the live half of the question. The service's contract says it is a change inside the service that every Consumer inherits without code of its own, and the office's second card has room for it. It is not spent until a week of live recordings, with the queue line showing the waits, says the one worker is not enough. Nothing in this phase assumes either answer.
+- **A second transcription worker** (a second GPU, or two workers side by side on the same card beside the Local engine): **settled in shape by the fast lane, v1.31.0** (the maintainer, 2026-09-11: "we already did the second worker"), a second WhisperX service on the office's second card that takes every live piece, so a recording in progress never waits behind an upload. The one half still open is whether uploads spill onto the fast lane when the queue backs up, which the service's contract allows without code of its own; The service's contract says it is a change inside the service that every Consumer inherits without code of its own, and the office's second card has room for it. It is not spent until a week of live recordings, with the queue line showing the waits, says the one worker is not enough. Nothing in this phase assumes either answer.
 - **A draft on screen while recording**: ruled out (Principle 2). Transcription during the recording, above, is the finished-quality shape of the same wish.
 - **Phones and tablets**: ruled out for this phase; the office's computers only.
 - **Desk-phone capture**: ruled out; not the app's to solve.
@@ -390,7 +390,7 @@ Every one takes effect at once; a Session in progress keeps the settings it star
 | Edits | Speakers named from taps | Live recording |
 | Recordings | Dictation sent; Dictation taken back | Dictation and Send to |
 | Email | Email sent and Email failed, kind `dictation_sent` | Dictation and Send to |
-| Recordings | Interpreter session started; Interpreter session finished; Language settled | The Interpreter (not yet built) |
+| Recordings | Interpreter session started; Interpreter session finished; Language settled | The Interpreter (withdrawn in v1.35.0, deferred) |
 
 ## Appendix B. Settings added in Phase 3
 
@@ -401,7 +401,7 @@ Every one takes effect at once; a Session in progress keeps the settings it star
 | Longest live recording | Limits | whole minutes, 10 to 480 | 180 |
 | Dictation by email | Email | On or Off; greyed while mail is not configured | Off |
 | Dictation sent (template) | Email | a Subject and a Body with `{name}`, `{by}`, `{case}`, `{title}`, `{link}` | the chapter's wording |
-| Interpreter, and its page of ten (not yet built) | Features, Interpreter page | see chapter 3's table | Off; Spanish; Speak to the visitor only; As soon as ready; first Voice; Normal; Automatic; On; six phrases; the shipped notice |
+| Interpreter, and its page of ten (withdrawn in v1.35.0, deferred) | Features, Interpreter page | see chapter 3's table | Off; Spanish; Speak to the visitor only; As soon as ready; first Voice; Normal; Automatic; On; six phrases; the shipped notice |
 
 ## Amendments applied
 
