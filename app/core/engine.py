@@ -33,13 +33,15 @@ log = logging.getLogger("transcribe.engine")
 # shows that name; this is the one the code reads.
 TOKEN_PATH = Path("/run/secrets/llm_api_token")
 
-# The six reason classes the AI assistant chapter adds to the catalogue.
+# The seven reason classes the AI assistant chapter adds to the catalogue.
 UNREACHABLE = "llm_unreachable"
 TIMEOUT = "llm_timeout"
 REFUSED = "llm_refused"
 TOO_LONG = "llm_too_long"
 BAD_OUTPUT = "llm_bad_output"
 ERROR = "llm_error"
+# A Moment asked of an engine that takes text only (Phase 4).
+NO_VISION = "llm_no_vision"
 # The Case Chat's own: a question over more talk than the ceiling allows.
 CASE_TOO_LARGE = "llm_case_too_large"
 
@@ -50,8 +52,18 @@ WHAT_TO_SAY = {
     TOO_LONG: "This transcript is too long for the AI assistant.",
     BAD_OUTPUT: "The assistant's answer did not come through. Try again.",
     ERROR: "The assistant hit a problem. Try again.",
+    NO_VISION: "This engine cannot look at video.",
     CASE_TOO_LARGE: "This case is too large for one question.",
 }
+
+# Every request carries a priority, as the box ledger's shared-engine paragraph
+# asks of a client (GIDEON's line 17): 1 is the lowest the engine ranks, and
+# the app's interactive calls never ask to go ahead of the engine's owner.
+PRIORITY = 1
+
+# What a vLLM says in its 400 when a text-only model is handed a picture or a
+# clip. The words differ by version, so any of these means the same thing.
+NO_VISION_WORDS = ("video", "image", "multimodal", "multi-modal", "modality")
 
 # The check and Test connection are quick questions, not calls.
 CHECK_TIMEOUT = 10
@@ -139,8 +151,12 @@ def classify(problem: Exception) -> str:
         return TIMEOUT
     if isinstance(problem, APIConnectionError):
         return UNREACHABLE
-    if isinstance(problem, BadRequestError) and "context length" in str(problem):
-        return TOO_LONG
+    if isinstance(problem, BadRequestError):
+        said = str(problem).lower()
+        if "context length" in said:
+            return TOO_LONG
+        if any(word in said for word in NO_VISION_WORDS):
+            return NO_VISION
     return ERROR
 
 
@@ -304,20 +320,30 @@ def complete(
     thinking: bool,
     timeout: float,
     schema: dict | None = None,
+    extra: dict | None = None,
 ) -> dict:
     """One chat completion, whole, with the chapter's rules applied.
 
     Explicit sampling on every call, the answer cap always sent, thinking
-    turned on or off per request, and a JSON schema through vLLM's structured
-    output when a feature wants one. One automatic retry on a connection
-    error and none on a timeout. Returns the text, the finish reason, the
-    engine's usage figures, and the model, and raises Problem otherwise.
+    turned on or off per request, a JSON schema through vLLM's structured
+    output when a feature wants one, and the priority every request carries.
+    `extra` is merged into the request's vLLM-only fields, for a feature that
+    needs one more (a Moment's frame sampling). One automatic retry on a
+    connection error and none on a timeout. Returns the text, the finish
+    reason, the engine's usage figures, and the model, and raises Problem
+    otherwise. A message's content may be a string or a list of parts, as the
+    OpenAI shape allows; nothing here looks inside it.
     """
     from openai import APIConnectionError, APITimeoutError
 
-    extra: dict = {"chat_template_kwargs": {"enable_thinking": thinking}}
+    extra_body: dict = {
+        "chat_template_kwargs": {"enable_thinking": thinking},
+        "priority": PRIORITY,
+    }
     if schema is not None:
-        extra["structured_outputs"] = {"json": schema}
+        extra_body["structured_outputs"] = {"json": schema}
+    if extra:
+        extra_body.update(extra)
 
     def once():
         return client(timeout).chat.completions.create(
@@ -326,7 +352,7 @@ def complete(
             max_completion_tokens=max_completion_tokens,
             temperature=temperature,
             top_p=top_p,
-            extra_body=extra,
+            extra_body=extra_body,
         )
 
     try:

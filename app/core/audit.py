@@ -87,7 +87,8 @@ class Reason:
     BLOCKED = "blocked"
     DIRECTORY_UNREACHABLE = "directory_unreachable"
     THROTTLED = "throttled"
-    # The AI assistant's six, from the chapter's table. The engine module
+    # The AI assistant's seven, from the chapter's table (the seventh, an
+    # engine that takes no video, from the Moments chapter). The engine module
     # names the same strings; they are listed here so the catalogue is one.
     LLM_UNREACHABLE = "llm_unreachable"
     LLM_TIMEOUT = "llm_timeout"
@@ -95,6 +96,7 @@ class Reason:
     LLM_TOO_LONG = "llm_too_long"
     LLM_BAD_OUTPUT = "llm_bad_output"
     LLM_ERROR = "llm_error"
+    LLM_NO_VISION = "llm_no_vision"
     # The mailer's three, from the Email notifications chapter's table.
     SMTP_UNREACHABLE = "smtp_unreachable"
     SMTP_REFUSED = "smtp_refused"

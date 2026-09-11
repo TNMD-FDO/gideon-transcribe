@@ -2,7 +2,7 @@
 
 The AI assistant's engine is reached only from llm-worker, on the engine's own
 network, with a token from a secret file. What is checked here is what would
-be expensive to get wrong: a failure is always one of six reason classes and
+be expensive to get wrong: a failure is always one of seven reason classes and
 never text; the status row turns the moment the answer changes; a stack with
 no engine still starts; and the two compose files that make the shared engine
 reachable say exactly what the architecture chapter fixes.
@@ -25,7 +25,7 @@ ENTRYPOINT = HERE / "app" / "entrypoint.sh"
 # Reason classes -----------------------------------------------------------------
 
 
-def test_every_failure_is_one_of_six_reason_classes():
+def test_every_failure_is_one_of_seven_reason_classes():
     from openai import (
         APIConnectionError,
         APITimeoutError,
@@ -58,6 +58,21 @@ def test_every_failure_is_one_of_six_reason_classes():
         == engine.TOO_LONG
     )
     assert engine.classify(status_error(BadRequestError, 400, "other")) == engine.ERROR
+    # A text-only engine handed a clip says so in its 400, in one of a few words.
+    assert (
+        engine.classify(
+            status_error(
+                BadRequestError, 400, "This model does not support video input"
+            )
+        )
+        == engine.NO_VISION
+    )
+    assert (
+        engine.classify(
+            status_error(BadRequestError, 400, "Unsupported modality: image")
+        )
+        == engine.NO_VISION
+    )
     assert engine.classify(RuntimeError("anything")) == engine.ERROR
     assert engine.classify(engine.Problem(engine.BAD_OUTPUT)) == engine.BAD_OUTPUT
 
@@ -70,12 +85,13 @@ def test_every_reason_class_has_a_line_for_the_person():
         engine.TOO_LONG,
         engine.BAD_OUTPUT,
         engine.ERROR,
+        engine.NO_VISION,
     ):
         assert reason in engine.WHAT_TO_SAY
         assert reason.startswith("llm_")
 
 
-def test_the_audit_catalogue_names_the_same_six():
+def test_the_audit_catalogue_names_the_same_seven():
     from core.audit import Reason
 
     ours = {
@@ -85,6 +101,7 @@ def test_the_audit_catalogue_names_the_same_six():
         engine.TOO_LONG,
         engine.BAD_OUTPUT,
         engine.ERROR,
+        engine.NO_VISION,
     }
     theirs = {value for name, value in vars(Reason).items() if name.startswith("LLM_")}
     assert ours == theirs
