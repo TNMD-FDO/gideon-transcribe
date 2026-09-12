@@ -140,6 +140,7 @@
   // that second and lights it for a moment, so the eye lands where the ear does.
   window.VIEWER.showSegment = function (seconds) {
     if (!column) { return; }
+    if (window.VIEWER.openTab) { window.VIEWER.openTab("transcript"); }
     var index = -1;
     segments.some(function (segment, n) {
       if (Math.floor(segment.start) === Math.floor(seconds)) { index = n; return true; }
@@ -176,9 +177,14 @@
       when.title = "Play from here";
 
       var body = document.createElement("div");
+      body.className = "words";
 
       var who = document.createElement("div");
       who.className = "who";
+      // A speaker's second line in a row leaves the name column blank.
+      if (index > 0 && segments[index - 1].speaker === segment.speaker) {
+        row.classList.add("cont");
+      }
       var actions = document.createElement("span");
       actions.className = "actions";
 
@@ -218,7 +224,11 @@
         name.appendChild(mark);
       }
       who.appendChild(name);
-      body.appendChild(who);
+      // The pills (a suggested name, a Camera? cue) go over the words, in
+      // the words' column, where there is room for them.
+      var tags = document.createElement("span");
+      tags.className = "tags";
+      body.appendChild(tags);
 
       var said = document.createElement("p");
       said.className = "txt";
@@ -226,6 +236,7 @@
       body.appendChild(said);
 
       row.appendChild(when);
+      row.appendChild(who);
       row.appendChild(body);
       // Its own column, so the buttons never sit over the words.
       row.appendChild(actions);
@@ -292,6 +303,7 @@
         }
       }
       here = index;
+      sayNow(segments[index]);
     }
 
     var row = column ? column.children[here] : null;
@@ -306,6 +318,21 @@
 
     document.getElementById("clock").textContent =
       clock(time) + " / " + clock(player.duration || duration);
+  }
+
+  // The line being spoken, on the stage, so a person watching the picture
+  // or tagging voices sees who is speaking without looking down.
+  var nowLine = document.getElementById("now");
+  function sayNow(segment) {
+    if (!nowLine) { return; }
+    var who = document.getElementById("now-who");
+    var text = document.getElementById("now-text");
+    var when = document.getElementById("now-clock");
+    nowLine.classList.toggle("empty", !segment);
+    who.textContent = segment ? (segment.speaker || "") : "";
+    who.style.setProperty("--speaker", segment && segment.speaker ? (colours[segment.speaker] || "") : "");
+    text.textContent = segment ? segment.text : "";
+    when.textContent = segment ? clock(segment.start) : "";
   }
 
   function pauseFollowing() {
@@ -479,30 +506,49 @@
 
   function showRange(from, to) {
     var box = document.getElementById("range");
+    var strip = document.getElementById("caption");
     var said = document.getElementById("clip-said");
     var drop = document.getElementById("drop-clip");
+    var preview = document.getElementById("clip-preview-strip");
+    var save = document.getElementById("clip-save-go");
     if (!box) { return; }
-    if (from === null || from === undefined || !duration) {
+    var marked = !(from === null || from === undefined || !duration);
+    if (strip) { strip.classList.toggle("marking", marked); }
+    [drop, preview, save].forEach(function (one) { if (one) { one.hidden = !marked; } });
+    if (!marked) {
       box.hidden = true;
       if (said) { said.textContent = ""; }
-      if (drop) { drop.hidden = true; }
       return;
     }
     box.hidden = false;
     box.style.left = ((from / duration) * 100) + "%";
     box.style.width = (((to - from) / duration) * 100) + "%";
     if (said) {
-      said.textContent = "Clip " + clock(from) + " to " + clock(to);
+      var inside = segments.filter(function (one) { return one.start < to && one.end > from; }).length;
+      said.textContent = "Clip " + clock(from) + " to " + clock(to) + ", " + clock(to - from) + " long" +
+        (window.VIEWER.hasTranscript ? ", " + inside + (inside === 1 ? " line" : " lines") : "");
       said.style.color = ink("--clip");
     }
-    // The selection is shown here, so the way to be rid of it is here.
-    if (drop) { drop.hidden = false; }
   }
 
   var dropClip = document.getElementById("drop-clip");
   if (dropClip) {
     dropClip.addEventListener("click", function () {
       if (window.CLIPS) { window.CLIPS.clear(); }
+    });
+  }
+  var previewStrip = document.getElementById("clip-preview-strip");
+  if (previewStrip) {
+    previewStrip.addEventListener("click", function () {
+      if (window.CLIPS && window.CLIPS.preview) { window.CLIPS.preview(); }
+    });
+  }
+  var saveGo = document.getElementById("clip-save-go");
+  if (saveGo) {
+    saveGo.addEventListener("click", function () {
+      if (window.VIEWER.openTab) { window.VIEWER.openTab("clips"); }
+      var title = document.getElementById("clip-title");
+      if (title) { title.focus(); title.select(); }
     });
   }
   window.VIEWER.showRange = showRange;
@@ -780,7 +826,7 @@
       showsStart(index);
       // No panel yet: nothing is finished, and flinging it open over the
       // transcript at this point is in the way rather than helpful.
-      window.CLIPS.mark(segment.start, segment.end, false);
+      window.CLIPS.mark(segment.start, segment.end);
       return;
     }
 
@@ -790,7 +836,7 @@
     var start = Math.min(other.start, segment.start);
     var end = Math.max(other.end, segment.end);
     stopMarking();
-    window.CLIPS.mark(start, end, true);
+    window.CLIPS.mark(start, end);
   }
 
   function showsStart(index) {
@@ -1182,16 +1228,13 @@
     });
   }
 
-  // The sheet and the overlay --------------------------------------------------
+  // The work area -------------------------------------------------------------
+  //
+  // The tabs along the top of the work area: Transcript, Clips, Summary,
+  // Chat, Moments, Details, one at a time at full width. The one chosen is
+  // remembered, because somebody working through a case moves from one
+  // recording to the next all day; a link that names a panel wins.
 
-  var sheet = document.getElementById("sheet");
-  var closeSheet = document.getElementById("close-sheet");
-  // The stylesheet lays the desk out two ways by the width of the window,
-  // and this is the same question asked from here: on a wide window the
-  // panels are the Bench, a column that is always open, so nothing closes
-  // it and the grip resizes the column rather than the picture.
-  var WIDE = window.matchMedia("(min-width: 1280px)");
-  function onTheBench() { return WIDE.matches; }
   var detailsLoaded = false;
 
   function loadDetails() {
@@ -1236,269 +1279,54 @@
     });
   }
 
-  // The sheet stays where it was put. Somebody working through a case moves
-  // from one recording to the next all day, and a panel that closed itself
-  // every time would have to be reopened every time.
-  var sheetGrip = document.getElementById("sheet-grip");
+  var panels = document.getElementById("panels");
 
-  function rememberSheet(what) {
+  function rememberTab(what) {
     try {
-      window.localStorage.setItem("sheet", what);
+      window.localStorage.setItem("tab", what);
     } catch (ignored) { /* a browser that forbids storage forgets it */ }
   }
 
-  function openSheet(which, keep) {
-    sheet.hidden = false;
-    closeSheet.hidden = false;
-    if (expandSheet) { expandSheet.hidden = false; }
-    if (sheetGrip) { sheetGrip.hidden = false; }
+  function openTab(which, keep) {
+    if (!panels) { return; }
+    if (!document.querySelector('.tab[data-panel="' + which + '"]')) { which = "transcript"; }
     Array.prototype.forEach.call(
-      sheet.querySelectorAll(".panel"),
+      panels.querySelectorAll(".panel"),
       function (panel) { panel.hidden = panel.dataset.panel !== which; }
     );
     Array.prototype.forEach.call(
-      document.querySelectorAll(".sheet-tab"),
+      document.querySelectorAll(".tab"),
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
     // `keep` is for restoring what was already chosen, which is not itself a
     // choice and must not overwrite one.
-    if (!keep) { rememberSheet(which); }
+    if (!keep) { rememberTab(which); }
+    document.dispatchEvent(new CustomEvent("tab-opened", { detail: which }));
   }
-  window.VIEWER.openSheet = openSheet;
+  window.VIEWER.openTab = openTab;
+  // The name the clip tool and the assistant knew it by.
+  window.VIEWER.openSheet = openTab;
 
   Array.prototype.forEach.call(
-    document.querySelectorAll(".sheet-tab"),
+    document.querySelectorAll(".tab"),
     function (tab) {
-      tab.addEventListener("click", function () {
-        if (!sheet.hidden && tab.classList.contains("on")) {
-          if (!onTheBench()) { hideSheet(); }
-        } else {
-          openSheet(tab.dataset.panel);
-        }
-      });
+      tab.addEventListener("click", function () { openTab(tab.dataset.panel); });
     }
   );
 
-  function hideSheet(keep) {
-    // The Bench has no closed state: Esc and the tabs leave it as it is.
-    if (onTheBench()) { return; }
-    sheet.hidden = true;
-    closeSheet.hidden = true;
-    if (expandSheet) { expandSheet.hidden = true; }
-    if (sheetGrip) { sheetGrip.hidden = true; }
-    Array.prototype.forEach.call(
-      document.querySelectorAll(".sheet-tab"),
-      function (tab) { tab.classList.remove("on"); }
-    );
-    if (!keep) { rememberSheet("closed"); }
-  }
-  closeSheet.addEventListener("click", function () { hideSheet(); });
-
-  // Expand: the sheet takes all the height the window allows, for reading a
-  // long answer; pressed again it goes back to the height it had.
-  var expandSheet = document.getElementById("expand-sheet");
-  var heightBefore = null;
-  if (expandSheet) {
-    expandSheet.addEventListener("click", function () {
-      if (heightBefore === null) {
-        heightBefore = Math.round(sheet.getBoundingClientRect().height);
-        // Never smaller than it was: on a short window the rule that keeps
-        // the transcript in view may already be the limit.
-        setSheetHeight(Math.max(tallest(), heightBefore));
-        expandSheet.innerHTML = icon("expand") + " Shrink";
-      } else {
-        setSheetHeight(heightBefore);
-        heightBefore = null;
-        expandSheet.innerHTML = icon("expand") + " Expand";
-      }
-      drawTimeline();
-    });
-  }
-
-  // Resizing it ----------------------------------------------------------------
-
-  var SHORTEST = 120;
-  // What the transcript and the panels beside it must keep, whatever the
-  // sheet is dragged to. A fraction of the window is not enough of a rule:
-  // the dock above is as tall as the picture, which is itself resizable, so
-  // the room left over has to be measured rather than assumed.
-  //
-  // A floor rather than a comfortable minimum, on purpose. This figure also
-  // trims a remembered height on load, and a comfortable one would snap the
-  // sheet smaller every time the page opened, which is the jerkiness this is
-  // meant to be rid of. It only has to stop the transcript disappearing.
-  var LEAST_ROOM_ABOVE = 160;
-
-  function tallest() {
-    var above = document.querySelector(".body");
-    // Measured only when the sheet is actually in the layout. Asked while it
-    // is hidden, the body has the room the sheet would take, and the answer
-    // would be far too small: that is what shrank a remembered height every
-    // time the page loaded.
-    if (!above || sheet.hidden) {
-      return Math.max(SHORTEST, Math.round(window.innerHeight * 0.7));
-    }
-    // The sheet and the part above it share what is left of the window, so
-    // the most the sheet can take is the pair of them less that minimum.
-    var shared = sheet.getBoundingClientRect().height
-      + above.getBoundingClientRect().height;
-    return Math.max(SHORTEST, Math.round(shared - LEAST_ROOM_ABOVE));
-  }
-
-  function setSheetHeight(pixels) {
-    var wanted = Math.round(Math.min(tallest(), Math.max(SHORTEST, pixels)));
-    document.documentElement.style.setProperty("--sheet-height", wanted + "px");
-    return wanted;
-  }
-
-  function trimToFit() {
-    // The Bench takes the column's height; nothing to trim.
-    if (onTheBench()) { return; }
-    // Once the sheet is really there, a remembered height that no longer fits
-    // is brought down to one that does. The stored figure is left alone, so a
-    // bigger window gets it back.
-    if (sheet.hidden) { return; }
-    if (sheet.getBoundingClientRect().height > tallest()) {
-      setSheetHeight(tallest());
-    }
-  }
-
-  function rememberHeight(pixels) {
-    try {
-      window.localStorage.setItem("sheet-height", String(pixels));
-    } catch (ignored) { /* the size then lasts this page only */ }
-  }
-
-  var storedHeight = null;
-  try {
-    storedHeight = window.localStorage.getItem("sheet-height");
-  } catch (ignored) { /* the sheet keeps the usual height */ }
-  if (storedHeight) { setSheetHeight(parseInt(storedHeight, 10)); }
-
-  if (sheetGrip) {
-    var sizing = false;
-    var startedY = 0;
-    var wasTall = 0;
-
-    sheetGrip.addEventListener("pointerdown", function (event) {
-      sizing = true;
-      startedY = event.clientY;
-      wasTall = sheet.getBoundingClientRect().height;
-      sheetGrip.setPointerCapture(event.pointerId);
-      document.querySelector(".desk").classList.add("sizing");
-      event.preventDefault();
-    });
-
-    sheetGrip.addEventListener("pointermove", function (event) {
-      if (!sizing) { return; }
-      // Dragging the strip upwards makes the sheet taller, so the sign is
-      // the other way round from the pointer's own movement.
-      setSheetHeight(wasTall - (event.clientY - startedY));
-    });
-
-    function doneSizing() {
-      if (!sizing) { return; }
-      sizing = false;
-      document.querySelector(".desk").classList.remove("sizing");
-      rememberHeight(Math.round(sheet.getBoundingClientRect().height));
-      drawTimeline();
-    }
-    sheetGrip.addEventListener("pointerup", doneSizing);
-    sheetGrip.addEventListener("pointercancel", doneSizing);
-    // Backstops. A pointer capture is not always given back to the element
-    // that took it, and when the up is missed the drag never ends: the size
-    // is not remembered and the resize cursor stays on the whole page.
-    sheetGrip.addEventListener("lostpointercapture", doneSizing);
-    window.addEventListener("pointerup", doneSizing);
-    window.addEventListener("blur", doneSizing);
-
-    sheetGrip.addEventListener("dblclick", function () {
-      rememberHeight(setSheetHeight(Math.round(window.innerHeight * 0.4)));
-      drawTimeline();
-    });
-
-    // A window that shrinks takes the sheet with it rather than leaving the
-    // transcript with nothing. The choice is left alone, so the sheet comes
-    // back at its full height on a taller window.
-    window.addEventListener("resize", trimToFit);
-
-    sheetGrip.addEventListener("keydown", function (event) {
-      var step = event.shiftKey ? 60 : 20;
-      if (event.key === "ArrowDown") { step = -step; }
-      else if (event.key !== "ArrowUp") { return; }
-      event.preventDefault();
-      rememberHeight(setSheetHeight(sheet.getBoundingClientRect().height + step));
-      drawTimeline();
-    });
-  }
-
-  // The sheet comes back as it was left, now rather than when the transcript
-  // arrives, so the page settles once instead of jumping. A link that names a
-  // panel wins, and openWhereAsked() opens that one when it runs. Restoring is
-  // not a choice, so it does not overwrite the one that was made.
+  // The tab comes back as it was left, now rather than when the transcript
+  // arrives, so the page settles once. A link that names a panel wins, and
+  // openWhereAsked() opens that one when it runs.
   (function () {
     var asked = new URLSearchParams(window.location.search);
-    if (asked.get("clip") || asked.get("panel")) { return; }
+    if (asked.get("clip") || asked.get("panel")) { openTab("transcript", true); return; }
     var was = null;
     try {
-      was = window.localStorage.getItem("sheet");
-    } catch (ignored) { /* the sheet then starts closed, as it always did */ }
-    // Whichever panel was open last, if this page has it: Clips and Details
-    // always, Summary and Chat while the AI assistant offers them.
-    if (was && was !== "closed" && document.querySelector('.sheet-tab[data-panel="' + was + '"]')) {
-      openSheet(was, true);
-    }
-    window.requestAnimationFrame(trimToFit);
+      was = window.localStorage.getItem("tab");
+    } catch (ignored) { /* the transcript then, as always */ }
+    openTab(was || "transcript", true);
   }());
-
-  // The Bench always shows a panel. A window widened onto it opens one if
-  // none was open; narrowed off it, the sheet stays as it was.
-  function settleTheBench() {
-    if (!onTheBench() || !sheet.hidden) { return; }
-    openSheet(window.VIEWER.clips ? "clips" : "details", true);
-  }
-  settleTheBench();
-  if (WIDE.addEventListener) {
-    WIDE.addEventListener("change", function () { settleTheBench(); drawTimeline(); });
-  }
-  // A plain resize as well: not every browser fires the change above.
-  window.addEventListener("resize", settleTheBench);
-
-  var overlay = document.getElementById("shortcuts");
-  function shortcuts(show) { overlay.hidden = !show; }
-  document.getElementById("open-shortcuts").addEventListener("click", function () {
-    shortcuts(true);
-  });
-  document.getElementById("close-shortcuts").addEventListener("click", function () {
-    shortcuts(false);
-  });
-  overlay.addEventListener("click", function (event) {
-    if (event.target === overlay) { shortcuts(false); }
-  });
-
-  var popOut = document.getElementById("pop-out");
-  if (popOut && player && player.requestPictureInPicture) {
-    popOut.addEventListener("click", function () {
-      if (document.pictureInPictureElement) {
-        document.exitPictureInPicture();
-      } else {
-        player.requestPictureInPicture().catch(function () {
-          UI.toast("This browser will not pop the video out.", { problem: true, icon: "warning" });
-        });
-      }
-    });
-    player.addEventListener("enterpictureinpicture", function () {
-      popOut.textContent = "Dock video";
-      document.getElementById("popped").hidden = false;
-    });
-    player.addEventListener("leavepictureinpicture", function () {
-      popOut.textContent = "Pop out video";
-      document.getElementById("popped").hidden = true;
-    });
-  } else if (popOut) {
-    popOut.hidden = true;
-  }
 
   // The keyboard --------------------------------------------------------------
 
@@ -1514,10 +1342,9 @@
       if (!overlay.hidden) { shortcuts(false); return; }
       if (clipStartsAt !== null) { stopMarking(); return; }
       if (window.CLIPS && window.CLIPS.range()) { window.CLIPS.clear(); return; }
-      if (!sheet.hidden) { hideSheet(); }
       return;
     }
-    if (event.key === "d" || event.key === "D") { openSheet("details"); return; }
+    if (event.key === "d" || event.key === "D") { openTab("details"); return; }
 
     if (event.key === "f" || event.key === "F") {
       if (paused) { resumeFollowing(); }
@@ -1657,16 +1484,16 @@
     }
 
     if (asked.get("clip") || asked.get("panel") === "clips") {
-      if (window.VIEWER.clips) { openSheet("clips"); }
+      if (window.VIEWER.clips) { openTab("clips"); }
       return;
     }
     if (asked.get("panel") === "details") {
-      openSheet("details");
+      openTab("details");
       return;
     }
-    // A dictation's memo: the Dictations page opens the viewer on the Summary panel.
+    // A dictation's memo: the Dictations page opens the viewer on the Summary tab.
     if (asked.get("panel") === "summary" && document.querySelector('[data-panel="summary"]')) {
-      openSheet("summary");
+      openTab("summary");
       return;
     }
 
@@ -1706,137 +1533,113 @@
     openWhereAsked();
   }
 
-  // Resizing the picture ------------------------------------------------------
+  // Resizing the stage --------------------------------------------------------
   //
-  // The width is the only thing chosen; the height follows it, so the picture
-  // keeps its shape and the transport beside it does not jump about. The
+  // On a wide window the stage is a column, and its width is the one thing
+  // a person chooses: the picture and the work area share the rest. The
   // choice is remembered, because somebody who wants a big picture wants it
-  // on the next recording too.
+  // on the next recording too. On a laptop the picture has one size and
+  // there is nothing to drag.
 
-  var SMALLEST = 160;
-  var USUAL = 220;
-  // On the Bench the grip sizes the whole column, and the picture with it.
-  var NARROWEST_COLUMN = 320;
-  // The column's usual width follows the window, as the stylesheet's clamp
-  // has it: 400 px on a small monitor, 620 on a wide one.
-  function usualColumn() {
-    return Math.round(Math.min(620, Math.max(400, window.innerWidth * 0.28)));
-  }
-  function smallest() { return onTheBench() ? NARROWEST_COLUMN : SMALLEST; }
-  function usual() { return onTheBench() ? usualColumn() : USUAL; }
+  var WIDE = window.matchMedia("(min-width: 1280px)");
+  var NARROWEST_STAGE = 360;
 
-  function widest() {
-    // Never more than half the window: the transcript is the point of the
-    // page, and a picture that pushed it off the screen would be a worse
-    // page, not a bigger picture.
-    return Math.max(smallest(), Math.round(window.innerWidth * 0.5));
+  // The usual width follows the window, as the stylesheet's clamp has it:
+  // 360 px on a small monitor, about 560 on a 1920 one, 800 at most.
+  function usualStage() {
+    return Math.round(Math.min(800, Math.max(NARROWEST_STAGE, window.innerWidth * 0.29)));
   }
 
-  function setWidth(pixels) {
-    var wanted = Math.round(Math.min(widest(), Math.max(smallest(), pixels)));
-    document.documentElement.style.setProperty(
-      onTheBench() ? "--column-width" : "--thumb-width", wanted + "px"
-    );
+  function widestStage() {
+    // Never more than half the window: the words are the point of the page.
+    return Math.max(NARROWEST_STAGE, Math.round(window.innerWidth * 0.5));
+  }
+
+  function setStage(pixels) {
+    var wanted = Math.round(Math.min(widestStage(), Math.max(NARROWEST_STAGE, pixels)));
+    document.documentElement.style.setProperty("--stage", wanted + "px");
     return wanted;
   }
 
-  var grip = document.getElementById("thumb-grip");
-  var thumb = document.getElementById("thumb");
+  var stageGrip = document.getElementById("stage-grip");
+  var stage = document.querySelector(".stage");
 
-  // Two sizes are remembered, one for each shape of the desk, because a
-  // width chosen for a picture beside the title is no width for a column.
   try {
-    var rememberedThumb = window.localStorage.getItem("thumb-width");
-    var rememberedColumn = window.localStorage.getItem("column-width");
-    if (rememberedThumb) {
-      document.documentElement.style.setProperty(
-        "--thumb-width", Math.max(SMALLEST, parseInt(rememberedThumb, 10) || USUAL) + "px"
-      );
-    }
-    if (rememberedColumn) {
-      document.documentElement.style.setProperty(
-        "--column-width",
-        Math.max(NARROWEST_COLUMN, parseInt(rememberedColumn, 10) || usualColumn()) + "px"
-      );
-    }
-  } catch (ignored) { /* a browser that forbids storage keeps the usual sizes */ }
+    var rememberedStage = window.localStorage.getItem("stage-width");
+    if (rememberedStage) { setStage(parseInt(rememberedStage, 10) || usualStage()); }
+  } catch (ignored) { /* a browser that forbids storage keeps the usual size */ }
 
-  function remember(pixels) {
+  function rememberStage(pixels) {
     try {
-      window.localStorage.setItem(
-        onTheBench() ? "column-width" : "thumb-width", String(pixels)
-      );
-    } catch (ignored) { /* the same, and the size lasts this page only */ }
+      window.localStorage.setItem("stage-width", String(pixels));
+    } catch (ignored) { /* the size lasts this page only */ }
   }
 
-  if (grip && thumb) {
-    // Named for the picture, and not `dragging`, which is the timeline's.
-    // This whole file is one function, so a second `var dragging` here was
-    // not a second variable: it was the same one. This block listens for
-    // pointerup on the window, and a browser sends pointerup before
-    // mouseup, so every click on the timeline of a video had its drag
-    // cancelled here before the timeline could act on it, and the video
-    // never moved. A recording with no picture has no grip and none of
-    // this exists for it, which is why audio scrubbed and video did not.
-    var sizingPicture = false;
-    var pictureFromX = 0;
-    var pictureWas = 0;
+  if (stageGrip && stage) {
+    // Named for the stage, and not `dragging`, which is the timeline's: this
+    // whole file is one function, and a second `var dragging` would be the
+    // same variable.
+    var sizingStage = false;
+    var stageFromX = 0;
+    var stageWas = 0;
 
-    grip.addEventListener("pointerdown", function (event) {
-      sizingPicture = true;
-      pictureFromX = event.clientX;
-      pictureWas = thumb.getBoundingClientRect().width;
-      grip.setPointerCapture(event.pointerId);
+    stageGrip.addEventListener("pointerdown", function (event) {
+      if (!WIDE.matches) { return; }
+      sizingStage = true;
+      stageFromX = event.clientX;
+      stageWas = stage.getBoundingClientRect().width;
+      stageGrip.setPointerCapture(event.pointerId);
       document.querySelector(".desk").classList.add("resizing");
       event.preventDefault();
     });
 
-    grip.addEventListener("pointermove", function (event) {
-      if (!sizingPicture) { return; }
-      // The grip is on the picture's right edge, or the column's left edge
-      // on the Bench, where dragging left makes the column wider.
-      var moved = event.clientX - pictureFromX;
-      setWidth(pictureWas + (onTheBench() ? -moved : moved));
+    stageGrip.addEventListener("pointermove", function (event) {
+      if (!sizingStage) { return; }
+      // The grip is on the stage's right edge: dragging right makes it wider.
+      setStage(stageWas + (event.clientX - stageFromX));
       window.requestAnimationFrame(drawTimeline);
     });
 
     function letGo() {
-      if (!sizingPicture) { return; }
-      sizingPicture = false;
+      if (!sizingStage) { return; }
+      sizingStage = false;
       document.querySelector(".desk").classList.remove("resizing");
-      remember(Math.round(thumb.getBoundingClientRect().width));
-      trimToFit();
+      rememberStage(Math.round(stage.getBoundingClientRect().width));
       drawTimeline();
     }
-    grip.addEventListener("pointerup", letGo);
-    grip.addEventListener("pointercancel", letGo);
-    grip.addEventListener("lostpointercapture", letGo);
+    stageGrip.addEventListener("pointerup", letGo);
+    stageGrip.addEventListener("pointercancel", letGo);
+    stageGrip.addEventListener("lostpointercapture", letGo);
     window.addEventListener("pointerup", letGo);
     window.addEventListener("blur", letGo);
 
-    grip.addEventListener("dblclick", function () {
-      remember(setWidth(usual()));
+    stageGrip.addEventListener("dblclick", function () {
+      rememberStage(setStage(usualStage()));
       drawTimeline();
     });
 
     // The keyboard reaches it too: the handle takes focus, and the arrows
     // move it in steps a person can predict.
-    grip.addEventListener("keydown", function (event) {
+    stageGrip.addEventListener("keydown", function (event) {
       var step = event.shiftKey ? 60 : 20;
       if (event.key === "ArrowLeft") { step = -step; }
       else if (event.key !== "ArrowRight") { return; }
       event.preventDefault();
-      remember(setWidth(thumb.getBoundingClientRect().width + step));
+      rememberStage(setStage(stage.getBoundingClientRect().width + step));
       drawTimeline();
     });
 
-    // A window that shrinks below what was chosen takes the picture with it,
+    // A window that shrinks below what was chosen takes the stage with it,
     // and the choice is left alone so it comes back on a wider window.
     window.addEventListener("resize", function () {
-      var now = thumb.getBoundingClientRect().width;
-      if (now > widest()) { setWidth(widest()); }
+      if (!WIDE.matches) { return; }
+      var now = stage.getBoundingClientRect().width;
+      if (now > widestStage()) { setStage(widestStage()); }
       drawTimeline();
     });
+  }
+  if (WIDE.addEventListener) {
+    WIDE.addEventListener("change", function () { drawTimeline(); });
   }
 
   drawTimeline();

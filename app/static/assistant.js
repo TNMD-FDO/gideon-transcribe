@@ -353,14 +353,16 @@
         "<button type='button' class='small ghost reject' data-suggestion='" + one.id + "'>Reject</button></li>";
     }).join("");
     state.pending.forEach(function (one) {
-      var rows = document.querySelectorAll("#transcript .seg .name");
+      var rows = document.querySelectorAll("#transcript .seg");
       for (var i = 0; i < rows.length; i += 1) {
-        if (rows[i].textContent.trim() === one.speaker) {
+        var name = rows[i].querySelector(".name");
+        var tags = rows[i].querySelector(".tags");
+        if (name && tags && name.textContent.trim() === one.speaker) {
           var pill = document.createElement("span");
           pill.className = "pill side suggested";
           pill.textContent = "Suggested: " + one.name + (one.role ? " (" + one.role + ")" : "");
           pill.title = one.quote + " at " + one.clock;
-          rows[i].parentNode.insertBefore(pill, rows[i].nextSibling);
+          tags.appendChild(pill);
           break;
         }
       }
@@ -649,9 +651,8 @@
     (state.cues || []).forEach(function (one) {
       var row = bySegment[one.segment_id];
       if (!row) { return; }
-      var who = row.querySelector(".who");
-      var name = row.querySelector(".name");
-      if (!who || !name) { return; }
+      var tags = row.querySelector(".tags");
+      if (!tags) { return; }
       var pill = document.createElement("button");
       pill.type = "button";
       pill.className = "pill side cue";
@@ -659,11 +660,8 @@
       pill.title = state.reachable ? one.reason.replace(/\.$/, "") + ". Press to describe the picture here." : state.unavailable_line;
       pill.disabled = !state.reachable;
       pill.dataset.cue = one.id;
-      // After the last pill on the name line (a Suggested: name, say), else
-      // straight after the name.
-      var pills = who.querySelectorAll(".pill");
-      var after = pills.length ? pills[pills.length - 1] : name;
-      after.parentNode.insertBefore(pill, after.nextSibling);
+      // In the row's tags cell, after a Suggested: name if there is one.
+      tags.appendChild(pill);
     });
     (state.moments || []).forEach(function (one) {
       if (one.state === "failed") { return; }

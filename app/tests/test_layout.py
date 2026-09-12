@@ -90,12 +90,16 @@ def test_the_rail_is_gone_and_its_tools_are_where_they_are_used(person, client):
     # The speakers as a strip at the head of the transcript, hide at its end.
     assert 'id="cast"' in page and 'id="speakers"' in page
     assert 'id="speakers-toggle"' in page
-    assert page.index('id="cast"') < page.index('id="transcript"')
+    assert (
+        page.index('data-panel="transcript"')
+        < page.index('id="cast"')
+        < page.index('id="transcript"')
+    )
     assert page.index('id="speakers"') < page.index('id="speakers-toggle"')
     # The pop-out control on the picture, after the video element.
     assert 'id="pop-out"' in page and 'class="tiny pip"' in page
     assert page.index('id="player"') < page.index('id="pop-out"')
-    assert page.index('id="pop-out"') < page.index('id="thumb-grip"')
+    assert page.index('id="pop-out"') < page.index('class="transport"')
     # The new clip button is the header's one coloured button.
     assert 'class="primary small" id="new-clip"' in page
     assert chr(0x2014) not in page

@@ -101,8 +101,14 @@ A user edit of a Segment's text in the viewer. Marked on the Segment and recorde
 **Timeline**:
 The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call.
 
-**Bench**:
-The viewer's right-hand column on a window 1280 pixels or wider: the video at the top and, under it, one of the Clips, Details, Summary and Chat panels, chosen by tabs. On a narrower window the same panels are the bottom sheet. Avoid: sidebar (that is the left one), drawer, inspector.
+**Stage**:
+The viewer's left-hand column on a window 1280 pixels or wider: the picture, the transport under it, the line being spoken, and Describe this moment, resizable by its right edge. On a narrower window the picture sits beside the title and the transport under it; a sound recording has no stage at any width. Avoid: Bench (the right-hand column of v1.4.0 to v1.45.1), player pane, dock (that is the laptop's arrangement of the same things).
+
+**Work area**:
+The viewer's tabbed area beside the stage: Transcript, Clips, Summary, Chat, Moments and Details, one at a time at the full width of the area. Avoid: sheet, Bench, panel column, drawer.
+
+**Marking strip**:
+The line under the Timeline that shows a marked Clip range with its length, Preview, Save clip and clear. Marking a Clip by any route fills it and never changes the tab; Save clip opens the Clips tab.
 
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.

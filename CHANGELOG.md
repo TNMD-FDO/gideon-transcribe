@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.46.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The recording page is the stage and the work area**, chosen by the
+  maintainer from four mockups after v1.45.0 showed that a picture in the
+  same column as the tools takes its size from them. On a wide monitor the
+  **stage** is a column on the left: the picture, the play controls under
+  it, the line being spoken with its time and speaker, and Describe this
+  moment; drag its right edge to make the picture bigger or smaller, from
+  360 pixels to half the window, and nothing else changes shape. The **work
+  area** is the rest: tabs along its top, Transcript, Clips, Summary, Chat,
+  Moments, Details, one at a time, each taking the whole area, so Chat is
+  never squeezed under a picture again. On a laptop the picture sits beside
+  the title and the same tabs fill the screen below; a sound recording has
+  no stage. The bottom sheet, its grip, Expand and Close are gone: both
+  shapes of the page are one page.
+- **The transcript reads like a court transcript.** The time, the speaker's
+  name in a column of its own, the words, and the row's buttons at the
+  right; when one person speaks several lines in a row the name is shown
+  once; 16 px type. The speakers are stuck at the head of the Transcript
+  tab so they never scroll away while a voice is being matched to a name.
+  Names hidden take their column with them.
+- **Marking a clip never changes the tab.** Any route (I and O, a drag on
+  the timeline, clip start on a line, S, a typed time, Make a clip on a
+  moment or a mark) fills the strip under the timeline with the range, its
+  length, Preview, Save clip and clear. Save clip, New clip and Adjust open
+  the Clips tab.
+- A citation in a Summary or a Chat answer opens the Transcript tab and
+  lights the line. D opens Details as before; the tab chosen is remembered.
+
 ## v1.45.1, 2026-09-12
 
 ```

@@ -658,7 +658,7 @@ def test_moments_start_off_and_the_viewer_offers_the_tab_only_when_on(
     # Two panels behind the one tab, as the Clips tab has: the presses and
     # the cue lines, then the Moments kept; every id once.
     assert page.count('class="panel" data-panel="moments"') == 2
-    assert page.count('class="sheet-tab" data-panel="moments"') == 1
+    assert page.count('class="tab" data-panel="moments"') == 1
     for one in (
         "describe-now",
         "find-moments",

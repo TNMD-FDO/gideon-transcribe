@@ -1,9 +1,11 @@
-// Marking a span and saving it as a clip, in the bottom sheet.
+// Marking a span and saving it as a clip.
 //
 // Five ways to mark one, because a corrector's hands are on the keyboard and
 // an occasional user's are on the mouse: I and O at the playhead, typing the
-// times, S to snap to the current segment, "+ clip" on any segment, and a
-// drag on the timeline. Any of them opens the sheet at Clips.
+// times, S to snap to the current segment, "clip start" on any segment, and
+// a drag on the timeline. Any of them fills the marking strip under the
+// timeline and leaves the tab under the reader alone; Save clip in the strip,
+// New clip in the head, and Adjust on a card open the Clips tab.
 
 (function () {
   "use strict";
@@ -69,15 +71,12 @@
   window.CLIPS = {
     range: range,
     load: load,
-    mark: function (start, end, andOpen) {
+    mark: function (start, end) {
       from.value = clock(start);
       to.value = clock(end);
-      // Only when there is something finished to name and save. Marking a
-      // start is not that, and opening the panel over the transcript then is
-      // in the way.
-      if (andOpen !== false) { window.VIEWER.openSheet("clips"); }
       say();
     },
+    preview: preview,
     addSegment: function (segment) {
       // Extends the range to include that segment rather than replacing it.
       // Kept for I and O while playing, which build a range as they go.
@@ -104,7 +103,7 @@
   var newClip = document.getElementById("new-clip");
   if (newClip) {
     newClip.addEventListener("click", function () {
-      window.VIEWER.openSheet("clips");
+      window.VIEWER.openTab("clips");
       document.getElementById("clip-title").focus();
     });
   }
@@ -136,12 +135,9 @@
 
     if (event.key === "i" || event.key === "I") {
       from.value = clock(window.VIEWER.at());
-      // The start alone is not something to save, so the panel stays out of
-      // the way, as it does when a start is marked in the transcript.
       say();
     } else if (event.key === "o" || event.key === "O") {
       to.value = clock(window.VIEWER.at());
-      window.VIEWER.openSheet("clips");
       say();
     } else if (event.key === "s" || event.key === "S") {
       var segment = window.VIEWER.currentSegment();
@@ -154,7 +150,6 @@
         from.value = clock(segment.start);
         to.value = clock(segment.end);
       }
-      window.VIEWER.openSheet("clips");
       say();
     } else if (event.key === "p" || event.key === "P") {
       preview();
@@ -328,6 +323,7 @@
       from.value = clock(parseFloat(card.dataset.start));
       to.value = clock(parseFloat(card.dataset.end));
       say();
+      window.VIEWER.openTab("clips");
       UI.confirm({
         title: "Adjust this clip",
         body: "Change the start and end in the tool above, then save. The clip is rendered again with the new span.",

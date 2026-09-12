@@ -763,38 +763,61 @@ main.wide { max-width: none; }
 body.viewer { display: flex; flex-direction: column; overflow: hidden; }
 body.viewer main { padding: 0; flex: 1; min-height: 0; }
 
-/* The desk is one grid, and the width of the window decides its shape. A
-   narrow window (a laptop) has the picture beside the title, the transcript
-   under them, and the Clips and Details panels as a sheet along the bottom.
-   From 1280 pixels the picture and the panels move to a column on the right,
-   the Bench, and the sheet is not there at all. The column element wraps the
-   picture and the panels in both shapes; on the narrow one it is
-   `display: contents`, so its children take their own places in the grid. */
+/* The desk: the shape of the viewer. Three regions: the head; the timeline
+   with its marking strip; and under them the stage on the left (the picture,
+   the transport, the line being spoken) beside the work area (the tabs). On a
+   window narrower than 1280 pixels the stage is `display: contents`, so the
+   picture sits beside the title and the transport under it, and the work
+   area takes the rest. A sound recording has no picture and no stage at any
+   width; its transport sits under the title. */
 .desk {
   display: grid;
   height: 100%;
   min-height: 0;
+  position: relative;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
   grid-template-areas:
     "thumb head"
+    "thumb transport"
     "timeline timeline"
-    "hint hint"
-    "body body"
-    "bench bench";
+    "caption caption"
+    "now now"
+    "body body";
   background: var(--surface);
 }
-.column { display: contents; }
-.desk .thumb { grid-area: thumb; margin: 8px 0 0 14px; }
-.dockhead { grid-area: head; padding: 8px 14px 0; min-width: 0; }
-.desk .caption { grid-area: hint; }
-.body { grid-area: body; }
-.bench { grid-area: bench; }
+.desk.sound {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "transport"
+    "timeline"
+    "caption"
+    "body";
+}
+.stage { display: contents; }
+.desk .head {
+  grid-area: head;
+  padding: 8px 14px 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.desk .head h1 { font-size: 1.1em; margin: 0; }
+/* The search box in the header, with its count beside it. */
+.desk .head .search-box { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.desk .head .search-box input { width: 190px; min-height: 28px; font-size: var(--t-small); }
+.desk .head .search-box #matches { white-space: nowrap; }
+.desk .head .search-box #matches:empty { display: none; }
+@media (max-width: 1100px) { .desk .head .search-box input { width: 130px; } }
 
 .desk .thumb {
-  /* The width is a person's to choose; the height follows it, so the picture
-     keeps its shape and the transport beside it never jumps about. */
-  width: var(--thumb-width, 220px);
+  grid-area: thumb;
+  margin: 8px 0 0 14px;
+  width: 160px;
   aspect-ratio: 16 / 9;
   background: var(--well);
   border-radius: var(--radius);
@@ -804,62 +827,18 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   justify-content: center;
   position: relative;
 }
-/* An audio recording has no picture to resize and no handle to resize it
-   with, so it keeps the usual box rather than inheriting a width chosen for
-   somebody's video. */
-.desk .thumb.audio { aspect-ratio: auto; height: 124px; width: 220px; }
-
-/* A bar down the right edge rather than a corner: width is the only thing
-   being chosen, and an edge is easier to hit than a corner. */
-.grip {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  cursor: ew-resize;
-  touch-action: none;
-}
-.grip::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 3px;
-  width: 3px;
-  height: 26px;
-  margin-top: -13px;
-  border-radius: 2px;
-  /* An outline as well as a fill, because the bar sits over the picture and
-     the picture can be any colour. */
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
-}
-.grip:hover::after,
-.grip:focus-visible::after { background: var(--accent); }
-.grip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.desk.resizing { cursor: ew-resize; user-select: none; }
-.desk .thumb.audio { background: var(--surface-2); }
 .desk .thumb video { width: 100%; height: 100%; object-fit: contain; }
-.desk .thumb audio { width: 96%; }
 .desk .thumb .preparing {
   color: var(--muted);
   font-size: 0.82em;
   text-align: center;
   padding: 8px;
 }
-.desk .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.desk .head h1 { font-size: 1.1em; margin: 0; }
-/* The search box in the header, with its count beside it. */
-.desk .head .search-box { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
-.desk .head .search-box input { width: 190px; min-height: 28px; font-size: var(--t-small); }
-.desk .head .search-box #matches { white-space: nowrap; }
-.desk .head .search-box #matches:empty { display: none; }
-@media (max-width: 1100px) { .desk .head .search-box input { width: 130px; } }
 /* The pop-out control sits on the picture, beside its consequence. */
 .thumb .pip {
   position: absolute;
   top: 6px;
-  right: 14px;
+  right: 6px;
   z-index: 2;
   background: rgba(0, 0, 0, 0.55);
   color: rgba(255, 255, 255, 0.95);
@@ -869,11 +848,13 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .thumb .pip:hover { background: rgba(0, 0, 0, 0.75); border-color: transparent; opacity: 1; }
 
 .transport {
+  grid-area: transport;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  padding: 6px 14px 0;
+  min-width: 0;
 }
 .transport button { padding: 4px 9px; }
 .transport .time {
@@ -892,6 +873,28 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   color: var(--muted);
   white-space: nowrap;
 }
+.transport #player-trouble, .transport .preparing { flex-basis: 100%; margin: 4px 0 0; }
+
+/* The line being spoken, with Describe this moment beside it on a video. */
+.desk .now {
+  grid-area: now;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 14px;
+  font-size: var(--t-small);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.desk .now .lbl { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.desk .now .time { font-family: var(--mono); color: var(--muted); }
+.desk .now .who { color: var(--speaker, inherit); }
+.desk .now #now-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.desk .now.empty #now-text::before { content: "Nothing is playing yet."; color: var(--muted); }
+.desk.sound .now { display: none; }
+.stagegrip { display: none; }
+.desk.resizing { cursor: ew-resize; user-select: none; }
 
 .timeline {
   grid-area: timeline;
@@ -903,15 +906,23 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   user-select: none;
 }
 .timeline canvas { display: block; width: 100%; }
+/* The marking strip under the timeline: a sentence at rest; the range, Preview,
+   Save clip and clear while something is marked. */
 .desk .caption {
+  grid-area: caption;
   display: flex;
   gap: 8px;
+  align-items: center;
   font-size: var(--t-small);
   color: var(--muted);
-  padding: 2px 16px 6px;
+  padding: 3px 16px;
   margin: 0;
+  min-height: 30px;
   border-bottom: 1px solid var(--line);
 }
+.desk .caption.marking { background: var(--clip-soft); border-bottom-color: var(--clip); color: var(--text); }
+.desk .caption.marking .instruction { display: none; }
+.desk .caption #clip-said { font-weight: 500; }
 #range {
   position: absolute;
   top: 0;
@@ -931,12 +942,52 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   pointer-events: none;
 }
 
-.body { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+/* The work area: the tabs along the top, one panel at a time under them. */
+.body { grid-area: body; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.work { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.tabbar {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+  flex: none;
+}
+.tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  padding: 9px 12px;
+  min-height: 0;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 14px;
+}
+.tab:hover { background: none; border-color: transparent; border-bottom-color: var(--line); color: var(--text); }
+.tab.on { background: none; color: var(--accent); border-color: transparent; border-bottom-color: var(--accent); }
+.panels {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--surface);
+}
+.panels .panel { padding: 12px 14px; flex: none; }
+.panels .panel[hidden] { display: none; }
+.panels .panel:not([hidden]) + .panel:not([hidden]) { border-top: 1px solid var(--line); }
+/* The transcript panel scrolls inside itself, so Follow mode moves only it;
+   the Chat fills the area so its box stays at the foot. */
+.panels .panel.read { padding: 0; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.panels .panel.chat { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
 
-/* A recording opened from a case gets a third column: the rest of the case,
-   so somebody working through a matter moves between its recordings without
-   going back to the case page. It hides on a narrow screen, and the button in
-   the head brings it back. */
+/* A recording opened from a case gets a column on the left: the rest of the
+   case, so somebody working through a matter moves between its recordings
+   without going back to the case page. It hides on a narrow screen, and the
+   button in the head brings it back. */
 .body.with-case { grid-template-columns: 232px minmax(0, 1fr); position: relative; }
 .body.with-case.case-hidden { grid-template-columns: minmax(0, 1fr); }
 .body.with-case.case-hidden .caserail { display: none; }
@@ -988,40 +1039,45 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   }
 }
 
-/* The cast: the speakers at the head of the transcript column, at the
-   transcript's width, scrolling with it. */
-.read { min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+/* The cast: the speakers at the head of the transcript, stuck under the tab
+   bar so they never scroll away; its contents at the transcript's width. */
 .cast {
-  max-width: var(--reading, 1040px);
-  width: 100%;
-  margin: 0 auto;
-  padding: 10px 20px 0;
-  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 20px;
   flex: none;
 }
+.cast > * { max-width: var(--reading, 1040px); margin-left: auto; margin-right: auto; }
 .cast .row { gap: 8px; align-items: center; }
 .cast .speakerchips { margin: 0; }
 .cast .hint { margin-top: 6px; }
-.cast .card { margin: 6px 0 0; }
+.cast .card { margin: 6px auto 0; }
 .cast input[type="text"] { width: 100%; }
 .read .transcript {
   max-width: var(--reading, 1040px);
   width: 100%;
   margin: 0 auto;
-  font-size: 1.05em;
+  font-size: 16px;
   list-style: none;
   padding: 8px 10px 40vh;
 }
 
+/* A row of the Ledger: the time, the name in a column of its own, the words,
+   and the row's buttons. A speaker's second line in a row leaves the name
+   column blank, so a column of names says who spoke at a glance. */
 .seg {
   display: grid;
-  grid-template-columns: 6em minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 8px 10px;
+  grid-template-columns: 5.5em 9em minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 7px 10px;
   border-radius: 6px;
   border-left: 4px solid transparent;
   margin: 2px 0;
   cursor: pointer;
+  align-items: start;
 }
 .seg:hover { background: var(--surface-2); }
 .seg.here { background: var(--now); color: var(--now-ink); }
@@ -1057,10 +1113,15 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .seg .who {
   font-weight: 600;
   font-size: 0.85em;
-  margin-bottom: 2px;
+  padding-top: 3px;
+  text-align: right;
+  overflow-wrap: anywhere;
   color: var(--speaker, inherit);
 }
 .seg.here .who { color: inherit; }
+.seg.cont .who .name { visibility: hidden; }
+.seg .tags { display: block; }
+.seg .tags:empty { display: none; }
 .seg .txt { white-space: pre-wrap; margin: 0; }
 .seg .txt mark {
   background: color-mix(in srgb, var(--accent) 35%, transparent);
@@ -1093,9 +1154,12 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   font-size: 0.85em;
 }
 /* The row's buttons in a column of their own, never over the words. */
-.seg .actions { grid-column: 3; align-self: start; display: inline-flex; gap: 2px; visibility: hidden; }
+.seg .actions { grid-column: 4; align-self: start; display: inline-flex; gap: 2px; visibility: hidden; }
 .seg:hover .actions, .seg.here .actions { visibility: visible; }
-body.no-speakers .seg .name { display: none; }
+/* Names hidden: the name column goes with them. */
+body.no-speakers .seg { grid-template-columns: 5.5em minmax(0, 1fr) auto; }
+body.no-speakers .seg .who { display: none; }
+body.no-speakers .seg .actions { grid-column: 3; }
 
 .speakerchips { list-style: none; margin: 6px 0; padding: 0; display: flex;
   flex-wrap: wrap; gap: 4px; }
@@ -1136,7 +1200,7 @@ body.no-speakers .seg .name { display: none; }
 
 .followpill {
   position: sticky;
-  top: 4px;
+  top: 52px;
   z-index: 5;
   display: block;
   width: max-content;
@@ -1160,8 +1224,8 @@ body.no-speakers .seg .name { display: none; }
   margin: 0 auto;
 }
 
-/* The tabs on a case page. Their own class rather than the viewer's
-   .sheet-tab, which is a button with no styles of its own. */
+/* The tabs on a case page, links in a row; the viewer's .tab draws its
+   buttons the same way. */
 .tabs {
   display: flex;
   gap: 2px;
@@ -1181,75 +1245,6 @@ body.no-speakers .seg .name { display: none; }
 .tabs .tab:hover { color: var(--text); }
 .tabs .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
 
-.sheetbar {
-  display: flex;
-  gap: 2px;
-  padding: 0 10px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--line);
-  align-items: center;
-}
-/* The tabs as the case page has them: an underline, not five boxed buttons. */
-.sheet-tab {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  margin-bottom: -1px;
-  padding: 9px 12px;
-  min-height: 0;
-  color: var(--muted);
-  font-weight: 500;
-  font-size: 14px;
-}
-.sheet-tab:hover { background: none; border-color: transparent; border-bottom-color: var(--line); color: var(--text); }
-.sheet-tab.on { background: none; color: var(--accent); border-color: transparent; border-bottom-color: var(--accent); }
-.sheet {
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-  /* A height rather than a cap, because it is dragged. Its own scroll, so a
-     long clips list never pushes the page about. */
-  height: var(--sheet-height, 40vh);
-  overflow: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-/* The strip that resizes the sheet, above the bar of tabs. */
-.sheetgrip {
-  height: 7px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--line);
-  cursor: ns-resize;
-  touch-action: none;
-  position: relative;
-}
-.sheetgrip::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 3px;
-  width: 40px;
-  height: 3px;
-  margin-left: -20px;
-  border-radius: 2px;
-  background: var(--line);
-}
-.sheetgrip:hover::after,
-.sheetgrip:focus-visible::after { background: var(--accent); }
-.sheetgrip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.desk.sizing { cursor: ns-resize; user-select: none; }
-.sheet .panel { padding: 12px 14px; }
-/* Each panel scrolls inside itself rather than the sheet as a whole, so the
-   Chat's box stays in view at the foot while its conversation scrolls. */
-.sheet { grid-template-rows: minmax(0, 1fr); }
-.sheet .panel { overflow: auto; min-height: 0; }
-.sheet .panel.chat { display: flex; flex-direction: column; overflow: hidden; grid-column: 1 / -1; }
-.sheet .panel.chat[hidden] { display: none; }
-.sheet .panel:not([hidden]) + .panel:not([hidden]) {
-  border-left: 1px solid var(--line);
-}
-
 .cliplist { display: flex; flex-direction: column; gap: 8px; }
 .clipcard {
   border: 1px solid var(--line);
@@ -1260,56 +1255,69 @@ body.no-speakers .seg .name { display: none; }
 }
 .clipcard .title { font-weight: 600; }
 
-/* The Bench: the wide shape of the desk. The picture takes the column's width
-   and the panels take the rest of its height, each with its own scroll. The
-   grip that resized the picture now resizes the column, from its left edge,
-   and the sheet's own grip and Close have nothing to do. */
+/* The stage: the wide shape of the desk. From 1280 pixels the picture, the
+   transport and the line being spoken are a column on the left, resizable
+   by its right edge, beside the work area; the head and the timeline span
+   the width above both. A sound recording keeps the narrow shape. */
 @media (min-width: 1280px) {
-  .desk {
-    /* The column grows with the window: 400 px on a small monitor, 620 on
-       a wide one, and the grip's choice over both. */
-    grid-template-columns: minmax(0, 1fr) var(--column-width, clamp(400px, 28vw, 620px));
+  .desk:not(.sound) {
+    grid-template-columns: var(--stage, clamp(360px, 29vw, 800px)) minmax(0, 1fr);
     grid-template-rows: auto auto auto minmax(0, 1fr);
     grid-template-areas:
-      "head column"
-      "timeline column"
-      "hint column"
-      "body column";
+      "head head"
+      "timeline timeline"
+      "caption caption"
+      "stage body";
   }
-  .column {
+  .desk:not(.sound) .stage {
     display: flex;
     flex-direction: column;
-    grid-area: column;
+    grid-area: stage;
     min-height: 0;
-    border-left: 1px solid var(--line);
+    min-width: 0;
+    position: relative;
+    border-right: 1px solid var(--line);
     background: var(--surface);
   }
-  .desk .thumb { grid-area: auto; width: auto; margin: 0; border-radius: 0; flex: none; }
-  .thumb .pip { right: 6px; }
-  .desk .thumb.audio { width: auto; }
-  .grip { right: auto; left: 0; }
-  .grip::after { right: auto; left: 3px; }
-  .bench { grid-area: auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
-  .sheetgrip, #close-sheet, #expand-sheet { display: none; }
-  .sheetbar { border-top: 0; border-bottom: 1px solid var(--line); }
-  .sheet {
-    height: auto;
-    flex: 1;
-    border-top: 0;
-    /* The panels of a tab stacked, each at its own height, the sheet
-       scrolling as a whole. A grid with one flexible row gave the first
-       panel what the second left over, which with fifty described moments
-       was a sliver with the head of the Moments tab in it. The Chat alone
-       fills the column, so its box stays at the foot. */
-    display: flex;
-    flex-direction: column;
-  }
-  .sheet .panel { flex: none; overflow: visible; }
-  .sheet .panel.chat { flex: 1; min-height: 0; overflow: hidden; }
-  .sheet .panel:not([hidden]) + .panel:not([hidden]) {
-    border-left: 0;
+  .desk:not(.sound) .thumb { grid-area: auto; width: 100%; margin: 0; border-radius: 0; flex: none; }
+  .desk:not(.sound) .transport { grid-area: auto; flex: none; }
+  .desk:not(.sound) .now {
+    grid-area: auto;
+    flex: none;
+    border-bottom: 0;
     border-top: 1px solid var(--line);
+    margin-top: 6px;
+    padding: 8px 14px;
+    align-items: flex-start;
   }
+  .desk:not(.sound) .now #now-text { white-space: normal; flex-basis: 100%; }
+  .desk:not(.sound) .now #describe-now { margin-top: 4px; }
+  /* A bar down the stage's right edge: the width is the only thing chosen. */
+  .desk:not(.sound) .stagegrip {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -5px;
+    width: 10px;
+    cursor: ew-resize;
+    touch-action: none;
+    z-index: 3;
+  }
+  .stagegrip::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 3px;
+    height: 26px;
+    margin-top: -13px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+  .stagegrip:hover::after,
+  .stagegrip:focus-visible::after { background: var(--accent); }
+  .stagegrip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 }
 
 /* The AI assistant's panels ---------------------------------------------------- */
@@ -1384,11 +1392,11 @@ body.no-speakers .seg .name { display: none; }
 .seg.lit { outline: 2px solid var(--accent); outline-offset: -2px; transition: outline-color 1.2s ease; }
 .suggestions { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .suggestion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9em; }
-.pill.suggested { margin-left: 6px; }
+.pill.suggested { margin-right: 6px; }
 /* Moments: a cue line's dashed Camera? button, and the camera line under a
    row. The button is reset to the pill's own size so the button rules do not
    grow the name line. */
-.pill.cue { margin-left: 6px; cursor: pointer; min-height: 0; line-height: 1.5; padding: 1px 9px; font-weight: 500; }
+.pill.cue { margin-right: 6px; cursor: pointer; min-height: 0; line-height: 1.5; padding: 1px 9px; font-weight: 500; }
 .pill.cue:hover { border-color: var(--accent); }
 .pill.cue:disabled { cursor: default; opacity: 0.6; }
 .camera-line { margin: 4px 0 0; font-style: italic; color: var(--text); }

@@ -2381,32 +2381,31 @@ A prototype exists in the planning repository at `prototypes/transcript-viewer/`
 
 ### The Desk layout
 
-The Transcript comes first, at reading width, in the middle of the screen. The search box, the one primary (New Clip), and two menus, **Export** and **More**, sit in the header, and the Speakers are a strip at the head of the Transcript column that scrolls with it (v1.45.0; until then a left sidebar held the search, the Speakers, the exports and the housekeeping, and took 260 pixels from the words on every screen). On a window narrower than 1280 pixels the media sits above the Transcript in a dock and Clips and Details sit in a bottom sheet, as the diagram below shows. From 1280 pixels the picture and the panels move to a third column on the right, the **Bench**: the video at the top, at the column's width and resizable by its left edge, and under it one panel at a time from Clips, Details and, when the AI assistant is on, Summary and Chat, chosen by a row of tabs. The Bench is always open; there is no sheet and nothing to close. The dock then holds only the title, the markers, the transport and the Timeline, which spans the Transcript's width. The layout is built for correctors and interpreters who live on the keyboard, and for the wide monitors an office actually has, without taking anything from a laptop.
+The Transcript comes first, in the **work area**, a tabbed area that takes the full width of the page under the head and the Timeline: **Transcript**, **Clips**, **Summary**, **Chat**, **Moments** (on a video with Moments on), **Details**, one at a time, each at the area's full width and height (v1.46.0). Beside it on a window 1280 pixels or wider stands the **stage**: the picture, the transport under it, the line being spoken, and Describe this moment, a column resizable by its right edge from 360 pixels to half the window. On a narrower window the stage is not a column: the picture sits beside the title at 160 pixels and the transport under it, and the work area takes the rest, so a laptop shows the same page smaller. A sound recording has no picture and no stage at any width; its transport sits under the title. The head above holds the search box, the one primary (New Clip), and two menus, **Export** and **More**; the Speakers are a strip at the head of the Transcript tab, stuck under the tab bar so they never scroll away. The layout is built for correctors and interpreters who live on the keyboard, and for the wide monitors an office actually has, without taking anything from a laptop.
+
+Before v1.46.0 the page was the Desk of the prototype (a left sidebar, the Transcript at reading width, the picture and the panels in a right-hand column, the Bench, from v1.4.0, or a bottom sheet on a laptop); the maintainer's review of 2026-09-12 found the tools squeezed beside the picture and the speakers out of view while tagging, and chose the stage and the work area from four mockups.
 
 ```
 +------------------------------------------------------------------+
 | Header: back, title, markers | search | New Clip | Export | More |
-| Media dock: thumbnail (Pop out video on it) or waveform | transport|
-|   Timeline: waveform                                             |
-+------------------------------------------------------------------+
-|   Speakers: chip  chip  chip                              hide   |
-|                                                                  |
-|        Transcript column, reading width                          |
-|        one row per Segment, its buttons in a column of their own |
-|                                                                  |
-+------------------------------------------------------------------+
-| Bottom sheet:  Clips | Summary | Chat | Moments | Details        |
-+------------------------------------------------------------------+
+| Timeline: waveform; the marking strip under it                   |
++----------------------+-------------------------------------------+
+| STAGE                | WORK AREA                                 |
+|  picture (Pop out)   |  Transcript | Clips | Summary | Chat |    |
+|  transport, clock    |  Moments | Details                        |
+|  Now: 0:42 Ruiz ...  |  Speakers: chip chip chip           hide  |
+|  Describe this moment|  0:04   Officer Ruiz   Licence and ...    |
+|  <- drag ->          |  0:09   Speaker 2      Yeah, hold on ...  |
+|                      |  one row per Segment: time, name, words   |
++----------------------+-------------------------------------------+
 ```
 
-(The diagram before v1.45.0 had a left sidebar; the Bench of v1.4.0 puts the picture and the panels in a column on the right from 1280 pixels, as the text above says.)
-
-- **Transcript column**: the Transcript at reading width, one row per Segment (see "The Transcript" below). It is the only thing that scrolls in Follow mode.
-- **Media dock**, above the Transcript: a thumbnail of the video (on the Bench, the picture at the top of the column instead), which pops out to a floating window (the `Pop out video` and `Dock video` control, on the picture itself from v1.45.0; while popped out the thumbnail slot reads `Video popped out`); for an audio-only Recording a waveform stands in the thumbnail's place. Beside the thumbnail sit the transport bar and the primary **New Clip** button. Under them runs the **Timeline**: the waveform; click to seek, drag to mark a Clip. For a Two-channel call the waveform is split into one lane per Side.
-- **The header's menus** (v1.45.0, in place of the left sidebar): the search box with its match count; **Export**, a menu of Word, plain text and Captions; **More**, a menu of the keyboard shortcuts, Process again and, last and red inside the menu only, Delete this recording. Nothing is red at reading height. The Speakers are the strip at the head of the Transcript column (see "Speakers panel").
-- **Bottom sheet**, on a narrow window, or the **Bench**'s tabbed panels on a wide one: **Clips** (the Clip tool and the Recording's Clips list) and **Details** (the Provenance). The New Clip button opens the sheet at Clips, and marking a Clip by any route (I or O, a drag on the Timeline, `+ Clip` on a Segment, S) opens it too. The sheet is never the only way to a Clip, because a Clip tool that lives only in a closed sheet is not found.
-- **Overlays**: on a narrow window Summary and Chat open as overlays from the sidebar; on the Bench they are two more tabs beside Clips and Details, so an answer is read beside the Transcript it cites. The shortcuts list opens as an overlay from the More menu or `?`. Esc closes an open menu, an overlay or, on a narrow window, the sheet.
-- **Header**: a control back to the Recordings page, the Recording's title, the markers (see "Markers" below), the search box, New Clip, the Export and More menus (v1.45.0), and the light and dark theme toggle. The pop-out control for a video sits on the picture once playback is Ready.
+- **The work area**: the tabs along its top, one panel at a time at full width and height, each scrolling inside itself. The tab chosen is remembered; a link that names a panel (`?panel=`) wins; D opens Details. The **Transcript** tab holds the Speakers strip and the Transcript (see "The Transcript" below); it is the only thing that scrolls in Follow mode. The others hold what the chapters give them: Clips (the Clip tool and the Recording's Clips list), Summary, Chat, Moments (the Phase 4 chapters), Details (the Provenance).
+- **The stage**, on a wide window: the picture at the column's width, which pops out to a floating window (the `Pop out video` and `Dock video` control on the picture itself; while popped out the picture's slot reads `Video popped out`); the transport under it; the line being spoken (its time, Speaker and words) and, on a video with Moments on, **Describe this moment**; the grip on its right edge, dragged, double-clicked to reset, or moved by the arrow keys. On a laptop the same picture sits beside the title, the transport under it, and the line being spoken with Describe this moment on a row under the marking strip.
+- **The Timeline**, under the head at the width of the window: the waveform; click to seek, drag to mark a Clip. For a Two-channel call the waveform is split into one lane per Side. Under it the **marking strip**: at rest one sentence; while a range is marked, the range, its length and its Segments, **Preview**, **Save clip** and **clear**. Marking a Clip by any route fills the strip and never changes the tab under the reader; Save clip, New Clip and Adjust open the Clips tab.
+- **The header's menus** (v1.45.0, in place of the left sidebar): the search box with its match count; **Export**, a menu of Word, plain text and Captions; **More**, a menu of the keyboard shortcuts, Process again and, last and red inside the menu only, Delete this recording. Nothing is red at reading height.
+- **Overlays**: the shortcuts list opens as an overlay from the More menu or `?`. Esc closes an open menu, an overlay, a marking in progress, or a marked range.
+- **Header**: a control back to the Recordings page, the Recording's title, the markers (see "Markers" below), the search box, New Clip, the Export and More menus, and the light and dark theme toggle.
 
 ### Player and transport
 
@@ -2492,7 +2491,7 @@ Following paused while you read. Resume (F)
 
 ### Speakers panel
 
-The Speakers panel is the strip at the head of the Transcript column, at the Transcript's width, scrolling with it (v1.45.0; the sidebar before). It lists the Recording's Speakers as chips in their colours, with the line "Click a name to rename it. Drag one Speaker onto another to merge them (when two labels are the same person)." It names one Recording's Speakers only.
+The Speakers panel is the strip at the head of the Transcript tab, stuck under the tab bar so it never scrolls away (v1.46.0; from v1.45.0 it scrolled with the Transcript, and the sidebar held it before). It lists the Recording's Speakers as chips in their colours, with the line "Click a name to rename it. Drag one Speaker onto another to merge them (when two labels are the same person)." It names one Recording's Speakers only.
 
 #### Rename and merge
 
@@ -2516,9 +2515,9 @@ Suggested: <name> ✓ ✗
 
 ### Clips in the viewer
 
-The Clips chapter owns the Clip: its fields, rendering, downloads, limits, and lifecycle. The viewer owns the marking and previewing tool and the Recording's Clips list, both in the Clips panel of the bottom sheet.
+The Clips chapter owns the Clip: its fields, rendering, downloads, limits, and lifecycle. The viewer owns the marking and previewing tool and the Recording's Clips list, both on the Clips tab of the work area (v1.46.0), and the marking strip under the Timeline.
 
-- **Marking a start and an end**: I and O at the playhead while playing; typing the times; Snap to the current Segment (S), which sets the start and end to that Segment's (when a start has been marked and no end yet, Snap extends the range to the Segment's end, as the prototype does); `+ Clip` on any Segment in the Transcript, which extends the range to include that Segment; or dragging on the Timeline. Any of these opens the sheet at Clips.
+- **Marking a start and an end**: I and O at the playhead while playing; typing the times; Snap to the current Segment (S), which sets the start and end to that Segment's (when a start has been marked and no end yet, Snap extends the range to the Segment's end, as the prototype does); `+ Clip` on any Segment in the Transcript, which extends the range to include that Segment; or dragging on the Timeline. Any of these fills the marking strip under the Timeline and leaves the tab under the reader alone; Save clip in the strip, New Clip in the header, and Adjust on a Clip's card open the Clips tab (v1.46.0; until then any route opened the sheet at Clips).
 - The tool shows the range's length and the number of Segments in it (or `No range yet`), a Clear control, and Preview.
 - **Preview** (P) plays the range and stops at its end.
 - **Title** (required, prefilled `Clip 1`, `Clip 2` per Recording), an optional **note**, and the two options: `Burn captions into the video` (off by default; shown for a video Recording only) and `Include the transcript excerpt` (on by default). The limits on each are the Clips chapter's.
@@ -2529,14 +2528,14 @@ The Clips chapter owns the Clip: its fields, rendering, downloads, limits, and l
 ### Export, Summary, and Chat
 
 - **Export**, a menu in the header (v1.45.0; the sidebar before), offers the Transcript's exports: **Word**, **plain text (.txt)**, and **Captions (.srt)**. Each is written at the moment of export from the live Transcript, carries what the Exports chapter fixes (the Word layout and its Processing record; the plain-text shape with its head, the one notice, and `[hh:mm:ss] Speaker: text` lines with `(corrected)` after the name; the Captions cues with no notice), and writes an audit row. No VTT is produced in Phase 1.
-- **Summary** opens its panel (a Bench tab on a wide window, an overlay on a narrow one) that lists the Transcript's Summaries, each with Export to Word, Regenerate, and Delete, and a `New summary` dialog with a Summary template choice (shown only when two or more templates are Enabled), an optional Focus box, and a Length choice of Short, Standard, or Detailed. Every time in a Summary is a Citation, a link that seeks the player. The AI notice sits at the top.
-- **Chat** opens its panel (a Bench tab on a wide window, an overlay on a narrow one) with a thread list (New chat, Delete per Chat), the conversation, Copy per answer, and Export to Word. Answers cite Segments; each Citation seeks the player. The AI notice sits at the top.
+- **Summary** is a tab of the work area (v1.46.0) that lists the Transcript's Summaries, each with Export to Word, Regenerate, and Delete, and a `New summary` dialog with a Summary template choice (shown only when two or more templates are Enabled), an optional Focus box, and a Length choice of Short, Standard, or Detailed. Every time in a Summary is a Citation, a link that seeks the player. The AI notice sits at the top.
+- **Chat** is a tab of the work area (v1.46.0) with a thread list (New chat, Delete per Chat), the conversation, Copy per answer, and Export to Word. Answers cite Segments; each Citation seeks the player. The AI notice sits at the top.
 - Both panels show `Reading the transcript...` while the AI assistant works and deliver whole answers; there is no streaming.
 - The content of Summaries, Chats, and Speaker suggestions, their prompts, and their exports are the AI assistant chapter's and the Exports chapter's decisions.
 
 ### Details panel and the Provenance
 
-The Details panel of the bottom sheet (also D) shows the Provenance: where the Recording came from and how it was processed, as name and value pairs. It is the same Provenance that is printed on every export, and it never holds Transcript content. The Media handling chapter fixes the entries: the original name, size, hash, uploader and time, the technical facts (container and duration; streams, with the frame rate the viewer uses for frame stepping; the sound sources found and used, from which the Sides are made; Two-channel detection; Sides), and every setting and model used (Preprocessing profile and the loudness measured and applied, the ASR model, Diarization and its Speaker-count hint, Translation, Vocabulary, the WhisperX service version, the Playback copy, the processing times and pipeline version). The Provenance also carries one Clip line per Clip that exists at the time (span, options, render time); a deleted Clip drops out.
+The Details tab of the work area (also D) shows the Provenance: where the Recording came from and how it was processed, as name and value pairs. It is the same Provenance that is printed on every export, and it never holds Transcript content. The Media handling chapter fixes the entries: the original name, size, hash, uploader and time, the technical facts (container and duration; streams, with the frame rate the viewer uses for frame stepping; the sound sources found and used, from which the Sides are made; Two-channel detection; Sides), and every setting and model used (Preprocessing profile and the loudness measured and applied, the ASR model, Diarization and its Speaker-count hint, Translation, Vocabulary, the WhisperX service version, the Playback copy, the processing times and pipeline version). The Provenance also carries one Clip line per Clip that exists at the time (span, options, render time); a deleted Clip drops out.
 
 ### Before the Transcript exists
 
@@ -2624,6 +2623,7 @@ No environment key belongs to this chapter.
 Transcript viewer and synced player; Clips: model, lifecycle, and management (its amendment to the viewer and the facts it records from the Word export ticket).
 
 ### Amendments applied
+- From the maintainer, on the v1.45.1 build ("the features are gonna squish too much"), the stage and the work area (v1.46.0), chosen from four mockups: the work area a tabbed area at full width, Transcript first, one tab at a time; the stage a column on the left with the picture, the transport, the line being spoken and Describe this moment, resizable by its right edge; on a laptop the picture beside the title and the same tabs below; a sound recording without a stage; the sheet, its grip, Expand and Close withdrawn, so the two shapes of the page are one page; the Transcript as a Ledger (time, the name in a column of its own, the words, the row's buttons; a speaker's second line in a row leaves the name blank; 16 px); the Speakers strip stuck under the tab bar; the marking strip under the Timeline, so no route of marking changes the tab; a Citation opening the Transcript tab. The Desk diagram redrawn again.
 - From the maintainer, on the v1.43.0 build ("do another review of the recording page ... giving the main things more space to move"), the first layout slice (v1.45.0): the left sidebar withdrawn; the search box, New Clip, and the Export and More menus in the header, the housekeeping (shortcuts, Process again, Delete) inside More and nothing red at reading height; the Speakers a strip at the head of the Transcript column that scrolls with it; the pop-out control on the picture; the reading width 1,040 pixels; each row's buttons in a column of their own rather than over the words; the sheet's tabs drawn as the case page's underline tabs; the Bench column 400 to 620 pixels with the window; the `No word timing` pill dropped from the header (the Details panel says it and the missing word underline shows it); the Timeline's caption one sentence. The Desk diagram redrawn.
 - From the maintainer, on the first Teams call (v1.35.1), to the Speakers panel, built in v1.36.0: a rename or a merge is remembered on the Transcript (`speaker_changes`, the moved Segment ids, kept to the last twenty) and **Undo** under the chips puts exactly those Segments back under their old name, newest change first, touching only Segments that still carry the given name; a **Rename** control beside the title lets the people who work in a Recording (standing "own", not an Admin looking in) give it a new title, the file name kept, writing "Recording renamed" without the title.
 

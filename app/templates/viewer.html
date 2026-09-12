@@ -18,13 +18,15 @@
     </p>
   {% endif %}
 
-  <div class="desk">
+  <div class="desk{% if not is_video %} sound{% endif %}">
     {% comment %}
-      The dock: the title and the transport. The picture is in the column,
-      which a narrow screen lays out beside this and a wide screen on the right.
+      Three regions: the head, the timeline with its marking strip, and
+      under them the stage on the left (the picture, the transport, the line
+      being spoken) beside the work area (the tabs). On a laptop the stage
+      is contents: the picture sits beside the title and the transport under
+      it. A sound recording has no picture and no stage at any width.
     {% endcomment %}
-    <div class="dockhead">
-        <div class="head">
+    <div class="head">
           {% if recording.case_id and in_case %}
             <a href="{% url 'case' recording.case_id %}" title="Back to the case {{ recording.case.name }}" class="btn ghost icon">{% icon "back" %}</a>
             <span class="crumb muted small"><a href="{% url 'case' recording.case_id %}">{{ recording.case.name }}</a></span>
@@ -95,9 +97,35 @@
                           data-clips="{{ recording.clips.count }}">{% icon "delete" %} Delete this recording</button></li>
             </ul>
           </details>
-        </div>
+    </div>
 
-        <div class="transport">
+    <div class="stage">
+      {% if is_video %}
+        <div class="thumb" id="thumb">
+          {% if media_url %}
+            <video id="player" src="{{ media_url }}" preload="metadata"></video>
+            <p id="popped" class="preparing" hidden>Video popped out</p>
+            <button type="button" class="tiny pip" id="pop-out" title="Put the video in its own window, so the words can have the screen">Pop out video</button>
+          {% else %}
+            <div class="preparing">
+              <b>Preparing video</b>
+              <p class="small">
+                {% if transcript %}
+                  The transcript is ready; you can read, search, and correct it
+                  now. Playback starts when the playback copy is done, a few
+                  minutes for a long video. This page notices by itself.
+                {% else %}
+                  The player appears when it is ready.
+                {% endif %}
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+      <div class="transport">
+        {% if media_url and not is_video %}
+          <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
+        {% endif %}
           <button type="button" id="play" class="big">Play</button>
           <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
           <button type="button" data-seek="-5" title="Back five seconds (Left)">&minus;5s</button>
@@ -125,26 +153,62 @@
             </label>
           {% endif %}
           <label><input type="checkbox" id="follow" checked> Follow</label>
-        </div>
-
         <p id="player-trouble" class="problem" hidden></p>
+        {% if not media_url and not is_video %}
+          <p class="preparing muted small">
+            <b>Preparing audio.</b>
+            {% if transcript %}
+              The transcript is ready; you can read, search, and correct it
+              now. Playback starts when the playback copy is done. This page
+              notices by itself.
+            {% else %}
+              The player appears when it is ready.
+            {% endif %}
+          </p>
+        {% endif %}
+      </div>
+      {% comment %}
+        The line being spoken, and Describe this moment beside it on a video
+        with Moments on: the picture's own work sits with the picture.
+      {% endcomment %}
+      <div class="now empty" id="now">
+        <span class="lbl">Now</span>
+        <span id="now-clock" class="time"></span>
+        <b id="now-who" class="who"></b>
+        <span id="now-text" class="grow"></span>
+        {% if assistant.moments and transcript and is_video %}
+          <button type="button" class="small primary" id="describe-now" title="Describe the picture at the player's time, or ask a question about it">{% icon "camera" %} Describe this moment</button>
+        {% endif %}
+      </div>
+      {% if is_video %}
+        <div id="stage-grip" class="stagegrip" title="Drag to resize the stage. Double-click to reset."
+             role="separator" aria-label="Resize the stage" tabindex="0"></div>
+      {% endif %}
     </div>
 
-      {# The timeline: the waveform and the marked range. #}
-      <div class="timeline" id="timeline">
-        <canvas id="waveform" height="56"></canvas>
-        <div id="range" hidden></div>
-        <div id="playhead"></div>
-      </div>
-      <p class="caption">
-        <span>Click the timeline to jump; drag along it to mark a clip.</span>
-        <span class="grow"></span>
-        <span id="clip-said"></span>
-        <button type="button" id="drop-clip" class="ghost tiny" hidden
-                title="Drop this selection (Esc)">clear</button>
-      </p>
+    {# The timeline: the waveform and the marked range, at the width of the window. #}
+    <div class="timeline" id="timeline">
+      <canvas id="waveform" height="56"></canvas>
+      <div id="range" hidden></div>
+      <div id="playhead"></div>
+    </div>
+    {% comment %}
+      The marking strip: at rest one sentence; while a range is marked, its
+      length, Preview, Save clip and clear. Marking a clip by any route fills
+      this strip and never changes the tab under the reader; Save clip, New
+      clip and Adjust are the routes that open the Clips tab.
+    {% endcomment %}
+    <p class="caption" id="caption">
+      <span class="instruction">Click the timeline to jump; drag along it to mark a clip.</span>
+      <span class="grow"></span>
+      <span id="clip-said"></span>
+      <button type="button" id="clip-preview-strip" class="tiny" hidden title="Play the marked range and stop at its end (P)">Preview</button>
+      <button type="button" id="clip-save-go" class="tiny primary" hidden title="Name the clip and save it">Save clip...</button>
+      <button type="button" id="drop-clip" class="ghost tiny" hidden
+              title="Drop this selection (Esc)">clear</button>
+    </p>
 
-    {# The body: the transcript, with the rest of the case beside it in a case. #}
+    {# The work area: the tabs, one at a time at full width; beside it, in a case, the rest of the case. #}
     <div class="body{% if in_case %} with-case{% endif %}">
       {% if in_case %}
         <aside class="caserail" id="caserail">
@@ -186,7 +250,26 @@
           </ul>
         </aside>
       {% endif %}
-      <div class="read">
+      <div class="work">
+        <div class="tabbar" role="tablist">
+          <button type="button" class="tab on" data-panel="transcript">Transcript</button>
+          {% if clips_available %}
+            <button type="button" class="tab" data-panel="clips">Clips</button>
+          {% endif %}
+          {% if assistant.summary and transcript %}
+            <button type="button" class="tab" data-panel="summary">Summary</button>
+          {% endif %}
+          {% if assistant.chat and transcript %}
+            <button type="button" class="tab" data-panel="chat">Chat</button>
+          {% endif %}
+          {% if assistant.moments and transcript and is_video %}
+            <button type="button" class="tab" data-panel="moments">Moments</button>
+          {% endif %}
+          <button type="button" class="tab" data-panel="details">Details</button>
+        </div>
+
+        <div id="panels" class="panels">
+          <div class="panel read" data-panel="transcript">
         {% if transcript %}
           {% comment %}
             The cast: the speakers at the head of the transcript, at its
@@ -287,71 +370,7 @@
             {% endif %}
           </div>
         {% endif %}
-      </div>
-    </div>
-
-    {% comment %}
-      The Bench: the picture, and the Clips and Details panels. On a wide
-      screen it is the column on the right; on a narrow one the picture sits
-      in the dock and the panels are a sheet along the bottom. The stylesheet
-      decides which, by the width of the window.
-    {% endcomment %}
-    <div class="column">
-      <div class="thumb{% if not is_video %} audio{% endif %}" id="thumb">
-        {% if media_url %}
-          {% if is_video %}
-            <video id="player" src="{{ media_url }}" preload="metadata"></video>
-            <p id="popped" class="preparing" hidden>Video popped out</p>
-            <button type="button" class="tiny pip" id="pop-out" title="Put the video in its own window, so the words can have the screen">Pop out video</button>
-          {% else %}
-            <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
-          {% endif %}
-        {% else %}
-          <div class="preparing">
-            <b>Preparing {% if is_video %}video{% else %}audio{% endif %}</b>
-            <p class="small">
-              {% if transcript %}
-                The transcript is ready; you can read, search, and correct it
-                now. Playback starts when the playback copy is done, a few
-                minutes for a long video. This page notices by itself.
-              {% else %}
-                The player appears when it is ready.
-              {% endif %}
-            </p>
           </div>
-        {% endif %}
-        {% if media_url and is_video %}
-          <div id="thumb-grip" class="grip" title="Drag to resize. Double-click to reset."
-               role="separator" aria-label="Resize the video" tabindex="0"></div>
-        {% endif %}
-      </div>
-
-
-      <div class="bench">
-      <div id="sheet-grip" class="sheetgrip" hidden
-           title="Drag to resize. Double-click to reset."
-           role="separator" aria-label="Resize the panel" tabindex="0"></div>
-
-      <div class="sheetbar">
-        {% if clips_available %}
-          <button type="button" class="sheet-tab" data-panel="clips">Clips</button>
-        {% endif %}
-        {% if assistant.summary and transcript %}
-          <button type="button" class="sheet-tab" data-panel="summary">Summary</button>
-        {% endif %}
-        {% if assistant.chat and transcript %}
-          <button type="button" class="sheet-tab" data-panel="chat">Chat</button>
-        {% endif %}
-        {% if assistant.moments and transcript and is_video %}
-          <button type="button" class="sheet-tab" data-panel="moments">Moments</button>
-        {% endif %}
-        <button type="button" class="sheet-tab" data-panel="details">Details</button>
-        <span class="grow"></span>
-        <button type="button" class="ghost small" id="expand-sheet" hidden title="Give the panel the height of the window">{% icon "expand" %} Expand</button>
-        <button type="button" class="ghost small" id="close-sheet" hidden>{% icon "chevron-down" %} Close</button>
-      </div>
-
-      <div id="sheet" class="sheet" hidden>
         {% if clips_available %}
           <div class="panel" data-panel="clips">
             <h2>New clip</h2>
@@ -470,10 +489,7 @@
             assistant.js once the rows exist.
           {% endcomment %}
           <div class="panel" data-panel="moments" hidden>
-            <div class="row">
-              <h2 class="grow">Moments</h2>
-              <button type="button" class="small primary" id="describe-now" title="Describe the picture at the player's time, or ask a question about it">{% icon "camera" %} Describe this moment</button>
-            </div>
+            <h2>Moments</h2>
             <p class="muted small" id="moments-said" hidden style="margin: 4px 0 0"></p>
             <h3 class="small" style="margin: 14px 0 2px">Suggested moments</h3>
             <div class="whole">
@@ -538,7 +554,7 @@
             export or a clip.
           </p>
         </div>
-      </div>
+        </div>
       </div>
     </div>
   </div>
