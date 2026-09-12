@@ -130,6 +130,16 @@ def test_the_speakers_window_lists_the_speakers_with_a_key_each(person, client):
     assert 'id="now-who"' in body and 'id="speakers-undo"' in body
     assert 'windowPanel: "speakers"' in body
     assert "assistant.js" not in body and "clip-tool.js" not in body
+    # The window plays the recording itself: the picture and the transport.
+    assert '<video id="player"' in body and 'id="play"' in body
+    assert body.index('class="winplayer"') < body.index('id="nowbox"')
+    audio = a_recording(person, video=False)
+    sound = client.get(f"/recording/{audio.pk}/window/speakers").content.decode()
+    assert '<audio id="player"' in sound and "<video" not in sound
+    # A tab's window has no player of its own.
+    settings_store.set_to("assistant_available", True)
+    chat = client.get(f"/recording/{recording.pk}/window/chat").content.decode()
+    assert 'id="player"' not in chat
     # Not before the transcript exists.
     waiting = a_recording(person, with_transcript=False)
     assert client.get(f"/recording/{waiting.pk}/window/speakers").status_code == 404

@@ -1339,6 +1339,16 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .window-panels { flex: 1; min-height: 0; }
 .tab.away { color: var(--muted); font-style: italic; }
 .tabbar #open-window { margin-left: auto; }
+/* The Speakers window's own player: the picture at the window's width. */
+.speakers-window .winplayer { margin-bottom: 10px; }
+.speakers-window .winplayer video {
+  display: block;
+  width: 100%;
+  max-height: 42vh;
+  background: var(--well);
+  border-radius: 6px;
+}
+.speakers-window .winplayer .transport { padding: 6px 0 0; }
 /* The Speakers window: the line being spoken, then the roster with a key each. */
 .speakers-window .nowbox {
   border: 2px solid var(--accent);

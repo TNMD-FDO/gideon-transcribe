@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.48.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Speakers window plays the recording itself.** The maintainer found
+  it "a bit off" to tag voices in a window while steering the picture and
+  the sound from another. The window now carries the picture, or the sound
+  alone, with its own Play, back three seconds, five seconds either way,
+  the clock, the speed, and the page's keys (Space, B, the arrows), so
+  nothing else needs to be in view while tagging. Whichever of the page and
+  the window you pressed Play in last has the sound; the other follows
+  along, so the page's rows light as the window plays and Play on the page
+  carries on from where the window paused.
+
 ## v1.47.0, 2026-09-12
 
 ```

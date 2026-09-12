@@ -20,10 +20,41 @@
   {% if panel == "speakers" %}
     <div class="panels window-panels" id="panels">
       <div class="panel speakers-window" data-panel="speakers">
+        {% comment %}
+          The window plays the recording itself, so tagging needs no other
+          window in view. Whichever of the page and this window played last
+          has the sound; the other follows along.
+        {% endcomment %}
+        <div class="winplayer">
+          {% if media_url %}
+            {% if is_video %}
+              <video id="player" src="{{ media_url }}" preload="metadata"></video>
+            {% else %}
+              <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
+            {% endif %}
+            <div class="transport">
+              <button type="button" id="play" class="big">Play</button>
+              <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
+              <button type="button" data-seek="-5" title="Back five seconds (Left)">&minus;5s</button>
+              <button type="button" data-seek="5" title="Forward five seconds (Right)">+5s</button>
+              <span id="clock" class="time">0:00 / 0:00</span>
+              <label>Speed
+                <select id="speed">
+                  <option>0.5</option><option>0.75</option>
+                  <option selected>1</option><option>1.25</option>
+                  <option>1.5</option><option>1.75</option>
+                  <option>2</option><option>2.5</option>
+                </select>
+              </label>
+            </div>
+          {% else %}
+            <p class="muted small">Playback is still being prepared; this window plays the recording once it is.</p>
+          {% endif %}
+        </div>
         <div class="nowbox" id="nowbox">
           <div class="q">Now <span id="now-clock" class="time"></span></div>
           <div class="big"><b id="now-who" class="who"></b> <span id="now-text">Nothing is playing yet.</span></div>
-          <div class="q">Press a number to say who is speaking this line. <kbd>Space</kbd> pauses, <kbd>B</kbd> goes back three seconds.</div>
+          <div class="q">Press a number to say who is speaking this line. <kbd>Space</kbd> plays and pauses, <kbd>B</kbd> goes back three seconds, <kbd>&larr;</kbd> <kbd>&rarr;</kbd> five.</div>
         </div>
         {% if speakers %}
           <ol class="roster" id="roster">
@@ -47,7 +78,7 @@
           <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
           <span id="speakers-undo-what">{{ last_change }}</span>
         </p>
-        <p class="muted small">A number gives the line being spoken to that speaker. Rename applies to every line of the speaker. The recording's page changes as you go.</p>
+        <p class="muted small">A number gives the line being spoken to that speaker. Rename applies to every line of the speaker. The recording's page follows this window while it plays, and changes as you go.</p>
       </div>
     </div>
   {% else %}

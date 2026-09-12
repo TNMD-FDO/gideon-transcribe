@@ -288,7 +288,12 @@
 
   function follow() {
     if (!player) { return; }
-    var time = player.currentTime;
+    followAt(player.currentTime);
+  }
+
+  // The rows, the playhead and the clock at a time: the player's own, or the
+  // Speakers window's while that window has the sound.
+  function followAt(time) {
     movePlayhead(time);
 
     var index = at(time);
@@ -317,7 +322,7 @@
     }
 
     document.getElementById("clock").textContent =
-      clock(time) + " / " + clock(player.duration || duration);
+      clock(time) + " / " + clock((player && player.duration) || duration);
   }
 
   // The line being spoken, on the stage, so a person watching the picture
@@ -1434,6 +1439,15 @@
       } else if (said.kind === "step") {
         step(said.by || 0);
         if (said.play) { window.VIEWER.play(); }
+      } else if (said.kind === "window-time") {
+        // The Speakers window has a player of its own. While it plays, the
+        // sound is its and this page follows along; when it pauses, the
+        // page's player takes its place quietly, so Play here carries on.
+        if (said.playing && player && !player.paused) { player.pause(); }
+        if (player && player.paused && Math.abs(player.currentTime - said.at) > 1) {
+          player.currentTime = said.at;
+        }
+        followAt(said.at || 0);
       } else if (said.kind === "show") {
         window.VIEWER.showSegment(said.at);
       } else if (said.kind === "range") {

@@ -20,6 +20,8 @@
   var segments = [];
   var duration = 0;
   var state = document.getElementById("win-state");
+  // The Speakers window's own player; a tab's window has none and asks the page.
+  var player = document.getElementById("player");
 
   function tell(message) { if (channel) { channel.postMessage(message); } }
 
@@ -56,13 +58,17 @@
   V.clock = clock;
   V.icon = icon;
   V.cookie = cookie;
-  V.at = function () { return time; };
+  // The window's own clock while it plays; the page's while the page does.
+  V.at = function () { return player && !player.paused ? player.currentTime : time; };
   V.length = function () { return duration; };
   V.segments = function () { return segments; };
-  V.currentSegment = function () { var i = at(time); return i >= 0 ? segments[i] : null; };
-  V.seek = function (seconds) { tell({ kind: "seek", at: seconds }); };
-  V.play = function () { tell({ kind: "play" }); };
-  V.pause = function () { tell({ kind: "pause" }); };
+  V.currentSegment = function () { var i = at(V.at()); return i >= 0 ? segments[i] : null; };
+  V.seek = function (seconds) {
+    if (player) { player.currentTime = Math.max(0, seconds); return; }
+    tell({ kind: "seek", at: seconds });
+  };
+  V.play = function () { if (player) { player.play(); return; } tell({ kind: "play" }); };
+  V.pause = function () { if (player) { player.pause(); return; } tell({ kind: "pause" }); };
   V.showSegment = function (seconds) { tell({ kind: "show", at: seconds }); };
   V.showRange = function (from, to) { tell({ kind: "range", from: from, to: to }); };
   V.tintRange = function () {};
@@ -85,9 +91,17 @@
     channel.onmessage = function (event) {
       var said = event.data || {};
       if (said.kind === "time") {
+        // The page's player. With a player of its own, this window yields
+        // the sound to a page that is playing and keeps its place in step.
         time = said.at || 0;
-        playing = !!said.playing;
-        if (state) { state.textContent = (playing ? "Playing, " : "Paused at ") + clock(time); }
+        if (player) {
+          if (said.playing && !player.paused) { player.pause(); }
+          if (player.paused && Math.abs(player.currentTime - time) > 1) { player.currentTime = time; }
+          if (state) { state.textContent = said.playing ? "The page is playing, " + clock(time) : "Paused at " + clock(time); }
+        } else {
+          playing = !!said.playing;
+          if (state) { state.textContent = (playing ? "Playing, " : "Paused at ") + clock(time); }
+        }
         if (showNow) { showNow(); }
       } else if (said.kind === "page-closed") {
         if (state) { state.textContent = "The recording's page has closed; open it again to carry on."; }
@@ -242,6 +256,55 @@
       });
     }
 
+    // The window's own transport, when it has a player: the page's keys and
+    // buttons, and the page told the time so it follows this window.
+    if (player) {
+      var lastTold = -1;
+      function tellTime() {
+        var now = Math.floor(player.currentTime * 4);
+        if (now === lastTold) { return; }
+        lastTold = now;
+        tell({ kind: "window-time", at: player.currentTime, playing: !player.paused });
+      }
+      player.addEventListener("timeupdate", function () {
+        time = player.currentTime;
+        playing = !player.paused;
+        document.getElementById("clock").textContent =
+          clock(player.currentTime) + " / " + clock(player.duration || duration);
+        if (state) { state.textContent = (playing ? "Playing, " : "Paused at ") + clock(time); }
+        showNow();
+        tellTime();
+      });
+      player.addEventListener("loadedmetadata", function () {
+        if (isFinite(player.duration) && player.duration > 0) { duration = player.duration; }
+        document.getElementById("clock").textContent = clock(player.currentTime) + " / " + clock(duration);
+      });
+      player.addEventListener("play", function () {
+        document.getElementById("play").textContent = "Pause";
+        lastTold = -1;
+        tellTime();
+      });
+      player.addEventListener("pause", function () {
+        document.getElementById("play").textContent = "Play";
+        tell({ kind: "window-time", at: player.currentTime, playing: false });
+      });
+      player.addEventListener("error", function () {
+        if (state) { state.textContent = "This window cannot play the recording here; the page still can."; }
+      });
+      document.getElementById("play").addEventListener("click", function () {
+        if (player.paused) { player.play(); } else { player.pause(); }
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-seek]"), function (button) {
+        button.addEventListener("click", function () {
+          player.currentTime = Math.max(0, player.currentTime + parseFloat(button.dataset.seek));
+          if (button.dataset.seek === "-3") { player.play(); }
+        });
+      });
+      document.getElementById("speed").addEventListener("change", function () {
+        player.playbackRate = parseFloat(this.value);
+      });
+    }
+
     var undoButton = document.getElementById("speakers-undo");
     if (undoButton) {
       undoButton.addEventListener("click", function () {
@@ -265,9 +328,14 @@
         if (row) { event.preventDefault(); give(row); }
       } else if (event.key === " ") {
         event.preventDefault();
-        if (playing) { V.pause(); } else { V.play(); }
+        if (player ? !player.paused : playing) { V.pause(); } else { V.play(); }
       } else if (event.key === "b" || event.key === "B") {
-        tell({ kind: "step", by: -3, play: true });
+        if (player) { player.currentTime = Math.max(0, player.currentTime - 3); player.play(); }
+        else { tell({ kind: "step", by: -3, play: true }); }
+      } else if (player && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+        event.preventDefault();
+        var by = event.shiftKey ? 1 : (event.ctrlKey || event.metaKey ? 30 : 5);
+        player.currentTime = Math.max(0, player.currentTime + (event.key === "ArrowLeft" ? -by : by));
       }
     });
 
