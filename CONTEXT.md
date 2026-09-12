@@ -110,8 +110,20 @@ The viewer's tabbed area beside the stage: Transcript, Clips, Summary, Chat, Mom
 **Marking strip**:
 The line under the Timeline that shows a marked Clip range with its length, Preview, Save clip and clear. Marking a Clip by any route fills it and never changes the tab; Save clip opens the Clips tab.
 
+**Speakers page**:
+A page of its own for one Recording, opened by Manage speakers on the Speakers strip and left by Done, whose one job is saying who each Speaker is: the Recording playing at the top right, a card per Speaker down the left with its Samples and its name box (the Case's People first), a Lane per Speaker under the player, and the Transcript's Ledger under the Lanes filtered to the Speaker in hand. Rename, merge, giving one line to a Speaker, Suggest names and Undo are the viewer's own. Avoid: speaker manager, tagging window, suite (the maintainer's word for the ask, not the page's name).
+
 **Speakers window**:
-A window of its own, opened by Tag speakers on the Speakers strip, that plays the Recording itself: the picture or the sound with its own transport, the line being spoken under it with its Speaker, and the Recording's Speakers under that with a number key each. Whichever of the page and the window played last has the sound; the other follows. A number gives the line being spoken to that Speaker; rename, merge and Undo are the viewer's own. Any tab of the work area opens in a window of its own the same way, kept in step with the page. Avoid: pop-up, dialog, floating panel.
+The Speakers page opened in a window of its own by Open in a window (from v1.50.0; before that, a window of its own opened by Tag speakers, with the player, the line being spoken and a roster with number keys). It plays the Recording; whichever of the recording page and the window played last has the sound, and the other follows. Any tab of the work area opens in a window of its own the same way, kept in step with the page. Avoid: pop-up, dialog, floating panel.
+
+**Lane**:
+One Speaker's row on the Speakers page's timeline: the Speaker's name at the left and, across the width of the Recording, a block for every stretch that Speaker talks. The Lanes are the page's scrub bar: a press seeks there, and dragging one Lane's head onto another merges the two Speakers. Avoid: track, swimlane, timeline row.
+
+**Sample**:
+One of up to three lines of a Speaker that the Speakers page offers to play to hear the voice, chosen from the first, middle and last thirds of that Speaker's lines and a few seconds long. Playing a Sample plays the Recording from the line's start and pauses at its end. Avoid: snippet, excerpt (that is a Clip's), clip.
+
+**Voice print**:
+Phase 5 chapter 2, not built: one vector per Person in a Case, made from a Speaker's voice when the Speaker is named, that lets the app say an unnamed Speaker in another Recording of the Case "sounds like" that Person. Content, never logged or exported, deleted with the Person. Until the chapter is in force the app keeps no such thing. Avoid: embedding (on a page; the service's word), voice signature, biometric.
 
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.

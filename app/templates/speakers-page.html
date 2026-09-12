@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Speakers of {{ recording.title }}{% endblock %}
+{% block body_class %}viewer speakers-page{% if in_window %} window{% endif %}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The Speakers page (Phase 5, chapter 1): one Recording's Speakers, each a
+    card down the left with its Samples and its name box; the Recording
+    playing at the top right with a Lane per Speaker under it as the scrub
+    bar; and the Transcript's Ledger under the Lanes, filtered to the Speaker
+    in hand. On its own it is left by Done; in a window it follows the
+    recording's page through the browser's channel, as the Speakers window
+    did before it.
+  {% endcomment %}
+  <div class="sp-head">
+    <span class="lbl">Speakers of</span>
+    <b class="grow" id="sp-title">{{ recording.title }}</b>
+    {% if cards %}
+      <span class="sp-progress" id="sp-progress">
+        <span class="bar"><i id="sp-progress-bar" style="width: {% widthratio named total 100 %}%"></i></span>
+        <span id="sp-progress-text">{{ named }} of {{ total }} speaker{{ total|pluralize }} named</span>
+      </span>
+      <span class="small muted" id="speakers-undo-line"{% if not last_change %} hidden{% endif %}>
+        <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
+        <span id="speakers-undo-what">{{ last_change }}</span>
+      </span>
+      {% if assistant.suggestions %}
+        <span id="suggest-line" hidden>
+          <button type="button" class="small" id="suggest-names" title="Ask the AI assistant who these speakers are, from what people say">Suggest names</button>
+          <span id="suggest-said" class="small muted"></span>
+        </span>
+      {% endif %}
+    {% endif %}
+    <span class="small muted" id="win-state"></span>
+    {% if not in_window %}
+      {% if cards %}
+        <button type="button" class="small" id="open-in-window" title="This page in a window of its own, which the recording's page follows">{% icon "expand" %} Open in a window</button>
+      {% endif %}
+      <a class="button primary small" id="done" href="{{ back_url }}">Done</a>
+    {% endif %}
+  </div>
+
+  {% if not cards %}
+    <p class="muted" style="padding: 20px">
+      This recording has no speaker labels to tag.
+      {% if not in_window %}<a href="{{ back_url }}">Back to the recording</a>.{% endif %}
+    </p>
+  {% else %}
+    <div class="sp-desk{% if not is_video %} sound{% endif %}">
+      <div class="sp-cards" id="cards">
+        {% for card in cards %}
+          <div class="sp-card{% if not card.named %} unnamed{% endif %}" data-name="{{ card.name }}" data-index="{{ forloop.counter }}" style="--speaker: {{ card.colour }}">
+            <div class="h">
+              <kbd class="k">{{ forloop.counter }}</kbd>
+              <span class="dot"></span>
+              <b class="name">{{ card.name }}</b>
+              {% if card.role %}<span class="pill role">{{ card.role }}</span>{% endif %}
+              <span class="pill state">{% if card.named %}named{% else %}unnamed{% endif %}</span>
+              <span class="label" title="The engine's own label for this voice">{{ card.label }}</span>
+            </div>
+            <div class="stats"><span class="count">{{ card.lines }} line{{ card.lines|pluralize }}</span>, <span class="talking">{{ card.talking_text }}</span> talking, first at {{ card.first_clock }}</div>
+            <div class="samples">
+              {% for sample in card.samples %}
+                <button type="button" class="tiny sample" data-start="{{ sample.start }}" data-end="{{ sample.end }}" title="Play this line on its own">{% icon "play" %} {{ sample.clock }}</button>
+              {% endfor %}
+              <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
+              <button type="button" class="ghost tiny same-as" title="Merge this speaker into another">same person as...</button>
+            </div>
+            {% if card.hint_other %}
+              <div class="hint-line">Never speaks while {{ card.hint_other }} does; see the lanes.
+                <button type="button" class="tiny merge-into" data-onto="{{ card.hint_other }}">Merge into {{ card.hint_other }}</button>
+              </div>
+            {% endif %}
+            <div class="suggested" hidden></div>
+            <div class="namebox"{% if card.named %} hidden{% endif %}>
+              <div class="row">
+                <input type="text" class="name-input grow" maxlength="60" autocomplete="off" placeholder="Who is this?"{% if card.named %} value="{{ card.name }}"{% endif %}>
+                <button type="button" class="primary small name-save">Name</button>
+                {% if card.named %}<button type="button" class="ghost small name-cancel">Cancel</button>{% endif %}
+              </div>
+              {% if in_case %}
+                <div class="known">
+                  {% if people %}
+                    <p class="q">Known in this case</p>
+                    <ul class="people-pick">
+                      {% for one in people %}
+                        <li><button type="button" class="pick" data-name="{{ one.name }}">{{ one.name }}{% if one.role %} <span class="pill role">{{ one.role }}</span>{% endif %}{% if one.count %} <span class="muted">in {{ one.count }} recording{{ one.count|pluralize }}</span>{% endif %}</button></li>
+                      {% endfor %}
+                    </ul>
+                    <p class="small muted people-none" hidden>Nobody in this case matches; Name makes a new person.</p>
+                  {% endif %}
+                  <div class="row newname">
+                    <span class="small muted">New name takes the role</span>
+                    <select class="role-pick small" title="The role of a new person; a person already in the case keeps theirs">
+                      <option value="">no role</option>
+                      {% for role in speaker_roles %}<option>{{ role }}</option>{% endfor %}
+                    </select>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+        <p class="small muted keys">
+          <kbd>1</kbd> to <kbd>9</kbd> give the line being spoken to a speaker.
+          <kbd>Space</kbd> plays, <kbd>B</kbd> goes back three seconds, <kbd>&larr;</kbd> <kbd>&rarr;</kbd> five.
+        </p>
+      </div>
+
+      <div class="sp-right">
+        <div class="sp-player">
+          {% if media_url %}
+            {% if is_video %}
+              <video id="player" src="{{ media_url }}" preload="metadata"></video>
+            {% else %}
+              <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
+              <canvas id="wave" class="wave" aria-hidden="true"></canvas>
+            {% endif %}
+          {% else %}
+            <p class="muted small">Playback is still being prepared; this page plays the recording once it is.</p>
+          {% endif %}
+          <div class="transport">
+            <button type="button" id="play" class="big">Play</button>
+            <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
+            <button type="button" data-seek="-5" title="Back five seconds (Left)">&minus;5s</button>
+            <button type="button" data-seek="5" title="Forward five seconds (Right)">+5s</button>
+            <span id="clock" class="time">0:00 / 0:00</span>
+            <label>Speed
+              <select id="speed">
+                <option>0.5</option><option>0.75</option>
+                <option selected>1</option><option>1.25</option>
+                <option>1.5</option><option>1.75</option>
+                <option>2</option><option>2.5</option>
+              </select>
+            </label>
+            <span class="grow"></span>
+            <span class="nowline"><b id="now-who" class="who"></b> <span id="now-text" class="muted"></span></span>
+          </div>
+        </div>
+
+        <div class="sp-lanes" id="lanes"{% if fold_small %} data-fold-small="yes"{% endif %}>
+          <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
+          {% for card in cards %}
+            <div class="lane{% if card.small %} small{% endif %}" data-name="{{ card.name }}" style="--speaker: {{ card.colour }}">
+              <div class="head" draggable="true" title="Press to pick this speaker; drag onto another to merge them"><span class="dot"></span><span class="name">{{ card.name }}</span></div>
+              <div class="track"><span class="playhead"></span></div>
+            </div>
+          {% endfor %}
+          {% if fold_small %}
+            <div class="lane fold" id="small-lane" hidden>
+              <div class="head"><button type="button" class="ghost tiny" id="small-toggle"></button></div>
+              <div class="track"><span class="playhead"></span></div>
+            </div>
+          {% endif %}
+          <div class="foot small muted">
+            <span>Click a block to play from there. Drag a speaker's name onto another to merge them.</span>
+            <span class="grow"></span>
+            <span class="zoom">Zoom
+              <button type="button" class="tiny on" data-zoom="0">all</button>
+              <button type="button" class="tiny" data-zoom="120">2 min</button>
+              <button type="button" class="tiny" data-zoom="30">30 s</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="sp-filter">
+          <button type="button" class="sw on" id="filter-one"></button>
+          <button type="button" class="sw" id="filter-all">Everyone</button>
+          <span class="small muted" id="filter-count"></span>
+          <span class="grow"></span>
+          <span id="follow-pill" class="pill followpill" hidden>
+            Following paused while you read.
+            <button type="button" id="resume-follow">Resume (F)</button>
+          </span>
+        </div>
+        <div class="sp-read" id="reading">
+          <ol id="transcript" class="transcript"></ol>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {{ speakers|json_script:"speaker-colours" }}
+  <script>
+    window.VIEWER = {
+      recording: "{{ recording.pk }}",
+      waveform: "{{ waveform_url }}",
+      hasTranscript: {% if transcript %}true{% else %}false{% endif %},
+      canPlay: {% if media_url %}true{% else %}false{% endif %},
+      isVideo: {% if is_video %}true{% else %}false{% endif %},
+      inCase: {% if in_case %}true{% else %}false{% endif %},
+      inWindow: {% if in_window %}true{% else %}false{% endif %},
+      assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %} }{% else %}null{% endif %},
+      windowPanel: "speakers",
+      backUrl: "{{ back_url }}",
+      windowUrl: "{{ window_url }}"
+    };
+  </script>
+  <script src="{% static 'speakers-page.js' %}"></script>
+{% endblock %}

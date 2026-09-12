@@ -1437,9 +1437,16 @@
       if (on && on.dataset.panel !== "transcript") { openWindow(on.dataset.panel); }
     });
   }
-  var tagSpeakers = document.getElementById("tag-speakers");
-  if (tagSpeakers) {
-    tagSpeakers.addEventListener("click", function () { openWindow("speakers"); });
+  // Manage speakers leaves for the Speakers page at the playhead; the page's
+  // Done comes back to the same moment. (Until v1.50.0 this opened the
+  // Speakers window; that window is now the page in a window of its own.)
+  var manageSpeakers = document.getElementById("manage-speakers");
+  if (manageSpeakers) {
+    manageSpeakers.addEventListener("click", function () {
+      var when = player ? Math.floor(player.currentTime) : 0;
+      if (player) { player.pause(); }
+      window.location.href = manageSpeakers.dataset.href + (when ? "?t=" + when : "");
+    });
   }
 
   // A window that closed without saying so gives its tab back.

@@ -15,6 +15,7 @@ from core import (
     panel,
     panel_pages,
     people_pages,
+    speakers_page,
     template_pages,
     uploads,
     viewer,
@@ -74,9 +75,10 @@ urlpatterns = [
     path(
         "recording/<uuid:recording_id>/rename", viewer.rename, name="rename-recording"
     ),
+    # GET is the Speakers page (v1.50.0); POST renames or merges, as before.
     path(
         "recording/<uuid:recording_id>/speakers",
-        viewer.speakers,
+        speakers_page.route,
         name="speakers",
     ),
     # One line given to a Speaker: the Speakers window's number keys.

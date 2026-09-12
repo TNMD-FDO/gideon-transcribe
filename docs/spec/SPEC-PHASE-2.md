@@ -994,6 +994,7 @@ The Case page gets a tab beside the Recordings list, labelled "Speakers" with th
 - The sidebar's Speakers panel (Phase 1) shows each Speaker's name with the Role as a small badge after it. Notes are shown on the Speakers tab only.
 - The rename box is a pick-or-type box: as the user types it lists the Case's People (name, Role, "in N recordings") plus "New person: <typed>". Picking or typing a name that matches a Person joins it, without a confirmation, since the list shows it is an existing Person. Under the box: "Changes this recording only. To rename <name> in every recording, use the case's Speakers tab", with the link.
 - A suggested pill shows the Role when the suggestion matches a Person ("Suggested: John Smith (Defendant)"); Accept joins that Person, or creates one when the name is new. Accepting a role suggestion ("Officer") creates or joins a Person of that name; the Role field is not set by itself, the user sets it on the tab.
+- From v1.50.0 the Speakers page's name box is this pick-or-type box with one addition: a Role picker beside "New name", so a Person made from that page can take its Role at once (Phase 5, chapter 1). The tab's Edit stays the place to change a Role afterwards.
 - Merge in the viewer (two Speakers of one Transcript, confirmed) works as in Phase 1: the surviving Speaker's Person applies; the other Person stays in the Case and may now be empty.
 
 ### Rename, merge, split, delete

@@ -1,11 +1,12 @@
 """v1.47.0: a tab in its own window, and the Speakers window.
 
 The rules checked here: a tab of the work area renders alone in a window of
-its own, only when the page offers it; the Speakers window lists the
-speakers with a key each; one line given to a Speaker changes that Segment
-alone, is remembered beside the renames so Undo puts it back, and writes a
-row without a name; the recording page carries the way to both windows;
-nothing is offered to somebody who may not open the recording.
+its own, only when the page offers it; the Speakers window (the Speakers page
+in a window since v1.50.0) lists the speakers with a key each; one line given
+to a Speaker changes that Segment alone, is remembered beside the renames so
+Undo puts it back, and writes a row without a name; the recording page
+carries the way to both; nothing is offered to somebody who may not open the
+recording.
 """
 
 from __future__ import annotations
@@ -83,7 +84,7 @@ def test_a_tab_renders_alone_in_its_own_window(person, client):
 
     # The page itself offers the way out, and every tab's panels.
     page = client.get(f"/recording/{recording.pk}").content.decode()
-    assert 'id="open-window"' in page and 'id="tag-speakers"' in page
+    assert 'id="open-window"' in page and 'id="manage-speakers"' in page
     assert page.count('data-panel="details"') == 3  # the tab and its two panels
     assert 'data-panel="chat"' in page and 'data-panel="clips"' in page
 
@@ -120,20 +121,19 @@ def test_a_tab_renders_alone_in_its_own_window(person, client):
 
 
 @pytest.mark.django_db
-def test_the_speakers_window_lists_the_speakers_with_a_key_each(person, client):
+def test_the_speakers_window_is_the_speakers_page_with_a_key_each(person, client):
     recording = a_recording(person)
     signed_in(client, person)
     body = client.get(f"/recording/{recording.pk}/window/speakers").content.decode()
-    assert 'class="panel speakers-window"' in body and 'id="roster"' in body
-    assert body.count('class="one"') == 3
+    assert 'class="viewer speakers-page window"' in body and 'id="cards"' in body
+    assert body.count('class="sp-card unnamed"') == 3
     assert '<kbd class="k">1</kbd>' in body and '<kbd class="k">3</kbd>' in body
     assert 'id="now-who"' in body and 'id="speakers-undo"' in body
-    assert 'windowPanel: "speakers"' in body
+    assert "inWindow: true" in body and "speakers-page.js" in body
     assert "assistant.js" not in body and "clip-tool.js" not in body
-    # The window plays the recording itself: the picture, the scrub bar, the transport.
+    # The window plays the recording itself: the picture, the lanes, the transport.
     assert '<video id="player"' in body and 'id="play"' in body
-    assert 'id="scrub"' in body and body.index('id="scrub"') < body.index('id="play"')
-    assert body.index('class="winplayer"') < body.index('id="nowbox"')
+    assert 'id="lanes"' in body and body.index('id="lanes"') > body.index('id="play"')
     audio = a_recording(person, video=False)
     sound = client.get(f"/recording/{audio.pk}/window/speakers").content.decode()
     assert '<audio id="player"' in sound and "<video" not in sound

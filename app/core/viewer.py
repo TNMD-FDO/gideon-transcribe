@@ -164,6 +164,16 @@ def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
     }
     if not offered[panel]:
         raise Http404
+    if panel == "speakers":
+        # The Speakers page in a window of its own (v1.50.0; before that a
+        # window with a roster of its own).
+        from core import speakers_page
+
+        return render(
+            request,
+            "speakers-page.html",
+            speakers_page.context(request, recording, in_window=True),
+        )
     return render(
         request,
         "viewer-window.html",
@@ -398,6 +408,13 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     now = (wanted.get("to") or "").strip()
     if not was or not now:
         return JsonResponse({"error": "both names are needed"}, status=400)
+    # The Speakers page names a new Person with a Role at once (v1.50.0). A
+    # Role not on the Admin's list is ignored; a Person that exists keeps its own.
+    from core import people
+
+    role = (wanted.get("role") or "").strip()
+    if role not in people.roles():
+        role = ""
 
     merging = transcript.segments.filter(speaker=now).exists()
     moved = list(transcript.segments.filter(speaker=was).values_list("pk", flat=True))
@@ -417,10 +434,13 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     transcript.speaker_changes = changes[-20:]
     transcript.save(update_fields=["speaker_changes"])
     # Inside a Case, a name means a person: the new name joins or makes one.
-    from core import people
-
     people.on_named(
-        recording, now, by=request.user, how="named in the viewer", request=request
+        recording,
+        now,
+        by=request.user,
+        how="named in the viewer",
+        request=request,
+        role=role,
     )
 
     audit.write(

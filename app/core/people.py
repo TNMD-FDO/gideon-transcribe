@@ -140,15 +140,22 @@ def join_or_create(
     return person, True
 
 
-def on_named(recording, name: str, *, by, how: str, request=None) -> Person | None:
-    """A Speaker was named inside a Case: the Person is joined or created."""
+def on_named(
+    recording, name: str, *, by, how: str, request=None, role: str = ""
+) -> Person | None:
+    """A Speaker was named inside a Case: the Person is joined or created.
+
+    A Role given here goes on a Person made now and never on one that exists.
+    """
     if recording.case_id is None or not (name or "").strip():
         return None
     from core.assistant import _is_a_label
 
     if _is_a_label(name):
         return None
-    person, _ = join_or_create(recording.case, name, by=by, how=how, request=request)
+    person, _ = join_or_create(
+        recording.case, name, by=by, how=how, request=request, role=role
+    )
     return person
 
 

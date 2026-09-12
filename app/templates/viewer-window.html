@@ -17,77 +17,14 @@
     <span class="muted small" id="win-state">Follows the recording's page</span>
   </div>
 
-  {% if panel == "speakers" %}
-    <div class="panels window-panels" id="panels">
-      <div class="panel speakers-window" data-panel="speakers">
-        {% comment %}
-          The window plays the recording itself, so tagging needs no other
-          window in view. Whichever of the page and this window played last
-          has the sound; the other follows along.
-        {% endcomment %}
-        <div class="winplayer">
-          {% if media_url %}
-            {% if is_video %}
-              <video id="player" src="{{ media_url }}" preload="metadata"></video>
-            {% else %}
-              <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
-            {% endif %}
-            <input type="range" id="scrub" class="scrub" min="0" max="1000" value="0" step="1"
-                   aria-label="Scrub through the recording" title="Drag to move through the recording">
-            <div class="transport">
-              <button type="button" id="play" class="big">Play</button>
-              <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
-              <button type="button" data-seek="-5" title="Back five seconds (Left)">&minus;5s</button>
-              <button type="button" data-seek="5" title="Forward five seconds (Right)">+5s</button>
-              <span id="clock" class="time">0:00 / 0:00</span>
-              <label>Speed
-                <select id="speed">
-                  <option>0.5</option><option>0.75</option>
-                  <option selected>1</option><option>1.25</option>
-                  <option>1.5</option><option>1.75</option>
-                  <option>2</option><option>2.5</option>
-                </select>
-              </label>
-            </div>
-          {% else %}
-            <p class="muted small">Playback is still being prepared; this window plays the recording once it is.</p>
-          {% endif %}
-        </div>
-        <div class="nowbox" id="nowbox">
-          <div class="q">Now <span id="now-clock" class="time"></span></div>
-          <div class="big"><b id="now-who" class="who"></b> <span id="now-text">Nothing is playing yet.</span></div>
-          <div class="q">Press a number to say who is speaking this line. <kbd>Space</kbd> plays and pauses, <kbd>B</kbd> goes back three seconds, <kbd>&larr;</kbd> <kbd>&rarr;</kbd> five.</div>
-        </div>
-        {% if speakers %}
-          <ol class="roster" id="roster">
-            {% for speaker in speakers %}
-              <li class="one" data-name="{{ speaker.name }}" style="--speaker: {{ speaker.colour }}">
-                <kbd class="k">{{ forloop.counter }}</kbd>
-                <span class="n"><span class="dot"></span><span class="name">{{ speaker.name }}</span>{% if speaker.role %} <span class="pill role">{{ speaker.role }}</span>{% endif %} <small class="count"></small></span>
-                <span class="a">
-                  <button type="button" class="ghost tiny play-line" title="Play a line this speaker spoke">play a line</button>
-                  <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
-                  <button type="button" class="ghost tiny same-as" title="Merge this speaker into another">same person as...</button>
-                </span>
-                <span class="sample muted small"></span>
-              </li>
-            {% endfor %}
-          </ol>
-        {% else %}
-          <p class="muted small">This recording has no speaker labels to tag.</p>
-        {% endif %}
-        <p class="small muted" id="speakers-undo-line"{% if not last_change %} hidden{% endif %}>
-          <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
-          <span id="speakers-undo-what">{{ last_change }}</span>
-        </p>
-        <p class="muted small">A number gives the line being spoken to that speaker. Rename applies to every line of the speaker. The recording's page follows this window while it plays, and changes as you go.</p>
-      </div>
-    </div>
-  {% else %}
-    <div class="panels window-panels" id="panels">
-      {% include "viewer-panels.html" %}
-    </div>
-  {% endif %}
+  {% comment %}
+    The Speakers window of v1.47.0 to v1.49.0 is the Speakers page in a
+    window of its own since v1.50.0 (speakers-page.html); this template
+    draws the tabs of the work area only.
+  {% endcomment %}
+  <div class="panels window-panels" id="panels">
+    {% include "viewer-panels.html" %}
+  </div>
 
   {{ speakers|json_script:"speaker-colours" }}
   <script>
@@ -109,7 +46,7 @@
   </script>
   <script src="{% static 'viewer-window.js' %}"></script>
   {% if panel == "clips" %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
-  {% if assistant.assistant and transcript and panel != "clips" and panel != "speakers" %}
+  {% if assistant.assistant and transcript and panel != "clips" %}
     <script src="{% static 'chat-ui.js' %}"></script>
     <script src="{% static 'assistant.js' %}"></script>
   {% endif %}

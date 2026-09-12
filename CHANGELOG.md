@@ -21,6 +21,76 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.50.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Speakers release: Phase 5, chapter 1 (`docs/spec/SPEC-PHASE-5.md`).
+The maintainer asked for speaker management as "more of a suite", answered
+the build's questions (a deliberate pass and a quick fix alike, naming the
+voices first, a page of its own, the case's people first), and chose the
+layout from the mockups: the line-up with lanes.
+
+### Added
+
+- **The Speakers page.** **Manage speakers** on the speakers strip opens
+  `recording/<id>/speakers`, a page whose one job is saying who each speaker
+  is. A card per speaker down the left, in the order they first spoke: the
+  name or the engine's label, the role inside a case, named or unnamed, the
+  engine's own label in small type, how many lines and how long talking,
+  three **samples** (one from each third of the speaker's lines, the one
+  nearest four seconds among those between two and eight, each playing that
+  line on its own and stopping at its end), **rename** and **same person
+  as**, and on an unnamed card the name box: inside a case the case's
+  people first with their roles and "in N other recordings", then a new
+  name with a **role picker** so a person made here takes a role at once.
+  A card whose lines never overlap a bigger speaker's says "Never speaks
+  while X does; see the lanes" with **Merge into X**.
+- **The lanes.** Under the player, one lane per speaker across the whole
+  recording with a block wherever they talk (lines of one speaker under a
+  second apart drawn as one), the playhead through every lane, and the lanes
+  as the only scrub bar: a press seeks, a block plays from its start, a
+  speaker's name picks the card, and dragging one name onto another merges
+  them. Zoom **all**, **2 min** and **30 s**, remembered in the browser; the
+  narrow views follow the playhead. With more than six speakers, those under
+  a minute fold into one "small speakers" lane. The picked card's samples
+  show as ticks on its lane.
+- **The Ledger under the lanes**, the viewer's own rows, filtered to the
+  picked speaker with the line before and after each dimmed for context, or
+  **Everyone**; Follow keeps the line being spoken in view under the
+  viewer's band rule. On the line being spoken, **play** and **not this
+  speaker**; the number keys 1 to 9 give the line to a speaker as the window
+  did.
+- **The head**: "N of M speakers named" with a bar, **Undo** with the last
+  change in words, **Suggest names** under the AI assistant's rules with
+  each suggestion landing on its card as "Probably X (Role), from 0:19:
+  '...'" with Accept and Reject, **Open in a window**, and **Done**, which
+  returns to the recording at the page's playhead.
+- A rename or merge may carry a `role`, applied to a person made by it and
+  never to one that exists; a role not on the Admin's list is ignored.
+
+### Changed
+
+- **The Speakers window is the Speakers page in a window.** The route
+  `recording/<id>/window/speakers` shows the page with no Done; the
+  recording's page follows it through the channel as before. **Tag
+  speakers** on the strip is gone, replaced by Manage speakers. The window's
+  own roster, nowbox and scrub bar are gone with it.
+
+### Documents
+
+- `docs/spec/SPEC-PHASE-5.md`: chapter 1, the page; chapter 2, voice prints,
+  deferred, written as the reservation the page keeps (an empty "Sounds
+  like" line on an unnamed card) and the five rules the release will have to
+  meet. Phase 1's rule against embeddings and Phase 2's stand.
+- `CONTEXT.md`: Speakers page, Lane, Sample, Voice print; the Speakers
+  window entry rewritten. Pointer lines in Phase 1 (the Speakers window,
+  Speaker suggestions) and Phase 2 (the viewer inside a case). The user
+  guide's Speakers section.
+
 ## v1.49.0, 2026-09-12
 
 ```

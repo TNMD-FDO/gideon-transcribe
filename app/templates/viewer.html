@@ -294,7 +294,7 @@
                   {% endfor %}
                 </ul>
                 <span id="cast-count" class="small muted"></span>
-                <button type="button" id="tag-speakers" class="ghost tiny" title="Tag the speakers in a window that follows the recording: a number key names the line being spoken">Tag speakers</button>
+                <button type="button" id="manage-speakers" class="ghost tiny" data-href="{% url 'speakers' recording.pk %}" title="A page of its own for saying who each speaker is: hear each voice, name it, merge the ones the engine split">Manage speakers</button>
                 <button type="button" id="speakers-toggle" class="ghost tiny" title="Hide or show the speaker names on the lines">hide</button>
                 <button type="button" id="cast-toggle" class="ghost tiny" title="Fold the speakers away to one line">fold</button>
               {% else %}
