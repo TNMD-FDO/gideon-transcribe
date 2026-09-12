@@ -1643,6 +1643,11 @@ def prepare(transcript, *, asked_by=None) -> bool:
 
     recording = transcript.recording
     started = time.monotonic()
+    # A preparation taken up again (after a worker stopped part-way, or pressed
+    # again after a failure) keeps the descriptions that stand and starts the
+    # rest afresh: a span left queued, running or failed by the last attempt
+    # would otherwise count as taken and never be described.
+    transcript.moments.filter(source=Moment.INTERVAL).exclude(state=DONE).delete()
     plan = prepare_plan(recording, transcript)
     transcript.prepare_state = PREPARING
     transcript.prepare_reason = ""

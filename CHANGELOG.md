@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.52.1, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- A video sat at "preparing" with the engine idle. The picture record thins a
+  long span's frames to a fraction of a frame a second (sixteen frames over
+  twenty seconds is 0.8), and the clip's cut rounded that to a whole number:
+  zero, at which ffmpeg cuts nothing until the cut's time limit ends it, one
+  span after another, every one of them failed. The fraction now goes to
+  ffmpeg as it is.
+- A preparation left part-way when a worker stopped (an upgrade restarts the
+  workers) stayed "preparing" for good: the queue gave the job back, but the
+  task left a transcript already marked running alone, and the spans left
+  queued or running counted as taken. The task now takes such a transcript up
+  again, and a preparation starts from the descriptions that stand, the spans
+  the last attempt left queued, running or failed described afresh.
+
 ## v1.52.0, 2026-09-12
 
 ```

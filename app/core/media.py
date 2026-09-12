@@ -784,7 +784,7 @@ def cut_for_description(
     start: float,
     end: float,
     *,
-    fps: int,
+    fps: float,
     height: int,
     timeout: int = DESCRIPTION_TIMEOUT,
 ) -> None:
@@ -795,6 +795,10 @@ def cut_for_description(
     up) so the engine is handed as little as tells the story; no sound, since
     the words go as text. The file is the caller's to delete: it is content and
     never kept.
+
+    `fps` is a fraction for a long record span (sixteen frames over twenty
+    seconds is 0.8 a second) and goes to ffmpeg as one: rounded to a whole
+    number it would be zero, and a zero frame rate cuts nothing, ever.
     """
     span = (start, end)
     arguments = [
@@ -809,7 +813,7 @@ def cut_for_description(
         *_span_length(span),
         "-an",
         "-vf",
-        f"fps={int(fps)},scale=-2:'min({int(height)},ih)'",
+        f"fps={float(fps):g},scale=-2:'min({int(height)},ih)'",
         "-c:v",
         "libx264",
         "-preset",

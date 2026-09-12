@@ -323,14 +323,22 @@ def describe_moment(moment_id: str) -> None:
 @app.task(queue="llm", name="prepare_video")
 def prepare_video(transcript_id: str, attempt: int = 1) -> None:
     """A video prepared as its transcript lands (Phase 4 chapter 7), once the
-    Playback copy is there; a minute later when it is not yet."""
+    Playback copy is there; a minute later when it is not yet.
+
+    A transcript still marked running is one this job was at when its worker
+    stopped (an upgrade restarts the workers): retry_stalled_jobs gives the job
+    back, and the preparation goes on from the descriptions that stand.
+    """
     from core import assistant
     from core.jobs import Transcript
 
     transcript = (
         Transcript.objects.filter(pk=transcript_id).select_related("recording").first()
     )
-    if transcript is None or transcript.prepare_state != assistant.QUEUED:
+    if transcript is None or transcript.prepare_state not in (
+        assistant.QUEUED,
+        assistant.PREPARING,
+    ):
         return
     if (
         not assistant.playable_video(transcript.recording)

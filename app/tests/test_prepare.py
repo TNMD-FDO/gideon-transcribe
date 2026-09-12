@@ -245,6 +245,54 @@ def test_the_preparation_makes_the_record_and_the_digest_and_keeps_count(
 
 
 @pytest.mark.django_db
+def test_a_preparation_left_by_a_worker_that_stopped_is_taken_up_again(
+    ready, person, monkeypatch
+):
+    """An upgrade restarts the workers part-way through a preparation. The
+    queue gives the job back, the task takes a transcript still marked
+    running, and the spans the last attempt left queued, running or failed
+    are described afresh rather than counted as taken (v1.52.1)."""
+    no_ffmpeg(monkeypatch)
+    asked = engine_answering(
+        monkeypatch,
+        [
+            "A doorway.",
+            "Unchanged: the doorway.",
+            "A car.",
+            "A bag.",
+            "1. [00:00:00]-[00:15:00] (both) A stop.",
+        ],
+    )
+    transcript = ready.transcript
+    transcript.prepare_state = assistant.PREPARING
+    transcript.prepare_total = 5
+    transcript.prepare_done = 1
+    transcript.save(update_fields=["prepare_state", "prepare_total", "prepare_done"])
+    left = (
+        (0.0, 100.0, assistant.FAILED),
+        (100.0, 300.0, assistant.RUNNING),
+        (300.0, 600.0, assistant.QUEUED),
+    )
+    for start, end, state in left:
+        Moment.objects.create(
+            transcript=transcript,
+            at=start,
+            span_start=start,
+            span_end=end,
+            source=Moment.INTERVAL,
+            state=state,
+        )
+    tasks.prepare_video(str(transcript.pk))
+    transcript.refresh_from_db()
+    assert transcript.prepare_state == assistant.DONE
+    assert transcript.prepare_total == 5 and transcript.prepare_done == 5
+    assert len(asked) == 5
+    standing = Moment.objects.filter(source=Moment.INTERVAL)
+    assert standing.count() == 4
+    assert standing.filter(state=assistant.DONE).count() == 4
+
+
+@pytest.mark.django_db
 def test_the_estimate_comes_from_the_engines_own_pace(ready, person):
     transcript = ready.transcript
     plan = assistant.prepare_plan(ready, transcript)

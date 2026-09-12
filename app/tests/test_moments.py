@@ -147,6 +147,27 @@ def test_a_clips_cost_is_estimated_by_its_frames_and_its_height():
     assert not prompts.fits("a" * 400, answer_cap=100, window=4000, extra=3900)
 
 
+def test_the_cut_hands_ffmpeg_a_fraction_of_a_frame_a_second(monkeypatch, tmp_path):
+    """Sixteen frames over twenty seconds is 0.8 a second. Rounded to a whole
+    number it was zero, and a zero frame rate cut nothing for ever (v1.52.1)."""
+    ran = []
+
+    class Finished:
+        returncode = 0
+
+    def run(arguments, timeout):
+        ran.append(arguments)
+        Path(arguments[-1]).write_bytes(b"\x00\x00\x00\x18ftypmp42")
+        return Finished()
+
+    monkeypatch.setattr(media, "_run", run)
+    source, clip = tmp_path / "playback.mp4", tmp_path / "clip.mp4"
+    media.cut_for_description(source, clip, 59.52, 79.37, fps=0.806, height=360)
+    assert ran[0][ran[0].index("-vf") + 1] == "fps=0.806,scale=-2:'min(360,ih)'"
+    media.cut_for_description(source, clip, 0.0, 8.0, fps=2, height=360)
+    assert ran[1][ran[1].index("-vf") + 1] == "fps=2,scale=-2:'min(360,ih)'"
+
+
 def test_the_words_in_the_span_are_told_with_the_span():
     lines = [
         a_line(1, 0.0, "Speaker 1", "This is Detective Ruiz."),
