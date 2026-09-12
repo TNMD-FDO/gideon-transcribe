@@ -390,7 +390,7 @@ _Avoid_: detector, classifier
 How a Moment appears among Transcript lines: marked Camera, in italic, in the viewer, in the exports, and in what the AI assistant is told. A Camera line is never a Segment.
 
 **Picture record**:
-The interval Moments of one video Recording, made by Describe the whole recording when a summary is asked for, as the foundation the summary is written from. Phase 4 chapter 6 (proposed). Avoid: sweep, timeline of the picture, frame set.
+The descriptions that cover one video Recording end to end: the recording cut where the picture and the sound change, each span described once, spans that touch and never overlap, made when a summary is asked for as the foundation the summary is written from. Phase 4 chapter 6 (proposed). Avoid: sweep, timeline of the picture, frame set, intervals (the clock is only the ceiling).
 
 **Digest**:
 One text per Transcript, made by the AI assistant when a summary is asked for: a time-ordered condensation of the words and the camera lines, each line marked said, seen or both, with exact quotes kept, that the Summary, the Chat and the Case Chat are written from. Plumbing: nobody reads it, Details says it exists and what it was made from, and it is remade when the Transcript or the described Moments change. Phase 4 chapter 6 (proposed). Avoid: summary (that is what a person reads), notes, index, embedding.
