@@ -191,6 +191,26 @@ def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict
         return [], [], {}
     moments = list(transcript.moments.all())
     cues = [_cue_json(one) for one in transcript.cues.filter(state=Cue.PENDING)]
+    # What Describe the whole recording would make now, so the tab can say
+    # so before the press: the times taken are the ones assistant.describe_intervals
+    # skips, a Moment not failed with words, or queued or running.
+    taken = [
+        one.at for one in moments if one.state != assistant.FAILED and one.text
+    ] + [
+        one.at for one in moments if one.state in (assistant.QUEUED, assistant.RUNNING)
+    ]
+    every = settings_store.moment_interval_seconds()
+    intervals = {
+        "every": every,
+        "count": len(
+            assistant.interval_times(
+                float(recording.duration_seconds or 0.0),
+                every,
+                settings_store.moment_interval_most(),
+                taken,
+            )
+        ),
+    }
     runs = {
         "transcript": _run_json(
             transcript.cue_runs.filter(source=CueRun.TRANSCRIPT).first()
@@ -199,6 +219,7 @@ def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict
         "interval": _run_json(
             transcript.cue_runs.filter(source=CueRun.INTERVAL).first()
         ),
+        "intervals": intervals,
         "finders": {
             "transcript": bool(settings_store.get("moment_finder_transcript")),
             "media": bool(settings_store.get("moment_finder_media")),

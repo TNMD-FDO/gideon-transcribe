@@ -1309,27 +1309,30 @@ body.no-speakers .seg .name { display: none; }
 .suggestions { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .suggestion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9em; }
 .pill.suggested { margin-left: 6px; }
-/* Moments: a cue line's dashed pill, and the camera line under a row. */
-.pill.cue { margin-left: 6px; border-style: dashed; cursor: pointer; }
-.seg .actions .camera-row svg { width: 12px; height: 12px; }
-.camera-line {
-  border-left: 3px solid var(--accent);
-  padding: 2px 8px;
-  margin: 4px 0 0;
-  font-style: italic;
-  color: var(--ink);
-}
+/* Moments: a cue line's dashed Camera? button, and the camera line under a
+   row. The button is reset to the pill's own size so the button rules do not
+   grow the name line. */
+.pill.cue { margin-left: 6px; cursor: pointer; min-height: 0; line-height: 1.5; padding: 1px 9px; font-weight: 500; }
+.pill.cue:hover { border-color: var(--accent); }
+.pill.cue:disabled { cursor: default; opacity: 0.6; }
+.camera-line { margin: 4px 0 0; font-style: italic; color: var(--text); }
 .camera-line .tag {
   font-style: normal;
-  font-weight: 600;
-  font-size: var(--small, 0.85em);
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--muted);
   margin-right: 4px;
 }
 .camera-line.waiting { color: var(--muted); }
 .moment .answer { font-style: italic; }
 .moment .question { margin: 4px 0 2px; }
+/* The whole-recording presses in the Moments tab: a button, its caption, and
+   its result line; a suggestion's quoted transcript line. */
+.whole { margin: 6px 0 10px; }
+.whole p { margin: 4px 0 0; }
+.suggestion .quote { display: block; margin-top: 2px; }
 
 /* The Workbench pages ---------------------------------------------------------
    A list beside its detail from 1280 pixels, stacked below that. The viewer's

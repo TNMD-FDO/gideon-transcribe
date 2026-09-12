@@ -430,7 +430,7 @@
               </div>
               {% if assistant.moments and is_video %}
                 <label class="row" id="summary-describe-line">
-                  <input type="checkbox" id="summary-describe-first"> <b>Describe the moments first</b>
+                  <input type="checkbox" id="summary-describe-first"> Describe the moments first
                   <span class="muted small" id="summary-describe-note"></span>
                 </label>
               {% endif %}
@@ -447,26 +447,36 @@
           {% comment %}
             Moments: what the camera showed at a chosen time. A short clip
             around the time is shown to the assistant, which describes what is
-            visible; the words are a description, never the transcript. The
-            camera buttons on the rows and the "Camera?" pills on cue lines
-            are put on by assistant.js once the rows exist.
+            visible; the words are a description, never the transcript. Two
+            panels, as the Clips tab has: the first to find where to look and
+            to ask, the second the Moments kept. The describe buttons on the
+            rows and the Camera? buttons on cue lines are put on by
+            assistant.js once the rows exist.
           {% endcomment %}
           <div class="panel" data-panel="moments" hidden>
             <div class="row">
               <h2 class="grow">Moments</h2>
-              <button type="button" class="small" id="describe-intervals" title="A moment every interval, the whole recording through">Describe the whole recording</button>
-              <button type="button" class="small primary" id="describe-now" title="Describe what the camera shows at the playhead">{% icon "camera" %} Describe this moment</button>
+              <button type="button" class="small primary" id="describe-now" title="Describe the picture at the player's time, or ask a question about it">{% icon "camera" %} Describe this moment</button>
             </div>
-            <p class="muted small" id="intervals-said" style="margin: 4px 0 0"></p>
-            <p class="muted small" style="margin: 4px 0 0">A short clip around the time is shown to the assistant, which describes what is visible. Its words are a description of the picture, never the transcript. The camera button on any line does the same for that line.</p>
-            <div id="moment-list" class="assistant-list"></div>
-            <div class="row" style="margin: 14px 0 2px; align-items: center">
-              <h3 class="small grow" style="margin: 0">Suggested moments</h3>
+            <p class="muted small" id="moments-said" hidden style="margin: 4px 0 0"></p>
+            <h3 class="small" style="margin: 14px 0 2px">Suggested moments</h3>
+            <div class="whole">
               <button type="button" class="small" id="find-moments">Find moments</button>
+              <p class="muted small">Reads the transcript for the lines where the picture would add a fact and, when your office has it on, scans the picture and sound. Nothing is described until you press Describe.</p>
+              <p class="muted small" id="find-said" hidden></p>
             </div>
-            <p class="muted small" style="margin: 0 0 4px">Find moments reads the transcript for the lines where the picture would add a fact, and, when your office has it on, scans the picture and sound. Nothing is described until you ask.</p>
-            <p class="muted small" id="find-said" style="margin: 0 0 4px"></p>
+            <div class="whole">
+              <button type="button" class="small" id="describe-intervals">Describe the whole recording</button>
+              <p class="muted small" id="intervals-note">A description at regular intervals through the recording, one engine call each. Times already described are skipped.</p>
+              <p class="muted small" id="intervals-said" hidden></p>
+            </div>
             <ul id="cue-list" class="suggestions"></ul>
+          </div>
+
+          <div class="panel" data-panel="moments" hidden>
+            <h2 id="moments-heading">Described moments</h2>
+            <div id="moment-list" class="assistant-list"></div>
+            <p class="muted small">A moment is what the assistant saw, never what was said. Moments print as Camera lines in the transcript's Export to Word and in a summary's What the camera showed section.</p>
           </div>
         {% endif %}
 

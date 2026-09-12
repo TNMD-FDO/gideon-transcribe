@@ -655,6 +655,24 @@ def test_moments_start_off_and_the_viewer_offers_the_tab_only_when_on(
     signed_in(client, person)
     page = client.get(f"/recording/{ready.pk}").content.decode()
     assert 'data-panel="moments"' in page and "moments: true" in page
+    # Two panels behind the one tab, as the Clips tab has: the presses and
+    # the cue lines, then the Moments kept; every id once.
+    assert page.count('class="panel" data-panel="moments"') == 2
+    assert page.count('class="sheet-tab" data-panel="moments"') == 1
+    for one in (
+        "describe-now",
+        "find-moments",
+        "describe-intervals",
+        "moment-list",
+        "cue-list",
+        "moments-heading",
+        "moments-said",
+        "intervals-note",
+        "find-said",
+        "intervals-said",
+    ):
+        assert page.count(f'id="{one}"') == 1, one
+    assert "Described moments" in page and "Suggested moments" in page
     settings_store.set_to("moments_available", False)
     assert assistant.features()["moments"] is False
     page = client.get(f"/recording/{ready.pk}").content.decode()
@@ -1060,6 +1078,46 @@ def test_the_intervals_stop_when_the_engine_goes_away(ready, person, monkeypatch
 
 
 @pytest.mark.django_db
+def test_the_state_counts_what_describing_the_whole_recording_would_make(
+    ready, person, client, monkeypatch
+):
+    swallow_defer(monkeypatch)
+    signed_in(client, person)
+    # 900 s at the default 60 s: from 30 s in, one a minute, fifteen.
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["intervals"] == {"every": 60.0, "count": 15}
+    # A Moment already described within half an interval of a time takes it.
+    done = Moment.objects.create(
+        transcript=ready.transcript,
+        at=452.0,
+        state=assistant.DONE,
+        text="Already here.",
+        model="the-model",
+    )
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["intervals"] == {"every": 60.0, "count": 14}
+    # A failed one does not; one waiting its turn does, as describe_intervals
+    # counts them.
+    done.state = assistant.FAILED
+    done.save(update_fields=["state"])
+    assert (
+        client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"]["intervals"][
+            "count"
+        ]
+        == 15
+    )
+    Moment.objects.create(transcript=ready.transcript, at=150.0, asked_by=person)
+    settings_store.set_to("moment_interval_seconds", 300)
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    expected = len(assistant.interval_times(900.0, 300.0, 40, [150.0]))
+    assert state["cue_runs"]["intervals"] == {"every": 300.0, "count": expected}
+    assert expected == 2
+    # Nothing while Moments are off: the runs dict is empty.
+    settings_store.set_to("moments_available", False)
+    assert client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"] == {}
+
+
+@pytest.mark.django_db
 def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_showed(
     ready, person, client, monkeypatch
 ):
@@ -1100,6 +1158,8 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
     ]
     page = client.get(f"/recording/{ready.pk}").content.decode()
     assert 'id="summary-describe-first"' in page
+    assert "<b>Describe the moments first</b>" not in page
+    assert "Describe the moments first" in page
 
     answer = client.post(
         f"/recording/{ready.pk}/summaries",

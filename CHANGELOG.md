@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.42.0, 2026-09-11
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Moments tab is two panels**, as the Clips tab is, because the one
+  panel was getting congested as chapters 3 and 4 added their presses to it:
+  the first, Moments, has Describe this moment and, under **Suggested
+  moments**, Find moments and Describe the whole recording together, each
+  with a caption that says what it does and what it costs in numbers ("A
+  description every minute, 23 in all for this recording, one engine call
+  each") and a line under it that says what the press did ("7 lines
+  suggested from the words.", "20 moments described across the recording.");
+  then the suggestions, each now quoting the transcript line it was found on
+  and saying sure, fairly sure, or unsure. The second, **Described moments
+  (n)**, lists the Moments, with a foot line saying where they print. The
+  state answer gains `cue_runs.intervals`, the interval and the count, so
+  the caption, the confirm, and the summary dialog's tick can say the numbers.
+- **The words on the page** read in the order a person works: the row's
+  button says **describe** and opens a box that names the time, with
+  Describe as its button; the Camera? pill on a suggested line is a button
+  that says "Looking..." once pressed; a card says "from a suggestion" or
+  "from the whole recording", "Waiting its turn..." while queued, and its
+  Again button reads **Describe again**, or **Ask again** on a question, and
+  waits while the Moment is being described; the Camera line under a row has
+  lost its second coloured bar. Nothing was added and nothing hidden: every
+  press is where it was, with its cost stated before and its result after.
+
 ## v1.41.0, 2026-09-11
 
 ```
