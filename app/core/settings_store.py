@@ -1311,97 +1311,6 @@ def _rows() -> list[Definition]:
             when_changed="The next question.",
         ),
         Definition(
-            key="moment_finder_transcript",
-            page=ASSISTANT,
-            name="Find moments from the words",
-            kind=TOGGLE,
-            default=True,
-            needs="moments_available",
-            what_it_does=(
-                "Find moments reads the whole transcript once and suggests the "
-                "lines where the picture would add a fact: an object named or "
-                "handled, a command that implies an action, an action narrated, "
-                "a pointing phrase, a sudden change; each with its reason."
-            ),
-            when_changed="The next Find moments.",
-        ),
-        Definition(
-            key="moment_finder_media",
-            page=ASSISTANT,
-            name="Find moments from the picture and sound",
-            kind=TOGGLE,
-            default=False,
-            needs="moments_available",
-            what_it_does=(
-                "Find moments also scans the video itself, without the engine: "
-                "sharp changes of picture and stretches of raised voices or a "
-                "bang become suggestions. Off by default until an office has "
-                "judged it on its own footage; a scan of a long recording takes "
-                "the media worker a few minutes."
-            ),
-            when_changed="The next Find moments.",
-        ),
-        Definition(
-            key="moment_finder_most",
-            page=ASSISTANT,
-            name="Most suggested moments",
-            kind=NUMBER,
-            default=12,
-            least=3,
-            most=40,
-            unit="",
-            needs="moments_available",
-            what_it_does=(
-                "The most lines one Find moments may suggest from the words, the "
-                "surest first; and the most from the picture and sound together."
-            ),
-            when_changed="The next Find moments.",
-        ),
-        Definition(
-            key="moment_finder_confidence",
-            page=ASSISTANT,
-            name="Least sure suggestion kept",
-            kind=CHOICE,
-            default="medium",
-            choices=("high", "medium", "low"),
-            needs="moments_available",
-            what_it_does=(
-                "A suggestion from the words is kept only when the engine is at "
-                'least this sure of it. "high" gives few and sure; "low" gives '
-                "everything it saw."
-            ),
-            when_changed="The next Find moments.",
-        ),
-        Definition(
-            key="moment_finder_tokens",
-            page=ASSISTANT,
-            name="Find moments answer cap",
-            kind=NUMBER,
-            default=1500,
-            least=200,
-            most=8000,
-            unit="tokens",
-            needs="moments_available",
-            what_it_does="The most the finder's list, a small JSON, may run to.",
-            when_changed="The next Find moments.",
-        ),
-        Definition(
-            key="moment_finder_time_seconds",
-            page=ASSISTANT,
-            name="Find moments time limit",
-            kind=NUMBER,
-            default=180,
-            least=30,
-            most=3600,
-            unit="seconds",
-            needs="moments_available",
-            what_it_does=(
-                "How long the finder's one read of the transcript may take. "
-                "Doubled while the model may think."
-            ),
-            when_changed="The next Find moments.",
-        ),
-        Definition(
             key="moment_scene_threshold",
             page=ASSISTANT,
             name="Picture change threshold",
@@ -1410,13 +1319,14 @@ def _rows() -> list[Definition]:
             least=10,
             most=90,
             unit="percent",
-            needs="moment_finder_media",
+            needs="moments_available",
             what_it_does=(
                 "How much of the picture must change between one frame and the "
-                "next for the scan to call it a moment. Lower finds more; a "
-                "body camera that swings about needs a higher figure."
+                "next for the scan to call it a change point, where the picture "
+                "record is cut. Lower finds more; a body camera that swings "
+                "about needs a higher figure."
             ),
-            when_changed="The next Find moments.",
+            when_changed="The next recording scanned (once per transcript).",
         ),
         Definition(
             key="moment_loud_db",
@@ -1427,59 +1337,109 @@ def _rows() -> list[Definition]:
             least=3,
             most=30,
             unit="dB",
-            needs="moment_finder_media",
+            needs="moments_available",
             what_it_does=(
                 "How far above the recording's usual level a second must be for "
-                "the scan to call it raised voices or a bang."
+                "the scan to call it a change point: raised voices or a bang."
             ),
-            when_changed="The next Find moments.",
+            when_changed="The next recording scanned (once per transcript).",
         ),
         Definition(
             key="moment_media_gap_seconds",
             page=ASSISTANT,
-            name="Gap between scanned moments",
+            name="Gap between change points",
             kind=NUMBER,
-            default=15,
-            least=5,
+            default=3,
+            least=1,
             most=120,
             unit="seconds",
-            needs="moment_finder_media",
+            needs="moments_available",
             what_it_does=(
-                "Two moments the scan finds closer together than this become "
-                "one, so a struggle is one suggestion and not twenty."
+                "Two change points closer together than this become one, so a "
+                "struggle is a few spans of the picture record and not fifty."
             ),
-            when_changed="The next Find moments.",
+            when_changed="The next recording scanned (once per transcript).",
+        ),
+        Definition(
+            key="picture_record_available",
+            page=ASSISTANT,
+            name="Picture record for summaries",
+            kind=TOGGLE,
+            default=True,
+            needs="moments_available",
+            what_it_does=(
+                "Whether a video's summary may first describe the whole recording: "
+                "the picture cut where it changes, each span described once, never "
+                "twice and never overlapping, as the foundation the summary is "
+                "written from. Off, the summary dialog offers no tick and a "
+                "summary draws on whatever moments exist."
+            ),
+            when_changed="The next summary dialog opened.",
         ),
         Definition(
             key="moment_interval_seconds",
             page=ASSISTANT,
-            name="Describe at intervals: every",
+            name="Picture record: longest span",
             kind=NUMBER,
-            default=60,
-            least=20,
+            default=15,
+            least=5,
             most=600,
             unit="seconds",
             needs="moments_available",
             what_it_does=(
-                "Describe the whole recording makes a Moment this far apart, from "
-                "half an interval in, skipping any time already described. Each "
-                "is one engine call of a few thousand tokens."
+                "The ceiling on one span of the picture record: a stretch where "
+                "the picture holds still longer than this is cut into pieces no "
+                "longer than this. Each span is one engine call of a few thousand "
+                "tokens; a busy hour of video at 15 seconds is about 240."
+            ),
+            when_changed="The next Describe the whole recording.",
+        ),
+        Definition(
+            key="picture_shortest_span",
+            page=ASSISTANT,
+            name="Picture record: shortest span",
+            kind=NUMBER,
+            default=3,
+            least=1,
+            most=30,
+            unit="seconds",
+            needs="moments_available",
+            what_it_does=(
+                "A span of the picture record shorter than this is joined to its "
+                "neighbour, so a flicker is not a description of its own."
             ),
             when_changed="The next Describe the whole recording.",
         ),
         Definition(
             key="moment_interval_most",
             page=ASSISTANT,
-            name="Describe at intervals: at most",
+            name="Picture record: most descriptions",
             kind=NUMBER,
-            default=40,
+            default=600,
             least=5,
-            most=200,
-            unit="moments",
+            most=2000,
+            unit="descriptions",
             needs="moments_available",
             what_it_does=(
-                "The most Moments one Describe the whole recording makes; a long "
-                "recording gets them spread evenly rather than from the start."
+                "The most spans one Describe the whole recording makes; past it "
+                "the cut is made coarser, longer spans first, until they fit."
+            ),
+            when_changed="The next Describe the whole recording.",
+        ),
+        Definition(
+            key="picture_frames_most",
+            page=ASSISTANT,
+            name="Picture record: frames per description",
+            kind=NUMBER,
+            default=16,
+            least=4,
+            most=64,
+            unit="frames",
+            needs="moments_available",
+            what_it_does=(
+                "The most frames one span of the record is shown as, however long "
+                "the span: a long still stretch is thinned so it costs the engine "
+                "no more than a short busy one."
             ),
             when_changed="The next Describe the whole recording.",
         ),
@@ -1492,30 +1452,91 @@ def _rows() -> list[Definition]:
             needs="moments_available",
             what_it_does=(
                 "Whether Summarise this video starts with its tick, Look at the "
-                "picture first, ticked, while fewer moments are described than "
-                "Enough moments for a video summary. Ticked, the summary describes "
-                "the recording at intervals before it writes, so it can say what "
-                "was seen as well as what was said; the cost is one call per "
-                "interval."
+                "picture first, ticked, while anything is left to describe. "
+                "Ticked, the summary makes the picture record before it writes; "
+                "the cost is one call per span."
             ),
             when_changed="The next summary dialog opened.",
         ),
         Definition(
-            key="summary_moments_enough",
+            key="digests_available",
             page=ASSISTANT,
-            name="Enough moments for a video summary",
-            kind=NUMBER,
-            default=10,
-            least=0,
-            most=200,
-            unit="moments",
+            name="Digests",
+            kind=TOGGLE,
+            default=True,
             needs="moments_available",
             what_it_does=(
-                "When at least this many moments are described already, Look at "
-                "the picture first starts unticked and the summary draws on what "
-                "there is. 0 means it always starts ticked."
+                "One digest per transcript, made when a summary is asked for: the "
+                "words and the camera condensed in windows into a time-ordered "
+                "record that the summary, the chat and the case chat are written "
+                "from, so every scene informs a summary and a long recording is "
+                "never refused. Nobody reads it. Off, the three work from the "
+                "transcript and the camera lines as before."
             ),
-            when_changed="The next summary dialog opened.",
+            when_changed="The next summary.",
+        ),
+        Definition(
+            key="digest_window_tokens",
+            page=ASSISTANT,
+            name="Digest window",
+            kind=NUMBER,
+            default=12000,
+            least=4000,
+            most=40000,
+            unit="tokens",
+            needs="moments_available",
+            what_it_does=(
+                "How much of the transcript one digest call condenses, about "
+                "twenty minutes of talk at the shipped figure; one call per window."
+            ),
+            when_changed="The next summary; only the changed windows are remade.",
+        ),
+        Definition(
+            key="digest_part_tokens",
+            page=ASSISTANT,
+            name="Digest part cap",
+            kind=NUMBER,
+            default=1200,
+            least=300,
+            most=4000,
+            unit="tokens",
+            needs="moments_available",
+            what_it_does="The most one window's part of the digest may run to.",
+            when_changed="The next summary.",
+        ),
+        Definition(
+            key="chat_descriptions_near",
+            page=ASSISTANT,
+            name="Chat: descriptions near an asked time",
+            kind=NUMBER,
+            default=6,
+            least=0,
+            most=30,
+            unit="descriptions",
+            needs="moments_available",
+            what_it_does=(
+                "With a digest, a chat question that names a time is also told "
+                "the descriptions whose spans hold that time, up to this many, so "
+                "the answer comes from the description itself."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="stamp_available",
+            page=ASSISTANT,
+            name="Read the camera's stamp",
+            kind=TOGGLE,
+            default=True,
+            needs="moments_available",
+            what_it_does=(
+                "When the picture record is first made, read the date, the time "
+                "and the camera id burned into the top of the picture, from a "
+                "frame near the start at the look-closer height, checked against "
+                "a second frame a minute on. Kept on the transcript, shown in "
+                "Details, and told to the summary, the chat and the digest as the "
+                "camera's clock."
+            ),
+            when_changed="The next picture record.",
         ),
         Definition(
             key="engine_address",
@@ -1923,7 +1944,6 @@ def time_limit_seconds(feature: str) -> int:
         "summary": "summary_time_seconds",
         "speaker_suggestions": "suggestions_time_seconds",
         "moment": "moments_time_seconds",
-        "moment_finder": "moment_finder_time_seconds",
     }[feature]
     return get(key)
 
@@ -1987,18 +2007,6 @@ def moment_question_frames() -> int:
     return get("moment_question_frames")
 
 
-def moment_finder_most() -> int:
-    return get("moment_finder_most")
-
-
-def moment_finder_confidence() -> str:
-    return str(get("moment_finder_confidence") or "medium")
-
-
-def moment_finder_cap() -> int:
-    return get("moment_finder_tokens")
-
-
 def moment_scene_threshold() -> float:
     return get("moment_scene_threshold") / 100.0
 
@@ -2019,5 +2027,21 @@ def moment_interval_most() -> int:
     return get("moment_interval_most")
 
 
-def summary_moments_enough() -> int:
-    return get("summary_moments_enough")
+def picture_shortest_span() -> float:
+    return float(get("picture_shortest_span"))
+
+
+def picture_frames_most() -> int:
+    return get("picture_frames_most")
+
+
+def digest_window_tokens() -> int:
+    return get("digest_window_tokens")
+
+
+def digest_part_cap() -> int:
+    return get("digest_part_tokens")
+
+
+def chat_descriptions_near() -> int:
+    return get("chat_descriptions_near")

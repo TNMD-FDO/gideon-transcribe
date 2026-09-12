@@ -46,6 +46,8 @@ PAIRS = {
     "case_chat_question_minutes": case_chat.QUESTION_LIMIT // 60,
     "moments_answer_tokens": prompts.MOMENT_CAP,
     "moments_time_seconds": assistant.TIME_LIMITS["moment"],
+    "digest_window_tokens": prompts.DIGEST_WINDOW_TOKENS,
+    "digest_part_tokens": prompts.DIGEST_CAP,
 }
 
 

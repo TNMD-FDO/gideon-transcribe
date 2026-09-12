@@ -378,22 +378,21 @@ A name or role the AI assistant proposes for an unnamed Speaker when a user asks
 A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it, or its answer to a question about the picture from a few close frames. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4.
 _Avoid_: frame, snapshot, scene, screenshot
 
-**Cue**:
-A suggested Moment: a time, and the Transcript line it belongs to when it has one, where the picture would tell what the words cannot, with a reason, how sure the finder was, and where it came from (the words, the picture, or the sound). Found by a finder when a person presses Find moments, never by a word list; stored; pending until a person accepts it (it becomes a Moment) or dismisses it.
-_Avoid_: trigger, keyword, hit, phrase
-
 **Finder**:
 One of the two ways Cues are found: the engine reading the whole Transcript for the lines worth seeing, or ffmpeg scanning the picture for sharp changes and the sound for raised voices. Each has its own switch; neither runs by itself.
 _Avoid_: detector, classifier
 
 **Camera line**:
-How a Moment appears among Transcript lines: marked Camera, in italic, in the viewer, in the exports, and in what the AI assistant is told. A Camera line is never a Segment.
+How a Moment is written where it is listed: marked Camera, with its time or its span, in what the AI assistant is told and in the exports' own What the camera showed section at the end. Never among the Transcript's rows (it was, in the viewer and interleaved in the exports, until v1.51.0), and never a Segment.
 
 **Picture record**:
-The descriptions that cover one video Recording end to end: the recording cut where the picture and the sound change, each span described once, spans that touch and never overlap, made when a summary is asked for as the foundation the summary is written from. Phase 4 chapter 6 (proposed). Avoid: sweep, timeline of the picture, frame set, intervals (the clock is only the ceiling).
+The descriptions that cover one video Recording end to end: the recording cut where the picture and the sound change, each span described once, spans that touch and never overlap, made when a summary is asked for as the foundation the summary is written from. Phase 4 chapter 6. Avoid: sweep, timeline of the picture, frame set, intervals (the clock is only the ceiling).
 
 **Digest**:
-One text per Transcript, made by the AI assistant when a summary is asked for: a time-ordered condensation of the words and the camera lines, each line marked said, seen or both, with exact quotes kept, that the Summary, the Chat and the Case Chat are written from. Plumbing: nobody reads it, Details says it exists and what it was made from, and it is remade when the Transcript or the described Moments change. Phase 4 chapter 6 (proposed). Avoid: summary (that is what a person reads), notes, index, embedding.
+One text per Transcript, made by the AI assistant when a summary is asked for: a time-ordered condensation of the words and the camera lines, each line marked said, seen or both, with exact quotes kept, that the Summary, the Chat and the Case Chat are written from. Plumbing: nobody reads it, Details says it exists and what it was made from, and it is remade part by part when the Transcript or the described Moments change. Phase 4 chapter 6. Avoid: summary (that is what a person reads), notes, index, embedding.
+
+**Camera stamp**:
+The date, the clock time and the camera id a body-worn or fixed camera burns into its picture, read once per Transcript from two frames when the picture record is first made, checked against each other, kept on the Transcript, shown in Details and on an export's processing record, and told to the AI assistant as the camera's clock so a time can be given as the time of day. Copied as printed, never reordered or guessed. Phase 4 chapter 6. Avoid: overlay, OSD, watermark, metadata (that is the file's).
 
 **Camera rules**:
 The fixed instructions Summary and Chat are given whenever Camera lines are handed to them: the two sources kept apart in every sentence, neither winning, a person named only from the words, nothing inferred from the picture, only the listed times looked at, and a camera fact told briefly. Not editable; the templates are. Phase 4.

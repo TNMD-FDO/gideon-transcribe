@@ -329,7 +329,37 @@ def answer_case_turn(turn_id) -> None:
                 engine.UNREACHABLE, "the engine is failing the minute check"
             )
         read, skipped = readable(case)
+        # A Recording with a Digest (Phase 4 chapter 6) contributes its
+        # Digest alone when the Case would exceed the hours ceiling, which is
+        # how a case of many videos fits a question; the hours counted are
+        # those read in full.
+        from core import assistant
+
+        digests = {
+            recording.pk: (
+                assistant.digest_text(recording.transcript)
+                if assistant.digests_on()
+                else ""
+            )
+            for recording in read
+        }
+        digest_only: set = set()
         hours = sum((one.duration_seconds or 0) for one in read) / 3600
+        if hours > hours_allowed():
+            for recording in sorted(read, key=lambda one: -(one.duration_seconds or 0)):
+                if not digests[recording.pk]:
+                    continue
+                digest_only.add(recording.pk)
+                hours = (
+                    sum(
+                        (one.duration_seconds or 0)
+                        for one in read
+                        if one.pk not in digest_only
+                    )
+                    / 3600
+                )
+                if hours <= hours_allowed():
+                    break
         if hours > hours_allowed():
             turn.reason_detail = (
                 f"This case is too large for one question ({hours:.0f} hours of "
@@ -343,33 +373,44 @@ def answer_case_turn(turn_id) -> None:
             )
             raise engine.Problem(engine.ERROR, "nothing to read")
 
-        # Render every Transcript once, with its header, and remember what was read.
+        # Render every Transcript once, with its header and its Digest after it,
+        # and remember what was read.
         total = len(read)
-        rendered: list[tuple[int, str]] = []
         starts_by_number: dict[int, dict] = {}
         readings_kept = []
+
+        def text_of(number: int, recording, alone: bool) -> str:
+            transcript = recording.transcript
+            header = header_line(number, total, recording, transcript)
+            digest = prompts.digest_block(digests[recording.pk])
+            if alone and digest:
+                return header + "\n" + digest
+            body = header + "\n" + prompts.render(prompts.lines_of(transcript))
+            return body + ("\n\n" + digest if digest else "")
+
         for number, recording in enumerate(read, start=1):
             transcript = recording.transcript
-            lines = prompts.lines_of(transcript)
-            text = (
-                header_line(number, total, recording, transcript)
-                + "\n"
-                + (prompts.render(lines))
-            )
-            rendered.append((number, text))
             starts: dict[int, float] = {}
-            for line in lines:
+            for line in prompts.lines_of(transcript):
                 starts.setdefault(int(line.start), line.start)
             starts_by_number[number] = {
                 "recording": str(recording.pk),
                 "starts": starts,
             }
-            readings_kept.append(reading_of(recording, transcript))
+            reading = reading_of(recording, transcript)
+            reading["digest"] = bool(digests[recording.pk])
+            readings_kept.append(reading)
+        rendered: list[tuple[int, str]] = [
+            (number, text_of(number, recording, recording.pk in digest_only))
+            for number, recording in enumerate(read, start=1)
+        ]
         turn.readings = readings_kept
         calls["read"] = total
 
         system = prompts.system_message(
-            ground.text, template.text, prompts.CASE_CHAT_FORMAT
+            ground.text,
+            template.text,
+            prompts.with_camera_rules(prompts.CASE_CHAT_FORMAT, any(digests.values())),
         )
         people = people_line(case)
         earlier = [
@@ -382,27 +423,38 @@ def answer_case_turn(turn_id) -> None:
         history_text = "\n".join(q + "\n" + a for q, a in history)
 
         part_cap = settings_store.case_chat_part_cap()
+
+        def fits_alone(body: str) -> bool:
+            return prompts.fits(
+                system,
+                people,
+                body,
+                history_text,
+                turn.question,
+                answer_cap=cap(part_cap),
+                window=settings_store.engine_window_tokens(),
+            )
+
+        # A Transcript that would not fit the window even alone falls back to
+        # its Digest when it has one, and names itself otherwise.
+        for number, recording in enumerate(read, start=1):
+            if recording.pk in digest_only:
+                continue
+            if digests[recording.pk] and not fits_alone(
+                text_of(number, recording, False)
+            ):
+                digest_only.add(recording.pk)
+                rendered[number - 1] = (number, text_of(number, recording, True))
         groups = pack(rendered, settings_store.reading_tokens())
         by_number = dict(rendered)
-        # A Transcript that would not fit the window even alone names itself.
         for group in groups:
-            if len(group) == 1:
-                body = by_number[group[0]]
-                if not prompts.fits(
-                    system,
-                    people,
-                    body,
-                    history_text,
-                    turn.question,
-                    answer_cap=cap(part_cap),
-                    window=settings_store.engine_window_tokens(),
-                ):
-                    which = read[group[0] - 1]
-                    turn.reason_detail = (
-                        f"The transcript of {_title(which)} is too long for the "
-                        "AI assistant, even on its own."
-                    )
-                    raise engine.Problem(engine.TOO_LONG, "one transcript too long")
+            if len(group) == 1 and not fits_alone(by_number[group[0]]):
+                which = read[group[0] - 1]
+                turn.reason_detail = (
+                    f"The transcript of {_title(which)} is too long for the "
+                    "AI assistant, even on its own."
+                )
+                raise engine.Problem(engine.TOO_LONG, "one transcript too long")
         turn.parts = len(groups) if len(groups) > 1 else 0
         turn.save(update_fields=["skipped", "readings", "parts"])
 

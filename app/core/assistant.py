@@ -10,8 +10,10 @@ ever logged; the audit row is metadata only.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import math
 import time
 import uuid
 from urllib.parse import urlparse
@@ -64,14 +66,12 @@ class PromptTemplate(models.Model):
     GROUND_RULES, CHAT, SUGGESTIONS = "ground_rules", "chat", "suggestions"
     CASE_CHAT = "case_chat"
     MOMENT = "moment"
-    FINDER = "finder"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
         SUGGESTIONS: ("Speaker suggestions", prompts.SUGGESTIONS),
         CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
         MOMENT: ("Moment", prompts.MOMENT),
-        FINDER: ("Find moments", prompts.FINDER),
     }
 
     key = models.CharField(max_length=30, unique=True)
@@ -319,6 +319,11 @@ class Summary(models.Model):
     # many described Moments the summary was handed (chapter 5).
     describe_first = models.BooleanField(default=False)
     moments_used = models.IntegerField(default=0)
+    # Written from the Digest (chapter 6): how many parts it had; 0 when it
+    # was written from the transcript and the camera block alone. And what
+    # the lane is doing while it runs, for the card.
+    digest_parts = models.IntegerField(default=0)
+    stage = models.CharField(max_length=60, blank=True, default="")
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     text = models.TextField(blank=True, default="")
@@ -445,9 +450,9 @@ class Moment(models.Model):
     at = models.FloatField()
     span_start = models.FloatField(default=0.0)
     span_end = models.FloatField(default=0.0)
-    # Asked for by a person, or accepted from a Cue; the phrase is content.
+    # Asked for by a person, or one span of the picture record (source
+    # interval, chapter 6); "cue" stays on rows made before v1.51.0.
     source = models.CharField(max_length=10, default=ASKED)
-    cue_text = models.CharField(max_length=80, blank=True, default="")
     # A question about the moment, answered from still frames; empty means a
     # description of the clip. Content, never logged.
     question = models.TextField(blank=True, default="")
@@ -475,42 +480,37 @@ class Moment(models.Model):
         return bool((self.question or "").strip())
 
 
-class Cue(models.Model):
-    """A line, or a second, where the picture would tell what the words cannot.
+class DigestPart(models.Model):
+    """One window of the Digest: the Transcript condensed with the camera lines in it.
 
-    Found by the finder reading the Transcript, or by the scan of the picture
-    and sound; never by a word list. Nothing is described until a person
-    accepts one. The reason is content: shown on the pill, never logged.
+    Phase 4 chapter 6. Kept per window with a signature of what it was made
+    from, so a later summary remakes only the parts whose words or
+    descriptions changed. Content, never logged, never shown.
     """
-
-    TRANSCRIPT, PICTURE, SOUND = "transcript", "picture", "sound"
-    PENDING, ACCEPTED, DISMISSED = "pending", "accepted", "dismissed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     transcript = models.ForeignKey(
-        "core.Transcript", on_delete=models.CASCADE, related_name="cues"
+        "core.Transcript", on_delete=models.CASCADE, related_name="digest_parts"
     )
-    segment = models.ForeignKey(
-        "core.Segment", on_delete=models.SET_NULL, null=True, blank=True
-    )
-    at = models.FloatField()
-    line = models.IntegerField(default=0)
-    kind = models.CharField(max_length=12, default="change")
-    reason = models.CharField(max_length=120, blank=True, default="")
-    confidence = models.CharField(max_length=8, default="medium")
-    source = models.CharField(max_length=12, default=TRANSCRIPT)
-    state = models.CharField(max_length=10, default=PENDING)
-    created = models.DateTimeField(auto_now_add=True)
+    number = models.IntegerField(default=1)
+    span_start = models.FloatField(default=0.0)
+    span_end = models.FloatField(default=0.0)
+    signature = models.CharField(max_length=64, blank=True, default="")
+    text = models.TextField(blank=True, default="")
+    moments_used = models.IntegerField(default=0)
+    model = models.CharField(max_length=120, blank=True, default="")
+    made_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ["at", "created"]
+        ordering = ["number"]
 
 
 class CueRun(models.Model):
-    """One Find moments press, per finder, or one Describe the whole recording.
+    """One Describe the whole recording: the picture record being made.
 
-    What it is doing, so the tab can wait; for the intervals, how many of how
-    many are described so far.
+    What it is doing, so the tab can wait: how many of how many spans are
+    described so far. The sources transcript and media are left on rows made
+    before v1.51.0, when the finders made Cues.
     """
 
     TRANSCRIPT, MEDIA, INTERVAL = "transcript", "media", "interval"
@@ -554,6 +554,32 @@ def features() -> dict:
 
 def thinking() -> bool:
     return bool(settings_store.get("assistant_thinks"))
+
+
+def _moments_on() -> bool:
+    """Moments, from the settings alone: never the engine's minute check."""
+    return bool(
+        settings_store.get("assistant_available")
+        and settings_store.get("moments_available")
+    )
+
+
+def record_on() -> bool:
+    """The picture record (chapter 6): made for a summary, when the office says so."""
+    return bool(_moments_on() and settings_store.get("picture_record_available"))
+
+
+def digests_on() -> bool:
+    return bool(_moments_on() and settings_store.get("digests_available"))
+
+
+def stamp_on() -> bool:
+    return bool(_moments_on() and settings_store.get("stamp_available"))
+
+
+def clock_line(transcript) -> str:
+    """The camera's clock for a prompt, when the stamp was read."""
+    return prompts.stamp_line(getattr(transcript, "stamp", None))
 
 
 def time_limit(feature: str) -> int:
@@ -618,7 +644,7 @@ def _record(
 ):
     """The one audit row a call writes, metadata only, whatever happened.
 
-    `more` is a Moment's source (asked, or from a cue), never a word of it.
+    `more` is a Moment's source or a Digest part's number, never a word of it.
     """
     host = urlparse(engine.address()).hostname or ""
     audit.write(
@@ -685,8 +711,11 @@ def write_summary(summary_id) -> None:
         if (
             summary.describe_first
             and features()["moments"]
+            and record_on()
             and playable_video(recording)
         ):
+            summary.stage = "looking"
+            summary.save(update_fields=["stage"])
             run = CueRun.objects.create(
                 transcript=transcript, source=CueRun.INTERVAL, asked_by=summary.asked_by
             )
@@ -697,24 +726,42 @@ def write_summary(summary_id) -> None:
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
+        # The Digest (chapter 6): every scene informs, and a long recording
+        # is never refused, because the Digest stands in for the transcript
+        # when the transcript would not fit beside everything else.
+        digest = (
+            make_digest(transcript, asked_by=summary.asked_by, summary=summary)
+            if seen and digests_on()
+            else ""
+        )
+        summary.digest_parts = transcript.digest_parts.count() if digest else 0
+        summary.stage = "writing"
+        summary.save(update_fields=["digest_parts", "stage"])
         system = prompts.system_message(
             ground.text,
             template.text,
             prompts.with_camera_rules(prompts.SUMMARY_FORMAT, seen),
         )
-        user = "\n\n".join(
+        picture = prompts.digest_block(digest) if digest else prompts.camera_lines(seen)
+        asked = prompts.summary_input(
+            summary.focus, summary.length, len(seen), digest=bool(digest)
+        )
+        nature = "\n".join(
             part
             for part in [
                 prompts.nature_line(recording, transcript),
-                rendered,
-                prompts.camera_lines(seen),
-                prompts.summary_input(summary.focus, summary.length, len(seen)),
+                clock_line(transcript),
             ]
             if part
         )
         wanted = settings_store.summary_answer_cap(summary.length)
+        user = "\n\n".join(part for part in [nature, rendered, picture, asked] if part)
         if not prompts.fits(system, user, answer_cap=cap(wanted), window=window()):
-            raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
+            if not digest:
+                raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
+            user = "\n\n".join(part for part in [nature, picture, asked] if part)
+            if not prompts.fits(system, user, answer_cap=cap(wanted), window=window()):
+                raise engine.Problem(engine.TOO_LONG, "even the digest is too long")
         answer = engine.complete(
             _messages(system, user),
             max_completion_tokens=cap(wanted),
@@ -730,6 +777,7 @@ def write_summary(summary_id) -> None:
         summary.cut_short = answer["finish_reason"] == "length"
         summary.model = answer["model"]
         summary.moments_used = len(seen)
+        summary.stage = ""
         summary.transcript_created = transcript.created
         summary.state = DONE
         summary.reason_class = ""
@@ -793,6 +841,20 @@ def answer_turn(turn_id) -> None:
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
+        # With a Digest (chapter 6) the chat is told the Digest instead of the
+        # whole camera block, and the descriptions whose spans hold the times
+        # the question names, so an answer about a time comes from the
+        # description itself.
+        digest = digest_text(transcript) if seen and digests_on() else ""
+        near = (
+            prompts.near_descriptions(
+                seen,
+                prompts.times_in(turn.question, float(recording.duration_seconds or 0)),
+                settings_store.chat_descriptions_near(),
+            )
+            if digest
+            else []
+        )
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -805,12 +867,18 @@ def answer_turn(turn_id) -> None:
         history = prompts.history_that_fits(
             earlier, settings_store.chat_history_tokens()
         )
+        picture = (
+            prompts.digest_block(digest) + prompts.near_block(near)
+            if digest
+            else prompts.camera_lines(seen)
+        )
         user = "\n\n".join(
             part
             for part in [
                 prompts.nature_line(recording, transcript),
+                clock_line(transcript),
                 rendered,
-                prompts.camera_lines(seen),
+                picture,
                 turn.question,
             ]
             if part
@@ -992,7 +1060,15 @@ def describe_moment(moment_id) -> None:
             raise problem
         if not playable_video(recording):
             raise engine.Problem(MEDIA_NOT_READY, "no playback copy with a picture")
-        span_start, span_end = moment_span(recording, moment.at)
+        record = (
+            moment.source == Moment.INTERVAL and moment.span_end > moment.span_start
+        )
+        if record:
+            # One span of the picture record: the span itself, never a clip
+            # cut around a time (chapter 6).
+            span_start, span_end = moment.span_start, moment.span_end
+        else:
+            span_start, span_end = moment_span(recording, moment.at)
         moment.span_start, moment.span_end = span_start, span_end
         lines = prompts.lines_of(transcript)
         spoken = prompts.lines_in_span(lines, span_start, span_end)
@@ -1024,6 +1100,9 @@ def describe_moment(moment_id) -> None:
             extra = prompts.still_tokens(frames, height)
         else:
             fps = settings_store.moment_frames_per_second()
+            if record:
+                # A long still span costs no more than a short busy one.
+                fps = record_fps(span_end - span_start, fps)
             height = settings_store.moment_frame_height()
             frames = max(1, round((span_end - span_start) * fps))
             style = (
@@ -1031,11 +1110,14 @@ def describe_moment(moment_id) -> None:
                 if settings_store.moment_style() == "full"
                 else prompts.MOMENT_FORMAT_BRIEF
             )
+            previous = previous_description(moment) if record else ""
+            if record:
+                style = style + "\n" + prompts.RECORD_NEW
             system = prompts.system_message(ground.text, template.text, style)
             text = "\n\n".join(
                 [
                     prompts.nature_line(recording, transcript),
-                    prompts.moment_input(spoken, span_start, span_end),
+                    prompts.moment_input(spoken, span_start, span_end, previous),
                 ]
             )
             extra = prompts.video_tokens(frames, height)
@@ -1149,35 +1231,123 @@ def describe_moment(moment_id) -> None:
             shutil.rmtree(stills, ignore_errors=True)
 
 
-def interval_times(
-    length: float, interval: float, most: int, taken: list[float]
-) -> list[float]:
-    """The seconds to describe at: from half an interval in, one every interval.
+def record_fps(length: float, fps: float, most: int | None = None) -> float:
+    """The frames a second for a record span: the setting, thinned so a span never
+    costs more than Picture record: frames per description."""
+    if most is None:
+        most = settings_store.picture_frames_most()
+    most = max(1, int(most))
+    if length <= 0:
+        return float(fps)
+    return round(min(float(fps), most / length), 3)
 
-    A time within half an interval of one already described is skipped, and
-    more than `most` are spread evenly over the recording.
+
+def previous_description(moment) -> str:
+    """What the record's previous span showed, for the description to build on."""
+    before = (
+        moment.transcript.moments.filter(
+            source=Moment.INTERVAL, state=DONE, at__lt=moment.at
+        )
+        .exclude(text="")
+        .order_by("-at")
+        .first()
+    )
+    return before.text if before is not None else ""
+
+
+def _cut_spans(
+    length: float, points: list[float], longest: float, shortest: float
+) -> list[tuple[float, float]]:
+    edges = (
+        [0.0]
+        + sorted({round(p, 2) for p in points if 0 < p < length})
+        + [round(length, 2)]
+    )
+    spans: list[tuple[float, float]] = []
+    for a, b in zip(edges, edges[1:], strict=False):
+        if spans and (b - a) < shortest:
+            spans[-1] = (spans[-1][0], b)
+        else:
+            spans.append((a, b))
+    if len(spans) > 1 and (spans[0][1] - spans[0][0]) < shortest:
+        first = spans.pop(0)
+        spans[0] = (first[0], spans[0][1])
+    cut: list[tuple[float, float]] = []
+    for a, b in spans:
+        pieces = max(1, math.ceil((b - a) / longest))
+        step = (b - a) / pieces
+        for n in range(pieces):
+            end = b if n == pieces - 1 else round(a + (n + 1) * step, 2)
+            cut.append((round(a + n * step, 2), end))
+    return cut
+
+
+def record_spans(
+    length: float,
+    points: list[float],
+    longest: float,
+    shortest: float,
+    most: int,
+    taken: list[tuple[float, float]] | None = None,
+) -> list[tuple[float, float]]:
+    """The spans of the picture record (chapter 6).
+
+    The recording cut at the change points; a span longer than `longest` cut
+    into equal pieces no longer than that; a span shorter than `shortest`
+    joined to its neighbour. The spans touch, never overlap, and cover the
+    recording; when more than `most`, the cut is made coarser until they fit.
+    A span already covered by a Moment (`taken`, as (start, end) pairs) is
+    left out: nothing is described twice.
     """
-    if length <= 0 or interval <= 0:
+    if length <= 0 or longest <= 0:
         return []
-    half = interval / 2
-    times = []
-    at = half
-    while at < length:
-        if not any(abs(at - done) < half for done in taken):
-            times.append(round(at, 3))
-        at += interval
-    if len(times) > most:
-        step = len(times) / most
-        times = [times[int(n * step)] for n in range(most)]
-    return times
+    ceiling = float(longest)
+    cut = _cut_spans(length, points, ceiling, shortest)
+    while len(cut) > most and ceiling < length:
+        ceiling *= 2
+        cut = _cut_spans(length, points if ceiling < length else [], ceiling, shortest)
+    if len(cut) > most:
+        cut = cut[:most]
+    taken = taken or []
+
+    def covered(a: float, b: float) -> bool:
+        return any(s <= a + 0.5 and e >= b - 0.5 for s, e in taken)
+
+    return [(a, b) for a, b in cut if not covered(a, b)]
+
+
+def taken_spans(transcript) -> list[tuple[float, float]]:
+    """The spans of the Moments that stand: described, or being described."""
+    return [
+        (one.span_start, one.span_end)
+        for one in transcript.moments.exclude(state=FAILED)
+        if one.span_end > one.span_start
+        and (one.text or one.state in (QUEUED, RUNNING))
+    ]
+
+
+def planned_spans(recording, transcript) -> tuple[list[tuple[float, float]], bool]:
+    """What Describe the whole recording would make now, and whether that is an
+    estimate (the picture not yet scanned, so the cut is by the clock alone)."""
+    points = transcript.change_points
+    spans = record_spans(
+        float(recording.duration_seconds or 0.0),
+        points or [],
+        settings_store.moment_interval_seconds(),
+        settings_store.picture_shortest_span(),
+        settings_store.moment_interval_most(),
+        taken_spans(transcript),
+    )
+    return spans, points is None
 
 
 def describe_intervals(run_id) -> None:
-    """Describe the whole recording: one Moment per interval, one after another.
+    """The picture record: one Moment per span, one after another (chapter 6).
 
     In one lane, so a long recording never takes the assistant's four lanes
-    from everyone else. Stops when the engine goes away; a single failed
-    Moment is left failed and the rest go on.
+    from everyone else. Each span is described with the previous span's
+    description in hand, so it says what is new. Stops when the engine goes
+    away; a single failed Moment is left failed and the rest go on.
     """
     run = (
         CueRun.objects.filter(pk=run_id)
@@ -1196,20 +1366,33 @@ def describe_intervals(run_id) -> None:
         run.finished_at = timezone.now()
         run.save(update_fields=["state", "reason_class", "finished_at"])
         return
-    taken = [
-        one.at for one in transcript.moments.exclude(state=FAILED).exclude(text="")
-    ] + [one.at for one in transcript.moments.filter(state__in=(QUEUED, RUNNING))]
-    times = interval_times(
-        float(recording.duration_seconds or 0.0),
-        settings_store.moment_interval_seconds(),
-        settings_store.moment_interval_most(),
-        taken,
-    )
+    # The change points first, once per Transcript: the scan of the picture
+    # and sound the record is cut by (chapter 6).
+    if transcript.change_points is None:
+        from core import media, moment_scan
+
+        try:
+            moment_scan.change_points_of(transcript, actor=run.asked_by)
+        except media.MediaError as why:
+            run.state = FAILED
+            run.reason_class = why.reason_class
+            run.finished_at = timezone.now()
+            run.save(update_fields=["state", "reason_class", "finished_at"])
+            return
+        transcript.refresh_from_db(fields=["change_points"])
+    if transcript.stamp is None and stamp_on():
+        read_stamp(transcript, asked_by=run.asked_by)
+    spans, _ = planned_spans(recording, transcript)
     moments = [
         Moment.objects.create(
-            transcript=transcript, at=at, source=Moment.INTERVAL, asked_by=run.asked_by
+            transcript=transcript,
+            at=start,
+            span_start=start,
+            span_end=end,
+            source=Moment.INTERVAL,
+            asked_by=run.asked_by,
         )
-        for at in times
+        for start, end in spans
     ]
     run.total = len(moments)
     run.save(update_fields=["total"])
@@ -1233,119 +1416,348 @@ def describe_intervals(run_id) -> None:
     run.save()
 
 
-def find_moments(run_id) -> None:
-    """One read of the whole Transcript, replacing every pending Cue from the words."""
-    run = (
-        CueRun.objects.filter(pk=run_id)
-        .select_related("transcript", "transcript__recording")
-        .first()
+# The camera's stamp (Phase 4, chapter 6) --------------------------------------------
+#
+# Many body-worn cameras burn a date, a clock time and the camera's id into
+# the picture. Read once per Transcript from a frame near the start, at the
+# look-closer height, and checked against a second frame a minute on: the
+# clock must have moved on by the same minute. Kept on the Transcript; told to
+# the Summary, the Chat and the Digest as the camera's clock. Never blocks the
+# record: a stamp that cannot be read is an empty one.
+
+STAMP_AT = 2.0
+STAMP_CHECK_AFTER = 60.0
+STAMP_TOLERANCE = 3
+
+
+def _read_stamp_frame(recording, transcript, at: float) -> tuple[dict, dict]:
+    """One frame's stamp as the engine read it, and the call's usage."""
+    import base64
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    from core import media
+
+    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
+    height = settings_store.moment_question_height()
+    system = prompts.system_message(ground.text, prompts.STAMP, prompts.STAMP_FORMAT)
+    text = "\n\n".join(
+        [
+            prompts.nature_line(recording, transcript),
+            f"The frame is from {prompts.clock(at)} of the recording.",
+        ]
     )
-    if run is None:
-        return
-    transcript = run.transcript
+    folder = Path(tempfile.mkdtemp(prefix="stamp-"))
+    try:
+        taken = media.grab_frames(
+            recording.playback_path(), folder, [at], height=height
+        )
+        parts: list[dict] = [{"type": "text", "text": text}]
+        for frame in taken:
+            parts.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/jpeg;base64,"
+                        + base64.b64encode(frame.read_bytes()).decode("ascii")
+                    },
+                }
+            )
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+    answer = engine.complete(
+        [{"role": "system", "content": system}, {"role": "user", "content": parts}],
+        max_completion_tokens=prompts.STAMP_CAP,
+        thinking=False,
+        timeout=settings_store.time_limit_seconds("moment"),
+        schema=prompts.STAMP_SCHEMA,
+        **SUGGESTION_SAMPLING,
+    )
+    try:
+        parsed = json.loads(answer["text"])
+    except ValueError:
+        parsed = {}
+    if not isinstance(parsed, dict):
+        parsed = {}
+    read = {
+        key: " ".join(str(parsed.get(key, "") or "").split())[:200]
+        for key in ("date", "time", "camera", "other")
+    }
+    return read, answer
+
+
+def read_stamp(transcript, *, asked_by) -> dict:
+    """The stamp read and checked, kept on the Transcript; empty when none."""
+    from core import media
+
     recording = transcript.recording
     started = time.monotonic()
-    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
-    template = PromptTemplate.named(PromptTemplate.FINDER)
-    templates_line = f"ground-rules v{ground.version}; Find moments v{template.version}"
-    run.state = RUNNING
-    run.save(update_fields=["state"])
-
+    length = float(recording.duration_seconds or 0.0)
+    at = min(STAMP_AT, length) if length > 0 else STAMP_AT
     usage: dict = {}
+    stamp: dict = {}
     try:
-        problem = _unreachable()
-        if problem:
-            raise problem
-        lines = prompts.lines_of(transcript)
-        if not lines:
-            raise engine.Problem(engine.ERROR, "there are no lines to read")
-        most = settings_store.moment_finder_most()
+        first, usage = _read_stamp_frame(recording, transcript, at)
+        stamp = {**first, "at": at, "checked": False}
+        seconds = prompts.clock_seconds(first.get("time", ""))
+        later = at + STAMP_CHECK_AFTER
+        if seconds is not None and length > later + 5:
+            second, more = _read_stamp_frame(recording, transcript, later)
+            usage = {
+                "input_tokens": (usage.get("input_tokens") or 0)
+                + (more.get("input_tokens") or 0),
+                "output_tokens": (usage.get("output_tokens") or 0)
+                + (more.get("output_tokens") or 0),
+                "model": usage.get("model", ""),
+            }
+            then = prompts.clock_seconds(second.get("time", ""))
+            if (
+                then is not None
+                and abs(((then - seconds) % 86400) - STAMP_CHECK_AFTER)
+                <= STAMP_TOLERANCE
+            ):
+                stamp["checked"] = True
+            elif then is not None:
+                # The clock did not move as the recording did: not a clock.
+                stamp["time"] = ""
+        if not any(stamp.get(key) for key in ("date", "time", "camera")):
+            stamp = {}
+        outcome = "ok"
+        reason = ""
+    except (engine.Problem, media.MediaError) as why:
+        log.warning("the stamp could not be read: %s", getattr(why, "reason", why))
+        stamp = {}
+        outcome = getattr(why, "reason", getattr(why, "reason_class", "media_failed"))
+        reason = outcome
+    transcript.stamp = stamp
+    transcript.save(update_fields=["stamp"])
+    _record(
+        "stamp",
+        recording,
+        actor=asked_by,
+        templates="ground-rules; Stamp (fixed)",
+        model=usage.get("model", "") if isinstance(usage, dict) else "",
+        usage=usage if isinstance(usage, dict) else {},
+        started=started,
+        outcome=outcome,
+        reason=reason,
+        found=bool(stamp),
+        checked=bool(stamp.get("checked")),
+    )
+    return stamp
+
+
+# The Digest (Phase 4, chapter 6) -------------------------------------------------
+#
+# One text per Transcript, made in the summary's lane after the record: the
+# Transcript in windows, each with the camera lines in it, condensed by one
+# call each into a time-ordered record where every line says said, seen or
+# both. Kept part by part with what each was made from, so the next summary
+# remakes only the parts whose words or descriptions changed. Nobody reads it.
+
+
+def digest_windows(lines: list, budget: int) -> list[tuple[int, int]]:
+    """The windows of the Transcript, cut on line boundaries, each within the budget."""
+    windows: list[tuple[int, int]] = []
+    start = 0
+    used = 0
+    for index, line in enumerate(lines):
+        cost = prompts.tokens(prompts.render([line])) + 1
+        if index > start and used + cost > budget:
+            windows.append((start, index))
+            start, used = index, 0
+        used += cost
+    if start < len(lines) or not windows:
+        windows.append((start, len(lines)))
+    return windows
+
+
+def digest_signature(lines: list, moments: list) -> str:
+    """What a part was made from, hashed: its lines and the descriptions in them."""
+    digest = hashlib.sha256()
+    for line in lines:
+        digest.update(
+            f"{line.segment_id}|{line.start}|{line.speaker}|{line.text}\n".encode()
+        )
+    for one in moments:
+        digest.update(
+            f"{one.pk}|{one.span_start}|{one.span_end}|{one.text}|{one.edited}\n".encode()
+        )
+    return digest.hexdigest()
+
+
+def _moments_in(moments: list, start: float, end: float) -> list:
+    """The described Moments whose spans fall in the window."""
+    found = []
+    for one in moments:
+        a, b = prompts.span_of(one)
+        if b >= start and a < end:
+            found.append(one)
+    return found
+
+
+def digest_plan(transcript) -> list[dict]:
+    """Each window with its span, its lines, its Moments and its signature."""
+    recording = transcript.recording
+    lines = prompts.lines_of(transcript)
+    if not lines:
+        return []
+    moments = list(transcript.moments.filter(state=DONE).exclude(text=""))
+    windows = digest_windows(lines, settings_store.digest_window_tokens())
+    length = float(recording.duration_seconds or 0.0) or (lines[-1].start + 1.0)
+    plan = []
+    for number, (first, last) in enumerate(windows, start=1):
+        start = 0.0 if number == 1 else lines[first].start
+        end = lines[windows[number][0]].start if number < len(windows) else length
+        mine = _moments_in(moments, start, end)
+        plan.append(
+            {
+                "number": number,
+                "total": len(windows),
+                "start": start,
+                "end": end,
+                "lines": lines[first:last],
+                "moments": mine,
+                "signature": digest_signature(lines[first:last], mine),
+            }
+        )
+    return plan
+
+
+def digest_current(transcript) -> bool:
+    """Whether every part stands for what the Transcript and the record hold now."""
+    parts = {one.number: one for one in transcript.digest_parts.all()}
+    plan = digest_plan(transcript)
+    if not plan or len(parts) != len(plan):
+        return False
+    return all(
+        parts.get(one["number"]) is not None
+        and parts[one["number"]].signature == one["signature"]
+        and parts[one["number"]].text
+        for one in plan
+    )
+
+
+def digest_text(transcript) -> str:
+    """The Digest as it stands, part after part, or nothing."""
+    return "\n".join(
+        one.text for one in transcript.digest_parts.all() if one.text
+    ).strip()
+
+
+def digest_made_at(transcript):
+    """When the Digest was last made: the newest part's time."""
+    newest = transcript.digest_parts.exclude(made_at=None).order_by("-made_at").first()
+    return newest.made_at if newest is not None else None
+
+
+def make_digest(transcript, *, asked_by, summary=None) -> str:
+    """The Digest brought current: only the stale parts are made again.
+
+    Called in the summary's lane, after the record. Raises the engine's
+    Problem, which fails the Summary the ordinary way.
+    """
+    recording = transcript.recording
+    plan = digest_plan(transcript)
+    if not plan:
+        return ""
+    existing = {one.number: one for one in transcript.digest_parts.all()}
+    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
+    templates_line = f"ground-rules v{ground.version}; Digest (fixed)"
+    texts = []
+    for window_plan in plan:
+        number = window_plan["number"]
+        part = existing.get(number)
+        if (
+            part is not None
+            and part.signature == window_plan["signature"]
+            and part.text
+        ):
+            texts.append(part.text)
+            continue
+        if summary is not None:
+            summary.stage = f"condensing {number} of {window_plan['total']}"
+            summary.save(update_fields=["stage"])
+        started = time.monotonic()
+        usage: dict = {}
+        mine = window_plan["moments"]
+        answer_cap = cap(settings_store.digest_part_cap())
         system = prompts.system_message(
-            ground.text, template.text, prompts.FINDER_FORMAT
+            ground.text,
+            prompts.DIGEST,
+            prompts.with_camera_rules(prompts.DIGEST_FORMAT, mine),
         )
         user = "\n\n".join(
-            [
+            part
+            for part in [
                 prompts.nature_line(recording, transcript),
-                prompts.render(lines),
-                prompts.finder_input(most),
+                clock_line(transcript),
+                prompts.digest_input(
+                    number,
+                    window_plan["total"],
+                    window_plan["start"],
+                    window_plan["end"],
+                    prompts.render(window_plan["lines"]),
+                    prompts.camera_lines(mine),
+                ),
             ]
+            if part
         )
-        finder_cap = settings_store.moment_finder_cap()
-        if not prompts.fits(system, user, answer_cap=cap(finder_cap), window=window()):
-            raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
-
-        raw = None
-        for attempt in (1, 2):
+        try:
+            if not prompts.fits(system, user, answer_cap=answer_cap, window=window()):
+                raise engine.Problem(engine.TOO_LONG, "a digest window would not fit")
             answer = engine.complete(
                 _messages(system, user),
-                max_completion_tokens=cap(finder_cap),
-                thinking=thinking(),
-                timeout=time_limit("moment_finder"),
-                schema=prompts.finder_schema(most),
-                **SUGGESTION_SAMPLING,
+                max_completion_tokens=answer_cap,
+                thinking=False,
+                timeout=time_limit("summary"),
+                **SAMPLING,
             )
             usage = answer
-            try:
-                try:
-                    parsed = json.loads(answer["text"])
-                except ValueError:
-                    parsed = json.loads(prompts.salvage_json(answer["text"]))
-                raw = parsed.get("cues", [])
-                if not isinstance(raw, list):
-                    raise ValueError("not a list")
-                break
-            except (ValueError, AttributeError) as bad:
-                if attempt == 2:
-                    raise engine.Problem(
-                        engine.BAD_OUTPUT, "invalid finder JSON twice"
-                    ) from bad
-        kept = prompts.keep_cues(
-            raw or [], lines, settings_store.moment_finder_confidence(), most
-        )
-        transcript.cues.filter(source=Cue.TRANSCRIPT, state=Cue.PENDING).delete()
-        for one in kept:
-            Cue.objects.create(
-                transcript=transcript,
-                segment_id=one["segment_id"],
-                at=one["start"],
-                line=one["line"],
-                kind=one["kind"],
-                reason=one["reason"],
-                confidence=one["confidence"],
-                source=Cue.TRANSCRIPT,
+            text = answer["text"].strip()
+            if not text:
+                raise engine.Problem(engine.BAD_OUTPUT, "an empty digest part")
+        except engine.Problem as problem:
+            _record(
+                "digest",
+                recording,
+                actor=asked_by,
+                templates=templates_line,
+                model="",
+                usage=usage,
+                started=started,
+                outcome=problem.reason,
+                reason=problem.reason,
+                part=number,
+                parts=window_plan["total"],
             )
-        run.found = len(kept)
-        run.state = DONE
-        run.reason_class = ""
-        run.finished_at = timezone.now()
-        run.save()
+            raise
+        if part is None:
+            part = DigestPart(transcript=transcript, number=number)
+        part.span_start = window_plan["start"]
+        part.span_end = window_plan["end"]
+        part.signature = window_plan["signature"]
+        part.text = text
+        part.moments_used = len(mine)
+        part.model = answer["model"]
+        part.made_at = timezone.now()
+        part.save()
         _record(
-            "moment_finder",
+            "digest",
             recording,
-            actor=run.asked_by,
+            actor=asked_by,
             templates=templates_line,
-            model=answer["model"],
+            model=part.model,
             usage=usage,
             started=started,
             outcome="ok",
-            found=len(kept),
+            part=number,
+            parts=window_plan["total"],
         )
-    except engine.Problem as problem:
-        run.state = FAILED
-        run.reason_class = problem.reason
-        run.finished_at = timezone.now()
-        run.save(update_fields=["state", "reason_class", "finished_at"])
-        _record(
-            "moment_finder",
-            recording,
-            actor=run.asked_by,
-            templates=templates_line,
-            model="",
-            usage=usage,
-            started=started,
-            outcome=problem.reason,
-            reason=problem.reason,
-        )
+        texts.append(text)
+    transcript.digest_parts.filter(number__gt=len(plan)).delete()
+    return "\n".join(texts).strip()
 
 
 def unnamed_speakers(transcript) -> list[str]:

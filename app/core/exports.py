@@ -36,12 +36,13 @@ log = logging.getLogger("transcribe.exports")
 
 CORRECTED_LEGEND_TEXT = "Lines marked (corrected) were corrected by staff."
 CORRECTED_LEGEND_WORD = "Segments marked * were corrected by staff."
-# A Moment among the lines: a model's description of what the picture showed.
+# The described Moments, in a section of their own at the end of an export
+# (v1.51.0; among the lines before that).
 CAMERA_LEGEND = (
-    "Lines marked Camera are a model's description of what the picture showed "
-    "at that time, not the transcript."
+    "What the camera showed is a model's description of the picture at the "
+    "listed times, not the transcript."
 )
-CAMERA_TAG = "Camera (a model's description, not transcript)"
+CAMERA_HEADING = "What the camera showed"
 
 
 def camera_moments(transcript) -> list:
@@ -60,19 +61,14 @@ def camera_text(moment) -> str:
     return prompts.camera_line_text(moment)
 
 
-def with_camera_lines(segments, moments):
-    """The Segments and the Moments together in time order.
+def camera_when(moment) -> str:
+    """A Moment's time for an export: its span when it is one of the record."""
+    from core import prompts
 
-    Yields ("segment", segment) and ("camera", moment): a Moment goes before
-    the first Segment that starts after it, and after the last otherwise.
-    """
-    waiting = list(moments)
-    for segment in segments:
-        while waiting and waiting[0].at <= segment.start:
-            yield "camera", waiting.pop(0)
-        yield "segment", segment
-    for moment in waiting:
-        yield "camera", moment
+    start, end = prompts.span_of(moment)
+    if end > start:
+        return f"[{clock(start)}]-[{clock(end)}]"
+    return f"[{clock(moment.at)}]"
 
 
 # What both parties of a call heard: the recorded announcement before it
@@ -341,18 +337,11 @@ def plain_text(recording: Recording) -> str:
     shared = both_sides_legend(transcript)
     if shared:
         notice += " " + shared
-    moments = camera_moments(transcript)
-    if moments:
-        notice += " " + CAMERA_LEGEND
     head.append(notice)
     head.append("")
 
     lines = []
-    for kind, one in with_camera_lines(segments, moments):
-        if kind == "camera":
-            lines.append(f"[{clock(one.at)}] {CAMERA_TAG}: {camera_text(one)}")
-            continue
-        segment = one
+    for segment in segments:
         name = segment.speaker
         if name and segment.corrected:
             name = f"{name} (corrected)"
@@ -363,8 +352,20 @@ def plain_text(recording: Recording) -> str:
             f"{start} {name}: {segment.text}" if name else f"{start} {segment.text}"
         )
 
+    # What the camera showed, after the talk (v1.51.0; among the lines before).
+    lines.extend(camera_lines_text(transcript))
     # Windows line endings: these are read on office workstations.
     return "\r\n".join(head + lines) + "\r\n"
+
+
+def camera_lines_text(transcript) -> list[str]:
+    """The end section of a plain-text export: the record, one line per Moment."""
+    moments = camera_moments(transcript)
+    if not moments:
+        return []
+    return ["", CAMERA_HEADING, CAMERA_LEGEND] + [
+        f"{camera_when(one)} {camera_text(one)}" for one in moments
+    ]
 
 
 # Captions ---------------------------------------------------------------------
@@ -486,11 +487,6 @@ def word(recording: Recording, exported_by: str) -> bytes:
     if shared:
         both = document.add_paragraph(shared)
         both.runs[0].italic = True
-    moments = camera_moments(transcript)
-    if moments:
-        camera = document.add_paragraph(CAMERA_LEGEND)
-        camera.runs[0].italic = True
-
     if who:
         document.add_paragraph()
         appearing = document.add_paragraph("Appearances")
@@ -502,20 +498,9 @@ def word(recording: Recording, exported_by: str) -> bytes:
     _number_the_lines(talk)
     _running_head(talk, title, kind, recording.sha256, Pt, RGBColor)
 
-    for kind, one in with_camera_lines(segments, moments):
+    for segment in segments:
         line = document.add_paragraph()
         line.paragraph_format.space_after = Pt(6)
-        if kind == "camera":
-            tag = line.add_run(f"[{clock(one.at)}]  Camera: ")
-            tag.bold = True
-            tag.font.name = "Consolas"
-            tag.font.size = Pt(10)
-            said = line.add_run(camera_text(one))
-            said.italic = True
-            said.font.name = "Consolas"
-            said.font.size = Pt(10)
-            continue
-        segment = one
         mark = "*" if segment.corrected else " "
         name = f"{segment.speaker.upper()}: " if segment.speaker else ""
         run = line.add_run(f"[{clock(segment.start)}]{mark} {name}{segment.text}")
@@ -524,6 +509,10 @@ def word(recording: Recording, exported_by: str) -> bytes:
 
     if not segments:
         document.add_paragraph("This transcript has no segments.")
+
+    # What the camera showed, in a section of its own after the talk
+    # (v1.51.0; among the lines before that).
+    _camera_section(document, transcript)
 
     # The processing record -----------------------------------------------------
     record = document.add_section(WD_SECTION.NEW_PAGE)
@@ -683,9 +672,18 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
         ("Segments", str(len(segments))),
         ("Corrections", str(corrections)),
         ("Camera moments", camera_moments_row(transcript)),
+        ("Camera stamp", stamp_row(transcript)),
         ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
     ]
     return [(label, value) for label, value in rows if str(value).strip()]
+
+
+def stamp_row(transcript) -> str:
+    """The camera's burned-in stamp as read, or nothing."""
+    from core import prompts
+
+    stamp = getattr(transcript, "stamp", None) or {}
+    return prompts.stamp_row(stamp)
 
 
 def camera_moments_row(transcript) -> str:
@@ -1213,7 +1211,7 @@ def _camera_section(document, transcript) -> None:
     if not moments:
         return
     document.add_paragraph()
-    heading = document.add_paragraph("What the camera showed")
+    heading = document.add_paragraph(CAMERA_HEADING)
     heading.runs[0].bold = True
     heading.runs[0].font.size = Pt(12)
     legend = document.add_paragraph(CAMERA_LEGEND)
@@ -1221,7 +1219,7 @@ def _camera_section(document, transcript) -> None:
     for one in moments:
         line = document.add_paragraph()
         line.paragraph_format.space_after = Pt(4)
-        when = line.add_run(f"[{clock(one.at)}] ")
+        when = line.add_run(f"{camera_when(one)} ")
         when.bold = True
         said = line.add_run(camera_text(one))
         said.italic = True

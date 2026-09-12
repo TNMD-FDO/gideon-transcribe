@@ -760,6 +760,23 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
         camera = exports.camera_moments_row(transcript)
         if camera:
             rows.append(("Camera moments", camera))
+        stamp = exports.stamp_row(transcript)
+        if stamp:
+            rows.append(("Camera stamp", stamp))
+        # The Digest (Phase 4 chapter 6): that it exists and what it was made
+        # from; its words are never shown.
+        parts = list(transcript.digest_parts.all())
+        made = max((one.made_at for one in parts if one.made_at), default=None)
+        used = sum(one.moments_used for one in parts)
+        if parts and made is not None:
+            rows.append(
+                (
+                    "Digest",
+                    f"made {made:%d %B %Y %H:%M} from the transcript and "
+                    f"{used} description{'' if used == 1 else 's'}, "
+                    f"in {len(parts)} part{'' if len(parts) == 1 else 's'}",
+                )
+            )
 
     # One line per Clip that exists now; a deleted Clip simply drops out.
     for clip in recording.clips.all():

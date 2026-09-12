@@ -391,11 +391,153 @@ CAMERA_RULES = (
     "Brevity: a camera fact earns a clause, not a paragraph. Leave out camera "
     "lines that add nothing to the words."
 )
-# The most camera lines a Summary of each length draws on, told to the model
-# in its input; and the most the block may cost, past which the app thins it
-# (every asked and suggested Moment kept, the interval ones spread evenly).
-CAMERA_MOST = {"short": 5, "standard": 12, "detailed": 30}
+# The most the camera block may cost a Summary or a Chat without a Digest,
+# past which the app thins it (every asked Moment kept, the record's spread
+# evenly). With a Digest the block is not sent at all (chapter 6).
 CAMERA_BLOCK_TOKENS = 6000
+
+# The picture record (chapter 6): a span described with the previous span's
+# description in hand, so it says what is new and never the room again.
+RECORD_NEW = (
+    "This clip is one span of a record that covers the whole recording, and "
+    "you are told what the clip before it showed. Say only what is new in this "
+    "one: what moved, what came into view or left it, what was handled, shown, "
+    "or pointed at, and where the camera went. Do not describe the setting "
+    "again. If nothing of note changed, answer with one line beginning "
+    "Unchanged: and a few words on what is still in view."
+)
+
+# The Digest (chapter 6): fixed instructions, never a template. The window's
+# words and camera lines come in, a time-ordered record comes out, every line
+# saying where it came from, exact quotes kept where a summary will need them.
+DIGEST = (
+    "You are condensing one window of a recording's transcript, and, when it "
+    "is given, the block headed What the camera showed for the same window, "
+    "into a record of what happened, in time order. Write one numbered line "
+    "per thing that happened, in this shape: the span of time it covers as "
+    "[hh:mm:ss]-[hh:mm:ss], then (said), (seen), or (both) for where it comes "
+    "from, then what happened in plain words. Keep the exact words inside "
+    "quotation marks for any statement about the case or the events behind it, "
+    "any request, instruction, threat, or admission, and any name, place, date, "
+    "or time of day, each with its line's time. Name a person only as the "
+    "words name them; a person the camera shows stays described by clothing "
+    "and position. A run of camera lines that say Unchanged is one line. Leave "
+    "nothing out that a careful reader would want to know; leave out filler, "
+    "repetition, and the setting said twice. Never add what neither source "
+    "carries, and never a legal conclusion."
+)
+DIGEST_FORMAT = (
+    "Answer in plain text, numbered lines only, no headings and no preamble. "
+    "Every time as [hh:mm:ss], copied from the line or the camera line it "
+    "comes from."
+)
+DIGEST_CAP = 1200
+DIGEST_WINDOW_TOKENS = 12000
+RECORD_HEADING = (
+    "The record of this recording (a model's condensation of the words and the "
+    "camera, in time order; every time is the transcript's):"
+)
+# The camera's stamp (chapter 6): the date, the time and the camera id burned
+# into the picture, read from a frame near the start, copied never guessed.
+STAMP = (
+    "You are shown one frame from a body-worn or fixed camera. Some cameras "
+    "burn text into the picture, usually along its top edge: a date, a clock "
+    "time, a camera or device id, a badge or a name, a manufacturer. Transcribe "
+    "exactly what is burned in, character for character, and nothing else in "
+    "the picture. Copy digits as they are printed and never guess a missing or "
+    "unclear one: leave the field empty instead. Give the date and the time "
+    "exactly as printed, without reordering."
+)
+STAMP_FORMAT = (
+    'Answer with the JSON asked for: {"date": "...", "time": "...", "camera": '
+    '"...", "other": "..."}, an empty string for a field the picture does not show.'
+)
+STAMP_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "date": {"type": "string", "maxLength": 40},
+        "time": {"type": "string", "maxLength": 40},
+        "camera": {"type": "string", "maxLength": 80},
+        "other": {"type": "string", "maxLength": 200},
+    },
+    "required": ["date", "time", "camera", "other"],
+}
+STAMP_CAP = 200
+CLOCK_TIME = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
+
+
+def clock_seconds(text: str) -> int | None:
+    """A printed clock time as seconds since midnight, or None when it is not one."""
+    match = CLOCK_TIME.match((text or "").strip())
+    if not match:
+        return None
+    hours, minutes, seconds = (int(part) for part in match.groups())
+    if hours > 23 or minutes > 59 or seconds > 59:
+        return None
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def stamp_line(stamp: dict | None) -> str:
+    """The camera's clock as the model is told it, or nothing.
+
+    Never reinterprets the date: the digits go as printed. A time is given
+    both as read and as the recording's own zero, so the model can add.
+    """
+    stamp = stamp or {}
+    when = stamp.get("time", "")
+    camera = stamp.get("camera", "")
+    date = stamp.get("date", "")
+    if not (when or camera or date):
+        return ""
+    parts = ["The camera's own stamp, burned into the picture, read"]
+    shown = ", ".join(part for part in (date, when) if part)
+    if shown:
+        parts.append(
+            f"{shown} at {clock(float(stamp.get('at', 0.0)))} of the recording"
+        )
+    if camera:
+        parts.append(f"camera {camera}")
+    said = " ".join(parts[:1]) + " " + ", ".join(parts[1:]) + "."
+    seconds = clock_seconds(when)
+    if seconds is not None:
+        zero = (seconds - int(float(stamp.get("at", 0.0)))) % 86400
+        hours, rest = divmod(zero, 3600)
+        minutes, secs = divmod(rest, 60)
+        said += (
+            f" So [00:00:00] of the recording was {hours:02d}:{minutes:02d}:{secs:02d} "
+            "by the camera's clock, and a time in the recording plus that is the "
+            "clock time; give the date as printed, without reordering it."
+        )
+    if not stamp.get("checked"):
+        said += " The stamp was read from one frame and not checked against a second."
+    return said
+
+
+def stamp_row(stamp: dict | None) -> str:
+    """The stamp for Details and an export's processing record, or nothing."""
+    stamp = stamp or {}
+    shown = ", ".join(
+        part for part in (stamp.get("date", ""), stamp.get("time", "")) if part
+    )
+    if not shown and not stamp.get("camera"):
+        return ""
+    row = shown
+    if shown:
+        row += f" at {clock(float(stamp.get('at', 0.0)))}"
+    if stamp.get("camera"):
+        row += (", " if row else "") + f"camera {stamp['camera']}"
+    row += (
+        " (checked against a second frame)"
+        if stamp.get("checked")
+        else " (read from one frame)"
+    )
+    return row
+
+
+NEAR_HEADING = (
+    "What the camera showed at the times asked about (a model's descriptions, "
+    "not the transcript):"
+)
 
 LENGTH_LINES = {
     "short": "Keep the whole summary under about 250 words.",
@@ -611,28 +753,30 @@ def system_message(ground_rules: str, template: str, answer_format: str) -> str:
     return "\n\n".join(part for part in (ground_rules, template, answer_format) if part)
 
 
-def summary_input(focus: str, length: str, seen: int = 0) -> str:
-    """The length line, the Focus, and, with a camera block, how much of it to use."""
+def summary_input(focus: str, length: str, seen: int = 0, digest: bool = False) -> str:
+    """The length line, the Focus, and what to make of the picture: the Digest
+    when there is one, else the camera block."""
     parts = [LENGTH_LINES.get(length, LENGTH_LINES["standard"])]
     if focus.strip():
         parts.append(
             f"Concentrate on: {focus.strip()}. Keep every part, but weight the "
             "content toward this."
         )
-    if seen > 0:
-        most = CAMERA_MOST.get(length, CAMERA_MOST["standard"])
+    if digest:
+        parts.append(
+            "The record of this recording is complete: every stretch of the "
+            "words and the picture is in it. Choose what matters for the "
+            "summary and leave the rest out rather than listing it; a fact "
+            "marked (seen) or (both) is the camera's and is written as the "
+            "rules say."
+        )
+    elif seen > 0:
         lines = "line" if seen == 1 else "lines"
-        if seen > most:
-            parts.append(
-                f"The camera block has {seen} {lines}. Draw on at most {most} of "
-                "them, the ones that add a fact the words do not; leave the rest "
-                "out rather than listing them."
-            )
-        else:
-            parts.append(
-                f"The camera block has {seen} {lines}; draw on the ones that add "
-                "a fact the words do not."
-            )
+        parts.append(
+            f"The camera block has {seen} {lines}; draw on the ones that add "
+            "a fact the words do not, and leave the rest out rather than "
+            "listing them."
+        )
     return "\n".join(parts)
 
 
@@ -681,15 +825,122 @@ def video_tokens(frames: int, height: int, width: int | None = None) -> int:
     return math.ceil(frames / 2) * patches
 
 
-def moment_input(lines: list[Line], span_start: float, span_end: float) -> str:
-    """The words spoken in the clip, as the model is told them, with the span."""
+def moment_input(
+    lines: list[Line], span_start: float, span_end: float, previous: str = ""
+) -> str:
+    """The words spoken in the clip, as the model is told them, with the span;
+    for a record span, what the previous span showed as well."""
     head = (
         f"This clip runs from {clock(span_start)} to {clock(span_end)} of the "
         "recording."
     )
     if not lines:
-        return f"{head} No words were transcribed in this clip."
-    return f"{head} The words spoken in this clip were:\n{render(lines)}"
+        said = f"{head} No words were transcribed in this clip."
+    else:
+        said = f"{head} The words spoken in this clip were:\n{render(lines)}"
+    if previous.strip():
+        said += f"\n\nThe clip before this one showed: {previous.strip()}"
+    return said
+
+
+def span_of(moment) -> tuple[float, float]:
+    """A Moment's span, or its time twice when it has none."""
+    start = getattr(moment, "span_start", 0.0) or 0.0
+    end = getattr(moment, "span_end", 0.0) or 0.0
+    if end > start:
+        return start, end
+    return moment.at, moment.at
+
+
+def span_clock(moment) -> str:
+    """A Moment's time as the lines print it: its span when it has one."""
+    start, end = span_of(moment)
+    if end > start:
+        return f"{clock(start)}-{clock(end)}"
+    return clock(moment.at)
+
+
+def digest_input(
+    number: int, total: int, start: float, end: float, words: str, camera: str
+) -> str:
+    """One window as the Digest's call is told it."""
+    head = (
+        f"Window {number} of {total}, from {clock(start)} to {clock(end)} of the "
+        "recording. The words spoken in it:"
+    )
+    parts = [f"{head}\n{words}" if words else f"{head}\n(none transcribed)"]
+    if camera:
+        parts.append(camera)
+    return "\n\n".join(parts)
+
+
+def digest_block(text: str) -> str:
+    """The Digest as Summary, Chat and the Case Chat are told it."""
+    if not text.strip():
+        return ""
+    return RECORD_HEADING + "\n" + text.strip()
+
+
+TIME_IN_QUESTION = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")
+
+
+def times_in(question: str, length: float = 0.0) -> list[float]:
+    """The times a question names, in seconds: h:mm:ss, or m:ss (read as h:mm
+    when that alone fits the recording)."""
+    found: list[float] = []
+    for match in TIME_IN_QUESTION.finditer(question or ""):
+        first, second, third = match.groups()
+        if third is not None:
+            seconds = int(first) * 3600 + int(second) * 60 + int(third)
+        else:
+            seconds = int(first) * 60 + int(second)
+            if (
+                length
+                and seconds > length
+                and int(first) * 3600 + int(second) * 60 <= length
+            ):
+                seconds = int(first) * 3600 + int(second) * 60
+        if seconds not in found:
+            found.append(float(seconds))
+    return found
+
+
+def near_descriptions(moments: list, times: list[float], most: int) -> list:
+    """The described Moments whose spans hold the times asked about, else the
+    nearest within a minute, at most `most`, in time order."""
+    if not times or most <= 0:
+        return []
+    chosen: dict = {}
+    for when in times:
+        holding = [
+            one
+            for one in moments
+            if span_of(one)[1] > span_of(one)[0]
+            and span_of(one)[0] <= when <= span_of(one)[1]
+        ]
+        if not holding:
+            near = sorted(
+                (one for one in moments if abs(one.at - when) <= 60),
+                key=lambda one: abs(one.at - when),
+            )[:1]
+            holding = near
+        for one in holding:
+            chosen[one.pk] = one
+    return sorted(chosen.values(), key=lambda one: one.at)[:most]
+
+
+def near_block(moments: list) -> str:
+    if not moments:
+        return ""
+    return (
+        "\n\n"
+        + NEAR_HEADING
+        + "\n"
+        + "\n".join(
+            f"{span_clock(one)} [camera] {camera_line_text(one, mark_edited=True)}"
+            for one in moments
+        )
+    )
 
 
 def question_input(
@@ -739,7 +990,7 @@ def camera_line_text(moment, mark_edited: bool = False) -> str:
 def camera_lines(moments) -> str:
     """The Moments as Summary and Chat are told them, or nothing."""
     said = [
-        f"{clock(one.at)} [camera] {camera_line_text(one, mark_edited=True)}"
+        f"{span_clock(one)} [camera] {camera_line_text(one, mark_edited=True)}"
         for one in moments
     ]
     if not said:
@@ -750,9 +1001,9 @@ def camera_lines(moments) -> str:
 def trim_camera_lines(moments, budget: int = CAMERA_BLOCK_TOKENS) -> list:
     """The Moments whose block fits the budget, in time order.
 
-    Every asked and suggested Moment is kept; the interval ones are spread
-    evenly over the recording, fewer each step, until the block fits. At the
-    shipped numbers (forty intervals, brief descriptions) nothing is thinned.
+    Every asked Moment is kept; the record's are spread evenly over the
+    recording, fewer each step, until the block fits. Used only without a
+    Digest (chapter 6).
     """
     moments = sorted(moments, key=lambda one: one.at)
     if tokens(camera_lines(moments)) <= budget:
@@ -768,120 +1019,6 @@ def trim_camera_lines(moments, budget: int = CAMERA_BLOCK_TOKENS) -> list:
             return chosen
         count -= max(1, count // 10)
     return kept
-
-
-# The finder (Phase 4, chapter 3) ----------------------------------------------------
-#
-# A Cue is a line where the picture would tell what the words cannot. A word
-# list cannot tell "look at that bag" from "what was that noise", so the
-# finder is one read of the whole Transcript by the engine, asked for lines
-# worth seeing and why, in a fixed shape the app checks line by line.
-FINDER = (
-    "You are reading the transcript of a video recording, a body-worn camera "
-    "or a fixed camera. Find the lines where seeing the picture at that time "
-    "would add a fact the words do not carry: an object named, handled, "
-    "shown, or found (a bag, a phone, a weapon, money, keys, a document, a "
-    "container); a command that implies an action (hands out of the window, "
-    "step out, on the ground); narration of an action (he is reaching down, "
-    "she dropped it, they are running); a pointing phrase with something in "
-    "view (look at that, there it is); or a sudden change (shouting, a "
-    "struggle, a crash, a door). Ordinary talk that happens to use such words "
-    "is not a moment: what was that about a sound, on the ground in a story, "
-    "look as a filler, a thing merely mentioned. Choose only lines where the "
-    "picture at that time is worth a person's look. Give each its line "
-    "number, its kind, one short reason in plain words that names the thing "
-    "or the action, and how sure you are. Fewer, better lines beat many."
-)
-FINDER_FORMAT = (
-    "Answer with the JSON asked for: the lines most worth seeing first, none "
-    "for a line that merely mentions a thing, and never more entries than the "
-    "list allows."
-)
-FINDER_CAP = 1500
-
-CUE_KINDS = ("object", "command", "action", "pointing", "change")
-CONFIDENCE = ("high", "medium", "low")
-
-FINDER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "cues": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "line": {"type": "integer"},
-                    "kind": {"type": "string", "enum": list(CUE_KINDS)},
-                    "reason": {"type": "string", "maxLength": 120},
-                    "confidence": {"type": "string", "enum": list(CONFIDENCE)},
-                },
-                "required": ["line", "kind", "reason", "confidence"],
-            },
-        }
-    },
-    "required": ["cues"],
-}
-
-
-def finder_schema(most: int) -> dict:
-    """The schema with the array bounded to the office's most-suggestions setting."""
-    import copy
-
-    schema = copy.deepcopy(FINDER_SCHEMA)
-    schema["properties"]["cues"]["maxItems"] = max(1, int(most))
-    return schema
-
-
-def finder_input(most: int) -> str:
-    return (
-        f"List at most {int(most)} lines. Refer to a line by the number in "
-        "square brackets at its start."
-    )
-
-
-def keep_cues(raw: list, lines: list[Line], least: str, most: int) -> list[dict]:
-    """The finder's answer checked line by line: real lines, sure enough, once each.
-
-    Ordered surest first and then by time, and cut to the most allowed.
-    """
-    rank = {name: n for n, name in enumerate(CONFIDENCE)}
-    floor = rank.get(least, rank["medium"])
-    by_number = {line.number: line for line in lines}
-    kept: list[dict] = []
-    seen: set[int] = set()
-    for one in raw:
-        if not isinstance(one, dict):
-            continue
-        try:
-            number = int(one.get("line"))
-        except (TypeError, ValueError):
-            continue
-        line = by_number.get(number)
-        kind = str(one.get("kind", "")).strip().lower()
-        confidence = str(one.get("confidence", "")).strip().lower()
-        reason = " ".join(str(one.get("reason", "")).split())[:120]
-        if (
-            line is None
-            or number in seen
-            or kind not in CUE_KINDS
-            or confidence not in rank
-            or rank[confidence] > floor
-            or not reason
-        ):
-            continue
-        seen.add(number)
-        kept.append(
-            {
-                "segment_id": line.segment_id,
-                "start": line.start,
-                "line": number,
-                "kind": kind,
-                "reason": reason,
-                "confidence": confidence,
-            }
-        )
-    kept.sort(key=lambda one: (rank[one["confidence"]], one["start"]))
-    return kept[: max(1, int(most))]
 
 
 def history_that_fits(

@@ -22,7 +22,6 @@ from core import assistant, audit, cases, exports, settings_store, tasks
 from core.assistant import (
     Chat,
     ChatTurn,
-    Cue,
     CueRun,
     Moment,
     Suggestion,
@@ -78,6 +77,8 @@ def _summary_json(summary: Summary, transcript) -> dict:
         "length": summary.length,
         "describe_first": summary.describe_first,
         "moments_used": summary.moments_used,
+        "digest_parts": summary.digest_parts,
+        "stage": summary.stage,
         "text": summary.text,
         "citations": summary.citations,
         "cut_short": summary.cut_short,
@@ -162,20 +163,6 @@ def _moment_json(one: Moment) -> dict:
     }
 
 
-def _cue_json(one: Cue) -> dict:
-    return {
-        "id": str(one.pk),
-        "segment_id": str(one.segment_id) if one.segment_id else "",
-        "start": one.at,
-        "clock": exports.clock(one.at),
-        "line": one.line,
-        "kind": one.kind,
-        "reason": one.reason,
-        "confidence": one.confidence,
-        "source": one.source,
-    }
-
-
 def _run_json(run) -> dict | None:
     if run is None:
         return None
@@ -187,62 +174,59 @@ def _run_json(run) -> dict | None:
     }
 
 
-def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict]:
-    """The Moments, the pending Cues, and the finders' runs; none while off."""
+def _digest_json(transcript) -> dict | None:
+    """The Digest as it stands, for the lines that say when it was made."""
+    if not assistant.digests_on():
+        return None
+    made = assistant.digest_made_at(transcript)
+    parts = transcript.digest_parts.count()
+    return {
+        "parts": parts,
+        "made": timezone.localtime(made).strftime("%H:%M") if made else "",
+        "moments": sum(one.moments_used for one in transcript.digest_parts.all()),
+        "current": bool(parts and assistant.digest_current(transcript)),
+    }
+
+
+def _moments_and_runs(recording, transcript, features) -> tuple[list, dict]:
+    """The Moments and the record's run and plan; none while off."""
     if transcript is None or not features["moments"]:
-        return [], [], {}
+        return [], {}
     moments = list(transcript.moments.all())
-    cues = [_cue_json(one) for one in transcript.cues.filter(state=Cue.PENDING)]
-    # What Describe the whole recording would make now, so the tab can say
-    # so before the press: the times taken are the ones assistant.describe_intervals
-    # skips, a Moment not failed with words, or queued or running.
-    taken = [
-        one.at for one in moments if one.state != assistant.FAILED and one.text
-    ] + [
-        one.at for one in moments if one.state in (assistant.QUEUED, assistant.RUNNING)
-    ]
-    every = settings_store.moment_interval_seconds()
-    count = len(
-        assistant.interval_times(
-            float(recording.duration_seconds or 0.0),
-            every,
-            settings_store.moment_interval_most(),
-            taken,
-        )
+    # What Describe the whole recording would make now, so the tab and the
+    # summary dialog can say so before the press (chapter 6): the spans of
+    # the cut, an estimate by the clock alone until the picture is scanned.
+    spans, estimated = (
+        assistant.planned_spans(recording, transcript)
+        if assistant.record_on()
+        else ([], False)
     )
+    count = len(spans)
     intervals = {
-        "every": every,
+        "every": settings_store.moment_interval_seconds(),
         "count": count,
+        "estimated": estimated,
         # About how long the run would take, for the dialog's line.
         "minutes": math.ceil(count * assistant.MOMENT_SECONDS_GUESS / 60),
     }
-    # The described Moments, and the rule for the dialog's Look at the picture
-    # first tick: the office's toggle, something left to describe, and fewer
-    # described already than the office calls enough (0 meaning always).
     described = sum(1 for one in moments if one.state == assistant.DONE and one.text)
-    enough = settings_store.summary_moments_enough()
     runs = {
-        "transcript": _run_json(
-            transcript.cue_runs.filter(source=CueRun.TRANSCRIPT).first()
-        ),
-        "media": _run_json(transcript.cue_runs.filter(source=CueRun.MEDIA).first()),
         "interval": _run_json(
             transcript.cue_runs.filter(source=CueRun.INTERVAL).first()
         ),
         "intervals": intervals,
-        "finders": {
-            "transcript": bool(settings_store.get("moment_finder_transcript")),
-            "media": bool(settings_store.get("moment_finder_media")),
-        },
+        "record": assistant.record_on(),
+        "digest": _digest_json(transcript),
+        "stamp": exports.stamp_row(transcript),
         "described": described,
         "answers_use_moments": bool(settings_store.get("moments_in_answers")),
+        # The dialog's Look at the picture first tick starts ticked while the
+        # office says so and anything is left to describe.
         "describe_first_default": bool(
-            settings_store.get("summary_describes_first")
-            and count > 0
-            and (enough == 0 or described < enough)
+            settings_store.get("summary_describes_first") and count > 0
         ),
     }
-    return [_moment_json(one) for one in moments], cues, runs
+    return [_moment_json(one) for one in moments], runs
 
 
 @login_required
@@ -256,7 +240,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
 
     summaries = [_summary_json(one, transcript) for one in recording.summaries.all()]
     chats = [_chat_json(one, transcript) for one in recording.chats.all()]
-    moments, cues, cue_runs = _moments_and_cues(recording, transcript, features)
+    moments, cue_runs = _moments_and_runs(recording, transcript, features)
 
     suggestions, run = [], None
     unnamed: list[str] = []
@@ -316,13 +300,10 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     busy = busy or any(
         one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in moments
     )
-    busy = busy or any(
-        run is not None and run["state"] in (assistant.QUEUED, assistant.RUNNING)
-        for run in (
-            cue_runs.get("transcript"),
-            cue_runs.get("media"),
-            cue_runs.get("interval"),
-        )
+    record_run = cue_runs.get("interval")
+    busy = busy or (
+        record_run is not None
+        and record_run["state"] in (assistant.QUEUED, assistant.RUNNING)
     )
 
     return JsonResponse(
@@ -333,7 +314,6 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             "chats": chats,
             # What the camera showed, and the lines that point at something.
             "moments": moments,
-            "cues": cues,
             "cue_runs": cue_runs,
             "video": assistant.playable_video(recording),
             # The office's starter questions for an empty chat; none by default.
@@ -452,7 +432,7 @@ def _moment(request, moment_id):
 @login_required
 @require_POST
 def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
-    """A Moment asked for at a time, by a person or from a Cue they accepted."""
+    """A Moment asked for at a time, by a person."""
     recording = _recording(request, recording_id)
     if recording is None:
         return JsonResponse({"error": "no such recording"}, status=404)
@@ -467,14 +447,8 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
             status=409,
         )
     wanted = _body(request)
-    # A Cue accepted carries its own time and line.
-    cue = None
-    if wanted.get("cue"):
-        cue = Cue.objects.filter(pk=wanted["cue"], transcript=transcript).first()
-        if cue is None:
-            return JsonResponse({"error": "no such suggestion"}, status=404)
     try:
-        at = float(cue.at if cue is not None else wanted.get("at", ""))
+        at = float(wanted.get("at", ""))
     except (TypeError, ValueError):
         return JsonResponse({"error": "a time is needed"}, status=400)
     length = float(recording.duration_seconds or 0.0)
@@ -484,11 +458,7 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
         segment = Segment.objects.filter(
             pk=wanted["segment"], transcript=transcript
         ).first()
-    source = Moment.CUE if wanted.get("source") == Moment.CUE else Moment.ASKED
     question = str(wanted.get("question", "")).strip()[:500]
-    if cue is not None:
-        source = Moment.CUE
-        segment = cue.segment
     if (
         not question
         and transcript.moments.filter(
@@ -504,69 +474,23 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
         transcript=transcript,
         segment=segment,
         at=at,
-        source=source,
+        source=Moment.ASKED,
         question=question,
-        cue_text=cue.reason[:80] if cue is not None else "",
         asked_by=request.user,
     )
-    if cue is not None:
-        cue.state = Cue.ACCEPTED
-        cue.save(update_fields=["state"])
     tasks.describe_moment.defer(moment_id=str(moment.pk))
     return JsonResponse({"id": str(moment.pk)})
 
 
 @login_required
 @require_POST
-def find_moments(request: HttpRequest, recording_id) -> JsonResponse:
-    """Find moments: one run per finder the office has on."""
-    recording = _recording(request, recording_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    if not assistant.features()["moments"]:
-        return JsonResponse({"error": "Moments are off"}, status=404)
-    transcript = getattr(recording, "transcript", None)
-    if transcript is None:
-        return JsonResponse({"error": "there is no transcript yet"}, status=409)
-    if not assistant.playable_video(recording):
-        return JsonResponse(
-            {"error": "the video is still being prepared, or this is sound only"},
-            status=409,
-        )
-    if transcript.cue_runs.filter(
-        state__in=(assistant.QUEUED, assistant.RUNNING)
-    ).exists():
-        return JsonResponse({"error": "a search is already in progress"}, status=409)
-    wanted_finders = []
-    if settings_store.get("moment_finder_transcript"):
-        wanted_finders.append(CueRun.TRANSCRIPT)
-    if settings_store.get("moment_finder_media"):
-        wanted_finders.append(CueRun.MEDIA)
-    if not wanted_finders:
-        return JsonResponse({"error": "every finder is off"}, status=409)
-    cases.used(recording, by=request.user)
-    ids = []
-    for source in wanted_finders:
-        run = CueRun.objects.create(
-            transcript=transcript, source=source, asked_by=request.user
-        )
-        if source == CueRun.TRANSCRIPT:
-            tasks.find_moments.defer(run_id=str(run.pk))
-        else:
-            tasks.scan_for_moments.defer(run_id=str(run.pk))
-        ids.append(str(run.pk))
-    return JsonResponse({"ids": ids})
-
-
-@login_required
-@require_POST
 def describe_intervals(request: HttpRequest, recording_id) -> JsonResponse:
-    """Describe the whole recording: a Moment every interval, in one lane."""
+    """Describe the whole recording: the picture record, one span at a time."""
     recording = _recording(request, recording_id)
     if recording is None:
         return JsonResponse({"error": "no such recording"}, status=404)
-    if not assistant.features()["moments"]:
-        return JsonResponse({"error": "Moments are off"}, status=404)
+    if not assistant.record_on():
+        return JsonResponse({"error": "the picture record is off"}, status=404)
     transcript = getattr(recording, "transcript", None)
     if transcript is None:
         return JsonResponse({"error": "there is no transcript yet"}, status=409)
@@ -585,21 +509,6 @@ def describe_intervals(request: HttpRequest, recording_id) -> JsonResponse:
     )
     tasks.describe_intervals.defer(run_id=str(run.pk))
     return JsonResponse({"id": str(run.pk)})
-
-
-@login_required
-@require_POST
-def dismiss_cue(request: HttpRequest, cue_id) -> JsonResponse:
-    """A suggestion not wanted: it goes from the list and the row, and stays gone."""
-    cue = get_object_or_404(
-        Cue.objects.select_related("transcript", "transcript__recording"), pk=cue_id
-    )
-    recording = _recording(request, cue.transcript.recording_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    cue.state = Cue.DISMISSED
-    cue.save(update_fields=["state"])
-    return JsonResponse({"ok": True})
 
 
 @login_required

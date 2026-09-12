@@ -1,15 +1,16 @@
 """Moments (Phase 4): what the camera showed at a time, as a model described it.
 
-The rules checked here: a Cue is a line whose words point at something, found
-by pattern and never stored; a Moment is a clip cut from the Playback copy
-around the chosen time, shown to the engine with the words spoken in it,
-never with thinking, and the clip is gone whatever happens; the engine's
-request carries a priority; an engine that takes no video says so; the
-endpoints refuse while Moments are off, before the Playback copy exists, and
-for sound alone; the state lists Moments and Cues; a Moment's words reach
-Summary and Chat as labelled camera lines only while the office says so, and
-the exports carry them marked; the audit rows carry no words; and a Moment
-goes with its Transcript.
+The rules checked here: a Moment is a clip cut from the Playback copy around
+the chosen time, shown to the engine with the words spoken in it, never with
+thinking, and the clip is gone whatever happens; the engine's request
+carries a priority; an engine that takes no video says so; the endpoints
+refuse while Moments are off, before the Playback copy exists, and for sound
+alone; the state lists Moments; a Moment's words reach Summary and Chat as
+labelled camera lines only while the office says so, and the exports carry
+them in a section of their own; the audit rows carry no words; a Moment goes
+with its Transcript; and the picture record (chapter 6) is cut where the
+picture changes, described once per span with the previous span in hand,
+never twice. The Cues of v1.40.0 to v1.50.1 are gone.
 """
 
 from __future__ import annotations
@@ -47,43 +48,38 @@ def a_line(number, start, speaker, text, segment_id=None):
 # Without a database ------------------------------------------------------------------
 
 
-def test_the_finders_answer_is_checked_line_by_line():
-    lines = [
-        a_line(1, 0.0, "Speaker 1", "This is Detective Ruiz."),
-        a_line(2, 12.4, "Speaker 2", "Look at that, right there in the console."),
-        a_line(3, 30.0, "Speaker 1", "Tell me about the car."),
+def test_the_record_is_cut_where_the_picture_changes():
+    # No change points: the clock alone, spans that touch and never overlap.
+    assert assistant.record_spans(900.0, [], 300.0, 3.0, 600) == [
+        (0.0, 300.0),
+        (300.0, 600.0),
+        (600.0, 900.0),
     ]
-    raw = [
-        {
-            "line": 2,
-            "kind": "pointing",
-            "reason": "a bag in the console",
-            "confidence": "high",
-        },
-        {"line": 2, "kind": "object", "reason": "again", "confidence": "high"},
-        {"line": 3, "kind": "action", "reason": "  too   unsure ", "confidence": "low"},
-        {"line": 9, "kind": "object", "reason": "no such line", "confidence": "high"},
-        {"line": 1, "kind": "sermon", "reason": "no such kind", "confidence": "high"},
-        {"line": 1, "kind": "command", "reason": "", "confidence": "medium"},
-        "not a dict",
+    # Cut at the change points; a long stretch cut into equal pieces no
+    # longer than the ceiling; a short one (100 to 101.5) joined to the span
+    # before it.
+    spans = assistant.record_spans(900.0, [100.0, 101.5, 450.0], 300.0, 3.0, 600)
+    assert spans == [
+        (0.0, 101.5),
+        (101.5, 275.75),
+        (275.75, 450.0),
+        (450.0, 675.0),
+        (675.0, 900.0),
     ]
-    kept = prompts.keep_cues(raw, lines, "medium", 10)
-    assert kept == [
-        {
-            "segment_id": 2,
-            "start": 12.4,
-            "line": 2,
-            "kind": "pointing",
-            "reason": "a bag in the console",
-            "confidence": "high",
-        }
-    ]
-    # Lower the floor and the unsure one comes in, after the surer, with its
-    # spaces tidied; the most allowed cuts the list.
-    assert [one["line"] for one in prompts.keep_cues(raw, lines, "low", 10)] == [2, 3]
-    assert prompts.keep_cues(raw, lines, "low", 10)[1]["reason"] == "too unsure"
-    assert len(prompts.keep_cues(raw, lines, "low", 1)) == 1
-    assert prompts.finder_schema(5)["properties"]["cues"]["maxItems"] == 5
+    assert all(b > a for a, b in spans)
+    assert all(spans[n][1] == spans[n + 1][0] for n in range(len(spans) - 1))
+    # A span already covered by a Moment is left out: nothing twice.
+    assert assistant.record_spans(
+        900.0, [], 300.0, 3.0, 600, taken=[(300.0, 600.0)]
+    ) == [(0.0, 300.0), (600.0, 900.0)]
+    # Past the most allowed the cut is made coarser, never taken from the start.
+    many = assistant.record_spans(3600.0, [], 15.0, 3.0, 20)
+    assert len(many) <= 20 and many[0][0] == 0.0 and many[-1][1] == 3600.0
+    assert assistant.record_spans(0.0, [], 15.0, 3.0, 600) == []
+    # A long still span costs no more than a short busy one.
+    assert assistant.record_fps(15.0, 2, 16) == 1.067
+    assert assistant.record_fps(2.0, 2, 16) == 2.0
+    assert assistant.record_fps(160.0, 2, 16) == 0.1
 
 
 def test_the_scan_reads_ffmpeg_and_thins_what_it_finds():
@@ -110,6 +106,36 @@ def test_the_scan_reads_ffmpeg_and_thins_what_it_finds():
     assert moment_scan.loud_from(printed, 12.0) == [3.0, 4.0]
     assert moment_scan.loud_from("nothing", 12.0) == []
     assert moment_scan.thin([3.0, 4.0, 40.0, 41.0, 70.0], 15.0) == [3.0, 40.0, 70.0]
+    # The camera's clock in a question, and the stamp's arithmetic.
+    assert prompts.times_in("what was in his hand at 12:40?", 900.0) == [760.0]
+    assert prompts.times_in("at 1:02:03 and again at 12:40", 4000.0) == [3723.0, 760.0]
+    assert prompts.times_in("nothing timed", 900.0) == []
+    assert prompts.clock_seconds("21:56:19") == 21 * 3600 + 56 * 60 + 19
+    assert (
+        prompts.clock_seconds("9:05") is None
+        and prompts.clock_seconds("25:00:00") is None
+    )
+    line = prompts.stamp_line(
+        {
+            "date": "06/07/2025",
+            "time": "21:56:19",
+            "camera": "BWC2-098679",
+            "at": 2.0,
+            "checked": True,
+        }
+    )
+    assert "06/07/2025, 21:56:19 at [00:00:02]" in line and "camera BWC2-098679" in line
+    assert (
+        "[00:00:00] of the recording was 21:56:17" in line
+        and "without reordering" in line
+    )
+    assert "not checked" not in line
+    assert "not checked" in prompts.stamp_line({"time": "21:56:19", "at": 2.0})
+    assert prompts.stamp_line({}) == "" and prompts.stamp_line(None) == ""
+    assert (
+        prompts.stamp_row({"camera": "BWC2-098679"})
+        == "camera BWC2-098679 (read from one frame)"
+    )
 
 
 def test_a_clips_cost_is_estimated_by_its_frames_and_its_height():
@@ -321,6 +347,15 @@ def segment_at(recording, start):
     return recording.transcript.segments.get(start=start)
 
 
+def no_scan_no_stamp(monkeypatch):
+    """The record without ffmpeg: no change points found, and the stamp off."""
+    from core import moment_scan
+
+    monkeypatch.setattr(moment_scan, "scene_changes", lambda *a, **k: [])
+    monkeypatch.setattr(moment_scan, "loud_seconds", lambda *a, **k: [])
+    settings_store.set_to("stamp_available", False)
+
+
 @pytest.mark.django_db
 def test_a_moment_is_described_from_the_clip_and_the_words(
     ready, person, client, monkeypatch, tmp_path
@@ -387,8 +422,7 @@ def test_a_moment_is_described_from_the_clip_and_the_words(
     (listed,) = state["moments"]
     assert listed["clock"] == "00:00:12" and listed["text"] == moment.text
     assert listed["state"] == "done" and listed["notice"]
-    # The cue on that line is gone from the suggestions now that it is described.
-    assert state["cues"] == []
+    assert "cues" not in state
 
 
 @pytest.mark.django_db
@@ -411,46 +445,32 @@ def test_a_moment_never_thinks_even_when_the_office_lets_the_model_think(
 
 
 @pytest.mark.django_db
-def test_the_state_lists_cues_and_a_moment_being_described_keeps_the_page_busy(
+def test_the_state_and_a_moment_being_described_keeps_the_page_busy(
     ready, person, client, monkeypatch
 ):
-    from core.assistant import Cue
-
     swallow_defer(monkeypatch)
     signed_in(client, person)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["moments"] == [] and state["cues"] == [] and state["busy"] is False
-    assert state["cue_runs"]["finders"] == {"transcript": True, "media": False}
+    assert state["moments"] == [] and state["busy"] is False
+    assert state["cue_runs"]["record"] is True and "finders" not in state["cue_runs"]
+    assert state["cue_runs"]["digest"] == {
+        "parts": 0,
+        "made": "",
+        "moments": 0,
+        "current": False,
+    }
 
     segment = segment_at(ready, 12.4)
-    cue = Cue.objects.create(
-        transcript=ready.transcript,
-        segment=segment,
-        at=12.4,
-        line=2,
-        kind="pointing",
-        reason="a bag in the console",
-        confidence="high",
-    )
-    state = client.get(f"/recording/{ready.pk}/assistant").json()
-    (listed,) = state["cues"]
-    assert listed["id"] == str(cue.pk) and listed["reason"] == "a bag in the console"
-    assert listed["segment_id"] == str(segment.pk) and listed["clock"] == "00:00:12"
-
-    # Accepting a Cue makes a Moment at its time and line, from the cue.
     answer = client.post(
         f"/recording/{ready.pk}/moments",
-        data=json.dumps({"cue": str(cue.pk), "source": "cue"}),
+        data=json.dumps({"at": 12.4, "segment": str(segment.pk)}),
         content_type="application/json",
     )
     assert answer.status_code == 200
     moment = Moment.objects.get(pk=answer.json()["id"])
-    assert moment.source == "cue" and moment.cue_text == "a bag in the console"
-    assert moment.at == 12.4 and moment.segment == segment
-    cue.refresh_from_db()
-    assert cue.state == Cue.ACCEPTED
+    assert moment.source == "asked" and moment.segment == segment
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["busy"] is True and state["cues"] == []
+    assert state["busy"] is True
     # The same time again while it runs is refused.
     again = client.post(
         f"/recording/{ready.pk}/moments",
@@ -458,89 +478,12 @@ def test_the_state_lists_cues_and_a_moment_being_described_keeps_the_page_busy(
         content_type="application/json",
     )
     assert again.status_code == 409
-
-    # Dismissing a Cue takes it off the list for good.
-    other = Cue.objects.create(
-        transcript=ready.transcript, at=30.0, reason="a door", confidence="medium"
-    )
-    assert client.post(f"/cue/{other.pk}/dismiss").status_code == 200
-    other.refresh_from_db()
-    assert other.state == Cue.DISMISSED
-    assert client.get(f"/recording/{ready.pk}/assistant").json()["cues"] == []
+    # The finders' routes are gone.
+    assert client.post(f"/recording/{ready.pk}/find-moments").status_code == 404
 
 
 @pytest.mark.django_db
-def test_find_moments_reads_the_transcript_once_and_keeps_what_it_checks(
-    ready, person, client, monkeypatch
-):
-    from core.assistant import Cue, CueRun
-
-    answer_json = json.dumps(
-        {
-            "cues": [
-                {
-                    "line": 2,
-                    "kind": "pointing",
-                    "reason": "something in the console",
-                    "confidence": "high",
-                },
-                {"line": 3, "kind": "object", "reason": "the car", "confidence": "low"},
-            ]
-        }
-    )
-    asked = reachable(monkeypatch, answer_json)
-    from core import tasks
-
-    deferred = []
-    monkeypatch.setattr(
-        tasks.find_moments, "defer", lambda **fields: deferred.append(("text", fields))
-    )
-    monkeypatch.setattr(
-        tasks.scan_for_moments,
-        "defer",
-        lambda **fields: deferred.append(("media", fields)),
-    )
-    signed_in(client, person)
-    answer = client.post(f"/recording/{ready.pk}/find-moments")
-    assert answer.status_code == 200, answer.content
-    assert [kind for kind, _ in deferred] == ["text"]
-    run = CueRun.objects.get(pk=answer.json()["ids"][0])
-    assert run.source == CueRun.TRANSCRIPT and run.state == assistant.QUEUED
-    assert client.post(f"/recording/{ready.pk}/find-moments").status_code == 409
-
-    assistant.find_moments(run.pk)
-    run.refresh_from_db()
-    assert run.state == assistant.DONE and run.found == 1
-    (cue,) = Cue.objects.filter(transcript=ready.transcript)
-    assert cue.line == 2 and cue.reason == "something in the console"
-    assert cue.segment == segment_at(ready, 12.4) and cue.source == Cue.TRANSCRIPT
-    call = asked[0]
-    assert prompts.FINDER in call["messages"][0]["content"]
-    assert (
-        "[2] [00:00:12] Speaker 2: Look at that, right there."
-        in call["messages"][-1]["content"]
-    )
-    assert "List at most 12 lines" in call["messages"][-1]["content"]
-    assert call["schema"]["properties"]["cues"]["maxItems"] == 12
-    assert call["temperature"] == 0.0 and call["timeout"] == 180
-    row = Row.objects.filter(category="llm").latest("at")
-    assert row.details["feature"] == "moment_finder" and row.details["found"] == 1
-    assert "console" not in json.dumps(row.details)
-    state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["transcript"] == {
-        "state": "done",
-        "found": 1,
-        "total": 0,
-        "said": "",
-    }
-
-    # With the media finder on as well, both runs start, and the scan writes
-    # its own Cues from what ffmpeg printed.
-    settings_store.set_to("moment_finder_media", True)
-    deferred.clear()
-    answer = client.post(f"/recording/{ready.pk}/find-moments")
-    assert [kind for kind, _ in deferred] == ["text", "media"]
-    media_run = CueRun.objects.get(source=CueRun.MEDIA)
+def test_the_scan_keeps_the_change_points_on_the_transcript(ready, person, monkeypatch):
     from core import moment_scan
 
     monkeypatch.setattr(
@@ -551,20 +494,26 @@ def test_find_moments_reads_the_transcript_once_and_keeps_what_it_checks(
     monkeypatch.setattr(
         moment_scan, "loud_seconds", lambda source, rise, timeout=0: [301.0, 730.0]
     )
-    moment_scan.scan_for_moments(media_run.pk)
-    media_run.refresh_from_db()
-    assert media_run.state == assistant.DONE and media_run.found == 3
-    scanned = list(
-        Cue.objects.filter(source__in=(Cue.PICTURE, Cue.SOUND)).order_by("at")
-    )
-    assert [(one.at, one.source) for one in scanned] == [
-        (5.0, Cue.PICTURE),
-        (300.0, Cue.PICTURE),
-        (730.0, Cue.SOUND),
-    ]
-    assert scanned[2].segment == segment_at(ready, 724.0)
+    assert ready.transcript.change_points is None
+    points = moment_scan.change_points_of(ready.transcript, actor=person)
+    # Thinned to the gap (3 s shipped): 5 and 6 are one, 300 and 301 are one.
+    assert points == [5.0, 300.0, 730.0]
+    ready.transcript.refresh_from_db()
+    assert ready.transcript.change_points == [5.0, 300.0, 730.0]
     row = Row.objects.get(event="Picture and sound scanned")
     assert row.details["found"] == 3 and row.details["picture_changes"] == 2
+    assert row.details["loud_seconds"] == 2
+
+    # A scan that fails raises, writes its row, and leaves the points unset.
+    def broken(source, threshold, timeout=0):
+        raise media.MediaError("no", "media_failed")
+
+    monkeypatch.setattr(moment_scan, "scene_changes", broken)
+    ready.transcript.change_points = None
+    ready.transcript.save(update_fields=["change_points"])
+    with pytest.raises(media.MediaError):
+        moment_scan.change_points_of(ready.transcript, actor=person)
+    assert Row.objects.filter(event="Picture and sound scanned").count() == 2
 
 
 @pytest.mark.django_db
@@ -661,18 +610,18 @@ def test_moments_start_off_and_the_viewer_offers_the_tab_only_when_on(
     assert page.count('class="tab" data-panel="moments"') == 1
     for one in (
         "describe-now",
-        "find-moments",
         "describe-intervals",
         "moment-list",
-        "cue-list",
         "moments-heading",
         "moments-said",
         "intervals-note",
-        "find-said",
         "intervals-said",
+        "record-lines",
     ):
         assert page.count(f'id="{one}"') == 1, one
-    assert "Described moments" in page and "Suggested moments" in page
+    assert "Described moments" in page and "Suggested moments" not in page
+    for gone in ("find-moments", "cue-list", "find-said", "camera-row", "Camera?"):
+        assert gone not in page, gone
     settings_store.set_to("moments_available", False)
     assert assistant.features()["moments"] is False
     page = client.get(f"/recording/{ready.pk}").content.decode()
@@ -684,7 +633,7 @@ def test_moments_start_off_and_the_viewer_offers_the_tab_only_when_on(
     )
     assert answer.status_code == 404
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["moments"] == [] and state["cues"] == []
+    assert state["moments"] == [] and "cues" not in state
     assert settings_store.DEFINITIONS["moments_available"].default is False
 
 
@@ -738,6 +687,8 @@ def test_summary_and_chat_carry_the_camera_block_only_while_the_office_says_so(
     ready, person, monkeypatch
 ):
     asked = reachable(monkeypatch, "Summary: at [00:00:12] a bag is shown.")
+    # Without a Digest the block is sent as before (test_digest has the rest).
+    settings_store.set_to("digests_available", False)
     Moment.objects.create(
         transcript=ready.transcript,
         at=12.4,
@@ -776,7 +727,7 @@ def test_summary_and_chat_carry_the_camera_block_only_while_the_office_says_so(
 
 
 @pytest.mark.django_db
-def test_the_exports_carry_the_camera_lines_marked(ready, person):
+def test_the_exports_carry_the_camera_lines_in_their_own_section(ready, person):
     Moment.objects.create(
         transcript=ready.transcript,
         at=12.4,
@@ -787,27 +738,28 @@ def test_the_exports_carry_the_camera_lines_marked(ready, person):
     )
     Moment.objects.create(
         transcript=ready.transcript,
-        at=800.0,
+        at=600.0,
+        span_start=600.0,
+        span_end=615.0,
+        source=Moment.INTERVAL,
         state=assistant.DONE,
         text="The car door is open.",
         model="the-model",
     )
     text = exports.plain_text(ready)
     lines = text.split("\r\n")
-    assert exports.CAMERA_LEGEND in text
+    # Nothing about the camera among the lines (v1.51.0): the talk, then a
+    # section of its own with the legend, a span on a record's line.
     spoken = [line for line in lines if line.startswith("[00:00:12] Speaker")]
     assert spoken[0].startswith("[00:00:12] Speaker 2:")
-    camera = [line for line in lines if exports.CAMERA_TAG in line]
-    assert camera == [
-        f"[00:00:12] {exports.CAMERA_TAG}: A hand holds a small bag.",
-        f"[00:13:20] {exports.CAMERA_TAG}: The car door is open.",
-    ]
-    # The Moment at 12.4 goes before the line that starts at 12.4, and the
-    # one at 800 after the last line.
-    assert lines.index(camera[0]) < lines.index(spoken[0])
-    assert lines.index(camera[1]) > lines.index(
-        [line for line in lines if line.startswith("[00:12:04]")][0]
+    assert "Camera (a model" not in text
+    heading = lines.index(exports.CAMERA_HEADING)
+    assert heading > lines.index(
+        [one for one in lines if one.startswith("[00:12:04]")][0]
     )
+    assert lines[heading + 1] == exports.CAMERA_LEGEND
+    assert lines[heading + 2] == "[00:00:12] A hand holds a small bag."
+    assert lines[heading + 3] == "[00:10:00]-[00:10:15] The car door is open."
     assert exports.camera_moments_row(ready.transcript) == (
         "2 described by the-model, 1 edited by staff"
     )
@@ -818,8 +770,11 @@ def test_the_exports_carry_the_camera_lines_marked(ready, person):
     import zipfile
 
     document = zipfile.ZipFile(io.BytesIO(word)).read("word/document.xml").decode()
-    assert "Camera: " in document and "A hand holds a small bag." in document
+    assert (
+        "What the camera showed" in document and "A hand holds a small bag." in document
+    )
     assert "Camera moments" in document and exports.CAMERA_LEGEND[:30] in document
+    assert "Camera: " not in document
 
 
 @pytest.mark.django_db
@@ -973,28 +928,6 @@ def test_a_clip_carries_the_camera_line_as_a_caption(ready, person):
 # Intervals and the summary (v1.41.0) -------------------------------------------------
 
 
-def test_interval_times_skip_what_is_described_and_spread_the_rest():
-    assert assistant.interval_times(300.0, 60.0, 40, []) == [
-        30.0,
-        90.0,
-        150.0,
-        210.0,
-        270.0,
-    ]
-    # A time already described within half an interval is skipped.
-    assert assistant.interval_times(300.0, 60.0, 40, [95.0]) == [
-        30.0,
-        150.0,
-        210.0,
-        270.0,
-    ]
-    # More than the most allowed are spread over the recording, not its start.
-    spread = assistant.interval_times(3600.0, 60.0, 6, [])
-    assert len(spread) == 6 and spread[0] == 30.0 and spread[-1] > 3000.0
-    assert assistant.interval_times(0.0, 60.0, 40, []) == []
-    assert assistant.interval_times(10.0, 60.0, 40, []) == []
-
-
 @pytest.mark.django_db
 def test_the_whole_recording_is_described_at_intervals_in_one_lane(
     ready, person, client, monkeypatch
@@ -1004,10 +937,15 @@ def test_the_whole_recording_is_described_at_intervals_in_one_lane(
 
     asked = reachable(monkeypatch, "A doorway.")
     a_cut(monkeypatch)
+    no_scan_no_stamp(monkeypatch)
     settings_store.set_to("moment_interval_seconds", 300)
+    # A span already described is never described twice.
     Moment.objects.create(
         transcript=ready.transcript,
-        at=452.0,
+        at=300.0,
+        span_start=300.0,
+        span_end=600.0,
+        source=Moment.INTERVAL,
         state=assistant.DONE,
         text="Already here.",
         model="the-model",
@@ -1025,12 +963,28 @@ def test_the_whole_recording_is_described_at_intervals_in_one_lane(
 
     assistant.describe_intervals(run.pk)
     run.refresh_from_db()
-    # 900 s at 300 s: 150, 450, 750; 450 is within half an interval of 452.
+    # 900 s cut at 300 s with no change points: 0-300, 300-600, 600-900, and
+    # the middle one is described already.
     assert run.state == assistant.DONE and (run.found, run.total) == (2, 2)
-    made = list(Moment.objects.filter(source=Moment.INTERVAL).order_by("at"))
-    assert [one.at for one in made] == [150.0, 750.0]
+    made = list(
+        Moment.objects.filter(source=Moment.INTERVAL).exclude(text="Already here.")
+    )
+    assert [(one.at, one.span_start, one.span_end) for one in made] == [
+        (0.0, 0.0, 300.0),
+        (600.0, 600.0, 900.0),
+    ]
     assert all(one.state == assistant.DONE and one.text == "A doorway." for one in made)
     assert len(asked) == 2
+    # The span is the clip, thinned to the frames allowed, and the second
+    # span is told what the one before it showed and asked for what is new.
+    first, second = asked
+    assert first["messages"][-1]["content"][0]["text"].count("The clip before") == 0
+    assert (
+        "The clip before this one showed: Already here."
+        in second["messages"][-1]["content"][0]["text"]
+    )
+    assert prompts.RECORD_NEW in second["messages"][0]["content"]
+    assert made[0].frames == 16
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["cue_runs"]["interval"] == {
         "state": "done",
@@ -1046,6 +1000,7 @@ def test_the_intervals_stop_when_the_engine_goes_away(ready, person, monkeypatch
     from core.assistant import CueRun
 
     a_cut(monkeypatch)
+    no_scan_no_stamp(monkeypatch)
     monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
     calls = {"n": 0}
 
@@ -1083,47 +1038,75 @@ def test_the_state_counts_what_describing_the_whole_recording_would_make(
 ):
     swallow_defer(monkeypatch)
     signed_in(client, person)
-    # 900 s at the default 60 s: from 30 s in, one a minute, fifteen.
+    # 900 s at the shipped 15 s ceiling, the picture not yet scanned: sixty
+    # spans by the clock alone, an estimate.
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["cue_runs"]["intervals"] == {
-        "every": 60.0,
-        "count": 15,
-        "minutes": 5,
+        "every": 15.0,
+        "count": 60,
+        "estimated": True,
+        "minutes": 20,
     }
-    # A Moment already described within half an interval of a time takes it.
+    settings_store.set_to("moment_interval_seconds", 300)
+    # A span described already is left out; a failed one is not; one waiting
+    # its turn is, as describe_intervals counts them.
     done = Moment.objects.create(
         transcript=ready.transcript,
-        at=452.0,
+        at=300.0,
+        span_start=300.0,
+        span_end=600.0,
+        source=Moment.INTERVAL,
         state=assistant.DONE,
         text="Already here.",
         model="the-model",
     )
-    state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["intervals"] == {
-        "every": 60.0,
-        "count": 14,
-        "minutes": 5,
-    }
-    # A failed one does not; one waiting its turn does, as describe_intervals
-    # counts them.
+    assert (
+        client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"]["intervals"][
+            "count"
+        ]
+        == 2
+    )
     done.state = assistant.FAILED
     done.save(update_fields=["state"])
     assert (
         client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"]["intervals"][
             "count"
         ]
-        == 15
+        == 3
     )
-    Moment.objects.create(transcript=ready.transcript, at=150.0, asked_by=person)
-    settings_store.set_to("moment_interval_seconds", 300)
+    Moment.objects.create(
+        transcript=ready.transcript,
+        at=0.0,
+        span_start=0.0,
+        span_end=300.0,
+        source=Moment.INTERVAL,
+        asked_by=person,
+    )
+    assert (
+        client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"]["intervals"][
+            "count"
+        ]
+        == 2
+    )
+    # Once the picture is scanned the cut is at its change points, and no
+    # longer an estimate.
+    ready.transcript.change_points = [100.0, 450.0]
+    ready.transcript.save(update_fields=["change_points"])
+    Moment.objects.all().delete()
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    expected = len(assistant.interval_times(900.0, 300.0, 40, [150.0]))
     assert state["cue_runs"]["intervals"] == {
         "every": 300.0,
-        "count": expected,
-        "minutes": 1,
+        "count": 5,
+        "estimated": False,
+        "minutes": 2,
     }
-    assert expected == 2
+    # The record off: nothing to describe, and the dialog offers no tick.
+    settings_store.set_to("picture_record_available", False)
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["intervals"]["count"] == 0
+    assert state["cue_runs"]["record"] is False
+    assert state["cue_runs"]["describe_first_default"] is False
+    assert client.post(f"/recording/{ready.pk}/describe-intervals").status_code == 404
     # Nothing while Moments are off: the runs dict is empty.
     settings_store.set_to("moments_available", False)
     assert client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"] == {}
@@ -1140,7 +1123,8 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
             "A doorway.",
             "A car.",
             "A bag.",
-            "Summary: the camera shows a bag at [00:12:30].",
+            "1. [00:00:00]-[00:15:00] (both) A doorway, a car, a bag.",
+            "Summary: the camera shows a bag at [00:10:00].",
         ]
     )
     monkeypatch.setattr(engine, "is_reachable", lambda: True)
@@ -1159,11 +1143,12 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
 
     monkeypatch.setattr(engine, "complete", complete)
     a_cut(monkeypatch)
+    no_scan_no_stamp(monkeypatch)
     monkeypatch.setattr(tasks.write_summary, "defer", lambda **fields: None)
     settings_store.set_to("moment_interval_seconds", 300)
     signed_in(client, person)
-    # The tick starts ticked: the office's toggle is On, two intervals are
-    # left, and nothing is described yet (test_video_summary has the rule).
+    # The tick starts ticked: the office's toggle is On and spans are left
+    # to describe (test_video_summary has the rule).
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["cue_runs"]["describe_first_default"] is True
     settings_store.set_to("summary_describes_first", False)
@@ -1186,17 +1171,29 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
     assistant.write_summary(summary.pk)
     summary.refresh_from_db()
     assert summary.state == assistant.DONE
-    # Three interval Moments, then the summary, which was handed them.
+    # Three spans of the record, then the Digest's one part, then the
+    # summary, written from the Digest with the transcript beside it.
     assert (
         Moment.objects.filter(source=Moment.INTERVAL, state=assistant.DONE).count() == 3
     )
-    assert len(asked) == 4
-    user = asked[3]["messages"][-1]["content"]
-    assert prompts.CAMERA_HEADING in user and "[00:12:30] [camera] A bag." in user
-    assert asked[3]["messages"][0]["content"].endswith(prompts.CAMERA_RULES)
+    assert len(asked) == 5
+    digest_call = asked[3]
+    assert prompts.DIGEST in digest_call["messages"][0]["content"]
+    assert "Window 1 of 1" in digest_call["messages"][-1]["content"]
+    assert (
+        "[00:10:00]-[00:15:00] [camera] A bag."
+        in digest_call["messages"][-1]["content"]
+    )
+    user = asked[4]["messages"][-1]["content"]
+    assert prompts.RECORD_HEADING in user and "(both) A doorway, a car, a bag." in user
+    assert prompts.CAMERA_HEADING not in user
+    assert "The record of this recording is complete" in user
+    assert asked[4]["messages"][0]["content"].endswith(prompts.CAMERA_RULES)
     assert "the camera shows" in prompts.CAMERA_RULES
-    assert summary.citations == {"[00:12:30]": 750.0}
-    assert summary.moments_used == 3
+    assert summary.citations == {"[00:10:00]": 600.0}
+    assert summary.moments_used == 3 and summary.digest_parts == 1
+    assert ready.transcript.digest_parts.count() == 1
+    assert summary.stage == ""
 
     word = exports.summary_word(summary, "asker")
     import io
@@ -1207,17 +1204,54 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
     assert exports.CAMERA_LEGEND[:30] in document
 
 
-def test_the_interval_settings_start_as_the_chapter_says():
+def test_the_record_and_digest_settings_start_as_the_chapter_says():
     for key, default in (
-        ("moment_interval_seconds", 60),
-        ("moment_interval_most", 40),
+        ("picture_record_available", True),
+        ("moment_interval_seconds", 15),
+        ("picture_shortest_span", 3),
+        ("moment_interval_most", 600),
+        ("picture_frames_most", 16),
         ("summary_describes_first", True),
+        ("digests_available", True),
+        ("digest_window_tokens", 12000),
+        ("digest_part_tokens", 1200),
+        ("chat_descriptions_near", 6),
+        ("stamp_available", True),
+        ("moment_media_gap_seconds", 3),
     ):
-        assert settings_store.DEFINITIONS[key].default == default
+        assert settings_store.DEFINITIONS[key].default == default, key
+    for gone in (
+        "moment_finder_transcript",
+        "moment_finder_media",
+        "moment_finder_most",
+        "moment_finder_confidence",
+        "moment_finder_tokens",
+        "moment_finder_time_seconds",
+        "summary_moments_enough",
+    ):
+        assert gone not in settings_store.DEFINITIONS, gone
+    assert (
+        settings_store.DEFINITIONS["moment_scene_threshold"].needs
+        == "moments_available"
+    )
     text = CATALOGUE.read_text(encoding="utf-8")
     for name in (
-        "Describe at intervals: every",
-        "Describe at intervals: at most",
+        "Picture record for summaries",
+        "Picture record: longest span",
+        "Picture record: shortest span",
+        "Picture record: most descriptions",
+        "Picture record: frames per description",
         "Summaries describe the moments first",
+        "Digests",
+        "Digest window",
+        "Digest part cap",
+        "Chat: descriptions near an asked time",
+        "Read the camera's stamp",
+        "Gap between change points",
     ):
         assert f"| {name} |" in text, f"the catalogue has no row for {name}"
+    for gone in (
+        "| Find moments from the words |",
+        "| Enough moments for a video summary |",
+    ):
+        assert gone not in text, gone

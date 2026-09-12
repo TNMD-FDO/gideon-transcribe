@@ -65,16 +65,19 @@ def test_the_camera_block_carries_its_legend_and_marks_staff_words():
     assert "[camera]" not in prompts.CAMERA_NOTE
 
 
-def test_the_summary_is_told_how_much_of_the_block_to_draw_on():
+def test_the_summary_is_told_what_to_make_of_the_picture():
     assert "camera block" not in prompts.summary_input("", "short")
     assert "camera block" not in prompts.summary_input("", "short", 0)
     few = prompts.summary_input("", "short", 3)
     assert "The camera block has 3 lines; draw on the ones that add a fact" in few
+    # No per-length cap since v1.51.0: the Digest does the choosing, and
+    # without one the model is told to leave the rest out.
     many = prompts.summary_input("", "short", 23)
-    assert "The camera block has 23 lines. Draw on at most 5 of them" in many
-    assert "Draw on at most 12 of them" in prompts.summary_input("", "standard", 23)
-    assert "Draw on at most 30 of them" in prompts.summary_input("", "detailed", 40)
+    assert "Draw on at most" not in many and "leave the rest out" in many
     assert "The camera block has 1 line;" in prompts.summary_input("", "short", 1)
+    told = prompts.summary_input("", "short", 23, digest=True)
+    assert "The record of this recording is complete" in told
+    assert "camera block" not in told
     # The rules go after the answer format only when a block is given.
     assert (
         prompts.with_camera_rules(prompts.SUMMARY_FORMAT, []) == prompts.SUMMARY_FORMAT
@@ -127,16 +130,15 @@ def test_the_wording_is_clean_and_the_templates_say_seen_but_not_said():
 
 
 def test_the_settings_and_the_catalogue_agree():
-    enough = settings_store.DEFINITIONS["summary_moments_enough"]
-    assert enough.page == settings_store.ASSISTANT
-    assert enough.kind == settings_store.NUMBER
-    assert enough.default == 10 and enough.least == 0 and enough.most == 200
-    assert enough.needs == "moments_available"
+    assert "summary_moments_enough" not in settings_store.DEFINITIONS
     assert settings_store.DEFINITIONS["summary_describes_first"].default is True
+    record = settings_store.DEFINITIONS["picture_record_available"]
+    assert record.page == settings_store.ASSISTANT and record.default is True
+    assert record.needs == "moments_available"
     text = CATALOGUE.read_text(encoding="utf-8")
     for name in (
-        "Enough moments for a video summary",
         "Summaries describe the moments first",
+        "Picture record for summaries",
     ):
         assert f"| {name} |" in text, f"the catalogue has no row for {name}"
     assert "Video summary" in text
@@ -275,6 +277,8 @@ def test_the_summary_is_told_the_rules_and_remembers_what_it_drew_on(
     ready, person, monkeypatch
 ):
     asked = reachable(monkeypatch, "Summary: the camera shows a bag [00:00:12].")
+    # The block's path, without a Digest (test_digest has the Digest's).
+    settings_store.set_to("digests_available", False)
     transcript = ready.transcript
     described(transcript, 12.4, "A hand holds a small bag.")
     described(transcript, 30.0, "A clear bag.", edited=True)
@@ -302,7 +306,7 @@ def test_the_summary_is_told_the_rules_and_remembers_what_it_drew_on(
     assert (
         '[00:00:45] [camera] (asked "what is in his hand?") Visible: a phone.' in user
     )
-    assert "The camera block has 7 lines. Draw on at most 5 of them" in user
+    assert "The camera block has 7 lines; draw on the ones that add a fact" in user
     assert summary.citations == {"[00:00:12]": 12.4}
 
     # Without a block: no rules, no camera line in the input, nothing counted.
@@ -355,31 +359,36 @@ def test_the_state_says_when_the_summary_looks_first(
     def runs():
         return client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"]
 
-    # Shipped: the toggle On, ten enough, nothing described: ticked.
+    # Shipped: the toggle On, spans left to describe: ticked. 900 s at the
+    # 15 s ceiling is sixty spans by the clock alone, an estimate.
     first = runs()
     assert first["describe_first_default"] is True
     assert first["described"] == 0 and first["answers_use_moments"] is True
-    assert first["intervals"]["count"] == 15
-    assert first["intervals"]["minutes"] == 5
-    # Ten described: enough, so unticked; 0 means always ticked.
+    assert first["intervals"]["count"] == 60 and first["intervals"]["estimated"]
+    assert first["intervals"]["minutes"] == 20
+    # Moments without spans cover nothing: still ticked (v1.51.0; the Enough
+    # setting of v1.43.0 is withdrawn).
     for n in range(10):
         described(ready.transcript, 500.0 + n, "A road.", source=Moment.INTERVAL)
     second = runs()
-    assert second["described"] == 10 and second["describe_first_default"] is False
-    assert 0 < second["intervals"]["count"] < 15
-    settings_store.set_to("summary_moments_enough", 0)
-    assert runs()["describe_first_default"] is True
-    settings_store.set_to("summary_moments_enough", 11)
-    assert runs()["describe_first_default"] is True
+    assert second["described"] == 10 and second["describe_first_default"] is True
+    assert second["intervals"]["count"] == 60
     # The office's toggle Off: never ticked.
     settings_store.set_to("summary_describes_first", False)
     assert runs()["describe_first_default"] is False
     settings_store.set_to("summary_describes_first", True)
     # Nothing left to describe: unticked, whatever the rest says.
     settings_store.set_to("moment_interval_seconds", 600)
-    settings_store.set_to("moment_interval_most", 5)
     Moment.objects.all().delete()
-    described(ready.transcript, 300.0, "A road.", source=Moment.INTERVAL)
+    for start, end in ((0.0, 450.0), (450.0, 900.0)):
+        described(
+            ready.transcript,
+            start,
+            "A road.",
+            source=Moment.INTERVAL,
+            span_start=start,
+            span_end=end,
+        )
     third = runs()
     assert third["intervals"]["count"] == 0 and third["intervals"]["minutes"] == 0
     assert third["describe_first_default"] is False

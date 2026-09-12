@@ -21,6 +21,90 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.51.0, 2026-09-12
+
+```
+Models: unchanged
+Database: migrates (0040: the digest's parts, the record's change points and
+the camera's stamp on the transcript, the summary's digest count and stage;
+the cues table dropped, the moment's cue text gone)
+```
+
+Phase 4, chapter 6 (`docs/spec/SPEC-PHASE-4.md`): the picture record, the
+digest, and the camera's stamp. The maintainer asked to "make summarization
+smart", read the first proposal and cut it back: cues out, no overlapping
+descriptions, "smart optimization" throughout, nothing about the camera in
+line with the transcript; then sent a stamped frame.
+
+### Added
+
+- **The picture record.** Describe the whole recording no longer describes
+  on a clock. The picture and the sound are scanned once per transcript for
+  where they change sharply (the scan of v1.40.0, kept, its change points
+  now kept on the transcript), and the recording is cut at those points into
+  spans that touch, never overlap, and cover it end to end: no span longer
+  than **Picture record: longest span** (15 s, renamed from Describe at
+  intervals: every), none shorter than **Picture record: shortest span**
+  (3 s), at most **Picture record: most descriptions** (600), and a span
+  already described is never described twice. Each span is described as
+  itself, its frames thinned to at most **Picture record: frames per
+  description** (16) so a long still stretch costs no more than a short busy
+  one, with the previous span's description in hand and an instruction to
+  say only what is new; a span where nothing changed comes back as one line
+  beginning "Unchanged:". The summary dialog's tick starts ticked while
+  anything is left to describe, and its line says the count, "up to" until
+  the picture is scanned. **Picture record for summaries** turns it off.
+- **The digest.** Made in the summary's lane after the record: the transcript
+  cut into windows of about **Digest window** tokens (12,000) on line
+  boundaries, each sent with the camera lines in it and condensed by one call,
+  capped at **Digest part cap** (1,200), into numbered lines that say the span,
+  (said), (seen) or (both), and what happened, exact quotes kept. Kept part
+  by part with a signature of what each was made from, so the next summary
+  remakes only the parts whose words or descriptions changed. The summary is
+  written from the digest with the transcript beside it when it fits, and
+  from the digest alone when it does not, so a long recording is never
+  refused; the per-length caps on camera lines are gone. The chat is told the
+  digest in place of the camera block, plus the descriptions whose spans hold
+  the times the question names (**Chat: descriptions near an asked time**,
+  6). The case chat reads each recording's digest after its transcript, and
+  the digest alone when the case would exceed the hours ceiling or a
+  transcript alone would not fit. Nobody reads a digest: Details says when it
+  was made and from what; the summary's card says it was written from the
+  digest; the chat's grounding line says the record it answers from. Audit
+  feature `digest`, one row per part. **Digests** turns it off.
+- **The camera's stamp.** When the record is first made, one frame two
+  seconds in is read at the look-closer height with fixed instructions to
+  transcribe the date, the time and the camera id burned into the picture,
+  character for character, never guessing; a second frame a minute on checks
+  that the clock moved on by that minute. Kept on the transcript, shown in
+  Details, on the export's processing record and on the Moments tab, and
+  told to the summary, the chat and the digest as the camera's clock, with
+  the recording's own zero worked out so a time can be given as the time of
+  day; the date goes as printed and is never reordered. Audit feature
+  `stamp`. **Read the camera's stamp** turns it off.
+
+### Changed
+
+- **Gap between change points** (3 s; was Gap between scanned moments, 15 s)
+  and the scan's two thresholds now hang on Moments rather than on the
+  withdrawn media finder.
+- The exports' What the camera showed section shows a span on a record's
+  line; the summary's head reads "from the digest" when it was.
+
+### Withdrawn
+
+- **Cues.** The word finder (Find moments from the words), the cue rows and
+  the Suggested moments list, the "Camera?" pill, Dismiss, the six finder
+  settings, the Find moments template (an office's edited copy goes with
+  it), the audit feature `moment_finder`, and the cues table. The scan of
+  the picture and sound stays as the record's cut.
+- **The camera among the transcript's rows.** The camera line under the
+  nearest row and the row's describe button in the viewer, and the camera
+  lines interleaved among the lines in the text and Word exports; the exports
+  keep the What the camera showed section at the end, the transcript export
+  gaining it.
+- **Enough moments for a video summary** and the tick's count rule.
+
 ## v1.50.1, 2026-09-12
 
 ```

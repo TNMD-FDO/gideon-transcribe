@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, and its fifth in `v1.43.0`.
+The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, its fifth in `v1.43.0`, and its sixth in `v1.51.0`.
 
 ## About this document
 
@@ -19,9 +19,9 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **The finders** (chapter 3, v1.40.0): Find moments reads the whole Transcript once and suggests the lines where the picture would add a fact, each with its reason, and, when the office turns it on, scans the picture and sound for sharp changes and raised voices; the word list of chapter 1 is withdrawn.
 - **Intervals and the summary** (chapter 4, v1.41.0): the whole recording described at intervals, one lane, one call each; a Summary that describes the moments first when asked, and draws on what was seen; and a "What the camera showed" section in the Summary's Word export.
 - **The video summary and the video-aware chat** (chapter 5, v1.43.0): a shipped Video summary template that writes from the words and the described Moments together, fixed camera rules that keep the two sources apart whenever Camera lines are handed to Summary or Chat, a Chat that answers "what was in his hand at 12:40?" from both feeds, a look-first line in the summary dialog that says the cost in numbers and starts ticked by a rule, and camera citations drawn with the camera glyph.
-- **The picture record and the Digest** (chapter 6, proposed, not yet built): the recording cut where the picture and the sound change and described once per span, never twice and never overlapping, as the foundation a video's summary is written from, made when a summary is asked for; one Digest per Transcript, a model's time-ordered condensation of the words and the camera that the Summary, the Chat and the Case Chat are written from; Cues and the camera lines among the transcript's rows withdrawn.
+- **The picture record, the Digest, and the camera's stamp** (chapter 6, v1.51.0): the recording cut where the picture and the sound change and described once per span, never twice and never overlapping, as the foundation a video's summary is written from, made when a summary is asked for; one Digest per Transcript, a model's time-ordered condensation of the words and the camera that the Summary, the Chat and the Case Chat are written from; the date, the time and the camera id burned into the picture read once and told to the model as the camera's clock; Cues and the camera lines among the transcript's rows withdrawn.
 
-It adds twenty-three admin settings, two prompt templates, one shipped Summary template, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0039), and no environment key.
+It adds twenty-six admin settings in all (thirty-three added, seven withdrawn in chapter 6), one prompt template (two, the second withdrawn in chapter 6), one shipped Summary template, three audit row features in all (the finder's withdrawn), one Recordings row, two Viewer-edit rows, one reason class, three tables in all (migrations 0035 to 0040; the Cues table made in 0037 dropped in 0040), and no environment key.
 
 ## Contents
 
@@ -30,7 +30,7 @@ It adds twenty-three admin settings, two prompt templates, one shipped Summary t
 3. The finders
 4. Intervals and the summary
 5. The video summary and the video-aware chat
-6. The picture record and the Digest (proposed 2026-09-12, not yet built)
+6. The picture record, the Digest, and the camera's stamp
 7. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
@@ -302,9 +302,9 @@ One new on the AI assistant page, greyed while Moments is Off: **Enough moments 
 - The "within a minute" rule for a question about a time, in the Chat template.
 - The seconds-a-description guess behind the dialog's minutes.
 
-## 6. The picture record and the Digest
+## 6. The picture record, the Digest, and the camera's stamp
 
-Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make summarization smart. One that combines moments and the transcription for awesome narratives of events", and their answers to the build's questions: the foundation is "good VLM explanations of snippets taken every so often" joined with the transcript, and it serves "both the overarching case chat as well as the single summaries for individual videos"; no scene-by-scene breakdown, "but every scene should inform the overall summary"; no section on where the words and the picture disagree; a sound-only Recording's summary is a summary as it is today, and for a video "we are still talking about summaries"; the picture record is made for "those creating summaries" and never on its own; every feature has its switch on the Admin panel; the interval is the setting that exists, "for now let's say every 15 seconds"; the Digest is plumbing nobody reads. Reshaped the same day at the maintainer's second reading: Cues left out ("too many pointless cues", and "drawing cues only from a transcript does not seem optimal"); no overlapping descriptions; "a focus should always be smart optimization"; no Moment shown in line with the transcript; "the whole theme and plan should center around optimized usage of the transcript and vlm capabilities without onerous tasking that causes overlap". Not yet built.
+Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make summarization smart. One that combines moments and the transcription for awesome narratives of events", and their answers to the build's questions: the foundation is "good VLM explanations of snippets taken every so often" joined with the transcript, and it serves "both the overarching case chat as well as the single summaries for individual videos"; no scene-by-scene breakdown, "but every scene should inform the overall summary"; no section on where the words and the picture disagree; a sound-only Recording's summary is a summary as it is today, and for a video "we are still talking about summaries"; the picture record is made for "those creating summaries" and never on its own; every feature has its switch on the Admin panel; the interval is the setting that exists, "for now let's say every 15 seconds"; the Digest is plumbing nobody reads. Reshaped the same day at the maintainer's second reading: Cues left out ("too many pointless cues", and "drawing cues only from a transcript does not seem optimal"); no overlapping descriptions; "a focus should always be smart optimization"; no Moment shown in line with the transcript; "the whole theme and plan should center around optimized usage of the transcript and vlm capabilities without onerous tasking that causes overlap". Later the same day the maintainer sent a frame of a body-worn camera with "06/07/2025 21:56:19 BWC2-098679" burned into its top edge: "a lot of these body worn cameras do have useful info like a date and identifying info hard stamped... This could vary depending on the recording." Built in v1.51.0.
 
 ### Principles
 
@@ -319,7 +319,7 @@ Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make sum
 
 ### Words
 
-**Picture record** and **Digest** are added to the glossary. A description's **span** is the stretch of the recording it covers; a Digest's **part** is one window of the Transcript condensed by one call. **Cue** leaves the glossary when this chapter is built.
+**Picture record**, **Digest**, and **Camera stamp** are added to the glossary. A description's **span** is the stretch of the recording it covers; a Digest's **part** is one window of the Transcript condensed by one call. **Cue** leaves the glossary.
 
 ### What is withdrawn
 
@@ -343,6 +343,15 @@ Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make sum
 - **When it is current.** A part is current while its signature matches; a summary press remakes only the stale parts, and the card says "Condensing the recording (n of m)...". The Chat and the Case Chat never make or remake one; they use the Digest as it stands and say when it was made.
 - **The switch**: **Digests** (On or Off, greyed while Moments is Off). Off, nothing is made and the three features work as chapter 5 has them.
 
+### The camera's stamp
+
+Many body-worn cameras burn a date, a clock time and the camera's id into the picture, usually along its top edge; where and in what order varies by camera, and a manufacturer's mark may sit beside it. The stamp is worth two things: the real clock, so a time in a summary, a Digest line or a chat answer can be given as the time of day and the date and not only as an offset into the file; and the camera's identity, for the record's provenance.
+
+- **Read once, from two frames.** When the picture record is first made, after the scan and before the spans, one frame two seconds in is shown at the look-closer height with fixed instructions to transcribe exactly what is burned in, character for character, never guessing a digit, as JSON with a date, a time, a camera id, and anything else; the whole frame, since the position varies. When the time reads as a clock, a second frame a minute on is read the same way: the clock must have moved on by that minute within a few seconds, and then the stamp is **checked**; a clock that did not move is not a clock, and the time is dropped while the camera id is kept. Kept on the Transcript with the second it was read at; an empty stamp is kept too, so nothing is read twice; a read that fails, or an engine that cannot see, leaves the stamp empty and never stops the record.
+- **Told, never reinterpreted.** The Summary, the Chat, and every Digest part are given a clock line after the nature line: the stamp as printed, the second it was read at, the camera id, and the recording's own zero worked out by the camera's clock, so the model can add; the date goes as printed and is never reordered, since a camera's month and day order is not the app's to guess. An unchecked stamp says so in the line.
+- **Shown.** Details gains "Camera stamp: 06/07/2025, 21:56:19 at [00:00:02], camera BWC2-098679 (checked against a second frame)"; the export's processing record gains the same row; the Moments tab says it under the record's press. The frames are never kept.
+- **The switch**: **Read the camera's stamp** (On or Off, greyed while Moments is Off). Chapter 7's "reading text in the picture" is no longer unasked: the stamp is the one text the app reads, and the description instructions still neither ask for nor forbid the rest.
+
 ### The Summary
 
 - A Summary on a Recording with a current Digest is written from the nature line, the Transcript when it fits the window beside everything else, the Digest headed "The record of this recording (a model's condensation of the words and the camera, in time order; every time is the transcript's):", the template, and the camera rules. When the Transcript does not fit, the Digest stands alone for it, and the Summary is no longer refused as too long. No per-length camera count is sent; the length line says the Digest is complete and the Summary chooses what matters.
@@ -361,11 +370,11 @@ Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make sum
 
 ### Settings
 
-On the AI assistant page, greyed while Moments is Off: **Picture record for summaries** (On), **Digests** (On), **Picture record: longest span** (15 s, 5 to 600; the renamed Describe at intervals: every), **Picture record: shortest span** (3 s, 1 to 30), **Picture record: most descriptions** (600, 5 to 2,000; the renamed Describe at intervals: at most), **Picture record: frames per description** (16, 4 to 64), **Digest window** (12,000 tokens, 4,000 to 40,000), **Digest part cap** (1,200 tokens, 300 to 4,000), **Chat: descriptions near an asked time** (6, 0 to 30). The scan's thresholds stay as chapter 3 has them. Withdrawn: **Enough moments for a video summary** and the word finder's settings.
+On the AI assistant page, greyed while Moments is Off: **Picture record for summaries** (On), **Read the camera's stamp** (On), **Digests** (On), **Picture record: longest span** (15 s, 5 to 600; the renamed Describe at intervals: every), **Picture record: shortest span** (3 s, 1 to 30), **Picture record: most descriptions** (600, 5 to 2,000; the renamed Describe at intervals: at most), **Picture record: frames per description** (16, 4 to 64), **Digest window** (12,000 tokens, 4,000 to 40,000), **Digest part cap** (1,200 tokens, 300 to 4,000), **Chat: descriptions near an asked time** (6, 0 to 30). The scan's thresholds stay as chapter 3 has them. Withdrawn: **Enough moments for a video summary** and the word finder's settings.
 
 ### Audit rows
 
-AI assistant call, feature `digest`, one per part, the usual metadata and never the text. Withdrawn: feature `moment_finder`.
+AI assistant call, feature `digest`, one per part, with the part's number and the count, the usual metadata and never the text; AI assistant call, feature `stamp`, one per Transcript read, with whether anything was found and whether it was checked, never the stamp's words. Withdrawn: feature `moment_finder`.
 
 ### What changes from earlier chapters
 
@@ -380,25 +389,27 @@ AI assistant call, feature `digest`, one per part, the usual metadata and never 
 - Choosing descriptions for the Case Chat by the times a question names.
 - Anything that recognises a face or a voice.
 
-### Left to the build
+### Left to the build, and decided
 
-- The Digest instructions (`prompts.DIGEST`), the record heading, and the description instructions with the previous span given.
-- The cut: the join rule for short spans, the coarser cut past the ceiling, the frame thinning of a long span (`moment_scan` and `media.cut_for_description`).
-- The window cut on Segment boundaries, the part signatures, and the wording of the dialog's count line for the descriptions and the parts.
+- The Digest instructions (`prompts.DIGEST`), the record heading, and the description instructions with the previous span given (`prompts.RECORD_NEW`).
+- The cut (`assistant.record_spans`): a span shorter than the shortest is joined to the span before it; past the most allowed the ceiling is doubled until the spans fit; a span is covered when a standing Moment's span holds it within half a second; the frames of a span are thinned by a frame rate of at most the frames allowed over its length (`assistant.record_fps`).
+- The window cut on line boundaries (`assistant.digest_windows`), the part signatures (a hash of the window's lines and the descriptions in it), and the dialog's count line: "up to" while the picture is not yet scanned, since the cut is then by the clock alone, and the scan itself runs in the record's lane rather than when the dialog opens.
+- The stamp's frames: two seconds in, and a minute on, at the look-closer height; a clock is checked when the second reading is within three seconds of a minute later.
 
 ## 7. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
 - **Describing the whole video** (a timeline of what was seen): built on request in chapter 4 and made the foundation of a summary in chapter 6; never on a timer.
-- **Reading text in the picture** (a plate, a label, a document): not asked for; the shipped instructions neither ask nor forbid it, and an office edits them.
+- **Reading text in the picture** (a plate, a label, a document): the camera's stamp is read (chapter 6); the rest is not asked for, the shipped instructions neither ask nor forbid it, and an office edits them.
 
 ## Appendix A. Audit rows added in Phase 4
 
 | Category | Row | Chapter |
 |---|---|---|
 | LLM | AI assistant call, feature `moment` | Moments |
-| LLM | AI assistant call, feature `moment_finder` | The finders |
+| LLM | AI assistant call, feature `moment_finder` | The finders (withdrawn in chapter 6) |
+| LLM | AI assistant call, feature `digest`; feature `stamp` | The picture record, the Digest, and the camera's stamp |
 | Recordings | Picture and sound scanned | The finders |
 | Viewer edits | Moment edited; Moment deleted | Moments |
 
@@ -443,4 +454,5 @@ The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-
 - From the maintainer, on the v1.39.0 build, chapter 3 (v1.40.0): the word-list Cues withdrawn for flagging ordinary talk; the finder that reads the Transcript and the scan of the picture and sound, each with its switch and its numbers; Cues stored, with a reason, and dismissable.
 - From the maintainer, on the v1.40.0 build, chapter 4 (v1.41.0): the whole recording described at intervals in one lane, the Summary's tick to describe the moments first, the summary format line that lets it draw on the camera block, and the export's "What the camera showed" section.
 - From the maintainer, on the v1.42.0 build ("a smart way to summarize all the moments in conjunction with the transcript"), chapter 5 (v1.43.0): the Video summary template and the Body camera summary's two camera parts; the fixed camera rules given to Summary and Chat whenever a block is present; the block's legend line and the edited mark; the per-length count of camera lines to draw on and the block's budget; the Chat template answering from both feeds, with the "within a minute" rule and the facts-then-decline shape for a legal conclusion; Summarise this video, the template chosen for a video, the three-form look-first line, the tick's rule with Enough moments for a video summary, Summaries describe the moments first starting On, the summary's count of moments used, and camera citations with the glyph.
+- From the maintainer, on the v1.50.0 build ("make summarization smart"), and their second reading ("cues left out", "smart optimization", no Moment in line with the transcript) and the stamped frame, chapter 6 (v1.51.0): the picture record cut where the picture and the sound change and described once per span with the previous span in hand; the Digest, part by part; the Summary, the Chat and the Case Chat written from it; the camera's stamp read from two frames and told as the camera's clock; Cues, the word finder, the row's camera line and describe button, and the exports' interleaved camera lines withdrawn.
 - From the maintainer, on the v1.41.0 build ("the page is sort of getting congested"), the Moments tab refined (v1.42.0): two panels behind the one tab, as the Clips tab has, Suggested moments with the Cues and Described moments with the Moments; Find moments and Describe the whole recording together under Suggested moments, each with a caption that says what it does and what it costs in numbers (the state answer's `cue_runs.intervals` carries the interval and how many Moments the press would make now) and a result line under it ("7 lines suggested from the words.", "3 changes found in the picture and sound.", "20 moments described across the recording.", "Both finders are off for your office."); a Cue quotes the transcript line it was found on and says sure, fairly sure, or unsure; Again reads Describe again, or Ask again on a question, and waits while the Moment is being described; a card says from a suggestion or from the whole recording and Waiting its turn... while queued; the row's button reads describe and, like Describe this moment, opens a box that names the time, with Describe as its OK; the Camera? pill is a button that says "Looking..." after the press; the Camera line has no coloured bar of its own, its tag in the muted colour, and says "waiting its turn..." while queued; the summary dialog's tick says the interval and the count in its note.

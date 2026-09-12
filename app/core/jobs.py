@@ -256,6 +256,14 @@ class Transcript(models.Model):
     # exactly. Kept to the last twenty; nothing here reaches the audit log,
     # since a Speaker's name is on the never-logged list.
     speaker_changes = models.JSONField(default=list, blank=True)
+    # The seconds where the picture or the sound changes sharply, from the
+    # scan, kept once per Transcript for the picture record's cut (Phase 4
+    # chapter 6); null until scanned.
+    change_points = models.JSONField(null=True, blank=True)
+    # The camera's burned-in stamp, read from the picture near the start:
+    # date, time, camera id, and the second it was read at; null until read,
+    # an empty dict when nothing was found.
+    stamp = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created"]

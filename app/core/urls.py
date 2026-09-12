@@ -163,12 +163,6 @@ urlpatterns = [
         name="new-moment",
     ),
     path(
-        "recording/<uuid:recording_id>/find-moments",
-        assistant_pages.find_moments,
-        name="find-moments",
-    ),
-    path("cue/<uuid:cue_id>/dismiss", assistant_pages.dismiss_cue, name="dismiss-cue"),
-    path(
         "recording/<uuid:recording_id>/describe-intervals",
         assistant_pages.describe_intervals,
         name="describe-intervals",

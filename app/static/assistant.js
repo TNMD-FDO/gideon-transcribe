@@ -18,10 +18,8 @@
   var suggestLine = document.getElementById("suggest-line");
   var suggestionList = document.getElementById("suggestions");
   var momentList = document.getElementById("moment-list");
-  var cueList = document.getElementById("cue-list");
   var describeNow = document.getElementById("describe-now");
-  var findMoments = document.getElementById("find-moments");
-  var findSaid = document.getElementById("find-said");
+  var recordLines = document.getElementById("record-lines");
   var describeIntervals = document.getElementById("describe-intervals");
   var intervalsSaid = document.getElementById("intervals-said");
   var intervalsNote = document.getElementById("intervals-note");
@@ -174,7 +172,7 @@
       var head = "<div class='row'><b class='grow'>" + escape(one.template) + "</b>" +
         "<span class='muted small'>" + escape(one.length) +
         (one.focus ? " · focus: " + escape(one.focus) : "") +
-        (one.moments_used ? " · " + plural(one.moments_used, "moment") : "") +
+        (one.digest_parts ? " · from the digest" : (one.moments_used ? " · " + plural(one.moments_used, "moment") : "")) +
         " · " + escape(one.when) + "</span></div>";
       var body;
       if (one.state === "queued" || one.state === "running") {
@@ -182,6 +180,9 @@
         var told = describedCount();
         if (one.describe_first && looking && (looking.state === "queued" || looking.state === "running")) {
           body = "<p class='muted'>Looking at the picture first" + (looking.total ? " (" + looking.found + " of " + looking.total + ")" : "") + "...</p>";
+        } else if (one.stage && one.stage.indexOf("condensing") === 0) {
+          // "condensing 2 of 5": the digest's parts being made (chapter 6).
+          body = "<p class='muted'>Condensing the recording (" + escape(one.stage.replace("condensing ", "")) + ")...</p>";
         } else if (told) {
           body = "<p class='muted'>Reading the transcript and " + plural(told, "moment") + "...</p>";
         } else {
@@ -276,6 +277,11 @@
         if (window.VIEWER.showSegment) { window.VIEWER.showSegment(seconds); }
       },
       grounding: function (s) {
+        if (s && s.digest && s.digest.parts && s.described) {
+          return "Answers come from this transcript and its record of " + plural(s.described, "description") +
+            ", made " + s.digest.made + (s.digest.current ? "" : " (the transcript or the moments have changed since)") +
+            ", not from any other recording. What the camera showed is a model's description.";
+        }
         if (s && s.described) {
           return "Answers come from this transcript and its " + plural(s.described, "described moment") +
             ", not from any other recording. What the camera showed is a model's description.";
@@ -394,10 +400,9 @@
   }
 
   // Moments -------------------------------------------------------------------------
-  // What the camera showed at a time. Two panels: the first the head, the
-  // whole-recording presses and the cue lines; the second the Moments kept.
-  // The rows carry a describe button each, a Camera? button on a cue line,
-  // and a camera line under the row nearest each described Moment.
+  // What the camera showed. Two panels: the first the head and the picture
+  // record's press; the second the Moments kept. Since v1.51.0 nothing about
+  // the camera sits among the transcript's rows.
 
   var momentsOn = !!(features.moments && window.VIEWER.isVideo);
 
@@ -421,22 +426,33 @@
     return "every " + n + " seconds";
   }
 
-  // How sure a finder was, in plain words.
-  function sureWord(confidence) {
-    if (confidence === "high") { return "sure"; }
-    if (confidence === "medium") { return "fairly sure"; }
-    if (confidence === "low") { return "unsure"; }
-    return confidence;
-  }
-
   // What Describe the whole recording would do now, in numbers, from the
-  // state's cue_runs.intervals; the template's own words until it arrives.
+  // state's cue_runs.intervals: the spans of the cut, an estimate by the
+  // clock alone until the picture is scanned; the template's own words
+  // until the state arrives.
   function intervalsLine() {
     var intervals = state && state.cue_runs && state.cue_runs.intervals;
     if (!intervals) {
-      return "A description at regular intervals through the recording, one engine call each. Times already described are skipped.";
+      return "The picture record: the recording cut where the picture and the sound change, each span described once, one engine call each. Spans already described are skipped.";
     }
-    return "A description " + everyWord(intervals.every) + ", " + intervals.count + " in all for this recording, one engine call each. Times already described are skipped.";
+    return "The picture record: the recording cut where the picture and the sound change, no span longer than " + spanWord(intervals.every) + ", " +
+      (intervals.estimated ? "up to " : "") + plural(intervals.count, "description") + " for this recording, one engine call each" +
+      (intervals.estimated ? " (fewer once the picture is scanned and still stretches are joined)" : "") + ". Spans already described are skipped.";
+  }
+
+  // hh:mm:ss, the shape the state's clocks come in, for a span's end.
+  function longClock(seconds) {
+    var whole = Math.max(0, Math.floor(seconds || 0));
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    return pad(Math.floor(whole / 3600)) + ":" + pad(Math.floor((whole % 3600) / 60)) + ":" + pad(whole % 60);
+  }
+
+  // "15 seconds", "a minute", "2 minutes": a span's ceiling in words.
+  function spanWord(seconds) {
+    var n = Number(seconds);
+    if (!n || n <= 0) { return "a stretch"; }
+    if (n % 60 === 0) { return n === 60 ? "a minute" : (n / 60) + " minutes"; }
+    return n + " seconds";
   }
 
   // One box for both: empty means describe the clip, words mean a question
@@ -483,8 +499,10 @@
     } else {
       line.hidden = false;
       if (!describeFirstSet) { tick.checked = !!runs.describe_first_default; describeFirstSet = true; }
-      note.textContent = plural(intervals.count, "description") + ", one " + everyWord(intervals.every) +
-        ", one engine call each, about " + plural(intervals.minutes || 1, "minute") + "." +
+      note.textContent = (intervals.estimated ? "Up to " : "") + plural(intervals.count, "description") +
+        " where the picture changes, none longer than " + spanWord(intervals.every) +
+        ", one engine call each, about " + plural(intervals.minutes || 1, "minute") +
+        (runs.digest ? ", then the digest the summary is written from" : "") + "." +
         (described ? " " + plural(described, "moment") + (described === 1 ? " is" : " are") + " described already." : "");
     }
   }
@@ -516,12 +534,12 @@
       var nothingLeft = !!(intervals && intervals.count === 0 && !busyRun(interval));
       if (busyRun(interval) || nothingLeft) { describeIntervals.disabled = true; }
       if (intervalsNote) {
-        // During a run every interval is a queued Moment, so the count reads
+        // During a run every span is a queued Moment, so the count reads
         // zero; the caption then goes without it.
         intervalsNote.textContent = nothingLeft
-          ? "Every interval is described already."
+          ? "Every span of the recording is described already."
           : (busyRun(interval) && intervals
-              ? "A description " + everyWord(intervals.every) + ", one engine call each. Times already described are skipped."
+              ? "The picture record, one engine call per span. Spans already described are skipped."
               : intervalsLine());
       }
       if (busyRun(interval)) {
@@ -530,10 +548,20 @@
         sayOrHide(intervalsSaid, interval.said, true);
       } else if (interval && interval.state === "done" && interval.total) {
         sayOrHide(intervalsSaid, (interval.found < interval.total ? interval.found + " of " + interval.total : interval.total) +
-          (interval.total === 1 ? " moment" : " moments") + " described across the recording.");
+          (interval.total === 1 ? " span" : " spans") + " described across the recording.");
       } else {
         sayOrHide(intervalsSaid, "");
       }
+    }
+    if (recordLines) {
+      var lines = [];
+      if (runs.stamp) { lines.push("The camera's stamp: " + runs.stamp + "."); }
+      if (runs.digest && runs.digest.parts) {
+        lines.push("The digest the summary and the chat are written from was made at " + runs.digest.made +
+          " from the transcript and " + plural(runs.digest.moments, "description") + ", in " + plural(runs.digest.parts, "part") +
+          (runs.digest.current ? "." : "; the transcript or the moments have changed since, and the next summary remakes it."));
+      }
+      sayOrHide(recordLines, lines.join(" "));
     }
     var moments = state.moments || [];
     var finished = moments.filter(function (one) { return one.state === "done"; }).length;
@@ -544,9 +572,12 @@
       momentList.innerHTML = moments.length ? moments.map(function (one) {
         var source = one.question ? "a question"
           : (one.source === "cue" ? "from a suggestion"
-            : (one.source === "interval" ? "from the whole recording" : "asked for"));
+            : (one.source === "interval" ? "the picture record" : "asked for"));
         var stamp = when(one.when);
-        var head = "<div class='row'><a href='#' class='cite' data-seconds='" + one.at + "'><b>" + escape(one.clock) + "</b></a>" +
+        var span = one.span_end > one.span_start && one.source === "interval"
+          ? escape(one.clock) + " to " + longClock(one.span_end)
+          : escape(one.clock);
+        var head = "<div class='row'><a href='#' class='cite' data-seconds='" + one.at + "'><b>" + span + "</b></a>" +
           "<span class='muted small grow'>" + source +
           (one.edited ? " · edited" : "") + (stamp ? " · " + escape(stamp) : "") + "</span></div>" +
           (one.question ? "<p class='question'><b>Asked:</b> " + escape(one.question) + "</p>" : "");
@@ -571,151 +602,11 @@
           "<span class='grow'></span>" +
           "<button type='button' class='small ghost danger delete-moment' data-moment='" + one.id + "'>Delete</button></div>";
         return "<div class='card moment" + (one.state === "failed" ? " failed" : "") + "' data-moment='" + one.id + "'>" + head + body + tools + "</div>";
-      }).join("") : "<p class='muted small'>No moments yet. <b>Describe this moment</b> describes the picture at the player's time; hold the pointer over any transcript line and press <b>describe</b> for that line. Either takes a question instead.</p>";
+      }).join("") : "<p class='muted small'>No moments yet. <b>Describe this moment</b> describes the picture at the player's time, or answers a question about it; <b>Describe the whole recording</b> makes the picture record a summary is written from.</p>";
       Array.prototype.forEach.call(momentList.querySelectorAll(".moment-again"), function (button) {
         if (!button.disabled) { unavailable(button); }
       });
     }
-    if (findMoments) {
-      unavailable(findMoments);
-      var finders = runs.finders || {};
-      var findersOff = runs.finders && !finders.transcript && !finders.media;
-      var running = busyRun(runs.transcript) || busyRun(runs.media);
-      if (running || findersOff) { findMoments.disabled = true; }
-      var lines = [];
-      var trouble = false;
-      if (findersOff) {
-        lines.push("Both finders are off for your office.");
-      } else {
-        if (runs.transcript) {
-          if (busyRun(runs.transcript)) { lines.push("Reading the transcript..."); }
-          else if (runs.transcript.state === "failed") { lines.push(runs.transcript.said); trouble = true; }
-          else if (runs.transcript.state === "done" && !runs.transcript.found) { lines.push("Nothing in the words calls for a look."); }
-          else if (runs.transcript.state === "done") { lines.push(runs.transcript.found + (runs.transcript.found === 1 ? " line" : " lines") + " suggested from the words."); }
-        }
-        if (runs.media) {
-          if (busyRun(runs.media)) { lines.push("Scanning the picture and sound..."); }
-          else if (runs.media.state === "failed") { lines.push(runs.media.said); trouble = true; }
-          else if (runs.media.state === "done" && runs.media.found) { lines.push(runs.media.found + (runs.media.found === 1 ? " change" : " changes") + " found in the picture and sound."); }
-        }
-      }
-      sayOrHide(findSaid, lines.filter(Boolean).join(" "), trouble);
-    }
-    if (cueList) {
-      var cues = state.cues || [];
-      var segments = window.VIEWER.segments() || [];
-      var textOf = {};
-      segments.forEach(function (segment) { textOf[segment.id] = segment.text; });
-      cueList.innerHTML = cues.length ? cues.map(function (one) {
-        var from = one.source === "picture" ? "the picture" : (one.source === "sound" ? "the sound" : "the words");
-        var quote = one.segment_id && textOf[one.segment_id] ? textOf[one.segment_id] : "";
-        return "<li class='suggestion'><span class='grow'>" +
-          "<a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
-          "<span class='pill'>" + escape(one.kind) + "</span> " + escape(one.reason) +
-          " <span class='muted small'>(" + escape(sureWord(one.confidence)) + ", from " + from + ")</span>" +
-          (quote ? "<span class='muted small quote'>“" + escape(quote) + "”</span>" : "") + "</span>" +
-          "<button type='button' class='small accept-cue' data-cue='" + one.id + "'>Describe</button>" +
-          "<button type='button' class='small ghost dismiss-cue' data-cue='" + one.id + "'>Dismiss</button></li>";
-      }).join("") : "<li class='muted small'>Nothing suggested yet.</li>";
-      Array.prototype.forEach.call(cueList.querySelectorAll(".accept-cue"), unavailable);
-    }
-    decorateRows();
-  }
-
-  // The rows: a describe button each, a Camera? button on a cue line, and
-  // the camera lines under the rows nearest the described Moments. Rebuilt
-  // after every state and whenever viewer.js redraws the transcript.
-  function decorateRows() {
-    if (!momentsOn || !state) { return; }
-    var rows = document.querySelectorAll("#transcript .seg");
-    var segments = window.VIEWER.segments() || [];
-    Array.prototype.forEach.call(document.querySelectorAll("#transcript .camera-line, #transcript .pill.cue"), function (old) {
-      old.remove();
-    });
-    Array.prototype.forEach.call(rows, function (row) {
-      var actions = row.querySelector(".actions");
-      if (!actions) { return; }
-      var button = actions.querySelector(".camera-row");
-      if (!button) {
-        button = document.createElement("button");
-        button.type = "button";
-        button.className = "ghost tiny camera-row";
-        button.innerHTML = window.VIEWER.icon("camera") + " describe";
-        actions.appendChild(button);
-      }
-      button.disabled = !state.reachable;
-      button.title = state.reachable
-        ? "Describe the picture at this line, or ask a question about it"
-        : state.unavailable_line;
-    });
-    var bySegment = {};
-    Array.prototype.forEach.call(rows, function (row) {
-      var segment = segments[parseInt(row.dataset.index, 10)];
-      if (segment) { bySegment[segment.id] = row; }
-    });
-    (state.cues || []).forEach(function (one) {
-      var row = bySegment[one.segment_id];
-      if (!row) { return; }
-      var tags = row.querySelector(".tags");
-      if (!tags) { return; }
-      var pill = document.createElement("button");
-      pill.type = "button";
-      pill.className = "pill side cue";
-      pill.textContent = "Camera?";
-      pill.title = state.reachable ? one.reason.replace(/\.$/, "") + ". Press to describe the picture here." : state.unavailable_line;
-      pill.disabled = !state.reachable;
-      pill.dataset.cue = one.id;
-      // In the row's tags cell, after a Suggested: name if there is one.
-      tags.appendChild(pill);
-    });
-    (state.moments || []).forEach(function (one) {
-      if (one.state === "failed") { return; }
-      var index = rowFor(segments, one.at);
-      if (index < 0 || !rows[index]) { return; }
-      var line = document.createElement("p");
-      line.className = "camera-line" + (one.state === "done" ? "" : " waiting");
-      var tag = document.createElement("span");
-      tag.className = "tag";
-      tag.textContent = "Camera";
-      line.appendChild(tag);
-      var cite = document.createElement("a");
-      cite.href = "#";
-      cite.className = "cite";
-      cite.dataset.seconds = one.at;
-      cite.textContent = one.clock;
-      line.appendChild(cite);
-      var words;
-      if (one.state === "done") { words = one.text; }
-      else if (one.state === "queued") { words = "waiting its turn..."; }
-      else { words = one.question ? "looking closely..." : "looking at the clip..."; }
-      if (one.question) { words = "(asked \u201C" + one.question + "\u201D) " + words; }
-      line.appendChild(document.createTextNode(" " + words));
-      // The line's words are not the row: a click on them neither seeks nor
-      // opens the row's correction box. The clock still seeks.
-      ["click", "dblclick"].forEach(function (kind) {
-        line.addEventListener(kind, function (event) {
-          event.stopPropagation();
-          var clock = event.target.closest(".cite");
-          if (kind === "click" && clock) {
-            event.preventDefault();
-            window.VIEWER.seek(parseFloat(clock.dataset.seconds));
-            window.VIEWER.play();
-            if (window.VIEWER.showSegment) { window.VIEWER.showSegment(parseFloat(clock.dataset.seconds)); }
-          }
-        });
-      });
-      var txt = rows[index].querySelector(".txt");
-      if (txt) { txt.parentNode.insertBefore(line, txt.nextSibling); }
-    });
-  }
-
-  // The row a time belongs to: the last one that starts at or before it.
-  function rowFor(segments, seconds) {
-    var found = -1;
-    for (var i = 0; i < segments.length; i += 1) {
-      if (segments[i].start <= seconds) { found = i; } else { break; }
-    }
-    return found < 0 && segments.length ? 0 : found;
   }
 
   if (momentsOn) {
@@ -725,14 +616,6 @@
       });
     }
     document.addEventListener("click", function (event) {
-      var camera = event.target.closest("#transcript .camera-row");
-      var pill = event.target.closest("#transcript .pill.cue");
-      if (camera) {
-        var row = camera.closest(".seg");
-        var segment = (window.VIEWER.segments() || [])[parseInt(row.dataset.index, 10)];
-        if (segment) { askOrDescribe({ at: segment.start, segment: segment.id, source: "asked" }); }
-        return;
-      }
       var clipOf = event.target.closest("#moment-list .moment-clip");
       if (clipOf && window.CLIPS) {
         var chosen = (state.moments || []).filter(function (one) { return one.id === clipOf.dataset.moment; })[0];
@@ -744,35 +627,6 @@
         var note = document.getElementById("clip-note");
         if (title && !title.value) { title.value = chosen.question ? chosen.question.slice(0, 120) : "Camera at " + chosen.clock; }
         if (note && !note.value) { note.value = chosen.text.slice(0, 1000); }
-        return;
-      }
-      if (pill) {
-        // Says it is looking until the next state replaces it with a camera line.
-        pill.disabled = true;
-        pill.textContent = "Looking...";
-        describe({ cue: pill.dataset.cue, source: "cue" });
-        return;
-      }
-      var accept = event.target.closest("#cue-list .accept-cue");
-      if (accept) {
-        accept.disabled = true;
-        describe({ cue: accept.dataset.cue, source: "cue" });
-        return;
-      }
-      var dismiss = event.target.closest("#cue-list .dismiss-cue");
-      if (dismiss) {
-        dismiss.disabled = true;
-        post("/cue/" + dismiss.dataset.cue + "/dismiss").then(refresh);
-        return;
-      }
-      if (event.target.closest("#find-moments")) {
-        findMoments.disabled = true;
-        post("/recording/" + recording + "/find-moments").then(function (answer) {
-          if (!answer.ok && answer.said && answer.said.error) {
-            UI.toast(answer.said.error, { problem: true, icon: "warning" });
-          }
-          return refresh();
-        });
         return;
       }
       if (event.target.closest("#describe-intervals")) {
@@ -845,7 +699,7 @@
 
   // The transcript rows are drawn by viewer.js once the segments arrive; the
   // suggestion pills go on after that, and again whenever the rows are redrawn.
-  document.addEventListener("transcript-drawn", function () { drawSuggestions(); decorateRows(); });
+  document.addEventListener("transcript-drawn", function () { drawSuggestions(); });
 
   refresh();
 })();
