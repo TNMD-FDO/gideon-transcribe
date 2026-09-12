@@ -281,6 +281,49 @@ button.big, .btn.big { min-height: 40px; padding: 0 16px; font-size: var(--t-hea
 button.icon, .btn.icon { padding: 0; width: 34px; }
 button.icon.small, .btn.icon.small { width: 28px; }
 
+/* A menu: <details class="menu"> with a summary styled as a button and a
+ * list under it, right-aligned. ui.js closes it on a click outside, on a
+ * choice inside, and on Esc. The viewer's Export and More menus. */
+details.menu { position: relative; }
+details.menu > summary { list-style: none; cursor: pointer; }
+details.menu > summary::-webkit-details-marker { display: none; }
+details.menu > summary .i:last-child { width: 0.9em; height: 0.9em; margin-left: -2px; }
+details.menu > ul {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 15rem;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+details.menu > ul li.sep { border-top: 1px solid var(--line); margin: 4px 0; }
+details.menu > ul a,
+details.menu > ul button {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+details.menu > ul a:hover,
+details.menu > ul button:hover { background: var(--surface-2); border-color: transparent; }
+details.menu > ul button.danger { color: var(--danger); }
+details.menu > ul button.danger:hover { background: var(--danger-soft); }
+
 /* The icons: one set of line symbols from the sprite in icons.html, sized to
  * the text beside them. */
 .i {
@@ -806,6 +849,24 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 }
 .desk .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .desk .head h1 { font-size: 1.1em; margin: 0; }
+/* The search box in the header, with its count beside it. */
+.desk .head .search-box { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.desk .head .search-box input { width: 190px; min-height: 28px; font-size: var(--t-small); }
+.desk .head .search-box #matches { white-space: nowrap; }
+.desk .head .search-box #matches:empty { display: none; }
+@media (max-width: 1100px) { .desk .head .search-box input { width: 130px; } }
+/* The pop-out control sits on the picture, beside its consequence. */
+.thumb .pip {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.95);
+  border-color: transparent;
+  opacity: 0.85;
+}
+.thumb .pip:hover { background: rgba(0, 0, 0, 0.75); border-color: transparent; opacity: 1; }
 
 .transport {
   display: flex;
@@ -870,14 +931,14 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   pointer-events: none;
 }
 
-.body { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
 
 /* A recording opened from a case gets a third column: the rest of the case,
    so somebody working through a matter moves between its recordings without
    going back to the case page. It hides on a narrow screen, and the button in
    the head brings it back. */
-.body.with-case { grid-template-columns: 232px 260px 1fr; position: relative; }
-.body.with-case.case-hidden { grid-template-columns: 260px 1fr; }
+.body.with-case { grid-template-columns: 232px minmax(0, 1fr); position: relative; }
+.body.with-case.case-hidden { grid-template-columns: minmax(0, 1fr); }
 .body.with-case.case-hidden .caserail { display: none; }
 
 .caserail {
@@ -913,7 +974,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
    and opens over the page rather than squeezing the transcript to nothing.
    The button in the head is always there, so there is always a way in. */
 @media (max-width: 1100px), (min-width: 1280px) and (max-width: 1499px) {
-  .body.with-case { grid-template-columns: 260px 1fr; }
+  .body.with-case { grid-template-columns: minmax(0, 1fr); }
   .body.with-case .caserail { display: none; }
   .body.with-case.case-shown .caserail {
     display: block;
@@ -927,28 +988,24 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   }
 }
 
-.side {
-  border-right: 1px solid var(--line);
-  background: var(--surface);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-.side .panel { padding: 10px 12px; }
-.side .panel h2 { margin-bottom: 6px; font-size: 0.95em; }
-.side .foot {
-  margin-top: auto;
-  padding: 10px 12px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.side input[type="search"], .side input[type="text"] { width: 100%; }
-
+/* The cast: the speakers at the head of the transcript column, at the
+   transcript's width, scrolling with it. */
 .read { min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.cast {
+  max-width: var(--reading, 1040px);
+  width: 100%;
+  margin: 0 auto;
+  padding: 10px 20px 0;
+  box-sizing: border-box;
+  flex: none;
+}
+.cast .row { gap: 8px; align-items: center; }
+.cast .speakerchips { margin: 0; }
+.cast .hint { margin-top: 6px; }
+.cast .card { margin: 6px 0 0; }
+.cast input[type="text"] { width: 100%; }
 .read .transcript {
-  max-width: 900px;
+  max-width: var(--reading, 1040px);
   width: 100%;
   margin: 0 auto;
   font-size: 1.05em;
@@ -958,7 +1015,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 
 .seg {
   display: grid;
-  grid-template-columns: 6em 1fr;
+  grid-template-columns: 6em minmax(0, 1fr) auto;
   gap: 8px;
   padding: 8px 10px;
   border-radius: 6px;
@@ -1035,7 +1092,8 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   color: var(--warn);
   font-size: 0.85em;
 }
-.seg .actions { float: right; visibility: hidden; }
+/* The row's buttons in a column of their own, never over the words. */
+.seg .actions { grid-column: 3; align-self: start; display: inline-flex; gap: 2px; visibility: hidden; }
 .seg:hover .actions, .seg.here .actions { visibility: visible; }
 body.no-speakers .seg .name { display: none; }
 
@@ -1125,12 +1183,27 @@ body.no-speakers .seg .name { display: none; }
 
 .sheetbar {
   display: flex;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 2px;
+  padding: 0 10px;
   background: var(--surface-2);
   border-top: 1px solid var(--line);
   align-items: center;
 }
+/* The tabs as the case page has them: an underline, not five boxed buttons. */
+.sheet-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  padding: 9px 12px;
+  min-height: 0;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 14px;
+}
+.sheet-tab:hover { background: none; border-color: transparent; border-bottom-color: var(--line); color: var(--text); }
+.sheet-tab.on { background: none; color: var(--accent); border-color: transparent; border-bottom-color: var(--accent); }
 .sheet {
   border-top: 1px solid var(--line);
   background: var(--surface);
@@ -1187,24 +1260,15 @@ body.no-speakers .seg .name { display: none; }
 }
 .clipcard .title { font-weight: 600; }
 
-.popout {
-  position: fixed;
-  right: 16px;
-  bottom: 60px;
-  width: 420px;
-  box-shadow: var(--shadow);
-  z-index: 30;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
 /* The Bench: the wide shape of the desk. The picture takes the column's width
    and the panels take the rest of its height, each with its own scroll. The
    grip that resized the picture now resizes the column, from its left edge,
    and the sheet's own grip and Close have nothing to do. */
 @media (min-width: 1280px) {
   .desk {
-    grid-template-columns: minmax(0, 1fr) var(--column-width, 400px);
+    /* The column grows with the window: 400 px on a small monitor, 620 on
+       a wide one, and the grip's choice over both. */
+    grid-template-columns: minmax(0, 1fr) var(--column-width, clamp(400px, 28vw, 620px));
     grid-template-rows: auto auto auto minmax(0, 1fr);
     grid-template-areas:
       "head column"
@@ -1221,6 +1285,7 @@ body.no-speakers .seg .name { display: none; }
     background: var(--surface);
   }
   .desk .thumb { grid-area: auto; width: auto; margin: 0; border-radius: 0; flex: none; }
+  .thumb .pip { right: 6px; }
   .desk .thumb.audio { width: auto; }
   .grip { right: auto; left: 0; }
   .grip::after { right: auto; left: 3px; }

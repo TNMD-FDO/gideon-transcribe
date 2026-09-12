@@ -196,6 +196,31 @@
     try { window.localStorage.setItem(hintKey(hint.dataset.hint), "seen"); } catch (ignored) { /* forgotten on reload */ }
   });
 
+  // Menus ---------------------------------------------------------------------------
+  //
+  // <details class="menu"><summary>...</summary><ul>...</ul></details> closes
+  // when a click lands outside it, once something in it is chosen, and on
+  // Esc, which nothing else on the page then sees.
+
+  document.addEventListener("click", function (event) {
+    var chosen = event.target.closest("details.menu li");
+    Array.prototype.forEach.call(document.querySelectorAll("details.menu[open]"), function (menu) {
+      if (chosen || !menu.contains(event.target)) { menu.open = false; }
+    });
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") { return; }
+    var open = document.querySelectorAll("details.menu[open]");
+    if (!open.length) { return; }
+    Array.prototype.forEach.call(open, function (menu) {
+      menu.open = false;
+      var summary = menu.querySelector("summary");
+      if (summary) { summary.focus(); }
+    });
+    event.stopImmediatePropagation();
+  });
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", showHints);
   } else {

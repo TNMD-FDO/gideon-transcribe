@@ -21,6 +21,39 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.45.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The recording page's rail is gone**, the first of the layout slices the
+  maintainer asked for ("giving the main things more space to move"). The
+  260 pixels it took from the words on every screen go to the transcript,
+  now 1,040 pixels wide at most. What the rail held moves to where it is
+  used: the search box into the header with its match count beside it; the
+  speakers into a strip at the head of the transcript that scrolls with it,
+  with hide at its end; the three exports into an **Export** menu in the
+  header; the keyboard shortcuts, Process again and Delete this recording
+  into a **More** menu, Delete last and red only inside the menu. Nothing
+  is red at reading height, and New clip is the header's one coloured
+  button. A menu closes on a click outside it, on a choice, or on Esc.
+- **Pop out video** sits on the picture itself, beside its consequence,
+  rather than in the header.
+- **Each row's buttons** (edit, clip start, describe) sit in a column of
+  their own to the right of the words instead of floating over them.
+- **The tabs** under the picture (Clips, Summary, Chat, Moments, Details)
+  are drawn as the case page's tabs, an underline rather than five boxed
+  buttons, and the Bench column grows with the window: 400 pixels on a
+  small monitor, 620 on a wide one, the grip's choice over both.
+- The `No word timing` pill leaves the header: the Details panel says it,
+  and the missing word underline shows it. The timeline's caption is one
+  sentence; the picture's edge says it can be dragged when the pointer
+  rests on it.
+
 ## v1.44.0, 2026-09-12
 
 ```

@@ -44,25 +44,57 @@
           {% if transcript.task_run == "translate" %}
             <span class="pill translate" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ language_name }}</span>
           {% endif %}
-          {% if transcript and not transcript.word_timestamps %}
-            <span class="pill">No word timing</span>
-          {% endif %}
           {% if transcript.shared_segments %}
             <span class="pill" id="both-sides"
                   title="A phone system plays its recorded announcement to both parties, so both sides transcribe it. Those passages are shown once and named Side 1 and Side 2. Both copies are kept and both are in the record.">{{ transcript.shared_segments }} passage{{ transcript.shared_segments|pluralize }} on both sides</span>
           {% endif %}
           <span class="grow"></span>
+          {% comment %}
+            The search, the case, the one primary, and two menus: Export for
+            the transcript's three exports and More for the housekeeping (the
+            shortcuts, Process again, Delete). The rail that held them until
+            v1.45.0 is gone, and the words have its width. The shared scripts
+            find Process again and Delete by their classes wherever they sit.
+          {% endcomment %}
+          <span class="search-box" title="Search the transcript (/)">
+            {% icon "search" %}
+            <input type="search" id="search" placeholder="Find in transcript" aria-label="Find in transcript">
+            <span id="matches" class="small muted"></span>
+          </span>
           {% if in_case %}
             <button type="button" class="tiny" id="show-case"
                     title="Show or hide the rest of the case">{% icon "menu" %} Case</button>
           {% endif %}
           {% if clips_available and media_url %}
-            <button type="button" class="primary" id="new-clip"
-                    title="Mark a start and an end with I and O while playing, by dragging on the timeline, or with + clip on a segment, then save">{% icon "clip" %} New clip</button>
+            <button type="button" class="primary small" id="new-clip"
+                    title="Mark a start and an end, then save (I and O while playing, a drag on the timeline, or clip start on a line)">{% icon "clip" %} New clip</button>
           {% endif %}
-          {% if is_video and media_url %}
-            <button type="button" class="tiny" id="pop-out">Pop out video</button>
+          {% if transcript %}
+            <details class="menu" id="export-menu">
+              <summary class="btn small" title="Export the transcript">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
+              <ul>
+                <li><a href="{% url 'export' recording.pk 'word' %}">{% icon "word" %} Export to Word</a></li>
+                <li><a href="{% url 'export' recording.pk 'text' %}">{% icon "text" %} Export as text (.txt)</a></li>
+                <li><a href="{% url 'export' recording.pk 'captions' %}">{% icon "captions" %} Captions (.srt)</a></li>
+              </ul>
+            </details>
           {% endif %}
+          <details class="menu" id="more-menu">
+            <summary class="btn small" title="Keyboard shortcuts, Process again, Delete">More {% icon "chevron-down" %}</summary>
+            <ul>
+              <li><button type="button" id="open-shortcuts">{% icon "help" %} Keyboard shortcuts</button></li>
+              {% if transcript and not being_replaced %}
+                <li><button type="button" class="process-again"
+                            data-recording="{{ recording.pk }}"
+                            data-title="{{ recording.title }}">{% icon "again" %} Process again</button></li>
+              {% endif %}
+              <li class="sep"></li>
+              <li><button type="button" class="danger delete"
+                          data-recording="{{ recording.pk }}"
+                          data-title="{{ recording.title }}"
+                          data-clips="{{ recording.clips.count }}">{% icon "delete" %} Delete this recording</button></li>
+            </ul>
+          </details>
         </div>
 
         <div class="transport">
@@ -105,14 +137,14 @@
         <div id="playhead"></div>
       </div>
       <p class="caption">
-        <span>Click the timeline to jump; drag along it to mark a clip.{% if media_url and is_video %} Drag the edge of the picture to resize it.{% endif %}</span>
+        <span>Click the timeline to jump; drag along it to mark a clip.</span>
         <span class="grow"></span>
         <span id="clip-said"></span>
         <button type="button" id="drop-clip" class="ghost tiny" hidden
                 title="Drop this selection (Esc)">clear</button>
       </p>
 
-    {# The body: tools on the left, the transcript in the middle. #}
+    {# The body: the transcript, with the rest of the case beside it in a case. #}
     <div class="body{% if in_case %} with-case{% endif %}">
       {% if in_case %}
         <aside class="caserail" id="caserail">
@@ -154,23 +186,32 @@
           </ul>
         </aside>
       {% endif %}
-      <aside class="side">
-        <div class="panel">
-          <div class="field">
-            <label for="search">Search</label>
-            <input type="search" id="search" placeholder="Find in transcript">
-          </div>
-          <p id="matches" class="small muted"></p>
-        </div>
-
-        <div class="panel">
-          <div class="row">
-            <h2 class="grow">Speakers</h2>
-            {% if speakers %}
-              <button type="button" id="speakers-toggle" class="ghost tiny">hide</button>
-            {% endif %}
-          </div>
-          {% if transcript %}
+      <div class="read">
+        {% if transcript %}
+          {% comment %}
+            The cast: the speakers at the head of the transcript, at its
+            width, scrolling with it, where a printed transcript names them.
+            Until v1.45.0 they sat in a rail that took 260 pixels from the
+            words on every screen and never closed.
+          {% endcomment %}
+          <div class="cast" id="cast">
+            <div class="row">
+              <span class="small muted">Speakers</span>
+              {% if speakers %}
+                <ul id="speakers" class="speakerchips grow">
+                  {% for speaker in speakers %}
+                    <li class="speakerchip" draggable="true"
+                        data-name="{{ speaker.name }}"
+                        style="--speaker: {{ speaker.colour }}">
+                      <span class="dot"></span>{{ speaker.name }}{% if speaker.role %} <span class="pill role">{{ speaker.role }}</span>{% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+                <button type="button" id="speakers-toggle" class="ghost tiny" title="Hide or show the speaker names on the lines">hide</button>
+              {% else %}
+                <span class="pill">Not diarized</span>
+              {% endif %}
+            </div>
             {% if speakers %}
               <div class="hint" data-hint="speakers" hidden>
                 {% icon "info" %}
@@ -209,21 +250,10 @@
                   <p class="muted small" style="margin: 6px 0 0">Changes this recording only. To rename in every recording, use the <a href="{% url 'case' recording.case_id %}?tab=speakers">case's Speakers tab</a>.</p>
                 </div>
               {% endif %}
-              <ul id="speakers" class="speakerchips">
-                {% for speaker in speakers %}
-                  <li class="speakerchip" draggable="true"
-                      data-name="{{ speaker.name }}"
-                      style="--speaker: {{ speaker.colour }}">
-                    <span class="dot"></span>{{ speaker.name }}{% if speaker.role %} <span class="pill role">{{ speaker.role }}</span>{% endif %}
-                  </li>
-                {% endfor %}
-              </ul>
               <p class="small muted" id="speakers-undo-line"{% if not last_change %} hidden{% endif %}>
                 <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
                 <span id="speakers-undo-what">{{ last_change }}</span>
               </p>
-            {% else %}
-              <p><span class="pill">Not diarized</span></p>
             {% endif %}
             {% if assistant.suggestions %}
               {% comment %}
@@ -238,32 +268,7 @@
                 <ul id="suggestions" class="suggestions"></ul>
               </div>
             {% endif %}
-          {% else %}
-            <p class="small muted">The speakers appear with the transcript.</p>
-          {% endif %}
-        </div>
-
-        <div class="foot">
-          {% if transcript %}
-            <a href="{% url 'export' recording.pk 'word' %}" class="btn primary" style="width: 100%">Export to Word</a>
-            <a href="{% url 'export' recording.pk 'text' %}" class="btn" style="width: 100%">Export as text (.txt)</a>
-            <a href="{% url 'export' recording.pk 'captions' %}" class="btn" style="width: 100%">Captions (.srt)</a>
-          {% endif %}
-          <button type="button" class="ghost small" id="open-shortcuts">Keyboard shortcuts ?</button>
-          {% if transcript and not being_replaced %}
-            <button type="button" class="ghost small process-again"
-                    data-recording="{{ recording.pk }}"
-                    data-title="{{ recording.title }}">Process again</button>
-          {% endif %}
-          <button type="button" class="ghost small danger delete"
-                  data-recording="{{ recording.pk }}"
-                  data-title="{{ recording.title }}"
-                  data-clips="{{ recording.clips.count }}">Delete this recording</button>
-        </div>
-      </aside>
-
-      <div class="read">
-        {% if transcript %}
+          </div>
           <span id="follow-pill" class="pill followpill" hidden>
             Following paused while you read.
             <button type="button" id="resume-follow">Resume (F)</button>
@@ -297,6 +302,7 @@
           {% if is_video %}
             <video id="player" src="{{ media_url }}" preload="metadata"></video>
             <p id="popped" class="preparing" hidden>Video popped out</p>
+            <button type="button" class="tiny pip" id="pop-out" title="Put the video in its own window, so the words can have the screen">Pop out video</button>
           {% else %}
             <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
           {% endif %}

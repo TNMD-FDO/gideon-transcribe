@@ -84,7 +84,7 @@ Any recording of yours can be **renamed** after the fact: **Rename** on its row 
 
 ## Reading a transcript
 
-Open a recording and the viewer shows the transcript at reading width with the tools on its left. On a wide monitor the video sits at the top of a column on the right, with the **Clips** and **Details** panels under it, so you can read, play and mark clips without anything covering the words; drag the column's left edge to make the picture bigger or smaller. On a laptop the picture sits above the transcript and the panels open as a sheet along the bottom instead. Playing the recording highlights the words being spoken, and the transcript scrolls to keep up.
+Open a recording and the viewer shows the transcript at reading width, the speakers at its head, and the search box, **New clip**, **Export** and **More** in the header. On a wide monitor the video sits at the top of a column on the right, with the **Clips** and **Details** panels under it, so you can read, play and mark clips without anything covering the words; drag the column's left edge to make the picture bigger or smaller. On a laptop the picture sits above the transcript and the panels open as a sheet along the bottom instead. Playing the recording highlights the words being spoken, and the transcript scrolls to keep up.
 
 ### Playing
 
@@ -92,15 +92,15 @@ Open a recording and the viewer shows the transcript at reading width with the t
 
 **Follow** keeps the current segment in view as the recording plays. It pauses when you scroll the transcript yourself, and **Resume** or the F key puts it back.
 
-A video can be popped out into its own window, so the transcript can have the whole screen.
+**Pop out video**, on the picture itself, puts the video in its own window, so the transcript can have the whole screen.
 
 ### Searching
 
-**Search** finds a word or phrase in the transcript and jumps between the matches. Enter goes to the next one and Shift and Enter to the one before.
+**Find in transcript**, the box in the header (or press /), finds a word or phrase in the transcript and jumps between the matches. Enter goes to the next one and Shift and Enter to the one before.
 
 ### Speakers
 
-Each speaker has a colour, used for their name and their lines. Click a speaker's name in the **Speakers** list to give them a real one; every segment they spoke is renamed. Drag one speaker onto another when two labels turn out to be the same person, and confirm the merge. A rename or a merge can be taken back: **Undo** under the list says what it would undo ("the merge of Speaker 2 into Speaker 1") and puts exactly those lines back under their old name. Each Undo takes back one more change, newest first.
+Each speaker has a colour, used for their name and their lines. The speakers are listed at the head of the transcript and scroll with it; **hide** at the end of the list takes the names off the lines. Click a speaker's name in the list to give them a real one; every segment they spoke is renamed. Drag one speaker onto another when two labels turn out to be the same person, and confirm the merge. A rename or a merge can be taken back: **Undo** under the list says what it would undo ("the merge of Speaker 2 into Speaker 1") and puts exactly those lines back under their old name. Each Undo takes back one more change, newest first.
 
 Inside a case, a name means a person: every speaker in the case's recordings given the same name is the same person. Click a speaker's name and a box opens under the list with the case's people under it, each with their role and how many recordings they are in: click a person to give the speaker that name at once, or type a name, which narrows the list as you go and makes a new person if it matches nobody. The box changes this recording only. A small badge after a name is the person's role. To rename someone in every recording at once, use the case's **Speakers** tab, described under Cases.
 
@@ -110,7 +110,7 @@ Click a segment, or press E on the one that is playing, to correct its text. **S
 
 ### Exporting
 
-On the right are the exports: **Export to Word** for a document with the speakers and times laid out, **Export as text** for the plain words, and **Captions** for a subtitle file (.srt) that plays with the video in a media player. Each carries the office's notice about machine transcription, and a translated transcript carries its translation notice too.
+**Export**, in the header, offers **Export to Word** for a document with the speakers and times laid out, **Export as text** for the plain words, and **Captions** for a subtitle file (.srt) that plays with the video in a media player. Each carries the office's notice about machine transcription, and a translated transcript carries its translation notice too. **More**, beside it, holds the keyboard shortcuts, **Process again** and **Delete this recording**.
 
 **Process again** sends the recording back through transcription with new settings, replacing the transcript. **Delete** removes the recording and everything about it.
 
@@ -127,7 +127,7 @@ If a button is greyed with "The assistant is not available right now", the engin
 
 ### Keyboard shortcuts
 
-Shortcuts work whenever you are not typing in a box, so a corrector or an interpreter can stay on the keyboard. **?** shows this list in the viewer.
+Shortcuts work whenever you are not typing in a box, so a corrector or an interpreter can stay on the keyboard. **?**, or **More** and then Keyboard shortcuts, shows this list in the viewer.
 
 | Key | What it does |
 |---|---|

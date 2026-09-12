@@ -218,7 +218,6 @@
         name.appendChild(mark);
       }
       who.appendChild(name);
-      who.appendChild(actions);
       body.appendChild(who);
 
       var said = document.createElement("p");
@@ -228,6 +227,8 @@
 
       row.appendChild(when);
       row.appendChild(body);
+      // Its own column, so the buttons never sit over the words.
+      row.appendChild(actions);
       column.appendChild(row);
     });
     tintRange();
@@ -1716,9 +1717,13 @@
   var USUAL = 220;
   // On the Bench the grip sizes the whole column, and the picture with it.
   var NARROWEST_COLUMN = 320;
-  var USUAL_COLUMN = 400;
+  // The column's usual width follows the window, as the stylesheet's clamp
+  // has it: 400 px on a small monitor, 620 on a wide one.
+  function usualColumn() {
+    return Math.round(Math.min(620, Math.max(400, window.innerWidth * 0.28)));
+  }
   function smallest() { return onTheBench() ? NARROWEST_COLUMN : SMALLEST; }
-  function usual() { return onTheBench() ? USUAL_COLUMN : USUAL; }
+  function usual() { return onTheBench() ? usualColumn() : USUAL; }
 
   function widest() {
     // Never more than half the window: the transcript is the point of the
@@ -1751,7 +1756,7 @@
     if (rememberedColumn) {
       document.documentElement.style.setProperty(
         "--column-width",
-        Math.max(NARROWEST_COLUMN, parseInt(rememberedColumn, 10) || USUAL_COLUMN) + "px"
+        Math.max(NARROWEST_COLUMN, parseInt(rememberedColumn, 10) || usualColumn()) + "px"
       );
     }
   } catch (ignored) { /* a browser that forbids storage keeps the usual sizes */ }
