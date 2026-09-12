@@ -2082,7 +2082,19 @@ BUILD_CACHE_WORDS="requirements|audiowaveform|g729|/opt/app|/opt/service|collect
 ROOT_GB_TO_BUILD=40
 
 root_gb_free() {
-  df -BG --output=avail /var/lib/docker 2>/dev/null | tail -1 | tr -d ' G'
+  # The least free space among the places a build writes: Docker's root and
+  # the containerd image store, which need not be on the same filesystem.
+  # On 2026-09-12 Docker's root had moved to a volume with 560 GB free while
+  # the image store stayed on the root disk with 1 GB, and a gate that read
+  # only the first let a build fill the second.
+  local least="" free where
+  for where in /var/lib/docker /var/lib/containerd /; do
+    [ -d "$where" ] || continue
+    free="$(df -BG --output=avail "$where" 2>/dev/null | tail -1 | tr -d ' G')"
+    [ -n "$free" ] || continue
+    if [ -z "$least" ] || [ "$free" -lt "$least" ]; then least="$free"; fi
+  done
+  echo "$least"
 }
 
 tidy_the_images() {

@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.48.1, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The upgrade's free-space gate read the wrong disk.** It measured the
+  filesystem under Docker's root, which since the shared server's window
+  of 2026-09-12 is a volume with 560 GB free, while the containerd image
+  store, where a build's layers land, stayed on the root disk with 1 GB.
+  The gate waved a v1.48.0 build through and the root disk filled mid
+  build; the old containers kept running and the upgrade stopped where
+  it should. The gate now takes the least free space among Docker's root,
+  the containerd store and the root filesystem, so a build is refused
+  when any of them is short.
+
 ## v1.48.0, 2026-09-12
 
 ```
