@@ -19,6 +19,7 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **The finders** (chapter 3, v1.40.0): Find moments reads the whole Transcript once and suggests the lines where the picture would add a fact, each with its reason, and, when the office turns it on, scans the picture and sound for sharp changes and raised voices; the word list of chapter 1 is withdrawn.
 - **Intervals and the summary** (chapter 4, v1.41.0): the whole recording described at intervals, one lane, one call each; a Summary that describes the moments first when asked, and draws on what was seen; and a "What the camera showed" section in the Summary's Word export.
 - **The video summary and the video-aware chat** (chapter 5, v1.43.0): a shipped Video summary template that writes from the words and the described Moments together, fixed camera rules that keep the two sources apart whenever Camera lines are handed to Summary or Chat, a Chat that answers "what was in his hand at 12:40?" from both feeds, a look-first line in the summary dialog that says the cost in numbers and starts ticked by a rule, and camera citations drawn with the camera glyph.
+- **The picture record and the Digest** (chapter 6, proposed, not yet built): the interval descriptions as the foundation a video's summary is written from, made when a summary is asked for; one Digest per Transcript, a model's time-ordered condensation of the words and the camera that the Summary, the Chat and the Case Chat are written from, so every scene informs a summary and a case of many videos fits a question.
 
 It adds twenty-three admin settings, two prompt templates, one shipped Summary template, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0039), and no environment key.
 
@@ -29,7 +30,8 @@ It adds twenty-three admin settings, two prompt templates, one shipped Summary t
 3. The finders
 4. Intervals and the summary
 5. The video summary and the video-aware chat
-6. Deferred and ruled out
+6. The picture record and the Digest (proposed 2026-09-12, not yet built)
+7. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -300,11 +302,87 @@ One new on the AI assistant page, greyed while Moments is Off: **Enough moments 
 - The "within a minute" rule for a question about a time, in the Chat template.
 - The seconds-a-description guess behind the dialog's minutes.
 
-## 6. Deferred and ruled out
+## 6. The picture record and the Digest
+
+Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make summarization smart. One that combines moments and the transcription for awesome narratives of events", and their answers to the build's questions: the foundation is "good VLM explanations of snippets taken every so often" joined with the transcript, and it serves "both the overarching case chat as well as the single summaries for individual videos"; no scene-by-scene breakdown, "but every scene should inform the overall summary"; no section on where the words and the picture disagree; a sound-only Recording's summary is a summary as it is today, and for a video "we are still talking about summaries"; the picture record is made for "those creating summaries" and never on its own; every feature has its switch on the Admin panel; the interval is the setting that exists, "for now let's say every 15 seconds"; the Digest is plumbing nobody reads, and the question is how it serves Chat and the Case Chat. Not yet built.
+
+### Principles
+
+1. **Made for the person asking.** The picture record of a video is made when someone asks for its summary, in that summary's lane, by chapter 4's intervals. Nothing describes a picture on a timer or at transcription; chapter 4's first principle stands.
+2. **Every scene informs; nothing is listed.** A Summary is written from a Digest that was made from all of the words and all of the camera lines, so no stretch of the recording is left out of what it draws on; the Summary's shape stays its template's, and no part of it walks through the recording scene by scene unless the template asks. The per-length caps on camera lines (chapter 5) go, because the Digest has already done the choosing.
+3. **The two sources survive the condensing.** Every line of a Digest says whether it came from the words, the camera, or both, and the camera rules govern the Digest as they govern an answer: names from the words only, "the camera shows", only the listed times.
+4. **Plumbing.** Nobody reads a Digest. It is made, kept, refreshed, and handed to the model; a person sees only that it exists and what it was made from, in Details.
+5. **Made once, used by all three.** One Digest per Transcript serves the Summary, the Chat, and the Case Chat. It is current when it was made from the current Transcript and the current set of described Moments, and is remade by the next summary otherwise; the Chat and the Case Chat use it as it stands and say when it was made.
+6. **Every feature is a switch, and the cost is said in numbers.** The Digest and the picture record each have their switch on the AI assistant page; the dialog says how many descriptions and how many Digest calls a press will make, and about how long; the catalogue and the ledger say what the engine is asked for.
+
+### Words
+
+**Picture record** and **Digest** are added to the glossary. A Digest's **part** is one window of the Transcript condensed by one call.
+
+### The picture record
+
+The interval Moments of one video Recording, made by chapter 4's Describe the whole recording, as the foundation a summary is written from. Nothing about the Moments changes: each is a Moment of source interval on the Moments tab, described as chapter 1 describes one, skipping times already described. What changes:
+
+- **Describe at intervals: every** allows 10 seconds at the least (20 before) and ships at **15 seconds**; **Describe at intervals: at most** ships at **600** and allows up to 2,000, so a long recording is covered at the interval rather than spread thin. The dialog states the count and the minutes it means (chapter 5's look-first line), and the catalogue states the cost per hour of video.
+- **The tick's start** (chapter 5) loses its count rule: Look at the picture first starts ticked while **Summaries describe the moments first** is On and anything is left to describe, and **Enough moments for a video summary** is withdrawn.
+- **Picture record** is the switch (**Picture record for summaries**, On or Off, greyed while Moments is Off); Off, the summary dialog offers no tick and a Summary draws on whatever Moments exist, as chapter 5 has it.
+
+### The Digest
+
+- **What it is.** One text per Transcript: a time-ordered record of what happened in the recording, condensed by the model from the Transcript and the camera lines, in numbered lines of the form `[hh:mm:ss]-[hh:mm:ss] (said | seen | both) ...`, with the exact words kept inside quotation marks for any statement about the case, a request, an instruction, a name, a place, or a date, so that a Summary written from the Digest can still quote. Under the camera rules throughout.
+- **How it is made.** In the summary's lane, after the picture record and before the Summary writes. The Transcript is cut into windows of about **Digest window** tokens on Segment boundaries; each window is sent with the camera lines whose times fall in it, the nature line, the fixed Digest instructions, and the camera rules, one call per window, answer capped at **Digest part cap**; the parts join in order. A window without camera lines is condensed from the words alone and its lines say (said). A short recording is one window. Thinking is never on for a Digest.
+- **What is kept.** A Digest row on the Transcript: the text, the number of parts, the Moments it drew on (a count and the latest description time), the Transcript's creation time, the model, when it was made. Never logged; content. One per Transcript, replaced when remade.
+- **When it is current.** Made from this Transcript and from the same described Moments (the count and the latest description time match). A summary press on a Transcript whose Digest is stale, or absent, makes one; the card says "Condensing the recording (n of m)...". The Chat and the Case Chat never make one.
+- **The switch.** **Digests** (On or Off, greyed while Moments is Off). Off, nothing is made and the three features work as chapter 5 has them.
+
+### The Summary
+
+- A Summary on a Recording with a current Digest is written from the nature line, the Transcript when it fits the window beside everything else, the Digest headed "The record of this recording (a model's condensation of the words and the camera, in time order; every time is the transcript's):", the template, and the camera rules. When the Transcript does not fit, the Digest stands alone for it, and the Summary is no longer refused as too long. The per-length camera counts (chapter 5) are not sent; the length line says the Digest is complete and the Summary chooses what matters.
+- A sound-only Recording, or one without a Digest, is summarised as today.
+- Details gains "Digest: made <when> from the transcript and n moments, in m parts"; the Summary's head says it was written from the Digest; the Word export's What the camera showed section is unchanged.
+
+### The Chat
+
+- A Chat on a Recording with a Digest is told the Transcript, the Digest in place of the whole camera block, and then the **camera lines nearest the times the question names**, up to **Chat: camera lines near an asked time**, each within a minute of a time written in the question, so that "what was in his hand at 12:40?" is answered from the description itself rather than the condensed line. A question that names no time gets the Digest alone for the picture.
+- The grounding line reads "Answers come from this transcript and its record of n described moments, made <when>."; a Digest older than the Transcript or the Moments says so in the line.
+
+### The Case Chat
+
+- A Recording's contribution to a Reading is its Transcript and, when it has a Digest, the Digest after it under the record heading, so the picture reaches the case-wide answer labelled. When the Case would exceed the hours ceiling, or a Transcript alone does not fit, a Recording that has a Digest contributes the Digest alone, which is how a case of many videos fits; a Recording without one is read or refused as chapter 2 of Phase 2 has it.
+- Chapter 1's "The Case Chat is not told" is withdrawn by this; the Case Chat template's wording is unchanged, and the camera rules follow its format when any Digest is present.
+
+### Settings
+
+On the AI assistant page, greyed while Moments is Off: **Picture record for summaries** (On), **Digests** (On), **Digest window** (12,000 tokens, 4,000 to 40,000), **Digest part cap** (1,200 tokens, 300 to 4,000), **Chat: camera lines near an asked time** (6, 0 to 30). Changed: **Describe at intervals: every** (15 s, 10 to 600) and **Describe at intervals: at most** (600, 5 to 2,000). Withdrawn: **Enough moments for a video summary**.
+
+### Audit rows
+
+AI assistant call, feature `digest`, one per part, the usual metadata and never the text.
+
+### What changes from earlier chapters
+
+- Chapter 4's tick rule and chapter 5's per-length camera counts and the Enough setting; chapter 1's and chapter 5's "The Case Chat is not told".
+- The block budget and thinning (chapter 5) stay for a Recording without a Digest.
+- The ledger: the engine is asked for one description per fifteen seconds of video summarised, about four thousand tokens and ten to twenty seconds each, in one lane; "For GIDEON" in the next entry.
+
+### Not in this phase
+
+- Showing the Digest to a person, or exporting it.
+- A Digest on a timer, at transcription, or for a Case as a whole.
+- Choosing camera lines for the Case Chat by the times a question names.
+- Anything that recognises a face or a voice.
+
+### Left to the build
+
+- The Digest instructions (`prompts.DIGEST`), fixed, and the record heading.
+- The window cut on Segment boundaries and the join; the staleness test.
+- The wording of the dialog's count line for both the descriptions and the parts.
+
+## 7. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
-- **Describing the whole video** (a timeline of what was seen): deferred; if wanted, it is a batch and takes the quiet window.
+- **Describing the whole video** (a timeline of what was seen): built on request in chapter 4 and made the foundation of a summary in chapter 6; never on a timer.
 - **Reading text in the picture** (a plate, a label, a document): not asked for; the shipped instructions neither ask nor forbid it, and an office edits them.
 
 ## Appendix A. Audit rows added in Phase 4

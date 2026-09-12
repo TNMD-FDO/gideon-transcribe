@@ -389,6 +389,12 @@ _Avoid_: detector, classifier
 **Camera line**:
 How a Moment appears among Transcript lines: marked Camera, in italic, in the viewer, in the exports, and in what the AI assistant is told. A Camera line is never a Segment.
 
+**Picture record**:
+The interval Moments of one video Recording, made by Describe the whole recording when a summary is asked for, as the foundation the summary is written from. Phase 4 chapter 6 (proposed). Avoid: sweep, timeline of the picture, frame set.
+
+**Digest**:
+One text per Transcript, made by the AI assistant when a summary is asked for: a time-ordered condensation of the words and the camera lines, each line marked said, seen or both, with exact quotes kept, that the Summary, the Chat and the Case Chat are written from. Plumbing: nobody reads it, Details says it exists and what it was made from, and it is remade when the Transcript or the described Moments change. Phase 4 chapter 6 (proposed). Avoid: summary (that is what a person reads), notes, index, embedding.
+
 **Camera rules**:
 The fixed instructions Summary and Chat are given whenever Camera lines are handed to them: the two sources kept apart in every sentence, neither winning, a person named only from the words, nothing inferred from the picture, only the listed times looked at, and a camera fact told briefly. Not editable; the templates are. Phase 4.
 
