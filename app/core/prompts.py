@@ -230,7 +230,10 @@ SUGGESTIONS = (
 SUMMARY_FORMAT = (
     "Write the summary as plain text with each part's heading on its own line, "
     "followed by a colon. Give every time as [hh:mm:ss], copied from the line "
-    "it appears on. Do not add parts the template does not ask for."
+    "it appears on. Do not add parts the template does not ask for. When a "
+    "block headed 'What the camera showed' is given, draw on it for what was "
+    "seen, cite its times the same way, and say 'the camera shows' so the "
+    "reader knows the fact came from the picture and not the words."
 )
 CHAT_FORMAT = (
     "Answer in plain text. Give every time as [hh:mm:ss], copied from the line "

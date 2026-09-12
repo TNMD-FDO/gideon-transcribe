@@ -428,6 +428,12 @@
                   <option value="detailed">Detailed</option>
                 </select>
               </div>
+              {% if assistant.moments and is_video %}
+                <label class="row" id="summary-describe-line">
+                  <input type="checkbox" id="summary-describe-first"> <b>Describe the moments first</b>
+                  <span class="muted small" id="summary-describe-note"></span>
+                </label>
+              {% endif %}
               <div class="row">
                 <button type="button" class="primary small" id="summary-write">Write summary</button>
                 <button type="button" class="ghost small" id="summary-cancel">Cancel</button>
@@ -448,8 +454,10 @@
           <div class="panel" data-panel="moments" hidden>
             <div class="row">
               <h2 class="grow">Moments</h2>
+              <button type="button" class="small" id="describe-intervals" title="A moment every interval, the whole recording through">Describe the whole recording</button>
               <button type="button" class="small primary" id="describe-now" title="Describe what the camera shows at the playhead">{% icon "camera" %} Describe this moment</button>
             </div>
+            <p class="muted small" id="intervals-said" style="margin: 4px 0 0"></p>
             <p class="muted small" style="margin: 4px 0 0">A short clip around the time is shown to the assistant, which describes what is visible. Its words are a description of the picture, never the transcript. The camera button on any line does the same for that line.</p>
             <div id="moment-list" class="assistant-list"></div>
             <div class="row" style="margin: 14px 0 2px; align-items: center">

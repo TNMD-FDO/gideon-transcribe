@@ -328,6 +328,14 @@ def find_moments(run_id: str) -> None:
     assistant.find_moments(run_id)
 
 
+@app.task(queue="llm", name="describe_intervals")
+def describe_intervals(run_id: str) -> None:
+    """The whole recording described at intervals, one Moment after another."""
+    from core import assistant
+
+    assistant.describe_intervals(run_id)
+
+
 @app.task(queue="media", name="scan_for_moments")
 def scan_for_moments(run_id: str) -> None:
     """The picture and sound scanned for moments, on the media worker, never a Job."""

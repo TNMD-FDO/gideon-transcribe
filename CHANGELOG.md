@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.41.0, 2026-09-11
+
+```
+Models: unchanged
+Database: migrates (0038, the intervals' run and the summary's tick)
+```
+
+### Added
+
+- **Describe the whole recording**, at the head of the Moments tab (Phase 4,
+  chapter 4): a Moment every interval through the video, described one
+  after another in a single lane of the assistant, skipping times already
+  described, at most a set number spread evenly; the tab counts them as
+  they land. Two settings: the interval (60 s) and the most (40).
+- **Describe the moments first**, a tick on a video's summary dialog: the
+  summary runs the intervals before it writes and then draws on what was
+  seen, citing the camera's moments and saying "the camera shows"; the
+  setting **Summaries describe the moments first** (Off) says how the tick
+  starts. The summary's Word export ends with **What the camera showed**,
+  every described moment with its time, under the camera legend.
+
 ## v1.40.0, 2026-09-11
 
 ```

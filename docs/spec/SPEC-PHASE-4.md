@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, and its third in `v1.40.0`.
+The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, and its fourth in `v1.41.0`.
 
 ## About this document
 
@@ -17,15 +17,17 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **The engine's priority**: every request the app sends the engine carries a priority, as the shared server's ledger asks of a client.
 - **Questions and clips** (chapter 2, v1.39.0): a Moment answers a question about the picture from a few close frames, in a fixed shape that says what is visible, what it is consistent with, and what cannot be told; descriptions are brief unless the office chooses full; and a Moment becomes a Clip with its words as the note and as a caption.
 - **The finders** (chapter 3, v1.40.0): Find moments reads the whole Transcript once and suggests the lines where the picture would add a fact, each with its reason, and, when the office turns it on, scans the picture and sound for sharp changes and raised voices; the word list of chapter 1 is withdrawn.
+- **Intervals and the summary** (chapter 4, v1.41.0): the whole recording described at intervals, one lane, one call each; a Summary that describes the moments first when asked, and draws on what was seen; and a "What the camera showed" section in the Summary's Word export.
 
-It adds nineteen admin settings, two prompt templates, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0037), and no environment key.
+It adds twenty-two admin settings, two prompt templates, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0038), and no environment key.
 
 ## Contents
 
 1. Moments
 2. Questions, clearer words, and clips
 3. The finders
-4. Deferred and ruled out
+4. Intervals and the summary
+5. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -205,7 +207,44 @@ Nine on the AI assistant page, greyed while Moments is Off: **Find moments from 
 - The reasons the scan writes, fixed words rather than the engine's.
 - The check's rules (`prompts.keep_cues`).
 
-## 4. Deferred and ruled out
+## 4. Intervals and the summary
+
+Written 2026-09-11 after the finders' first day: the maintainer found the word finder "hit or miss" and asked that summaries "do a decent or good job of picking the moments that are then described". The answer lets the picture decide: describe the recording throughout, and let the Summary, which reads everything, pick what mattered. Built in v1.41.0.
+
+### Principles
+
+1. **One lane, one call each.** Describe the whole recording makes one Moment per interval and describes them one after another in a single lane of the AI assistant, so a long recording never takes the four lanes from everyone else. It is a press, never automatic.
+2. **Nothing described twice.** A time within half an interval of a Moment already described, or being described, is skipped; the most allowed are spread evenly over the recording rather than taken from its start.
+3. **The Summary picks.** A Summary asked to describe the moments first runs the intervals in its own lane before it writes, then receives every described Moment as camera lines and is told it may draw on them, citing their times and saying "the camera shows". What mattered is the Summary's judgement, made from everything seen and said.
+4. **The export shows its evidence.** A Summary's Word export ends with "What the camera showed": every described Moment with its time, under the legend, so a reader sees what the summary drew on.
+
+### Describe the whole recording
+
+- **The button**, at the head of the Moments tab beside Describe this moment, asks once ("one engine call each") and starts a run. The times are every **Describe at intervals: every** seconds from half an interval in, skipping times already described, at most **Describe at intervals: at most**, spread evenly when more. Each becomes a Moment of source interval, described as chapter 1 describes one; a failed Moment is left failed and the run goes on; the run stops when the engine goes away, the rest marked unreachable.
+- **The run** is a CueRun of source interval with a total and a count; the tab says "Describing the recording: n of m..." and the button waits; "Every interval is described already." when there was nothing to do.
+
+### The Summary
+
+- The summary dialog on a video with Moments on gains the tick **Describe the moments first**, starting as the **Summaries describe the moments first** setting says (Off), with a line on the cost. A Summary made with it ticked runs the intervals in its own lane before it writes (the card says "Looking at the picture first (n of m)..."), then writes with the camera block as chapter 1 has it; the engine going away during the intervals fails the Summary as unreachable.
+- The app's summary format line now tells the model that a "What the camera showed" block may be drawn on, cited by time, and said to be from the camera. The editable templates are unchanged; an office may say more in its Body camera template.
+- The Summary's Word export gains the section **What the camera showed** after the summary's body when any described Moment exists: the legend, then one line per Moment, time and words.
+
+### Settings
+
+Three on the AI assistant page, greyed while Moments is Off: **Describe at intervals: every** (60 s, 20 to 600), **Describe at intervals: at most** (40, 5 to 200), **Summaries describe the moments first** (Off).
+
+### Not in this phase
+
+- Choosing which interval Moments a Summary uses; it receives all of them, as Moments in answers has it.
+- Describing at intervals on a timer or at transcription.
+- Deleting the interval Moments in one press; each is a Moment like any other.
+
+### Left to the build
+
+- The first time (half an interval in), the skip rule (half an interval), and the spreading (`assistant.interval_times`).
+- The order (time order) and the stop rule (`assistant.describe_intervals`).
+
+## 5. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
@@ -245,6 +284,9 @@ Nine on the AI assistant page, greyed while Moments is Off: **Find moments from 
 | Loudness rise | AI assistant | dB, 3 to 30; greyed while the picture and sound finder is Off | 12 |
 | Gap between scanned moments | AI assistant | seconds, 5 to 120; greyed while the picture and sound finder is Off | 15 |
 | Find moments (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
+| Describe at intervals: every | AI assistant | seconds, 20 to 600; greyed while Moments is Off | 60 |
+| Describe at intervals: at most | AI assistant | 5 to 200; greyed while Moments is Off | 40 |
+| Summaries describe the moments first | AI assistant | On or Off; greyed while Moments is Off | Off |
 | Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 
 ## Sources
@@ -255,3 +297,4 @@ The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-
 
 - From the maintainer, on the v1.38.0 build, chapter 2 (v1.39.0): questions answered from close frames in a fixed shape, the brief style as the default with the answer cap at 250, and Moment to Clip with Camera captions.
 - From the maintainer, on the v1.39.0 build, chapter 3 (v1.40.0): the word-list Cues withdrawn for flagging ordinary talk; the finder that reads the Transcript and the scan of the picture and sound, each with its switch and its numbers; Cues stored, with a reason, and dismissable.
+- From the maintainer, on the v1.40.0 build, chapter 4 (v1.41.0): the whole recording described at intervals in one lane, the Summary's tick to describe the moments first, the summary format line that lets it draw on the camera block, and the export's "What the camera showed" section.

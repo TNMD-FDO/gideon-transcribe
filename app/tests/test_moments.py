@@ -527,7 +527,12 @@ def test_find_moments_reads_the_transcript_once_and_keeps_what_it_checks(
     assert row.details["feature"] == "moment_finder" and row.details["found"] == 1
     assert "console" not in json.dumps(row.details)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["transcript"] == {"state": "done", "found": 1, "said": ""}
+    assert state["cue_runs"]["transcript"] == {
+        "state": "done",
+        "found": 1,
+        "total": 0,
+        "said": "",
+    }
 
     # With the media finder on as well, both runs start, and the scan writes
     # its own Cues from what ffmpeg printed.
@@ -945,3 +950,198 @@ def test_a_clip_carries_the_camera_line_as_a_caption(ready, person):
     assert "00:00:02,400 --> 00:00:06,400" in camera
     # The spoken cue at 12.4 is there too, after the camera cue's number.
     assert any("Speaker 2: Look at that, right there." in cue for cue in cues)
+
+
+# Intervals and the summary (v1.41.0) -------------------------------------------------
+
+
+def test_interval_times_skip_what_is_described_and_spread_the_rest():
+    assert assistant.interval_times(300.0, 60.0, 40, []) == [
+        30.0,
+        90.0,
+        150.0,
+        210.0,
+        270.0,
+    ]
+    # A time already described within half an interval is skipped.
+    assert assistant.interval_times(300.0, 60.0, 40, [95.0]) == [
+        30.0,
+        150.0,
+        210.0,
+        270.0,
+    ]
+    # More than the most allowed are spread over the recording, not its start.
+    spread = assistant.interval_times(3600.0, 60.0, 6, [])
+    assert len(spread) == 6 and spread[0] == 30.0 and spread[-1] > 3000.0
+    assert assistant.interval_times(0.0, 60.0, 40, []) == []
+    assert assistant.interval_times(10.0, 60.0, 40, []) == []
+
+
+@pytest.mark.django_db
+def test_the_whole_recording_is_described_at_intervals_in_one_lane(
+    ready, person, client, monkeypatch
+):
+    from core import tasks
+    from core.assistant import CueRun
+
+    asked = reachable(monkeypatch, "A doorway.")
+    a_cut(monkeypatch)
+    settings_store.set_to("moment_interval_seconds", 300)
+    Moment.objects.create(
+        transcript=ready.transcript,
+        at=452.0,
+        state=assistant.DONE,
+        text="Already here.",
+        model="the-model",
+    )
+    deferred = []
+    monkeypatch.setattr(
+        tasks.describe_intervals, "defer", lambda **fields: deferred.append(fields)
+    )
+    signed_in(client, person)
+    answer = client.post(f"/recording/{ready.pk}/describe-intervals")
+    assert answer.status_code == 200, answer.content
+    assert client.post(f"/recording/{ready.pk}/describe-intervals").status_code == 409
+    run = CueRun.objects.get(pk=answer.json()["id"])
+    assert run.source == CueRun.INTERVAL and deferred == [{"run_id": str(run.pk)}]
+
+    assistant.describe_intervals(run.pk)
+    run.refresh_from_db()
+    # 900 s at 300 s: 150, 450, 750; 450 is within half an interval of 452.
+    assert run.state == assistant.DONE and (run.found, run.total) == (2, 2)
+    made = list(Moment.objects.filter(source=Moment.INTERVAL).order_by("at"))
+    assert [one.at for one in made] == [150.0, 750.0]
+    assert all(one.state == assistant.DONE and one.text == "A doorway." for one in made)
+    assert len(asked) == 2
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["interval"] == {
+        "state": "done",
+        "found": 2,
+        "total": 2,
+        "said": "",
+    }
+    assert state["moments"][0]["source"] == "interval"
+
+
+@pytest.mark.django_db
+def test_the_intervals_stop_when_the_engine_goes_away(ready, person, monkeypatch):
+    from core.assistant import CueRun
+
+    a_cut(monkeypatch)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        return calls["n"] <= 1
+
+    monkeypatch.setattr(engine, "is_reachable", flaky)
+    monkeypatch.setattr(
+        engine,
+        "complete",
+        lambda messages, **options: {
+            "text": "A doorway.",
+            "finish_reason": "stop",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "model": "the-model",
+        },
+    )
+    settings_store.set_to("moment_interval_seconds", 300)
+    run = CueRun.objects.create(
+        transcript=ready.transcript, source=CueRun.INTERVAL, asked_by=person
+    )
+    assistant.describe_intervals(run.pk)
+    run.refresh_from_db()
+    assert run.state == assistant.FAILED and run.reason_class == "llm_unreachable"
+    assert (run.found, run.total) == (1, 3)
+    states = [one.state for one in Moment.objects.order_by("at")]
+    assert states == [assistant.DONE, assistant.FAILED, assistant.FAILED]
+
+
+@pytest.mark.django_db
+def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_showed(
+    ready, person, client, monkeypatch
+):
+    from core import tasks
+
+    answers = iter(
+        [
+            "A doorway.",
+            "A car.",
+            "A bag.",
+            "Summary: the camera shows a bag at [00:12:30].",
+        ]
+    )
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    asked = []
+
+    def complete(messages, **options):
+        asked.append({"messages": messages, **options})
+        return {
+            "text": next(answers),
+            "finish_reason": "stop",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "model": "the-model",
+        }
+
+    monkeypatch.setattr(engine, "complete", complete)
+    a_cut(monkeypatch)
+    monkeypatch.setattr(tasks.write_summary, "defer", lambda **fields: None)
+    settings_store.set_to("moment_interval_seconds", 300)
+    signed_in(client, person)
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["describe_first_default"] is False
+    settings_store.set_to("summary_describes_first", True)
+    assert client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"][
+        "describe_first_default"
+    ]
+    page = client.get(f"/recording/{ready.pk}").content.decode()
+    assert 'id="summary-describe-first"' in page
+
+    answer = client.post(
+        f"/recording/{ready.pk}/summaries",
+        data=json.dumps({"length": "short", "describe_first": True}),
+        content_type="application/json",
+    )
+    assert answer.status_code == 200
+    summary = Summary.objects.get(pk=answer.json()["id"])
+    assert summary.describe_first
+    assistant.write_summary(summary.pk)
+    summary.refresh_from_db()
+    assert summary.state == assistant.DONE
+    # Three interval Moments, then the summary, which was handed them.
+    assert (
+        Moment.objects.filter(source=Moment.INTERVAL, state=assistant.DONE).count() == 3
+    )
+    assert len(asked) == 4
+    user = asked[3]["messages"][-1]["content"]
+    assert prompts.CAMERA_HEADING in user and "[00:12:30] [camera] A bag." in user
+    assert "the camera shows" in prompts.SUMMARY_FORMAT
+    assert summary.citations == {"[00:12:30]": 750.0}
+
+    word = exports.summary_word(summary, "asker")
+    import io
+    import zipfile
+
+    document = zipfile.ZipFile(io.BytesIO(word)).read("word/document.xml").decode()
+    assert "What the camera showed" in document and "A bag." in document
+    assert exports.CAMERA_LEGEND[:30] in document
+
+
+def test_the_interval_settings_start_as_the_chapter_says():
+    for key, default in (
+        ("moment_interval_seconds", 60),
+        ("moment_interval_most", 40),
+        ("summary_describes_first", False),
+    ):
+        assert settings_store.DEFINITIONS[key].default == default
+    text = CATALOGUE.read_text(encoding="utf-8")
+    for name in (
+        "Describe at intervals: every",
+        "Describe at intervals: at most",
+        "Summaries describe the moments first",
+    ):
+        assert f"| {name} |" in text, f"the catalogue has no row for {name}"

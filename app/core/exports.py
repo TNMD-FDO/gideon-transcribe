@@ -1199,9 +1199,32 @@ def summary_word(summary, exported_by: str) -> bytes:
     _notices(document, transcript, assistant.notice(summary.model, written))
     document.add_paragraph()
     _summary_body(document, summary)
+    _camera_section(document, transcript)
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()
+
+
+def _camera_section(document, transcript) -> None:
+    """What the camera showed: the described Moments a summary could draw on."""
+    from docx.shared import Pt
+
+    moments = camera_moments(transcript)
+    if not moments:
+        return
+    document.add_paragraph()
+    heading = document.add_paragraph("What the camera showed")
+    heading.runs[0].bold = True
+    heading.runs[0].font.size = Pt(12)
+    legend = document.add_paragraph(CAMERA_LEGEND)
+    legend.runs[0].italic = True
+    for one in moments:
+        line = document.add_paragraph()
+        line.paragraph_format.space_after = Pt(4)
+        when = line.add_run(f"[{clock(one.at)}] ")
+        when.bold = True
+        said = line.add_run(camera_text(one))
+        said.italic = True
 
 
 def chat_word(chat, exported_by: str) -> bytes:

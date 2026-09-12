@@ -1451,6 +1451,54 @@ def _rows() -> list[Definition]:
             when_changed="The next Find moments.",
         ),
         Definition(
+            key="moment_interval_seconds",
+            page=ASSISTANT,
+            name="Describe at intervals: every",
+            kind=NUMBER,
+            default=60,
+            least=20,
+            most=600,
+            unit="seconds",
+            needs="moments_available",
+            what_it_does=(
+                "Describe the whole recording makes a Moment this far apart, from "
+                "half an interval in, skipping any time already described. Each "
+                "is one engine call of a few thousand tokens."
+            ),
+            when_changed="The next Describe the whole recording.",
+        ),
+        Definition(
+            key="moment_interval_most",
+            page=ASSISTANT,
+            name="Describe at intervals: at most",
+            kind=NUMBER,
+            default=40,
+            least=5,
+            most=200,
+            unit="moments",
+            needs="moments_available",
+            what_it_does=(
+                "The most Moments one Describe the whole recording makes; a long "
+                "recording gets them spread evenly rather than from the start."
+            ),
+            when_changed="The next Describe the whole recording.",
+        ),
+        Definition(
+            key="summary_describes_first",
+            page=ASSISTANT,
+            name="Summaries describe the moments first",
+            kind=TOGGLE,
+            default=False,
+            needs="moments_available",
+            what_it_does=(
+                "Whether the summary dialog's tick, describe the moments first, "
+                "starts ticked on a video. Ticked, a summary describes the recording "
+                "at intervals before it writes, so it can say what was seen as well "
+                "as what was said; the cost is one call per interval."
+            ),
+            when_changed="The next summary dialog opened.",
+        ),
+        Definition(
             key="engine_address",
             page=ASSISTANT,
             name="Engine address",
@@ -1942,3 +1990,11 @@ def moment_loud_db() -> float:
 
 def moment_media_gap_seconds() -> float:
     return float(get("moment_media_gap_seconds"))
+
+
+def moment_interval_seconds() -> float:
+    return float(get("moment_interval_seconds"))
+
+
+def moment_interval_most() -> int:
+    return get("moment_interval_most")

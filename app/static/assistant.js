@@ -22,6 +22,8 @@
   var describeNow = document.getElementById("describe-now");
   var findMoments = document.getElementById("find-moments");
   var findSaid = document.getElementById("find-said");
+  var describeIntervals = document.getElementById("describe-intervals");
+  var intervalsSaid = document.getElementById("intervals-said");
 
   var state = null;
   var timer = null;
@@ -112,7 +114,12 @@
         (one.focus ? " · focus: " + escape(one.focus) : "") + " · " + escape(one.when) + "</span></div>";
       var body;
       if (one.state === "queued" || one.state === "running") {
-        body = "<p class='muted'>Reading the transcript...</p>";
+        var looking = state.cue_runs && state.cue_runs.interval;
+        if (one.describe_first && looking && (looking.state === "queued" || looking.state === "running")) {
+          body = "<p class='muted'>Looking at the picture first" + (looking.total ? " (" + looking.found + " of " + looking.total + ")" : "") + "...</p>";
+        } else {
+          body = "<p class='muted'>Reading the transcript...</p>";
+        }
       } else if (one.state === "failed") {
         body = "<p class='problem'>" + escape(one.said) + "</p>";
       } else {
@@ -141,10 +148,12 @@
     });
     document.getElementById("summary-write").addEventListener("click", function () {
       var templateChoice = document.getElementById("summary-template");
+      var describeFirst = document.getElementById("summary-describe-first");
       post("/recording/" + recording + "/summaries", {
         template: templateChoice ? templateChoice.value : "",
         focus: document.getElementById("summary-focus").value,
-        length: document.getElementById("summary-length").value
+        length: document.getElementById("summary-length").value,
+        describe_first: !!(describeFirst && describeFirst.checked)
       }).then(function () {
         summaryDialog.hidden = true;
         document.getElementById("summary-focus").value = "";
@@ -334,14 +343,43 @@
     });
   }
 
+  // The summary dialog's tick starts as the office set it, once, and says
+  // what it costs.
+  var describeFirstSet = false;
+  function drawDescribeFirst() {
+    var tick = document.getElementById("summary-describe-first");
+    if (!tick || !state || !state.cue_runs) { return; }
+    if (!describeFirstSet) { tick.checked = !!state.cue_runs.describe_first_default; describeFirstSet = true; }
+    var note = document.getElementById("summary-describe-note");
+    if (note) { note.textContent = "A moment every interval before the summary is written, so it can say what was seen; one call each."; }
+  }
+
   function drawMoments() {
     if (!momentsOn || !state) { return; }
     if (describeNow) { unavailable(describeNow); }
+    drawDescribeFirst();
+    if (describeIntervals) {
+      unavailable(describeIntervals);
+      var interval = state.cue_runs && state.cue_runs.interval;
+      var busyIntervals = interval && (interval.state === "queued" || interval.state === "running");
+      if (busyIntervals) { describeIntervals.disabled = true; }
+      if (intervalsSaid) {
+        if (busyIntervals) {
+          intervalsSaid.textContent = "Describing the recording" + (interval.total ? ": " + interval.found + " of " + interval.total : "") + "...";
+        } else if (interval && interval.state === "failed") {
+          intervalsSaid.textContent = interval.said;
+        } else if (interval && interval.state === "done") {
+          intervalsSaid.textContent = interval.total ? "" : "Every interval is described already.";
+        } else {
+          intervalsSaid.textContent = "";
+        }
+      }
+    }
     var moments = state.moments || [];
     if (momentList) {
       momentList.innerHTML = moments.length ? moments.map(function (one) {
         var head = "<div class='row'><a href='#' class='cite' data-seconds='" + one.at + "'><b>" + escape(one.clock) + "</b></a>" +
-          "<span class='muted small grow'>" + (one.question ? "a question" : (one.source === "cue" ? "from a cue" : "asked for")) +
+          "<span class='muted small grow'>" + (one.question ? "a question" : (one.source === "cue" ? "from a cue" : (one.source === "interval" ? "at an interval" : "asked for"))) +
           (one.edited ? " · edited" : "") + (one.when ? " · " + escape(one.when.slice(0, 16).replace("T", " ")) : "") + "</span></div>" +
           (one.question ? "<p class='question'><b>Asked:</b> " + escape(one.question) + "</p>" : "");
         var body;
@@ -521,6 +559,20 @@
           }
           return refresh();
         });
+        return;
+      }
+      if (event.target.closest("#describe-intervals")) {
+        UI.confirm({ title: "Describe the whole recording?", body: "A moment every interval, the recording through, one engine call each. Times already described are skipped.", ok: "Describe it" })
+          .then(function (yes) {
+            if (!yes) { return; }
+            describeIntervals.disabled = true;
+            post("/recording/" + recording + "/describe-intervals").then(function (answer) {
+              if (!answer.ok && answer.said && answer.said.error) {
+                UI.toast(answer.said.error, { problem: true, icon: "warning" });
+              }
+              return refresh();
+            });
+          });
         return;
       }
       var edit = event.target.closest("#moment-list .edit-moment");

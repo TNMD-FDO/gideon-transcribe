@@ -75,6 +75,7 @@ def _summary_json(summary: Summary, transcript) -> dict:
         "template": summary.template_name,
         "focus": summary.focus,
         "length": summary.length,
+        "describe_first": summary.describe_first,
         "text": summary.text,
         "citations": summary.citations,
         "cut_short": summary.cut_short,
@@ -179,6 +180,7 @@ def _run_json(run) -> dict | None:
     return {
         "state": run.state,
         "found": run.found,
+        "total": run.total,
         "said": assistant.what_to_say(run.reason_class) if run.reason_class else "",
     }
 
@@ -194,10 +196,14 @@ def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict
             transcript.cue_runs.filter(source=CueRun.TRANSCRIPT).first()
         ),
         "media": _run_json(transcript.cue_runs.filter(source=CueRun.MEDIA).first()),
+        "interval": _run_json(
+            transcript.cue_runs.filter(source=CueRun.INTERVAL).first()
+        ),
         "finders": {
             "transcript": bool(settings_store.get("moment_finder_transcript")),
             "media": bool(settings_store.get("moment_finder_media")),
         },
+        "describe_first_default": bool(settings_store.get("summary_describes_first")),
     }
     return [_moment_json(one) for one in moments], cues, runs
 
@@ -273,7 +279,11 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     )
     busy = busy or any(
         run is not None and run["state"] in (assistant.QUEUED, assistant.RUNNING)
-        for run in (cue_runs.get("transcript"), cue_runs.get("media"))
+        for run in (
+            cue_runs.get("transcript"),
+            cue_runs.get("media"),
+            cue_runs.get("interval"),
+        )
     )
 
     return JsonResponse(
@@ -338,6 +348,8 @@ def new_summary(request: HttpRequest, recording_id) -> JsonResponse:
         template_version=template.version,
         focus=str(wanted.get("focus", ""))[:200],
         length=length,
+        describe_first=bool(wanted.get("describe_first"))
+        and assistant.features()["moments"],
     )
     tasks.write_summary.defer(summary_id=str(summary.pk))
     return JsonResponse({"id": str(summary.pk)})
@@ -504,6 +516,35 @@ def find_moments(request: HttpRequest, recording_id) -> JsonResponse:
             tasks.scan_for_moments.defer(run_id=str(run.pk))
         ids.append(str(run.pk))
     return JsonResponse({"ids": ids})
+
+
+@login_required
+@require_POST
+def describe_intervals(request: HttpRequest, recording_id) -> JsonResponse:
+    """Describe the whole recording: a Moment every interval, in one lane."""
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if not assistant.features()["moments"]:
+        return JsonResponse({"error": "Moments are off"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=409)
+    if not assistant.playable_video(recording):
+        return JsonResponse(
+            {"error": "the video is still being prepared, or this is sound only"},
+            status=409,
+        )
+    if transcript.cue_runs.filter(
+        source=CueRun.INTERVAL, state__in=(assistant.QUEUED, assistant.RUNNING)
+    ).exists():
+        return JsonResponse({"error": "the recording is being described"}, status=409)
+    cases.used(recording, by=request.user)
+    run = CueRun.objects.create(
+        transcript=transcript, source=CueRun.INTERVAL, asked_by=request.user
+    )
+    tasks.describe_intervals.defer(run_id=str(run.pk))
+    return JsonResponse({"id": str(run.pk)})
 
 
 @login_required

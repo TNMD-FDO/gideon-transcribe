@@ -155,6 +155,11 @@ urlpatterns = [
     ),
     path("cue/<uuid:cue_id>/dismiss", assistant_pages.dismiss_cue, name="dismiss-cue"),
     path(
+        "recording/<uuid:recording_id>/describe-intervals",
+        assistant_pages.describe_intervals,
+        name="describe-intervals",
+    ),
+    path(
         "moment/<uuid:moment_id>/again",
         assistant_pages.moment_again,
         name="moment-again",

@@ -297,6 +297,8 @@ class Summary(models.Model):
     ground_rules_version = models.IntegerField(default=1)
     focus = models.CharField(max_length=200, blank=True, default="")
     length = models.CharField(max_length=10, default="standard")
+    # Describe the recording at intervals before writing (Phase 4).
+    describe_first = models.BooleanField(default=False)
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     text = models.TextField(blank=True, default="")
@@ -410,7 +412,7 @@ class Moment(models.Model):
     Transcript; the clip it was made from is never kept.
     """
 
-    ASKED, CUE = "asked", "cue"
+    ASKED, CUE, INTERVAL = "asked", "cue", "interval"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     transcript = models.ForeignKey(
@@ -485,9 +487,13 @@ class Cue(models.Model):
 
 
 class CueRun(models.Model):
-    """One Find moments press, per finder: what it is doing, so the tab can wait."""
+    """One Find moments press, per finder, or one Describe the whole recording.
 
-    TRANSCRIPT, MEDIA = "transcript", "media"
+    What it is doing, so the tab can wait; for the intervals, how many of how
+    many are described so far.
+    """
+
+    TRANSCRIPT, MEDIA, INTERVAL = "transcript", "media", "interval"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     transcript = models.ForeignKey(
@@ -500,6 +506,7 @@ class CueRun(models.Model):
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     found = models.IntegerField(default=0)
+    total = models.IntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
@@ -653,6 +660,20 @@ def write_summary(summary_id) -> None:
         problem = _unreachable()
         if problem:
             raise problem
+        # The picture first, when asked: the recording described at
+        # intervals, in this lane, so the camera block below is full.
+        if (
+            summary.describe_first
+            and features()["moments"]
+            and playable_video(recording)
+        ):
+            run = CueRun.objects.create(
+                transcript=transcript, source=CueRun.INTERVAL, asked_by=summary.asked_by
+            )
+            describe_intervals(run.pk)
+            run.refresh_from_db()
+            if run.reason_class == engine.UNREACHABLE:
+                raise engine.Problem(engine.UNREACHABLE, "the engine went away")
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
@@ -1077,6 +1098,90 @@ def describe_moment(moment_id) -> None:
             clip.unlink(missing_ok=True)
         if stills is not None:
             shutil.rmtree(stills, ignore_errors=True)
+
+
+def interval_times(
+    length: float, interval: float, most: int, taken: list[float]
+) -> list[float]:
+    """The seconds to describe at: from half an interval in, one every interval.
+
+    A time within half an interval of one already described is skipped, and
+    more than `most` are spread evenly over the recording.
+    """
+    if length <= 0 or interval <= 0:
+        return []
+    half = interval / 2
+    times = []
+    at = half
+    while at < length:
+        if not any(abs(at - done) < half for done in taken):
+            times.append(round(at, 3))
+        at += interval
+    if len(times) > most:
+        step = len(times) / most
+        times = [times[int(n * step)] for n in range(most)]
+    return times
+
+
+def describe_intervals(run_id) -> None:
+    """Describe the whole recording: one Moment per interval, one after another.
+
+    In one lane, so a long recording never takes the assistant's four lanes
+    from everyone else. Stops when the engine goes away; a single failed
+    Moment is left failed and the rest go on.
+    """
+    run = (
+        CueRun.objects.filter(pk=run_id)
+        .select_related("transcript", "transcript__recording")
+        .first()
+    )
+    if run is None:
+        return
+    transcript = run.transcript
+    recording = transcript.recording
+    run.state = RUNNING
+    run.save(update_fields=["state"])
+    if not playable_video(recording):
+        run.state = FAILED
+        run.reason_class = MEDIA_NOT_READY
+        run.finished_at = timezone.now()
+        run.save(update_fields=["state", "reason_class", "finished_at"])
+        return
+    taken = [
+        one.at for one in transcript.moments.exclude(state=FAILED).exclude(text="")
+    ] + [one.at for one in transcript.moments.filter(state__in=(QUEUED, RUNNING))]
+    times = interval_times(
+        float(recording.duration_seconds or 0.0),
+        settings_store.moment_interval_seconds(),
+        settings_store.moment_interval_most(),
+        taken,
+    )
+    moments = [
+        Moment.objects.create(
+            transcript=transcript, at=at, source=Moment.INTERVAL, asked_by=run.asked_by
+        )
+        for at in times
+    ]
+    run.total = len(moments)
+    run.save(update_fields=["total"])
+    reason = ""
+    for moment in moments:
+        if reason:
+            moment.state = FAILED
+            moment.reason_class = reason
+            moment.save(update_fields=["state", "reason_class"])
+            continue
+        describe_moment(moment.pk)
+        moment.refresh_from_db()
+        if moment.state == DONE:
+            run.found += 1
+            run.save(update_fields=["found"])
+        elif moment.reason_class == engine.UNREACHABLE:
+            reason = engine.UNREACHABLE
+    run.state = FAILED if reason else DONE
+    run.reason_class = reason
+    run.finished_at = timezone.now()
+    run.save()
 
 
 def find_moments(run_id) -> None:
