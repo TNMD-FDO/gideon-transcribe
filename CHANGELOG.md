@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.50.1, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The word being said no longer breaks onto a line of its own.** Since
+  v1.46.0 the stage's line being spoken was styled through a bare `now`
+  class under the desk, and the word being said in the transcript carries
+  that class too, so as the transcript followed along the underlined word
+  took the box's layout: a line to itself, the rest of the line after it,
+  and on a sound recording it vanished altogether. The stage's rules now name
+  the box by its id.
+
 ## v1.50.0, 2026-09-12
 
 ```

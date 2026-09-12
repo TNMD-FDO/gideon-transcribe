@@ -85,6 +85,12 @@ def test_the_stylesheet_has_both_shapes():
     # The cast is stuck under the tab bar.
     cast = css[css.index(".cast {") :][:200]
     assert "position: sticky;" in cast
+    # The line being spoken is styled by its id, never by a bare "now" class:
+    # the word being said carries that class too, and took the box's layout
+    # (v1.46.0 to v1.50.0), breaking onto a line of its own and vanishing on
+    # a sound recording.
+    assert ".desk #now {" in css and ".desk.sound #now {" in css
+    assert ".desk .now" not in css and ".desk:not(.sound) .now" not in css
     for gone in (
         ".sheetbar",
         ".sheet-tab",

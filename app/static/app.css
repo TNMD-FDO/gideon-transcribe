@@ -876,7 +876,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .transport #player-trouble, .transport .preparing { flex-basis: 100%; margin: 4px 0 0; }
 
 /* The line being spoken, with Describe this moment beside it on a video. */
-.desk .now {
+.desk #now {
   grid-area: now;
   display: flex;
   align-items: center;
@@ -887,12 +887,12 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   border-bottom: 1px solid var(--line);
   min-width: 0;
 }
-.desk .now .lbl { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
-.desk .now .time { font-family: var(--mono); color: var(--muted); }
-.desk .now .who { color: var(--speaker, inherit); }
-.desk .now #now-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.desk .now.empty #now-text::before { content: "Nothing is playing yet."; color: var(--muted); }
-.desk.sound .now { display: none; }
+.desk #now .lbl { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.desk #now .time { font-family: var(--mono); color: var(--muted); }
+.desk #now .who { color: var(--speaker, inherit); }
+.desk #now #now-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.desk #now.empty #now-text::before { content: "Nothing is playing yet."; color: var(--muted); }
+.desk.sound #now { display: none; }
 .stagegrip { display: none; }
 .desk.resizing { cursor: ew-resize; user-select: none; }
 
@@ -1286,7 +1286,7 @@ body.no-speakers .seg .actions { grid-column: 3; }
   }
   .desk:not(.sound) .thumb { grid-area: auto; width: 100%; margin: 0; border-radius: 0; flex: none; }
   .desk:not(.sound) .transport { grid-area: auto; flex: none; }
-  .desk:not(.sound) .now {
+  .desk:not(.sound) #now {
     grid-area: auto;
     flex: none;
     border-bottom: 0;
@@ -1295,8 +1295,8 @@ body.no-speakers .seg .actions { grid-column: 3; }
     padding: 8px 14px;
     align-items: flex-start;
   }
-  .desk:not(.sound) .now #now-text { white-space: normal; flex-basis: 100%; }
-  .desk:not(.sound) .now #describe-now { margin-top: 4px; }
+  .desk:not(.sound) #now #now-text { white-space: normal; flex-basis: 100%; }
+  .desk:not(.sound) #now #describe-now { margin-top: 4px; }
   /* A bar down the stage's right edge: the width is the only thing chosen. */
   .desk:not(.sound) .stagegrip {
     display: block;
