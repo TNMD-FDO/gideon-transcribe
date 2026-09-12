@@ -1311,6 +1311,146 @@ def _rows() -> list[Definition]:
             when_changed="The next question.",
         ),
         Definition(
+            key="moment_finder_transcript",
+            page=ASSISTANT,
+            name="Find moments from the words",
+            kind=TOGGLE,
+            default=True,
+            needs="moments_available",
+            what_it_does=(
+                "Find moments reads the whole transcript once and suggests the "
+                "lines where the picture would add a fact: an object named or "
+                "handled, a command that implies an action, an action narrated, "
+                "a pointing phrase, a sudden change; each with its reason."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_finder_media",
+            page=ASSISTANT,
+            name="Find moments from the picture and sound",
+            kind=TOGGLE,
+            default=False,
+            needs="moments_available",
+            what_it_does=(
+                "Find moments also scans the video itself, without the engine: "
+                "sharp changes of picture and stretches of raised voices or a "
+                "bang become suggestions. Off by default until an office has "
+                "judged it on its own footage; a scan of a long recording takes "
+                "the media worker a few minutes."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_finder_most",
+            page=ASSISTANT,
+            name="Most suggested moments",
+            kind=NUMBER,
+            default=12,
+            least=3,
+            most=40,
+            unit="",
+            needs="moments_available",
+            what_it_does=(
+                "The most lines one Find moments may suggest from the words, the "
+                "surest first; and the most from the picture and sound together."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_finder_confidence",
+            page=ASSISTANT,
+            name="Least sure suggestion kept",
+            kind=CHOICE,
+            default="medium",
+            choices=("high", "medium", "low"),
+            needs="moments_available",
+            what_it_does=(
+                "A suggestion from the words is kept only when the engine is at "
+                'least this sure of it. "high" gives few and sure; "low" gives '
+                "everything it saw."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_finder_tokens",
+            page=ASSISTANT,
+            name="Find moments answer cap",
+            kind=NUMBER,
+            default=1500,
+            least=200,
+            most=8000,
+            unit="tokens",
+            needs="moments_available",
+            what_it_does="The most the finder's list, a small JSON, may run to.",
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_finder_time_seconds",
+            page=ASSISTANT,
+            name="Find moments time limit",
+            kind=NUMBER,
+            default=180,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="moments_available",
+            what_it_does=(
+                "How long the finder's one read of the transcript may take. "
+                "Doubled while the model may think."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_scene_threshold",
+            page=ASSISTANT,
+            name="Picture change threshold",
+            kind=NUMBER,
+            default=40,
+            least=10,
+            most=90,
+            unit="percent",
+            needs="moment_finder_media",
+            what_it_does=(
+                "How much of the picture must change between one frame and the "
+                "next for the scan to call it a moment. Lower finds more; a "
+                "body camera that swings about needs a higher figure."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_loud_db",
+            page=ASSISTANT,
+            name="Loudness rise",
+            kind=NUMBER,
+            default=12,
+            least=3,
+            most=30,
+            unit="dB",
+            needs="moment_finder_media",
+            what_it_does=(
+                "How far above the recording's usual level a second must be for "
+                "the scan to call it raised voices or a bang."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
+            key="moment_media_gap_seconds",
+            page=ASSISTANT,
+            name="Gap between scanned moments",
+            kind=NUMBER,
+            default=15,
+            least=5,
+            most=120,
+            unit="seconds",
+            needs="moment_finder_media",
+            what_it_does=(
+                "Two moments the scan finds closer together than this become "
+                "one, so a struggle is one suggestion and not twenty."
+            ),
+            when_changed="The next Find moments.",
+        ),
+        Definition(
             key="engine_address",
             page=ASSISTANT,
             name="Engine address",
@@ -1716,6 +1856,7 @@ def time_limit_seconds(feature: str) -> int:
         "summary": "summary_time_seconds",
         "speaker_suggestions": "suggestions_time_seconds",
         "moment": "moments_time_seconds",
+        "moment_finder": "moment_finder_time_seconds",
     }[feature]
     return get(key)
 
@@ -1777,3 +1918,27 @@ def moment_question_height() -> int:
 
 def moment_question_frames() -> int:
     return get("moment_question_frames")
+
+
+def moment_finder_most() -> int:
+    return get("moment_finder_most")
+
+
+def moment_finder_confidence() -> str:
+    return str(get("moment_finder_confidence") or "medium")
+
+
+def moment_finder_cap() -> int:
+    return get("moment_finder_tokens")
+
+
+def moment_scene_threshold() -> float:
+    return get("moment_scene_threshold") / 100.0
+
+
+def moment_loud_db() -> float:
+    return float(get("moment_loud_db"))
+
+
+def moment_media_gap_seconds() -> float:
+    return float(get("moment_media_gap_seconds"))

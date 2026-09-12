@@ -17,10 +17,12 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, exports, prompts, settings_store, tasks
+from core import assistant, audit, cases, exports, settings_store, tasks
 from core.assistant import (
     Chat,
     ChatTurn,
+    Cue,
+    CueRun,
     Moment,
     Suggestion,
     SuggestionRun,
@@ -157,22 +159,47 @@ def _moment_json(one: Moment) -> dict:
     }
 
 
-def _moments_and_cues(recording, transcript, features) -> tuple[list, list]:
-    """The Moments and the Cues of a Transcript, or nothing while Moments are off."""
+def _cue_json(one: Cue) -> dict:
+    return {
+        "id": str(one.pk),
+        "segment_id": str(one.segment_id) if one.segment_id else "",
+        "start": one.at,
+        "clock": exports.clock(one.at),
+        "line": one.line,
+        "kind": one.kind,
+        "reason": one.reason,
+        "confidence": one.confidence,
+        "source": one.source,
+    }
+
+
+def _run_json(run) -> dict | None:
+    if run is None:
+        return None
+    return {
+        "state": run.state,
+        "found": run.found,
+        "said": assistant.what_to_say(run.reason_class) if run.reason_class else "",
+    }
+
+
+def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict]:
+    """The Moments, the pending Cues, and the finders' runs; none while off."""
     if transcript is None or not features["moments"]:
-        return [], []
+        return [], [], {}
     moments = list(transcript.moments.all())
-    taken = {one.segment_id for one in moments if one.state != assistant.FAILED}
-    cues = [
-        {
-            **cue,
-            "segment_id": str(cue["segment_id"]),
-            "clock": exports.clock(cue["start"]),
-        }
-        for cue in prompts.cues_in(prompts.lines_of(transcript))
-        if cue["segment_id"] not in taken
-    ]
-    return [_moment_json(one) for one in moments], cues
+    cues = [_cue_json(one) for one in transcript.cues.filter(state=Cue.PENDING)]
+    runs = {
+        "transcript": _run_json(
+            transcript.cue_runs.filter(source=CueRun.TRANSCRIPT).first()
+        ),
+        "media": _run_json(transcript.cue_runs.filter(source=CueRun.MEDIA).first()),
+        "finders": {
+            "transcript": bool(settings_store.get("moment_finder_transcript")),
+            "media": bool(settings_store.get("moment_finder_media")),
+        },
+    }
+    return [_moment_json(one) for one in moments], cues, runs
 
 
 @login_required
@@ -186,7 +213,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
 
     summaries = [_summary_json(one, transcript) for one in recording.summaries.all()]
     chats = [_chat_json(one, transcript) for one in recording.chats.all()]
-    moments, cues = _moments_and_cues(recording, transcript, features)
+    moments, cues, cue_runs = _moments_and_cues(recording, transcript, features)
 
     suggestions, run = [], None
     unnamed: list[str] = []
@@ -244,6 +271,10 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     busy = busy or any(
         one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in moments
     )
+    busy = busy or any(
+        run is not None and run["state"] in (assistant.QUEUED, assistant.RUNNING)
+        for run in (cue_runs.get("transcript"), cue_runs.get("media"))
+    )
 
     return JsonResponse(
         {
@@ -254,6 +285,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             # What the camera showed, and the lines that point at something.
             "moments": moments,
             "cues": cues,
+            "cue_runs": cue_runs,
             "video": assistant.playable_video(recording),
             # The office's starter questions for an empty chat; none by default.
             "starters": settings_store.lines_of("chat_starters"),
@@ -383,8 +415,14 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
             status=409,
         )
     wanted = _body(request)
+    # A Cue accepted carries its own time and line.
+    cue = None
+    if wanted.get("cue"):
+        cue = Cue.objects.filter(pk=wanted["cue"], transcript=transcript).first()
+        if cue is None:
+            return JsonResponse({"error": "no such suggestion"}, status=404)
     try:
-        at = float(wanted.get("at", ""))
+        at = float(cue.at if cue is not None else wanted.get("at", ""))
     except (TypeError, ValueError):
         return JsonResponse({"error": "a time is needed"}, status=400)
     length = float(recording.duration_seconds or 0.0)
@@ -396,6 +434,9 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
         ).first()
     source = Moment.CUE if wanted.get("source") == Moment.CUE else Moment.ASKED
     question = str(wanted.get("question", "")).strip()[:500]
+    if cue is not None:
+        source = Moment.CUE
+        segment = cue.segment
     if (
         not question
         and transcript.moments.filter(
@@ -413,11 +454,71 @@ def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
         at=at,
         source=source,
         question=question,
-        cue_text=str(wanted.get("cue", ""))[:80] if source == Moment.CUE else "",
+        cue_text=cue.reason[:80] if cue is not None else "",
         asked_by=request.user,
     )
+    if cue is not None:
+        cue.state = Cue.ACCEPTED
+        cue.save(update_fields=["state"])
     tasks.describe_moment.defer(moment_id=str(moment.pk))
     return JsonResponse({"id": str(moment.pk)})
+
+
+@login_required
+@require_POST
+def find_moments(request: HttpRequest, recording_id) -> JsonResponse:
+    """Find moments: one run per finder the office has on."""
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if not assistant.features()["moments"]:
+        return JsonResponse({"error": "Moments are off"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=409)
+    if not assistant.playable_video(recording):
+        return JsonResponse(
+            {"error": "the video is still being prepared, or this is sound only"},
+            status=409,
+        )
+    if transcript.cue_runs.filter(
+        state__in=(assistant.QUEUED, assistant.RUNNING)
+    ).exists():
+        return JsonResponse({"error": "a search is already in progress"}, status=409)
+    wanted_finders = []
+    if settings_store.get("moment_finder_transcript"):
+        wanted_finders.append(CueRun.TRANSCRIPT)
+    if settings_store.get("moment_finder_media"):
+        wanted_finders.append(CueRun.MEDIA)
+    if not wanted_finders:
+        return JsonResponse({"error": "every finder is off"}, status=409)
+    cases.used(recording, by=request.user)
+    ids = []
+    for source in wanted_finders:
+        run = CueRun.objects.create(
+            transcript=transcript, source=source, asked_by=request.user
+        )
+        if source == CueRun.TRANSCRIPT:
+            tasks.find_moments.defer(run_id=str(run.pk))
+        else:
+            tasks.scan_for_moments.defer(run_id=str(run.pk))
+        ids.append(str(run.pk))
+    return JsonResponse({"ids": ids})
+
+
+@login_required
+@require_POST
+def dismiss_cue(request: HttpRequest, cue_id) -> JsonResponse:
+    """A suggestion not wanted: it goes from the list and the row, and stays gone."""
+    cue = get_object_or_404(
+        Cue.objects.select_related("transcript", "transcript__recording"), pk=cue_id
+    )
+    recording = _recording(request, cue.transcript.recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    cue.state = Cue.DISMISSED
+    cue.save(update_fields=["state"])
+    return JsonResponse({"ok": True})
 
 
 @login_required

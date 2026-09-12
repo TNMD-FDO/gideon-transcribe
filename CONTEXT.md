@@ -354,14 +354,18 @@ A model's description of what the camera showed at one chosen time of a video Re
 _Avoid_: frame, snapshot, scene, screenshot
 
 **Cue**:
-A Transcript line whose words point at something the camera saw ("look at that", "there's the"), marked as a suggested Moment. Found by pattern and never stored; nothing runs until a person accepts it.
-_Avoid_: trigger, keyword, hit
+A suggested Moment: a time, and the Transcript line it belongs to when it has one, where the picture would tell what the words cannot, with a reason, how sure the finder was, and where it came from (the words, the picture, or the sound). Found by a finder when a person presses Find moments, never by a word list; stored; pending until a person accepts it (it becomes a Moment) or dismisses it.
+_Avoid_: trigger, keyword, hit, phrase
+
+**Finder**:
+One of the two ways Cues are found: the engine reading the whole Transcript for the lines worth seeing, or ffmpeg scanning the picture for sharp changes and the sound for raised voices. Each has its own switch; neither runs by itself.
+_Avoid_: detector, classifier
 
 **Camera line**:
 How a Moment appears among Transcript lines: marked Camera, in italic, in the viewer, in the exports, and in what the AI assistant is told. A Camera line is never a Segment.
 
 **Prompt template**:
-An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, the Moment instructions, and every Summary template. Each carries a version.
+An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, the Moment and Find moments instructions, and every Summary template. Each carries a version.
 
 **AI notice**:
 The admin-set wording shown at the top of every Summary and Chat and printed on their exports, saying the text is AI-generated and unverified.

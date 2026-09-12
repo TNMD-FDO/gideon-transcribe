@@ -452,8 +452,12 @@
             </div>
             <p class="muted small" style="margin: 4px 0 0">A short clip around the time is shown to the assistant, which describes what is visible. Its words are a description of the picture, never the transcript. The camera button on any line does the same for that line.</p>
             <div id="moment-list" class="assistant-list"></div>
-            <h3 class="small" style="margin: 14px 0 2px">Suggested moments</h3>
-            <p class="muted small" style="margin: 0 0 4px">Lines where someone points at something. Nothing is described until you ask.</p>
+            <div class="row" style="margin: 14px 0 2px; align-items: center">
+              <h3 class="small grow" style="margin: 0">Suggested moments</h3>
+              <button type="button" class="small" id="find-moments">Find moments</button>
+            </div>
+            <p class="muted small" style="margin: 0 0 4px">Find moments reads the transcript for the lines where the picture would add a fact, and, when your office has it on, scans the picture and sound. Nothing is described until you ask.</p>
+            <p class="muted small" id="find-said" style="margin: 0 0 4px"></p>
             <ul id="cue-list" class="suggestions"></ul>
           </div>
         {% endif %}

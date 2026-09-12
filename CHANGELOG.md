@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.40.0, 2026-09-11
+
+```
+Models: unchanged
+Database: migrates (0037, Cues and their runs)
+```
+
+### Added
+
+- **Find moments**, in the Moments tab (Phase 4, chapter 3). One press reads
+  the whole transcript once and suggests the lines where the picture would
+  add a fact, each with a reason: an object named or handled, a command
+  that implies an action, an action narrated, a pointing phrase, a sudden
+  change. Ordinary talk that happens to use such words is passed over,
+  because the engine reads the context. With the second finder on, the
+  picture and sound are scanned as well, without the engine: sharp changes
+  of picture and raised voices or a bang. Each suggestion shows its time,
+  kind, reason and source, with Describe and Dismiss; the reason rides on
+  the Camera? pill. Nine settings, the Find moments template, the audit
+  feature `moment_finder` and the row "Picture and sound scanned".
+
+### Removed
+
+- **The word-list cues** of v1.38.0. On the office's footage they flagged
+  "what was that" and "on the ground" in ordinary talk far more often than
+  a pointer at evidence; the maintainer: "too much general conversation".
+
 ## v1.39.0, 2026-09-11
 
 ```

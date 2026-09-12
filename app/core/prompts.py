@@ -635,88 +635,118 @@ def camera_lines(moments) -> str:
     return CAMERA_HEADING + "\n" + "\n".join(said)
 
 
-# Cues, found before anyone asks (Phase 4) ---------------------------------------------
+# The finder (Phase 4, chapter 3) ----------------------------------------------------
 #
-# A Cue is a line whose words point at something the camera saw: "look at
-# that", "there's the". The list is the app's, in English and the Spanish the
-# office's calls carry; a line is a Cue when it holds any phrase whole. Found
-# by a pattern over the lines, never stored, so it costs nothing to change.
-CUES = (
-    "look at that",
-    "look at this",
-    "look at him",
-    "look at her",
-    "look what",
-    "there's the",
-    "there is the",
-    "there it is",
-    "there they are",
-    "see this",
-    "see that",
-    "you see that",
-    "what is that",
-    "what's that",
-    "what is this",
-    "what's this",
-    "that right there",
-    "right there",
-    "right here",
-    "put that down",
-    "drop it",
-    "drop the",
-    "show me",
-    "is that a",
-    "is this a",
-    "what's in",
-    "what is in",
-    "hands where",
-    "show me your hands",
-    "step out",
-    "get out of the",
-    "on the ground",
-    "he's got a",
-    "she's got a",
-    "in his hand",
-    "in her hand",
-    "in his pocket",
-    "in her pocket",
-    "over there",
-    "check the",
-    "open the",
-    "mira eso",
-    "mira esto",
-    "ahi esta",
-    "ahí está",
-    "que es eso",
-    "qué es eso",
-    "ensename",
-    "enséñame",
-    "las manos",
+# A Cue is a line where the picture would tell what the words cannot. A word
+# list cannot tell "look at that bag" from "what was that noise", so the
+# finder is one read of the whole Transcript by the engine, asked for lines
+# worth seeing and why, in a fixed shape the app checks line by line.
+FINDER = (
+    "You are reading the transcript of a video recording, a body-worn camera "
+    "or a fixed camera. Find the lines where seeing the picture at that time "
+    "would add a fact the words do not carry: an object named, handled, "
+    "shown, or found (a bag, a phone, a weapon, money, keys, a document, a "
+    "container); a command that implies an action (hands out of the window, "
+    "step out, on the ground); narration of an action (he is reaching down, "
+    "she dropped it, they are running); a pointing phrase with something in "
+    "view (look at that, there it is); or a sudden change (shouting, a "
+    "struggle, a crash, a door). Ordinary talk that happens to use such words "
+    "is not a moment: what was that about a sound, on the ground in a story, "
+    "look as a filler, a thing merely mentioned. Choose only lines where the "
+    "picture at that time is worth a person's look. Give each its line "
+    "number, its kind, one short reason in plain words that names the thing "
+    "or the action, and how sure you are. Fewer, better lines beat many."
 )
-CUE = re.compile(
-    r"(?<![\w'])(?:" + "|".join(re.escape(phrase) for phrase in CUES) + r")(?![\w'])",
-    re.IGNORECASE,
+FINDER_FORMAT = (
+    "Answer with the JSON asked for: the lines most worth seeing first, none "
+    "for a line that merely mentions a thing, and never more entries than the "
+    "list allows."
 )
+FINDER_CAP = 1500
+
+CUE_KINDS = ("object", "command", "action", "pointing", "change")
+CONFIDENCE = ("high", "medium", "low")
+
+FINDER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cues": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "line": {"type": "integer"},
+                    "kind": {"type": "string", "enum": list(CUE_KINDS)},
+                    "reason": {"type": "string", "maxLength": 120},
+                    "confidence": {"type": "string", "enum": list(CONFIDENCE)},
+                },
+                "required": ["line", "kind", "reason", "confidence"],
+            },
+        }
+    },
+    "required": ["cues"],
+}
 
 
-def cues_in(lines: list[Line], limit: int = 60) -> list[dict]:
-    """The lines that carry a cue phrase, the first `limit`, oldest first."""
-    found = []
-    for line in lines:
-        match = CUE.search(line.text.replace("\u2019", "'"))
-        if match is None:
+def finder_schema(most: int) -> dict:
+    """The schema with the array bounded to the office's most-suggestions setting."""
+    import copy
+
+    schema = copy.deepcopy(FINDER_SCHEMA)
+    schema["properties"]["cues"]["maxItems"] = max(1, int(most))
+    return schema
+
+
+def finder_input(most: int) -> str:
+    return (
+        f"List at most {int(most)} lines. Refer to a line by the number in "
+        "square brackets at its start."
+    )
+
+
+def keep_cues(raw: list, lines: list[Line], least: str, most: int) -> list[dict]:
+    """The finder's answer checked line by line: real lines, sure enough, once each.
+
+    Ordered surest first and then by time, and cut to the most allowed.
+    """
+    rank = {name: n for n, name in enumerate(CONFIDENCE)}
+    floor = rank.get(least, rank["medium"])
+    by_number = {line.number: line for line in lines}
+    kept: list[dict] = []
+    seen: set[int] = set()
+    for one in raw:
+        if not isinstance(one, dict):
             continue
-        found.append(
+        try:
+            number = int(one.get("line"))
+        except (TypeError, ValueError):
+            continue
+        line = by_number.get(number)
+        kind = str(one.get("kind", "")).strip().lower()
+        confidence = str(one.get("confidence", "")).strip().lower()
+        reason = " ".join(str(one.get("reason", "")).split())[:120]
+        if (
+            line is None
+            or number in seen
+            or kind not in CUE_KINDS
+            or confidence not in rank
+            or rank[confidence] > floor
+            or not reason
+        ):
+            continue
+        seen.add(number)
+        kept.append(
             {
                 "segment_id": line.segment_id,
                 "start": line.start,
-                "line": line.number,
-                "phrase": match.group(0),
+                "line": number,
+                "kind": kind,
+                "reason": reason,
+                "confidence": confidence,
             }
         )
-        if len(found) >= limit:
-            break
-    return found
+    kept.sort(key=lambda one: (rank[one["confidence"]], one["start"]))
+    return kept[: max(1, int(most))]
 
 
 def history_that_fits(

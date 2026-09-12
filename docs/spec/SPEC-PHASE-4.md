@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`, and its second chapter in `v1.39.0`.
+The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, and its third in `v1.40.0`.
 
 ## About this document
 
@@ -16,14 +16,16 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **Cues**: the Transcript lines whose words point at something, marked as suggested Moments, described only when a person asks.
 - **The engine's priority**: every request the app sends the engine carries a priority, as the shared server's ledger asks of a client.
 - **Questions and clips** (chapter 2, v1.39.0): a Moment answers a question about the picture from a few close frames, in a fixed shape that says what is visible, what it is consistent with, and what cannot be told; descriptions are brief unless the office chooses full; and a Moment becomes a Clip with its words as the note and as a caption.
+- **The finders** (chapter 3, v1.40.0): Find moments reads the whole Transcript once and suggests the lines where the picture would add a fact, each with its reason, and, when the office turns it on, scans the picture and sound for sharp changes and raised voices; the word list of chapter 1 is withdrawn.
 
-It adds ten admin settings, one prompt template, one audit row's feature and two Viewer-edit rows, one reason class, one table (migrations 0035 and 0036), and no environment key.
+It adds nineteen admin settings, two prompt templates, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0037), and no environment key.
 
 ## Contents
 
 1. Moments
 2. Questions, clearer words, and clips
-3. Deferred and ruled out
+3. The finders
+4. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -63,7 +65,7 @@ On a video Recording with a Transcript, while Moments is On:
 
 ### Cues
 
-A Cue is found by a fixed list of phrases matched whole in a line's words, in English and the Spanish the office's calls carry ("look at that", "there's the", "right there", "put that down", "show me your hands", "in his hand", "mira eso", "ahí está", and the rest of `prompts.CUES`), with a curly apostrophe read as a straight one. The list is the app's, not a setting, so it costs nothing to change and never varies between offices. Cues are computed when the viewer asks for the assistant's state and never stored: a Cue disappears from the suggestions the moment its line carries a Moment that has not failed, and the first sixty are listed.
+**Withdrawn in v1.40.0 and replaced by chapter 3.** As built in v1.38.0, a Cue was found by a fixed list of phrases matched whole in a line's words and never stored. On the office's own footage the list flagged ordinary talk far more often than a pointer at evidence ("what was that" about a sound, "on the ground" in a story), because whether a line points at something is a matter of context, which a word list cannot read. Chapter 3 finds Cues by reading, listening, and watching, stores them, and lets a person dismiss one.
 
 ### Exports and the assistant
 
@@ -154,7 +156,56 @@ Three more on the AI assistant page, greyed while Moments is Off: **Moment style
 - The spread of the frames' times (`assistant.question_times`), and the JPEG quality (`media.grab_frames`, q 3).
 - The caption's length inside a Clip (`clip_work.CAMERA_CAPTION_SECONDS`, four seconds).
 
-## 3. Deferred and ruled out
+## 3. The finders
+
+Written 2026-09-11 after the first day of Moments on the office's footage. The maintainer: "there's too much general conversation that includes things like 'what was that', 'on the ground'"; the answer is a finder that reads context, and a second that needs no words at all. Built in v1.40.0.
+
+### Principles
+
+1. **Context, not words.** A line is a Cue because the picture at that time would add a fact worth a person's look, judged from the whole Transcript by the engine, never because a phrase occurs.
+2. **Still on request.** Find moments is one press; nothing is read, scanned, or described by itself. A Cue is an invitation until a person accepts it, and a person may dismiss one for good.
+3. **Two finders, each with a switch.** The one that reads the words is On by default and costs one engine call per press. The one that scans the picture and sound uses no engine and runs on the media worker, Off by default until an office has judged it, since a body camera that swings about finds its own changes.
+4. **A reason on every suggestion.** Each Cue says why, in a few words, and where it came from, so a person can decide without opening it.
+
+### Words
+
+A **Cue** as `CONTEXT.md` now defines it: a stored suggestion with a time, the line it belongs to when it has one, a kind (object, command, action, pointing, change), a reason, how sure the finder was, and its source (the words, the picture, or the sound). A **finder** is one of the two ways Cues are found. A Cue is **pending** until accepted (it becomes a Moment) or **dismissed**.
+
+### Find moments from the words
+
+- **The call.** One read of the whole Transcript: the Ground rules, the **Find moments** prompt template (editable), and the app's format line; the user message is the nature line, the rendered Transcript, and "List at most N lines", N being **Most suggested moments**. Structured output in a fixed schema (line number, kind, reason of at most 120 characters, confidence), the array bounded to N, deterministic sampling as Suggest names uses, one retry on invalid JSON, `llm_bad_output` after two. The answer cap is **Find moments answer cap**, the time limit **Find moments time limit**, doubled while the model may think.
+- **The check.** Every entry is held to the Transcript: the line must exist, the kind and confidence must be from the lists, the reason must not be empty, a line is kept once, entries below **Least sure suggestion kept** are dropped, and the rest are ordered surest first and cut to N. The pending Cues from the words are replaced whole on every press; accepted and dismissed ones stay as they are.
+- **The audit row** is "AI assistant call" with feature `moment_finder` and how many were kept; never a reason.
+
+### Find moments from the picture and sound
+
+- **The picture.** ffmpeg reads the Playback copy once at a small size and reports every frame that differs from the one before by more than **Picture change threshold** (a fraction of the picture; 40 percent by default).
+- **The sound.** ffmpeg reads the sound once in one-second windows and reports each second's level; a second is loud when it sits **Loudness rise** (12 dB by default) above the recording's median level. Fewer than five seconds of level, and nothing is reported.
+- **The thinning.** Times closer together than **Gap between scanned moments** (15 s) become one, first the picture's, then the sound's, then the two together; more than **Most suggested moments** are spread evenly over the recording rather than taken from its start. Each becomes a Cue of kind change, source picture or sound, with the fixed reason "The picture changes sharply here" or "Raised voices or a bang here", on the row nearest its time.
+- **Where it runs.** On the media worker, as a Clip render does: not a Job, no place in the line, no Workspace clock. A long recording takes a few minutes. The one audit row is "Picture and sound scanned" under Recordings, with the counts.
+
+### The viewer
+
+- The Moments tab's **Suggested moments** gains **Find moments**, a status line ("Reading the transcript...", "Scanning the picture and sound...", "Nothing in the words calls for a look."), and a list where each Cue shows its time, its kind as a pill, its reason, how sure and where from, with **Describe** and **Dismiss**. A **Camera?** pill on the Cue's row carries the reason as its title. The Describe this moment and camera buttons are unchanged.
+- Accepting a Cue makes a Moment at the Cue's time and line, from the cue, its reason kept as the Moment's cue text; the Cue is marked accepted and leaves the list. Dismiss marks it dismissed and it never returns from that press's results; the next Find moments may find the line again.
+
+### Settings
+
+Nine on the AI assistant page, greyed while Moments is Off: **Find moments from the words** (On), **Find moments from the picture and sound** (Off), **Most suggested moments** (12), **Least sure suggestion kept** (medium), **Find moments answer cap** (1,500 tokens), **Find moments time limit** (180 s); and, greyed while the second finder is Off, **Picture change threshold** (40 percent), **Loudness rise** (12 dB), **Gap between scanned moments** (15 s). The **Find moments** prompt template joins the Templates page.
+
+### Not in this phase
+
+- A finder that runs at transcription time or on a timer.
+- A learned finder, or one that reads the office's past accepts and dismisses.
+- A sound classifier (a siren, a shot, a dog): the loudness scan is the honest first step; a model for sounds is a research note first.
+
+### Left to the build
+
+- The scan's ffmpeg arguments (`moment_scan.scene_changes`, `moment_scan.loud_seconds`), the small size the picture is read at (320 wide), and the one-second window.
+- The reasons the scan writes, fixed words rather than the engine's.
+- The check's rules (`prompts.keep_cues`).
+
+## 4. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
@@ -166,6 +217,8 @@ Three more on the AI assistant page, greyed while Moments is Off: **Moment style
 | Category | Row | Chapter |
 |---|---|---|
 | LLM | AI assistant call, feature `moment` | Moments |
+| LLM | AI assistant call, feature `moment_finder` | The finders |
+| Recordings | Picture and sound scanned | The finders |
 | Viewer edits | Moment edited; Moment deleted | Moments |
 
 ## Appendix B. Settings added in Phase 4
@@ -182,6 +235,16 @@ Three more on the AI assistant page, greyed while Moments is Off: **Moment style
 | Moment style | AI assistant | brief or full; greyed while Moments is Off | brief |
 | Look closer frame height | AI assistant | pixels, 360 to 1,080; greyed while Moments is Off | 720 |
 | Look closer frames | AI assistant | 1 to 5; greyed while Moments is Off | 3 |
+| Find moments from the words | AI assistant | On or Off; greyed while Moments is Off | On |
+| Find moments from the picture and sound | AI assistant | On or Off; greyed while Moments is Off | Off |
+| Most suggested moments | AI assistant | 3 to 40; greyed while Moments is Off | 12 |
+| Least sure suggestion kept | AI assistant | high, medium, or low; greyed while Moments is Off | medium |
+| Find moments answer cap | AI assistant | tokens, 200 to 8,000; greyed while Moments is Off | 1,500 |
+| Find moments time limit | AI assistant | seconds, 30 to 3,600; greyed while Moments is Off | 180 |
+| Picture change threshold | AI assistant | percent, 10 to 90; greyed while the picture and sound finder is Off | 40 |
+| Loudness rise | AI assistant | dB, 3 to 30; greyed while the picture and sound finder is Off | 12 |
+| Gap between scanned moments | AI assistant | seconds, 5 to 120; greyed while the picture and sound finder is Off | 15 |
+| Find moments (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 | Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 
 ## Sources
@@ -191,3 +254,4 @@ The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-
 ## Amendments applied
 
 - From the maintainer, on the v1.38.0 build, chapter 2 (v1.39.0): questions answered from close frames in a fixed shape, the brief style as the default with the answer cap at 250, and Moment to Clip with Camera captions.
+- From the maintainer, on the v1.39.0 build, chapter 3 (v1.40.0): the word-list Cues withdrawn for flagging ordinary talk; the finder that reads the Transcript and the scan of the picture and sound, each with its switch and its numbers; Cues stored, with a reason, and dismissable.

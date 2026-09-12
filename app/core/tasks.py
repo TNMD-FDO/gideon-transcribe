@@ -320,6 +320,22 @@ def describe_moment(moment_id: str) -> None:
     assistant.describe_moment(moment_id)
 
 
+@app.task(queue="llm", name="find_moments")
+def find_moments(run_id: str) -> None:
+    """One read of the whole Transcript for the lines worth seeing."""
+    from core import assistant
+
+    assistant.find_moments(run_id)
+
+
+@app.task(queue="media", name="scan_for_moments")
+def scan_for_moments(run_id: str) -> None:
+    """The picture and sound scanned for moments, on the media worker, never a Job."""
+    from core import moment_scan
+
+    moment_scan.scan_for_moments(run_id)
+
+
 @app.periodic(cron="30 3 * * *")
 @app.task(queue="default", name="retention_sweep")
 def retention_sweep(timestamp: int) -> None:

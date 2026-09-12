@@ -64,12 +64,14 @@ class PromptTemplate(models.Model):
     GROUND_RULES, CHAT, SUGGESTIONS = "ground_rules", "chat", "suggestions"
     CASE_CHAT = "case_chat"
     MOMENT = "moment"
+    FINDER = "finder"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
         SUGGESTIONS: ("Speaker suggestions", prompts.SUGGESTIONS),
         CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
         MOMENT: ("Moment", prompts.MOMENT),
+        FINDER: ("Find moments", prompts.FINDER),
     }
 
     key = models.CharField(max_length=30, unique=True)
@@ -449,6 +451,60 @@ class Moment(models.Model):
     @property
     def is_question(self) -> bool:
         return bool((self.question or "").strip())
+
+
+class Cue(models.Model):
+    """A line, or a second, where the picture would tell what the words cannot.
+
+    Found by the finder reading the Transcript, or by the scan of the picture
+    and sound; never by a word list. Nothing is described until a person
+    accepts one. The reason is content: shown on the pill, never logged.
+    """
+
+    TRANSCRIPT, PICTURE, SOUND = "transcript", "picture", "sound"
+    PENDING, ACCEPTED, DISMISSED = "pending", "accepted", "dismissed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="cues"
+    )
+    segment = models.ForeignKey(
+        "core.Segment", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    at = models.FloatField()
+    line = models.IntegerField(default=0)
+    kind = models.CharField(max_length=12, default="change")
+    reason = models.CharField(max_length=120, blank=True, default="")
+    confidence = models.CharField(max_length=8, default="medium")
+    source = models.CharField(max_length=12, default=TRANSCRIPT)
+    state = models.CharField(max_length=10, default=PENDING)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["at", "created"]
+
+
+class CueRun(models.Model):
+    """One Find moments press, per finder: what it is doing, so the tab can wait."""
+
+    TRANSCRIPT, MEDIA = "transcript", "media"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="cue_runs"
+    )
+    source = models.CharField(max_length=12, default=TRANSCRIPT)
+    asked_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
+    reason_class = models.CharField(max_length=40, blank=True, default="")
+    found = models.IntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created"]
 
 
 # What is on and what is reachable ----------------------------------------------
@@ -1021,6 +1077,121 @@ def describe_moment(moment_id) -> None:
             clip.unlink(missing_ok=True)
         if stills is not None:
             shutil.rmtree(stills, ignore_errors=True)
+
+
+def find_moments(run_id) -> None:
+    """One read of the whole Transcript, replacing every pending Cue from the words."""
+    run = (
+        CueRun.objects.filter(pk=run_id)
+        .select_related("transcript", "transcript__recording")
+        .first()
+    )
+    if run is None:
+        return
+    transcript = run.transcript
+    recording = transcript.recording
+    started = time.monotonic()
+    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
+    template = PromptTemplate.named(PromptTemplate.FINDER)
+    templates_line = f"ground-rules v{ground.version}; Find moments v{template.version}"
+    run.state = RUNNING
+    run.save(update_fields=["state"])
+
+    usage: dict = {}
+    try:
+        problem = _unreachable()
+        if problem:
+            raise problem
+        lines = prompts.lines_of(transcript)
+        if not lines:
+            raise engine.Problem(engine.ERROR, "there are no lines to read")
+        most = settings_store.moment_finder_most()
+        system = prompts.system_message(
+            ground.text, template.text, prompts.FINDER_FORMAT
+        )
+        user = "\n\n".join(
+            [
+                prompts.nature_line(recording, transcript),
+                prompts.render(lines),
+                prompts.finder_input(most),
+            ]
+        )
+        finder_cap = settings_store.moment_finder_cap()
+        if not prompts.fits(system, user, answer_cap=cap(finder_cap), window=window()):
+            raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
+
+        raw = None
+        for attempt in (1, 2):
+            answer = engine.complete(
+                _messages(system, user),
+                max_completion_tokens=cap(finder_cap),
+                thinking=thinking(),
+                timeout=time_limit("moment_finder"),
+                schema=prompts.finder_schema(most),
+                **SUGGESTION_SAMPLING,
+            )
+            usage = answer
+            try:
+                try:
+                    parsed = json.loads(answer["text"])
+                except ValueError:
+                    parsed = json.loads(prompts.salvage_json(answer["text"]))
+                raw = parsed.get("cues", [])
+                if not isinstance(raw, list):
+                    raise ValueError("not a list")
+                break
+            except (ValueError, AttributeError) as bad:
+                if attempt == 2:
+                    raise engine.Problem(
+                        engine.BAD_OUTPUT, "invalid finder JSON twice"
+                    ) from bad
+        kept = prompts.keep_cues(
+            raw or [], lines, settings_store.moment_finder_confidence(), most
+        )
+        transcript.cues.filter(source=Cue.TRANSCRIPT, state=Cue.PENDING).delete()
+        for one in kept:
+            Cue.objects.create(
+                transcript=transcript,
+                segment_id=one["segment_id"],
+                at=one["start"],
+                line=one["line"],
+                kind=one["kind"],
+                reason=one["reason"],
+                confidence=one["confidence"],
+                source=Cue.TRANSCRIPT,
+            )
+        run.found = len(kept)
+        run.state = DONE
+        run.reason_class = ""
+        run.finished_at = timezone.now()
+        run.save()
+        _record(
+            "moment_finder",
+            recording,
+            actor=run.asked_by,
+            templates=templates_line,
+            model=answer["model"],
+            usage=usage,
+            started=started,
+            outcome="ok",
+            found=len(kept),
+        )
+    except engine.Problem as problem:
+        run.state = FAILED
+        run.reason_class = problem.reason
+        run.finished_at = timezone.now()
+        run.save(update_fields=["state", "reason_class", "finished_at"])
+        _record(
+            "moment_finder",
+            recording,
+            actor=run.asked_by,
+            templates=templates_line,
+            model="",
+            usage=usage,
+            started=started,
+            outcome=problem.reason,
+            reason=problem.reason,
+        )
 
 
 def unnamed_speakers(transcript) -> list[str]:

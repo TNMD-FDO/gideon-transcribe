@@ -149,6 +149,12 @@ urlpatterns = [
         name="new-moment",
     ),
     path(
+        "recording/<uuid:recording_id>/find-moments",
+        assistant_pages.find_moments,
+        name="find-moments",
+    ),
+    path("cue/<uuid:cue_id>/dismiss", assistant_pages.dismiss_cue, name="dismiss-cue"),
+    path(
         "moment/<uuid:moment_id>/again",
         assistant_pages.moment_again,
         name="moment-again",

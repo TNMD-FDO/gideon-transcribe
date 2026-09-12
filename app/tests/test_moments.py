@@ -47,24 +47,69 @@ def a_line(number, start, speaker, text, segment_id=None):
 # Without a database ------------------------------------------------------------------
 
 
-def test_cues_are_found_on_lines_that_point_at_something():
+def test_the_finders_answer_is_checked_line_by_line():
     lines = [
         a_line(1, 0.0, "Speaker 1", "This is Detective Ruiz."),
         a_line(2, 12.4, "Speaker 2", "Look at that, right there in the console."),
         a_line(3, 30.0, "Speaker 1", "Tell me about the car."),
-        a_line(4, 44.0, "Speaker 2", "Mira eso, ahí está."),
-        a_line(5, 50.0, "Speaker 1", "He looked at the paperwork."),
     ]
-    found = prompts.cues_in(lines)
-    assert [(one["line"], one["phrase"].lower()) for one in found] == [
-        (2, "look at that"),
-        (4, "mira eso"),
+    raw = [
+        {
+            "line": 2,
+            "kind": "pointing",
+            "reason": "a bag in the console",
+            "confidence": "high",
+        },
+        {"line": 2, "kind": "object", "reason": "again", "confidence": "high"},
+        {"line": 3, "kind": "action", "reason": "  too   unsure ", "confidence": "low"},
+        {"line": 9, "kind": "object", "reason": "no such line", "confidence": "high"},
+        {"line": 1, "kind": "sermon", "reason": "no such kind", "confidence": "high"},
+        {"line": 1, "kind": "command", "reason": "", "confidence": "medium"},
+        "not a dict",
     ]
-    assert found[0]["segment_id"] == 2 and found[0]["start"] == 12.4
-    assert prompts.cues_in(lines, limit=1) == found[:1]
-    # A curly apostrophe reads as a straight one.
-    curly = [a_line(1, 1.0, "", "There’s the bag he dropped.")]
-    assert prompts.cues_in(curly)[0]["phrase"].lower() == "there's the"
+    kept = prompts.keep_cues(raw, lines, "medium", 10)
+    assert kept == [
+        {
+            "segment_id": 2,
+            "start": 12.4,
+            "line": 2,
+            "kind": "pointing",
+            "reason": "a bag in the console",
+            "confidence": "high",
+        }
+    ]
+    # Lower the floor and the unsure one comes in, after the surer, with its
+    # spaces tidied; the most allowed cuts the list.
+    assert [one["line"] for one in prompts.keep_cues(raw, lines, "low", 10)] == [2, 3]
+    assert prompts.keep_cues(raw, lines, "low", 10)[1]["reason"] == "too unsure"
+    assert len(prompts.keep_cues(raw, lines, "low", 1)) == 1
+    assert prompts.finder_schema(5)["properties"]["cues"]["maxItems"] == 5
+
+
+def test_the_scan_reads_ffmpeg_and_thins_what_it_finds():
+    from core import moment_scan
+
+    printed = "\n".join(
+        [
+            "frame:0 pts:0 pts_time:0",
+            "lavfi.astats.Overall.RMS_level=-30.0",
+            "frame:1 pts:16000 pts_time:1",
+            "lavfi.astats.Overall.RMS_level=-29.5",
+            "frame:2 pts:32000 pts_time:2",
+            "lavfi.astats.Overall.RMS_level=-31.0",
+            "frame:3 pts:48000 pts_time:3",
+            "lavfi.astats.Overall.RMS_level=-12.0",
+            "frame:4 pts:64000 pts_time:4",
+            "lavfi.astats.Overall.RMS_level=-11.0",
+            "frame:5 pts:80000 pts_time:5",
+            "lavfi.astats.Overall.RMS_level=-inf",
+            "frame:6 pts:96000 pts_time:6",
+            "lavfi.astats.Overall.RMS_level=-30.5",
+        ]
+    )
+    assert moment_scan.loud_from(printed, 12.0) == [3.0, 4.0]
+    assert moment_scan.loud_from("nothing", 12.0) == []
+    assert moment_scan.thin([3.0, 4.0, 40.0, 41.0, 70.0], 15.0) == [3.0, 40.0, 70.0]
 
 
 def test_a_clips_cost_is_estimated_by_its_frames_and_its_height():
@@ -369,30 +414,41 @@ def test_a_moment_never_thinks_even_when_the_office_lets_the_model_think(
 def test_the_state_lists_cues_and_a_moment_being_described_keeps_the_page_busy(
     ready, person, client, monkeypatch
 ):
+    from core.assistant import Cue
+
     swallow_defer(monkeypatch)
     signed_in(client, person)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["moments"] == [] and state["busy"] is False
-    (cue,) = state["cues"]
-    assert cue["line"] == 2 and cue["phrase"].lower() == "look at that"
-    assert cue["segment_id"] == str(segment_at(ready, 12.4).pk)
-    assert cue["clock"] == "00:00:12"
+    assert state["moments"] == [] and state["cues"] == [] and state["busy"] is False
+    assert state["cue_runs"]["finders"] == {"transcript": True, "media": False}
 
+    segment = segment_at(ready, 12.4)
+    cue = Cue.objects.create(
+        transcript=ready.transcript,
+        segment=segment,
+        at=12.4,
+        line=2,
+        kind="pointing",
+        reason="a bag in the console",
+        confidence="high",
+    )
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    (listed,) = state["cues"]
+    assert listed["id"] == str(cue.pk) and listed["reason"] == "a bag in the console"
+    assert listed["segment_id"] == str(segment.pk) and listed["clock"] == "00:00:12"
+
+    # Accepting a Cue makes a Moment at its time and line, from the cue.
     answer = client.post(
         f"/recording/{ready.pk}/moments",
-        data=json.dumps(
-            {
-                "at": 12.4,
-                "segment": cue["segment_id"],
-                "source": "cue",
-                "cue": cue["phrase"],
-            }
-        ),
+        data=json.dumps({"cue": str(cue.pk), "source": "cue"}),
         content_type="application/json",
     )
     assert answer.status_code == 200
     moment = Moment.objects.get(pk=answer.json()["id"])
-    assert moment.source == "cue" and moment.cue_text.lower() == "look at that"
+    assert moment.source == "cue" and moment.cue_text == "a bag in the console"
+    assert moment.at == 12.4 and moment.segment == segment
+    cue.refresh_from_db()
+    assert cue.state == Cue.ACCEPTED
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["busy"] is True and state["cues"] == []
     # The same time again while it runs is refused.
@@ -402,6 +458,108 @@ def test_the_state_lists_cues_and_a_moment_being_described_keeps_the_page_busy(
         content_type="application/json",
     )
     assert again.status_code == 409
+
+    # Dismissing a Cue takes it off the list for good.
+    other = Cue.objects.create(
+        transcript=ready.transcript, at=30.0, reason="a door", confidence="medium"
+    )
+    assert client.post(f"/cue/{other.pk}/dismiss").status_code == 200
+    other.refresh_from_db()
+    assert other.state == Cue.DISMISSED
+    assert client.get(f"/recording/{ready.pk}/assistant").json()["cues"] == []
+
+
+@pytest.mark.django_db
+def test_find_moments_reads_the_transcript_once_and_keeps_what_it_checks(
+    ready, person, client, monkeypatch
+):
+    from core.assistant import Cue, CueRun
+
+    answer_json = json.dumps(
+        {
+            "cues": [
+                {
+                    "line": 2,
+                    "kind": "pointing",
+                    "reason": "something in the console",
+                    "confidence": "high",
+                },
+                {"line": 3, "kind": "object", "reason": "the car", "confidence": "low"},
+            ]
+        }
+    )
+    asked = reachable(monkeypatch, answer_json)
+    from core import tasks
+
+    deferred = []
+    monkeypatch.setattr(
+        tasks.find_moments, "defer", lambda **fields: deferred.append(("text", fields))
+    )
+    monkeypatch.setattr(
+        tasks.scan_for_moments,
+        "defer",
+        lambda **fields: deferred.append(("media", fields)),
+    )
+    signed_in(client, person)
+    answer = client.post(f"/recording/{ready.pk}/find-moments")
+    assert answer.status_code == 200, answer.content
+    assert [kind for kind, _ in deferred] == ["text"]
+    run = CueRun.objects.get(pk=answer.json()["ids"][0])
+    assert run.source == CueRun.TRANSCRIPT and run.state == assistant.QUEUED
+    assert client.post(f"/recording/{ready.pk}/find-moments").status_code == 409
+
+    assistant.find_moments(run.pk)
+    run.refresh_from_db()
+    assert run.state == assistant.DONE and run.found == 1
+    (cue,) = Cue.objects.filter(transcript=ready.transcript)
+    assert cue.line == 2 and cue.reason == "something in the console"
+    assert cue.segment == segment_at(ready, 12.4) and cue.source == Cue.TRANSCRIPT
+    call = asked[0]
+    assert prompts.FINDER in call["messages"][0]["content"]
+    assert (
+        "[2] [00:00:12] Speaker 2: Look at that, right there."
+        in call["messages"][-1]["content"]
+    )
+    assert "List at most 12 lines" in call["messages"][-1]["content"]
+    assert call["schema"]["properties"]["cues"]["maxItems"] == 12
+    assert call["temperature"] == 0.0 and call["timeout"] == 180
+    row = Row.objects.filter(category="llm").latest("at")
+    assert row.details["feature"] == "moment_finder" and row.details["found"] == 1
+    assert "console" not in json.dumps(row.details)
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["transcript"] == {"state": "done", "found": 1, "said": ""}
+
+    # With the media finder on as well, both runs start, and the scan writes
+    # its own Cues from what ffmpeg printed.
+    settings_store.set_to("moment_finder_media", True)
+    deferred.clear()
+    answer = client.post(f"/recording/{ready.pk}/find-moments")
+    assert [kind for kind, _ in deferred] == ["text", "media"]
+    media_run = CueRun.objects.get(source=CueRun.MEDIA)
+    from core import moment_scan
+
+    monkeypatch.setattr(
+        moment_scan,
+        "scene_changes",
+        lambda source, threshold, timeout=0: [5.0, 6.0, 300.0],
+    )
+    monkeypatch.setattr(
+        moment_scan, "loud_seconds", lambda source, rise, timeout=0: [301.0, 730.0]
+    )
+    moment_scan.scan_for_moments(media_run.pk)
+    media_run.refresh_from_db()
+    assert media_run.state == assistant.DONE and media_run.found == 3
+    scanned = list(
+        Cue.objects.filter(source__in=(Cue.PICTURE, Cue.SOUND)).order_by("at")
+    )
+    assert [(one.at, one.source) for one in scanned] == [
+        (5.0, Cue.PICTURE),
+        (300.0, Cue.PICTURE),
+        (730.0, Cue.SOUND),
+    ]
+    assert scanned[2].segment == segment_at(ready, 724.0)
+    row = Row.objects.get(event="Picture and sound scanned")
+    assert row.details["found"] == 3 and row.details["picture_changes"] == 2
 
 
 @pytest.mark.django_db

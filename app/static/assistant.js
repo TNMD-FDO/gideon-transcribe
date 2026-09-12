@@ -20,6 +20,8 @@
   var momentList = document.getElementById("moment-list");
   var cueList = document.getElementById("cue-list");
   var describeNow = document.getElementById("describe-now");
+  var findMoments = document.getElementById("find-moments");
+  var findSaid = document.getElementById("find-said");
 
   var state = null;
   var timer = null;
@@ -361,14 +363,37 @@
       }).join("") : "<p class='muted small'>No moments yet. Press Describe this moment, or the camera button on any line; either can take a question.</p>";
       Array.prototype.forEach.call(momentList.querySelectorAll(".moment-again"), unavailable);
     }
+    if (findMoments) {
+      unavailable(findMoments);
+      var runs = state.cue_runs || {};
+      var running = ["transcript", "media"].some(function (which) {
+        var run = runs[which];
+        return run && (run.state === "queued" || run.state === "running");
+      });
+      if (running) { findMoments.disabled = true; }
+      var lines = [];
+      if (runs.transcript) {
+        if (runs.transcript.state === "queued" || runs.transcript.state === "running") { lines.push("Reading the transcript..."); }
+        else if (runs.transcript.state === "failed") { lines.push(runs.transcript.said); }
+        else if (runs.transcript.state === "done" && !runs.transcript.found) { lines.push("Nothing in the words calls for a look."); }
+      }
+      if (runs.media) {
+        if (runs.media.state === "queued" || runs.media.state === "running") { lines.push("Scanning the picture and sound..."); }
+        else if (runs.media.state === "failed") { lines.push(runs.media.said); }
+      }
+      if (findSaid) { findSaid.textContent = lines.filter(Boolean).join(" "); }
+    }
     if (cueList) {
       var cues = state.cues || [];
       cueList.innerHTML = cues.length ? cues.map(function (one) {
+        var from = one.source === "picture" ? "the picture" : (one.source === "sound" ? "the sound" : "the words");
         return "<li class='suggestion'><span class='grow'>" +
           "<a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
-          "<span class='muted small'>“" + escape(one.phrase) + "”</span></span>" +
-          "<button type='button' class='small accept-cue' data-segment='" + one.segment_id + "' data-at='" + one.start + "' data-cue='" + escape(one.phrase) + "'>Describe</button></li>";
-      }).join("") : "<li class='muted small'>No line points at anything.</li>";
+          "<span class='pill'>" + escape(one.kind) + "</span> " + escape(one.reason) +
+          " <span class='muted small'>(" + escape(one.confidence) + ", from " + from + ")</span></span>" +
+          "<button type='button' class='small accept-cue' data-cue='" + one.id + "'>Describe</button>" +
+          "<button type='button' class='small ghost dismiss-cue' data-cue='" + one.id + "'>Dismiss</button></li>";
+      }).join("") : "<li class='muted small'>No suggestions yet. Press Find moments.</li>";
       Array.prototype.forEach.call(cueList.querySelectorAll(".accept-cue"), unavailable);
     }
     decorateRows();
@@ -407,10 +432,8 @@
       var pill = document.createElement("span");
       pill.className = "pill side cue";
       pill.textContent = "Camera?";
-      pill.title = "\u201C" + one.phrase + "\u201D: describe what the camera shows here";
-      pill.dataset.segment = one.segment_id;
-      pill.dataset.at = one.start;
-      pill.dataset.cue = one.phrase;
+      pill.title = one.reason + ": describe what the camera shows here";
+      pill.dataset.cue = one.id;
       name.parentNode.insertBefore(pill, name.nextSibling);
     });
     (state.moments || []).forEach(function (one) {
@@ -475,13 +498,29 @@
         return;
       }
       if (pill) {
-        describe({ at: parseFloat(pill.dataset.at), segment: pill.dataset.segment, source: "cue", cue: pill.dataset.cue });
+        describe({ cue: pill.dataset.cue, source: "cue" });
         return;
       }
       var accept = event.target.closest("#cue-list .accept-cue");
       if (accept) {
         accept.disabled = true;
-        describe({ at: parseFloat(accept.dataset.at), segment: accept.dataset.segment, source: "cue", cue: accept.dataset.cue });
+        describe({ cue: accept.dataset.cue, source: "cue" });
+        return;
+      }
+      var dismiss = event.target.closest("#cue-list .dismiss-cue");
+      if (dismiss) {
+        dismiss.disabled = true;
+        post("/cue/" + dismiss.dataset.cue + "/dismiss").then(refresh);
+        return;
+      }
+      if (event.target.closest("#find-moments")) {
+        findMoments.disabled = true;
+        post("/recording/" + recording + "/find-moments").then(function (answer) {
+          if (!answer.ok && answer.said && answer.said.error) {
+            UI.toast(answer.said.error, { problem: true, icon: "warning" });
+          }
+          return refresh();
+        });
         return;
       }
       var edit = event.target.closest("#moment-list .edit-moment");
