@@ -266,11 +266,26 @@
         lastTold = now;
         tell({ kind: "window-time", at: player.currentTime, playing: !player.paused });
       }
+      // The scrub bar: dragged, it moves the player; playing, it follows.
+      var scrub = document.getElementById("scrub");
+      var scrubbing = false;
+      if (scrub) {
+        scrub.addEventListener("input", function () {
+          scrubbing = true;
+          var length = player.duration || duration;
+          if (length) { player.currentTime = (parseInt(scrub.value, 10) / 1000) * length; }
+        });
+        scrub.addEventListener("change", function () { scrubbing = false; });
+      }
       player.addEventListener("timeupdate", function () {
         time = player.currentTime;
         playing = !player.paused;
         document.getElementById("clock").textContent =
           clock(player.currentTime) + " / " + clock(player.duration || duration);
+        var length = player.duration || duration;
+        if (scrub && !scrubbing && length) {
+          scrub.value = String(Math.round((player.currentTime / length) * 1000));
+        }
         if (state) { state.textContent = (playing ? "Playing, " : "Paused at ") + clock(time); }
         showNow();
         tellTime();

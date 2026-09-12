@@ -293,8 +293,10 @@
                     </li>
                   {% endfor %}
                 </ul>
+                <span id="cast-count" class="small muted"></span>
                 <button type="button" id="tag-speakers" class="ghost tiny" title="Tag the speakers in a window that follows the recording: a number key names the line being spoken">Tag speakers</button>
                 <button type="button" id="speakers-toggle" class="ghost tiny" title="Hide or show the speaker names on the lines">hide</button>
+                <button type="button" id="cast-toggle" class="ghost tiny" title="Fold the speakers away to one line">fold</button>
               {% else %}
                 <span class="pill">Not diarized</span>
               {% endif %}
@@ -356,10 +358,13 @@
               </div>
             {% endif %}
           </div>
-          <span id="follow-pill" class="pill followpill" hidden>
-            Following paused while you read.
-            <button type="button" id="resume-follow">Resume (F)</button>
-          </span>
+          {# A holder of no height, so the pill's coming and going moves nothing. #}
+          <div class="followhold">
+            <span id="follow-pill" class="pill followpill" hidden>
+              Following paused while you read.
+              <button type="button" id="resume-follow">Resume (F)</button>
+            </span>
+          </div>
           <ol id="transcript" class="transcript"></ol>
         {% else %}
           <div class="jobstate" id="waiting">

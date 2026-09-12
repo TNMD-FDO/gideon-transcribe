@@ -40,6 +40,10 @@ def test_the_stage_wraps_the_picture_the_transport_and_the_line_being_spoken():
         < page.index('id="panels"')
         < page.index('class="panel read" data-panel="transcript"')
     )
+    # The follow pill in a holder of no height; the speakers fold away.
+    assert 'class="followhold"' in page and 'id="cast-toggle"' in page
+    panels = (APP / "templates" / "viewer-panels.html").read_text(encoding="utf-8")
+    assert 'id="download-clips"' in panels
     # The marking strip's three controls.
     for control in ("clip-said", "clip-preview-strip", "clip-save-go", "drop-clip"):
         assert f'id="{control}"' in page
@@ -111,6 +115,14 @@ def test_the_script_asks_the_same_question_as_the_stylesheet():
         "thumb-grip",
     ):
         assert gone not in script, gone
+    # Lost once in the rewrite and not to be lost again: the shortcuts
+    # overlay and the pop-out, which the keyboard handler leans on.
+    assert 'getElementById("shortcuts")' in script and "function shortcuts(" in script
+    assert 'getElementById("open-shortcuts")' in script
+    assert "requestPictureInPicture" in script and "enterpictureinpicture" in script
+    # Follow scrolls only once the line has left the middle of the column.
+    assert "function outOfTheMiddle(" in script
+    assert "outOfTheMiddle(now)" in script
     # Marking never changes the tab: the clip tool opens it only for Save,
     # New clip and Adjust.
     tool = (APP / "static" / "clip-tool.js").read_text(encoding="utf-8")

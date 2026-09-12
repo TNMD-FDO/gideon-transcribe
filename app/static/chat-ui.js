@@ -90,6 +90,7 @@
     var startedAt = {};      // when a running turn was first seen, by turn id
     var pendingSince = 0;    // when the question not yet in the state was sent
     var lastHtml = "";       // what the body holds, so a poll that changes nothing redraws nothing
+    var lastList = "";       // the same for the list of chats
     var ticker = null;
     var followBottom = true;
 
@@ -191,13 +192,17 @@
       var chats = state.chats || [];
       var others = chats.filter(function (one) { return !chat || one.id !== chat.id; });
       listBox.hidden = chats.length < 2 && !others.length;
-      list.innerHTML = chats.map(function (one) {
+      var listHtml = chats.map(function (one) {
         var count = one.turns ? one.turns.length : 0;
         return "<li><button type='button' class='thread" + (chat && one.id === chat.id ? " on" : "") +
           "' data-chat='" + one.id + "'><span class='name'>" + escape(one.name) + "</span>" +
           "<span class='muted tiny'>" + (one.started ? escape(when(one.started)) + " &middot; " : "") +
           count + " question" + (count === 1 ? "" : "s") + "</span></button></li>";
       }).join("");
+      if (listHtml !== lastList) {
+        list.innerHTML = listHtml;
+        lastList = listHtml;
+      }
       var summary = listBox.querySelector("summary");
       summary.textContent = chat ? "Chats (" + chats.length + ")" : "Earlier chats";
     }

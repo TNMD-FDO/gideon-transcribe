@@ -32,6 +32,8 @@
             {% else %}
               <audio id="player" src="{{ media_url }}" preload="metadata"></audio>
             {% endif %}
+            <input type="range" id="scrub" class="scrub" min="0" max="1000" value="0" step="1"
+                   aria-label="Scrub through the recording" title="Drag to move through the recording">
             <div class="transport">
               <button type="button" id="play" class="big">Play</button>
               <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>

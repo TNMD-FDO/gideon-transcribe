@@ -57,7 +57,11 @@
           </div>
 
           <div class="panel" data-panel="clips">
-            <h2 id="clips-heading">Clips of this recording</h2>
+            <div class="row">
+              <h2 id="clips-heading" class="grow">Clips of this recording</h2>
+              <a href="{% url 'download-clips' %}?recording={{ recording.pk }}" class="btn small" id="download-clips" hidden
+                 title="Every ready clip of this recording in one zip, each with its excerpt and captions">{% icon "download" %} Download all</a>
+            </div>
             <div id="clip-list" class="cliplist"></div>
           </div>
         {% endif %}

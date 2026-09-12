@@ -224,6 +224,13 @@
   // The list ------------------------------------------------------------------
 
   function draw(clips) {
+    // Download all, once there is something ready of this recording's own.
+    var downloadAll = document.getElementById("download-clips");
+    if (downloadAll) {
+      downloadAll.hidden = !clips.some(function (one) {
+        return one.here !== false && one.state === "ready";
+      });
+    }
     if (!clips.length) {
       list.innerHTML = "<p class='muted small'>No clips of this recording yet. " +
         "Mark a span with I and O, by typing the times, or by dragging on the " +

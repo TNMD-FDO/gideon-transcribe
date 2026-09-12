@@ -303,7 +303,10 @@
       var now = column ? column.children[index] : null;
       if (now) {
         now.classList.add("here");
-        if (following && !paused && !now.querySelector("textarea")) {
+        // Scrolled to the centre only once it has left the middle of the
+        // column. Centring every new line made a column of short lines
+        // creep and bounce, a glide every second or two.
+        if (following && !paused && !now.querySelector("textarea") && outOfTheMiddle(now)) {
           now.scrollIntoView({ block: "center", behavior: "smooth" });
         }
       }
@@ -344,6 +347,17 @@
     if (!following || paused) { return; }
     paused = true;
     if (pill) { pill.hidden = false; }
+  }
+
+  // Whether a row sits outside the middle band of the column, from about a
+  // fifth of the way down to about three quarters: inside it, reading is
+  // comfortable and nothing moves.
+  function outOfTheMiddle(row) {
+    if (!reading) { return true; }
+    var box = reading.getBoundingClientRect();
+    var seen = row.getBoundingClientRect();
+    if (!box.height) { return false; }
+    return seen.top < box.top + box.height * 0.18 || seen.bottom > box.top + box.height * 0.74;
   }
 
   function lineIsInView() {
@@ -1127,6 +1141,34 @@
     });
   }
 
+  // Fold the speakers away to one line, and remember it: somebody reading
+  // a long transcript wants the words, not the cast, most of the time.
+  var cast = document.getElementById("cast");
+  var castToggle = document.getElementById("cast-toggle");
+  function foldCast(folded) {
+    if (!cast) { return; }
+    cast.classList.toggle("folded", folded);
+    if (castToggle) {
+      castToggle.textContent = folded ? "unfold" : "fold";
+      castToggle.title = folded ? "Show the speakers" : "Fold the speakers away to one line";
+    }
+    var count = document.getElementById("cast-count");
+    if (count) {
+      var n = cast.querySelectorAll(".speakerchip").length;
+      count.textContent = folded && n ? n + (n === 1 ? " speaker" : " speakers") : "";
+    }
+  }
+  if (castToggle) {
+    castToggle.addEventListener("click", function () {
+      var folded = !cast.classList.contains("folded");
+      foldCast(folded);
+      try { window.localStorage.setItem("cast-folded", folded ? "yes" : "no"); } catch (ignored) { /* this page only */ }
+    });
+    try {
+      foldCast(window.localStorage.getItem("cast-folded") === "yes");
+    } catch (ignored) { foldCast(false); }
+  }
+
   function rename(from, to) {
     fetch("/recording/" + window.VIEWER.recording + "/speakers", {
       method: "POST",
@@ -1489,6 +1531,50 @@
       });
     }
     window.addEventListener("beforeunload", function () { tell({ kind: "page-closed" }); });
+  }
+
+  // The shortcuts overlay and the pop-out --------------------------------------
+  //
+  // Both were lost in v1.46.0, when the sheet's code around them was replaced;
+  // Escape and ? threw on the missing overlay until v1.49.0 put them back.
+
+  var overlay = document.getElementById("shortcuts");
+  function shortcuts(show) { if (overlay) { overlay.hidden = !show; } }
+  var openShortcuts = document.getElementById("open-shortcuts");
+  if (openShortcuts) {
+    openShortcuts.addEventListener("click", function () { shortcuts(true); });
+  }
+  var closeShortcuts = document.getElementById("close-shortcuts");
+  if (closeShortcuts) {
+    closeShortcuts.addEventListener("click", function () { shortcuts(false); });
+  }
+  if (overlay) {
+    overlay.addEventListener("click", function (event) {
+      if (event.target === overlay) { shortcuts(false); }
+    });
+  }
+
+  var popOut = document.getElementById("pop-out");
+  if (popOut && player && player.requestPictureInPicture) {
+    popOut.addEventListener("click", function () {
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture();
+      } else {
+        player.requestPictureInPicture().catch(function () {
+          UI.toast("This browser will not pop the video out.", { problem: true, icon: "warning" });
+        });
+      }
+    });
+    player.addEventListener("enterpictureinpicture", function () {
+      popOut.textContent = "Dock video";
+      document.getElementById("popped").hidden = false;
+    });
+    player.addEventListener("leavepictureinpicture", function () {
+      popOut.textContent = "Pop out video";
+      document.getElementById("popped").hidden = true;
+    });
+  } else if (popOut) {
+    popOut.hidden = true;
   }
 
   // The keyboard --------------------------------------------------------------

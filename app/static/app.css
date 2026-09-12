@@ -1052,6 +1052,11 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 }
 .cast > * { max-width: var(--reading, 1040px); margin-left: auto; margin-right: auto; }
 .cast .row { gap: 8px; align-items: center; }
+/* Folded: the row alone, with a count in place of the chips. */
+.cast.folded .speakerchips, .cast.folded .hint, .cast.folded .card,
+.cast.folded #speakers-undo-line, .cast.folded #suggest-line { display: none; }
+.cast.folded { padding: 6px 20px; }
+.cast #cast-count:empty { display: none; }
 .cast .speakerchips { margin: 0; }
 .cast .hint { margin-top: 6px; }
 .cast .card { margin: 6px auto 0; }
@@ -1198,13 +1203,13 @@ body.no-speakers .seg .actions { grid-column: 3; }
 .people-pick .pick:hover, .people-pick .pick:focus-visible { border-color: var(--accent); }
 .people-pick .pick .muted { font-size: 0.9em; }
 
+/* The follow pill sits in a holder of no height, stuck under the cast, so
+   its coming and going moves no line of the transcript. */
+.followhold { position: sticky; top: 52px; height: 0; z-index: 5; display: flex; justify-content: center; overflow: visible; }
 .followpill {
-  position: sticky;
-  top: 52px;
-  z-index: 5;
   display: block;
   width: max-content;
-  margin: 6px auto;
+  margin: 8px 0 0;
   background: var(--warn);
   color: var(--accent-ink);
   border-color: var(--warn);
@@ -1349,6 +1354,7 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
   border-radius: 6px;
 }
 .speakers-window .winplayer .transport { padding: 6px 0 0; }
+.speakers-window .scrub { display: block; width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
 /* The Speakers window: the line being spoken, then the roster with a key each. */
 .speakers-window .nowbox {
   border: 2px solid var(--accent);

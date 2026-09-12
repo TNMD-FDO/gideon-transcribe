@@ -383,12 +383,34 @@ def download_clip(request: HttpRequest, clip_id) -> HttpResponse:
 
 @login_required
 def download_all_clips(request: HttpRequest) -> HttpResponse:
-    """Every Ready Clip on the My clips page, flat, with no zip inside a zip."""
-    clips = [
-        one
-        for one in my_clips(request.user)
-        if one.state == RenderState.READY and one.path.exists()
-    ]
+    """Every Ready Clip on the My clips page, flat, with no zip inside a zip.
+
+    With `?recording=`, every Ready Clip of that one Recording instead, for
+    the viewer's Clips tab: in a Case that is every collaborator's, as the
+    tab lists them; elsewhere the person's own.
+    """
+    wanted = request.GET.get("recording", "")
+    if wanted:
+        recording = Recording.objects.filter(pk=wanted).first()
+        if recording is None or not cases.standing(recording, request.user):
+            return redirect(reverse("clips"))
+        clips = [
+            one
+            for one in Clip.objects.filter(recording=recording)
+            .select_related("recording", "recording__case", "recording__user")
+            .order_by("start")
+            if one.state == RenderState.READY
+            and one.path.exists()
+            and (recording.case_id or one.user_id == request.user.pk)
+        ]
+        stem = exports.safe_name(exports.title_of(recording))
+    else:
+        clips = [
+            one
+            for one in my_clips(request.user)
+            if one.state == RenderState.READY and one.path.exists()
+        ]
+        stem = "clips"
 
     holder = io.BytesIO()
     taken: set[str] = set()
@@ -400,7 +422,7 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
 
     return _hand_over(
         holder.getvalue(),
-        f"clips {datetime.now():%Y-%m-%d %H%M}.zip",
+        f"{stem} clips {datetime.now():%Y-%m-%d %H%M}.zip",
         "application/zip",
     )
 

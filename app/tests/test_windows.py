@@ -130,8 +130,9 @@ def test_the_speakers_window_lists_the_speakers_with_a_key_each(person, client):
     assert 'id="now-who"' in body and 'id="speakers-undo"' in body
     assert 'windowPanel: "speakers"' in body
     assert "assistant.js" not in body and "clip-tool.js" not in body
-    # The window plays the recording itself: the picture and the transport.
+    # The window plays the recording itself: the picture, the scrub bar, the transport.
     assert '<video id="player"' in body and 'id="play"' in body
+    assert 'id="scrub"' in body and body.index('id="scrub"') < body.index('id="play"')
     assert body.index('class="winplayer"') < body.index('id="nowbox"')
     audio = a_recording(person, video=False)
     sound = client.get(f"/recording/{audio.pk}/window/speakers").content.decode()

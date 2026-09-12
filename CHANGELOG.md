@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.49.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **Pop out video and the keyboard shortcuts overlay did nothing**, and
+  Escape and ? threw in the page's script: their code sat between two
+  sections the v1.46.0 rewrite replaced and went with them. Put back, with
+  a test that they stay.
+- **Follow mode bounced.** Every new line was scrolled to the centre with
+  a smooth glide, so a column of short lines crept and bounced every
+  second or two; and the "Following paused" pill took height when it
+  appeared, so the transcript jumped by a line when it came and went. The
+  transcript now moves only when the line being spoken has left the middle
+  of the column, and the pill sits in a holder of no height.
+- The chat's list of earlier chats was rebuilt on every poll; it is now
+  rebuilt only when it changed, like the conversation.
+
+### Added
+
+- **Download all** on the Clips tab: one zip of the recording's ready
+  clips with their excerpts and captions, once there is one. In a case it
+  takes every collaborator's clips of the recording, as the tab lists them.
+- **fold** at the end of the speakers strip folds it to one line with the
+  count of speakers; the page remembers the choice.
+- **A scrub bar** in the Speakers window, under the picture, to drag
+  through the recording.
+
 ## v1.48.1, 2026-09-12
 
 ```
