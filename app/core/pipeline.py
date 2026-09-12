@@ -82,21 +82,7 @@ def _check(recording: Recording) -> None:
 
     recording.sha256 = media.hash_file(path)
 
-    # The same file twice in the same place. Other people's files are never
-    # looked at, so nobody learns what anybody else has uploaded, and the
-    # refusal applies per destination: the same file in another Case is
-    # allowed, because a Case is a different place to keep it.
-    same_place = (
-        Recording.objects.filter(case=recording.case)
-        if recording.case_id
-        else Recording.objects.filter(user=recording.user, case__isnull=True)
-    )
-    already = (
-        same_place.filter(sha256=recording.sha256)
-        .exclude(pk=recording.pk)
-        .exclude(media_state=MediaState.REJECTED)
-        .first()
-    )
+    already = duplicate_of(recording)
     if already is not None:
         raise media.MediaError(
             Refusal.MESSAGES[Refusal.ALREADY_UPLOADED].format(title=already.title),
@@ -261,6 +247,31 @@ def make_playback(recording: Recording) -> Recording:
     recording.save(update_fields=["playback_ready"])
     log.info("recording %s can be played", recording.id)
     return recording
+
+
+def duplicate_of(recording: Recording) -> Recording | None:
+    """The Recording this one is a second copy of, in the same place, or none.
+
+    The same file twice in the same place. Other people's files are never
+    looked at, so nobody learns what anybody else has uploaded, and the
+    refusal applies per destination: the same file in another Case is
+    allowed, because a Case is a different place to keep it. The Batch page
+    asks again, to link the refusal to the recording it already is.
+    """
+    if not recording.sha256:
+        return None
+    same_place = (
+        Recording.objects.filter(case=recording.case)
+        if recording.case_id
+        else Recording.objects.filter(user=recording.user, case__isnull=True)
+    )
+    return (
+        same_place.filter(sha256=recording.sha256)
+        .exclude(pk=recording.pk)
+        .exclude(media_state=MediaState.REJECTED)
+        .order_by("created")
+        .first()
+    )
 
 
 def _keep_the_probe(recording: Recording, raw: dict) -> None:

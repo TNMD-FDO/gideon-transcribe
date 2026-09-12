@@ -21,6 +21,36 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.44.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Added
+
+- **Back to the case.** A batch started from a case's Add recordings now
+  offers **Back to the case** beside Ready now while it runs, and once it
+  has finished the page counts down eight seconds and returns to the case
+  by itself, with **Stay here** to stop it. What the batch made is on the
+  case page, a refused recording with its reason included. A batch whose
+  files went to several places, or to your own recordings, behaves as
+  before.
+
+### Changed
+
+- **A clearer refusal for an incomplete video.** Two surveillance exports
+  were refused as "could not be decoded" when the truth was that their
+  index had never been written: the export or the copy was cut short, and
+  no player anywhere could open them. The app now tells that case apart by
+  ffprobe's own words, under its own reason class `incomplete_file`, and
+  says what to do: play the file on your own computer, and if it will not
+  play there either, export it again from the system it came from.
+- **A duplicate refusal links to the recording it already is.** "You
+  already have this file in your recordings as ..." names the recording as
+  a link on the Batch page, so nobody hunts for it by title.
+
 ## v1.43.0, 2026-09-12
 
 ```

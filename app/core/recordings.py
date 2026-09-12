@@ -66,6 +66,11 @@ class Refusal:
     ARCHIVE = "archive"
     NO_AUDIO = "no_audio"
     UNDECODABLE = "undecodable"
+    # An MP4 whose index was never written: the recorder or the export
+    # stopped before the end, or the file was copied while still being
+    # written. Its own refusal, because the cure is another export, not
+    # another format (v1.44.0).
+    INCOMPLETE_FILE = "incomplete_file"
     ALREADY_UPLOADED = "already_uploaded"
 
     # Every refusal identifier, so that a media step can say whether what
@@ -83,6 +88,7 @@ class Refusal:
             ARCHIVE,
             NO_AUDIO,
             UNDECODABLE,
+            INCOMPLETE_FILE,
             ALREADY_UPLOADED,
         }
     )
@@ -96,6 +102,12 @@ class Refusal:
         ),
         NO_AUDIO: "This file has no audio track",
         UNDECODABLE: "The audio in this file could not be decoded",
+        INCOMPLETE_FILE: (
+            "This file is incomplete: its index was never written, usually "
+            "because the export or the copy was cut short. Play it on your own "
+            "computer; if it will not play there either, export it again from "
+            "the system it came from."
+        ),
         TOO_LARGE: "Over the size limit ({limit})",
         TOO_LONG: "Over the length limit ({limit})",
         ALREADY_UPLOADED: "You already have this file in your recordings as {title}",

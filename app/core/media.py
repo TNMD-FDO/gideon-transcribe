@@ -163,6 +163,22 @@ def hash_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+# What ffprobe says of an MP4 whose index (the moov box) is missing. A camera
+# or an export writes the index last, when the recording is closed, so its
+# absence means the file was cut short or copied while still being written:
+# a different refusal from undecodable, with a different cure.
+NO_INDEX = "moov atom not found"
+
+
+def refusal_for(stderr: str) -> tuple[str, str]:
+    """The message and the reason class for a file ffprobe or ffmpeg refused."""
+    from core.recordings import Refusal
+
+    if NO_INDEX in (stderr or ""):
+        return Refusal.MESSAGES[Refusal.INCOMPLETE_FILE], Refusal.INCOMPLETE_FILE
+    return Refusal.MESSAGES[Refusal.UNDECODABLE], Refusal.UNDECODABLE
+
+
 def probe(path: Path) -> Probe:
     """Look inside the file. The extension and the declared type are ignored.
 
@@ -183,7 +199,7 @@ def probe(path: Path) -> Probe:
         timeout=PROBE_TIMEOUT,
     )
     if finished.returncode != 0:
-        raise MediaError("The audio in this file could not be decoded", "undecodable")
+        raise MediaError(*refusal_for(finished.stderr))
 
     try:
         raw = json.loads(finished.stdout or "{}")
@@ -248,7 +264,7 @@ def test_decode(path: Path, track: Track | None) -> None:
         timeout=PROBE_TIMEOUT,
     )
     if finished.returncode != 0:
-        raise MediaError("The audio in this file could not be decoded", "undecodable")
+        raise MediaError(*refusal_for(finished.stderr))
 
 
 # Sides -----------------------------------------------------------------------

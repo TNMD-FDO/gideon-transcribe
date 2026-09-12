@@ -24,8 +24,18 @@
       <div class="tick">{% icon "done" %}</div>
       <h1 id="finished-heading">The transcripts are ready</h1>
       <p id="finished-when" class="lead"></p>
+      {% if case %}
+        {% comment %}
+          A Batch added from a Case goes back there when it finishes: the
+          recordings, the transcripts, and any refusal with its reason are
+          on the Case page. A short countdown, and Stay here to stop it.
+        {% endcomment %}
+        <p id="back-line" class="lead" hidden></p>
+        <a href="{{ case.url }}" class="btn primary" id="back-to-case">Back to {{ case.name }}</a>
+        <button type="button" class="btn" id="stay-here" hidden>Stay here</button>
+      {% endif %}
       <a id="download-done" href="{% url 'batch-download' batch.pk %}">
-        <button type="button" class="primary">Download transcripts</button>
+        <button type="button" class="{% if case %}btn{% else %}primary{% endif %}">Download transcripts</button>
       </a>
       <div class="quiet-row">
         <button type="button" class="btn clear-recordings"
@@ -50,6 +60,10 @@
         </p>
         <h2 style="margin-top: 18px">Still to come</h2>
         <p id="when-done" class="muted small"></p>
+        {% if case %}
+          <p class="muted small">The batch carries on without you; the case page shows each recording as it lands.</p>
+          <p><a href="{{ case.url }}" class="btn">Back to {{ case.name }}</a></p>
+        {% endif %}
         <p style="margin-top: 14px">
           <button type="button" id="cancel" class="ghost danger">Cancel batch</button>
         </p>
@@ -59,6 +73,7 @@
 
   <script>
     window.BATCH = "{{ batch.pk }}";
+    window.BATCH_CASE = {% if case %}{ name: "{{ case.name|escapejs }}", url: "{{ case.url|escapejs }}" }{% else %}null{% endif %};
   </script>
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'clearing.js' %}"></script>

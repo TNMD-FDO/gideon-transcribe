@@ -1355,8 +1355,9 @@ Every refusal has one plain message for users and one reason class for Admins; t
 | `Over the size limit (10 GB)` (the Largest file setting) | Before upload in the browser; again by the sidecar's `-max-size` and the pre-create hook | `too_large` |
 | `This file has no audio track` | After checking (the probe finds no audio stream) | a format class; identifier left to the build |
 | `The audio in this file could not be decoded` | After checking (the ten-second test decode fails, fallback included) | a format class; identifier left to the build |
+| `This file is incomplete: its index was never written, usually because the export or the copy was cut short. Play it on your own computer; if it will not play there either, export it again from the system it came from.` | After checking: the probe reports an MP4 whose index (the moov box) is missing, which a camera or an export writes last (v1.44.0) | `incomplete_file` |
 | `Over the length limit (6 hours)` (the Longest Recording setting) | After checking (duration is known only from the probe) | `too_long` |
-| `You already have this file in your recordings as <title>` | After checking: same SHA-256 and same user. Other users' files are never checked, so no user learns what another has uploaded | a duplicate class; identifier left to the build |
+| `You already have this file in your recordings as <title>` | After checking: same SHA-256 and same user. Other users' files are never checked, so no user learns what another has uploaded. On the Batch page the title is a link to the recording it already is (v1.44.0) | a duplicate class; identifier left to the build |
 | `This batch would go over your storage space (52 of 50 GB). Remove some files, or delete recordings you no longer need. IT can raise your space.` (the figures are the user's own after this Batch and their quota) | Before upload: on the Upload page, and by the pre-create hook | `quota_exceeded` |
 | `A batch can hold up to 25 files. Remove N to continue.` (the Files per Batch setting) | Before upload: on the Upload page, and by the pre-create hook | `limit_exceeded` |
 | `You have a batch in progress; wait for it to finish.` | When the Upload page opens or Submit is pressed while the user's one unfinished Batch exists | `batch_in_progress` |
@@ -1672,6 +1673,7 @@ Media handling from browser to ASR to player; Assemble a test corpus of real rec
 - From Clips: model, lifecycle, and management, to Clips and the storage layout: no `.txt` or `.srt` stored beside a Clip; a Clip possible once playback is Ready; renders on the media worker with the timeout and `clip_render_failed`; the Longest Clip limit; a deleted Clip leaves the Provenance.
 - From Upload page and Batch settings prototype, to Diarization on a multi-Side Recording: "defaults to off for a Two-channel call" withdrawn; the user's Diarize choice honoured per Side with "Let the app decide"; the Side-alone label for a one-Speaker Side; the title editable at upload.
 - From the maintainer, on the v1.3.0 build, to Waveform peaks: 256 samples per pixel replaced by about 8,192 pairs for the whole Recording, never finer than 256, because the Timeline never zooms and was drawing one pair in four hundred of a 4 MB file that every opening of the viewer fetched again.
+- From the maintainer, on the v1.43.0 build (two surveillance exports refused as undecodable when their index had never been written), to the refusals: the incomplete-file refusal, `incomplete_file`, told apart from undecodable by ffprobe's own words, with a message that says what to do; and the duplicate refusal's title linked to the recording it already is (v1.44.0).
 
 ## 5. Upload page and Batch page
 
@@ -1772,7 +1774,8 @@ The Upload page and the Batch page are one page. After Submit the Upload page sh
   - "Preparing video" (or "Preparing audio") until playback is Ready, then Open; the viewer opens from this page as soon as playback is Ready, before the Transcript exists;
   - Cancel while unfinished; Process again and Details once Done;
   - the two-channel-call and two-track notes under the row.
-- **Refused rows** stay in the list with their reason until the Batch ends. Zip files, empty files, and files over the size limit are refused before uploading; no audio, undecodable audio, over the length limit, and duplicates after checking (the messages are in the chapter "Media handling").
+- **Refused rows** stay in the list with their reason until the Batch ends. Zip files, empty files, and files over the size limit are refused before uploading; no audio, undecodable audio, an incomplete file, over the length limit, and duplicates after checking (the messages are in the chapter "Media handling"). A duplicate's reason names the recording it already is as a link (v1.44.0).
+- **A Batch added from a Case** (v1.44.0): while it runs, `Ready now` ends with a line saying the batch carries on without you and a **Back to <case>** button; when it finishes, the finished state says "Back to <case> in 8 seconds..." and returns there, with **Stay here** to stop it, because what the batch made is on the Case page, refused rows with their reasons included. A Batch whose files went to several places, or to the person's own recordings, has no one place to go back to and behaves as before.
 - **Cancel** for a Recording and for the Batch each confirm first; the confirmation says the recording is removed from your recordings and must be uploaded again.
 - **Retry** on a Failed Recording, with its plain message beside it (a new one-Recording Batch with the same settings, reusing the media steps that succeeded; chapter "Queue and Jobs").
 - There is no list of past Batches. Each Recording on the Recordings page shows the time of its batch, and the Batch download and the sign-out dialog's zips cover downloads.
@@ -1859,6 +1862,7 @@ Upload page and Batch settings prototype; Media handling from browser to ASR to 
 - From Email notifications, to the settings step: the Phase 2 "Email me when this batch finishes" tick (carried, nothing in the Phase 1 build).
 - Within Upload page and Batch settings prototype, the Answer over the prototype: the prototype's Diarize-off rule for a Two-channel call, its storage meter, and its IT-administrators line withdrawn; "Diarize" for "Separate speakers".
 - From the maintainer, on the v1.5.0 build, to the three steps, the Batch page, and the Recordings page: the Workbench Layout's second page. From 1280 pixels the Upload page shows all three steps at once with Start always in view and the exceptions chip on each file's card; the Batch page is two panes, the rows and `Ready now`; the Recordings page is a table with the chosen Recording's details in a pane. Below 1280 pixels the stepper, the single column, and details under the row.
+- From the maintainer, on the v1.43.0 build ("when I'm in a case and select add recording and go through the flow, when it's done for whatever reason, I want to land back on the same case"), to the Batch page: a Batch added from a Case offers the way back while it runs and returns there when it finishes, after a short countdown with Stay here (v1.44.0).
 
 
 ## 6. Queue and Jobs
@@ -4287,7 +4291,7 @@ A reason class is the fixed short identifier a row records when something is ref
 | Where | Classes | Chapter |
 |---|---|---|
 | Sign-in failed | wrong password; not in a group; deactivated; blocked; directory unreachable; throttled (identifiers left to the build) | Sign-in, accounts, and roles |
-| Upload refused | `too_large`; `too_long`; `quota_exceeded`; `limit_exceeded`; `batch_in_progress`; `service_unreachable`; `disk_full`; and one class each for no audio track, undecodable audio, empty file, duplicate file, and archive (identifiers left to the build) | Media handling; Queue and Jobs; Workspace lifecycle |
+| Upload refused | `too_large`; `too_long`; `quota_exceeded`; `limit_exceeded`; `batch_in_progress`; `service_unreachable`; `disk_full`; `incomplete_file` (v1.44.0); and one class each for no audio track, undecodable audio, empty file, duplicate file, and archive (identifiers left to the build) | Media handling; Queue and Jobs; Workspace lifecycle |
 | Job failed, from the service | `bad_input`; `too_large`; `too_long`; `model_unavailable`; `gpu_error` (retried once by the service); `timeout`; `cancelled`; `service_restarted`; `internal` | the WhisperX service API document |
 | Job failed, the app's own | `media_failed`; `service_unreachable`; `service_refused`; `result_expired`; `merge_failed` | Queue and Jobs |
 | AI assistant | `llm_unreachable`; `llm_timeout`; `llm_refused`; `llm_too_long`; `llm_bad_output`; `llm_error`; `llm_no_vision` (Phase 4) | AI assistant |

@@ -23,6 +23,7 @@ from core import (
     exports,
     guides,
     lifecycle,
+    pipeline,
     settings_store,
     tasks,
     uploads,
@@ -390,8 +391,47 @@ def batch(request: HttpRequest, batch_id) -> HttpResponse:
             "page": "upload",
             "batch": found,
             "standing_line": standing_line(),
+            # The Case the Batch was added to, when it was: the page offers
+            # the way back while it runs and returns there when it finishes.
+            "case": _case_of(found),
         },
     )
+
+
+def _case_of(batch) -> dict | None:
+    """The one Case every Recording in the Batch went to, while Cases are on.
+
+    A Batch from a Case's Add recordings is one such; a Batch whose files
+    went to several places, or to the person's own recordings, has no one
+    place to go back to.
+    """
+    if not cases.folder_management_on():
+        return None
+    ids = set(batch.recordings.values_list("case_id", flat=True))
+    if len(ids) != 1 or None in ids:
+        return None
+    case = cases.cases_for(batch.user).filter(pk=ids.pop()).first()
+    if case is None:
+        return None
+    return {
+        "id": str(case.pk),
+        "name": case.name,
+        "url": reverse("case", args=[case.pk]),
+    }
+
+
+def _already(recording) -> dict | None:
+    """For a duplicate refusal, the recording it already is, to link to."""
+    if recording.refusal_class != Refusal.ALREADY_UPLOADED:
+        return None
+    twin = pipeline.duplicate_of(recording)
+    if twin is None:
+        return None
+    return {
+        "id": str(twin.pk),
+        "title": twin.title,
+        "url": reverse("viewer", args=[twin.pk]),
+    }
 
 
 @login_required
@@ -436,6 +476,7 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "two_channel_call": recording.is_two_channel_call,
                 "message": recording.failure_message,
                 "reason": recording.refusal_class,
+                "already": _already(recording),
                 "received": arriving.get(str(recording.pk), (0, 0))[0],
                 "job": _job_state(job, speed, in_line, request.user),
                 "has_transcript": (
@@ -459,6 +500,7 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
             "reprocessing": found.is_reprocessing,
             "everything_done_by": _everything_done_by(found, speed),
             "recordings": rows,
+            "case": _case_of(found),
         }
     )
 

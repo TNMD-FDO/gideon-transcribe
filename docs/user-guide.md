@@ -59,6 +59,8 @@ You have one unfinished batch at a time. The Upload page takes you back to it un
 
 When the batch has finished, the page says how many transcripts are ready and offers **Download all transcripts**: one zip, one plain-text transcript per recording, each carrying the office's notice. Recordings that failed or were refused are simply left out.
 
+A batch you started from a case with **Add recordings** goes back to that case by itself once it has finished, after a short countdown; press **Stay here** to stop it. While it runs, **Back to the case** beside Ready now takes you there at once, and the case page shows each recording as it lands, a refused one with its reason.
+
 Then two choices:
 
 - **Done with these** removes the batch's recordings and their transcripts and takes you back to the Upload page for the next lot. It asks first, and says exactly what is going and how much space it takes. It cannot be undone, so download anything you want to keep before you agree.
@@ -264,7 +266,7 @@ On a wide monitor, the **?** at the top of every page opens this guide in a colu
 
 ## When something goes wrong
 
-- **Refused.** The file was over a limit, or the app has already got an identical copy of it. The reason is shown beside it. Nothing else in the batch is affected.
+- **Refused.** The file was over a limit, the app has already got an identical copy of it (the reason names that recording, as a link), or the file itself is unusable. Nothing else in the batch is affected. "This file is incomplete" means a video whose index was never written, which happens when an export from a camera or a surveillance system is copied before it has finished: play it on your own computer, and if it will not play there either, export it again and wait for the export to finish.
 - **Failed.** Something went wrong in transcription. **Retry** sends it again. If it fails a second time, tell IT which recording it was.
 - **The transcript is wrong.** Correct the segments, or **Process again** with different settings: a speaker count, a vocabulary, the right language.
 - **The page says transcription is not available.** The transcription service is down or the server is low on space. Your recordings are safe; try again later, or tell IT.

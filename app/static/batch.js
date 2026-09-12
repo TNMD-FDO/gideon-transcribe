@@ -45,8 +45,19 @@
     return holder.innerHTML;
   }
 
+  // A duplicate's refusal names the recording it already is; the name is a
+  // link to it, so nobody hunts for it by title.
+  function refusedLine(one) {
+    var said = escape(one.message);
+    if (one.already && one.already.title && said.indexOf(escape(one.already.title)) >= 0) {
+      said = said.replace(escape(one.already.title),
+        "<a href='" + escape(one.already.url) + "'>" + escape(one.already.title) + "</a>");
+    }
+    return "Refused: " + said;
+  }
+
   function line(one) {
-    if (one.state === "rejected") { return "Refused: " + escape(one.message); }
+    if (one.state === "rejected") { return refusedLine(one); }
     if (one.state === "failed") { return "Failed: " + escape(one.message); }
 
     var job = one.job;
@@ -176,10 +187,40 @@
             : "All " + tally.done + " transcripts are ready")
         : "This batch produced no transcripts";
       finishedWhen.textContent = tally.failed || tally.refused
-        ? tally.failed + " failed, " + tally.refused + " refused."
+        ? tally.failed + " failed, " + tally.refused + " refused." +
+          (window.BATCH_CASE ? " The case page shows each with its reason." : "")
         : "";
       downloadDone.hidden = tally.done === 0;
+      backToTheCase();
     }
+  }
+
+  // A batch added from a case goes back there once it has finished: a short
+  // countdown, once, with Stay here to stop it. What the batch made is on
+  // the case page, refusals and their reasons included.
+  var COUNTDOWN = 8;
+  var goingBack = false;
+  function backToTheCase() {
+    var backLine = document.getElementById("back-line");
+    var stay = document.getElementById("stay-here");
+    if (!window.BATCH_CASE || !backLine || !stay || goingBack) { return; }
+    goingBack = true;
+    var left = COUNTDOWN;
+    var timer = null;
+    var tick = function () {
+      if (left <= 0) { window.location = window.BATCH_CASE.url; return; }
+      backLine.textContent = "Back to " + window.BATCH_CASE.name + " in " + left + (left === 1 ? " second" : " seconds") + "...";
+      backLine.hidden = false;
+      left -= 1;
+      timer = window.setTimeout(tick, 1000);
+    };
+    stay.hidden = false;
+    stay.addEventListener("click", function () {
+      window.clearTimeout(timer);
+      backLine.hidden = true;
+      stay.hidden = true;
+    });
+    tick();
   }
 
   function ask() {
