@@ -1296,9 +1296,16 @@ body.no-speakers .seg .name { display: none; }
     height: auto;
     flex: 1;
     border-top: 0;
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start;
+    /* The panels of a tab stacked, each at its own height, the sheet
+       scrolling as a whole. A grid with one flexible row gave the first
+       panel what the second left over, which with fifty described moments
+       was a sliver with the head of the Moments tab in it. The Chat alone
+       fills the column, so its box stays at the foot. */
+    display: flex;
+    flex-direction: column;
   }
+  .sheet .panel { flex: none; overflow: visible; }
+  .sheet .panel.chat { flex: 1; min-height: 0; overflow: hidden; }
   .sheet .panel:not([hidden]) + .panel:not([hidden]) {
     border-left: 0;
     border-top: 1px solid var(--line);

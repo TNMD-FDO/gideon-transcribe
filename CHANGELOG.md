@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.45.1, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- **The head of the Moments tab was squeezed to a sliver** on a wide
+  monitor once a recording had many described moments. A tab's two panels
+  sat in a grid with one flexible row, so the first panel (Describe this
+  moment, Suggested moments) got only what the second (Described moments)
+  left over, and with fifty moments that was nothing: the top edge of the
+  button peeked over the Described moments heading. Latent since v1.42.0,
+  seen on the first recording described throughout. The panels now stack
+  at their own heights and the column scrolls as a whole; the Chat alone
+  still fills the column so its box stays at the foot. The Clips tab had
+  the same shape and the same fix.
+
 ## v1.45.0, 2026-09-12
 
 ```
