@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}{{ panel_title }} of {{ recording.title }}{% endblock %}
+{% block body_class %}viewer window{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    One tab of the work area, or the Speakers window, in a window of its
+    own. It follows the recording's page through the browser's channel
+    between the two: the page sends the time and the line being spoken, and
+    this window sends seeks, clip ranges and word that something changed.
+  {% endcomment %}
+  <div class="winhead">
+    <span class="lbl">{{ panel_title }}</span>
+    <b class="grow">{{ recording.title }}</b>
+    <span class="muted small" id="win-state">Follows the recording's page</span>
+  </div>
+
+  {% if panel == "speakers" %}
+    <div class="panels window-panels" id="panels">
+      <div class="panel speakers-window" data-panel="speakers">
+        <div class="nowbox" id="nowbox">
+          <div class="q">Now <span id="now-clock" class="time"></span></div>
+          <div class="big"><b id="now-who" class="who"></b> <span id="now-text">Nothing is playing yet.</span></div>
+          <div class="q">Press a number to say who is speaking this line. <kbd>Space</kbd> pauses, <kbd>B</kbd> goes back three seconds.</div>
+        </div>
+        {% if speakers %}
+          <ol class="roster" id="roster">
+            {% for speaker in speakers %}
+              <li class="one" data-name="{{ speaker.name }}" style="--speaker: {{ speaker.colour }}">
+                <kbd class="k">{{ forloop.counter }}</kbd>
+                <span class="n"><span class="dot"></span><span class="name">{{ speaker.name }}</span>{% if speaker.role %} <span class="pill role">{{ speaker.role }}</span>{% endif %} <small class="count"></small></span>
+                <span class="a">
+                  <button type="button" class="ghost tiny play-line" title="Play a line this speaker spoke">play a line</button>
+                  <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
+                  <button type="button" class="ghost tiny same-as" title="Merge this speaker into another">same person as...</button>
+                </span>
+                <span class="sample muted small"></span>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p class="muted small">This recording has no speaker labels to tag.</p>
+        {% endif %}
+        <p class="small muted" id="speakers-undo-line"{% if not last_change %} hidden{% endif %}>
+          <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
+          <span id="speakers-undo-what">{{ last_change }}</span>
+        </p>
+        <p class="muted small">A number gives the line being spoken to that speaker. Rename applies to every line of the speaker. The recording's page changes as you go.</p>
+      </div>
+    </div>
+  {% else %}
+    <div class="panels window-panels" id="panels">
+      {% include "viewer-panels.html" %}
+    </div>
+  {% endif %}
+
+  {{ speakers|json_script:"speaker-colours" }}
+  <script>
+    window.VIEWER = {
+      recording: "{{ recording.pk }}",
+      waveform: "{{ waveform_url }}",
+      frameRate: {{ frame_rate|default:0 }},
+      hasTranscript: {% if transcript %}true{% else %}false{% endif %},
+      canPlay: {% if media_url %}true{% else %}false{% endif %},
+      clips: {% if clips_available %}true{% else %}false{% endif %},
+      twoChannel: {% if recording.is_two_channel_call %}true{% else %}false{% endif %},
+      batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %},
+      inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %},
+      caseChatUrl: {% if case_chat_url %}"{{ case_chat_url }}"{% else %}null{% endif %},
+      isVideo: {% if is_video %}true{% else %}false{% endif %},
+      assistant: {% if assistant.assistant and transcript %}{ summary: {% if assistant.summary %}true{% else %}false{% endif %}, chat: {% if assistant.chat %}true{% else %}false{% endif %}, suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, moments: {% if assistant.moments %}true{% else %}false{% endif %} }{% else %}null{% endif %},
+      windowPanel: "{{ panel }}"
+    };
+  </script>
+  <script src="{% static 'viewer-window.js' %}"></script>
+  {% if panel == "clips" %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
+  {% if assistant.assistant and transcript and panel != "clips" and panel != "speakers" %}
+    <script src="{% static 'chat-ui.js' %}"></script>
+    <script src="{% static 'assistant.js' %}"></script>
+  {% endif %}
+  {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
+{% endblock %}

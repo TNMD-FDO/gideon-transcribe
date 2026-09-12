@@ -110,6 +110,9 @@ The viewer's tabbed area beside the stage: Transcript, Clips, Summary, Chat, Mom
 **Marking strip**:
 The line under the Timeline that shows a marked Clip range with its length, Preview, Save clip and clear. Marking a Clip by any route fills it and never changes the tab; Save clip opens the Clips tab.
 
+**Speakers window**:
+A window of its own, opened by Tag speakers on the Speakers strip, that follows the player: the line being spoken at the top with its Speaker, and the Recording's Speakers under it with a number key each. A number gives the line being spoken to that Speaker; rename, merge and Undo are the viewer's own. Any tab of the work area opens in a window of its own the same way, kept in step with the page. Avoid: pop-up, dialog, floating panel.
+
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.
 

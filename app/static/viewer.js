@@ -1299,6 +1299,7 @@
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
+    if (openWindowButton) { openWindowButton.hidden = which === "transcript"; }
     // `keep` is for restoring what was already chosen, which is not itself a
     // choice and must not overwrite one.
     if (!keep) { rememberTab(which); }
@@ -1308,10 +1309,18 @@
   // The name the clip tool and the assistant knew it by.
   window.VIEWER.openSheet = openTab;
 
+  var openWindowButton = document.getElementById("open-window");
   Array.prototype.forEach.call(
     document.querySelectorAll(".tab"),
     function (tab) {
-      tab.addEventListener("click", function () { openTab(tab.dataset.panel); });
+      tab.addEventListener("click", function () {
+        // A tab that is out in its own window comes to the front instead.
+        if (tab.classList.contains("away") && windowOf(tab.dataset.panel)) {
+          windowOf(tab.dataset.panel).focus();
+          return;
+        }
+        openTab(tab.dataset.panel);
+      });
     }
   );
 
@@ -1327,6 +1336,146 @@
     } catch (ignored) { /* the transcript then, as always */ }
     openTab(was || "transcript", true);
   }());
+
+  // Windows -------------------------------------------------------------------
+  //
+  // A tab opened in its own window, and the Speakers window, follow the
+  // player through the browser's channel named for this recording: the page
+  // sends the time and the line being spoken; a window sends seeks, clip
+  // ranges, and word that something changed. On a second monitor the words
+  // stay here and the tool sits there.
+
+  var channel = ("BroadcastChannel" in window)
+    ? new BroadcastChannel("transcribe-" + window.VIEWER.recording)
+    : null;
+  var windows = {};
+
+  function tell(message) { if (channel) { channel.postMessage(message); } }
+
+  function windowOf(panel) {
+    var open = windows[panel];
+    return open && !open.closed ? open : null;
+  }
+
+  function tabOf(panel) {
+    return document.querySelector('.tab[data-panel="' + panel + '"]');
+  }
+
+  function markAway(panel, away) {
+    var tab = tabOf(panel);
+    if (!tab) { return; }
+    tab.classList.toggle("away", away);
+    tab.title = away ? "In its own window; press to bring it to the front" : "";
+  }
+
+  function openWindow(panel) {
+    if (windowOf(panel)) { windowOf(panel).focus(); return; }
+    var url = "/recording/" + window.VIEWER.recording + "/window/" + panel;
+    var size = panel === "speakers" ? "width=560,height=720" : "width=780,height=900";
+    windows[panel] = window.open(url, "transcribe-" + window.VIEWER.recording + "-" + panel, "popup," + size);
+    if (!windows[panel]) {
+      UI.toast("The browser blocked the window. Allow pop-ups for this site and try again.", { problem: true, icon: "warning" });
+      return;
+    }
+    if (panel !== "speakers") {
+      markAway(panel, true);
+      openTab("transcript");
+    }
+  }
+  window.VIEWER.openWindow = openWindow;
+
+  if (openWindowButton) {
+    openWindowButton.addEventListener("click", function () {
+      var on = document.querySelector(".tab.on");
+      if (on && on.dataset.panel !== "transcript") { openWindow(on.dataset.panel); }
+    });
+  }
+  var tagSpeakers = document.getElementById("tag-speakers");
+  if (tagSpeakers) {
+    tagSpeakers.addEventListener("click", function () { openWindow("speakers"); });
+  }
+
+  // A window that closed without saying so gives its tab back.
+  window.setInterval(function () {
+    Object.keys(windows).forEach(function (panel) {
+      if (windows[panel] && windows[panel].closed) {
+        windows[panel] = null;
+        markAway(panel, false);
+      }
+    });
+  }, 2000);
+
+  // The transcript fetched again after a line changed hands in a window:
+  // the rows redrawn, the highlight and any search put back.
+  function reloadSegments() {
+    if (!window.VIEWER.hasTranscript) { return; }
+    fetch("/recording/" + window.VIEWER.recording + "/segments")
+      .then(function (answer) { return answer.json(); })
+      .then(function (body) {
+        segments = body.segments || [];
+        wordTiming = body.word_timestamps;
+        draw();
+        here = -1;
+        if (player) { follow(); }
+        if (search && search.value.trim()) { look(); }
+      })
+      .catch(function () { /* the next change will bring it */ });
+  }
+
+  if (channel) {
+    channel.onmessage = function (event) {
+      var said = event.data || {};
+      if (said.kind === "seek") {
+        window.VIEWER.seek(said.at);
+      } else if (said.kind === "play") {
+        window.VIEWER.play();
+      } else if (said.kind === "pause") {
+        window.VIEWER.pause();
+      } else if (said.kind === "step") {
+        step(said.by || 0);
+        if (said.play) { window.VIEWER.play(); }
+      } else if (said.kind === "show") {
+        window.VIEWER.showSegment(said.at);
+      } else if (said.kind === "range") {
+        if (!window.CLIPS) { return; }
+        if (said.from === null || said.from === undefined) { window.CLIPS.clear(); }
+        else { window.CLIPS.mark(said.from, said.to); }
+      } else if (said.kind === "refresh") {
+        document.dispatchEvent(new CustomEvent("changed-elsewhere"));
+        if (window.CLIPS) { window.CLIPS.load(); }
+      } else if (said.kind === "segments-changed") {
+        reloadSegments();
+      } else if (said.kind === "speakers-changed") {
+        window.location.reload();
+      } else if (said.kind === "window-open") {
+        if (said.panel !== "speakers") {
+          markAway(said.panel, true);
+          var on = document.querySelector(".tab.on");
+          if (on && on.dataset.panel === said.panel) { openTab("transcript"); }
+        }
+      } else if (said.kind === "window-closed") {
+        markAway(said.panel, false);
+      }
+    };
+
+    // The time, a few times a second, with the line being spoken.
+    var lastTold = -1;
+    if (player) {
+      player.addEventListener("timeupdate", function () {
+        var now = Math.floor(player.currentTime * 4);
+        if (now === lastTold) { return; }
+        lastTold = now;
+        tell({ kind: "time", at: player.currentTime, here: here, playing: !player.paused });
+      });
+      player.addEventListener("pause", function () {
+        tell({ kind: "time", at: player.currentTime, here: here, playing: false });
+      });
+      player.addEventListener("play", function () {
+        tell({ kind: "time", at: player.currentTime, here: here, playing: true });
+      });
+    }
+    window.addEventListener("beforeunload", function () { tell({ kind: "page-closed" }); });
+  }
 
   // The keyboard --------------------------------------------------------------
 

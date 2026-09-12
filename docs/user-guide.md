@@ -88,6 +88,8 @@ Open a recording and the viewer is two things side by side. On the left, the **s
 
 The transcript reads like a court transcript: the time, the speaker's name in a column of its own, then the words. When one person speaks several lines in a row the name is shown once. The speakers are listed at the head of the transcript and stay in view as it scrolls.
 
+Any tab but the transcript can go into a window of its own: **Open in a window** at the end of the tab bar. The window follows the recording as it plays, a citation in it plays the recording here, and the transcript comes back on the page, so with two monitors the words are on one and the chat, the moments or the clips on the other. The tab shows as away while its window is open; press it to bring the window to the front, or close the window to have the tab back.
+
 ### Playing
 
 **Play** and the seek buttons are under the picture on a wide monitor, and under the title on a laptop or for a sound recording. Click anywhere on the waveform to jump there. **Speed** slows the recording down for a difficult passage or speeds it up for a long one. **Boost** turns the volume above normal, for a quiet jail call. On a two-channel call there is also a control to shift the sound towards one side.
@@ -102,7 +104,9 @@ The transcript reads like a court transcript: the time, the speaker's name in a 
 
 ### Speakers
 
-Each speaker has a colour, used for their name and their lines. The speakers are listed at the head of the transcript and stay in view as it scrolls; **hide** at the end of the list takes the names off the lines. Click a speaker's name in the list to give them a real one; every segment they spoke is renamed. Drag one speaker onto another when two labels turn out to be the same person, and confirm the merge. A rename or a merge can be taken back: **Undo** under the list says what it would undo ("the merge of Speaker 2 into Speaker 1") and puts exactly those lines back under their old name. Each Undo takes back one more change, newest first.
+Each speaker has a colour, used for their name and their lines. The speakers are listed at the head of the transcript and stay in view as it scrolls; **hide** at the end of the list takes the names off the lines.
+
+**Tag speakers**, beside the list, opens the Speakers window, made for matching voices to names while the recording plays: the line being spoken at the top with its speaker, and the speakers under it with a number key each. Press the number of the person you hear and that line becomes theirs; **rename** gives a speaker a name on every line, **same person as** merges two labels that are one person, **play a line** plays a line of that speaker so you can compare voices, and **Undo** takes back the last change. Space pauses and B goes back three seconds without leaving the window. Put it on a second monitor if you have one. Click a speaker's name in the list to give them a real one; every segment they spoke is renamed. Drag one speaker onto another when two labels turn out to be the same person, and confirm the merge. A rename or a merge can be taken back: **Undo** under the list says what it would undo ("the merge of Speaker 2 into Speaker 1") and puts exactly those lines back under their old name. Each Undo takes back one more change, newest first.
 
 Inside a case, a name means a person: every speaker in the case's recordings given the same name is the same person. Click a speaker's name and a box opens under the list with the case's people under it, each with their role and how many recordings they are in: click a person to give the speaker that name at once, or type a name, which narrows the list as you go and makes a new person if it matches nobody. The box changes this recording only. A small badge after a name is the person's role. To rename someone in every recording at once, use the case's **Speakers** tab, described under Cases.
 

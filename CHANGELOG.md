@@ -21,6 +21,35 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.47.0, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Added
+
+- **A tab in its own window.** Open in a window, at the end of the tab bar,
+  puts the tab shown (any but the transcript) in a window of its own and
+  brings the transcript back on the page. The window follows the recording:
+  the page tells it the time and the line being spoken, a citation or Play
+  in the window seeks the page's player, a clip range typed there lights
+  the timeline here, and anything described, saved or asked in the window
+  shows on the page at once. With two monitors the words stay on one and
+  the chat, the moments or the clips sit on the other. The tab shows as
+  away while its window is open; press it to bring the window to the
+  front. A window opens nothing the page does not offer.
+- **The Speakers window.** Tag speakers, on the speakers strip, opens a
+  window made for matching voices to names while the recording plays: the
+  line being spoken at the top with its speaker, the speakers under it with
+  a number key each, the count of their lines and a sample line. A number
+  gives the line being spoken to that speaker, one line at a time, and the
+  page's rows change as you go; rename, same person as (merge) and Undo are
+  the viewer's own; play a line plays a line of that speaker; Space pauses
+  and B goes back three seconds. The new one-line change writes the audit
+  row "Speaker changed on a line", with no name, and Undo puts it back.
+
 ## v1.46.0, 2026-09-12
 
 ```

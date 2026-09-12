@@ -266,6 +266,9 @@
             <button type="button" class="tab" data-panel="moments">Moments</button>
           {% endif %}
           <button type="button" class="tab" data-panel="details">Details</button>
+          <span class="grow"></span>
+          <button type="button" class="ghost small" id="open-window" hidden
+                  title="Open this tab in a window of its own, which follows the recording">{% icon "expand" %} Open in a window</button>
         </div>
 
         <div id="panels" class="panels">
@@ -290,6 +293,7 @@
                     </li>
                   {% endfor %}
                 </ul>
+                <button type="button" id="tag-speakers" class="ghost tiny" title="Tag the speakers in a window that follows the recording: a number key names the line being spoken">Tag speakers</button>
                 <button type="button" id="speakers-toggle" class="ghost tiny" title="Hide or show the speaker names on the lines">hide</button>
               {% else %}
                 <span class="pill">Not diarized</span>
@@ -371,189 +375,11 @@
           </div>
         {% endif %}
           </div>
-        {% if clips_available %}
-          <div class="panel" data-panel="clips">
-            <h2>New clip</h2>
-            <div class="row">
-              <div class="field"><label for="clip-from">From</label>
-                <input type="text" id="clip-from" placeholder="0:00" size="8"></div>
-              <div class="field"><label for="clip-to">To</label>
-                <input type="text" id="clip-to" placeholder="0:00" size="8"></div>
-              <div class="field"><label>&nbsp;</label>
-                <span id="clip-range" class="small muted">No range yet</span></div>
-              <div class="field"><label>&nbsp;</label>
-                <span class="row">
-                  <button type="button" id="clip-clear" class="small">Clear</button>
-                  <button type="button" id="clip-preview" class="small">Preview (P)</button>
-                </span>
-              </div>
-            </div>
-
-            <form id="clip-form">
-              <div class="field">
-                <label for="clip-title">Title</label>
-                <input type="text" id="clip-title" maxlength="120"
-                       placeholder="e.g. Officer states reason for the stop">
-              </div>
-              <div class="field">
-                <label for="clip-note">Note (optional)</label>
-                <textarea id="clip-note" rows="2" maxlength="1000"
-                          placeholder="Why this matters, for your own reference"></textarea>
-              </div>
-              <label class="row small">
-                <input type="checkbox" id="clip-excerpt" checked
-                       {% if not transcript %}disabled{% endif %}>
-                Include the transcript excerpt
-                {% if not transcript %}<span class="muted">available once the transcript is ready</span>{% endif %}
-              </label>
-              {% if is_video %}
-                <label class="row small">
-                  <input type="checkbox" id="clip-burn" {% if not transcript %}disabled{% endif %}>
-                  Burn captions into the video
-                  {% if not transcript %}<span class="muted">available once the transcript is ready</span>{% endif %}
-                </label>
-              {% endif %}
-              <div class="row" style="margin-top: 8px">
-                <button type="submit" class="primary">Save clip</button>
-                <span class="muted small">
-                  Saved as {% if is_video %}mp4{% else %}mp3{% endif %}, cut from the playback copy
-                </span>
-              </div>
-              <p id="clip-problem" class="problem" hidden></p>
-            </form>
-          </div>
-
-          <div class="panel" data-panel="clips">
-            <h2 id="clips-heading">Clips of this recording</h2>
-            <div id="clip-list" class="cliplist"></div>
-          </div>
-        {% endif %}
-
-        {% if assistant.summary and transcript %}
-          <div class="panel" data-panel="summary" hidden>
-            <div class="row">
-              <h2 class="grow">Summaries</h2>
-              <button type="button" class="small primary" id="new-summary">{% if assistant.moments and is_video %}Summarise this video{% else %}New summary{% endif %}</button>
-            </div>
-            <div id="summary-dialog" class="card" hidden style="margin: 8px 0">
-              <div class="field" id="summary-template-line" hidden>
-                <label for="summary-template">Template</label>
-                <select id="summary-template"></select>
-                <p class="muted small" id="summary-type-line" hidden style="margin: 4px 0 0"></p>
-              </div>
-              <div class="field">
-                <label for="summary-focus">What should the summary concentrate on? (optional)</label>
-                <input type="text" id="summary-focus" maxlength="200">
-              </div>
-              <div class="field">
-                <label for="summary-length">Length</label>
-                <select id="summary-length">
-                  <option value="short">Short</option>
-                  <option value="standard" selected>Standard</option>
-                  <option value="detailed">Detailed</option>
-                </select>
-              </div>
-              {% if assistant.moments and is_video %}
-                {% comment %}
-                  The look-first line, in one of three forms assistant.js
-                  chooses from the state: the tick with its cost while
-                  intervals are left to describe; a line saying the summary
-                  draws on the moments described when none are; a line saying
-                  the office writes from the words alone when it hands no
-                  moments to answers.
-                {% endcomment %}
-                <div class="field" id="summary-look-line">
-                  <label class="row" id="summary-describe-line">
-                    <input type="checkbox" id="summary-describe-first"> Look at the picture first
-                  </label>
-                  <p class="muted small" id="summary-describe-note" style="margin: 2px 0 0"></p>
-                </div>
-              {% endif %}
-              <div class="row">
-                <button type="button" class="primary small" id="summary-write">Write summary</button>
-                <button type="button" class="ghost small" id="summary-cancel">Cancel</button>
-              </div>
-            </div>
-            <div id="summary-list" class="assistant-list"></div>
-          </div>
-        {% endif %}
-
-        {% if assistant.moments and transcript and is_video %}
-          {% comment %}
-            Moments: what the camera showed at a chosen time. A short clip
-            around the time is shown to the assistant, which describes what is
-            visible; the words are a description, never the transcript. Two
-            panels, as the Clips tab has: the first to find where to look and
-            to ask, the second the Moments kept. The describe buttons on the
-            rows and the Camera? buttons on cue lines are put on by
-            assistant.js once the rows exist.
-          {% endcomment %}
-          <div class="panel" data-panel="moments" hidden>
-            <h2>Moments</h2>
-            <p class="muted small" id="moments-said" hidden style="margin: 4px 0 0"></p>
-            <h3 class="small" style="margin: 14px 0 2px">Suggested moments</h3>
-            <div class="whole">
-              <button type="button" class="small" id="find-moments">Find moments</button>
-              <p class="muted small">Reads the transcript for the lines where the picture would add a fact and, when your office has it on, scans the picture and sound. Nothing is described until you press Describe.</p>
-              <p class="muted small" id="find-said" hidden></p>
-            </div>
-            <div class="whole">
-              <button type="button" class="small" id="describe-intervals">Describe the whole recording</button>
-              <p class="muted small" id="intervals-note">A description at regular intervals through the recording, one engine call each. Times already described are skipped.</p>
-              <p class="muted small" id="intervals-said" hidden></p>
-            </div>
-            <ul id="cue-list" class="suggestions"></ul>
-          </div>
-
-          <div class="panel" data-panel="moments" hidden>
-            <h2 id="moments-heading">Described moments</h2>
-            <div id="moment-list" class="assistant-list"></div>
-            <p class="muted small">A moment is what the assistant saw, never what was said. Moments print as Camera lines in the transcript's Export to Word and in a summary's What the camera showed section.</p>
-          </div>
-        {% endif %}
-
-        {% if assistant.chat and transcript %}
-          <div class="panel chat" data-panel="chat" hidden>
-            {% comment %}
-              The shared Chat (chat-ui.js) fills this root; assistant.js feeds
-              it the state and the calls. The same component draws the case
-              page's Chat tab, so the two look and behave as one thing.
-            {% endcomment %}
-            <div id="chat-root"></div>
-          </div>
-        {% endif %}
-
-        <div class="panel" data-panel="details" hidden>
-          <div class="row">
-            <h2 class="grow">Details</h2>
-            {% if folder_management and transcript and not is_someone_elses %}
-              <button type="button" class="small move"
-                      data-recording="{{ recording.pk }}"
-                      data-title="{{ recording.title }}">
-                {% if recording.case_id %}Move to another case{% else %}Move to case{% endif %}
-              </button>
-            {% endif %}
-          </div>
-          <p class="muted small">
-            The provenance: where this recording came from and how it was
-            processed. Printed on every export. Never the transcript itself.
-          </p>
-          <dl id="details" class="kv"></dl>
-          <div id="marks" hidden>
-            <h3 class="small" style="margin: 12px 0 4px">Marks</h3>
-            <ul class="plain marks"></ul>
-          </div>
-        </div>
-
-        <div class="panel" data-panel="details" hidden>
-          <h2>Where the files live</h2>
-          <p class="muted small">
-            The playback copy, the waveform, and the clips are made from the
-            uploaded bytes and served straight off the disk. The uploaded
-            file itself is never downloadable: what you keep, you keep as an
-            export or a clip.
-          </p>
-        </div>
+        {% comment %}
+          The tabs' panels, in a file of their own, because a tab opened in
+          its own window is drawn from the same markup with one panel shown.
+        {% endcomment %}
+        {% include "viewer-panels.html" %}
         </div>
       </div>
     </div>

@@ -42,9 +42,14 @@
       headers: { "X-CSRFToken": cookie("csrftoken"), "Content-Type": "application/json" },
       body: JSON.stringify(body || {})
     }).then(function (answer) {
+      // Word of the change, for a window and the page to keep in step.
+      document.dispatchEvent(new CustomEvent("transcribe-posted"));
       return answer.json().then(function (said) { return { ok: answer.ok, said: said }; });
     });
   }
+
+  // Something changed in another window of this recording: read the state again.
+  document.addEventListener("changed-elsewhere", function () { refresh(); });
 
   function escape(text) {
     var holder = document.createElement("span");

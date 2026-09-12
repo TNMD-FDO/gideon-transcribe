@@ -11,13 +11,13 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases
+from core import assistant, audit, cases, settings_store
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -99,6 +99,20 @@ def open_recording(request: HttpRequest, recording_id) -> Recording | None:
     return recording
 
 
+# The tabs of the work area, and the windows a person may open: each tab in
+# its own window, and the Speakers window for tagging voices while it plays.
+PANELS = ["clips", "summary", "chat", "moments", "details"]
+WINDOWS = PANELS + ["speakers"]
+WINDOW_TITLES = {
+    "clips": "Clips",
+    "summary": "Summary",
+    "chat": "Chat",
+    "moments": "Moments",
+    "details": "Details",
+    "speakers": "Speakers",
+}
+
+
 @login_required
 def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     """The page itself."""
@@ -106,11 +120,66 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     if recording is None:
         return redirect(reverse("home"))
 
-    from core import exports
-
     # Opening a Recording in a Case is use of that Case, so its Retention
     # clock moves. An Admin looking into somebody else's does not count.
     cases.used(recording, by=request.user)
+
+    return render(
+        request,
+        "viewer.html",
+        {"page": "viewer", "panels_shown": PANELS, **_page_context(request, recording)},
+    )
+
+
+@login_required
+def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
+    """One tab of the work area, or the Speakers window, in a window of its own.
+
+    The page it belongs to is already open and has written its rows; this is
+    a second view of the same Recording, kept in step with the page through
+    the browser's own channel between them. A tab the page does not offer is
+    not offered here either.
+    """
+    if panel not in WINDOWS:
+        raise Http404
+    recording = (
+        Recording.objects.filter(pk=recording_id)
+        .select_related("user", "case", "case__owner")
+        .first()
+    )
+    if recording is None or not cases.standing(recording, request.user):
+        return redirect(reverse("home"))
+    context = _page_context(request, recording)
+    transcript = context["transcript"]
+    features = context["assistant"]
+    offered = {
+        "clips": bool(settings_store.get("clips_available")),
+        "summary": bool(features["summary"] and transcript is not None),
+        "chat": bool(features["chat"] and transcript is not None),
+        "moments": bool(
+            features["moments"] and transcript is not None and context["is_video"]
+        ),
+        "details": True,
+        "speakers": transcript is not None,
+    }
+    if not offered[panel]:
+        raise Http404
+    return render(
+        request,
+        "viewer-window.html",
+        {
+            "page": "viewer",
+            "panel": panel,
+            "panel_title": WINDOW_TITLES[panel],
+            "panels_shown": [panel],
+            **context,
+        },
+    )
+
+
+def _page_context(request: HttpRequest, recording: Recording) -> dict:
+    """What the viewer's page and its windows are drawn from."""
+    from core import exports
 
     transcript = getattr(recording, "transcript", None)
     # Ready, not merely present: the copy is written under another name until
@@ -147,54 +216,45 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
 
     job = recording.jobs.order_by("-created").first()
 
-    return render(
-        request,
-        "viewer.html",
-        {
-            "page": "viewer",
-            "recording": recording,
-            # Which of the AI assistant's three features the page offers;
-            # the panels' contents come from the assistant's own endpoint.
-            "assistant": assistant.features(),
-            # The Case's People, for the rename box to offer; none in a Workspace.
-            "people": _people_of(recording),
-            "speaker_roles": _roles_if_in_a_case(recording),
-            # The case's Chat tab, for the link under the viewer's chat.
-            "case_chat_url": _case_chat_url(recording),
-            # The rest of the case, so somebody working through a matter moves
-            # between its recordings without going back to the case page.
-            "in_case": _the_rest_of_the_case(recording),
-            "transcript": transcript,
-            "speakers": speakers,
-            "language_name": (
-                exports.language_name(transcript.language)
-                if transcript is not None
-                else ""
-            ),
-            "sides": list(recording.sides.all()),
-            "job": job,
-            "is_someone_elses": cases.standing(recording, request.user) == "admin",
-            # What Undo in the Speakers panel would undo, in words.
-            "last_change": last_change_line(transcript) if transcript else "",
-            "being_replaced": being_replaced(recording),
-            "media_url": (
-                f"{media_root(recording)}/{playback.name}" if playback else ""
-            ),
-            # While the copy is still being written there is no file to judge
-            # by, so the overlay's word comes from the probe: "Preparing
-            # video" for a recording with a picture, and not "audio".
-            "is_video": (
-                bool(playback and playback.suffix == ".mp4")
-                or (playback is None and _expects_video(recording))
-            ),
-            "waveform_url": (
-                f"{media_root(recording)}/waveform.json"
-                if recording.playback_ready and recording.waveform_path.exists()
-                else ""
-            ),
-            "frame_rate": frame_rate(recording),
-        },
-    )
+    return {
+        "recording": recording,
+        # Which of the AI assistant's three features the page offers;
+        # the panels' contents come from the assistant's own endpoint.
+        "assistant": assistant.features(),
+        # The Case's People, for the rename box to offer; none in a Workspace.
+        "people": _people_of(recording),
+        "speaker_roles": _roles_if_in_a_case(recording),
+        # The case's Chat tab, for the link under the viewer's chat.
+        "case_chat_url": _case_chat_url(recording),
+        # The rest of the case, so somebody working through a matter moves
+        # between its recordings without going back to the case page.
+        "in_case": _the_rest_of_the_case(recording),
+        "transcript": transcript,
+        "speakers": speakers,
+        "language_name": (
+            exports.language_name(transcript.language) if transcript is not None else ""
+        ),
+        "sides": list(recording.sides.all()),
+        "job": job,
+        "is_someone_elses": cases.standing(recording, request.user) == "admin",
+        # What Undo in the Speakers panel would undo, in words.
+        "last_change": last_change_line(transcript) if transcript else "",
+        "being_replaced": being_replaced(recording),
+        "media_url": (f"{media_root(recording)}/{playback.name}" if playback else ""),
+        # While the copy is still being written there is no file to judge
+        # by, so the overlay's word comes from the probe: "Preparing
+        # video" for a recording with a picture, and not "audio".
+        "is_video": (
+            bool(playback and playback.suffix == ".mp4")
+            or (playback is None and _expects_video(recording))
+        ),
+        "waveform_url": (
+            f"{media_root(recording)}/waveform.json"
+            if recording.playback_ready and recording.waveform_path.exists()
+            else ""
+        ),
+        "frame_rate": frame_rate(recording),
+    }
 
 
 @login_required
@@ -387,9 +447,83 @@ def last_change_line(transcript) -> str:
     if not changes:
         return ""
     last = changes[-1]
+    if last.get("line"):
+        return f"giving one line of {last['from']} to {last['to']}"
     if last.get("merged"):
         return f"the merge of {last['from']} into {last['to']}"
     return f"renaming {last['from']} to {last['to']}"
+
+
+@login_required
+@require_POST
+def line_speaker(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
+    """Give one line to a Speaker: the Speakers window's number keys.
+
+    One Segment changes hands; the change is remembered beside the renames
+    and merges, so Undo puts that one line back. The row holds no name.
+    """
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    cases.used(recording, by=request.user)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=404)
+    if being_replaced(recording):
+        return JsonResponse(
+            {
+                "error": "This transcript is being replaced, so its speakers "
+                "cannot be changed until the new one lands."
+            },
+            status=409,
+        )
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "that could not be read"}, status=400)
+    now = (wanted.get("speaker") or "").strip()
+    if not now:
+        return JsonResponse({"error": "a name is needed"}, status=400)
+    segment = transcript.segments.filter(pk=segment_id).first()
+    if segment is None:
+        return JsonResponse({"error": "no such line"}, status=404)
+    was = segment.speaker
+    if was == now:
+        return JsonResponse({"changed": 0, "undo": last_change_line(transcript)})
+    segment.speaker = now
+    segment.save(update_fields=["speaker"])
+    changes = list(transcript.speaker_changes or [])
+    changes.append(
+        {
+            "from": was,
+            "to": now,
+            "segments": [segment.pk],
+            "merged": False,
+            "line": True,
+            "at": timezone.now().isoformat(),
+        }
+    )
+    transcript.speaker_changes = changes[-20:]
+    transcript.save(update_fields=["speaker_changes"])
+    from core import people
+
+    people.on_named(
+        recording, now, by=request.user, how="named in the viewer", request=request
+    )
+    audit.write(
+        audit.Category.EDITS,
+        "Speaker changed on a line",
+        actor=request.user,
+        request=request,
+        affected_user=(
+            recording.user if recording.user_id != request.user.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        segments_changed=1,
+    )
+    return JsonResponse({"changed": 1, "undo": last_change_line(transcript)})
 
 
 @login_required

@@ -79,6 +79,18 @@ urlpatterns = [
         viewer.speakers,
         name="speakers",
     ),
+    # One line given to a Speaker: the Speakers window's number keys.
+    path(
+        "recording/<uuid:recording_id>/segment/<int:segment_id>/speaker",
+        viewer.line_speaker,
+        name="line-speaker",
+    ),
+    # A tab of the work area, or the Speakers window, in a window of its own.
+    path(
+        "recording/<uuid:recording_id>/window/<slug:panel>",
+        viewer.window,
+        name="viewer-window",
+    ),
     # The three exports: Word, plain text, and Captions.
     path(
         "recording/<uuid:recording_id>/export/<str:shape>",

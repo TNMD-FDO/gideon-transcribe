@@ -214,7 +214,11 @@
         "X-CSRFToken": cookie("csrftoken")
       },
       body: body ? JSON.stringify(body) : undefined
-    }).then(function (answer) { return answer.json(); });
+    }).then(function (answer) {
+      // Word of the change, for a window and the page to keep in step.
+      document.dispatchEvent(new CustomEvent("transcribe-posted"));
+      return answer.json();
+    });
   }
 
   // The list ------------------------------------------------------------------
