@@ -313,7 +313,7 @@ Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make sum
 3. **The picture decides, not a word list.** Where to look is settled by the scan of the picture and sound (chapter 3's second finder), which marks the seconds where the picture or the sound changes sharply; the clock is only the ceiling between them. Cues, the word finder, and everything that grew from them are withdrawn when this chapter is built.
 4. **Every scene informs; nothing is listed.** A Summary is written from a Digest made from all of the words and all of the record, so no stretch is left out of what it draws on; the Summary's shape stays its template's, and no part walks the recording scene by scene unless the template asks. The per-length caps on camera lines (chapter 5) go, because the Digest has already done the choosing.
 5. **The two sources survive the condensing.** Every line of a Digest says whether it came from the words, the camera, or both, and the camera rules govern the Digest as they govern an answer.
-6. **The transcript stays the transcript.** No Camera line sits among the rows any more, in the viewer or interleaved in an export; the Moments tab lists the record, and an export carries it in its own section at the end. The row's describe button stays as the way to ask about that line's time.
+6. **The transcript stays the transcript.** No Camera line sits among the rows any more, in the viewer or interleaved in an export, and no row carries a describe button; the Moments tab lists the record, and an export carries it in its own section at the end. Asking on purpose is Describe this moment at the playhead and a question about the picture, on the Moments tab, and the record already covers every second a row could point at.
 7. **Plumbing, made once, refreshed only where stale.** Nobody reads a Digest. Its parts are kept per window with what each was made from, and only a part whose words or descriptions changed is remade.
 8. **Every feature is a switch, and the cost is said in numbers.** The record and the Digest each have their switch on the AI assistant page; the dialog says how many descriptions and how many Digest parts a press will make and about how long; the catalogue and the ledger say what the engine is asked for.
 
@@ -324,7 +324,7 @@ Proposed 2026-09-12, while v1.50.0 built, from the maintainer's ask to "make sum
 ### What is withdrawn
 
 - **Cues**: the word finder (Find moments from the words) and its settings, the Cue rows, the Suggested moments list, the Camera? pill, Dismiss, and the audit feature `moment_finder`. The scan of the picture and sound stays, with its thresholds, and no longer makes Cues: its change points are what the record is cut by, and the row "Picture and sound scanned" is written as before.
-- **Camera lines among the rows**: the viewer's Camera line under the nearest row (chapter 1) and the exports' interleaved camera lines (chapter 1). The Transcript export and the Summary export keep the section "What the camera showed" at the end (chapter 4), one line per description with its span.
+- **Camera lines among the rows**: the viewer's Camera line under the nearest row and the row's describe button (chapter 1), and the exports' interleaved camera lines (chapter 1). The Transcript export and the Summary export keep the section "What the camera showed" at the end (chapter 4), one line per description with its span.
 - **Enough moments for a video summary**, the tick's count rule, and the per-length camera counts (chapter 5).
 
 ### The picture record
@@ -369,7 +369,7 @@ AI assistant call, feature `digest`, one per part, the usual metadata and never 
 
 ### What changes from earlier chapters
 
-- Chapter 1: Cues, the Camera? pill, the Camera line under a row, and the interleaved camera lines in exports; chapter 3: the word finder and the Cue rows, the scan kept and repurposed; chapter 4: the tick rule; chapter 5: the per-length counts and the Enough setting; chapters 1 and 5: "The Case Chat is not told".
+- Chapter 1: Cues, the Camera? pill, the Camera line under a row, the row's describe button, and the interleaved camera lines in exports; chapter 3: the word finder and the Cue rows, the scan kept and repurposed; chapter 4: the tick rule; chapter 5: the per-length counts and the Enough setting; chapters 1 and 5: "The Case Chat is not told".
 - The block budget and thinning (chapter 5) stay for a Recording without a Digest.
 - The ledger: the engine is asked, per video summarised for the first time, for one description per span of change, at the ceiling one per longest span, about four thousand tokens and ten to twenty seconds each, in one lane; "For GIDEON" in the next entry.
 
