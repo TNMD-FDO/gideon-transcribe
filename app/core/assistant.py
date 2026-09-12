@@ -117,6 +117,13 @@ SHIPPED_TEMPLATES = (
         (),
     ),
     (
+        "video",
+        "Video summary",
+        "What happened, seen and said together; seen but not said; notable "
+        "statements; names and dates.",
+        (),
+    ),
+    (
         "jail_call",
         "Jail call summary",
         "Who is speaking, statements about the case, requests, threats or pressure.",
@@ -248,9 +255,20 @@ class SummaryTemplate(models.Model):
 
     @classmethod
     def chosen_for(cls, recording) -> SummaryTemplate:
-        """What the viewer preselects: the type's template, else the Default."""
+        """What the viewer preselects: the type's template; else, for a video
+        whose Moments reach answers, the Video summary; else the Default."""
         for_it = cls.for_type(getattr(recording, "recording_type", ""))
-        return for_it[0] if for_it else cls.the_default()
+        if for_it:
+            return for_it[0]
+        if (
+            features()["moments"]
+            and settings_store.get("moments_in_answers")
+            and has_picture(recording)
+        ):
+            video = cls.objects.filter(built_in=True, key="video", enabled=True).first()
+            if video is not None:
+                return video
+        return cls.the_default()
 
     @classmethod
     def the_default(cls) -> SummaryTemplate:
@@ -297,8 +315,10 @@ class Summary(models.Model):
     ground_rules_version = models.IntegerField(default=1)
     focus = models.CharField(max_length=200, blank=True, default="")
     length = models.CharField(max_length=10, default="standard")
-    # Describe the recording at intervals before writing (Phase 4).
+    # Describe the recording at intervals before writing (Phase 4), and how
+    # many described Moments the summary was handed (chapter 5).
     describe_first = models.BooleanField(default=False)
+    moments_used = models.IntegerField(default=0)
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     text = models.TextField(blank=True, default="")
@@ -678,7 +698,9 @@ def write_summary(summary_id) -> None:
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
         system = prompts.system_message(
-            ground.text, template.text, prompts.SUMMARY_FORMAT
+            ground.text,
+            template.text,
+            prompts.with_camera_rules(prompts.SUMMARY_FORMAT, seen),
         )
         user = "\n\n".join(
             part
@@ -686,7 +708,7 @@ def write_summary(summary_id) -> None:
                 prompts.nature_line(recording, transcript),
                 rendered,
                 prompts.camera_lines(seen),
-                prompts.summary_input(summary.focus, summary.length),
+                prompts.summary_input(summary.focus, summary.length, len(seen)),
             ]
             if part
         )
@@ -707,6 +729,7 @@ def write_summary(summary_id) -> None:
             raise ThoughtItAway()
         summary.cut_short = answer["finish_reason"] == "length"
         summary.model = answer["model"]
+        summary.moments_used = len(seen)
         summary.transcript_created = transcript.created
         summary.state = DONE
         summary.reason_class = ""
@@ -770,7 +793,11 @@ def answer_turn(turn_id) -> None:
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
-        system = prompts.system_message(ground.text, template.text, prompts.CHAT_FORMAT)
+        system = prompts.system_message(
+            ground.text,
+            template.text,
+            prompts.with_camera_rules(prompts.CHAT_FORMAT, seen),
+        )
         earlier = [
             (one.question, one.answer)
             for one in chat.turns.filter(state=DONE, number__lt=turn.number)
@@ -860,15 +887,24 @@ MOMENT_SAYS = {
 }
 
 
+# What one interval description takes the engine, about, so the summary
+# dialog can say the minutes; a note, never a limit.
+MOMENT_SECONDS_GUESS = 20
+
+
 def moments_for_answers(transcript) -> list:
     """The Moments Summary and Chat are told about, or none.
 
     Only while Moments are on and the office hands them to answers; a Moment
-    that failed or is still being described is not a description.
+    that failed or is still being described is not a description. Thinned to
+    the camera block's budget when an office's numbers make it too big.
     """
     if not settings_store.get("moments_in_answers") or not features()["moments"]:
         return []
-    return list(transcript.moments.filter(state=DONE).exclude(text=""))
+    return prompts.trim_camera_lines(
+        list(transcript.moments.filter(state=DONE).exclude(text="")),
+        prompts.CAMERA_BLOCK_TOKENS,
+    )
 
 
 def playable_video(recording) -> bool:
@@ -877,6 +913,19 @@ def playable_video(recording) -> bool:
     return bool(
         recording.playback_ready and playback is not None and playback.suffix == ".mp4"
     )
+
+
+def has_picture(recording) -> bool:
+    """Whether the Recording carries a picture: the Playback copy says so, or
+    the probe does before the copy exists."""
+    if playable_video(recording):
+        return True
+    from core import media
+
+    try:
+        return media.video_stream(getattr(recording, "probe", None) or {}) is not None
+    except Exception:  # noqa: BLE001 - an odd probe is not a reason to fail the page
+        return False
 
 
 def moment_span(recording, at: float) -> tuple[float, float]:

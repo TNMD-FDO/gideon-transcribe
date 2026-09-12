@@ -10,6 +10,7 @@ chapter's, metadata only.
 from __future__ import annotations
 
 import json
+import math
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -76,6 +77,7 @@ def _summary_json(summary: Summary, transcript) -> dict:
         "focus": summary.focus,
         "length": summary.length,
         "describe_first": summary.describe_first,
+        "moments_used": summary.moments_used,
         "text": summary.text,
         "citations": summary.citations,
         "cut_short": summary.cut_short,
@@ -200,17 +202,25 @@ def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict
         one.at for one in moments if one.state in (assistant.QUEUED, assistant.RUNNING)
     ]
     every = settings_store.moment_interval_seconds()
+    count = len(
+        assistant.interval_times(
+            float(recording.duration_seconds or 0.0),
+            every,
+            settings_store.moment_interval_most(),
+            taken,
+        )
+    )
     intervals = {
         "every": every,
-        "count": len(
-            assistant.interval_times(
-                float(recording.duration_seconds or 0.0),
-                every,
-                settings_store.moment_interval_most(),
-                taken,
-            )
-        ),
+        "count": count,
+        # About how long the run would take, for the dialog's line.
+        "minutes": math.ceil(count * assistant.MOMENT_SECONDS_GUESS / 60),
     }
+    # The described Moments, and the rule for the dialog's Look at the picture
+    # first tick: the office's toggle, something left to describe, and fewer
+    # described already than the office calls enough (0 meaning always).
+    described = sum(1 for one in moments if one.state == assistant.DONE and one.text)
+    enough = settings_store.summary_moments_enough()
     runs = {
         "transcript": _run_json(
             transcript.cue_runs.filter(source=CueRun.TRANSCRIPT).first()
@@ -224,7 +234,13 @@ def _moments_and_cues(recording, transcript, features) -> tuple[list, list, dict
             "transcript": bool(settings_store.get("moment_finder_transcript")),
             "media": bool(settings_store.get("moment_finder_media")),
         },
-        "describe_first_default": bool(settings_store.get("summary_describes_first")),
+        "described": described,
+        "answers_use_moments": bool(settings_store.get("moments_in_answers")),
+        "describe_first_default": bool(
+            settings_store.get("summary_describes_first")
+            and count > 0
+            and (enough == 0 or described < enough)
+        ),
     }
     return [_moment_json(one) for one in moments], cues, runs
 
@@ -288,6 +304,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             f"This is a {recording.recording_type.lower()}, so the "
             f"{chosen.name} is chosen."
         )
+    elif chosen is not None and chosen.key == "video" and len(templates) > 1:
+        type_line = f"This is a video, so the {chosen.name} is chosen."
     busy = any(
         one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in summaries
     )
@@ -330,6 +348,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
                 for one in templates
             ],
             "default_template": str(chosen.pk) if chosen else "",
+            "default_template_key": chosen.key if chosen else "",
             "type_line": type_line,
             "unnamed": unnamed,
             # "pending", not "suggestions": that word is the feature's own flag above.

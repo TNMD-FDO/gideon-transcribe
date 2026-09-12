@@ -408,7 +408,7 @@
           <div class="panel" data-panel="summary" hidden>
             <div class="row">
               <h2 class="grow">Summaries</h2>
-              <button type="button" class="small primary" id="new-summary">New summary</button>
+              <button type="button" class="small primary" id="new-summary">{% if assistant.moments and is_video %}Summarise this video{% else %}New summary{% endif %}</button>
             </div>
             <div id="summary-dialog" class="card" hidden style="margin: 8px 0">
               <div class="field" id="summary-template-line" hidden>
@@ -429,10 +429,20 @@
                 </select>
               </div>
               {% if assistant.moments and is_video %}
-                <label class="row" id="summary-describe-line">
-                  <input type="checkbox" id="summary-describe-first"> Describe the moments first
-                  <span class="muted small" id="summary-describe-note"></span>
-                </label>
+                {% comment %}
+                  The look-first line, in one of three forms assistant.js
+                  chooses from the state: the tick with its cost while
+                  intervals are left to describe; a line saying the summary
+                  draws on the moments described when none are; a line saying
+                  the office writes from the words alone when it hands no
+                  moments to answers.
+                {% endcomment %}
+                <div class="field" id="summary-look-line">
+                  <label class="row" id="summary-describe-line">
+                    <input type="checkbox" id="summary-describe-first"> Look at the picture first
+                  </label>
+                  <p class="muted small" id="summary-describe-note" style="margin: 2px 0 0"></p>
+                </div>
               {% endif %}
               <div class="row">
                 <button type="button" class="primary small" id="summary-write">Write summary</button>

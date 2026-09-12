@@ -80,7 +80,10 @@ SHIPPED_SUMMARIES = {
         "place as far as the recording says, and who takes part.\n"
         "Timeline: a bulleted list of what happens in order, each point ending "
         "with its time: arrival, contact, commands, searches, handcuffing, any "
-        "use of force, transport, and the end of the recording.\n"
+        "use of force, transport, and the end of the recording. Where the "
+        "camera showed the thing said or done, add it to the same point as "
+        '"the camera shows ..." with the camera line\'s time. Leave out camera '
+        "lines that only repeat the scene.\n"
         "Commands, warnings, and rights: every command, warning, and advisement "
         "of rights spoken by an officer, quoted exactly with the time. Never "
         "paraphrase inside quotation marks.\n"
@@ -89,11 +92,41 @@ SHIPPED_SUMMARIES = {
         "said unprompted.\n"
         "What officers say to each other: statements between officers or over "
         "the radio about the person, the scene, or what to do next, with times.\n"
+        "Seen but not said: what the camera showed that nobody spoke about: an "
+        "object, an action, a person in view, a change of place; each as "
+        '"the camera shows ..." with its time. Write "None noticed" if there '
+        "are none.\n"
         "Names, places, and dates: every person, place, organisation, date, and "
         "time of day mentioned, each with the time of its first mention.\n"
         "Unclear parts: stretches where the audio is garbled, cut off, "
         'overlapping, or hard to follow, with their times. Write "None noticed" '
         "if there are none."
+    ),
+    "video": (
+        "Write a summary of this video recording with these parts, in this "
+        "order, using these headings. It has two sources: the transcript, which "
+        "is what was said, and, when it is given, the block headed What the "
+        "camera showed, which is what a model saw in the picture. Keep them "
+        "apart in every sentence.\n"
+        "Overview: one short paragraph. What kind of recording this is, where "
+        "it is as far as the words or the camera say, who takes part, and what "
+        "happens.\n"
+        "What happened: a bulleted list in the order things happen, each point "
+        "ending with its time. Where the camera showed the thing said or done, "
+        'add it to the same point as "the camera shows ..." with the camera '
+        "line's time. Leave out camera lines that only repeat the scene.\n"
+        "Seen but not said: what the camera showed that nobody spoke about: an "
+        "object, an action, a person in view, a change of place; each as "
+        '"the camera shows ..." with its time. Write "None noticed" if there '
+        "are none.\n"
+        "Notable statements: short quotes that matter, each with the speaker "
+        "and the time. Quote exactly; never paraphrase inside quotation marks.\n"
+        "Names, places, and dates: every person, place, organisation, date, and "
+        "time of day mentioned in the words, each with the time of its first "
+        "mention. Never a name from the camera.\n"
+        "Unclear parts: stretches where the audio is garbled, cut off, "
+        "overlapping, or hard to follow, and times the camera could not make "
+        'out, with their times. Write "None noticed" if there are none.'
     ),
     "interview": (
         "Write a summary of this interview with these parts, in this order, "
@@ -194,13 +227,22 @@ SHIPPED_SUMMARIES = {
 }
 
 CHAT = (
-    "Answer the user's questions using only this transcript. If the answer is "
-    "not in the transcript, say so in one sentence and do not guess. Quote the "
-    "transcript when it helps. Give the time for every statement you rely on "
-    "as [hh:mm:ss]. Keep answers short unless the user asks for detail. If a "
-    "question asks for legal advice, an opinion on guilt or credibility, or "
-    "anything outside the transcript, reply: I can only answer from this "
-    "transcript."
+    "Answer the user's questions using only this transcript and, when it is "
+    "given, the block headed What the camera showed. If the answer is in "
+    "neither, say so in one sentence and do not guess. Quote the transcript "
+    "when it helps. Give the time for every statement you rely on as "
+    '[hh:mm:ss], and write anything from the camera as "the camera shows ..." '
+    "with the camera line's time. Asked what was visible at a time, answer "
+    "from the camera line nearest it within a minute; when there is none, say "
+    "no moment has been described near that time and that one can be asked "
+    "for on the Moments tab. Keep answers short unless the user asks for "
+    "detail. If a question asks for a legal conclusion, such as whether "
+    "someone consented, was under arrest, or was searched lawfully, give what "
+    "was said and what the camera showed about it, with times, then say in "
+    "one sentence that the conclusion is not something you can answer from a "
+    "transcript. If a question asks for legal advice, an opinion on guilt or "
+    "credibility, or anything outside the transcript and the camera lines, "
+    "reply: I can only answer from this transcript."
 )
 
 CASE_CHAT = (
@@ -230,10 +272,9 @@ SUGGESTIONS = (
 SUMMARY_FORMAT = (
     "Write the summary as plain text with each part's heading on its own line, "
     "followed by a colon. Give every time as [hh:mm:ss], copied from the line "
-    "it appears on. Do not add parts the template does not ask for. When a "
-    "block headed 'What the camera showed' is given, draw on it for what was "
-    "seen, cite its times the same way, and say 'the camera shows' so the "
-    "reader knows the fact came from the picture and not the words."
+    "it appears on. Do not add parts the template does not ask for. Where a "
+    "part asks for what the camera showed and no block headed What the camera "
+    'showed was given, write "No moments were described" under it.'
 )
 CHAT_FORMAT = (
     "Answer in plain text. Give every time as [hh:mm:ss], copied from the line "
@@ -317,6 +358,44 @@ QUESTION_FORMAT = (
 # transcript, labelled so the model and the reader both know it is a
 # description and not the words.
 CAMERA_HEADING = "What the camera showed (a model's descriptions, not the transcript):"
+# The legend under the heading: the block's shape, and that the picture was
+# looked at only at the listed times.
+CAMERA_NOTE = (
+    "One line per described moment, in time order. Times not listed were not looked at."
+)
+# How Summary and Chat use the block (chapter 5): fixed, and put after the
+# answer format only when a block is given, so a sound-only Recording pays
+# nothing. Two sources kept apart, neither winning, names from the words
+# only, nothing inferred from the picture, only the listed times, briefly.
+CAMERA_RULES = (
+    "The block headed What the camera showed is a model's description of the "
+    "picture at the listed times, not the transcript. Use it by these rules.\n"
+    "Two sources, kept apart: a fact from the words is cited with its line's "
+    'time; a fact from the camera is written as "the camera shows ..." and '
+    "cited with the camera line's time. Never put a camera fact and a spoken "
+    "fact in one unmarked clause.\n"
+    "Precedence: neither wins. The words are the record of what was said; the "
+    "camera is the record of what was visible. When they disagree, give both "
+    "with their times and say that they differ.\n"
+    "Names: a person is named only from the words. The camera's \"a man in a "
+    'grey hoodie" stays that even when the words name him; join the two only '
+    'side by side, as "the man the officer calls Marcus [00:03:10]; the '
+    'camera shows a man in a grey hoodie ... [00:03:12]".\n'
+    "Never infer from the camera: not who someone is, not what they intend, "
+    "not what an object or substance is beyond what the description says (a "
+    "small bag stays a small bag), and not a legal fact such as consent, "
+    'arrest, search, or force. "Not visible" is a finding; report it as one.\n'
+    "Only listed times: the camera was looked at only at the listed times. Say "
+    "nothing about the picture at any other time, and when asked about one, "
+    "say no moment was described there.\n"
+    "Brevity: a camera fact earns a clause, not a paragraph. Leave out camera "
+    "lines that add nothing to the words."
+)
+# The most camera lines a Summary of each length draws on, told to the model
+# in its input; and the most the block may cost, past which the app thins it
+# (every asked and suggested Moment kept, the interval ones spread evenly).
+CAMERA_MOST = {"short": 5, "standard": 12, "detailed": 30}
+CAMERA_BLOCK_TOKENS = 6000
 
 LENGTH_LINES = {
     "short": "Keep the whole summary under about 250 words.",
@@ -532,14 +611,34 @@ def system_message(ground_rules: str, template: str, answer_format: str) -> str:
     return "\n\n".join(part for part in (ground_rules, template, answer_format) if part)
 
 
-def summary_input(focus: str, length: str) -> str:
+def summary_input(focus: str, length: str, seen: int = 0) -> str:
+    """The length line, the Focus, and, with a camera block, how much of it to use."""
     parts = [LENGTH_LINES.get(length, LENGTH_LINES["standard"])]
     if focus.strip():
         parts.append(
             f"Concentrate on: {focus.strip()}. Keep every part, but weight the "
             "content toward this."
         )
+    if seen > 0:
+        most = CAMERA_MOST.get(length, CAMERA_MOST["standard"])
+        lines = "line" if seen == 1 else "lines"
+        if seen > most:
+            parts.append(
+                f"The camera block has {seen} {lines}. Draw on at most {most} of "
+                "them, the ones that add a fact the words do not; leave the rest "
+                "out rather than listing them."
+            )
+        else:
+            parts.append(
+                f"The camera block has {seen} {lines}; draw on the ones that add "
+                "a fact the words do not."
+            )
     return "\n".join(parts)
+
+
+def with_camera_rules(answer_format: str, seen) -> str:
+    """The answer format, with the camera rules after it when a block is given."""
+    return answer_format + ("\n\n" + CAMERA_RULES if seen else "")
 
 
 def suggestions_input(unnamed: list[str], known: list[str]) -> str:
@@ -623,19 +722,52 @@ def lines_in_span(lines: list[Line], span_start: float, span_end: float) -> list
     return before[-1:] + after[:1]
 
 
-def camera_line_text(moment) -> str:
-    """A Moment's words with its question in front, when it answered one."""
+def camera_line_text(moment, mark_edited: bool = False) -> str:
+    """A Moment's words: its question in front when it answered one, and, for
+    the model's block, a mark at the end when staff put their own words in,
+    so the heading's "a model's descriptions" is honest for every line. The
+    exports have their legend and their provenance row for that."""
     question = (getattr(moment, "question", "") or "").strip()
     text = (moment.text or "").strip()
-    return f'(asked "{question}") {text}' if question else text
+    if question:
+        text = f'(asked "{question}") {text}'
+    if mark_edited and getattr(moment, "edited", False):
+        text = f"{text} (edited by staff)"
+    return text
 
 
 def camera_lines(moments) -> str:
     """The Moments as Summary and Chat are told them, or nothing."""
-    said = [f"{clock(one.at)} [camera] {camera_line_text(one)}" for one in moments]
+    said = [
+        f"{clock(one.at)} [camera] {camera_line_text(one, mark_edited=True)}"
+        for one in moments
+    ]
     if not said:
         return ""
-    return CAMERA_HEADING + "\n" + "\n".join(said)
+    return CAMERA_HEADING + "\n" + CAMERA_NOTE + "\n" + "\n".join(said)
+
+
+def trim_camera_lines(moments, budget: int = CAMERA_BLOCK_TOKENS) -> list:
+    """The Moments whose block fits the budget, in time order.
+
+    Every asked and suggested Moment is kept; the interval ones are spread
+    evenly over the recording, fewer each step, until the block fits. At the
+    shipped numbers (forty intervals, brief descriptions) nothing is thinned.
+    """
+    moments = sorted(moments, key=lambda one: one.at)
+    if tokens(camera_lines(moments)) <= budget:
+        return moments
+    kept = [one for one in moments if getattr(one, "source", "") != "interval"]
+    intervals = [one for one in moments if getattr(one, "source", "") == "interval"]
+    count = len(intervals)
+    while count > 0:
+        step = len(intervals) / count
+        spread = [intervals[int(n * step)] for n in range(count)]
+        chosen = sorted(kept + spread, key=lambda one: one.at)
+        if tokens(camera_lines(chosen)) <= budget:
+            return chosen
+        count -= max(1, count // 10)
+    return kept
 
 
 # The finder (Phase 4, chapter 3) ----------------------------------------------------

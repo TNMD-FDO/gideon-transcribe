@@ -328,7 +328,11 @@ _Avoid_: the LLM, the model (in anything a user reads)
 English prose the AI assistant writes about one Transcript when a user asks, in the shape of a Summary template, with every point tied to a time. A Transcript can have several; each can be exported to Word.
 
 **Summary template**:
-An admin-kept instruction that fixes the shape of a Summary. "Standard summary" is built in; Admins may add more, and users choose one only when more than one is offered.
+An admin-kept instruction that fixes the shape of a Summary. "Standard summary", the "Video summary", and one per shipped Recording type are built in; Admins may add more, and users choose one only when more than one is offered.
+
+**Video summary**:
+The shipped Summary template for a video Recording without a Recording type, when Moments reach answers: what was said and what the camera showed interleaved, and a part "Seen but not said" for what the camera showed that nobody spoke about. A Recording type still wins: a body camera recording keeps its Body camera summary. The viewer's button reads "Summarise this video" on such a Recording. Phase 4.
+_Avoid_: visual summary, combined summary, multimodal summary
 
 **Focus**:
 The user's optional steer for one Summary, such as "the timeline of the evening of March 3".
@@ -363,6 +367,9 @@ _Avoid_: detector, classifier
 
 **Camera line**:
 How a Moment appears among Transcript lines: marked Camera, in italic, in the viewer, in the exports, and in what the AI assistant is told. A Camera line is never a Segment.
+
+**Camera rules**:
+The fixed instructions Summary and Chat are given whenever Camera lines are handed to them: the two sources kept apart in every sentence, neither winning, a person named only from the words, nothing inferred from the picture, only the listed times looked at, and a camera fact told briefly. Not editable; the templates are. Phase 4.
 
 **Prompt template**:
 An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, the Moment and Find moments instructions, and every Summary template. Each carries a version.

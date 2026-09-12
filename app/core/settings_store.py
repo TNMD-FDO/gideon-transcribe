@@ -1488,13 +1488,32 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Summaries describe the moments first",
             kind=TOGGLE,
-            default=False,
+            default=True,
             needs="moments_available",
             what_it_does=(
-                "Whether the summary dialog's tick, describe the moments first, "
-                "starts ticked on a video. Ticked, a summary describes the recording "
-                "at intervals before it writes, so it can say what was seen as well "
-                "as what was said; the cost is one call per interval."
+                "Whether Summarise this video starts with its tick, Look at the "
+                "picture first, ticked, while fewer moments are described than "
+                "Enough moments for a video summary. Ticked, the summary describes "
+                "the recording at intervals before it writes, so it can say what "
+                "was seen as well as what was said; the cost is one call per "
+                "interval."
+            ),
+            when_changed="The next summary dialog opened.",
+        ),
+        Definition(
+            key="summary_moments_enough",
+            page=ASSISTANT,
+            name="Enough moments for a video summary",
+            kind=NUMBER,
+            default=10,
+            least=0,
+            most=200,
+            unit="moments",
+            needs="moments_available",
+            what_it_does=(
+                "When at least this many moments are described already, Look at "
+                "the picture first starts unticked and the summary draws on what "
+                "there is. 0 means it always starts ticked."
             ),
             when_changed="The next summary dialog opened.",
         ),
@@ -1998,3 +2017,7 @@ def moment_interval_seconds() -> float:
 
 def moment_interval_most() -> int:
     return get("moment_interval_most")
+
+
+def summary_moments_enough() -> int:
+    return get("summary_moments_enough")

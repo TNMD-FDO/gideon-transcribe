@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, and its fourth in `v1.41.0`.
+The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, and its fifth in `v1.43.0`.
 
 ## About this document
 
@@ -18,8 +18,9 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **Questions and clips** (chapter 2, v1.39.0): a Moment answers a question about the picture from a few close frames, in a fixed shape that says what is visible, what it is consistent with, and what cannot be told; descriptions are brief unless the office chooses full; and a Moment becomes a Clip with its words as the note and as a caption.
 - **The finders** (chapter 3, v1.40.0): Find moments reads the whole Transcript once and suggests the lines where the picture would add a fact, each with its reason, and, when the office turns it on, scans the picture and sound for sharp changes and raised voices; the word list of chapter 1 is withdrawn.
 - **Intervals and the summary** (chapter 4, v1.41.0): the whole recording described at intervals, one lane, one call each; a Summary that describes the moments first when asked, and draws on what was seen; and a "What the camera showed" section in the Summary's Word export.
+- **The video summary and the video-aware chat** (chapter 5, v1.43.0): a shipped Video summary template that writes from the words and the described Moments together, fixed camera rules that keep the two sources apart whenever Camera lines are handed to Summary or Chat, a Chat that answers "what was in his hand at 12:40?" from both feeds, a look-first line in the summary dialog that says the cost in numbers and starts ticked by a rule, and camera citations drawn with the camera glyph.
 
-It adds twenty-two admin settings, two prompt templates, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0038), and no environment key.
+It adds twenty-three admin settings, two prompt templates, one shipped Summary template, two audit row features, one Recordings row, two Viewer-edit rows, one reason class, three tables (migrations 0035 to 0039), and no environment key.
 
 ## Contents
 
@@ -27,7 +28,8 @@ It adds twenty-two admin settings, two prompt templates, two audit row features,
 2. Questions, clearer words, and clips
 3. The finders
 4. Intervals and the summary
-5. Deferred and ruled out
+5. The video summary and the video-aware chat
+6. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -235,7 +237,7 @@ Three on the AI assistant page, greyed while Moments is Off: **Describe at inter
 
 ### Not in this phase
 
-- Choosing which interval Moments a Summary uses; it receives all of them, as Moments in answers has it.
+- Choosing which interval Moments a Summary uses; it receives all of them, as Moments in answers has it. (Chapter 5, v1.43.0: the model picks under a per-length cap, and the app thins the block only past its budget.)
 - Describing at intervals on a timer or at transcription.
 - Deleting the interval Moments in one press; each is a Moment like any other.
 
@@ -244,7 +246,61 @@ Three on the AI assistant page, greyed while Moments is Off: **Describe at inter
 - The first time (half an interval in), the skip rule (half an interval), and the spreading (`assistant.interval_times`).
 - The order (time order) and the stop rule (`assistant.describe_intervals`).
 
-## 5. Deferred and ruled out
+## 5. The video summary and the video-aware chat
+
+Written 2026-09-12 after chapter 4 shipped and the maintainer asked for "a smart way to summarize all the moments in conjunction with the transcript for a comprehensive summary of a video", intuitive, "not overly verbose", with a chat "that also uses the smart combo", and "some good prompting". Chapter 4 built the plumbing: the intervals, the tick, the camera block after the Transcript. What was missing was the choosing, the prompting, and the words on the screen. Built in v1.43.0.
+
+### Principles
+
+1. **Two sources, kept apart.** The Transcript is the record of what was said; a Moment is a model's description of what was visible. The model is told both and never lets them blur: a fact from the words carries its line's time, a fact from the camera is written as "the camera shows ..." with the camera line's time, and never the two in one unmarked clause.
+2. **Neither wins.** When the words and the picture disagree, the answer gives both with their times and says that they differ. The reader judges.
+3. **Names from the words only.** The camera's "a man in a grey hoodie" stays that even when the words name him; the two are joined only side by side. Nothing is inferred from the picture: not who someone is, not what they intend, not what an object is beyond what the description says, and never a legal fact.
+4. **Only the listed times.** The camera was looked at only where a Moment exists. Asked about any other time, the assistant says no moment was described there, and where to ask for one.
+5. **Brevity.** A camera fact earns a clause, not a paragraph; a summary of each length draws on a stated number of camera lines and leaves the rest out rather than listing them. The maintainer's "not overly verbose" is a rule the model is given, not a hope.
+6. **The rules are the app's; the shape is the office's.** The camera rules are fixed and never edited; the Video summary and the Body camera summary are templates an office edits or resets like any other, and every other template is still governed by the rules when a block is present.
+
+### Words
+
+**Video summary** and **Camera rules** are added to the glossary.
+
+### The templates and the rules
+
+- **The Video summary**, a shipped template for no Recording type: Overview; **What happened**, each point ending with its time, and where the camera showed the thing said or done, "the camera shows ..." added to the same point with the camera line's time, camera lines that only repeat the scene left out; **Seen but not said**, what the camera showed that nobody spoke about, each as "the camera shows ..." with its time, "None noticed" when there are none; Notable statements; Names, places, and dates, mentioned in the words, never a name from the camera; Unclear parts, the audio's and the camera's.
+- **The Body camera summary** gains the same two things: its Timeline draws on the camera the same way, and Seen but not said follows What officers say to each other. An office that edited its Body camera summary keeps its words and version, and gets the new parts with Reset to default.
+- **The camera rules** (`prompts.CAMERA_RULES`, fixed) follow the answer format in the system message of Summary and of Chat only when a camera block is given, so a sound-only Recording pays nothing: the six principles above as instructions, with the worked example of a name joined side by side.
+- **The block** keeps its heading and gains a legend line: one line per described Moment, in time order; times not listed were not looked at. A line staff edited ends "(edited by staff)" in the block only, so the heading's "a model's descriptions" is honest for every line; the exports have their legend and provenance row already.
+- **The length line** gains, when a block is given, how many camera lines to draw on: 5 for Short, 12 for Standard, 30 for Detailed, "the ones that add a fact the words do not; leave the rest out rather than listing them"; when the block has no more than that, "draw on the ones that add a fact the words do not".
+- **The block's budget**: past `CAMERA_BLOCK_TOKENS` (6,000 by the app's estimate) the block is thinned, every asked and suggested Moment kept and the interval Moments spread evenly, fewer each step, until it fits. At the shipped numbers nothing is thinned; the budget exists for the office that sets two hundred intervals in the full style.
+- **The summary format line** loses its one sentence on the camera block, which the rules replace, and says that a part asking for what the camera showed reads "No moments were described" when no block was given.
+- **The Chat template** (editable) answers from the Transcript and, when given, the block; asked what was visible at a time it uses the camera line nearest it within a minute or says none was described there and that one can be asked for on the Moments tab; asked for a legal conclusion (consent, arrest, a lawful search) it gives what was said and what the camera showed, with times, then says in one sentence that the conclusion is not something it can answer from a transcript; legal advice, guilt, credibility, and anything outside both feeds still get "I can only answer from this transcript". The Case Chat is untouched (chapter 1's Not in this phase stands).
+
+### The viewer
+
+- **The button.** On a video with Moments on and Moments in answers on, the Summary tab's button reads **Summarise this video**; otherwise New summary. The empty state says what it does: "Summarise this video looks at the picture at intervals, then writes from the words and the moments together."
+- **The template chosen.** A Recording type wins (a body camera recording gets the Body camera summary); a video of any other type or none gets the Video summary while Moments reach answers and the template is Enabled; the type line reads "This is a video, so the Video summary is chosen."; the state answer carries the chosen template's key.
+- **The look-first line** replaces the tick's caption, in one of three forms the page chooses from the state: while intervals are left to describe, the tick **Look at the picture first** with "n descriptions, one every minute, one engine call each, about m minutes. k moments are described already."; when none are left, "The summary draws on the k described moments."; when the office hands no Moments to answers, "Your office does not hand moments to summaries, so this one is written from the words alone." The minutes are `count` times a code guess of twenty seconds a description (`assistant.MOMENT_SECONDS_GUESS`), a note and never a limit.
+- **The tick's start** is a rule, not a bare toggle: ticked when **Summaries describe the moments first** is On, something is left to describe, and fewer Moments are described than **Enough moments for a video summary** (0 meaning always). The state answer carries `cue_runs.described`, `cue_runs.answers_use_moments`, `cue_runs.intervals.minutes`, and `describe_first_default` computed by the rule.
+- **The card** says "Reading the transcript and n moments..." while the one call runs (after "Looking at the picture first (n of m)..." while the intervals run), and its head says how many moments the summary drew on; a Summary remembers the number (`moments_used`, migration 0039).
+- **Camera citations.** A time cited in a summary or a chat answer that is a described Moment's time is drawn with the camera glyph before it and the description as its hover title; a word citation is as before; both seek the player. The Chat's play pill carries the glyph in place of the play mark.
+- **The Chat's lines.** The grounding line reads "Answers come from this transcript and its n described moments, not from any other recording. What the camera showed is a model's description."; the waiting line "Reading the transcript and n moments..."; without Moments, both as before.
+
+### Settings
+
+One new on the AI assistant page, greyed while Moments is Off: **Enough moments for a video summary** (10, 0 to 200). **Summaries describe the moments first** starts On (Off in v1.41.0), reworded to say what it now governs.
+
+### Not in this phase
+
+- The Case Chat being told Moments.
+- A Templates page notice that a newer shipped wording exists for a template an office edited.
+- Choosing the Video summary for a video whose office writes from the words alone; it gets the Default, and the dialog says why.
+
+### Left to the build
+
+- The per-length numbers (`prompts.CAMERA_MOST`), the block budget (`prompts.CAMERA_BLOCK_TOKENS`), and the thinning (`prompts.trim_camera_lines`).
+- The "within a minute" rule for a question about a time, in the Chat template.
+- The seconds-a-description guess behind the dialog's minutes.
+
+## 6. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
@@ -286,7 +342,9 @@ Three on the AI assistant page, greyed while Moments is Off: **Describe at inter
 | Find moments (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 | Describe at intervals: every | AI assistant | seconds, 20 to 600; greyed while Moments is Off | 60 |
 | Describe at intervals: at most | AI assistant | 5 to 200; greyed while Moments is Off | 40 |
-| Summaries describe the moments first | AI assistant | On or Off; greyed while Moments is Off | Off |
+| Summaries describe the moments first | AI assistant | On or Off; greyed while Moments is Off | On (Off in v1.41.0) |
+| Enough moments for a video summary | AI assistant | 0 to 200; greyed while Moments is Off | 10 |
+| Video summary (template) | Templates | a Summary template for no Recording type, editable, resettable, not deletable | the chapter 5 wording |
 | Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 
 ## Sources
@@ -298,4 +356,5 @@ The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-
 - From the maintainer, on the v1.38.0 build, chapter 2 (v1.39.0): questions answered from close frames in a fixed shape, the brief style as the default with the answer cap at 250, and Moment to Clip with Camera captions.
 - From the maintainer, on the v1.39.0 build, chapter 3 (v1.40.0): the word-list Cues withdrawn for flagging ordinary talk; the finder that reads the Transcript and the scan of the picture and sound, each with its switch and its numbers; Cues stored, with a reason, and dismissable.
 - From the maintainer, on the v1.40.0 build, chapter 4 (v1.41.0): the whole recording described at intervals in one lane, the Summary's tick to describe the moments first, the summary format line that lets it draw on the camera block, and the export's "What the camera showed" section.
+- From the maintainer, on the v1.42.0 build ("a smart way to summarize all the moments in conjunction with the transcript"), chapter 5 (v1.43.0): the Video summary template and the Body camera summary's two camera parts; the fixed camera rules given to Summary and Chat whenever a block is present; the block's legend line and the edited mark; the per-length count of camera lines to draw on and the block's budget; the Chat template answering from both feeds, with the "within a minute" rule and the facts-then-decline shape for a legal conclusion; Summarise this video, the template chosen for a video, the three-form look-first line, the tick's rule with Enough moments for a video summary, Summaries describe the moments first starting On, the summary's count of moments used, and camera citations with the glyph.
 - From the maintainer, on the v1.41.0 build ("the page is sort of getting congested"), the Moments tab refined (v1.42.0): two panels behind the one tab, as the Clips tab has, Suggested moments with the Cues and Described moments with the Moments; Find moments and Describe the whole recording together under Suggested moments, each with a caption that says what it does and what it costs in numbers (the state answer's `cue_runs.intervals` carries the interval and how many Moments the press would make now) and a result line under it ("7 lines suggested from the words.", "3 changes found in the picture and sound.", "20 moments described across the recording.", "Both finders are off for your office."); a Cue quotes the transcript line it was found on and says sure, fairly sure, or unsure; Again reads Describe again, or Ask again on a question, and waits while the Moment is being described; a card says from a suggestion or from the whole recording and Waiting its turn... while queued; the row's button reads describe and, like Describe this moment, opens a box that names the time, with Describe as its OK; the Camera? pill is a button that says "Looking..." after the press; the Camera line has no coloured bar of its own, its tag in the muted colour, and says "waiting its turn..." while queued; the summary dialog's tick says the interval and the count in its note.

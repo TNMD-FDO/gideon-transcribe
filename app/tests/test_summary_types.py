@@ -66,6 +66,7 @@ def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):
     keys = dict(SummaryTemplate.objects.values_list("key", "recording_types"))
     assert keys == {
         "standard": [],
+        "video": [],
         "jail_call": ["Jail call"],
         "body_camera": ["Body camera"],
         "interview": ["Interview"],
@@ -74,11 +75,11 @@ def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):
         "dictation": ["Dictation"],
         "meeting": ["Meeting"],
     }
-    assert SummaryTemplate.objects.filter(built_in=True, enabled=True).count() == 8
+    assert SummaryTemplate.objects.filter(built_in=True, enabled=True).count() == 9
     assert SummaryTemplate.the_default().key == "standard"
     # Made once: asking again makes nothing.
     SummaryTemplate.shipped()
-    assert SummaryTemplate.objects.count() == 8
+    assert SummaryTemplate.objects.count() == 9
     for one in SummaryTemplate.objects.exclude(key="standard"):
         assert one.text == prompts.SHIPPED_SUMMARIES[one.key]
         if one.key != "dictation":

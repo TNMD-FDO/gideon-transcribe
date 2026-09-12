@@ -52,11 +52,33 @@
     return holder.innerHTML;
   }
 
+  // The described Moment at a cited second, if any: a citation of a camera
+  // line is drawn with the camera glyph and the description as its title, so
+  // a reader sees at once that the fact came from the picture.
+  function cameraAt(seconds) {
+    if (!state || !state.moments) { return null; }
+    var whole = Math.floor(seconds);
+    for (var i = 0; i < state.moments.length; i += 1) {
+      var one = state.moments[i];
+      if (one.state === "done" && one.text && Math.floor(one.at) === whole) { return one; }
+    }
+    return null;
+  }
+
+  function quoted(text) {
+    return escape(text).replace(/'/g, "&#39;");
+  }
+
   // Text with its Citations as links. Only the times the app matched become
   // links; the pattern is the chapter's [hh:mm:ss].
   function withCitations(text, citations) {
     return escape(text).replace(/\[(\d{1,2}):(\d{2}):(\d{2})\]/g, function (whole) {
       if (citations && Object.prototype.hasOwnProperty.call(citations, whole)) {
+        var seen = cameraAt(citations[whole]);
+        if (seen) {
+          return "<a href='#' class='cite camera' data-seconds='" + citations[whole] + "' title='Camera: " + quoted(seen.text) + "'>" +
+            window.VIEWER.icon("camera") + whole + "</a>";
+        }
         return "<a href='#' class='cite' data-seconds='" + citations[whole] + "'>" + whole + "</a>";
       }
       return whole;
@@ -102,9 +124,26 @@
   var newSummary = document.getElementById("new-summary");
   var summaryDialog = document.getElementById("summary-dialog");
 
+  // Whether the assistant's answers on this page draw on the camera: a video
+  // with Moments on, and the office handing them to answers.
+  function answersUseMoments() {
+    return !!(momentsOn && state && state.cue_runs && state.cue_runs.answers_use_moments);
+  }
+
+  function describedCount() {
+    return answersUseMoments() ? (state.cue_runs.described || 0) : 0;
+  }
+
+  function plural(n, word) {
+    return n + " " + word + (n === 1 ? "" : "s");
+  }
+
   function drawSummaries() {
     if (!summaryList || !state) { return; }
-    if (newSummary) { unavailable(newSummary); }
+    if (newSummary) {
+      unavailable(newSummary);
+      newSummary.textContent = answersUseMoments() ? "Summarise this video" : "New summary";
+    }
     var templateChoice = document.getElementById("summary-template");
     if (templateChoice) {
       templateChoice.innerHTML = state.templates.map(function (one) {
@@ -121,18 +160,25 @@
       }
     }
     if (!state.summaries.length) {
-      summaryList.innerHTML = "<p class='muted small'>No summaries yet. New summary reads the whole transcript and writes one.</p>";
+      summaryList.innerHTML = answersUseMoments()
+        ? "<p class='muted small'>No summaries yet. Summarise this video looks at the picture at intervals, then writes from the words and the moments together.</p>"
+        : "<p class='muted small'>No summaries yet. New summary reads the whole transcript and writes one.</p>";
       return;
     }
     summaryList.innerHTML = state.summaries.map(function (one) {
       var head = "<div class='row'><b class='grow'>" + escape(one.template) + "</b>" +
         "<span class='muted small'>" + escape(one.length) +
-        (one.focus ? " · focus: " + escape(one.focus) : "") + " · " + escape(one.when) + "</span></div>";
+        (one.focus ? " · focus: " + escape(one.focus) : "") +
+        (one.moments_used ? " · " + plural(one.moments_used, "moment") : "") +
+        " · " + escape(one.when) + "</span></div>";
       var body;
       if (one.state === "queued" || one.state === "running") {
         var looking = state.cue_runs && state.cue_runs.interval;
+        var told = describedCount();
         if (one.describe_first && looking && (looking.state === "queued" || looking.state === "running")) {
           body = "<p class='muted'>Looking at the picture first" + (looking.total ? " (" + looking.found + " of " + looking.total + ")" : "") + "...</p>";
+        } else if (told) {
+          body = "<p class='muted'>Reading the transcript and " + plural(told, "moment") + "...</p>";
         } else {
           body = "<p class='muted'>Reading the transcript...</p>";
         }
@@ -205,6 +251,10 @@
       citation: function (whole, citations) {
         if (!Object.prototype.hasOwnProperty.call(citations, whole)) { return null; }
         var seconds = citations[whole];
+        var seen = cameraAt(seconds);
+        if (seen) {
+          return { clock: whole.slice(1, -1), seconds: seconds, line: "Camera: " + seen.text, camera: true };
+        }
         var line = "";
         (window.VIEWER.segments() || []).some(function (segment) {
           if (Math.floor(segment.start) === Math.floor(seconds)) {
@@ -220,8 +270,16 @@
         window.VIEWER.play();
         if (window.VIEWER.showSegment) { window.VIEWER.showSegment(seconds); }
       },
-      grounding: function () { return "Answers come from this transcript only, not from any other recording."; },
-      readingLine: function () { return "Reading the transcript..."; },
+      grounding: function (s) {
+        if (s && s.described) {
+          return "Answers come from this transcript and its " + plural(s.described, "described moment") +
+            ", not from any other recording. What the camera showed is a model's description.";
+        }
+        return "Answers come from this transcript only, not from any other recording.";
+      },
+      readingLine: function (s) {
+        return s && s.described ? "Reading the transcript and " + plural(s.described, "moment") + "..." : "Reading the transcript...";
+      },
       expectation: "usually 5 to 20 seconds",
       placeholder: "Ask anything about this recording",
       crossLink: window.VIEWER.caseChatUrl
@@ -246,7 +304,8 @@
       unavailable_line: state.unavailable_line,
       chats: state.chats || [],
       starters: state.starters || [],
-      busy: state.busy
+      busy: state.busy,
+      described: describedCount()
     });
   }
 
@@ -365,22 +424,12 @@
 
   // What Describe the whole recording would do now, in numbers, from the
   // state's cue_runs.intervals; the template's own words until it arrives.
-  // The summary form is the tick's note in the summary dialog.
-  function intervalsLine(summary) {
+  function intervalsLine() {
     var intervals = state && state.cue_runs && state.cue_runs.intervals;
     if (!intervals) {
-      return summary
-        ? "A description at regular intervals (one engine call each) before the summary is written, so it can say what the camera showed."
-        : "A description at regular intervals through the recording, one engine call each. Times already described are skipped.";
+      return "A description at regular intervals through the recording, one engine call each. Times already described are skipped.";
     }
-    var every = everyWord(intervals.every);
-    if (summary) {
-      if (intervals.count === 0) {
-        return "Every interval is described already, so the summary can say what the camera showed without waiting.";
-      }
-      return "A description " + every + " (" + intervals.count + " for this recording, one engine call each) before the summary is written, so it can say what the camera showed.";
-    }
-    return "A description " + every + ", " + intervals.count + " in all for this recording, one engine call each. Times already described are skipped.";
+    return "A description " + everyWord(intervals.every) + ", " + intervals.count + " in all for this recording, one engine call each. Times already described are skipped.";
   }
 
   // One box for both: empty means describe the clip, words mean a question
@@ -400,15 +449,37 @@
     });
   }
 
-  // The summary dialog's tick starts as the office set it, once, and says
-  // what it costs.
+  // The summary dialog's look-first line, in one of three forms: the tick
+  // with its cost while intervals are left to describe (starting as the
+  // server's rule says, set once); a line saying the summary draws on what
+  // is described when nothing is left; and a line saying the office writes
+  // from the words alone when it hands no moments to answers.
   var describeFirstSet = false;
-  function drawDescribeFirst() {
+  function drawLookFirst() {
     var tick = document.getElementById("summary-describe-first");
-    if (!tick || !state || !state.cue_runs) { return; }
-    if (!describeFirstSet) { tick.checked = !!state.cue_runs.describe_first_default; describeFirstSet = true; }
+    var line = document.getElementById("summary-describe-line");
     var note = document.getElementById("summary-describe-note");
-    if (note) { note.textContent = intervalsLine(true); }
+    if (!tick || !line || !note || !state || !state.cue_runs) { return; }
+    var runs = state.cue_runs;
+    var intervals = runs.intervals || { every: 0, count: 0, minutes: 0 };
+    var described = runs.described || 0;
+    if (!runs.answers_use_moments) {
+      line.hidden = true;
+      tick.checked = false;
+      note.textContent = "Your office does not hand moments to summaries, so this one is written from the words alone.";
+    } else if (intervals.count === 0) {
+      line.hidden = true;
+      tick.checked = false;
+      note.textContent = described
+        ? "The summary draws on the " + plural(described, "described moment") + "."
+        : "Nothing is left to describe, and no moment is described yet.";
+    } else {
+      line.hidden = false;
+      if (!describeFirstSet) { tick.checked = !!runs.describe_first_default; describeFirstSet = true; }
+      note.textContent = plural(intervals.count, "description") + ", one " + everyWord(intervals.every) +
+        ", one engine call each, about " + plural(intervals.minutes || 1, "minute") + "." +
+        (described ? " " + plural(described, "moment") + (described === 1 ? " is" : " are") + " described already." : "");
+    }
   }
 
   function busyRun(run) {
@@ -429,7 +500,7 @@
       momentsSaid.textContent = state.reachable ? "" : state.unavailable_line;
       momentsSaid.hidden = !!state.reachable;
     }
-    drawDescribeFirst();
+    drawLookFirst();
     var runs = state.cue_runs || {};
     if (describeIntervals) {
       unavailable(describeIntervals);
@@ -444,7 +515,7 @@
           ? "Every interval is described already."
           : (busyRun(interval) && intervals
               ? "A description " + everyWord(intervals.every) + ", one engine call each. Times already described are skipped."
-              : intervalsLine(false));
+              : intervalsLine());
       }
       if (busyRun(interval)) {
         sayOrHide(intervalsSaid, "Describing the recording" + (interval.total ? ": " + interval.found + " of " + interval.total : "") + "...");
@@ -702,7 +773,7 @@
         return;
       }
       if (event.target.closest("#describe-intervals")) {
-        UI.confirm({ title: "Describe the whole recording?", body: intervalsLine(false), ok: "Describe it" })
+        UI.confirm({ title: "Describe the whole recording?", body: intervalsLine(), ok: "Describe it" })
           .then(function (yes) {
             if (!yes) { return; }
             describeIntervals.disabled = true;

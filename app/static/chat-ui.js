@@ -143,9 +143,9 @@
           }
           var title = where.line ? " title='" + escape(where.line) + "'" : "";
           var label = (where.name ? escape(where.name) + ", " : "") + shortClock(where.clock);
-          return "<a href='" + escape(where.href || "#") + "' class='cite play'" +
+          return "<a href='" + escape(where.href || "#") + "' class='cite play" + (where.camera ? " camera" : "") + "'" +
             (where.seconds !== undefined ? " data-seconds='" + where.seconds + "'" : "") + title + ">" +
-            "<svg class='i' aria-hidden='true'><use href='#i-play'></use></svg> " + label + "</a>";
+            "<svg class='i' aria-hidden='true'><use href='#i-" + (where.camera ? "camera" : "play") + "'></use></svg> " + label + "</a>";
         });
       };
     }

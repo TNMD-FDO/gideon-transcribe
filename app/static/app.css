@@ -1244,6 +1244,10 @@ body.no-speakers .seg .name { display: none; }
 .assistant-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .assistant-list .answer p { margin: 0 0 6px; }
 .cite { text-decoration: none; border-bottom: 1px dotted var(--accent); color: var(--accent); }
+/* A citation of a camera line: the glyph before the time, the description
+ * as its title. */
+.cite.camera { white-space: nowrap; }
+.cite.camera .i { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 2px; }
 .asking { margin-top: 8px; align-items: flex-end; }
 .asking textarea { resize: none; }
 

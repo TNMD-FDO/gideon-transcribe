@@ -1085,7 +1085,11 @@ def test_the_state_counts_what_describing_the_whole_recording_would_make(
     signed_in(client, person)
     # 900 s at the default 60 s: from 30 s in, one a minute, fifteen.
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["intervals"] == {"every": 60.0, "count": 15}
+    assert state["cue_runs"]["intervals"] == {
+        "every": 60.0,
+        "count": 15,
+        "minutes": 5,
+    }
     # A Moment already described within half an interval of a time takes it.
     done = Moment.objects.create(
         transcript=ready.transcript,
@@ -1095,7 +1099,11 @@ def test_the_state_counts_what_describing_the_whole_recording_would_make(
         model="the-model",
     )
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["intervals"] == {"every": 60.0, "count": 14}
+    assert state["cue_runs"]["intervals"] == {
+        "every": 60.0,
+        "count": 14,
+        "minutes": 5,
+    }
     # A failed one does not; one waiting its turn does, as describe_intervals
     # counts them.
     done.state = assistant.FAILED
@@ -1110,7 +1118,11 @@ def test_the_state_counts_what_describing_the_whole_recording_would_make(
     settings_store.set_to("moment_interval_seconds", 300)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     expected = len(assistant.interval_times(900.0, 300.0, 40, [150.0]))
-    assert state["cue_runs"]["intervals"] == {"every": 300.0, "count": expected}
+    assert state["cue_runs"]["intervals"] == {
+        "every": 300.0,
+        "count": expected,
+        "minutes": 1,
+    }
     assert expected == 2
     # Nothing while Moments are off: the runs dict is empty.
     settings_store.set_to("moments_available", False)
@@ -1150,16 +1162,18 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
     monkeypatch.setattr(tasks.write_summary, "defer", lambda **fields: None)
     settings_store.set_to("moment_interval_seconds", 300)
     signed_in(client, person)
+    # The tick starts ticked: the office's toggle is On, two intervals are
+    # left, and nothing is described yet (test_video_summary has the rule).
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["describe_first_default"] is False
-    settings_store.set_to("summary_describes_first", True)
-    assert client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"][
+    assert state["cue_runs"]["describe_first_default"] is True
+    settings_store.set_to("summary_describes_first", False)
+    assert not client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"][
         "describe_first_default"
     ]
     page = client.get(f"/recording/{ready.pk}").content.decode()
     assert 'id="summary-describe-first"' in page
-    assert "<b>Describe the moments first</b>" not in page
-    assert "Describe the moments first" in page
+    assert "Look at the picture first" in page
+    assert "Summarise this video" in page
 
     answer = client.post(
         f"/recording/{ready.pk}/summaries",
@@ -1179,8 +1193,10 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
     assert len(asked) == 4
     user = asked[3]["messages"][-1]["content"]
     assert prompts.CAMERA_HEADING in user and "[00:12:30] [camera] A bag." in user
-    assert "the camera shows" in prompts.SUMMARY_FORMAT
+    assert asked[3]["messages"][0]["content"].endswith(prompts.CAMERA_RULES)
+    assert "the camera shows" in prompts.CAMERA_RULES
     assert summary.citations == {"[00:12:30]": 750.0}
+    assert summary.moments_used == 3
 
     word = exports.summary_word(summary, "asker")
     import io
@@ -1195,7 +1211,7 @@ def test_the_interval_settings_start_as_the_chapter_says():
     for key, default in (
         ("moment_interval_seconds", 60),
         ("moment_interval_most", 40),
-        ("summary_describes_first", False),
+        ("summary_describes_first", True),
     ):
         assert settings_store.DEFINITIONS[key].default == default
     text = CATALOGUE.read_text(encoding="utf-8")

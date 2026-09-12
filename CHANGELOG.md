@@ -21,6 +21,69 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.43.0, 2026-09-12
+
+```
+Models: unchanged
+Database: migrates (0039, how many moments a summary drew on)
+```
+
+### Added
+
+- **The video summary** (Phase 4, chapter 5). On a video with Moments on
+  and Moments in answers on, the Summary tab's button reads **Summarise
+  this video**, and the summary is written from the words and the described
+  moments together. A new shipped template, **Video summary**, is
+  preselected for a video without a recording type (a type still wins, so a
+  body camera recording keeps its Body camera summary); it interleaves what
+  was said and what the camera showed inside What happened, and adds a part
+  **Seen but not said** for what the camera showed that nobody spoke about.
+  The Body camera summary gains the same two things. The model is given a
+  fixed set of camera rules whenever a camera block is present: two sources
+  kept apart in every sentence ("the camera shows ..." for the picture, the
+  line's time for the words); neither wins, and a disagreement is reported
+  as one; a person is named only from the words; nothing is inferred from
+  the picture, least of all a legal fact; only the listed times were looked
+  at; and a camera fact earns a clause, not a paragraph. The summary is told
+  how many camera lines to draw on for its length (5, 12, or 30) and to
+  leave the rest out rather than list them; the camera block itself is
+  thinned to a budget when an office's numbers make it too big, every asked
+  and suggested moment kept.
+- **The video-aware chat.** Chat answers from both feeds: asked what was
+  visible at a time it uses the camera line nearest it within a minute, or
+  says no moment has been described there and where to ask for one; asked
+  for a legal conclusion (consent, arrest, a lawful search) it gives what
+  was said and what the camera showed, with times, then says in one
+  sentence that the conclusion is not something it can answer. The Chat
+  panel's grounding line and its waiting line count the described moments.
+- **The look-first line** in the summary dialog replaces the tick's caption
+  with one of three forms: **Look at the picture first** with its cost in
+  numbers ("15 descriptions, one every minute, one engine call each, about 5
+  minutes. 4 moments are described already.") while intervals are left to
+  describe; "The summary draws on the 23 described moments." when none are;
+  and a line saying the office writes from the words alone when it hands no
+  moments to answers. The tick starts ticked by a rule rather than a bare
+  toggle: the office's toggle is On, something is left to describe, and
+  fewer moments are described than **Enough moments for a video summary**,
+  a new setting (10; 0 means always ticked). **Summaries describe the
+  moments first** now starts On.
+- **A camera citation** in a summary or a chat answer, a time that is a
+  described moment's, is drawn with the camera glyph before it and the
+  description as its hover title, so a reader sees at once that the fact
+  came from the picture; the summary card's head says how many moments the
+  summary drew on, and a summary remembers the number.
+
+### Changed
+
+- The model's camera block gains a legend line under its heading (one line
+  per moment, in time order, times not listed were not looked at), and a
+  line staff edited ends "(edited by staff)" in the block, so the heading's
+  "a model's descriptions" is honest for every line. The exports are
+  unchanged: their legend and provenance row already say so.
+- The summary format line no longer carries the one sentence on the camera
+  block; the camera rules replace it, and a part that asks for what the
+  camera showed with no block given reads "No moments were described".
+
 ## v1.42.0, 2026-09-11
 
 ```
