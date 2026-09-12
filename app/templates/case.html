@@ -278,9 +278,16 @@
             row on every width: the pane on the right is the case's own, so
             the recordings' details stay with their rows.
           {% endcomment %}
+          {% if prepare_line %}
+            <form method="post" action="{% url 'prepare-case' case.pk %}" class="row" style="margin: 0 0 8px">
+              {% csrf_token %}
+              <span class="muted small">{{ prepare_line }}.</span>
+              <button type="submit" class="small">Prepare them now</button>
+            </form>
+          {% endif %}
           <table class="tbl" id="recordings">
             <thead>
-              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Added</th><th></th></tr>
+              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Prepared</th><th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
@@ -291,6 +298,7 @@
                   <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
+                  <td>{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>
                   <td class="muted">
                     {{ recording.created|date:"d M Y" }}
                     {% if recording.user_id != case.owner_id %}by {{ recording.user.shown_name }}{% endif %}

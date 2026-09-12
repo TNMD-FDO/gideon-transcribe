@@ -83,7 +83,9 @@ def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):
     for one in SummaryTemplate.objects.exclude(key="standard"):
         assert one.text == prompts.SHIPPED_SUMMARIES[one.key]
         if one.key != "dictation":
-            assert "Unclear parts" in one.text and "Overview" in one.text
+            assert "Unclear parts" in one.text
+            # The Video summary opens with an executive summary (v1.52.0).
+            assert "Overview" in one.text or "Executive summary" in one.text
 
 
 def test_the_type_chooses_the_template_and_no_type_keeps_the_default(db, admin):

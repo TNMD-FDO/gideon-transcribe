@@ -1296,7 +1296,36 @@
           }
         ).join("");
         drawMarks(body.marks || []);
+        drawAdminDigest(body.digest);
       });
+  }
+
+  // For an Admin only: the digest and the record's descriptions as the
+  // model wrote them, under Details, so the prompting can be refined.
+  function drawAdminDigest(digest) {
+    var box = document.getElementById("admin-digest");
+    if (!box) { return; }
+    box.hidden = !digest;
+    if (!digest) { return; }
+    var parts = (digest.parts || []).map(function (one) {
+      return "<h4>Part " + one.number + " <span class='muted small'>" + escape(one.span) +
+        (one.made ? " · " + escape(one.made) : "") + (one.model ? " · " + escape(one.model) : "") + "</span></h4>" +
+        "<pre>" + escape(one.text) + "</pre>";
+    }).join("");
+    var descriptions = (digest.descriptions || []).map(function (one) {
+      return "<li><b>" + escape(one.span) + "</b> <span class='muted small'>" + escape(one.source) +
+        (one.edited ? ", edited by staff" : "") + "</span><br>" + escape(one.text) + "</li>";
+    }).join("");
+    var versions = Object.keys(digest.templates || {}).map(function (key) {
+      return key.replace("_", " ") + " v" + digest.templates[key];
+    }).join(", ");
+    box.innerHTML =
+      "<details class='admin-digest'><summary>The digest and the descriptions (admins only)</summary>" +
+      "<p class='muted small'>" + escape(digest.prepared || "Not prepared") + ". Templates: " + escape(versions) + ". " +
+      "What the summary and the chat are written from, as the model wrote it; nobody else sees this.</p>" +
+      (parts || "<p class='muted small'>No digest yet.</p>") +
+      "<h4>Descriptions</h4>" + (descriptions ? "<ul class='admin-descriptions'>" + descriptions + "</ul>" : "<p class='muted small'>None yet.</p>") +
+      "</details>";
   }
 
   // The Marks a person dropped while recording live: each a time that seeks

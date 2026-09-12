@@ -176,9 +176,6 @@
         <span id="now-clock" class="time"></span>
         <b id="now-who" class="who"></b>
         <span id="now-text" class="grow"></span>
-        {% if assistant.moments and transcript and is_video %}
-          <button type="button" class="small primary" id="describe-now" title="Describe the picture at the player's time, or ask a question about it">{% icon "camera" %} Describe this moment</button>
-        {% endif %}
       </div>
       {% if is_video %}
         <div id="stage-grip" class="stagegrip" title="Drag to resize the stage. Double-click to reset."
@@ -261,9 +258,6 @@
           {% endif %}
           {% if assistant.chat and transcript %}
             <button type="button" class="tab" data-panel="chat">Chat</button>
-          {% endif %}
-          {% if assistant.moments and transcript and is_video %}
-            <button type="button" class="tab" data-panel="moments">Moments</button>
           {% endif %}
           <button type="button" class="tab" data-panel="details">Details</button>
           <span class="grow"></span>

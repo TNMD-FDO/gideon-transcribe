@@ -19,6 +19,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import (
+    assistant,
     audit,
     cases,
     exports,
@@ -256,6 +257,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "role": role,
             **_sharing_context(case, role),
             "recordings": _rows_for(case),
+            "prepare_line": prepare_line(case),
             "asked": asked,
             "hits": _search(case, asked) if asked else None,
             "types": cases.recording_types(),
@@ -331,8 +333,57 @@ def _rows_for(case: Case) -> list:
         one.speakers_in_words = _speakers_in_words(one)
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
+        # Prepared for summaries and chat (Phase 4 chapter 7), for a video.
+        one.prepare_word, one.prepare_tone = assistant.prepare_words(
+            getattr(one, "transcript", None)
+        )
         rows.append(one)
     return rows
+
+
+def _unprepared(case: Case) -> list:
+    """The case's videos that a press would prepare: not prepared and not at it."""
+    from core.jobs import Transcript
+
+    found = []
+    for transcript in Transcript.objects.filter(recording__case=case).select_related(
+        "recording"
+    ):
+        if transcript.prepare_state in (assistant.QUEUED, assistant.PREPARING):
+            continue
+        if (
+            assistant.record_on()
+            and assistant.has_picture(transcript.recording)
+            and not assistant.prepared(transcript)
+        ):
+            found.append(transcript)
+    return found
+
+
+def prepare_line(case: Case) -> str:
+    """The case page's line about its unprepared videos, or nothing."""
+    waiting = _unprepared(case)
+    if not waiting:
+        return ""
+    seconds = sum(
+        assistant.prepare_plan(one.recording, one)["seconds"] for one in waiting
+    )
+    return (
+        f"{len(waiting)} video{'' if len(waiting) == 1 else 's'} not yet prepared for "
+        f"summaries and chat, {assistant.about(seconds)}"
+    )
+
+
+@login_required
+@require_POST
+def prepare_case(request: HttpRequest, case_id) -> HttpResponse:
+    """Prepare the case's videos now, one after another, in the record's lane."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    cases.note_activity(case, by=request.user)
+    for transcript in _unprepared(case):
+        assistant.queue_preparation(transcript.recording)
+    return redirect(reverse("case", args=[case.pk]))
 
 
 def _speakers_in_words(recording: Recording) -> str:

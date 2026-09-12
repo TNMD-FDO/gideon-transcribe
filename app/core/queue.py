@@ -247,6 +247,11 @@ def merge(job: Job) -> Job:
     job.merging = False
     job.finished = timezone.now()
     job.save()
+    # A video's preparation is queued before the Batch is looked at, so the
+    # Batch's mail waits for it (Phase 4 chapter 7).
+    from core import assistant
+
+    assistant.queue_preparation(job.recording)
     _the_batch_may_have_finished(job)
 
     seconds = (job.finished - job.created).total_seconds()

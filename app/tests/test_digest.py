@@ -115,6 +115,15 @@ def described(transcript, start, end, text):
     )
 
 
+def no_scan_no_stamp(monkeypatch):
+    """The preparation without ffmpeg: no change points, and the stamp off."""
+    from core import moment_scan
+
+    monkeypatch.setattr(moment_scan, "scene_changes", lambda *a, **k: [])
+    monkeypatch.setattr(moment_scan, "loud_seconds", lambda *a, **k: [])
+    settings_store.set_to("stamp_available", False)
+
+
 def a_line(number, start, text):
     return prompts.Line(
         number=number, segment_id=number, start=start, speaker="A", text=text
@@ -153,6 +162,7 @@ def test_the_digest_block_and_the_words_are_as_the_chapter_says():
 @pytest.mark.django_db
 def test_a_summary_makes_the_digest_and_is_written_from_it(ready, person, monkeypatch):
     transcript = ready.transcript
+    no_scan_no_stamp(monkeypatch)
     described(transcript, 0.0, 300.0, "A doorway.")
     described(transcript, 300.0, 600.0, "Unchanged: the doorway.")
     described(transcript, 600.0, 900.0, "A car.")
@@ -189,12 +199,14 @@ def test_a_summary_makes_the_digest_and_is_written_from_it(ready, person, monkey
     assert digest_call["thinking"] is False
     assert digest_call["max_completion_tokens"] == 1200
 
-    # The summary's call: the transcript, the Digest in place of the block.
+    # The summary's call: the transcript, the Digest in place of the block,
+    # and the narrative rules (one account) in place of the two-source rules.
     user = asked[1]["messages"][-1]["content"]
     assert prompts.RECORD_HEADING in user and "An officer at a doorway." in user
     assert prompts.CAMERA_HEADING not in user and "[camera]" not in user
     assert "[2] [00:00:12] Speaker 2" in user
     assert "The record of this recording is complete" in user
+    assert asked[1]["messages"][0]["content"].endswith(prompts.NARRATIVE_RULES)
     assert summary.citations == {"[00:00:00]": 0.0, "[00:10:00]": 600.0}
 
     (part,) = DigestPart.objects.all()
@@ -256,6 +268,7 @@ def test_a_transcript_too_long_is_summarised_from_the_digest_alone(
     ready, person, monkeypatch
 ):
     transcript = ready.transcript
+    no_scan_no_stamp(monkeypatch)
     described(transcript, 0.0, 900.0, "A doorway.")
     asked = answering(
         monkeypatch, ["1. [00:00:00]-[00:15:00] (both) A doorway.", "Summary."]
@@ -301,6 +314,8 @@ def test_the_chat_is_told_the_digest_and_the_descriptions_at_the_times_asked(
     ready, person, monkeypatch
 ):
     transcript = ready.transcript
+    # The record off: the chat reads the Digest as it stands, preparing nothing.
+    settings_store.set_to("picture_record_available", False)
     described(transcript, 0.0, 300.0, "A doorway.")
     described(transcript, 300.0, 600.0, "A car.")
     described(transcript, 600.0, 900.0, "A bag on the seat.")

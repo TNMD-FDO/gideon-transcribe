@@ -533,7 +533,7 @@ def _rows() -> list[Definition]:
             needs_mail=True,
             what_it_does=(
                 "Placeholders: {name}, {count}, {done}, {failed}, {failed_list}, "
-                "{where}, {time}, {link}."
+                "{prepared}, {where}, {time}, {link}."
             ),
             when_changed="The next message.",
         ),
@@ -551,16 +551,20 @@ def _rows() -> list[Definition]:
                 "\n"
                 "{failed_list}\n"
                 "\n"
+                "{prepared}\n"
+                "\n"
                 "The recordings are {where}.\n"
                 "\n"
                 "Open them: {link}\n"
             ),
             needs_mail=True,
             what_it_does=(
-                "Sent when the last recording in a batch has ended, to a person "
-                "who ticked the box. {failed_list} is one line per failed "
-                "recording, built by the app; {where} is where the recordings "
-                "are; the rest as above."
+                "Sent when the last recording in a batch has ended and its videos "
+                "are prepared for summaries and chat, to a person who ticked the "
+                "box. {failed_list} is one line per failed recording, built by "
+                "the app; {prepared} is a line on how the videos' preparation "
+                "went, or nothing; {where} is where the recordings are; the "
+                "rest as above."
             ),
             when_changed="The next message.",
         ),
@@ -1442,21 +1446,6 @@ def _rows() -> list[Definition]:
                 "no more than a short busy one."
             ),
             when_changed="The next Describe the whole recording.",
-        ),
-        Definition(
-            key="summary_describes_first",
-            page=ASSISTANT,
-            name="Summaries describe the moments first",
-            kind=TOGGLE,
-            default=True,
-            needs="moments_available",
-            what_it_does=(
-                "Whether Summarise this video starts with its tick, Look at the "
-                "picture first, ticked, while anything is left to describe. "
-                "Ticked, the summary makes the picture record before it writes; "
-                "the cost is one call per span."
-            ),
-            when_changed="The next summary dialog opened.",
         ),
         Definition(
             key="digests_available",

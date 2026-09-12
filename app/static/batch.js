@@ -111,6 +111,10 @@
           Math.max(2, Math.min(100, one.job.percent)) + "%'></i></div>";
       }
 
+      // A video prepared for summaries and chat after its transcript: the
+      // count and the time left while it runs, then prepared.
+      if (one.prepare && one.prepare.line) { about.push(one.prepare.line.toLowerCase()); }
+
       card.innerHTML =
         "<div class='row'><b class='grow'>" + escape(one.title) + "</b>" +
         "<span>" + line(one) + "</span>" + tools + "</div>" + bar +
@@ -162,7 +166,10 @@
 
     // Still to come: how many, and the estimate, while anything is on its way.
     var done = document.getElementById("when-done");
-    done.textContent = state.finished ? "" :
+    var preparing = state.preparing || { count: 0 };
+    done.textContent = state.finished
+      ? (preparing.count ? "Transcribed. Preparing " + preparing.count + (preparing.count === 1 ? " video" : " videos") + " for summaries and chat, " + preparing.about + "." : "")
+      :
       (waiting ? waiting + (waiting === 1 ? " recording" : " recordings") + " still to come" : "Nothing still to come") +
       (state.everything_done_by ? ". " + state.everything_done_by : ".");
 
@@ -228,7 +235,7 @@
       .then(function (answer) { return answer.json(); })
       .then(function (state) {
         draw(state);
-        if (!state.finished) { window.setTimeout(ask, EVERY); }
+        if (!state.finished || (state.preparing && state.preparing.count)) { window.setTimeout(ask, EVERY); }
       })
       .catch(function () {
         // A moment's trouble reaching the app is not worth saying anything

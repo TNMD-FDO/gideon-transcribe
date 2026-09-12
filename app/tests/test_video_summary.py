@@ -121,26 +121,29 @@ def test_the_wording_is_clean_and_the_templates_say_seen_but_not_said():
     assert "the camera shows" in prompts.CAMERA_RULES
     assert "the camera shows" in prompts.CHAT
     assert "No moments were described" in prompts.SUMMARY_FORMAT
+    # One account since v1.52.0: no "Seen but not said" part and no "the
+    # camera shows" in the summary templates; the guardrails are the rules'.
     for key in ("video", "body_camera"):
         text = prompts.SHIPPED_SUMMARIES[key]
-        assert "Seen but not said" in text and "the camera shows" in text
-        assert "Overview" in text and "Unclear parts" in text
-    assert "Never a name from the camera" in prompts.SHIPPED_SUMMARIES["video"]
+        assert "Seen but not said" not in text and "the camera shows" not in text
+        assert "Unclear parts" in text
+    assert "Executive summary" in prompts.SHIPPED_SUMMARIES["video"]
+    assert "one account" in prompts.SHIPPED_SUMMARIES["video"]
+    assert "never given a name" in prompts.NARRATIVE_RULES
+    assert "the camera shows" in prompts.CAMERA_RULES
     assert "consented" in prompts.CHAT and "Moments tab" in prompts.CHAT
 
 
 def test_the_settings_and_the_catalogue_agree():
     assert "summary_moments_enough" not in settings_store.DEFINITIONS
-    assert settings_store.DEFINITIONS["summary_describes_first"].default is True
+    assert "summary_describes_first" not in settings_store.DEFINITIONS
     record = settings_store.DEFINITIONS["picture_record_available"]
     assert record.page == settings_store.ASSISTANT and record.default is True
     assert record.needs == "moments_available"
     text = CATALOGUE.read_text(encoding="utf-8")
-    for name in (
-        "Summaries describe the moments first",
-        "Picture record for summaries",
-    ):
+    for name in ("Picture record for summaries", "Digests"):
         assert f"| {name} |" in text, f"the catalogue has no row for {name}"
+    assert "| Summaries describe the moments first |" not in text
     assert "Video summary" in text
 
 
@@ -277,8 +280,10 @@ def test_the_summary_is_told_the_rules_and_remembers_what_it_drew_on(
     ready, person, monkeypatch
 ):
     asked = reachable(monkeypatch, "Summary: the camera shows a bag [00:00:12].")
-    # The block's path, without a Digest (test_digest has the Digest's).
+    # The block's path, without a Digest and without the record (test_digest
+    # and test_prepare have those).
     settings_store.set_to("digests_available", False)
+    settings_store.set_to("picture_record_available", False)
     transcript = ready.transcript
     described(transcript, 12.4, "A hand holds a small bag.")
     described(transcript, 30.0, "A clear bag.", edited=True)
@@ -300,7 +305,7 @@ def test_the_summary_is_told_the_rules_and_remembers_what_it_drew_on(
     system = asked[0]["messages"][0]["content"]
     user = asked[0]["messages"][-1]["content"]
     assert system.endswith(prompts.SUMMARY_FORMAT + "\n\n" + prompts.CAMERA_RULES)
-    assert "Seen but not said" in system
+    assert "Executive summary" in system
     assert prompts.CAMERA_HEADING + "\n" + prompts.CAMERA_NOTE in user
     assert "[00:00:30] [camera] A clear bag. (edited by staff)" in user
     assert (
@@ -329,6 +334,7 @@ def test_chat_is_told_the_rules_and_cites_the_camera(ready, person, monkeypatch)
     asked = reachable(
         monkeypatch, "The camera shows a dark object in his right hand [00:00:45]."
     )
+    settings_store.set_to("picture_record_available", False)
     described(ready.transcript, 45.0, "A dark object in the right hand.")
     chat = Chat.objects.create(recording=ready, asked_by=person)
     turn = ChatTurn.objects.create(
@@ -351,7 +357,7 @@ def test_chat_is_told_the_rules_and_cites_the_camera(ready, person, monkeypatch)
 
 
 @pytest.mark.django_db
-def test_the_state_says_when_the_summary_looks_first(
+def test_the_state_says_what_preparing_the_video_would_do(
     ready, person, tmp_path, settings, client
 ):
     signed_in(client, person)
@@ -359,27 +365,20 @@ def test_the_state_says_when_the_summary_looks_first(
     def runs():
         return client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"]
 
-    # Shipped: the toggle On, spans left to describe: ticked. 900 s at the
-    # 15 s ceiling is sixty spans by the clock alone, an estimate.
+    # Nothing prepared yet: 900 s at the 15 s ceiling is sixty spans by the
+    # clock alone, an estimate, and the preparation says so in seconds.
     first = runs()
-    assert first["describe_first_default"] is True
     assert first["described"] == 0 and first["answers_use_moments"] is True
     assert first["intervals"]["count"] == 60 and first["intervals"]["estimated"]
     assert first["intervals"]["minutes"] == 20
-    # Moments without spans cover nothing: still ticked (v1.51.0; the Enough
-    # setting of v1.43.0 is withdrawn).
-    for n in range(10):
-        described(ready.transcript, 500.0 + n, "A road.", source=Moment.INTERVAL)
-    second = runs()
-    assert second["described"] == 10 and second["describe_first_default"] is True
-    assert second["intervals"]["count"] == 60
-    # The office's toggle Off: never ticked.
-    settings_store.set_to("summary_describes_first", False)
-    assert runs()["describe_first_default"] is False
-    settings_store.set_to("summary_describes_first", True)
-    # Nothing left to describe: unticked, whatever the rest says.
+    assert (
+        first["prepare"]["state"] == "none"
+        and first["prepare"]["line"] == "Not prepared"
+    )
+    assert first["prepare"]["seconds_left"] >= 60 * 20
+    assert "describe_first_default" not in first
+    # Every span described: nothing left, and the plan is one Digest part.
     settings_store.set_to("moment_interval_seconds", 600)
-    Moment.objects.all().delete()
     for start, end in ((0.0, 450.0), (450.0, 900.0)):
         described(
             ready.transcript,
@@ -391,19 +390,20 @@ def test_the_state_says_when_the_summary_looks_first(
         )
     third = runs()
     assert third["intervals"]["count"] == 0 and third["intervals"]["minutes"] == 0
-    assert third["describe_first_default"] is False
+    assert 0 < third["prepare"]["seconds_left"] < 60 * 20
     # Moments off: no runs at all, as before.
     settings_store.set_to("moments_available", False)
     assert runs() == {}
     settings_store.set_to("moments_available", True)
 
-    # The page's words: Summarise this video on a video, New summary on sound.
+    # The page's words: Summarise this video on a video, New summary on sound,
+    # and no tick anywhere since v1.52.0.
     page = client.get(f"/recording/{ready.pk}").content.decode()
-    assert "Summarise this video" in page and "Look at the picture first" in page
-    assert 'id="summary-look-line"' in page
+    assert "Summarise this video" in page and 'id="summary-prepare-note"' in page
+    assert "Look at the picture first" not in page
     audio = a_recording(person, tmp_path, settings, video=False)
     page = client.get(f"/recording/{audio.pk}").content.decode()
-    assert "New summary" in page and "Look at the picture first" not in page
+    assert "New summary" in page and 'id="summary-prepare-note"' not in page
 
     # A summary's card says how many moments it drew on.
     summary = Summary.objects.create(

@@ -126,6 +126,7 @@ TEMPLATES = {
             "done",
             "failed",
             "failed_list",
+            "prepared",
             "where",
             "time",
             "link",
@@ -140,6 +141,8 @@ TEMPLATES = {
             "transcribed, {failed} failed.\n"
             "\n"
             "{failed_list}\n"
+            "\n"
+            "{prepared}\n"
             "\n"
             "The recordings are {where}.\n"
             "\n"
@@ -955,6 +958,10 @@ def batch_finished(batch) -> bool:
     recordings = list(batch.recordings.select_related("case").order_by("created"))
     if not recordings:
         return False
+    # The videos' preparation (Phase 4 chapter 7) is part of finishing: the
+    # mail waits for it, and says how it went.
+    if any(_still_preparing(one) for one in recordings):
+        return False
     failed_lines = []
     done = 0
     for recording in recordings:
@@ -983,6 +990,7 @@ def batch_finished(batch) -> bool:
         done=done,
         failed=failed,
         failed_list="\n".join(failed_lines),
+        prepared=_prepared_line(recordings),
         where=where,
         time=_when(timezone.now()),
         link=link,
@@ -1000,6 +1008,43 @@ def batch_finished(batch) -> bool:
         done=done,
         failed=failed,
     )
+
+
+def _still_preparing(recording) -> bool:
+    transcript = getattr(recording, "transcript", None)
+    return transcript is not None and transcript.prepare_state in ("queued", "running")
+
+
+def _prepared_line(recordings) -> str:
+    """How the videos' preparation went, for the Batch's mail; nothing without them."""
+    from core import assistant
+
+    prepared = 0
+    failed = 0
+    seconds = 0.0
+    for recording in recordings:
+        transcript = getattr(recording, "transcript", None)
+        if transcript is None:
+            continue
+        if transcript.prepare_state == assistant.DONE:
+            prepared += 1
+            if transcript.prepare_started and transcript.prepared_at:
+                seconds += (
+                    transcript.prepared_at - transcript.prepare_started
+                ).total_seconds()
+        elif transcript.prepare_state == assistant.FAILED:
+            failed += 1
+    if not prepared and not failed:
+        return ""
+    line = (
+        f"{prepared} video{'' if prepared == 1 else 's'} prepared for summaries "
+        f"and chat"
+    )
+    if seconds:
+        line += f" in {assistant.about(int(seconds)).replace('about ', '')}"
+    if failed:
+        line += f"; {failed} could not be prepared"
+    return line + "."
 
 
 def note_batch_progress(recording) -> None:

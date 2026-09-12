@@ -156,30 +156,6 @@ urlpatterns = [
         assistant_pages.decide,
         name="decide-suggestion",
     ),
-    # Moments: what the camera showed at a time (Phase 4).
-    path(
-        "recording/<uuid:recording_id>/moments",
-        assistant_pages.new_moment,
-        name="new-moment",
-    ),
-    path(
-        "recording/<uuid:recording_id>/describe-intervals",
-        assistant_pages.describe_intervals,
-        name="describe-intervals",
-    ),
-    path(
-        "moment/<uuid:moment_id>/again",
-        assistant_pages.moment_again,
-        name="moment-again",
-    ),
-    path(
-        "moment/<uuid:moment_id>/edit", assistant_pages.edit_moment, name="edit-moment"
-    ),
-    path(
-        "moment/<uuid:moment_id>/delete",
-        assistant_pages.delete_moment,
-        name="delete-moment",
-    ),
     # The sign-out dialog's two downloads, across the whole Workspace.
     path(
         "download/<str:shape>",
@@ -203,6 +179,8 @@ urlpatterns = [
     path("case/<uuid:case_id>/keep", case_pages.keep_case, name="keep-case"),
     path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
+    # The case's videos prepared for summaries and chat, on purpose (Phase 4 ch. 7).
+    path("case/<uuid:case_id>/prepare", case_pages.prepare_case, name="prepare-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     # The Record page (Phase 3): a Recording made in the browser.
     # Recorded here (its old tab address redirects home), and the New recording page,

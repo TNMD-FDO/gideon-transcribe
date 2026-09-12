@@ -17,14 +17,9 @@
   var summaryList = document.getElementById("summary-list");
   var suggestLine = document.getElementById("suggest-line");
   var suggestionList = document.getElementById("suggestions");
-  var momentList = document.getElementById("moment-list");
-  var describeNow = document.getElementById("describe-now");
-  var recordLines = document.getElementById("record-lines");
   var describeIntervals = document.getElementById("describe-intervals");
   var intervalsSaid = document.getElementById("intervals-said");
   var intervalsNote = document.getElementById("intervals-note");
-  var momentsSaid = document.getElementById("moments-said");
-  var momentsHeading = document.getElementById("moments-heading");
 
   var state = null;
   var timer = null;
@@ -172,14 +167,13 @@
       var head = "<div class='row'><b class='grow'>" + escape(one.template) + "</b>" +
         "<span class='muted small'>" + escape(one.length) +
         (one.focus ? " · focus: " + escape(one.focus) : "") +
-        (one.digest_parts ? " · from the digest" : (one.moments_used ? " · " + plural(one.moments_used, "moment") : "")) +
+        (one.digest_parts ? " · from the words and the camera" : (one.moments_used ? " · " + plural(one.moments_used, "moment") : "")) +
         " · " + escape(one.when) + "</span></div>";
       var body;
       if (one.state === "queued" || one.state === "running") {
-        var looking = state.cue_runs && state.cue_runs.interval;
         var told = describedCount();
-        if (one.describe_first && looking && (looking.state === "queued" || looking.state === "running")) {
-          body = "<p class='muted'>Looking at the picture first" + (looking.total ? " (" + looking.found + " of " + looking.total + ")" : "") + "...</p>";
+        if (one.stage === "preparing") {
+          body = "<p class='muted'>" + (preparingLine() || "Preparing the recording...") + "</p>";
         } else if (one.stage && one.stage.indexOf("condensing") === 0) {
           // "condensing 2 of 5": the digest's parts being made (chapter 6).
           body = "<p class='muted'>Condensing the recording (" + escape(one.stage.replace("condensing ", "")) + ")...</p>";
@@ -216,12 +210,10 @@
     });
     document.getElementById("summary-write").addEventListener("click", function () {
       var templateChoice = document.getElementById("summary-template");
-      var describeFirst = document.getElementById("summary-describe-first");
       post("/recording/" + recording + "/summaries", {
         template: templateChoice ? templateChoice.value : "",
         focus: document.getElementById("summary-focus").value,
-        length: document.getElementById("summary-length").value,
-        describe_first: !!(describeFirst && describeFirst.checked)
+        length: document.getElementById("summary-length").value
       }).then(function () {
         summaryDialog.hidden = true;
         document.getElementById("summary-focus").value = "";
@@ -289,6 +281,8 @@
         return "Answers come from this transcript only, not from any other recording.";
       },
       readingLine: function (s) {
+        var preparing = preparingLine();
+        if (preparing) { return preparing; }
         return s && s.described ? "Reading the transcript and " + plural(s.described, "moment") + "..." : "Reading the transcript...";
       },
       expectation: "usually 5 to 20 seconds",
@@ -399,53 +393,10 @@
     });
   }
 
-  // Moments -------------------------------------------------------------------------
-  // What the camera showed. Two panels: the first the head and the picture
-  // record's press; the second the Moments kept. Since v1.51.0 nothing about
-  // the camera sits among the transcript's rows.
-
-  var momentsOn = !!(features.moments && window.VIEWER.isVideo);
-
-  function describe(body) {
-    return post("/recording/" + recording + "/moments", body).then(function (answer) {
-      if (!answer.ok && answer.said && answer.said.error) {
-        UI.toast(answer.said.error, { problem: true, icon: "warning" });
-      }
-      return refresh();
-    });
-  }
-
-  // "every minute", "every 2 minutes", "every 90 seconds": the interval in words.
-  function everyWord(seconds) {
-    var n = Number(seconds);
-    if (!n || n <= 0) { return "at regular intervals"; }
-    if (n % 60 === 0) {
-      var minutes = n / 60;
-      return minutes === 1 ? "every minute" : "every " + minutes + " minutes";
-    }
-    return "every " + n + " seconds";
-  }
-
-  // What Describe the whole recording would do now, in numbers, from the
-  // state's cue_runs.intervals: the spans of the cut, an estimate by the
-  // clock alone until the picture is scanned; the template's own words
-  // until the state arrives.
-  function intervalsLine() {
-    var intervals = state && state.cue_runs && state.cue_runs.intervals;
-    if (!intervals) {
-      return "The picture record: the recording cut where the picture and the sound change, each span described once, one engine call each. Spans already described are skipped.";
-    }
-    return "The picture record: the recording cut where the picture and the sound change, no span longer than " + spanWord(intervals.every) + ", " +
-      (intervals.estimated ? "up to " : "") + plural(intervals.count, "description") + " for this recording, one engine call each" +
-      (intervals.estimated ? " (fewer once the picture is scanned and still stretches are joined)" : "") + ". Spans already described are skipped.";
-  }
-
-  // hh:mm:ss, the shape the state's clocks come in, for a span's end.
-  function longClock(seconds) {
-    var whole = Math.max(0, Math.floor(seconds || 0));
-    var pad = function (n) { return String(n).padStart(2, "0"); };
-    return pad(Math.floor(whole / 3600)) + ":" + pad(Math.floor((whole % 3600) / 60)) + ":" + pad(whole % 60);
-  }
+  // The preparation (chapter 7) -----------------------------------------------------
+  // A video is prepared by itself as its transcript lands, on first use, or
+  // from the case page; nobody presses anything here. What this page says:
+  // the summary dialog's line, and the cards' "Preparing the recording".
 
   // "15 seconds", "a minute", "2 minutes": a span's ceiling in words.
   function spanWord(seconds) {
@@ -455,220 +406,48 @@
     return n + " seconds";
   }
 
-  // One box for both: empty means describe the clip, words mean a question
-  // answered from a few frames at the camera's own detail.
-  function askOrDescribe(body) {
-    UI.prompt({
-      title: "Describe the picture at " + window.VIEWER.clock(body.at),
-      body: "Leave the box empty to have the picture described. Or type a question about it, such as \"what is on the passenger seat?\", and the answer says what is visible, what it is consistent with, and what cannot be told.",
-      value: "",
-      placeholder: "A question about the picture (optional)",
-      ok: "Describe"
-    }).then(function (text) {
-      if (text === null || text === undefined) { return; }
-      var question = String(text).trim();
-      if (question) { body.question = question; }
-      describe(body);
-    });
+  // "about 18 minutes", "about 2 h 10 min", "under a minute".
+  function aboutWord(seconds) {
+    if (!seconds || seconds < 60) { return "under a minute"; }
+    var minutes = Math.round(seconds / 60);
+    if (minutes < 60) { return "about " + plural(minutes, "minute"); }
+    var hours = Math.floor(minutes / 60);
+    var rest = minutes % 60;
+    return "about " + hours + " h" + (rest ? " " + (rest < 10 ? "0" : "") + rest + " min" : "");
   }
 
-  // The summary dialog's look-first line, in one of three forms: the tick
-  // with its cost while intervals are left to describe (starting as the
-  // server's rule says, set once); a line saying the summary draws on what
-  // is described when nothing is left; and a line saying the office writes
-  // from the words alone when it hands no moments to answers.
-  var describeFirstSet = false;
-  function drawLookFirst() {
-    var tick = document.getElementById("summary-describe-first");
-    var line = document.getElementById("summary-describe-line");
-    var note = document.getElementById("summary-describe-note");
-    if (!tick || !line || !note || !state || !state.cue_runs) { return; }
+  // The preparation's own words for a card while it runs.
+  function preparingLine() {
+    var prepare = state && state.cue_runs && state.cue_runs.prepare;
+    if (!prepare || (prepare.state !== "running" && prepare.state !== "queued")) { return ""; }
+    return "Preparing the recording" + (prepare.total ? " (" + prepare.done + " of " + prepare.total + ")" : "") +
+      ", " + aboutWord(prepare.seconds_left) + "...";
+  }
+  window.VIEWER.preparingLine = preparingLine;
+
+  function drawPrepareNote() {
+    var note = document.getElementById("summary-prepare-note");
+    if (!note || !state || !state.cue_runs) { return; }
     var runs = state.cue_runs;
-    var intervals = runs.intervals || { every: 0, count: 0, minutes: 0 };
-    var described = runs.described || 0;
-    if (!runs.answers_use_moments) {
-      line.hidden = true;
-      tick.checked = false;
-      note.textContent = "Your office does not hand moments to summaries, so this one is written from the words alone.";
-    } else if (intervals.count === 0) {
-      line.hidden = true;
-      tick.checked = false;
-      note.textContent = described
-        ? "The summary draws on the " + plural(described, "described moment") + "."
-        : "Nothing is left to describe, and no moment is described yet.";
+    var prepare = runs.prepare;
+    var intervals = runs.intervals || { every: 0, count: 0 };
+    if (!runs.answers_use_moments || !prepare) {
+      note.hidden = true;
+      return;
+    }
+    note.hidden = false;
+    if (prepare.state === "done") {
+      note.textContent = "Written from the words and the camera's descriptions together" +
+        (runs.stamp ? "; the camera's clock is known" : "") + ".";
+    } else if (prepare.state === "running" || prepare.state === "queued") {
+      note.textContent = "The recording is being prepared first: " + preparingLine().replace(/\.\.\.$/, ".");
+    } else if (prepare.state === "failed") {
+      note.textContent = "The picture could not be described (" + prepare.line.replace(/^Not prepared: /, "") + "); the summary is written from the words alone.";
     } else {
-      line.hidden = false;
-      if (!describeFirstSet) { tick.checked = !!runs.describe_first_default; describeFirstSet = true; }
-      note.textContent = (intervals.estimated ? "Up to " : "") + plural(intervals.count, "description") +
-        " where the picture changes, none longer than " + spanWord(intervals.every) +
-        ", one engine call each, about " + plural(intervals.minutes || 1, "minute") +
-        (runs.digest ? ", then the digest the summary is written from" : "") + "." +
-        (described ? " " + plural(described, "moment") + (described === 1 ? " is" : " are") + " described already." : "");
+      note.textContent = "The recording is prepared first: " + (intervals.estimated ? "up to " : "") +
+        plural(intervals.count, "description") + " where the picture changes, none longer than " + spanWord(intervals.every) +
+        ", then the digest the summary is written from, " + aboutWord(prepare.seconds_left) + ".";
     }
-  }
-
-  function busyRun(run) {
-    return !!(run && (run.state === "queued" || run.state === "running"));
-  }
-
-  function sayOrHide(line, text, problem) {
-    if (!line) { return; }
-    line.textContent = text || "";
-    line.hidden = !text;
-    line.classList.toggle("problem", !!problem);
-  }
-
-  function drawMoments() {
-    if (!momentsOn || !state) { return; }
-    if (describeNow) { unavailable(describeNow); }
-    if (momentsSaid) {
-      momentsSaid.textContent = state.reachable ? "" : state.unavailable_line;
-      momentsSaid.hidden = !!state.reachable;
-    }
-    drawLookFirst();
-    var runs = state.cue_runs || {};
-    if (describeIntervals) {
-      unavailable(describeIntervals);
-      var interval = runs.interval;
-      var intervals = runs.intervals;
-      var nothingLeft = !!(intervals && intervals.count === 0 && !busyRun(interval));
-      if (busyRun(interval) || nothingLeft) { describeIntervals.disabled = true; }
-      if (intervalsNote) {
-        // During a run every span is a queued Moment, so the count reads
-        // zero; the caption then goes without it.
-        intervalsNote.textContent = nothingLeft
-          ? "Every span of the recording is described already."
-          : (busyRun(interval) && intervals
-              ? "The picture record, one engine call per span. Spans already described are skipped."
-              : intervalsLine());
-      }
-      if (busyRun(interval)) {
-        sayOrHide(intervalsSaid, "Describing the recording" + (interval.total ? ": " + interval.found + " of " + interval.total : "") + "...");
-      } else if (interval && interval.state === "failed") {
-        sayOrHide(intervalsSaid, interval.said, true);
-      } else if (interval && interval.state === "done" && interval.total) {
-        sayOrHide(intervalsSaid, (interval.found < interval.total ? interval.found + " of " + interval.total : interval.total) +
-          (interval.total === 1 ? " span" : " spans") + " described across the recording.");
-      } else {
-        sayOrHide(intervalsSaid, "");
-      }
-    }
-    if (recordLines) {
-      var lines = [];
-      if (runs.stamp) { lines.push("The camera's stamp: " + runs.stamp + "."); }
-      if (runs.digest && runs.digest.parts) {
-        lines.push("The digest the summary and the chat are written from was made at " + runs.digest.made +
-          " from the transcript and " + plural(runs.digest.moments, "description") + ", in " + plural(runs.digest.parts, "part") +
-          (runs.digest.current ? "." : "; the transcript or the moments have changed since, and the next summary remakes it."));
-      }
-      sayOrHide(recordLines, lines.join(" "));
-    }
-    var moments = state.moments || [];
-    var finished = moments.filter(function (one) { return one.state === "done"; }).length;
-    if (momentsHeading) {
-      momentsHeading.textContent = "Described moments" + (finished ? " (" + finished + ")" : "");
-    }
-    if (momentList) {
-      momentList.innerHTML = moments.length ? moments.map(function (one) {
-        var source = one.question ? "a question"
-          : (one.source === "cue" ? "from a suggestion"
-            : (one.source === "interval" ? "the picture record" : "asked for"));
-        var stamp = when(one.when);
-        var span = one.span_end > one.span_start && one.source === "interval"
-          ? escape(one.clock) + " to " + longClock(one.span_end)
-          : escape(one.clock);
-        var head = "<div class='row'><a href='#' class='cite' data-seconds='" + one.at + "'><b>" + span + "</b></a>" +
-          "<span class='muted small grow'>" + source +
-          (one.edited ? " · edited" : "") + (stamp ? " · " + escape(stamp) : "") + "</span></div>" +
-          (one.question ? "<p class='question'><b>Asked:</b> " + escape(one.question) + "</p>" : "");
-        var busy = one.state === "queued" || one.state === "running";
-        var body;
-        if (one.state === "queued") {
-          body = "<p class='muted'>Waiting its turn...</p>";
-        } else if (one.state === "running") {
-          body = "<p class='muted'>" + (one.question ? "Looking closely..." : "Looking at the clip...") + "</p>";
-        } else if (one.state === "failed") {
-          body = "<p class='problem'>" + escape(one.said) + "</p>";
-        } else {
-          body = (one.notice ? "<p class='notice small'>" + escape(one.notice) + "</p>" : "") +
-            "<div class='answer'>" + paragraphs(one.text, {}) + "</div>";
-        }
-        var tools = "<div class='row' style='margin-top:6px'>" +
-          (one.state === "done" ? "<button type='button' class='small edit-moment' data-moment='" + one.id + "'>Edit</button>" : "") +
-          "<button type='button' class='small moment-again' data-moment='" + one.id + "'" +
-          (busy ? " disabled title='Being described now'" : "") + ">" +
-          (one.question ? "Ask again" : "Describe again") + "</button>" +
-          (one.state === "done" && window.CLIPS ? "<button type='button' class='small moment-clip' data-moment='" + one.id + "'>Make a clip</button>" : "") +
-          "<span class='grow'></span>" +
-          "<button type='button' class='small ghost danger delete-moment' data-moment='" + one.id + "'>Delete</button></div>";
-        return "<div class='card moment" + (one.state === "failed" ? " failed" : "") + "' data-moment='" + one.id + "'>" + head + body + tools + "</div>";
-      }).join("") : "<p class='muted small'>No moments yet. <b>Describe this moment</b> describes the picture at the player's time, or answers a question about it; <b>Describe the whole recording</b> makes the picture record a summary is written from.</p>";
-      Array.prototype.forEach.call(momentList.querySelectorAll(".moment-again"), function (button) {
-        if (!button.disabled) { unavailable(button); }
-      });
-    }
-  }
-
-  if (momentsOn) {
-    if (describeNow) {
-      describeNow.addEventListener("click", function () {
-        askOrDescribe({ at: window.VIEWER.at(), source: "asked" });
-      });
-    }
-    document.addEventListener("click", function (event) {
-      var clipOf = event.target.closest("#moment-list .moment-clip");
-      if (clipOf && window.CLIPS) {
-        var chosen = (state.moments || []).filter(function (one) { return one.id === clipOf.dataset.moment; })[0];
-        if (!chosen) { return; }
-        var from = chosen.span_end > chosen.span_start ? chosen.span_start : Math.max(0, chosen.at - 5);
-        var to = chosen.span_end > chosen.span_start ? chosen.span_end : chosen.at + 5;
-        window.CLIPS.mark(from, to);
-        var title = document.getElementById("clip-title");
-        var note = document.getElementById("clip-note");
-        if (title && !title.value) { title.value = chosen.question ? chosen.question.slice(0, 120) : "Camera at " + chosen.clock; }
-        if (note && !note.value) { note.value = chosen.text.slice(0, 1000); }
-        return;
-      }
-      if (event.target.closest("#describe-intervals")) {
-        UI.confirm({ title: "Describe the whole recording?", body: intervalsLine(), ok: "Describe it" })
-          .then(function (yes) {
-            if (!yes) { return; }
-            describeIntervals.disabled = true;
-            post("/recording/" + recording + "/describe-intervals").then(function (answer) {
-              if (!answer.ok && answer.said && answer.said.error) {
-                UI.toast(answer.said.error, { problem: true, icon: "warning" });
-              }
-              return refresh();
-            });
-          });
-        return;
-      }
-      var edit = event.target.closest("#moment-list .edit-moment");
-      if (edit) {
-        var current = (state.moments || []).filter(function (one) { return one.id === edit.dataset.moment; })[0];
-        UI.prompt({ title: "Edit this description", body: "Your words replace the assistant's; the card is marked edited.", value: current ? current.text : "", ok: "Save" })
-          .then(function (text) {
-            if (!text || !text.trim()) { return; }
-            post("/moment/" + edit.dataset.moment + "/edit", { text: text.trim() }).then(refresh);
-          });
-        return;
-      }
-      var again = event.target.closest("#moment-list .moment-again");
-      if (again) {
-        var asked = (state.moments || []).filter(function (one) { return one.id === again.dataset.moment; })[0];
-        var question = !!(asked && asked.question);
-        UI.confirm(question
-          ? { title: "Ask this question again?", body: "The answer here is replaced by a new one from the same frames. One engine call.", ok: "Ask again" }
-          : { title: "Describe this moment again?", body: "The description here, and any edit you made to it, is replaced by a new one. One engine call.", ok: "Describe again" })
-          .then(function (yes) { if (yes) { post("/moment/" + again.dataset.moment + "/again").then(refresh); } });
-        return;
-      }
-      var gone = event.target.closest("#moment-list .delete-moment");
-      if (gone) {
-        UI.confirm({ title: "Delete this moment?", body: "Its description goes from the viewer and the exports.", ok: "Delete moment", danger: true })
-          .then(function (yes) { if (yes) { post("/moment/" + gone.dataset.moment + "/delete").then(refresh); } });
-      }
-    });
   }
 
   // Polling -------------------------------------------------------------------------
@@ -677,7 +456,7 @@
     drawSummaries();
     drawChat();
     drawSuggestions();
-    drawMoments();
+    drawPrepareNote();
   }
 
   function refresh() {

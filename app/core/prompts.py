@@ -80,10 +80,8 @@ SHIPPED_SUMMARIES = {
         "place as far as the recording says, and who takes part.\n"
         "Timeline: a bulleted list of what happens in order, each point ending "
         "with its time: arrival, contact, commands, searches, handcuffing, any "
-        "use of force, transport, and the end of the recording. Where the "
-        "camera showed the thing said or done, add it to the same point as "
-        '"the camera shows ..." with the camera line\'s time. Leave out camera '
-        "lines that only repeat the scene.\n"
+        "use of force, transport, and the end of the recording, what was seen "
+        "and what was said together in one account.\n"
         "Commands, warnings, and rights: every command, warning, and advisement "
         "of rights spoken by an officer, quoted exactly with the time. Never "
         "paraphrase inside quotation marks.\n"
@@ -92,10 +90,6 @@ SHIPPED_SUMMARIES = {
         "said unprompted.\n"
         "What officers say to each other: statements between officers or over "
         "the radio about the person, the scene, or what to do next, with times.\n"
-        "Seen but not said: what the camera showed that nobody spoke about: an "
-        "object, an action, a person in view, a change of place; each as "
-        '"the camera shows ..." with its time. Write "None noticed" if there '
-        "are none.\n"
         "Names, places, and dates: every person, place, organisation, date, and "
         "time of day mentioned, each with the time of its first mention.\n"
         "Unclear parts: stretches where the audio is garbled, cut off, "
@@ -103,30 +97,24 @@ SHIPPED_SUMMARIES = {
         "if there are none."
     ),
     "video": (
-        "Write a summary of this video recording with these parts, in this "
-        "order, using these headings. It has two sources: the transcript, which "
-        "is what was said, and, when it is given, the block headed What the "
-        "camera showed, which is what a model saw in the picture. Keep them "
-        "apart in every sentence.\n"
-        "Overview: one short paragraph. What kind of recording this is, where "
-        "it is as far as the words or the camera say, who takes part, and what "
-        "happens.\n"
-        "What happened: a bulleted list in the order things happen, each point "
-        "ending with its time. Where the camera showed the thing said or done, "
-        'add it to the same point as "the camera shows ..." with the camera '
-        "line's time. Leave out camera lines that only repeat the scene.\n"
-        "Seen but not said: what the camera showed that nobody spoke about: an "
-        "object, an action, a person in view, a change of place; each as "
-        '"the camera shows ..." with its time. Write "None noticed" if there '
-        "are none.\n"
+        "Write a summary of this video recording as one account of the events, "
+        "drawn from what was said and what the camera showed together, with "
+        "these parts, in this order, using these headings.\n"
+        "Executive summary: one short paragraph a reader in a hurry could stop "
+        "at. What kind of recording this is, where it is, who takes part, what "
+        "happens, and how it ends.\n"
+        "What happened: the events in the order they happen, as prose in a few "
+        "paragraphs, each paragraph covering one stretch of the recording and "
+        "opening with its time. Say what people did and said and what was in "
+        "view as one story; give the time of each thing that matters.\n"
         "Notable statements: short quotes that matter, each with the speaker "
         "and the time. Quote exactly; never paraphrase inside quotation marks.\n"
         "Names, places, and dates: every person, place, organisation, date, and "
         "time of day mentioned in the words, each with the time of its first "
-        "mention. Never a name from the camera.\n"
+        "mention.\n"
         "Unclear parts: stretches where the audio is garbled, cut off, "
-        "overlapping, or hard to follow, and times the camera could not make "
-        'out, with their times. Write "None noticed" if there are none.'
+        "overlapping, or hard to follow, and stretches the camera could not "
+        'make out, with their times. Write "None noticed" if there are none.'
     ),
     "interview": (
         "Write a summary of this interview with these parts, in this order, "
@@ -391,6 +379,24 @@ CAMERA_RULES = (
     "Brevity: a camera fact earns a clause, not a paragraph. Leave out camera "
     "lines that add nothing to the words."
 )
+# The guardrails a Summary keeps when it is written as one account from the
+# Digest (chapter 7): the reader is not told which source each sentence came
+# from, so the rules that protect the reader stay and the two-source wording
+# goes.
+NARRATIVE_RULES = (
+    "The record of this recording joins what was said and what the camera "
+    "showed; write one account from both and do not label which source a "
+    "sentence came from. Keep these rules whatever the account says. Names: a "
+    "person is named only as the words name them; a person only the camera "
+    "shows is described by clothing, position, or what they do, never given "
+    "a name. Objects: a thing stays what the description saw (a small bag "
+    "stays a small bag) and is never called more. Never state a legal fact "
+    "such as consent, arrest, search, or force as a conclusion; say what was "
+    "done and said. A stretch the camera could not make out is reported as "
+    "not visible, not filled in. Give every time as [hh:mm:ss] copied from "
+    "the record."
+)
+
 # The most the camera block may cost a Summary or a Chat without a Digest,
 # past which the app thins it (every asked Moment kept, the record's spread
 # evenly). With a Digest the block is not sent at all (chapter 6).
@@ -765,10 +771,8 @@ def summary_input(focus: str, length: str, seen: int = 0, digest: bool = False) 
     if digest:
         parts.append(
             "The record of this recording is complete: every stretch of the "
-            "words and the picture is in it. Choose what matters for the "
-            "summary and leave the rest out rather than listing it; a fact "
-            "marked (seen) or (both) is the camera's and is written as the "
-            "rules say."
+            "words and the picture is in it. Write one account from it, choose "
+            "what matters, and leave the rest out rather than listing it."
         )
     elif seen > 0:
         lines = "line" if seen == 1 else "lines"
@@ -783,6 +787,11 @@ def summary_input(focus: str, length: str, seen: int = 0, digest: bool = False) 
 def with_camera_rules(answer_format: str, seen) -> str:
     """The answer format, with the camera rules after it when a block is given."""
     return answer_format + ("\n\n" + CAMERA_RULES if seen else "")
+
+
+def with_narrative_rules(answer_format: str) -> str:
+    """The answer format with the one-account guardrails (a Summary from the Digest)."""
+    return answer_format + "\n\n" + NARRATIVE_RULES
 
 
 def suggestions_input(unnamed: list[str], known: list[str]) -> str:

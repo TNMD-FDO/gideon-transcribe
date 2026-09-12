@@ -29,7 +29,6 @@ from core.assistant import (
     Summary,
     SummaryTemplate,
 )
-from core.jobs import Segment
 from core.recordings import Recording
 
 LENGTHS = ("short", "standard", "detailed")
@@ -218,13 +217,11 @@ def _moments_and_runs(recording, transcript, features) -> tuple[list, dict]:
         "record": assistant.record_on(),
         "digest": _digest_json(transcript),
         "stamp": exports.stamp_row(transcript),
+        # The preparation (chapter 7): its state, its count and the time left,
+        # for the cards and the dialog's cost line.
+        "prepare": assistant.prepare_json(transcript),
         "described": described,
         "answers_use_moments": bool(settings_store.get("moments_in_answers")),
-        # The dialog's Look at the picture first tick starts ticked while the
-        # office says so and anything is left to describe.
-        "describe_first_default": bool(
-            settings_store.get("summary_describes_first") and count > 0
-        ),
     }
     return [_moment_json(one) for one in moments], runs
 
@@ -368,8 +365,6 @@ def new_summary(request: HttpRequest, recording_id) -> JsonResponse:
         template_version=template.version,
         focus=str(wanted.get("focus", ""))[:200],
         length=length,
-        describe_first=bool(wanted.get("describe_first"))
-        and assistant.features()["moments"],
     )
     tasks.write_summary.defer(summary_id=str(summary.pk))
     return JsonResponse({"id": str(summary.pk)})
@@ -407,166 +402,6 @@ def delete_summary(request: HttpRequest, summary_id) -> JsonResponse:
     audit.write(
         audit.Category.EDITS,
         "Summary deleted",
-        actor=request.user,
-        request=request,
-        affected_user=_affected(request, recording),
-        object_type="recording",
-        object_id=recording.pk,
-        object_label=recording.original_filename,
-    )
-    return JsonResponse({"ok": True})
-
-
-# Moments ------------------------------------------------------------------------------
-
-
-def _moment(request, moment_id):
-    moment = get_object_or_404(
-        Moment.objects.select_related("transcript", "transcript__recording"),
-        pk=moment_id,
-    )
-    recording = _recording(request, moment.transcript.recording_id)
-    return moment, recording
-
-
-@login_required
-@require_POST
-def new_moment(request: HttpRequest, recording_id) -> JsonResponse:
-    """A Moment asked for at a time, by a person."""
-    recording = _recording(request, recording_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    if not assistant.features()["moments"]:
-        return JsonResponse({"error": "Moments are off"}, status=404)
-    transcript = getattr(recording, "transcript", None)
-    if transcript is None:
-        return JsonResponse({"error": "there is no transcript yet"}, status=409)
-    if not assistant.playable_video(recording):
-        return JsonResponse(
-            {"error": "the video is still being prepared, or this is sound only"},
-            status=409,
-        )
-    wanted = _body(request)
-    try:
-        at = float(wanted.get("at", ""))
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "a time is needed"}, status=400)
-    length = float(recording.duration_seconds or 0.0)
-    at = min(max(0.0, at), length) if length > 0 else max(0.0, at)
-    segment = None
-    if wanted.get("segment"):
-        segment = Segment.objects.filter(
-            pk=wanted["segment"], transcript=transcript
-        ).first()
-    question = str(wanted.get("question", "")).strip()[:500]
-    if (
-        not question
-        and transcript.moments.filter(
-            state__in=(assistant.QUEUED, assistant.RUNNING),
-            question="",
-            at__gte=at - 1,
-            at__lte=at + 1,
-        ).exists()
-    ):
-        return JsonResponse({"error": "that moment is being described"}, status=409)
-    cases.used(recording, by=request.user)
-    moment = Moment.objects.create(
-        transcript=transcript,
-        segment=segment,
-        at=at,
-        source=Moment.ASKED,
-        question=question,
-        asked_by=request.user,
-    )
-    tasks.describe_moment.defer(moment_id=str(moment.pk))
-    return JsonResponse({"id": str(moment.pk)})
-
-
-@login_required
-@require_POST
-def describe_intervals(request: HttpRequest, recording_id) -> JsonResponse:
-    """Describe the whole recording: the picture record, one span at a time."""
-    recording = _recording(request, recording_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    if not assistant.record_on():
-        return JsonResponse({"error": "the picture record is off"}, status=404)
-    transcript = getattr(recording, "transcript", None)
-    if transcript is None:
-        return JsonResponse({"error": "there is no transcript yet"}, status=409)
-    if not assistant.playable_video(recording):
-        return JsonResponse(
-            {"error": "the video is still being prepared, or this is sound only"},
-            status=409,
-        )
-    if transcript.cue_runs.filter(
-        source=CueRun.INTERVAL, state__in=(assistant.QUEUED, assistant.RUNNING)
-    ).exists():
-        return JsonResponse({"error": "the recording is being described"}, status=409)
-    cases.used(recording, by=request.user)
-    run = CueRun.objects.create(
-        transcript=transcript, source=CueRun.INTERVAL, asked_by=request.user
-    )
-    tasks.describe_intervals.defer(run_id=str(run.pk))
-    return JsonResponse({"id": str(run.pk)})
-
-
-@login_required
-@require_POST
-def moment_again(request: HttpRequest, moment_id) -> JsonResponse:
-    moment, recording = _moment(request, moment_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    if not assistant.playable_video(recording):
-        return JsonResponse({"error": "the video is not ready"}, status=409)
-    moment.state = assistant.QUEUED
-    moment.reason_class = ""
-    moment.text = ""
-    moment.edited = False
-    moment.asked_by = request.user
-    moment.save()
-    tasks.describe_moment.defer(moment_id=str(moment.pk))
-    return JsonResponse({"id": str(moment.pk)})
-
-
-@login_required
-@require_POST
-def edit_moment(request: HttpRequest, moment_id) -> JsonResponse:
-    """A person's own words for the Moment; the row says only that it changed."""
-    moment, recording = _moment(request, moment_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    text = str(_body(request).get("text", "")).strip()[:2000]
-    if not text:
-        return JsonResponse({"error": "some words are needed"}, status=400)
-    moment.text = text
-    moment.edited = True
-    moment.state = assistant.DONE
-    moment.reason_class = ""
-    moment.save(update_fields=["text", "edited", "state", "reason_class"])
-    audit.write(
-        audit.Category.EDITS,
-        "Moment edited",
-        actor=request.user,
-        request=request,
-        affected_user=_affected(request, recording),
-        object_type="recording",
-        object_id=recording.pk,
-        object_label=recording.original_filename,
-    )
-    return JsonResponse({"ok": True})
-
-
-@login_required
-@require_POST
-def delete_moment(request: HttpRequest, moment_id) -> JsonResponse:
-    moment, recording = _moment(request, moment_id)
-    if recording is None:
-        return JsonResponse({"error": "no such recording"}, status=404)
-    moment.delete()
-    audit.write(
-        audit.Category.EDITS,
-        "Moment deleted",
         actor=request.user,
         request=request,
         affected_user=_affected(request, recording),

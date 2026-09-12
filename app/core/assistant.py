@@ -66,12 +66,14 @@ class PromptTemplate(models.Model):
     GROUND_RULES, CHAT, SUGGESTIONS = "ground_rules", "chat", "suggestions"
     CASE_CHAT = "case_chat"
     MOMENT = "moment"
+    DIGEST = "digest"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
         SUGGESTIONS: ("Speaker suggestions", prompts.SUGGESTIONS),
         CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
         MOMENT: ("Moment", prompts.MOMENT),
+        DIGEST: ("Digest", prompts.DIGEST),
     }
 
     key = models.CharField(max_length=30, unique=True)
@@ -461,8 +463,10 @@ class Moment(models.Model):
     text = models.TextField(blank=True, default="")
     edited = models.BooleanField(default=False)
     model = models.CharField(max_length=120, blank=True, default="")
-    # How many frames the engine was shown, for the Details panel.
+    # How many frames the engine was shown, for the Details panel; and how
+    # long the call took, for the preparation's estimates (chapter 7).
     frames = models.IntegerField(default=0)
+    seconds = models.FloatField(default=0.0)
     asked_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -500,6 +504,7 @@ class DigestPart(models.Model):
     moments_used = models.IntegerField(default=0)
     model = models.CharField(max_length=120, blank=True, default="")
     made_at = models.DateTimeField(null=True, blank=True)
+    seconds = models.FloatField(default=0.0)
 
     class Meta:
         ordering = ["number"]
@@ -708,39 +713,31 @@ def write_summary(summary_id) -> None:
             raise problem
         # The picture first, when asked: the recording described at
         # intervals, in this lane, so the camera block below is full.
-        if (
-            summary.describe_first
-            and features()["moments"]
-            and record_on()
-            and playable_video(recording)
-        ):
-            summary.stage = "looking"
+        # A video is prepared first (chapter 7): the record and the Digest,
+        # by the transcript's own task if it is at it, else here and now.
+        if record_on() and has_picture(recording) and not prepared(transcript):
+            summary.stage = "preparing"
             summary.save(update_fields=["stage"])
-            run = CueRun.objects.create(
-                transcript=transcript, source=CueRun.INTERVAL, asked_by=summary.asked_by
-            )
-            describe_intervals(run.pk)
-            run.refresh_from_db()
-            if run.reason_class == engine.UNREACHABLE:
-                raise engine.Problem(engine.UNREACHABLE, "the engine went away")
+            wait_or_prepare(transcript, asked_by=summary.asked_by)
+            transcript.refresh_from_db()
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
         # The Digest (chapter 6): every scene informs, and a long recording
         # is never refused, because the Digest stands in for the transcript
         # when the transcript would not fit beside everything else.
-        digest = (
-            make_digest(transcript, asked_by=summary.asked_by, summary=summary)
-            if seen and digests_on()
-            else ""
-        )
+        digest = digest_text(transcript) if seen and digests_on() else ""
         summary.digest_parts = transcript.digest_parts.count() if digest else 0
         summary.stage = "writing"
         summary.save(update_fields=["digest_parts", "stage"])
+        # One account from the Digest (chapter 7); the two-source rules only
+        # for a Summary that still reads the camera block.
         system = prompts.system_message(
             ground.text,
             template.text,
-            prompts.with_camera_rules(prompts.SUMMARY_FORMAT, seen),
+            prompts.with_narrative_rules(prompts.SUMMARY_FORMAT)
+            if digest
+            else prompts.with_camera_rules(prompts.SUMMARY_FORMAT, seen),
         )
         picture = prompts.digest_block(digest) if digest else prompts.camera_lines(seen)
         asked = prompts.summary_input(
@@ -838,6 +835,9 @@ def answer_turn(turn_id) -> None:
         problem = _unreachable()
         if problem:
             raise problem
+        if record_on() and has_picture(recording) and not prepared(transcript):
+            wait_or_prepare(transcript, asked_by=chat.asked_by)
+            transcript.refresh_from_db()
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
         seen = moments_for_answers(transcript)
@@ -1190,6 +1190,7 @@ def describe_moment(moment_id) -> None:
         moment.text = said
         moment.model = answer["model"]
         moment.frames = frames
+        moment.seconds = round(time.monotonic() - started, 1)
         moment.state = DONE
         moment.reason_class = ""
         moment.edited = False
@@ -1410,6 +1411,7 @@ def describe_intervals(run_id) -> None:
             run.save(update_fields=["found"])
         elif moment.reason_class == engine.UNREACHABLE:
             reason = engine.UNREACHABLE
+        _prepare_tick(transcript)
     run.state = FAILED if reason else DONE
     run.reason_class = reason
     run.finished_at = timezone.now()
@@ -1548,6 +1550,275 @@ def read_stamp(transcript, *, asked_by) -> dict:
     return stamp
 
 
+# Prepared videos (Phase 4, chapter 7) --------------------------------------------
+#
+# A video is prepared once its picture record is complete and its Digest is
+# current. It happens by itself as the transcript lands (the task below,
+# waiting for the Playback copy), on first use (a summary or a chat question
+# prepares first, the card saying so), or on purpose from the case page.
+# Nobody presses anything on the recording page. The count and the time left
+# are kept on the Transcript, and the estimate comes from what descriptions
+# and parts have taken on this engine rather than a guess.
+
+PREPARING = "running"
+DIGEST_SECONDS_GUESS = 30
+PREPARE_WAIT_SECONDS = 3 * 3600
+PLAYBACK_RETRY_SECONDS = 60
+PLAYBACK_RETRIES = 120
+
+
+def seconds_per_description() -> float:
+    """What one span's description takes on this engine, from the last fifty."""
+    recent = list(
+        Moment.objects.filter(source=Moment.INTERVAL, state=DONE, seconds__gt=0)
+        .order_by("-described_at")
+        .values_list("seconds", flat=True)[:50]
+    )
+    return sum(recent) / len(recent) if recent else float(MOMENT_SECONDS_GUESS)
+
+
+def seconds_per_part() -> float:
+    recent = list(
+        DigestPart.objects.filter(seconds__gt=0)
+        .order_by("-made_at")
+        .values_list("seconds", flat=True)[:50]
+    )
+    return sum(recent) / len(recent) if recent else float(DIGEST_SECONDS_GUESS)
+
+
+def prepared(transcript) -> bool:
+    """Whether the record is complete and the Digest current, as the last
+    preparation left them; a change since (a Process again makes a new
+    Transcript anyway) is caught by the Digest's signatures."""
+    if transcript.prepare_state != DONE:
+        return False
+    return not (digests_on() and not digest_current(transcript))
+
+
+def prepare_plan(recording, transcript) -> dict:
+    """What preparing this video would do now, in numbers: the spans left, the
+    parts stale, and about how long, from this engine's own pace."""
+    spans, estimated = (
+        planned_spans(recording, transcript) if record_on() else ([], False)
+    )
+    parts = 0
+    # A Digest is made only once there are descriptions to condense.
+    will_have = bool(spans) or bool(moments_for_answers(transcript))
+    if digests_on() and will_have:
+        existing = {one.number: one for one in transcript.digest_parts.all()}
+        for window_plan in digest_plan(transcript):
+            part = existing.get(window_plan["number"])
+            if (
+                part is None
+                or part.signature != window_plan["signature"]
+                or not part.text
+            ):
+                parts += 1
+    seconds = len(spans) * seconds_per_description() + parts * seconds_per_part()
+    return {
+        "descriptions": len(spans),
+        "estimated": estimated,
+        "parts": parts,
+        "seconds": int(round(seconds)),
+    }
+
+
+def _prepare_tick(transcript) -> None:
+    """One more thing done, for the count the pages show while it runs."""
+    if transcript.prepare_state != PREPARING:
+        return
+    transcript.prepare_done = models.F("prepare_done") + 1
+    transcript.save(update_fields=["prepare_done"])
+    transcript.refresh_from_db(fields=["prepare_done"])
+
+
+def prepare(transcript, *, asked_by=None) -> bool:
+    """The record, the stamp and the Digest, in this lane, with the count kept.
+
+    Returns whether the video ended up prepared. Never raises: a preparation
+    that fails is a state the pages say, and the Batch's mail is told either
+    way.
+    """
+    from core import mail, media, moment_scan
+
+    recording = transcript.recording
+    started = time.monotonic()
+    plan = prepare_plan(recording, transcript)
+    transcript.prepare_state = PREPARING
+    transcript.prepare_reason = ""
+    transcript.prepare_done = 0
+    transcript.prepare_total = plan["descriptions"] + plan["parts"]
+    transcript.prepare_started = timezone.now()
+    transcript.save(
+        update_fields=[
+            "prepare_state",
+            "prepare_reason",
+            "prepare_done",
+            "prepare_total",
+            "prepare_started",
+        ]
+    )
+    reason = ""
+    try:
+        if not playable_video(recording):
+            raise engine.Problem(MEDIA_NOT_READY, "no playback copy with a picture")
+        problem = _unreachable()
+        if problem:
+            raise problem
+        if transcript.change_points is None:
+            try:
+                moment_scan.change_points_of(transcript, actor=asked_by)
+            except media.MediaError as why:
+                raise engine.Problem(why.reason_class, str(why)) from why
+            transcript.refresh_from_db(fields=["change_points"])
+            # The cut is known now, so the count the pages show is the cut's.
+            plan = prepare_plan(recording, transcript)
+            transcript.prepare_total = plan["descriptions"] + plan["parts"]
+            transcript.save(update_fields=["prepare_total"])
+        if transcript.stamp is None and stamp_on():
+            read_stamp(transcript, asked_by=asked_by)
+        if record_on():
+            run = CueRun.objects.create(
+                transcript=transcript, source=CueRun.INTERVAL, asked_by=asked_by
+            )
+            describe_intervals(run.pk)
+            run.refresh_from_db()
+            if run.reason_class == engine.UNREACHABLE:
+                raise engine.Problem(engine.UNREACHABLE, "the engine went away")
+        if digests_on() and moments_for_answers(transcript):
+            make_digest(
+                transcript,
+                asked_by=asked_by,
+                progress=lambda: _prepare_tick(transcript),
+            )
+        transcript.prepare_state = DONE
+        transcript.prepared_at = timezone.now()
+    except engine.Problem as problem:
+        reason = problem.reason
+        transcript.prepare_state = FAILED
+        transcript.prepare_reason = reason
+    transcript.save(update_fields=["prepare_state", "prepare_reason", "prepared_at"])
+    audit.write(
+        audit.Category.RECORDINGS,
+        "Video prepared",
+        actor=asked_by,
+        outcome=audit.Outcome.SUCCESS if not reason else audit.Outcome.FAILURE,
+        reason_class=reason,
+        affected_user=(
+            recording.user
+            if asked_by is not None and recording.user_id != asked_by.pk
+            else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        descriptions=transcript.moments.filter(
+            source=Moment.INTERVAL, state=DONE
+        ).count(),
+        parts=transcript.digest_parts.count(),
+        duration_seconds=round(time.monotonic() - started, 1),
+    )
+    # The Batch's mail waits for its videos to be prepared.
+    mail.note_batch_progress(recording)
+    return not reason
+
+
+def wait_or_prepare(transcript, *, asked_by=None) -> bool:
+    """Prepared by the transcript's own task if it is at it, else here and now."""
+    transcript.refresh_from_db(fields=["prepare_state"])
+    if transcript.prepare_state in (QUEUED, PREPARING):
+        waited = 0
+        while waited < PREPARE_WAIT_SECONDS:
+            time.sleep(5)
+            waited += 5
+            transcript.refresh_from_db(fields=["prepare_state"])
+            if transcript.prepare_state not in (QUEUED, PREPARING):
+                return transcript.prepare_state == DONE
+        raise engine.Problem(engine.TIMEOUT, "the preparation is taking too long")
+    return prepare(transcript, asked_by=asked_by)
+
+
+def queue_preparation(recording) -> bool:
+    """A video's transcript has landed: its preparation is queued behind the
+    Playback copy. Nothing for sound alone, or while the record is off."""
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None or not record_on() or not has_picture(recording):
+        return False
+    from core import tasks
+
+    transcript.prepare_state = QUEUED
+    transcript.prepare_reason = ""
+    transcript.prepare_done = 0
+    transcript.prepare_total = 0
+    transcript.save(
+        update_fields=[
+            "prepare_state",
+            "prepare_reason",
+            "prepare_done",
+            "prepare_total",
+        ]
+    )
+    tasks.prepare_video.defer(transcript_id=str(transcript.pk))
+    return True
+
+
+def prepare_words(transcript) -> tuple[str, str]:
+    """What a page says about a video's preparation, and the pill's tone."""
+    if transcript is None:
+        return "", ""
+    state = transcript.prepare_state
+    if state == DONE:
+        return "Prepared", "ok"
+    if state == FAILED:
+        return "Not prepared: " + what_to_say(transcript.prepare_reason), "danger"
+    if state in (QUEUED, PREPARING):
+        left = seconds_left(transcript)
+        count = (
+            f"{transcript.prepare_done} of {transcript.prepare_total}, "
+            if transcript.prepare_total
+            else ""
+        )
+        return f"Preparing {count}{about(left)}".strip(), "warn"
+    if record_on() and has_picture(transcript.recording):
+        return "Not prepared", ""
+    return "", ""
+
+
+def seconds_left(transcript) -> int:
+    """About how long a preparation has to go, from the engine's own pace."""
+    if transcript.prepare_state == QUEUED or not transcript.prepare_total:
+        return prepare_plan(transcript.recording, transcript)["seconds"]
+    left = max(0, transcript.prepare_total - transcript.prepare_done)
+    return int(round(left * seconds_per_description()))
+
+
+def about(seconds: int) -> str:
+    """ "about 18 minutes", "about 2 h 10 min", "under a minute"."""
+    if seconds < 60:
+        return "under a minute"
+    minutes = int(round(seconds / 60))
+    if minutes < 60:
+        return f"about {minutes} minute{'' if minutes == 1 else 's'}"
+    hours, rest = divmod(minutes, 60)
+    return f"about {hours} h {rest:02d} min" if rest else f"about {hours} h"
+
+
+def prepare_json(transcript) -> dict | None:
+    """The preparation as the pages read it, or nothing for sound alone."""
+    if transcript is None or not (record_on() and has_picture(transcript.recording)):
+        return None
+    words, tone = prepare_words(transcript)
+    left = seconds_left(transcript) if transcript.prepare_state != DONE else 0
+    return {
+        "state": transcript.prepare_state or "none",
+        "done": transcript.prepare_done,
+        "total": transcript.prepare_total,
+        "seconds_left": left,
+        "line": words,
+        "tone": tone,
+    }
+
+
 # The Digest (Phase 4, chapter 6) -------------------------------------------------
 #
 # One text per Transcript, made in the summary's lane after the record: the
@@ -1652,7 +1923,7 @@ def digest_made_at(transcript):
     return newest.made_at if newest is not None else None
 
 
-def make_digest(transcript, *, asked_by, summary=None) -> str:
+def make_digest(transcript, *, asked_by, summary=None, progress=None) -> str:
     """The Digest brought current: only the stale parts are made again.
 
     Called in the summary's lane, after the record. Raises the engine's
@@ -1664,7 +1935,8 @@ def make_digest(transcript, *, asked_by, summary=None) -> str:
         return ""
     existing = {one.number: one for one in transcript.digest_parts.all()}
     ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
-    templates_line = f"ground-rules v{ground.version}; Digest (fixed)"
+    template = PromptTemplate.named(PromptTemplate.DIGEST)
+    templates_line = f"ground-rules v{ground.version}; Digest v{template.version}"
     texts = []
     for window_plan in plan:
         number = window_plan["number"]
@@ -1685,7 +1957,7 @@ def make_digest(transcript, *, asked_by, summary=None) -> str:
         answer_cap = cap(settings_store.digest_part_cap())
         system = prompts.system_message(
             ground.text,
-            prompts.DIGEST,
+            template.text,
             prompts.with_camera_rules(prompts.DIGEST_FORMAT, mine),
         )
         user = "\n\n".join(
@@ -1742,6 +2014,7 @@ def make_digest(transcript, *, asked_by, summary=None) -> str:
         part.moments_used = len(mine)
         part.model = answer["model"]
         part.made_at = timezone.now()
+        part.seconds = round(time.monotonic() - started, 1)
         part.save()
         _record(
             "digest",
@@ -1756,6 +2029,8 @@ def make_digest(transcript, *, asked_by, summary=None) -> str:
             parts=window_plan["total"],
         )
         texts.append(text)
+        if progress is not None:
+            progress()
     transcript.digest_parts.filter(number__gt=len(plan)).delete()
     return "\n".join(texts).strip()
 

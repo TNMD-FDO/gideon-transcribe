@@ -101,13 +101,13 @@ def open_recording(request: HttpRequest, recording_id) -> Recording | None:
 
 # The tabs of the work area, and the windows a person may open: each tab in
 # its own window, and the Speakers window for tagging voices while it plays.
-PANELS = ["clips", "summary", "chat", "moments", "details"]
+# (Moments was a tab from v1.38.0 to v1.51.0.)
+PANELS = ["clips", "summary", "chat", "details"]
 WINDOWS = PANELS + ["speakers"]
 WINDOW_TITLES = {
     "clips": "Clips",
     "summary": "Summary",
     "chat": "Chat",
-    "moments": "Moments",
     "details": "Details",
     "speakers": "Speakers",
 }
@@ -156,9 +156,6 @@ def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
         "clips": bool(settings_store.get("clips_available")),
         "summary": bool(features["summary"] and transcript is not None),
         "chat": bool(features["chat"] and transcript is not None),
-        "moments": bool(
-            features["moments"] and transcript is not None and context["is_video"]
-        ),
         "details": True,
         "speakers": transcript is not None,
     }
@@ -800,12 +797,55 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
         }
         for one in (recording.marks or [])
     ]
-    return JsonResponse(
-        {
-            "rows": [[name, value] for name, value in rows if str(value).strip()],
-            "marks": marks,
-        }
-    )
+    answer = {
+        "rows": [[name, value] for name, value in rows if str(value).strip()],
+        "marks": marks,
+    }
+    # The Digest itself, and the record's descriptions, for an Admin only
+    # (Phase 4 chapter 7): what a summary was written from, so the prompting
+    # can be refined. The row the audit log writes when an Admin opens
+    # somebody's recording covers the look.
+    if transcript is not None and request.user.is_admin:
+        answer["digest"] = _digest_for_admins(transcript)
+    return JsonResponse(answer)
+
+
+def _digest_for_admins(transcript) -> dict:
+    from core import assistant, exports, prompts
+
+    return {
+        "parts": [
+            {
+                "number": one.number,
+                "span": (
+                    f"{exports.clock(one.span_start)} to {exports.clock(one.span_end)}"
+                ),
+                "text": one.text,
+                "model": one.model,
+                "made": f"{one.made_at:%d %B %Y %H:%M}" if one.made_at else "",
+            }
+            for one in transcript.digest_parts.all()
+        ],
+        "descriptions": [
+            {
+                "span": prompts.span_clock(one),
+                "text": one.text,
+                "source": one.source,
+                "model": one.model,
+                "edited": one.edited,
+            }
+            for one in transcript.moments.filter(state=assistant.DONE).exclude(text="")
+        ],
+        "prepared": assistant.prepare_words(transcript)[0],
+        "templates": {
+            key: assistant.PromptTemplate.named(key).version
+            for key in (
+                assistant.PromptTemplate.GROUND_RULES,
+                assistant.PromptTemplate.MOMENT,
+                assistant.PromptTemplate.DIGEST,
+            )
+        },
+    }
 
 
 def _plainly(seconds: float) -> str:

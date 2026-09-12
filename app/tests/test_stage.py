@@ -24,16 +24,12 @@ def test_the_stage_wraps_the_picture_the_transport_and_the_line_being_spoken():
         < page.index('id="stage-grip"')
     )
     assert page.index('id="stage-grip"') < page.index('id="timeline"')
-    # Describe this moment lives on the stage, beside the line being spoken.
-    assert (
-        page.index('id="now"')
-        < page.index('id="describe-now"')
-        < page.index('id="timeline"')
-    )
+    # Nothing about the camera on the stage since v1.52.0.
+    assert 'id="describe-now"' not in page
     # Then the marking strip, then the work area with its tabs, Transcript first.
     assert page.index('id="caption"') < page.index('class="tabbar"')
     tabs = re.findall(r'class="tab(?: on)?" data-panel="([a-z]+)"', page)
-    assert tabs == ["transcript", "clips", "summary", "chat", "moments", "details"]
+    assert tabs == ["transcript", "clips", "summary", "chat", "details"]
     assert 'class="tab on" data-panel="transcript"' in page
     assert (
         page.index('class="tabbar"')

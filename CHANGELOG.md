@@ -21,6 +21,63 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.52.0, 2026-09-12
+
+```
+Models: unchanged
+Database: migrates (0041: the transcript's preparation state and counts, and
+the seconds a description and a digest part took)
+```
+
+Phase 4, chapter 7 (`docs/spec/SPEC-PHASE-4.md`): prepared videos, one
+account, and the digest for Admins. The maintainer, on v1.51.0: "the intent
+is getting lost"; the record and the digest are a foundation, not something
+a person presses or reads, and the summary is "a narrative and executive
+summary of the events" from both.
+
+### Added
+
+- **Prepared videos.** A video is prepared, its picture record complete and
+  its digest current, by itself as its transcript lands (queued before the
+  batch is looked at, waiting a minute at a time for the playback copy), on
+  first use when a summary or a chat question comes first (the card says
+  "Preparing the recording (12 of 60), about 18 minutes", and waits for a
+  preparation already running rather than starting another), or on purpose
+  from the case page, whose recordings list gains a **Prepared** column and
+  **Prepare them now** for the rest. One audit row, **Video prepared**, with
+  the descriptions and the parts made. The count and the time left come from
+  what descriptions and digest parts have taken on this engine.
+- **Wait times.** The batch page says, per recording, "preparing 12 of 60,
+  about 18 minutes" or "prepared", and at the top, once transcribed,
+  "Preparing 3 videos for summaries and chat, about 2 h 40 min", polling
+  until they are done; the case page says the count and the time; the
+  summary dialog says what preparing will do first.
+- **The mail waits.** The Batch finished message goes only once the batch's
+  videos are prepared, and gains {prepared}: "3 videos prepared for summaries
+  and chat in 2 h 10 min; 1 could not be prepared."
+- **One account.** The Video summary is an executive summary and the events
+  in order as prose, from the words and the picture together, never saying
+  which source a sentence came from; the body camera summary's timeline is
+  one account too. A summary written from the digest is given the narrative
+  rules in place of the camera rules: the guardrails stay (a person named
+  only from the words, an object what the description saw, no legal
+  conclusion, "not visible" reported), the two-source wording goes. The chat
+  still says where a fact came from.
+- **The digest for Admins.** Details shows an Admin, and nobody else, the
+  digest's parts as the model wrote them, every description with its span,
+  and the template versions that made them. The digest's instructions are a
+  **Digest** template on the Templates page, editable and resettable.
+
+### Withdrawn
+
+- The Moments tab, Describe this moment, questions answered from close
+  frames, Describe the whole recording, the summary dialog's Look at the
+  picture first tick, the setting Summaries describe the moments first, the
+  endpoints that made, edited, described again and deleted a moment, and the
+  audit rows Moment edited and Moment deleted. Nobody presses anything on the
+  recording page for the picture. Moments made before this release stay in
+  the exports' What the camera showed section.
+
 ## v1.51.0, 2026-09-12
 
 ```

@@ -92,7 +92,7 @@ def test_a_tab_renders_alone_in_its_own_window(person, client):
     assert chat.status_code == 200
     body = chat.content.decode()
     assert 'class="panel chat" data-panel="chat"' in body
-    for other in ("summary", "clips", "moments", "details"):
+    for other in ("summary", "clips", "details"):
         assert f'data-panel="{other}"' not in body, other
     assert 'windowPanel: "chat"' in body and "viewer-window.js" in body
     assert "assistant.js" in body and "chat-ui.js" in body

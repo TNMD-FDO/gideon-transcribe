@@ -1943,3 +1943,11 @@ details.inline[open] summary::after { content: ": "; }
   .sp-cards { border-right: 0; border-bottom: 1px solid var(--line); max-height: 38vh; }
   .sp-player video { max-height: 22vh; }
 }
+
+/* The digest for Admins, under Details (Phase 4 chapter 7). */
+.admin-digest { margin-top: 14px; }
+.admin-digest summary { cursor: pointer; font-weight: 600; }
+.admin-digest h4 { margin: 12px 0 4px; font-size: var(--t-small); }
+.admin-digest pre { white-space: pre-wrap; font-size: 0.85em; background: var(--surface-2); padding: 8px 10px; border-radius: 6px; }
+.admin-descriptions { padding-left: 18px; font-size: 0.9em; }
+.admin-descriptions li { margin: 0 0 6px; }

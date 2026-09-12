@@ -92,19 +92,11 @@
               </div>
               {% if assistant.moments and is_video %}
                 {% comment %}
-                  The look-first line, in one of three forms assistant.js
-                  chooses from the state: the tick with its cost while spans
-                  of the picture record are left to describe; a line saying
-                  the summary draws on the moments described when none are; a
-                  line saying the office writes from the words alone when it
-                  hands no moments to answers.
+                  The preparation's line (Phase 4 chapter 7): what the summary
+                  does first when the video is not yet prepared, in numbers,
+                  from the state; nothing to tick.
                 {% endcomment %}
-                <div class="field" id="summary-look-line">
-                  <label class="row" id="summary-describe-line">
-                    <input type="checkbox" id="summary-describe-first"> Look at the picture first
-                  </label>
-                  <p class="muted small" id="summary-describe-note" style="margin: 2px 0 0"></p>
-                </div>
+                <p class="muted small" id="summary-prepare-note" hidden style="margin: 2px 0 0"></p>
               {% endif %}
               <div class="row">
                 <button type="button" class="primary small" id="summary-write">Write summary</button>
@@ -112,33 +104,6 @@
               </div>
             </div>
             <div id="summary-list" class="assistant-list"></div>
-          </div>
-        {% endif %}
-
-        {% if assistant.moments and transcript and is_video and "moments" in panels_shown %}
-          {% comment %}
-            Moments: what the camera showed. Two panels, as the Clips tab has:
-            the first to ask (Describe this moment at the playhead, or the
-            whole recording as the picture record), the second the Moments
-            kept. Since v1.51.0 nothing about the camera sits among the
-            transcript's rows: no cue pills, no describe buttons, no camera
-            lines; the record is listed here and in the exports' own section.
-          {% endcomment %}
-          <div class="panel" data-panel="moments" hidden>
-            <h2>Moments</h2>
-            <p class="muted small" id="moments-said" hidden style="margin: 4px 0 0"></p>
-            <div class="whole">
-              <button type="button" class="small" id="describe-intervals">Describe the whole recording</button>
-              <p class="muted small" id="intervals-note">The picture record: the recording cut where the picture and the sound change, each span described once, one engine call each. Spans already described are skipped.</p>
-              <p class="muted small" id="intervals-said" hidden></p>
-            </div>
-            <p class="muted small" id="record-lines" hidden></p>
-          </div>
-
-          <div class="panel" data-panel="moments" hidden>
-            <h2 id="moments-heading">Described moments</h2>
-            <div id="moment-list" class="assistant-list"></div>
-            <p class="muted small">A moment is what the assistant saw, never what was said. Moments print in the What the camera showed section of the transcript's and a summary's Export to Word.</p>
           </div>
         {% endif %}
 
@@ -170,6 +135,12 @@
             processed. Printed on every export. Never the transcript itself.
           </p>
           <dl id="details" class="kv"></dl>
+          {% comment %}
+            For an Admin only: the digest and the record's descriptions, as
+            the model wrote them, so the prompting can be refined (Phase 4
+            chapter 7). Filled by viewer.js from the details answer.
+          {% endcomment %}
+          <div id="admin-digest" hidden></div>
           <div id="marks" hidden>
             <h3 class="small" style="margin: 12px 0 4px">Marks</h3>
             <ul class="plain marks"></ul>

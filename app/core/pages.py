@@ -18,6 +18,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core import (
+    assistant,
     audit,
     cases,
     exports,
@@ -490,9 +491,22 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                     and not out_of_reach
                 ),
                 "reprocessing": found.is_reprocessing,
+                # Prepared for summaries and chat (Phase 4 chapter 7).
+                "prepare": assistant.prepare_json(
+                    getattr(recording, "transcript", None)
+                )
+                if not out_of_reach
+                else None,
             }
         )
 
+    # The videos still preparing, and about how long they have to go: the
+    # page keeps polling until they are done, and says so.
+    preparing = [
+        one["prepare"]
+        for one in rows
+        if one["prepare"] and one["prepare"]["state"] in ("queued", "running")
+    ]
     return JsonResponse(
         {
             "finished": found.is_finished,
@@ -501,6 +515,13 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
             "everything_done_by": _everything_done_by(found, speed),
             "recordings": rows,
             "case": _case_of(found),
+            "preparing": {
+                "count": len(preparing),
+                "seconds_left": sum(one["seconds_left"] for one in preparing),
+                "about": assistant.about(sum(one["seconds_left"] for one in preparing))
+                if preparing
+                else "",
+            },
         }
     )
 

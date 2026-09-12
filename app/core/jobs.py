@@ -264,6 +264,15 @@ class Transcript(models.Model):
     # date, time, camera id, and the second it was read at; null until read,
     # an empty dict when nothing was found.
     stamp = models.JSONField(null=True, blank=True)
+    # Prepared (Phase 4 chapter 7): the picture record and the Digest made,
+    # by themselves as the transcript landed, on first use, or on purpose
+    # from the case. The state, its count as it goes, and when it ended.
+    prepare_state = models.CharField(max_length=10, blank=True, default="")
+    prepare_reason = models.CharField(max_length=40, blank=True, default="")
+    prepare_done = models.IntegerField(default=0)
+    prepare_total = models.IntegerField(default=0)
+    prepare_started = models.DateTimeField(null=True, blank=True)
+    prepared_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created"]

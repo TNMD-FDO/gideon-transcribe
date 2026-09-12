@@ -320,6 +320,29 @@ def describe_moment(moment_id: str) -> None:
     assistant.describe_moment(moment_id)
 
 
+@app.task(queue="llm", name="prepare_video")
+def prepare_video(transcript_id: str, attempt: int = 1) -> None:
+    """A video prepared as its transcript lands (Phase 4 chapter 7), once the
+    Playback copy is there; a minute later when it is not yet."""
+    from core import assistant
+    from core.jobs import Transcript
+
+    transcript = (
+        Transcript.objects.filter(pk=transcript_id).select_related("recording").first()
+    )
+    if transcript is None or transcript.prepare_state != assistant.QUEUED:
+        return
+    if (
+        not assistant.playable_video(transcript.recording)
+        and attempt < assistant.PLAYBACK_RETRIES
+    ):
+        prepare_video.configure(
+            schedule_in={"seconds": assistant.PLAYBACK_RETRY_SECONDS}
+        ).defer(transcript_id=transcript_id, attempt=attempt + 1)
+        return
+    assistant.prepare(transcript)
+
+
 @app.task(queue="llm", name="describe_intervals")
 def describe_intervals(run_id: str) -> None:
     """The picture record: the whole recording described span by span."""

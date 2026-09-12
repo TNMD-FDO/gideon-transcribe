@@ -365,14 +365,13 @@ def test_a_moment_is_described_from_the_clip_and_the_words(
     swallow_defer(monkeypatch)
     signed_in(client, person)
     segment = segment_at(ready, 12.4)
-    answer = client.post(
-        f"/recording/{ready.pk}/moments",
-        data=json.dumps({"at": 12.4, "segment": str(segment.pk), "source": "asked"}),
-        content_type="application/json",
+    # Nobody presses anything on the page since v1.52.0; a Moment asked for
+    # by a person is made the same way the record makes one.
+    moment = Moment.objects.create(
+        transcript=ready.transcript, segment=segment, at=12.4, asked_by=person
     )
-    assert answer.status_code == 200, answer.content
-    moment = Moment.objects.get(pk=answer.json()["id"])
     assert moment.state == assistant.QUEUED and moment.segment == segment
+    assert client.post(f"/recording/{ready.pk}/moments").status_code == 404
 
     assistant.describe_moment(moment.pk)
     moment.refresh_from_db()
@@ -459,27 +458,14 @@ def test_the_state_and_a_moment_being_described_keeps_the_page_busy(
         "moments": 0,
         "current": False,
     }
-
-    segment = segment_at(ready, 12.4)
-    answer = client.post(
-        f"/recording/{ready.pk}/moments",
-        data=json.dumps({"at": 12.4, "segment": str(segment.pk)}),
-        content_type="application/json",
-    )
-    assert answer.status_code == 200
-    moment = Moment.objects.get(pk=answer.json()["id"])
-    assert moment.source == "asked" and moment.segment == segment
+    assert state["cue_runs"]["prepare"]["state"] == "none"
+    assert "describe_first_default" not in state["cue_runs"]
+    Moment.objects.create(transcript=ready.transcript, at=12.4, asked_by=person)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["busy"] is True
-    # The same time again while it runs is refused.
-    again = client.post(
-        f"/recording/{ready.pk}/moments",
-        data=json.dumps({"at": 12.9}),
-        content_type="application/json",
-    )
-    assert again.status_code == 409
-    # The finders' routes are gone.
-    assert client.post(f"/recording/{ready.pk}/find-moments").status_code == 404
+    # The routes of the presses are gone.
+    for gone in ("find-moments", "moments", "describe-intervals"):
+        assert client.post(f"/recording/{ready.pk}/{gone}").status_code == 404
 
 
 @pytest.mark.django_db
@@ -568,13 +554,7 @@ def test_a_moment_waits_for_the_playback_copy_and_never_for_sound_alone(
     recording = a_recording(person, tmp_path, settings)
     recording.playback_ready = False
     recording.save(update_fields=["playback_ready"])
-    answer = client.post(
-        f"/recording/{recording.pk}/moments",
-        data=json.dumps({"at": 12.4}),
-        content_type="application/json",
-    )
-    assert answer.status_code == 409
-    # The task side says the same, should a Moment be queued before the copy lands.
+    # A Moment queued before the copy lands fails and says so.
     moment = Moment.objects.create(
         transcript=recording.transcript, at=12.4, asked_by=person
     )
@@ -586,100 +566,45 @@ def test_a_moment_waits_for_the_playback_copy_and_never_for_sound_alone(
     assert "still being prepared" in assistant.what_to_say("media_not_ready")
 
     audio = a_recording(person, tmp_path / "two", settings, video=False)
-    answer = client.post(
-        f"/recording/{audio.pk}/moments",
-        data=json.dumps({"at": 12.4}),
-        content_type="application/json",
-    )
-    assert answer.status_code == 409
     page = client.get(f"/recording/{audio.pk}").content.decode()
     assert 'data-panel="moments"' not in page
+    assert (
+        client.get(f"/recording/{audio.pk}/assistant").json()["cue_runs"]["prepare"]
+        is None
+    )
 
 
 @pytest.mark.django_db
-def test_moments_start_off_and_the_viewer_offers_the_tab_only_when_on(
+def test_nothing_about_moments_is_on_the_page_and_moments_start_off(
     ready, person, client, monkeypatch
 ):
     swallow_defer(monkeypatch)
     signed_in(client, person)
     page = client.get(f"/recording/{ready.pk}").content.decode()
-    assert 'data-panel="moments"' in page and "moments: true" in page
-    # Two panels behind the one tab, as the Clips tab has: the presses and
-    # the cue lines, then the Moments kept; every id once.
-    assert page.count('class="panel" data-panel="moments"') == 2
-    assert page.count('class="tab" data-panel="moments"') == 1
-    for one in (
+    # v1.52.0: no Moments tab, no button on the stage, no tick in the summary
+    # dialog; the dialog has one line that says what preparing does.
+    assert "moments: true" in page
+    assert 'data-panel="moments"' not in page
+    assert 'id="summary-prepare-note"' in page
+    for gone in (
         "describe-now",
         "describe-intervals",
         "moment-list",
-        "moments-heading",
-        "moments-said",
-        "intervals-note",
-        "intervals-said",
-        "record-lines",
+        "cue-list",
+        "camera-row",
+        "summary-describe-first",
+        "Look at the picture first",
+        "Describe this moment",
     ):
-        assert page.count(f'id="{one}"') == 1, one
-    assert "Described moments" in page and "Suggested moments" not in page
-    for gone in ("find-moments", "cue-list", "find-said", "camera-row", "Camera?"):
         assert gone not in page, gone
+    assert "Summarise this video" in page
     settings_store.set_to("moments_available", False)
     assert assistant.features()["moments"] is False
     page = client.get(f"/recording/{ready.pk}").content.decode()
-    assert 'data-panel="moments"' not in page
-    answer = client.post(
-        f"/recording/{ready.pk}/moments",
-        data=json.dumps({"at": 12.4}),
-        content_type="application/json",
-    )
-    assert answer.status_code == 404
+    assert 'id="summary-prepare-note"' not in page and "New summary" in page
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["moments"] == [] and "cues" not in state
     assert settings_store.DEFINITIONS["moments_available"].default is False
-
-
-@pytest.mark.django_db
-def test_edit_again_and_delete_write_rows_without_words(
-    ready, person, client, monkeypatch
-):
-    swallow_defer(monkeypatch)
-    signed_in(client, person)
-    moment = Moment.objects.create(
-        transcript=ready.transcript,
-        at=12.4,
-        state=assistant.DONE,
-        text="A hand holds a small bag.",
-        model="the-model",
-        asked_by=person,
-    )
-    answer = client.post(
-        f"/moment/{moment.pk}/edit",
-        data=json.dumps({"text": "  A hand holds a clear plastic bag.  "}),
-        content_type="application/json",
-    )
-    assert answer.status_code == 200
-    moment.refresh_from_db()
-    assert moment.text == "A hand holds a clear plastic bag." and moment.edited
-    row = Row.objects.get(event="Moment edited")
-    assert "bag" not in json.dumps(row.details)
-    assert (
-        client.post(
-            f"/moment/{moment.pk}/edit",
-            data=json.dumps({"text": " "}),
-            content_type="application/json",
-        ).status_code
-        == 400
-    )
-
-    answer = client.post(f"/moment/{moment.pk}/again")
-    assert answer.status_code == 200
-    moment.refresh_from_db()
-    assert moment.state == assistant.QUEUED and moment.text == "" and not moment.edited
-
-    answer = client.post(f"/moment/{moment.pk}/delete")
-    assert answer.status_code == 200
-    assert not Moment.objects.filter(pk=moment.pk).exists()
-    row = Row.objects.get(event="Moment deleted")
-    assert row.details == {} or "bag" not in json.dumps(row.details)
 
 
 @pytest.mark.django_db
@@ -687,8 +612,10 @@ def test_summary_and_chat_carry_the_camera_block_only_while_the_office_says_so(
     ready, person, monkeypatch
 ):
     asked = reachable(monkeypatch, "Summary: at [00:00:12] a bag is shown.")
-    # Without a Digest the block is sent as before (test_digest has the rest).
+    # Without a Digest the block is sent as before (test_digest has the rest),
+    # and without the record nothing is prepared first.
     settings_store.set_to("digests_available", False)
+    settings_store.set_to("picture_record_available", False)
     Moment.objects.create(
         transcript=ready.transcript,
         at=12.4,
@@ -834,14 +761,13 @@ def test_a_question_is_answered_from_close_frames(ready, person, client, monkeyp
     monkeypatch.setattr(media, "grab_frames", grab)
     swallow_defer(monkeypatch)
     signed_in(client, person)
-    answer = client.post(
-        f"/recording/{ready.pk}/moments",
-        data=json.dumps({"at": 12.4, "question": " Is that a gun on the seat? "}),
-        content_type="application/json",
+    moment = Moment.objects.create(
+        transcript=ready.transcript,
+        at=12.4,
+        question="Is that a gun on the seat?",
+        asked_by=person,
     )
-    assert answer.status_code == 200, answer.content
-    moment = Moment.objects.get(pk=answer.json()["id"])
-    assert moment.question == "Is that a gun on the seat?" and moment.is_question
+    assert moment.is_question
 
     assistant.describe_moment(moment.pk)
     moment.refresh_from_db()
@@ -864,16 +790,7 @@ def test_a_question_is_answered_from_close_frames(ready, person, client, monkeyp
     assert row.details["kind"] == "question" and "gun" not in json.dumps(row.details)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["moments"][0]["question"] == "Is that a gun on the seat?"
-    # A question does not block a description at the same time, and the
-    # camera line carries the question in front of the answer.
-    assert (
-        client.post(
-            f"/recording/{ready.pk}/moments",
-            data=json.dumps({"at": 12.4}),
-            content_type="application/json",
-        ).status_code
-        == 200
-    )
+    # The camera line carries the question in front of the answer.
     text = exports.plain_text(ready)
     assert '(asked "Is that a gun on the seat?") Visible:' in text
 
@@ -932,7 +849,6 @@ def test_a_clip_carries_the_camera_line_as_a_caption(ready, person):
 def test_the_whole_recording_is_described_at_intervals_in_one_lane(
     ready, person, client, monkeypatch
 ):
-    from core import tasks
     from core.assistant import CueRun
 
     asked = reachable(monkeypatch, "A doorway.")
@@ -950,16 +866,10 @@ def test_the_whole_recording_is_described_at_intervals_in_one_lane(
         text="Already here.",
         model="the-model",
     )
-    deferred = []
-    monkeypatch.setattr(
-        tasks.describe_intervals, "defer", lambda **fields: deferred.append(fields)
-    )
     signed_in(client, person)
-    answer = client.post(f"/recording/{ready.pk}/describe-intervals")
-    assert answer.status_code == 200, answer.content
-    assert client.post(f"/recording/{ready.pk}/describe-intervals").status_code == 409
-    run = CueRun.objects.get(pk=answer.json()["id"])
-    assert run.source == CueRun.INTERVAL and deferred == [{"run_id": str(run.pk)}]
+    run = CueRun.objects.create(
+        transcript=ready.transcript, source=CueRun.INTERVAL, asked_by=person
+    )
 
     assistant.describe_intervals(run.pk)
     run.refresh_from_db()
@@ -1100,20 +1010,19 @@ def test_the_state_counts_what_describing_the_whole_recording_would_make(
         "estimated": False,
         "minutes": 2,
     }
-    # The record off: nothing to describe, and the dialog offers no tick.
+    # The record off: nothing to describe, and nothing to prepare.
     settings_store.set_to("picture_record_available", False)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["cue_runs"]["intervals"]["count"] == 0
     assert state["cue_runs"]["record"] is False
-    assert state["cue_runs"]["describe_first_default"] is False
-    assert client.post(f"/recording/{ready.pk}/describe-intervals").status_code == 404
+    assert state["cue_runs"]["prepare"] is None
     # Nothing while Moments are off: the runs dict is empty.
     settings_store.set_to("moments_available", False)
     assert client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"] == {}
 
 
 @pytest.mark.django_db
-def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_showed(
+def test_a_summary_prepares_the_video_first_and_writes_one_account(
     ready, person, client, monkeypatch
 ):
     from core import tasks
@@ -1124,7 +1033,8 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
             "A car.",
             "A bag.",
             "1. [00:00:00]-[00:15:00] (both) A doorway, a car, a bag.",
-            "Summary: the camera shows a bag at [00:10:00].",
+            "Executive summary: a stop, a bag at [00:10:00].",
+            "Executive summary: again.",
         ]
     )
     monkeypatch.setattr(engine, "is_reachable", lambda: True)
@@ -1147,32 +1057,27 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
     monkeypatch.setattr(tasks.write_summary, "defer", lambda **fields: None)
     settings_store.set_to("moment_interval_seconds", 300)
     signed_in(client, person)
-    # The tick starts ticked: the office's toggle is On and spans are left
-    # to describe (test_video_summary has the rule).
     state = client.get(f"/recording/{ready.pk}/assistant").json()
-    assert state["cue_runs"]["describe_first_default"] is True
-    settings_store.set_to("summary_describes_first", False)
-    assert not client.get(f"/recording/{ready.pk}/assistant").json()["cue_runs"][
-        "describe_first_default"
-    ]
-    page = client.get(f"/recording/{ready.pk}").content.decode()
-    assert 'id="summary-describe-first"' in page
-    assert "Look at the picture first" in page
-    assert "Summarise this video" in page
+    assert state["cue_runs"]["prepare"]["state"] == "none"
+    assert state["cue_runs"]["prepare"]["line"] == "Not prepared"
+    assert state["cue_runs"]["prepare"]["seconds_left"] > 0
 
     answer = client.post(
         f"/recording/{ready.pk}/summaries",
-        data=json.dumps({"length": "short", "describe_first": True}),
+        data=json.dumps({"length": "short"}),
         content_type="application/json",
     )
     assert answer.status_code == 200
     summary = Summary.objects.get(pk=answer.json()["id"])
-    assert summary.describe_first
     assistant.write_summary(summary.pk)
     summary.refresh_from_db()
-    assert summary.state == assistant.DONE
-    # Three spans of the record, then the Digest's one part, then the
-    # summary, written from the Digest with the transcript beside it.
+    assert summary.state == assistant.DONE, summary.reason_class
+    # Prepared first: three spans of the record, the Digest's one part, and
+    # then the summary, one account under the narrative rules.
+    transcript = ready.transcript
+    transcript.refresh_from_db()
+    assert transcript.prepare_state == assistant.DONE and transcript.prepared_at
+    assert transcript.prepare_total == 4 and transcript.prepare_done == 4
     assert (
         Moment.objects.filter(source=Moment.INTERVAL, state=assistant.DONE).count() == 3
     )
@@ -1184,16 +1089,33 @@ def test_a_summary_may_describe_the_moments_first_and_export_what_the_camera_sho
         "[00:10:00]-[00:15:00] [camera] A bag."
         in digest_call["messages"][-1]["content"]
     )
+    system = asked[4]["messages"][0]["content"]
     user = asked[4]["messages"][-1]["content"]
     assert prompts.RECORD_HEADING in user and "(both) A doorway, a car, a bag." in user
     assert prompts.CAMERA_HEADING not in user
-    assert "The record of this recording is complete" in user
-    assert asked[4]["messages"][0]["content"].endswith(prompts.CAMERA_RULES)
-    assert "the camera shows" in prompts.CAMERA_RULES
+    assert "Write one account from it" in user
+    assert system.endswith(prompts.NARRATIVE_RULES)
+    assert prompts.CAMERA_RULES not in system
+    assert "Executive summary" in prompts.SHIPPED_SUMMARIES["video"]
+    assert "Seen but not said" not in prompts.SHIPPED_SUMMARIES["video"]
+    assert "Seen but not said" not in prompts.SHIPPED_SUMMARIES["body_camera"]
     assert summary.citations == {"[00:10:00]": 600.0}
     assert summary.moments_used == 3 and summary.digest_parts == 1
-    assert ready.transcript.digest_parts.count() == 1
     assert summary.stage == ""
+    row = Row.objects.get(event="Video prepared")
+    assert row.details["descriptions"] == 3 and row.details["parts"] == 1
+    assert "doorway" not in json.dumps(row.details)
+    assert Moment.objects.filter(source=Moment.INTERVAL).first().seconds >= 0
+
+    # Prepared already: the next summary is one call.
+    again = Summary.objects.create(
+        recording=ready, asked_by=person, template_name="Video summary", length="short"
+    )
+    assistant.write_summary(again.pk)
+    assert len(asked) == 6
+    state = client.get(f"/recording/{ready.pk}/assistant").json()
+    assert state["cue_runs"]["prepare"]["state"] == "done"
+    assert state["cue_runs"]["prepare"]["line"] == "Prepared"
 
     word = exports.summary_word(summary, "asker")
     import io
@@ -1211,7 +1133,6 @@ def test_the_record_and_digest_settings_start_as_the_chapter_says():
         ("picture_shortest_span", 3),
         ("moment_interval_most", 600),
         ("picture_frames_most", 16),
-        ("summary_describes_first", True),
         ("digests_available", True),
         ("digest_window_tokens", 12000),
         ("digest_part_tokens", 1200),
@@ -1228,6 +1149,7 @@ def test_the_record_and_digest_settings_start_as_the_chapter_says():
         "moment_finder_tokens",
         "moment_finder_time_seconds",
         "summary_moments_enough",
+        "summary_describes_first",
     ):
         assert gone not in settings_store.DEFINITIONS, gone
     assert (
@@ -1241,7 +1163,6 @@ def test_the_record_and_digest_settings_start_as_the_chapter_says():
         "Picture record: shortest span",
         "Picture record: most descriptions",
         "Picture record: frames per description",
-        "Summaries describe the moments first",
         "Digests",
         "Digest window",
         "Digest part cap",

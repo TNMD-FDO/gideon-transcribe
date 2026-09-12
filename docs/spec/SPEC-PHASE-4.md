@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, its fifth in `v1.43.0`, and its sixth in `v1.51.0`.
+The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, its fifth in `v1.43.0`, its sixth in `v1.51.0`, and its seventh in `v1.52.0`.
 
 ## About this document
 
@@ -19,6 +19,7 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **The finders** (chapter 3, v1.40.0): Find moments reads the whole Transcript once and suggests the lines where the picture would add a fact, each with its reason, and, when the office turns it on, scans the picture and sound for sharp changes and raised voices; the word list of chapter 1 is withdrawn.
 - **Intervals and the summary** (chapter 4, v1.41.0): the whole recording described at intervals, one lane, one call each; a Summary that describes the moments first when asked, and draws on what was seen; and a "What the camera showed" section in the Summary's Word export.
 - **The video summary and the video-aware chat** (chapter 5, v1.43.0): a shipped Video summary template that writes from the words and the described Moments together, fixed camera rules that keep the two sources apart whenever Camera lines are handed to Summary or Chat, a Chat that answers "what was in his hand at 12:40?" from both feeds, a look-first line in the summary dialog that says the cost in numbers and starts ticked by a rule, and camera citations drawn with the camera glyph.
+- **Prepared videos, one account, and the digest for Admins** (chapter 7, v1.52.0): a video is prepared by itself as its transcript lands, on first use, or from the case page, never by a press on the recording page; the Moments tab and every moment button are gone; the Video summary is one account of the events from the words and the picture together, an executive summary first; the batch page, the case page and the cards say the count and the time left, and the Batch's mail waits for its videos; an Admin reads the Digest under Details, and the Digest's instructions are a template.
 - **The picture record, the Digest, and the camera's stamp** (chapter 6, v1.51.0): the recording cut where the picture and the sound change and described once per span, never twice and never overlapping, as the foundation a video's summary is written from, made when a summary is asked for; one Digest per Transcript, a model's time-ordered condensation of the words and the camera that the Summary, the Chat and the Case Chat are written from; the date, the time and the camera id burned into the picture read once and told to the model as the camera's clock; Cues and the camera lines among the transcript's rows withdrawn.
 
 It adds twenty-six admin settings in all (thirty-three added, seven withdrawn in chapter 6), one prompt template (two, the second withdrawn in chapter 6), one shipped Summary template, three audit row features in all (the finder's withdrawn), one Recordings row, two Viewer-edit rows, one reason class, three tables in all (migrations 0035 to 0040; the Cues table made in 0037 dropped in 0040), and no environment key.
@@ -31,7 +32,8 @@ It adds twenty-six admin settings in all (thirty-three added, seven withdrawn in
 4. Intervals and the summary
 5. The video summary and the video-aware chat
 6. The picture record, the Digest, and the camera's stamp
-7. Deferred and ruled out
+7. Prepared videos, one account, and the digest for Admins
+8. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -396,7 +398,78 @@ AI assistant call, feature `digest`, one per part, with the part's number and th
 - The window cut on line boundaries (`assistant.digest_windows`), the part signatures (a hash of the window's lines and the descriptions in it), and the dialog's count line: "up to" while the picture is not yet scanned, since the cut is then by the clock alone, and the scan itself runs in the record's lane rather than when the dialog opens.
 - The stamp's frames: two seconds in, and a minute on, at the look-closer height; a clock is checked when the second reading is within three seconds of a minute later.
 
-## 7. Deferred and ruled out
+## 7. Prepared videos, one account, and the digest for Admins
+
+Written 2026-09-12, the evening v1.51.0 went out, when the maintainer said the intent was getting lost: "what would be the reason for someone to click 'describe the whole recording'? ... the moments tab all by itself and what's readable there isn't something a user would directly reference"; then, "the summary is going to be a combined sentiment of the transcript and vlm description of scenes. Not a section in the summary ... a narrative and executive summary of the events. A user doesn't need to know how or why it worked"; then, on twenty-five videos at once, "we need to give the user wait times"; and, on the flow, "if it is a video it automatically occurs this way ... the user gets an email when the processing is complete ... as an admin I will want to view the digest that way output and prompting may be refined later." Built in v1.52.0.
+
+### Principles
+
+1. **Nobody presses anything.** The picture record and the Digest are the foundation a video's summary and chat stand on, and a foundation is laid by the app, not by a person. The Moments tab, Describe this moment, the questions about a frame, Describe the whole recording, and the summary dialog's tick are withdrawn. The switches on the AI assistant page stay, for the office.
+2. **A video is prepared.** Prepared means its picture record is complete and its Digest current. It happens by itself as the transcript lands; on first use, when a summary or a chat question comes first; or on purpose from the case page. Whichever came first, the person never has to know.
+3. **One account.** A video's summary is one account of the events written from the words and the picture together, an executive summary first and the events in order as prose, and it never labels which source a sentence came from. The guardrails stay: a person is named only from the words, an object is what the description saw, no legal conclusion, "not visible" reported as such. The chat still says where a fact came from, because a question about a time deserves "the description at 12:40 says".
+4. **The wait is said in numbers.** Twenty-five body camera videos are hours of engine time in one lane. Every place the preparation shows says the count and about how long, from what descriptions and parts have taken on this engine, never a guess once one has been measured.
+5. **The mail waits.** The Batch's mail of Phase 3 goes only once the Batch's videos are prepared, and says how that went.
+6. **Admins read the Digest.** What a summary was written from is readable by an Admin under Details, and the Digest's instructions are a template on the Templates page, so the prompting can be refined without a release.
+
+### Words
+
+**Prepared** is added to the glossary; **Digest** now names a template as well.
+
+### What is withdrawn
+
+The Moments tab and both its panels; **Describe this moment** and the questions answered from close frames; **Describe the whole recording**; the summary dialog's **Look at the picture first** tick and the **Summaries describe the moments first** setting's effect (the setting is withdrawn); the endpoints that made, edited, described again and deleted a Moment, and their audit rows Moment edited and Moment deleted. A Moment stays what it was as a row: the record's spans, and the questions and descriptions made before v1.52.0, which the exports still print.
+
+### Prepared
+
+- **As the transcript lands.** When a Job ends with a Transcript on a video (the probe says it has a picture) and the picture record is on, the preparation is queued before the Batch is looked at, and its task waits a minute at a time for the Playback copy, up to two hours. Sound alone, and a video while the record is off, are never queued.
+- **What it does**, in the record's lane: the scan for the change points, once per Transcript; the stamp, once, while its switch is on; the record, span by span; then the Digest, part by part, while Digests are on and there are descriptions to condense. The count of things left (spans and stale parts) and the count done are kept on the Transcript as it goes, with when it started and ended, and one row, **Video prepared**, with the descriptions and the parts it made and whether it ended prepared or not. A preparation that fails keeps its reason and is prepared no further until asked again; nothing blocks a summary from being written from the words alone.
+- **On first use.** A summary or a chat question on a video that is not prepared prepares it first, in that call's lane, the card saying "Preparing the recording (12 of 60), about 18 minutes". When the transcript's own task is at it, the call waits for it, up to three hours, rather than running a second preparation.
+- **On purpose.** The case page's recordings list gains a **Prepared** column (Prepared; Preparing 12 of 60, about 18 minutes; Not prepared; nothing for sound alone) and, above it while any video is unprepared, "3 videos not yet prepared for summaries and chat, about 2 h 10 min" with **Prepare them now**, which queues them one after another. The case chat prepares nothing: it reads what is prepared, and a video still preparing reads as its transcript alone.
+- **The estimate** is the count of spans times what one description has taken on this engine (the last fifty), plus the stale parts times what one part has taken, with the chapter's guesses until something has been measured. Until the picture is scanned the count is by the clock alone and says "up to".
+- **The batch page** says, per recording, "preparing 12 of 60, about 18 minutes" or "prepared" after its transcript, and at the top, once transcribed, "Transcribed. Preparing 3 videos for summaries and chat, about 2 h 40 min", polling until they are done.
+- **The mail.** The Batch finished message waits until none of the Batch's videos is queued or preparing, and its body gains {prepared}: "3 videos prepared for summaries and chat in 2 h 10 min; 1 could not be prepared." A video prepared later, on purpose or on first use, sends no mail.
+
+### The Summary
+
+- The **Video summary** is rewritten as one account: **Executive summary** (one paragraph a reader in a hurry could stop at), **What happened** (the events in order as prose, a paragraph per stretch opening with its time, what people did and said and what was in view as one story), Notable statements, Names, places, and dates, Unclear parts. The **Body camera summary** loses Seen but not said and its "the camera shows" wording; its Timeline is one account too.
+- A Summary written from the Digest is given the **narrative rules** in place of the camera rules: write one account from both, do not label the source of a sentence, and keep the guardrails. A Summary that still reads a camera block (Digests off, or a sound recording with asked Moments) keeps the camera rules of chapter 5.
+- The summary dialog on a video with Moments on carries one line in place of the tick: what preparing will do first, in numbers, while the video is not prepared; "The recording is being prepared first" while it is; and "Written from the words and the camera's descriptions together" once it is. The card's head says "from the words and the camera".
+
+### The chat
+
+A chat question on a video prepares it first the same way, the waiting line saying so; the answer is as chapter 6 has it, the Digest and the descriptions at the times asked, with the camera rules.
+
+### For Admins
+
+- **Details** shows an Admin, and nobody else, **The digest and the descriptions (admins only)**: the Digest's parts as the model wrote them, each with its span, when it was made and by which model; every description with its span and source; whether the video is prepared; and the versions of the Ground rules, the Moment and the Digest templates that made them. The row the audit log writes when an Admin opens somebody's recording covers the look.
+- **The Digest template** joins the Templates page beside Moment: editable, resettable, with a version, and the Digest's audit rows carry it.
+
+### Settings
+
+None added. **Summaries describe the moments first** is withdrawn. The Batch finished body gains the placeholder {prepared}.
+
+### Audit rows
+
+Recordings: **Video prepared**, with the descriptions and the parts made and the outcome. Withdrawn: Viewer edits, Moment edited and Moment deleted.
+
+### What changes from earlier chapters
+
+- Chapter 1's viewer (the tab, the button, the rows' controls), chapter 2's questions, chapter 4's press and tick, chapter 5's Video summary and Body camera summary parts and the summary's two-source rules, chapter 6's "The Summary" (written from the Digest, now under the narrative rules) and its dialog line.
+- Phase 3's Batch finished mail: waits for the videos, gains {prepared}.
+- Phase 2's Case page: the Prepared column and the press.
+
+### Not in this phase
+
+- Mail for a video prepared on purpose or on first use.
+- Preparing from the case chat, or a per-upload choice.
+- Anything a user reads of the Digest.
+
+### Left to the build
+
+- The task's wait for the Playback copy (a minute, up to a hundred and twenty times), the on-first-use wait for a running preparation (five seconds at a time, up to three hours), and the estimate's window of fifty (`assistant.prepare`, `wait_or_prepare`, `seconds_per_description`).
+- The batch page's and the case page's wording, within the words fixed here.
+
+## 8. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
@@ -411,7 +484,8 @@ AI assistant call, feature `digest`, one per part, with the part's number and th
 | LLM | AI assistant call, feature `moment_finder` | The finders (withdrawn in chapter 6) |
 | LLM | AI assistant call, feature `digest`; feature `stamp` | The picture record, the Digest, and the camera's stamp |
 | Recordings | Picture and sound scanned | The finders |
-| Viewer edits | Moment edited; Moment deleted | Moments |
+| Recordings | Video prepared | Prepared videos |
+| Viewer edits | Moment edited; Moment deleted | Moments (withdrawn in chapter 7) |
 
 ## Appendix B. Settings added in Phase 4
 
@@ -439,7 +513,7 @@ AI assistant call, feature `digest`, one per part, with the part's number and th
 | Find moments (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
 | Describe at intervals: every | AI assistant | seconds, 20 to 600; greyed while Moments is Off | 60 |
 | Describe at intervals: at most | AI assistant | 5 to 200; greyed while Moments is Off | 40 |
-| Summaries describe the moments first | AI assistant | On or Off; greyed while Moments is Off | On (Off in v1.41.0) |
+| Summaries describe the moments first | AI assistant | On or Off; greyed while Moments is Off | On (Off in v1.41.0) Withdrawn in chapter 7 (v1.52.0). |
 | Enough moments for a video summary | AI assistant | 0 to 200; greyed while Moments is Off | 10 |
 | Video summary (template) | Templates | a Summary template for no Recording type, editable, resettable, not deletable | the chapter 5 wording |
 | Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
@@ -454,5 +528,6 @@ The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-
 - From the maintainer, on the v1.39.0 build, chapter 3 (v1.40.0): the word-list Cues withdrawn for flagging ordinary talk; the finder that reads the Transcript and the scan of the picture and sound, each with its switch and its numbers; Cues stored, with a reason, and dismissable.
 - From the maintainer, on the v1.40.0 build, chapter 4 (v1.41.0): the whole recording described at intervals in one lane, the Summary's tick to describe the moments first, the summary format line that lets it draw on the camera block, and the export's "What the camera showed" section.
 - From the maintainer, on the v1.42.0 build ("a smart way to summarize all the moments in conjunction with the transcript"), chapter 5 (v1.43.0): the Video summary template and the Body camera summary's two camera parts; the fixed camera rules given to Summary and Chat whenever a block is present; the block's legend line and the edited mark; the per-length count of camera lines to draw on and the block's budget; the Chat template answering from both feeds, with the "within a minute" rule and the facts-then-decline shape for a legal conclusion; Summarise this video, the template chosen for a video, the three-form look-first line, the tick's rule with Enough moments for a video summary, Summaries describe the moments first starting On, the summary's count of moments used, and camera citations with the glyph.
+- From the maintainer, on the v1.51.0 build ("the intent is getting lost", "a narrative and executive summary of the events", "we need to give the user wait times", "the user gets an email when the processing is complete", "as an admin I will want to view the digest"), chapter 7 (v1.52.0): prepared videos by themselves, on first use or from the case page; the Moments tab and every moment button withdrawn; the Video summary one account; the wait said in numbers everywhere; the Batch's mail waiting for the videos; the Digest under Details for Admins and its instructions a template.
 - From the maintainer, on the v1.50.0 build ("make summarization smart"), and their second reading ("cues left out", "smart optimization", no Moment in line with the transcript) and the stamped frame, chapter 6 (v1.51.0): the picture record cut where the picture and the sound change and described once per span with the previous span in hand; the Digest, part by part; the Summary, the Chat and the Case Chat written from it; the camera's stamp read from two frames and told as the camera's clock; Cues, the word finder, the row's camera line and describe button, and the exports' interleaved camera lines withdrawn.
 - From the maintainer, on the v1.41.0 build ("the page is sort of getting congested"), the Moments tab refined (v1.42.0): two panels behind the one tab, as the Clips tab has, Suggested moments with the Cues and Described moments with the Moments; Find moments and Describe the whole recording together under Suggested moments, each with a caption that says what it does and what it costs in numbers (the state answer's `cue_runs.intervals` carries the interval and how many Moments the press would make now) and a result line under it ("7 lines suggested from the words.", "3 changes found in the picture and sound.", "20 moments described across the recording.", "Both finders are off for your office."); a Cue quotes the transcript line it was found on and says sure, fairly sure, or unsure; Again reads Describe again, or Ask again on a question, and waits while the Moment is being described; a card says from a suggestion or from the whole recording and Waiting its turn... while queued; the row's button reads describe and, like Describe this moment, opens a box that names the time, with Describe as its OK; the Camera? pill is a button that says "Looking..." after the press; the Camera line has no coloured bar of its own, its tag in the muted colour, and says "waiting its turn..." while queued; the summary dialog's tick says the interval and the count in its note.
