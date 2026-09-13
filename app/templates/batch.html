@@ -10,7 +10,9 @@
       Started {{ batch.created|time:"g:i a" }}. One transcription runs at a
       time for the whole office, so a batch works through the line in order.
     </p>
-    <p class="notice">{{ standing_line }}</p>
+    {% if not case %}
+      <p class="notice">{{ standing_line }}</p>
+    {% endif %}
 
     {% comment %}
       A finished Batch is about getting the transcripts out, so when it is

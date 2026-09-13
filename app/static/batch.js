@@ -63,7 +63,13 @@
     var job = one.job;
     if (!job) { return escape(STATES[one.state] || one.state); }
 
-    if (job.state === "done") { return "Done"; }
+    if (job.state === "done") {
+      // The transcript is there; the picture is still being prepared for
+      // summaries and chat, and the card's foot says how far along it is.
+      var prepare = one.prepare;
+      if (prepare && (prepare.state === "running" || prepare.state === "queued")) { return "Transcribed, preparing"; }
+      return "Done";
+    }
     if (job.state === "failed") { return "Failed: " + escape(job.message); }
     if (job.state === "cancelled") { return "Cancelled"; }
     if (job.step) { return escape(job.step); }

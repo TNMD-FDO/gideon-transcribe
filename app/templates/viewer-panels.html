@@ -130,17 +130,18 @@
               </button>
             {% endif %}
           </div>
+          {% comment %}
+            For an Admin only: the digest and the record's descriptions, as
+            the model wrote them, so the prompting can be refined (Phase 4
+            chapter 7). Filled by viewer.js from the details answer; first,
+            so it is found, and folded, so it is not in the way.
+          {% endcomment %}
+          <div id="admin-digest" hidden></div>
           <p class="muted small">
             The provenance: where this recording came from and how it was
             processed. Printed on every export. Never the transcript itself.
           </p>
           <dl id="details" class="kv"></dl>
-          {% comment %}
-            For an Admin only: the digest and the record's descriptions, as
-            the model wrote them, so the prompting can be refined (Phase 4
-            chapter 7). Filled by viewer.js from the details answer.
-          {% endcomment %}
-          <div id="admin-digest" hidden></div>
           <div id="marks" hidden>
             <h3 class="small" style="margin: 12px 0 4px">Marks</h3>
             <ul class="plain marks"></ul>

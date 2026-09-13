@@ -19,8 +19,35 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.52.2, 2026-09-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
 ### Fixed
 
+- The Summary and Chat panels drew nothing since v1.52.0: the page script
+  still named a helper the Moments tab took with it, the first draw threw,
+  and the poll's error handler hid it. A summary written meanwhile was there
+  all along and shows now.
+- A summary asked for while the dialog had drawn nothing named no template
+  and got the office's Default (the Standard summary) rather than the Video
+  summary. The app now falls back to the template the page preselects for
+  the recording, its type's or the Video summary, never the Default over it.
+- A video's State pill said Ready while its picture was still being prepared
+  and the Prepared column said Preparing beside it. The pill now says
+  Preparing, and the batch card Transcribed, preparing, until the picture is
+  done; Ready and Done mean ready for everything.
+- A batch that went into a case carried the sign-out warning ("Your
+  recordings stay until you sign out..."), which is not true of a case: the
+  case keeps them. The batch page shows it only for a batch of the session.
+- The Admin's fold, The digest and the descriptions (admins only), sat under
+  the provenance list at the foot of Details, folded, where nobody found it.
+  It is first in Details now, still folded.
 - `./transcribe tidy`, and the tidy every upgrade runs after it starts the
   containers, freed no build cache on Docker's buildx 0.36: the filter's
   pattern was unquoted, so buildx read its first `|` as the end of the value,

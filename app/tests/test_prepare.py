@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 from core import assistant, engine, mail, media, settings_store, tasks
-from core.assistant import DigestPart, Moment
+from core.assistant import DigestPart, Moment, Summary
 from core.audit import Row
 from core.cases import Case
 from core.jobs import Segment, Transcript
@@ -416,11 +416,20 @@ def test_the_batch_page_and_the_case_page_say_the_count_and_the_time_left(
     page = client.get(f"/case/{case.pk}").content.decode()
     assert "<th>Prepared</th>" in page and "Preparing 4 of 10" in page
     assert "Prepare them now" not in page
+    # The State pill says Preparing rather than Ready while the picture is
+    # being prepared (v1.52.2), and Ready once it is.
+    assert '<span class="pill warn">Preparing</span>' in page
+    assert '<span class="pill ok">Ready</span>' not in page
+    # A batch that went into a case gets no sign-out warning: the case keeps it.
+    batch_page = client.get(f"/batch/{batch.pk}").content.decode()
+    assert "stay until you sign out" not in batch_page
+    assert "Back to Ramirez" in batch_page
 
     # Not prepared: the case page offers the press, which queues them.
     transcript.prepare_state = ""
     transcript.save(update_fields=["prepare_state"])
     page = client.get(f"/case/{case.pk}").content.decode()
+    assert '<span class="pill ok">Ready</span>' in page
     assert "1 video not yet prepared for summaries and chat" in page
     assert "Prepare them now" in page
     deferred = []
@@ -435,6 +444,24 @@ def test_the_batch_page_and_the_case_page_say_the_count_and_the_time_left(
     state = client.get(f"/batch/{batch.pk}/state").json()
     assert state["recordings"][0]["prepare"]["state"] == "queued"
     assert state["preparing"]["count"] == 1
+
+
+@pytest.mark.django_db
+def test_a_summary_asked_for_without_a_template_gets_the_videos_own(
+    ready, person, client, monkeypatch
+):
+    """The dialog names the template the page preselects; when it names none
+    (v1.52.0's page drew nothing and sent nothing), the recording's own
+    choice, the Video summary here, and never the office's Default over it."""
+    monkeypatch.setattr(tasks.write_summary, "defer", lambda **fields: None)
+    signed_in(client, person)
+    answer = client.post(
+        f"/recording/{ready.pk}/summaries",
+        data="{}",
+        content_type="application/json",
+    )
+    assert answer.status_code == 200, answer.content
+    assert Summary.objects.get().template_name == "Video summary"
 
 
 @pytest.mark.django_db

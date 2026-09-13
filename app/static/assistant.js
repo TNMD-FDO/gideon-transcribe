@@ -122,6 +122,10 @@
   var newSummary = document.getElementById("new-summary");
   var summaryDialog = document.getElementById("summary-dialog");
 
+  // A video with the picture record on: the assistant's answers draw on the
+  // camera when the office hands them the descriptions.
+  var momentsOn = !!(features.moments && window.VIEWER.isVideo);
+
   // Whether the assistant's answers on this page draw on the camera: a video
   // with Moments on, and the office handing them to answers.
   function answersUseMoments() {

@@ -354,7 +354,9 @@ def new_summary(request: HttpRequest, recording_id) -> JsonResponse:
         template = SummaryTemplate.objects.filter(
             pk=wanted["template"], enabled=True
         ).first()
-    template = template or SummaryTemplate.the_default()
+    # None named: the one the page preselects for this recording (its type's,
+    # or the Video summary), never the office's Default over it.
+    template = template or SummaryTemplate.chosen_for(recording)
     length = wanted.get("length") if wanted.get("length") in LENGTHS else "standard"
     cases.used(recording, by=request.user)
     summary = Summary.objects.create(

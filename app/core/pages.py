@@ -123,6 +123,11 @@ def state_words(one) -> tuple[str, str]:
     if one.in_the_queue:
         return "In the queue", "warn"
     if hasattr(one, "transcript"):
+        # A video whose picture is still being prepared (Phase 4 chapter 7)
+        # is not ready for everything: its transcript can be read, but its
+        # summary and chat wait, so the pill says so rather than Ready.
+        if one.transcript.prepare_state in ("queued", "running"):
+            return "Preparing", "warn"
         return "Ready", "ok"
     if one.media_state == "rejected":
         return "Refused", "danger"
