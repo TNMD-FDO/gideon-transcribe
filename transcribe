@@ -2073,7 +2073,7 @@ verify_the_pull() {
 # records, and no other project's Dockerfile does: the cache is shared with the
 # rest of the server (box ledger, section 5), so only records carrying one of
 # these are pruned, never the whole cache.
-BUILD_CACHE_WORDS="requirements|audiowaveform|g729|/opt/app|/opt/service|collectstatic|user-guide|VIRTUAL_ENV|python3-venv|libsasl2"
+BUILD_CACHE_WORDS="requirements|audiowaveform|g729|/opt/app|/opt/service|collectstatic|user-guide|VIRTUAL_ENV|python3-venv|libsasl2|ldap|torchcodec"
 
 # A WhisperX build needs room for its 13.8 GB image and about as much cache
 # again on the root filesystem, where the image store lives (box ledger, open
@@ -2116,7 +2116,13 @@ tidy_the_images() {
   # either; with the filter, `-a` still touches nothing outside it. The
   # records of the build just done go too: a later build was seen not to
   # reuse them (nine copies of one install), and the images carry the layers.
-  docker buildx prune -a -f --filter "description~=${BUILD_CACHE_WORDS}" >/dev/null 2>&1 || true
+  # The pattern is quoted inside the filter: buildx 0.36 reads an unquoted
+  # `|` or `/` as the end of the value, matches nothing, and says nothing
+  # (six torch installs, 69 GB, sat through the v1.52.0 upgrade's tidy). The
+  # words include every image's last step (the ldap and torchcodec checks):
+  # a record is pruned only once nothing built on it remains, so a topmost
+  # step the pattern misses pins the whole stack beneath it.
+  docker buildx prune -a -f --filter "description~=\"${BUILD_CACHE_WORDS}\"" >/dev/null 2>&1 || true
 }
 
 build_the_images() {

@@ -19,7 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- `./transcribe tidy`, and the tidy every upgrade runs after it starts the
+  containers, freed no build cache on Docker's buildx 0.36: the filter's
+  pattern was unquoted, so buildx read its first `|` as the end of the value,
+  matched nothing and said nothing, and six torch installs (69 GB) sat on the
+  root filesystem until an upgrade refused to build for want of room. The
+  pattern is quoted now, and names each image's last build step, since a
+  record is pruned only once nothing built on it remains.
 
 ## v1.52.1, 2026-09-12
 
