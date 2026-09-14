@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.55.1, 2026-09-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **The Speakers page in three columns.** The transcript stands at full
+  height in the middle, between the speaker cards and the player, and the
+  lanes sit under the player on the right. Until now the transcript was
+  squeezed under the lanes to a few lines. On a window narrower than 1280
+  pixels the cards sit beside the player and the lanes in a band across
+  the top, and the transcript runs full width under it with the rest of
+  the height.
+
+### Fixed
+
+- The Speaker check ran with thinking on when the AI assistant's switch
+  said so, and the model spent the answer room reasoning: every window
+  came back cut off and the run found nothing after twelve minutes. The
+  check answers without thinking whatever the switch says; its answer is a
+  short list.
+
 ## v1.55.0, 2026-09-14
 
 ```

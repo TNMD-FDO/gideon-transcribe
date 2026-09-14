@@ -1876,10 +1876,13 @@ details.inline[open] summary::after { content: ": "; }
 .sp-progress .bar i { display: block; height: 100%; background: var(--ok, var(--accent)); }
 .sp-desk {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
+  /* Three columns (v1.55.1): the cards, the transcript at full height, and
+     the player over the lanes. */
+  grid-template-columns: 340px minmax(0, 1.5fr) minmax(360px, 1fr);
   flex: 1;
   min-height: 0;
 }
+.sp-middle { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-right: 1px solid var(--line); }
 .sp-cards {
   border-right: 1px solid var(--line);
   padding: 10px;
@@ -1949,8 +1952,8 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sp-player .transport .time { font-family: var(--mono); color: var(--muted); }
 .sp-player .nowline { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-small); }
 .sp-player .nowline .who { color: var(--speaker, inherit); }
-.sp-lanes { flex: none; padding: 6px 12px 8px; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
-.sp-lanes .ruler, .sp-lanes .lane { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; align-items: center; }
+.sp-lanes { flex: 1; min-height: 0; overflow-y: auto; align-content: start; padding: 6px 12px 8px; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
+.sp-lanes .ruler, .sp-lanes .lane { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; align-items: center; }
 .sp-lanes .ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .sp-lanes .lane .head { display: flex; align-items: center; gap: 6px; font-size: var(--t-small); font-weight: 600; min-width: 0; cursor: pointer; color: var(--speaker, inherit); }
 .sp-lanes .lane .head .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1961,7 +1964,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sp-lanes .lane.on .track { outline: 2px solid var(--speaker, var(--accent)); outline-offset: 1px; }
 .sp-lanes .lane.over .track { outline: 2px dashed var(--accent); outline-offset: 1px; }
 .sp-lanes .lane.fold .head { font-weight: 400; }
-.sp-lanes .foot { display: flex; gap: 10px; align-items: center; margin-left: 128px; flex-wrap: wrap; }
+.sp-lanes .foot { display: flex; gap: 10px; align-items: center; margin-left: 108px; flex-wrap: wrap; }
 .sp-lanes .zoom button.on { border-color: var(--accent); color: var(--accent); }
 .sp-filter { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex: none; font-size: var(--t-small); }
 .sp-filter .sw { border: 1px solid var(--line); border-radius: 999px; padding: 0 10px; min-height: 22px; background: none; color: inherit; }
@@ -1974,8 +1977,12 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sp-read .seg .actions { visibility: hidden; }
 .sp-read .seg.here .actions { visibility: visible; }
 @media (max-width: 1279px) {
-  .sp-desk { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  .sp-cards { border-right: 0; border-bottom: 1px solid var(--line); max-height: 38vh; }
+  /* A band across the top, the cards beside the player and the lanes, and
+     the transcript at full width under it with the rest of the height. */
+  .sp-desk { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .sp-cards { grid-row: 1; grid-column: 1; border-bottom: 1px solid var(--line); max-height: 40vh; }
+  .sp-right { grid-row: 1; grid-column: 2; border-bottom: 1px solid var(--line); max-height: 40vh; }
+  .sp-middle { grid-row: 2; grid-column: 1 / -1; border-right: 0; }
   .sp-player video { max-height: 22vh; }
 }
 

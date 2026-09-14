@@ -136,6 +136,28 @@
         </p>
       </div>
 
+      {% comment %}
+        The middle column (v1.55.1): the transcript at full height between
+        the cards and the player, so reading along is never squeezed under
+        the lanes. On a narrow window it runs full width under a band that
+        holds the cards beside the player.
+      {% endcomment %}
+      <div class="sp-middle">
+        <div class="sp-filter">
+          <button type="button" class="sw on" id="filter-one"></button>
+          <button type="button" class="sw" id="filter-all">Everyone</button>
+          <span class="small muted" id="filter-count"></span>
+          <span class="grow"></span>
+          <span id="follow-pill" class="pill followpill" hidden>
+            Following paused while you read.
+            <button type="button" id="resume-follow">Resume (F)</button>
+          </span>
+        </div>
+        <div class="sp-read" id="reading">
+          <ol id="transcript" class="transcript"></ol>
+        </div>
+      </div>
+
       <div class="sp-right">
         <div class="sp-player">
           {% if media_url %}
@@ -192,19 +214,6 @@
           </div>
         </div>
 
-        <div class="sp-filter">
-          <button type="button" class="sw on" id="filter-one"></button>
-          <button type="button" class="sw" id="filter-all">Everyone</button>
-          <span class="small muted" id="filter-count"></span>
-          <span class="grow"></span>
-          <span id="follow-pill" class="pill followpill" hidden>
-            Following paused while you read.
-            <button type="button" id="resume-follow">Resume (F)</button>
-          </span>
-        </div>
-        <div class="sp-read" id="reading">
-          <ol id="transcript" class="transcript"></ol>
-        </div>
       </div>
     </div>
   {% endif %}

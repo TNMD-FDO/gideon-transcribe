@@ -35,7 +35,7 @@ Written 2026-09-12 from the maintainer's ask ("treat any in depth speaker manage
 ### Principles
 
 1. **One page, one job.** The page exists to say who each Speaker is. Everything on it serves that: hearing a Speaker, seeing where in the Recording they talk, naming them, joining two the engine split, and fixing a line given to the wrong one. It does not correct text, mark Clips, summarise, or chat; those stay on the recording page, one press away.
-2. **The Transcript stays in view.** The Ledger under the Lanes is the viewer's own Ledger, the same rows in the same colours, so nothing about a line has to be remembered from another page. Follow keeps the line being spoken in view while the Recording plays.
+2. **The Transcript stays in view.** The Ledger, at full height in the page's middle column since v1.55.1 (under the Lanes until then), is the viewer's own Ledger, the same rows in the same colours, so nothing about a line has to be remembered from another page. Follow keeps the line being spoken in view while the Recording plays.
 3. **Both tempos.** A deliberate pass reads the progress line, works down the cards, and presses Done. A quick fix opens the page, picks one card, names it, and presses Done; nothing on the page has to be finished first, and nothing is lost by leaving.
 4. **The Case's People first.** Inside a Case, naming offers the Case's People with their Roles before a free name, so the same officer gets the same name across the Case's Recordings without typing. Outside a Case naming is free-form, as Phase 1 has it.
 5. **Nothing new is stored for it.** Samples, Lanes, the progress line, and the fragment hint are computed from the Segments the Transcript already holds. The page adds no table and no setting. Every change it makes is a change the viewer already makes, through the viewer's own routes, with the viewer's own audit rows and the viewer's own Undo.
@@ -250,4 +250,5 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- 2026-09-14 (v1.55.1): the Speakers page in three columns, the maintainer's pick from three mockups ("the transcript in the middle"): the cards, the Ledger at full height, and the player over the Lanes; the Ledger had been squeezed under the Lanes to a few lines. On a window under 1280 pixels the cards sit beside the player and the Lanes in a band across the top, and the Ledger runs full width under it.
 - 2026-09-14: chapter 3, the Speaker check, written and built as v1.55.0 the same day, with these decisions left to the build: windows overlap by six lines, at most sixty moves per window's answer, the state line's and the stale notice's wording as the page has them.

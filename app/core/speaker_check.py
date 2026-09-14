@@ -200,7 +200,7 @@ def run(check_id) -> None:
         system = prompts.system_message(
             ground.text, template.text, prompts.SPEAKER_CHECK_FORMAT
         )
-        answer_cap = assistant.cap(settings_store.speaker_check_answer_cap())
+        answer_cap = settings_store.speaker_check_answer_cap()
         for start, end in windows(lines, settings_store.speaker_check_window_seconds()):
             window = lines[start:end]
             user = prompts.speaker_check_input(window, speakers)

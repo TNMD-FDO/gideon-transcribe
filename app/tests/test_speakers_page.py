@@ -191,6 +191,15 @@ def test_the_page_is_reached_from_the_strip_and_shows_the_cards(person, client):
     assert '<kbd class="k">1</kbd>' in body and '<kbd class="k">4</kbd>' in body
     assert "0 of 4 speakers named" in body
     assert 'id="lanes"' in body and 'id="transcript"' in body and 'id="reading"' in body
+    # Three columns (v1.55.1): the transcript's column sits between the
+    # cards and the player, and the reading pane is in it.
+    assert body.index('class="sp-cards"') < body.index('class="sp-middle"')
+    assert body.index('class="sp-middle"') < body.index('class="sp-right"')
+    assert (
+        body.index('class="sp-middle"')
+        < body.index('id="reading"')
+        < body.index('class="sp-right"')
+    )
     assert 'id="done"' in body and f'href="/recording/{recording.pk}"' in body
     assert 'id="open-in-window"' in body
     assert '<video id="player"' in body and 'id="play"' in body
@@ -299,6 +308,8 @@ def test_the_words_the_stylesheet_and_the_guides_carry_the_page():
         assert word in glossary, word
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     assert ".sp-desk {" in css and ".sp-lanes .lane .track i {" in css
+    assert "grid-template-columns: 340px minmax(0, 1.5fr) minmax(360px, 1fr);" in css
+    assert ".sp-middle {" in css
     assert ".speakers-window" not in css
     script = (APP / "static" / "speakers-page.js").read_text(encoding="utf-8")
     for piece in (
