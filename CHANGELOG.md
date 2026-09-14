@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.54.2, 2026-09-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- On a window 1280 pixels or wider, clicking a recording's row on the case
+  page shaded the row and showed nothing: the rule that hides a row's
+  details where they go to the pane on the right (My recordings, Clips) hid
+  them on the case page too, which has no such pane. The type, Rename,
+  Process again, Move to another case, Delete and the Vision buttons were
+  unreachable there on a wide screen. The fold opens at every width now.
+- The line above a case's recordings, with Enrich now for an Admin, went
+  away once every video was marked for tonight. It stays: "1 video is
+  enriched tonight", with Ask for it now and Enrich now.
+
+### Changed
+
+- The New summary form says plainly when the video is not yet enriched with
+  vision and when it will be ("it is enriched tonight, between 20:00 and
+  06:00"), and that Regenerate takes the vision in; a finished summary's
+  card carries "Written from the transcript" as a pill rather than a
+  fragment of its header line.
+
 ## v1.54.1, 2026-09-14
 
 ```

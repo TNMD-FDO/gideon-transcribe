@@ -486,12 +486,27 @@ def offers(case, *, user) -> dict:
 
 
 def line(case) -> str:
-    """The case page's line about its videos not yet enriched, or nothing."""
+    """The case page's line about its videos not yet enriched, and about the
+    ones waiting for tonight (v1.54.2), or nothing."""
     waiting = unenriched(case)
-    if not waiting:
-        return ""
-    count = f"{len(waiting)} video{'' if len(waiting) == 1 else 's'}"
-    return f"{count} not yet enriched with vision"
+    tonight = waiting_tonight().filter(recording__case=case).count()
+    parts = []
+    if waiting:
+        parts.append(f"{_videos(len(waiting))} not yet enriched with vision")
+    if tonight:
+        parts.append(
+            f"{_videos(tonight)} {'is' if tonight == 1 else 'are'} enriched tonight"
+        )
+    return "; ".join(parts)
+
+
+def pending(case) -> bool:
+    """Whether a press of Enrich tonight would mark anything."""
+    return bool(unenriched(case))
+
+
+def _videos(count: int) -> str:
+    return f"{count} video{'' if count == 1 else 's'}"
 
 
 def tick(user) -> dict:

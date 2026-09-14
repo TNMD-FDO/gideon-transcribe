@@ -1211,6 +1211,10 @@ body.no-speakers .seg .actions { grid-column: 3; }
 .followhold { position: sticky; top: 52px; height: 0; z-index: 5; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
 .followpill { flex: none; }
 
+/* The summary form's line when the video is not yet enriched (v1.54.2):
+   plain words in a box, not a muted aside. */
+#summary-prepare-note.plain { color: var(--text); background: var(--surface-2); padding: 6px 10px; border-radius: var(--radius); }
+
 /* The one tick a confirm box may carry (Process again). */
 .ui-dialog-check { margin: 10px 0 0; gap: 8px; align-items: center; font-size: var(--t-small); }
 .followpill {
@@ -1547,7 +1551,10 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
     min-width: 0;
   }
   #detail-pane { display: block; }
-  .tbl tr.detail-row { display: none; }
+  /* Only where the details go to the pane (My recordings, Clips): the
+     case page has no pane and its fold opens under the row at every
+     width (v1.54.2). */
+  .panes.benched .tbl tr.detail-row { display: none; }
 
   /* The Upload page: the three steps at once, Choose files on the left and
      Settings over Check and start on the right. Next and Back have nothing

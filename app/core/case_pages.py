@@ -264,6 +264,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             **_sharing_context(case, role),
             "recordings": _rows_for(case),
             "vision_line": vision.line(case),
+            "vision_pending": vision.pending(case),
             "vision_offers": vision.offers(case, user=request.user),
             "asked": asked,
             "hits": _search(case, asked) if asked else None,

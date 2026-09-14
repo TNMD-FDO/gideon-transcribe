@@ -275,10 +275,19 @@ def test_the_case_page_offers_tonight_to_anyone_and_now_to_an_admin(
     assert Row.objects.get(event="Vision queued").details["how"] == "tonight"
     page = client.get(f"/case/{case.pk}").content.decode()
     assert "Enriching tonight" in page and "not yet enriched with vision" not in page
-    # An Admin: Enrich now queues it at once, tonight or not.
+    # The line stays while videos wait for tonight (v1.54.2): Ask for it now,
+    # no Enrich tonight (nothing left to mark), no Enrich now for them.
+    assert "1 video is enriched tonight" in page and 'id="prepare-line"' in page
+    assert 'value="tonight"' not in page and "Ask for it now" in page
+    assert 'value="now"' not in page
+    # An Admin: Enrich now queues it at once, tonight or not, and the line
+    # above the list offers it.
     signed_in(client, admin)
     page = client.get(f"/case/{case.pk}").content.decode()
     assert 'value="now"' in page
+    at = page.index('id="prepare-line"')
+    line = page[at : page.index("</form>", at)]
+    assert "1 video is enriched tonight" in line and 'value="now"' in line
     answer = client.post(
         f"/case/{case.pk}/vision", {"action": "now", "recording": str(video.pk)}
     )
@@ -399,6 +408,7 @@ def test_under_a_schedule_the_summary_is_written_from_the_transcript(
     state = client.get(f"/recording/{video.pk}/assistant").json()
     assert state["summaries"][0]["written_from"] == "transcript"
     assert state["cue_runs"]["prepare"]["scheduled"] is True
+    assert state["cue_runs"]["prepare"]["window"] == "between 20:00 and 06:00"
     # Enriched later: the same card says Regenerate takes the vision in.
     video.transcript.prepare_state = assistant.DONE
     video.transcript.save(update_fields=["prepare_state"])
@@ -534,6 +544,24 @@ def test_a_video_left_queued_with_no_task_is_queued_again(
     monkeypatch.setattr(uploads, "drop_abandoned", lambda: 0)
     tasks.keep_the_queue_moving(0)
     assert deferred == [{"transcript_id": str(transcript.pk)}]
+
+
+def test_the_case_page_fold_opens_at_every_width():
+    """The wide-window rule that hides a recording's details row applies only
+    where the details go to a pane; the case page has none (v1.54.2)."""
+    from django.conf import settings as django_settings
+
+    base = django_settings.BASE_DIR
+    css = (base / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".panes.benched .tbl tr.detail-row { display: none; }" in css
+    assert "\n  .tbl tr.detail-row { display: none; }" not in css
+    templates = base / "templates"
+    for name in ("recordings.html", "clips.html"):
+        assert '<div class="panes benched">' in (templates / name).read_text(
+            encoding="utf-8"
+        )
+    case_page = (templates / "case.html").read_text(encoding="utf-8")
+    assert '<div class="panes">' in case_page and "benched" not in case_page
 
 
 @pytest.mark.django_db

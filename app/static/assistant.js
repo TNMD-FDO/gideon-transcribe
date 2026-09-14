@@ -168,13 +168,16 @@
       return;
     }
     summaryList.innerHTML = state.summaries.map(function (one) {
-      var head = "<div class='row'><b class='grow'>" + escape(one.template) + "</b>" +
+      // What the summary was written from, as a pill that reads at a
+      // glance (v1.54.2): the transcript and the vision, the transcript with
+      // the vision there now for a Regenerate, or the transcript alone.
+      var from = one.written_from === "both" ? "<span class='pill ok small'>Written from the transcript and the vision</span>" :
+        (one.written_from === "transcript_vision" ? "<span class='pill warn small'>Written from the transcript; Regenerate to include the vision</span>" :
+          (one.state === "done" && one.written_from === "transcript" ? "<span class='pill small'>Written from the transcript</span>" : ""));
+      var head = "<div class='row'><b class='grow'>" + escape(one.template) + "</b>" + from +
         "<span class='muted small'>" + escape(one.length) +
         (one.focus ? " · focus: " + escape(one.focus) : "") +
-        (one.written_from === "both" ? " · written from the transcript and the vision" :
-          (one.written_from === "transcript_vision" ? " · written from the transcript; Regenerate to include the vision" :
-            (one.state === "done" && one.written_from === "transcript" ? " · written from the transcript" :
-              (one.moments_used ? " · " + plural(one.moments_used, "moment") : "")))) +
+        (!from && one.moments_used ? " · " + plural(one.moments_used, "moment") : "") +
         " · " + escape(one.when) + "</span></div>";
       var body;
       if (one.state === "queued" || one.state === "running") {
@@ -443,10 +446,17 @@
       return;
     }
     note.hidden = false;
+    note.classList.toggle("plain", !!(prepare.scheduled && prepare.state !== "done"));
     if (prepare.scheduled && prepare.state !== "done") {
       // Under a schedule (Phase 4 chapter 5) the summary never starts the
-      // vision work: it is written from the transcript.
-      note.textContent = "Written from the transcript.";
+      // vision work: it is written from the transcript, and the form says so
+      // plainly, with when the vision comes (v1.54.2).
+      var when = prepare.state === "tonight"
+        ? "This video is not yet enriched with vision; it is enriched tonight, " + prepare.window + "."
+        : (prepare.state === "running" || prepare.state === "queued")
+          ? "This video is being enriched with vision now, " + aboutWord(prepare.seconds_left) + "."
+          : "This video is not yet enriched with vision.";
+      note.textContent = when + " The summary is written from the transcript, and Regenerate takes the vision in once it is there.";
     } else if (prepare.state === "done") {
       note.textContent = "Written from the words and the camera's descriptions together" +
         (runs.stamp ? "; the camera's clock is known" : "") + ".";

@@ -282,13 +282,15 @@
             {% comment %}
               Vision for the case's videos not yet enriched (Phase 4 chapter
               5): tonight for anyone with the case, a request for now that an
-              Admin decides, and Enrich now for an Admin. cases.js refreshes
-              this line while a video is being enriched.
+              Admin decides, and Enrich now for an Admin. The line stays while
+              videos wait for tonight (v1.54.2), so an Admin's Enrich now is
+              never only in a row's fold. cases.js refreshes this line while
+              a video is being enriched.
             {% endcomment %}
             <form method="post" action="{% url 'vision-case' case.pk %}" class="row vision-line" id="prepare-line" style="margin: 0 0 8px; flex-wrap: wrap">
               {% csrf_token %}
               <span class="muted small">{{ vision_line }}.</span>
-              {% if vision_offers.tonight %}
+              {% if vision_offers.tonight and vision_pending %}
                 <button type="submit" name="action" value="tonight" class="small"
                         data-confirm-title="Enrich them tonight?" data-confirm="Enriched tonight, {{ vision_offers.window }}; the people on this case get an email when it is done." data-confirm-ok="Enrich tonight">Enrich tonight</button>
               {% endif %}

@@ -1933,6 +1933,8 @@ def prepare_json(transcript) -> dict | None:
         "line": words,
         "tone": tone,
         "scheduled": vision.scheduled(),
+        # The night's hours, for the summary form's line (v1.54.2).
+        "window": vision.window_words(),
     }
 
 
