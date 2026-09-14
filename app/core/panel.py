@@ -19,6 +19,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core import audit, settings_store
@@ -106,6 +107,10 @@ def furniture(request, page: str = "") -> dict:
                             if key in dict(settings_store.PAGES)
                             else 0
                         ),
+                        # The requests waiting for an Admin, beside Vision.
+                        "alerts": (
+                            _requests_waiting() if key == settings_store.VISION else 0
+                        ),
                     }
                     for name, key in pages
                 ],
@@ -192,6 +197,7 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             {
                 "key": known.key,
                 "name": known.name,
+                "group": known.group,
                 "kind": known.kind,
                 "help": known.what_it_does,
                 "when_changed": known.when_changed,
@@ -266,6 +272,12 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
             "token": token,
             "email": email,
             "email_said": request.session.pop("email_said", ""),
+            # The Vision page carries the requests waiting for an Admin at
+            # the top (Phase 4 chapter 5).
+            "vision_requests": (
+                _vision_requests() if page == settings_store.VISION else None
+            ),
+            "vision_said": request.session.pop("vision_said", ""),
             "fixed_rules": FIXED_RULES,
             "directory": _directory_facts() if page == settings_store.SIGN_IN else None,
             # The Appearance page carries the logo, which is a file and not a
@@ -407,3 +419,58 @@ def _file_has_something(path: str) -> bool:
         return bool(path) and Path(path).is_file() and Path(path).stat().st_size > 0
     except OSError:
         return False
+
+
+# Vision requests (Phase 4 chapter 5) -----------------------------------------------
+
+
+def _requests_waiting() -> int:
+    from core import vision
+
+    try:
+        return vision.requests_waiting().count()
+    except Exception:  # noqa: BLE001 - the rail is drawn before the tables exist
+        return 0
+
+
+def _vision_requests() -> list[dict]:
+    from core import vision
+
+    rows = []
+    for one in vision.requests_waiting():
+        rows.append(
+            {
+                "id": str(one.pk),
+                "who": one.asked_by.shown_name,
+                "what": one.what,
+                "case_id": str(one.case_id),
+                "when": timezone.localtime(one.asked_at).strftime("%d %b %H:%M"),
+                "about": vision.estimate_words(one.transcripts()),
+                "why": one.why,
+            }
+        )
+    return rows
+
+
+@admins_only
+@require_POST
+def vision_request(request: HttpRequest, request_id) -> HttpResponse:
+    """Allow or decline one request, with an optional line back."""
+    from core import vision
+
+    found = vision.VisionRequest.objects.filter(
+        pk=request_id, state=vision.VisionRequest.WAITING
+    ).first()
+    if found is None:
+        request.session["vision_said"] = "That request was already decided."
+        return redirect(reverse("panel-settings", args=[settings_store.VISION]))
+    line = request.POST.get("line", "")
+    if request.POST.get("action") == "allow":
+        count = vision.allow(found, by=request.user, line=line)
+        request.session["vision_said"] = (
+            f"Allowed: {count} video{'' if count == 1 else 's'} enriching now."
+        )
+    else:
+        vision.decline(found, by=request.user, line=line)
+        request.session["vision_said"] = "Declined; the asker sees it on the case page."
+    return redirect(reverse("panel-settings", args=[settings_store.VISION]))

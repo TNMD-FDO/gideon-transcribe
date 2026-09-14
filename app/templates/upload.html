@@ -155,6 +155,24 @@
                 </div>
               {% endif %}
 
+              {% if vision.offered %}
+                {% comment %}
+                  Enrich with vision (Phase 4 chapter 5): for the videos of
+                  the batch; under a schedule only for a batch going into a
+                  case, and upload.js hides it with This session only chosen.
+                {% endcomment %}
+                <div id="vision-tick" data-needs-case="{% if vision.needs_case %}yes{% else %}no{% endif %}">
+                  <label class="row">
+                    <input type="checkbox" id="enrich-with-vision"{% if vision.ticked %} checked{% endif %}>
+                    <b>Enrich with vision</b>
+                  </label>
+                  <p class="muted small">{{ vision.caption }}</p>
+                </div>
+                {% if vision.session_line %}
+                  <p class="muted small" id="vision-session-line" hidden>{{ vision.session_line }}</p>
+                {% endif %}
+              {% endif %}
+
               {% if batch_mail.offered %}
                 <label class="row">
                   <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>

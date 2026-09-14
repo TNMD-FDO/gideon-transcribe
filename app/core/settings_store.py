@@ -12,6 +12,7 @@ cannot drift apart. Phase 2 rows are absent rather than greyed.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -29,6 +30,7 @@ FEATURES = "features"
 LIMITS = "limits"
 TRANSCRIPTION = "transcription"
 ASSISTANT = "assistant"
+VISION = "vision"
 NOTICES = "notices"
 SIGN_IN = "sign-in"
 AUDIT = "audit"
@@ -59,6 +61,7 @@ PAGES = [
     (LIMITS, "Limits"),
     (TRANSCRIPTION, "Transcription defaults"),
     (ASSISTANT, "AI assistant"),
+    (VISION, "Vision"),
     (NOTICES, "Notices"),
     (SIGN_IN, "Sign-in and directory"),
     (AUDIT, "Audit log"),
@@ -92,6 +95,12 @@ class Definition:
     # Greyed while mail is not configured (SMTP_HOST and MAIL_FROM in .env),
     # which no toggle can turn on. The value is kept, as under `needs`.
     needs_mail: bool = False
+    # Greyed unless another setting holds one value: (key, value). The value
+    # is kept, as under `needs`.
+    needs_value: tuple = ()
+    # The heading a page groups this setting under (the Vision page); empty
+    # rows sit under no heading.
+    group: str = ""
     aliases: tuple = field(default=(), repr=False)
 
 
@@ -566,6 +575,116 @@ def _rows() -> list[Definition]:
                 "went, or nothing; {where} is where the recordings are; the "
                 "rest as above."
             ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="vision_done_subject",
+            page=EMAIL,
+            name="Vision done: subject",
+            kind=TEXT,
+            lines=1,
+            default=("Gideon Transcribe: {count} enriched with vision in {where}"),
+            needs_mail=True,
+            what_it_does=(
+                "The subject of the message sent when a case batch's videos, or "
+                "the videos a person pressed or asked for, are enriched with "
+                "vision. Placeholders: {name}, {count}, {failed}, {where}, "
+                "{time}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="vision_done_body",
+            page=EMAIL,
+            name="Vision done: body",
+            kind=TEXT,
+            lines=7,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                "Enriched with vision: {count} in {where}, ready for summaries "
+                "and chat, at {time}.\n"
+                "\n"
+                "{failed}\n"
+                "\n"
+                "Open them: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "The body of the Vision done message. {failed} is the line "
+                "about any video that could not be enriched, or nothing."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="vision_request_subject",
+            page=EMAIL,
+            name="Vision requested: subject",
+            kind=TEXT,
+            lines=1,
+            default="Gideon Transcribe: {who} asks for vision now on {what}",
+            needs_mail=True,
+            what_it_does=(
+                "The subject of the message every Admin with an address gets "
+                "when someone asks for vision now. Placeholders: {name}, {who}, "
+                "{what}, {about}, {why}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="vision_request_body",
+            page=EMAIL,
+            name="Vision requested: body",
+            kind=TEXT,
+            lines=8,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                "{who} asks for vision now on {what}, {about} of engine time "
+                "by day.\n"
+                "\n"
+                "{why}\n"
+                "\n"
+                "Allow or decline it in the Panel: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does=(
+                "The body of the Vision requested message. {why} is the line "
+                "the asker wrote, or nothing."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="vision_allowed_subject",
+            page=EMAIL,
+            name="Vision allowed: subject",
+            kind=TEXT,
+            lines=1,
+            default="Gideon Transcribe: vision is running now on {what}",
+            needs_mail=True,
+            what_it_does=(
+                "The subject of the message the asker gets when an Admin allows "
+                "their request. Placeholders: {name}, {what}, {about}, {by}, "
+                "{link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="vision_allowed_body",
+            page=EMAIL,
+            name="Vision allowed: body",
+            kind=TEXT,
+            lines=7,
+            default=(
+                "Hello {name},\n"
+                "\n"
+                "{by} allowed your request: vision is running now on {what}, "
+                "{about}. You get another message when it is done.\n"
+                "\n"
+                "Open it: {link}\n"
+            ),
+            needs_mail=True,
+            what_it_does="The body of the Vision allowed message.",
             when_changed="The next message.",
         ),
         Definition(
@@ -1157,8 +1276,9 @@ def _rows() -> list[Definition]:
         # Moments (Phase 4) ----------------------------------------------------
         Definition(
             key="moments_available",
-            page=ASSISTANT,
-            name="Moments",
+            page=VISION,
+            group="Vision",
+            name="Vision",
             kind=TOGGLE,
             default=False,
             what_it_does=(
@@ -1173,9 +1293,78 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="vision_runs",
+            page=VISION,
+            group="Vision",
+            name="Vision runs",
+            kind=CHOICE,
+            default="lands",
+            choices=("lands", "overnight", "asked"),
+            needs="moments_available",
+            what_it_does=(
+                '"lands": the picture is described and joined to the words the '
+                "moment each transcript lands, session recordings too. "
+                '"overnight": recordings in a case wait for the window below, '
+                'oldest first, one at a time. "asked": nothing runs until an '
+                "Admin allows it for a case, on the case page or from a request."
+            ),
+            when_changed=(
+                "The next transcript. Videos already waiting for tonight are "
+                "queued at once under lands, and wait for an Admin under asked."
+            ),
+        ),
+        Definition(
+            key="vision_window_start",
+            page=VISION,
+            group="Vision",
+            name="Overnight from",
+            kind=TEXT,
+            lines=1,
+            default="20:00",
+            needs="moments_available",
+            needs_value=("vision_runs", "overnight"),
+            what_it_does=(
+                "When the night's vision work may start, as a clock time in the "
+                "server's time zone (hh:mm)."
+            ),
+            when_changed="The next window.",
+        ),
+        Definition(
+            key="vision_window_end",
+            page=VISION,
+            group="Vision",
+            name="Overnight until",
+            kind=TEXT,
+            lines=1,
+            default="06:00",
+            needs="moments_available",
+            needs_value=("vision_runs", "overnight"),
+            what_it_does=(
+                "When the night's vision work stops taking new videos, as a "
+                "clock time in the server's time zone (hh:mm); a video part-way "
+                "finishes."
+            ),
+            when_changed="The next window.",
+        ),
+        Definition(
+            key="vision_tick_default",
+            page=VISION,
+            group="Vision",
+            name="Enrich with vision starts ticked",
+            kind=TOGGLE,
+            default=True,
+            needs="moments_available",
+            what_it_does=(
+                "Whether the upload page's Enrich with vision tick starts ticked "
+                "for a video. An office that wants transcripts alone turns this Off."
+            ),
+            when_changed="The next upload page.",
+        ),
+        Definition(
             key="moments_in_answers",
-            page=ASSISTANT,
-            name="Moments in answers",
+            page=VISION,
+            group="The descriptions",
+            name="Descriptions reach summaries and chat",
             kind=TOGGLE,
             default=True,
             needs="moments_available",
@@ -1187,8 +1376,9 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moments_answer_tokens",
-            page=ASSISTANT,
-            name="Moment answer cap",
+            page=VISION,
+            group="The descriptions",
+            name="Description answer cap",
             kind=NUMBER,
             default=250,
             least=100,
@@ -1200,8 +1390,9 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moments_time_seconds",
-            page=ASSISTANT,
-            name="Moment time limit",
+            page=VISION,
+            group="The descriptions",
+            name="Description time limit",
             kind=NUMBER,
             default=120,
             least=30,
@@ -1215,25 +1406,10 @@ def _rows() -> list[Definition]:
             when_changed="The next Moment.",
         ),
         Definition(
-            key="moment_span_seconds",
-            page=ASSISTANT,
-            name="Moment clip length",
-            kind=NUMBER,
-            default=10,
-            least=4,
-            most=30,
-            unit="seconds",
-            needs="moments_available",
-            what_it_does=(
-                "How much of the recording the engine is shown for one Moment: half "
-                "before the chosen time and half after."
-            ),
-            when_changed="The next Moment.",
-        ),
-        Definition(
             key="moment_frames_per_second",
-            page=ASSISTANT,
-            name="Moment frames a second",
+            page=VISION,
+            group="The descriptions",
+            name="Description frames a second",
             kind=NUMBER,
             default=2,
             least=1,
@@ -1248,8 +1424,9 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moment_frame_height",
-            page=ASSISTANT,
-            name="Moment frame height",
+            page=VISION,
+            group="The descriptions",
+            name="Description frame height",
             kind=NUMBER,
             default=360,
             least=180,
@@ -1266,8 +1443,9 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moment_style",
-            page=ASSISTANT,
-            name="Moment style",
+            page=VISION,
+            group="The descriptions",
+            name="Description style",
             kind=CHOICE,
             default="brief",
             choices=("brief", "full"),
@@ -1281,42 +1459,9 @@ def _rows() -> list[Definition]:
             when_changed="The next Moment.",
         ),
         Definition(
-            key="moment_question_height",
-            page=ASSISTANT,
-            name="Look closer frame height",
-            kind=NUMBER,
-            default=720,
-            least=360,
-            most=1080,
-            unit="pixels",
-            needs="moments_available",
-            what_it_does=(
-                "A question about a moment is answered from a few still frames at "
-                "this height rather than the small clip, so a small object on a "
-                "seat can be made out; never scaled up. A 1280 by 720 frame costs "
-                "the engine about 1,200 tokens."
-            ),
-            when_changed="The next question.",
-        ),
-        Definition(
-            key="moment_question_frames",
-            page=ASSISTANT,
-            name="Look closer frames",
-            kind=NUMBER,
-            default=3,
-            least=1,
-            most=5,
-            unit="frames",
-            needs="moments_available",
-            what_it_does=(
-                "How many still frames a question is answered from, spread over "
-                "about a second either side of the chosen time."
-            ),
-            when_changed="The next question.",
-        ),
-        Definition(
             key="moment_scene_threshold",
-            page=ASSISTANT,
+            page=VISION,
+            group="The scan",
             name="Picture change threshold",
             kind=NUMBER,
             default=40,
@@ -1334,7 +1479,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moment_loud_db",
-            page=ASSISTANT,
+            page=VISION,
+            group="The scan",
             name="Loudness rise",
             kind=NUMBER,
             default=12,
@@ -1350,7 +1496,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moment_media_gap_seconds",
-            page=ASSISTANT,
+            page=VISION,
+            group="The scan",
             name="Gap between change points",
             kind=NUMBER,
             default=3,
@@ -1366,7 +1513,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="picture_record_available",
-            page=ASSISTANT,
+            page=VISION,
+            group="The record",
             name="Picture record for summaries",
             kind=TOGGLE,
             default=True,
@@ -1382,7 +1530,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moment_interval_seconds",
-            page=ASSISTANT,
+            page=VISION,
+            group="The record",
             name="Picture record: longest span",
             kind=NUMBER,
             default=15,
@@ -1400,7 +1549,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="picture_shortest_span",
-            page=ASSISTANT,
+            page=VISION,
+            group="The record",
             name="Picture record: shortest span",
             kind=NUMBER,
             default=3,
@@ -1416,7 +1566,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="moment_interval_most",
-            page=ASSISTANT,
+            page=VISION,
+            group="The record",
             name="Picture record: most descriptions",
             kind=NUMBER,
             default=600,
@@ -1432,7 +1583,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="picture_frames_most",
-            page=ASSISTANT,
+            page=VISION,
+            group="The record",
             name="Picture record: frames per description",
             kind=NUMBER,
             default=16,
@@ -1449,7 +1601,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="digests_available",
-            page=ASSISTANT,
+            page=VISION,
+            group="The digest",
             name="Digests",
             kind=TOGGLE,
             default=True,
@@ -1466,7 +1619,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="digest_window_tokens",
-            page=ASSISTANT,
+            page=VISION,
+            group="The digest",
             name="Digest window",
             kind=NUMBER,
             default=4000,
@@ -1484,7 +1638,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="digest_part_tokens",
-            page=ASSISTANT,
+            page=VISION,
+            group="The digest",
             name="Digest part cap",
             kind=NUMBER,
             default=1200,
@@ -1497,7 +1652,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="chat_descriptions_near",
-            page=ASSISTANT,
+            page=VISION,
+            group="The chat",
             name="Chat: descriptions near an asked time",
             kind=NUMBER,
             default=6,
@@ -1514,7 +1670,8 @@ def _rows() -> list[Definition]:
         ),
         Definition(
             key="stamp_available",
-            page=ASSISTANT,
+            page=VISION,
+            group="The camera stamp",
             name="Read the camera's stamp",
             kind=TOGGLE,
             default=True,
@@ -1528,6 +1685,20 @@ def _rows() -> list[Definition]:
                 "camera's clock."
             ),
             when_changed="The next picture record.",
+        ),
+        Definition(
+            key="exports_camera_section",
+            page=VISION,
+            group="Exports",
+            name="Exports carry what the camera showed",
+            kind=TOGGLE,
+            default=True,
+            what_it_does=(
+                "Whether a summary's and a transcript's Word and text exports "
+                "carry the What the camera showed section and its legend. Off "
+                "leaves the descriptions in the app only."
+            ),
+            when_changed="The next export.",
         ),
         Definition(
             key="engine_address",
@@ -1775,6 +1946,13 @@ def check(key: str, value):
         return wanted
 
     text = str(value)
+    if key in ("vision_window_start", "vision_window_end"):
+        text = text.strip()
+        if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", text):
+            raise ValueError(
+                f"{known.name} is a clock time such as 20:00, and {text!r} is not"
+            )
+        return text
     # A Notification's template may use its kind's placeholders and no
     # other: the Email chapter's rule, kept here so every way in obeys it.
     from core import mail
@@ -1795,6 +1973,13 @@ def greyed_because(known: Definition) -> str:
     """
     if known.needs and not get(known.needs):
         return f"Greyed while {definition(known.needs).name} is off; the value is kept."
+    if known.needs_value:
+        other, wanted = known.needs_value
+        if get(other) != wanted:
+            return (
+                f"Greyed unless {definition(other).name} is {wanted}; "
+                "the value is kept."
+            )
     if known.needs_mail:
         from core import mail
 
@@ -1974,10 +2159,6 @@ def moments_answer_cap() -> int:
     return get("moments_answer_tokens")
 
 
-def moment_span_seconds() -> int:
-    return get("moment_span_seconds")
-
-
 def moment_frames_per_second() -> int:
     return get("moment_frames_per_second")
 
@@ -1988,14 +2169,6 @@ def moment_frame_height() -> int:
 
 def moment_style() -> str:
     return str(get("moment_style") or "brief")
-
-
-def moment_question_height() -> int:
-    return get("moment_question_height")
-
-
-def moment_question_frames() -> int:
-    return get("moment_question_frames")
 
 
 def moment_scene_threshold() -> float:
@@ -2036,3 +2209,26 @@ def digest_part_cap() -> int:
 
 def chat_descriptions_near() -> int:
     return get("chat_descriptions_near")
+
+
+# Vision (Phase 4 chapter 5) ----------------------------------------------------
+
+VISION_LANDS, VISION_OVERNIGHT, VISION_ASKED = "lands", "overnight", "asked"
+
+
+def vision_runs() -> str:
+    """When the picture is described: lands, overnight, or asked."""
+    return get("vision_runs")
+
+
+def vision_window() -> tuple[str, str]:
+    """The night's window as two clock times, hh:mm, in the server's time zone."""
+    return get("vision_window_start"), get("vision_window_end")
+
+
+def vision_tick_default() -> bool:
+    return bool(get("vision_tick_default"))
+
+
+def exports_camera_section() -> bool:
+    return bool(get("exports_camera_section"))

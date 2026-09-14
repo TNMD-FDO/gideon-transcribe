@@ -207,23 +207,34 @@ def test_the_moment_template_and_its_settings_start_as_the_chapter_says():
         ("moments_in_answers", True),
         ("moments_answer_tokens", 250),
         ("moments_time_seconds", 120),
-        ("moment_span_seconds", 10),
         ("moment_frames_per_second", 2),
         ("moment_frame_height", 360),
     ):
         known = settings_store.DEFINITIONS[key]
-        assert known.default == default and known.page == settings_store.ASSISTANT
+        # On the Vision page since v1.54.0, the keys unchanged.
+        assert known.default == default and known.page == settings_store.VISION
+    for gone in (
+        "moment_span_seconds",
+        "moment_question_height",
+        "moment_question_frames",
+    ):
+        assert gone not in settings_store.DEFINITIONS, gone
     text = CATALOGUE.read_text(encoding="utf-8")
     for name in (
-        "Moments",
-        "Moments in answers",
-        "Moment answer cap",
-        "Moment time limit",
-        "Moment clip length",
-        "Moment frames a second",
-        "Moment frame height",
+        "Vision",
+        "Descriptions reach summaries and chat",
+        "Description answer cap",
+        "Description time limit",
+        "Description frames a second",
+        "Description frame height",
+        "Description style",
+        "Vision runs",
+        "Overnight from; Overnight until",
+        "Enrich with vision starts ticked",
+        "Exports carry what the camera showed",
     ):
-        assert f"| {name} |" in text, f"the catalogue has no row for {name}"
+        # A row may carry its old name in brackets after the new one.
+        assert f"| {name} " in text, f"the catalogue has no row for {name}"
 
 
 def test_the_engine_request_carries_a_priority_and_the_extra_fields(monkeypatch):
@@ -452,7 +463,6 @@ def test_a_moment_never_thinks_even_when_the_office_lets_the_model_think(
     asked = reachable(monkeypatch, "A doorway.")
     a_cut(monkeypatch)
     settings_store.set_to("assistant_thinks", True)
-    settings_store.set_to("moment_span_seconds", 20)
     settings_store.set_to("moment_frames_per_second", 1)
     settings_store.set_to("moment_frame_height", 720)
     moment = Moment.objects.create(transcript=ready.transcript, at=5.0, asked_by=person)
@@ -460,8 +470,9 @@ def test_a_moment_never_thinks_even_when_the_office_lets_the_model_think(
     moment.refresh_from_db()
     assert moment.state == assistant.DONE
     assert asked[0]["thinking"] is False and asked[0]["max_completion_tokens"] == 250
-    # The span is clamped to the start of the file: 0 to 15, at one frame a second.
-    assert (moment.span_start, moment.span_end) == (0.0, 15.0) and moment.frames == 15
+    # The span is the fixed ten seconds (the setting was retired in v1.54.0),
+    # clamped to the start of the file: 0 to 10, at one frame a second.
+    assert (moment.span_start, moment.span_end) == (0.0, 10.0) and moment.frames == 10
 
 
 @pytest.mark.django_db
@@ -1080,7 +1091,7 @@ def test_a_summary_prepares_the_video_first_and_writes_one_account(
     signed_in(client, person)
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["cue_runs"]["prepare"]["state"] == "none"
-    assert state["cue_runs"]["prepare"]["line"] == "Not prepared"
+    assert state["cue_runs"]["prepare"]["line"] == "Not yet enriched with vision"
     assert state["cue_runs"]["prepare"]["seconds_left"] > 0
 
     answer = client.post(
@@ -1123,7 +1134,7 @@ def test_a_summary_prepares_the_video_first_and_writes_one_account(
     assert summary.citations == {"[00:10:00]": 600.0}
     assert summary.moments_used == 3 and summary.digest_parts == 1
     assert summary.stage == ""
-    row = Row.objects.get(event="Video prepared")
+    row = Row.objects.get(event="Video enriched")
     assert row.details["descriptions"] == 3 and row.details["parts"] == 1
     assert "doorway" not in json.dumps(row.details)
     assert Moment.objects.filter(source=Moment.INTERVAL).first().seconds >= 0
@@ -1136,7 +1147,7 @@ def test_a_summary_prepares_the_video_first_and_writes_one_account(
     assert len(asked) == 6
     state = client.get(f"/recording/{ready.pk}/assistant").json()
     assert state["cue_runs"]["prepare"]["state"] == "done"
-    assert state["cue_runs"]["prepare"]["line"] == "Prepared"
+    assert state["cue_runs"]["prepare"]["line"] == "Enriched with vision"
 
     word = exports.summary_word(summary, "asker")
     import io

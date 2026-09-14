@@ -155,6 +155,15 @@
     var chosenWhere = wheres.querySelector('input[name="where"]:checked');
     lightUp(wheres, chosenWhere ? chosenWhere.value : "");
     intoCase.value = chosenWhere && chosenWhere.value === "case" ? whichCase.value : "";
+    // Under a schedule vision needs a case: the tick shows only with Into a
+    // case chosen, and This session only gets the one line saying why.
+    var tick = document.getElementById("vision-tick");
+    var sessionLine = document.getElementById("vision-session-line");
+    if (tick && tick.dataset.needsCase === "yes") {
+      var toCase = !!(chosenWhere && chosenWhere.value === "case");
+      tick.hidden = !toCase;
+      if (sessionLine) { sessionLine.hidden = toCase; }
+    }
     fire(intoCase);
   }
 
@@ -231,9 +240,13 @@
     var intoCase = document.getElementById("add-to-case");
     var whatKind = document.getElementById("recording-type");
     var mailMe = document.getElementById("email-when-done");
+    var enrich = document.getElementById("enrich-with-vision");
+    var tick = document.getElementById("vision-tick");
     return {
       // Absent while the Admin's switch is off or mail is not configured.
       email_when_done: !!(mailMe && !mailMe.disabled && mailMe.checked),
+      // Enrich with vision (Phase 4 chapter 5): only while its tick is shown.
+      enrich: !!(enrich && tick && !tick.hidden && enrich.checked),
       diarize: document.getElementById("diarize").checked,
       speakers: speakers,
       translate: document.getElementById("translate").checked,

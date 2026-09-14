@@ -138,7 +138,7 @@ def test_the_settings_and_the_catalogue_agree():
     assert "summary_moments_enough" not in settings_store.DEFINITIONS
     assert "summary_describes_first" not in settings_store.DEFINITIONS
     record = settings_store.DEFINITIONS["picture_record_available"]
-    assert record.page == settings_store.ASSISTANT and record.default is True
+    assert record.page == settings_store.VISION and record.default is True
     assert record.needs == "moments_available"
     text = CATALOGUE.read_text(encoding="utf-8")
     for name in ("Picture record for summaries", "Digests"):
@@ -373,7 +373,7 @@ def test_the_state_says_what_preparing_the_video_would_do(
     assert first["intervals"]["minutes"] == 20
     assert (
         first["prepare"]["state"] == "none"
-        and first["prepare"]["line"] == "Not prepared"
+        and first["prepare"]["line"] == "Not yet enriched with vision"
     )
     assert first["prepare"]["seconds_left"] >= 60 * 20
     assert "describe_first_default" not in first

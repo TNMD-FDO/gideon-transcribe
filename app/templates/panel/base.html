@@ -10,6 +10,7 @@
           <a href="{{ one.url }}"{% if one.here %} class="on"{% endif %}>
             {{ one.name }}
             {% if one.waiting %}<span class="cnt">{{ one.waiting }}</span>{% endif %}
+            {% if one.alerts %}<span class="cnt warn" title="Requests waiting for an Admin">{{ one.alerts }}</span>{% endif %}
           </a>
         {% endfor %}
       {% endfor %}

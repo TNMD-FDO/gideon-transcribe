@@ -49,8 +49,11 @@ def camera_moments(transcript) -> list:
     """The described Moments of a Transcript, in time order, for the exports."""
     if transcript is None or not hasattr(transcript, "moments"):
         return []
-    from core import assistant
+    from core import assistant, settings_store
 
+    # The office may keep the descriptions inside the app (Phase 4 chapter 5).
+    if not settings_store.exports_camera_section():
+        return []
     return list(transcript.moments.filter(state=assistant.DONE).exclude(text=""))
 
 

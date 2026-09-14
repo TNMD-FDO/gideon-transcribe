@@ -180,7 +180,7 @@ urlpatterns = [
     path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     # The case's videos prepared for summaries and chat, on purpose (Phase 4 ch. 7).
-    path("case/<uuid:case_id>/prepare", case_pages.prepare_case, name="prepare-case"),
+    path("case/<uuid:case_id>/vision", case_pages.vision_case, name="vision-case"),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     # The Record page (Phase 3): a Recording made in the browser.
     # Recorded here (its old tab address redirects home), and the New recording page,
@@ -376,6 +376,11 @@ urlpatterns = [
     path("panel/settings/<str:page>", panel.settings_page, name="panel-settings"),
     path("panel/settings/<str:page>/edit", panel.edit, name="panel-edit"),
     path("panel/apply", panel.apply, name="panel-apply"),
+    path(
+        "panel/vision/request/<uuid:request_id>",
+        panel.vision_request,
+        name="panel-vision-request",
+    ),
     path("panel/cancel", panel.cancel_all, name="panel-cancel"),
     path("sign-in", views.sign_in, name="sign-in"),
     path("sign-out", views.sign_out, name="sign-out"),

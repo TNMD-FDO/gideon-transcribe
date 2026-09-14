@@ -37,6 +37,9 @@ DIGEST = "retention_digest"
 SHARED = "case_shared"
 HANDED = "case_handed"
 BATCH = "batch_finished"
+VISION_DONE = "vision_done"
+VISION_REQUEST = "vision_requested"
+VISION_ALLOWED = "vision_allowed"
 DICTATION = "dictation_sent"
 OPERATOR = "operator"
 TEST = "test"
@@ -147,6 +150,52 @@ TEMPLATES = {
             "The recordings are {where}.\n"
             "\n"
             "Open them: {link}\n"
+        ),
+    },
+    VISION_DONE: {
+        "subject_key": "vision_done_subject",
+        "body_key": "vision_done_body",
+        "placeholders": {"name", "count", "failed", "where", "time", "link"},
+        "subject": "Gideon Transcribe: {count} enriched with vision in {where}",
+        "body": (
+            "Hello {name},\n"
+            "\n"
+            "Enriched with vision: {count} in {where}, ready for summaries "
+            "and chat, at {time}.\n"
+            "\n"
+            "{failed}\n"
+            "\n"
+            "Open them: {link}\n"
+        ),
+    },
+    VISION_REQUEST: {
+        "subject_key": "vision_request_subject",
+        "body_key": "vision_request_body",
+        "placeholders": {"name", "who", "what", "about", "why", "link"},
+        "subject": "Gideon Transcribe: {who} asks for vision now on {what}",
+        "body": (
+            "Hello {name},\n"
+            "\n"
+            "{who} asks for vision now on {what}, {about} of engine time "
+            "by day.\n"
+            "\n"
+            "{why}\n"
+            "\n"
+            "Allow or decline it in the Panel: {link}\n"
+        ),
+    },
+    VISION_ALLOWED: {
+        "subject_key": "vision_allowed_subject",
+        "body_key": "vision_allowed_body",
+        "placeholders": {"name", "what", "about", "by", "link"},
+        "subject": "Gideon Transcribe: vision is running now on {what}",
+        "body": (
+            "Hello {name},\n"
+            "\n"
+            "{by} allowed your request: vision is running now on {what}, "
+            "{about}. You get another message when it is done.\n"
+            "\n"
+            "Open it: {link}\n"
         ),
     },
 }
@@ -728,6 +777,9 @@ KIND_WORDS = {
     SHARED: "case shared",
     HANDED: "case handed over",
     BATCH: "batch finished",
+    VISION_DONE: "vision done",
+    VISION_REQUEST: "vision requested",
+    VISION_ALLOWED: "vision allowed",
     OPERATOR: "operator",
     TEST: "test message",
 }
@@ -1016,8 +1068,29 @@ def _still_preparing(recording) -> bool:
 
 
 def _prepared_line(recordings) -> str:
-    """How the videos' preparation went, for the Batch's mail; nothing without them."""
-    from core import assistant
+    """How the videos' vision went, for the Batch's mail; nothing without them.
+    Under a schedule (chapter 5) the line says what will happen and that a
+    second message follows."""
+    from core import assistant, vision
+
+    if vision.scheduled():
+        videos = [
+            one
+            for one in recordings
+            if one.vision_wanted and one.case_id is not None and vision.eligible(one)
+        ]
+        if not videos:
+            return ""
+        count = f"{len(videos)} video{'' if len(videos) == 1 else 's'}"
+        if vision.position() == vision.OVERNIGHT:
+            return (
+                f"The {count} are enriched with vision tonight; you will get a "
+                "second message when that is done."
+            )
+        return (
+            f"The {count} are enriched with vision when an Admin allows it; you "
+            "will get a second message when that is done."
+        )
 
     prepared = 0
     failed = 0
@@ -1140,4 +1213,125 @@ def restore_completed(report: dict) -> bool:
             f"Audit log chain unbroken: {report.get('integrity_unbroken')}.\n"
         ),
         about="restore_completed",
+    )
+
+
+# Vision (Phase 4 chapter 5) ------------------------------------------------------
+
+
+def _vision_where(where) -> str:
+    """The batch or the request a Vision done message is about, in words."""
+    from core.recordings import Batch
+
+    if isinstance(where, Batch):
+        return f"your batch of {where.recordings.count()} recordings"
+    return where.what
+
+
+def vision_done(person, videos, *, where, link_case) -> bool:
+    """Enriched with vision: to the batch's person, or to the asker."""
+    from core import assistant
+
+    done = [
+        one
+        for one in videos
+        if getattr(one, "transcript", None) is not None
+        and one.transcript.prepare_state == assistant.DONE
+    ]
+    failed = len(videos) - len(done)
+    count = f"{len(done)} video{'' if len(done) == 1 else 's'}"
+    subject, body = render(
+        VISION_DONE,
+        name=person.shown_name,
+        count=count,
+        failed=(
+            f"{failed} could not be enriched; the case page says why." if failed else ""
+        ),
+        where=_vision_where(where),
+        time=_when(timezone.now()),
+        link=(
+            app_url(f"/case/{link_case.pk}") if link_case is not None else app_url("/")
+        ),
+    )
+    return send_to_person(
+        VISION_DONE,
+        person,
+        subject,
+        body,
+        object_type="case" if link_case is not None else "batch",
+        object_id=link_case.pk if link_case is not None else "",
+        object_label=count,
+        done=len(done),
+        failed=failed,
+    )
+
+
+def _admins_with_addresses():
+    from core.models import User
+
+    return [one for one in User.objects.all() if one.is_admin and one.email]
+
+
+def vision_requested(request) -> int:
+    """Vision requested now: to every Admin with an address, else the operator."""
+    from core import vision
+
+    about = vision.estimate_words(request.transcripts())
+    sent = 0
+    admins = _admins_with_addresses()
+    for admin in admins:
+        subject, body = render(
+            VISION_REQUEST,
+            name=admin.shown_name,
+            who=request.asked_by.shown_name,
+            what=request.what,
+            about=about,
+            why=request.why,
+            link=app_url("/panel/settings/vision"),
+        )
+        if send_to_person(
+            VISION_REQUEST,
+            admin,
+            subject,
+            body,
+            object_type="case",
+            object_id=request.case_id,
+            object_label=request.what,
+        ):
+            sent += 1
+    if not admins:
+        subject, body = render(
+            VISION_REQUEST,
+            name="Operator",
+            who=request.asked_by.shown_name,
+            what=request.what,
+            about=about,
+            why=request.why,
+            link=app_url("/panel/settings/vision"),
+        )
+        if send_to_operator(VISION_REQUEST, subject, body, case=str(request.case_id)):
+            sent += 1
+    return sent
+
+
+def vision_allowed(request) -> bool:
+    """Vision allowed: to the asker, with the estimate."""
+    from core import vision
+
+    subject, body = render(
+        VISION_ALLOWED,
+        name=request.asked_by.shown_name,
+        what=request.what,
+        about=vision.estimate_words(request.transcripts()),
+        by=request.decided_by.shown_name if request.decided_by else "An Admin",
+        link=app_url(f"/case/{request.case_id}"),
+    )
+    return send_to_person(
+        VISION_ALLOWED,
+        request.asked_by,
+        subject,
+        body,
+        object_type="case",
+        object_id=request.case_id,
+        object_label=request.what,
     )

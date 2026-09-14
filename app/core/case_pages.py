@@ -13,13 +13,18 @@ import zipfile
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseForbidden,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import (
-    assistant,
     audit,
     cases,
     exports,
@@ -29,6 +34,7 @@ from core import (
     settings_store,
     sharing,
     uploads,
+    vision,
 )
 from core.cases import Case
 from core.jobs import Segment
@@ -257,7 +263,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "role": role,
             **_sharing_context(case, role),
             "recordings": _rows_for(case),
-            "prepare_line": prepare_line(case),
+            "vision_line": vision.line(case),
+            "vision_offers": vision.offers(case, user=request.user),
             "asked": asked,
             "hits": _search(case, asked) if asked else None,
             "types": cases.recording_types(),
@@ -333,56 +340,43 @@ def _rows_for(case: Case) -> list:
         one.speakers_in_words = _speakers_in_words(one)
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
-        # Prepared for summaries and chat (Phase 4 chapter 7), for a video.
-        one.prepare_word, one.prepare_tone = assistant.prepare_words(
+        # The Vision column (Phase 4 chapter 5), for a video.
+        one.prepare_word, one.prepare_tone = vision.words(
             getattr(one, "transcript", None)
         )
+        transcript = getattr(one, "transcript", None)
+        one.vision_state = getattr(transcript, "prepare_state", "")
+        one.vision_offered = bool(transcript is not None and vision.eligible(one))
         rows.append(one)
     return rows
 
 
-def _unprepared(case: Case) -> list:
-    """The case's videos that a press would prepare: not prepared and not at it."""
-    from core.jobs import Transcript
-
-    found = []
-    for transcript in Transcript.objects.filter(recording__case=case).select_related(
-        "recording"
-    ):
-        if transcript.prepare_state in (assistant.QUEUED, assistant.PREPARING):
-            continue
-        if (
-            assistant.record_on()
-            and assistant.has_picture(transcript.recording)
-            and not assistant.prepared(transcript)
-        ):
-            found.append(transcript)
-    return found
-
-
-def prepare_line(case: Case) -> str:
-    """The case page's line about its unprepared videos, or nothing."""
-    waiting = _unprepared(case)
-    if not waiting:
-        return ""
-    seconds = sum(
-        assistant.prepare_plan(one.recording, one)["seconds"] for one in waiting
-    )
-    return (
-        f"{len(waiting)} video{'' if len(waiting) == 1 else 's'} not yet prepared for "
-        f"summaries and chat, {assistant.about(seconds)}"
-    )
-
-
 @login_required
 @require_POST
-def prepare_case(request: HttpRequest, case_id) -> HttpResponse:
-    """Prepare the case's videos now, one after another, in the record's lane."""
+def vision_case(request: HttpRequest, case_id) -> HttpResponse:
+    """Enrich tonight (anyone with the case), Ask for it now (a request an
+    Admin decides), or Enrich now (an Admin's): for the case's videos, or
+    for one recording named in the form (Phase 4 chapter 5)."""
     _on_or_404()
     case = _their_case(request, case_id)
     cases.note_activity(case, by=request.user)
-    for transcript in _unprepared(case):
-        assistant.queue_preparation(transcript.recording)
+    action = request.POST.get("action", "")
+    recording = None
+    if request.POST.get("recording"):
+        recording = case.recordings.filter(pk=request.POST["recording"]).first()
+        if recording is None:
+            raise Http404("no such recording in this case")
+    offers = vision.offers(case, user=request.user)
+    if action == "tonight" and offers["tonight"]:
+        vision.enrich_tonight(case, by=request.user, recording=recording)
+    elif action == "ask" and offers["ask"]:
+        vision.ask(
+            case, by=request.user, recording=recording, why=request.POST.get("why", "")
+        )
+    elif action == "now" and offers["now"]:
+        vision.enrich_now(case, by=request.user, recording=recording)
+    else:
+        return HttpResponseForbidden("not offered")
     return redirect(reverse("case", args=[case.pk]))
 
 

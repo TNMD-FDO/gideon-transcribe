@@ -63,7 +63,7 @@ def signed_in(client, who):
 def test_every_budget_starts_at_the_code_value():
     for key, constant in PAIRS.items():
         known = settings_store.DEFINITIONS[key]
-        assert known.page == settings_store.ASSISTANT, key
+        assert known.page in (settings_store.ASSISTANT, settings_store.VISION), key
         assert known.kind == settings_store.NUMBER, key
         assert known.default == constant, (key, known.default, constant)
         assert known.least <= known.default <= known.most, key

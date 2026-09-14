@@ -28,6 +28,7 @@ from core import (
     settings_store,
     tasks,
     uploads,
+    vision,
     whisperx,
 )
 from core.jobs import JobState
@@ -218,6 +219,9 @@ def upload(request: HttpRequest) -> HttpResponse:
             "to_a_case": to_a_case,
             "chosen_case": chosen_case,
             "batch_mail": batch_mail,
+            # Enrich with vision (Phase 4 chapter 5): the tick, its start and
+            # its caption, from the office's position.
+            "vision": vision.tick(request.user),
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
@@ -284,6 +288,7 @@ def submit(request: HttpRequest) -> JsonResponse:
 
     from core import mail
 
+    offered = vision.tick(request.user)["offered"]
     batch = Batch.objects.create(
         user=request.user,
         email_when_done=bool(
@@ -291,6 +296,7 @@ def submit(request: HttpRequest) -> JsonResponse:
             and request.user.email
             and (wanted.get("batch") or {}).get("email_when_done")
         ),
+        vision=bool(offered and (wanted.get("batch") or {}).get("enrich")),
     )
     made = []
     for one in files:
@@ -307,6 +313,7 @@ def submit(request: HttpRequest) -> JsonResponse:
             original_filename=one.get("name", "recording")[:400],
             size_bytes=int(one.get("size") or 0),
             media_state=MediaState.UPLOADING,
+            vision_wanted=batch.vision,
             **settings_for_file,
         )
         made.append({"id": str(recording.pk), "name": one.get("name", "")})
@@ -512,6 +519,9 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
         for one in rows
         if one["prepare"] and one["prepare"]["state"] in ("queued", "running")
     ]
+    tonight = sum(
+        1 for one in rows if one["prepare"] and one["prepare"]["state"] == "tonight"
+    )
     return JsonResponse(
         {
             "finished": found.is_finished,
@@ -522,6 +532,8 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
             "case": _case_of(found),
             "preparing": {
                 "count": len(preparing),
+                "tonight": tonight,
+                "window": vision.window_words(),
                 "seconds_left": sum(one["seconds_left"] for one in preparing),
                 "about": assistant.about(sum(one["seconds_left"] for one in preparing))
                 if preparing

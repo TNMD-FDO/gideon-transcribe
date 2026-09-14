@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The picture: what the camera showed. Released as `v1.38.0` and refined through `v1.53.2`; chapter 5 (Vision) is proposed and not yet built.
+The picture: what the camera showed. Released as `v1.38.0` and refined through `v1.54.0`, which built chapter 5 (Vision).
 
 ## About this document
 
@@ -19,7 +19,7 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **A chat that has seen the video.** A question is answered from the transcript, the Digest, and the descriptions nearest the times asked, under fixed rules that keep the two sources honest.
 - **The wait is said in numbers**, everywhere the work shows: how many descriptions and parts are left and about how long, measured on the office's own engine.
 - **Admins read the Digest** under Details, and every instruction the app builds on is a template they can edit, reset, and that follows each release's wording while unedited.
-- **Vision on the office's terms** (chapter 5, proposed): a tick on the upload page, a schedule (as each transcript lands, overnight, or only when an Admin allows it), requests an Admin allows or declines, two mails, and a Vision page in the Panel.
+- **Vision on the office's terms** (chapter 5, v1.54.0): a tick on the upload page, a schedule (as each transcript lands, overnight, or only when an Admin allows it), requests an Admin allows or declines, two mails, and a Vision page in the Panel.
 
 Every request the app sends the engine carries `priority` 1, as the shared server's ledger asks of a client, and an engine that cannot take a picture says so with the reason class `llm_no_vision`.
 
@@ -29,7 +29,7 @@ Every request the app sends the engine carries `priority` 1, as the shared serve
 2. Words
 3. What runs when a video is enriched
 4. The memo and the chat
-5. Vision: the tick, the night, and what an Admin allows (proposed)
+5. Vision: the tick, the night, and what an Admin allows
 6. The pages, the exports, and the mail
 7. The Panel: the Vision page and the templates
 8. Audit rows and reason classes
@@ -118,7 +118,7 @@ In the vision lane, one video after another, in this order; the whole of it is w
 - **The Case Chat** reads, after each Transcript, that recording's Digest; a recording still preparing reads as its transcript alone; over the hours ceiling, or when a transcript will not fit, the Digest stands in for it. It never makes or remakes a Digest and says when one was made. The camera rules join its instructions when any Digest is present.
 - **The lines.** The chat's grounding line reads "Answers come from this transcript and its n described moments, not from any other recording. What the camera showed is a model's description."; the waiting line "Reading the transcript and n moments..." or, while the video is prepared, the preparation's own words.
 
-## 5. Vision: the tick, the night, and what an Admin allows (proposed)
+## 5. Vision: the tick, the night, and what an Admin allows
 
 Written 2026-09-14, after the maintainer had judged the first memos and turned to the cost of the picture: "I'm wondering if we should build in some scheduling, where the vlm part runs overnight ... I think we need a tick that turns on this part of the processing. Someone may just want transcripts completed." The decisions that followed, in the maintainer's words: the option needs a better name, "maybe something like 'enrich with vision'"; the person is told it runs overnight and that an email follows; "only an admin should be able to make this urgent, otherwise everyone will just click it", with a request an Admin can allow; two mails, one when each stage is complete; "intuitive but not overexplanatory" communication of what has occurred and what will occur; a user may change their mind after a case is made ("not yet enriched with vision"); and, on session recordings, that vision runs for recordings in a case, and for session recordings too when the office sets it to run as each transcript lands. The engine is GIDEON's, shared with its own users by day; every description is a request on it; the night is where the bulk of that work belongs, and a person's need for it now is a decision an Admin makes.
 
@@ -262,7 +262,7 @@ As they stand at v1.53.2; chapter 5 changes the words on the case page, the batc
 | LLM | AI assistant call, feature `digest`; feature `stamp` | v1.51.0 |
 | Recordings | Picture and sound scanned | v1.40.0 |
 | Recordings | Video prepared (Video enriched from chapter 5) | v1.52.0 |
-| Recordings | Vision queued; Vision requested; Vision allowed; Vision declined | chapter 5, proposed |
+| Recordings | Vision queued; Vision requested; Vision allowed; Vision declined | v1.54.0 |
 
 Withdrawn: AI assistant call, feature `moment_finder` (v1.51.0); Viewer edits, Moment edited and Moment deleted (v1.52.0).
 
@@ -325,4 +325,5 @@ The maintainer's asks and decisions of 2026-09-11 (Moments), 2026-09-12 (the rec
 
 ## Amendments applied
 
-- 2026-09-14: the document rewritten whole as what stands, from the maintainer's reading of the diary ("I see a lot of mentions related to moments which I thought we went away from"); the diary kept under `docs/spec/history/`. Chapter 5 (Vision) carried over from the diary's chapter 8, proposed the same day and not yet built. Later amendments are recorded here, one line each, as before.
+- 2026-09-14: the document rewritten whole as what stands, from the maintainer's reading of the diary ("I see a lot of mentions related to moments which I thought we went away from"); the diary kept under `docs/spec/history/`. Chapter 5 (Vision) carried over from the diary's chapter 8, proposed the same day. Later amendments are recorded here, one line each, as before.
+- Chapter 5 built as v1.54.0, the same day, with these decisions left to the build: the night's tick is a periodic task each minute on the default queue, one video at a time, the oldest transcript first; the videos still waiting are marked not reached in the three minutes after the window closes; a request is one open at a time per case or video; the Vision requested message goes to every Admin with an address and to the operator when none has one; the summary's card carries `written_from`; the retired settings' values live on as constants for the code paths that still read them (an asked moment's span of 10 s, a question's 3 frames at 720 pixels, the stamp's 720 pixels).

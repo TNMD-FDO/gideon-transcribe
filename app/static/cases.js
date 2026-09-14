@@ -583,6 +583,35 @@
     reopen.addEventListener("click", function () { draw(open()); });
   }
 
+  // Ask for it now (Phase 4 chapter 5): a button that carries data-prompt
+  // opens one box for the optional line of why, then submits its form with
+  // the line in a hidden field; Cancel submits nothing.
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-prompt]"), function (button) {
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+      var form = button.form;
+      if (!form) { return; }
+      // The app's own box (ui.js); without it the request goes with no line.
+      var asked = window.UI && window.UI.prompt
+        ? window.UI.prompt({ title: button.dataset.promptTitle, text: button.dataset.prompt, ok: button.dataset.promptOk, value: "" })
+        : Promise.resolve("");
+      asked.then(function (line) {
+        if (line === null || line === undefined || line === false) { return; }
+        var field = document.createElement("input");
+        field.type = "hidden";
+        field.name = button.dataset.promptName || "why";
+        field.value = String(line).slice(0, 200);
+        form.appendChild(field);
+        var action = document.createElement("input");
+        action.type = "hidden";
+        action.name = "action";
+        action.value = button.value;
+        form.appendChild(action);
+        form.submit();
+      });
+    });
+  });
+
   // The recordings' state while a video is being prepared (Phase 4 chapter
   // 7, v1.53.2): the page fetches itself every fifteen seconds and swaps
   // the State and Prepared cells of each row, and the line above the table,
@@ -594,7 +623,7 @@
     function preparing() {
       return Array.prototype.some.call(
         recordings.querySelectorAll("td.prepared .pill.warn"),
-        function (pill) { return /^(Preparing|Queued)/.test(pill.textContent.trim()); }
+        function (pill) { return /^(Enriching now|Preparing|Queued)/.test(pill.textContent.trim()); }
       );
     }
     function swap(fresh) {

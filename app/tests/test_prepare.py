@@ -221,17 +221,17 @@ def test_the_preparation_makes_the_record_and_the_digest_and_keeps_count(
     )
     assert DigestPart.objects.count() == 1
     assert assistant.prepared(transcript) is True
-    row = Row.objects.get(event="Video prepared")
+    row = Row.objects.get(event="Video enriched")
     assert row.details["descriptions"] == 4 and row.details["parts"] == 1
     assert row.outcome == "success"
-    assert assistant.prepare_words(transcript) == ("Prepared", "ok")
+    assert assistant.prepare_words(transcript) == ("Enriched with vision", "ok")
     said = assistant.prepare_json(transcript)
     assert said["state"] == "done" and said["seconds_left"] == 0
 
     # A second preparation finds nothing left: no calls, the row written again.
     assert assistant.prepare(transcript, asked_by=person) is True
     assert len(asked) == 5
-    assert Row.objects.filter(event="Video prepared").count() == 2
+    assert Row.objects.filter(event="Video enriched").count() == 2
 
     # The engine gone: not prepared, the reason kept, the row a failure.
     monkeypatch.setattr(engine, "is_reachable", lambda: False)
@@ -241,7 +241,7 @@ def test_the_preparation_makes_the_record_and_the_digest_and_keeps_count(
     assert transcript.prepare_state == assistant.FAILED
     assert transcript.prepare_reason == "llm_unreachable"
     assert assistant.prepare_words(transcript)[1] == "danger"
-    assert assistant.prepare_words(transcript)[0].startswith("Not prepared: ")
+    assert assistant.prepare_words(transcript)[0].startswith("Not enriched: ")
 
 
 @pytest.mark.django_db
@@ -327,7 +327,7 @@ def test_the_estimate_comes_from_the_engines_own_pace(ready, person):
     transcript.save()
     assert assistant.seconds_left(transcript) == 60
     assert assistant.prepare_words(transcript) == (
-        "Preparing 4 of 10, about 1 minute",
+        "Enriching now, 4 of 10, about 1 minute",
         "warn",
     )
 
@@ -435,11 +435,11 @@ def test_the_batch_page_and_the_case_page_say_the_count_and_the_time_left(
     state = client.get(f"/batch/{batch.pk}/state").json()
     (row,) = state["recordings"]
     assert row["prepare"]["state"] == "running" and row["prepare"]["done"] == 4
-    assert row["prepare"]["line"].startswith("Preparing 4 of 10")
+    assert row["prepare"]["line"].startswith("Enriching now, 4 of 10")
     assert state["preparing"]["count"] == 1 and state["preparing"]["about"]
     page = client.get(f"/case/{case.pk}").content.decode()
-    assert "<th>Prepared</th>" in page and "Preparing 4 of 10" in page
-    assert "Prepare them now" not in page
+    assert "<th>Vision</th>" in page and "Enriching now, 4 of 10" in page
+    assert "not yet enriched with vision" not in page
     # The State pill says Preparing rather than Ready while the picture is
     # being prepared (v1.52.2), and Ready once it is.
     assert '<span class="pill warn">Preparing</span>' in page
@@ -449,18 +449,18 @@ def test_the_batch_page_and_the_case_page_say_the_count_and_the_time_left(
     assert "stay until you sign out" not in batch_page
     assert "Back to Ramirez" in batch_page
 
-    # Not prepared: the case page offers the press, which queues them.
+    # Not enriched: the case page offers an Admin Enrich now, which queues them.
     transcript.prepare_state = ""
     transcript.save(update_fields=["prepare_state"])
     page = client.get(f"/case/{case.pk}").content.decode()
     assert '<span class="pill ok">Ready</span>' in page
-    assert "1 video not yet prepared for summaries and chat" in page
-    assert "Prepare them now" in page
+    assert "1 video not yet enriched with vision" in page
+    assert "Enrich now" in page
     deferred = []
     monkeypatch.setattr(
         tasks.prepare_video, "defer", lambda **fields: deferred.append(fields)
     )
-    answer = client.post(f"/case/{case.pk}/prepare")
+    answer = client.post(f"/case/{case.pk}/vision", {"action": "now"})
     assert answer.status_code == 302
     transcript.refresh_from_db()
     assert transcript.prepare_state == assistant.QUEUED

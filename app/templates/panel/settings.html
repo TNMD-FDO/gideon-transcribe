@@ -12,6 +12,34 @@
     audit log with the note you type there.
   </p>
 
+  {% if vision_said %}<p class="notice">{{ vision_said }}</p>{% endif %}
+  {% if vision_requests is not None %}
+    {% comment %}
+      The requests waiting for an Admin (Phase 4 chapter 5): who, what, how
+      long the work would take, the line of why, and Allow or Decline with an
+      optional line back. Outside the tray: a decision acts at once.
+    {% endcomment %}
+    <h2 style="margin-top: 0">Requests</h2>
+    {% if vision_requests %}
+      <div class="vision-requests">
+        {% for one in vision_requests %}
+          <form method="post" action="{% url 'panel-vision-request' one.id %}" class="card" style="margin-bottom: 10px">
+            {% csrf_token %}
+            <div class="row"><b class="grow">{{ one.who }} asks for vision now on <a href="{% url 'case' one.case_id %}">{{ one.what }}</a></b><span class="muted small">{{ one.when }} · {{ one.about }} of engine time</span></div>
+            {% if one.why %}<p class="small" style="margin: 6px 0 0">"{{ one.why }}"</p>{% endif %}
+            <div class="row" style="margin-top: 8px; gap: 8px; flex-wrap: wrap">
+              <input type="text" name="line" maxlength="200" placeholder="A line back, if you like" class="grow" style="min-width: 12rem">
+              <button type="submit" name="action" value="allow" class="primary small">Allow</button>
+              <button type="submit" name="action" value="decline" class="small">Decline</button>
+            </div>
+          </form>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted small">Nobody is waiting for an Admin to allow vision now.</p>
+    {% endif %}
+  {% endif %}
+
   {% if limits_cross_reference %}
     <p class="notice">
       The idle timeout is on the <b>Sign-in and directory</b> page, because it
@@ -54,6 +82,7 @@
     {% csrf_token %}
 
     {% for row in rows %}
+      {% ifchanged row.group %}{% if row.group %}<h2 class="settings-group">{{ row.group }}</h2>{% endif %}{% endifchanged %}
       <div class="arow{% if row.waiting %} dirty{% endif %}{% if row.greyed %} greyed{% endif %}" id="row-{{ row.key }}">
         <div class="lbl">
           <label for="{{ row.key }}"><b>{{ row.name }}</b></label>

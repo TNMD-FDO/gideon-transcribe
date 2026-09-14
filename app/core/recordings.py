@@ -151,6 +151,10 @@ class Batch(models.Model):
     # that message went, so it is sent once and never resent.
     email_when_done = models.BooleanField(default=False)
     mail_sent_at = models.DateTimeField(null=True, blank=True)
+    # Enrich with vision, ticked as one for the batch (Phase 4 chapter 5), and
+    # when the second message, Vision done, went.
+    vision = models.BooleanField(default=False)
+    vision_mail_sent_at = models.DateTimeField(null=True, blank=True)
 
     # A Live recording's own Batch (Phase 3): one Recording, made on the
     # Record page, which never holds up the person's uploads.
@@ -229,6 +233,9 @@ class Recording(models.Model):
     # recognise a recording after it is discarded.
     title = models.CharField(max_length=300)
     original_filename = models.CharField(max_length=400)
+    # Enrich with vision (Phase 4 chapter 5): the upload page's tick, or a
+    # press on the case page; means nothing for a sound recording.
+    vision_wanted = models.BooleanField(default=False)
 
     size_bytes = models.BigIntegerField(default=0)
     sha256 = models.CharField(max_length=64, blank=True, default="", db_index=True)

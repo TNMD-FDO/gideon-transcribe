@@ -21,6 +21,70 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.54.0, 2026-09-14
+
+```
+Models: unchanged
+Database: migrates (0043: the Enrich with vision tick on a recording and a
+batch, when a batch's second message went, and the Vision requests)
+```
+
+### Added
+
+- **Vision on the office's terms** (Phase 4 chapter 5). The picture step of
+  a video is called Vision on every page and is chosen with a tick on the
+  upload page, **Enrich with vision**, whose starting position is an office
+  setting. The office says when it runs: **as each transcript lands** (what
+  v1.52.0 did, and the shipped position), **overnight** in a window of two
+  server-time clock times, oldest video first, one at a time, or **only
+  when asked**, when nothing runs until an Admin allows it. Under the two
+  scheduled positions vision is offered only for a recording in a case,
+  since a session's recordings are gone by night.
+- **The case page's Vision column** in one family of words: Enriched with
+  vision; Enriching now, 12 of 60, about 18 minutes; Enriching tonight (and
+  how many are ahead of it, or that it was not reached last night); Requested
+  now, waiting for an Admin; Not yet enriched with vision. **Enrich tonight**
+  for anyone with the case, **Ask for it now** as a request with an optional
+  line of why, and **Enrich now** for an Admin, on the line above the list
+  and on each video's row.
+- **Requests** at the top of the Panel's Vision page, with the asker, the
+  case or video, the estimate and the line, and Allow or Decline with a line
+  back; a count in the rail; every Admin with an address is mailed when one
+  arrives, the asker when it is allowed and when the work is done.
+- **A Vision page** in the Panel's Settings group holding every picture
+  setting under its group (Vision, the descriptions, the scan, the record,
+  the digest, the chat, the camera stamp, exports), moved from the AI
+  assistant page with their keys unchanged. Moments is named **Vision**,
+  Moments in answers **Descriptions reach summaries and chat**, and the
+  Moment prefix Description. **Exports carry what the camera showed** (On)
+  leaves the camera section out of the exports when Off.
+- **Two mails for a case batch under a schedule**: the Batch finished
+  message says the videos are enriched tonight, or when an Admin allows it,
+  and that a second message follows; **Vision done** says they are ready.
+  Three new templates on the Email page: Vision done, Vision requested,
+  Vision allowed.
+- **Before the vision**, under a schedule, a summary or a chat question is
+  written from the transcript at once and the card says "written from the
+  transcript"; once the video is enriched the card says "Regenerate to
+  include the vision". A summary never starts the vision work under a
+  schedule. As each transcript lands, the v1.52.0 rule stands.
+- The engine gone during the night puts the video back to tonight rather
+  than failing it. GIDEON's own maintenance nights are parked for a later
+  chapter.
+
+### Changed
+
+- The audit row Video prepared is written as **Video enriched**; new rows
+  Vision queued, Vision requested, Vision allowed, Vision declined.
+- The batch page says "Enriching 3 videos with vision, about 40 minutes" or
+  "3 videos are enriched with vision tonight, between 20:00 and 06:00".
+
+### Withdrawn
+
+- Three settings whose features v1.52.0 removed: Moment clip length, Look
+  closer frame height, Look closer frames. A stored value is ignored.
+- The case page's Prepare them now, replaced by the three buttons above.
+
 ## v1.53.2, 2026-09-14
 
 ```

@@ -256,6 +256,17 @@ def mind_the_workspaces(timestamp: int) -> None:
 
 
 @app.periodic(cron="* * * * *")
+@app.task(queue="default", name="mind_the_night")
+def mind_the_night(timestamp: int) -> None:
+    """Every minute: inside the office's overnight window the oldest video
+    marked tonight is queued for vision when none is being enriched; outside
+    it the ones still waiting are marked not reached (Phase 4 chapter 5)."""
+    from core import vision
+
+    vision.mind_the_night()
+
+
+@app.periodic(cron="* * * * *")
 @app.task(queue="llm", name="check_the_engine")
 def check_the_engine(timestamp: int) -> None:
     """Does the engine answer? Asked once a minute, from the one container that can.

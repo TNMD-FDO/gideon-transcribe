@@ -278,11 +278,28 @@
             row on every width: the pane on the right is the case's own, so
             the recordings' details stay with their rows.
           {% endcomment %}
-          {% if prepare_line %}
-            <form method="post" action="{% url 'prepare-case' case.pk %}" class="row" id="prepare-line" style="margin: 0 0 8px">
+          {% if vision_line %}
+            {% comment %}
+              Vision for the case's videos not yet enriched (Phase 4 chapter
+              5): tonight for anyone with the case, a request for now that an
+              Admin decides, and Enrich now for an Admin. cases.js refreshes
+              this line while a video is being enriched.
+            {% endcomment %}
+            <form method="post" action="{% url 'vision-case' case.pk %}" class="row vision-line" id="prepare-line" style="margin: 0 0 8px; flex-wrap: wrap">
               {% csrf_token %}
-              <span class="muted small">{{ prepare_line }}.</span>
-              <button type="submit" class="small">Prepare them now</button>
+              <span class="muted small">{{ vision_line }}.</span>
+              {% if vision_offers.tonight %}
+                <button type="submit" name="action" value="tonight" class="small"
+                        data-confirm-title="Enrich them tonight?" data-confirm="Enriched tonight, {{ vision_offers.window }}; the people on this case get an email when it is done." data-confirm-ok="Enrich tonight">Enrich tonight</button>
+              {% endif %}
+              {% if vision_offers.ask %}
+                <button type="submit" name="action" value="ask" class="small ghost"
+                        data-prompt-title="Ask for it now?" data-prompt="One line for the Admin, if you like: why now." data-prompt-name="why" data-prompt-ok="Ask">Ask for it now</button>
+              {% endif %}
+              {% if vision_offers.now %}
+                <button type="submit" name="action" value="now" class="small primary"
+                        data-confirm-title="Enrich them now?" data-confirm="The engine works on them by day, one after another, starting now." data-confirm-ok="Enrich now">Enrich now</button>
+              {% endif %}
             </form>
           {% endif %}
           {% comment %}
@@ -294,7 +311,7 @@
           <div class="tbl-wrap">
           <table class="tbl" id="recordings">
             <thead>
-              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Prepared</th><th>Added</th><th></th></tr>
+              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Vision</th><th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
@@ -339,6 +356,22 @@
                       <div class="row actions">
                         {% if recording.transcript %}
                           <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
+                        {% endif %}
+                        {% if recording.vision_offered and recording.vision_state != "done" and recording.vision_state != "queued" and recording.vision_state != "running" %}
+                          <form method="post" action="{% url 'vision-case' case.pk %}" class="row" style="display: inline-flex; gap: 6px">
+                            {% csrf_token %}
+                            <input type="hidden" name="recording" value="{{ recording.pk }}">
+                            {% if vision_offers.tonight and recording.vision_state != "tonight" %}
+                              <button type="submit" name="action" value="tonight" class="small">Enrich tonight</button>
+                            {% endif %}
+                            {% if vision_offers.ask %}
+                              <button type="submit" name="action" value="ask" class="small ghost"
+                                      data-prompt-title="Ask for it now?" data-prompt="One line for the Admin, if you like: why now." data-prompt-name="why" data-prompt-ok="Ask">Ask for it now</button>
+                            {% endif %}
+                            {% if vision_offers.now %}
+                              <button type="submit" name="action" value="now" class="small">Enrich now</button>
+                            {% endif %}
+                          </form>
                         {% endif %}
                         {% if recording.transcript and not recording.being_replaced %}
                           <button type="button" class="small process-again"

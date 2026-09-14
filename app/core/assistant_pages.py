@@ -77,6 +77,20 @@ def _summary_json(summary: Summary, transcript) -> dict:
         "describe_first": summary.describe_first,
         "moments_used": summary.moments_used,
         "digest_parts": summary.digest_parts,
+        # The card's line (chapter 5): from the transcript and the vision,
+        # from the transcript, or from the transcript with the vision there
+        # now for a Regenerate to take in.
+        "written_from": (
+            "both"
+            if summary.digest_parts
+            else (
+                "transcript_vision"
+                if transcript is not None
+                and summary.state == assistant.DONE
+                and assistant.prepared(transcript)
+                else "transcript"
+            )
+        ),
         "stage": summary.stage,
         "text": summary.text,
         "citations": summary.citations,

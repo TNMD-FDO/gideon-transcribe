@@ -174,7 +174,11 @@
     var done = document.getElementById("when-done");
     var preparing = state.preparing || { count: 0 };
     done.textContent = state.finished
-      ? (preparing.count ? "Transcribed. Preparing " + preparing.count + (preparing.count === 1 ? " video" : " videos") + " for summaries and chat, " + preparing.about + "." : "")
+      ? (preparing.count
+          ? "Transcribed. Enriching " + preparing.count + (preparing.count === 1 ? " video" : " videos") + " with vision, " + preparing.about + "."
+          : (preparing.tonight
+              ? "Transcribed. " + preparing.tonight + (preparing.tonight === 1 ? " video is" : " videos are") + " enriched with vision tonight, " + preparing.window + "."
+              : ""))
       :
       (waiting ? waiting + (waiting === 1 ? " recording" : " recordings") + " still to come" : "Nothing still to come") +
       (state.everything_done_by ? ". " + state.everything_done_by : ".");

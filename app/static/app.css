@@ -1959,3 +1959,7 @@ details.inline[open] summary::after { content: ": "; }
 .admin-digest pre { white-space: pre-wrap; font-size: 0.85em; background: var(--surface-2); padding: 8px 10px; border-radius: 6px; }
 .admin-descriptions { padding-left: 18px; font-size: 0.9em; }
 .admin-descriptions li { margin: 0 0 6px; }
+
+/* The Vision page groups its settings under headings (Phase 4 chapter 5). */
+.settings-group { margin: 22px 0 6px; font-size: 1em; }
+.settings-group:first-child { margin-top: 0; }

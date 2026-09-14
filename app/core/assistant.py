@@ -792,7 +792,17 @@ def write_summary(summary_id) -> None:
         # intervals, in this lane, so the camera block below is full.
         # A video is prepared first (chapter 7): the record and the Digest,
         # by the transcript's own task if it is at it, else here and now.
-        if record_on() and has_picture(recording) and not prepared(transcript):
+        # Under a schedule the summary never starts the vision work: it is
+        # written from the transcript, and Regenerate takes the vision in
+        # later (chapter 5).
+        from core import vision
+
+        if (
+            record_on()
+            and has_picture(recording)
+            and not prepared(transcript)
+            and not vision.scheduled()
+        ):
             summary.stage = "preparing"
             summary.save(update_fields=["stage"])
             wait_or_prepare(
@@ -920,7 +930,14 @@ def answer_turn(turn_id) -> None:
         problem = _unreachable()
         if problem:
             raise problem
-        if record_on() and has_picture(recording) and not prepared(transcript):
+        from core import vision
+
+        if (
+            record_on()
+            and has_picture(recording)
+            and not prepared(transcript)
+            and not vision.scheduled()
+        ):
             wait_or_prepare(transcript, asked_by=chat.asked_by)
             transcript.refresh_from_db()
         lines = prompts.lines_of(transcript)
@@ -1083,7 +1100,7 @@ def has_picture(recording) -> bool:
 
 def moment_span(recording, at: float) -> tuple[float, float]:
     """The clip's span around a time: half the setting either side, inside the file."""
-    half = settings_store.moment_span_seconds() / 2
+    half = ASKED_SPAN_SECONDS / 2
     length = float(recording.duration_seconds or 0.0)
     start = max(0.0, at - half)
     end = at + half
@@ -1162,10 +1179,10 @@ def describe_moment(moment_id) -> None:
         if moment.is_question:
             # A question: a few frames at the camera's own detail, and the
             # question's fixed shape; the editable template still applies.
-            height = settings_store.moment_question_height()
+            height = QUESTION_HEIGHT
             times = question_times(
                 moment.at,
-                settings_store.moment_question_frames(),
+                QUESTION_FRAMES,
                 float(recording.duration_seconds or 0.0),
             )
             frames = len(times)
@@ -1527,7 +1544,7 @@ def _read_stamp_frame(recording, transcript, at: float) -> tuple[dict, dict]:
     from core import media
 
     ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
-    height = settings_store.moment_question_height()
+    height = STAMP_HEIGHT
     system = prompts.system_message(ground.text, prompts.STAMP, prompts.STAMP_FORMAT)
     text = "\n\n".join(
         [
@@ -1646,6 +1663,13 @@ def read_stamp(transcript, *, asked_by) -> dict:
 # and parts have taken on this engine rather than a guess.
 
 PREPARING = "running"
+# What the withdrawn features' settings were (the diary's chapters 1 and 2),
+# kept as constants for the code paths that still read them: an asked
+# moment's span, a question's frames, and the height the stamp is read at.
+ASKED_SPAN_SECONDS = 10
+QUESTION_HEIGHT = 720
+QUESTION_FRAMES = 3
+STAMP_HEIGHT = 720
 DIGEST_SECONDS_GUESS = 30
 PREPARE_WAIT_SECONDS = 3 * 3600
 PLAYBACK_RETRY_SECONDS = 60
@@ -1782,10 +1806,17 @@ def prepare(transcript, *, asked_by=None) -> bool:
         reason = problem.reason
         transcript.prepare_state = FAILED
         transcript.prepare_reason = reason
+        # The engine gone during the night: the video waits for the next
+        # window rather than failing (chapter 5).
+        from core import vision
+
+        if reason == engine.UNREACHABLE and vision.scheduled():
+            transcript.prepare_state = vision.TONIGHT
+            transcript.prepare_reason = vision.NOT_REACHED
     transcript.save(update_fields=["prepare_state", "prepare_reason", "prepared_at"])
     audit.write(
         audit.Category.RECORDINGS,
-        "Video prepared",
+        "Video enriched",
         actor=asked_by,
         outcome=audit.Outcome.SUCCESS if not reason else audit.Outcome.FAILURE,
         reason_class=reason,
@@ -1803,8 +1834,12 @@ def prepare(transcript, *, asked_by=None) -> bool:
         parts=transcript.digest_parts.count(),
         duration_seconds=round(time.monotonic() - started, 1),
     )
-    # The Batch's mail waits for its videos to be prepared.
+    # The Batch's mail waits for its videos to be prepared; under a schedule
+    # the second message and the requests are told (chapter 5).
     mail.note_batch_progress(recording)
+    from core import vision
+
+    vision.note_progress(recording)
     return not reason
 
 
@@ -1852,25 +1887,12 @@ def queue_preparation(recording) -> bool:
 
 
 def prepare_words(transcript) -> tuple[str, str]:
-    """What a page says about a video's preparation, and the pill's tone."""
-    if transcript is None:
-        return "", ""
-    state = transcript.prepare_state
-    if state == DONE:
-        return "Prepared", "ok"
-    if state == FAILED:
-        return "Not prepared: " + what_to_say(transcript.prepare_reason), "danger"
-    if state in (QUEUED, PREPARING):
-        left = seconds_left(transcript)
-        count = (
-            f"{transcript.prepare_done} of {transcript.prepare_total}, "
-            if transcript.prepare_total
-            else ""
-        )
-        return f"Preparing {count}{about(left)}".strip(), "warn"
-    if record_on() and has_picture(transcript.recording):
-        return "Not prepared", ""
-    return "", ""
+    """What a page says about a video's vision, and the pill's tone: the one
+    family of words chapter 5 fixes (Enriched with vision, Enriching now,
+    Enriching tonight, Not yet enriched with vision)."""
+    from core import vision
+
+    return vision.words(transcript)
 
 
 def seconds_left(transcript) -> int:
@@ -1898,6 +1920,8 @@ def prepare_json(transcript) -> dict | None:
         return None
     words, tone = prepare_words(transcript)
     left = seconds_left(transcript) if transcript.prepare_state != DONE else 0
+    from core import vision
+
     return {
         "state": transcript.prepare_state or "none",
         "done": transcript.prepare_done,
@@ -1905,6 +1929,7 @@ def prepare_json(transcript) -> dict | None:
         "seconds_left": left,
         "line": words,
         "tone": tone,
+        "scheduled": vision.scheduled(),
     }
 
 

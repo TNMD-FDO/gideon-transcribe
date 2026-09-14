@@ -171,7 +171,10 @@
       var head = "<div class='row'><b class='grow'>" + escape(one.template) + "</b>" +
         "<span class='muted small'>" + escape(one.length) +
         (one.focus ? " · focus: " + escape(one.focus) : "") +
-        (one.digest_parts ? " · from the words and the camera" : (one.moments_used ? " · " + plural(one.moments_used, "moment") : "")) +
+        (one.written_from === "both" ? " · written from the transcript and the vision" :
+          (one.written_from === "transcript_vision" ? " · written from the transcript; Regenerate to include the vision" :
+            (one.state === "done" && one.written_from === "transcript" ? " · written from the transcript" :
+              (one.moments_used ? " · " + plural(one.moments_used, "moment") : "")))) +
         " · " + escape(one.when) + "</span></div>";
       var body;
       if (one.state === "queued" || one.state === "running") {
@@ -440,7 +443,11 @@
       return;
     }
     note.hidden = false;
-    if (prepare.state === "done") {
+    if (prepare.scheduled && prepare.state !== "done") {
+      // Under a schedule (Phase 4 chapter 5) the summary never starts the
+      // vision work: it is written from the transcript.
+      note.textContent = "Written from the transcript.";
+    } else if (prepare.state === "done") {
       note.textContent = "Written from the words and the camera's descriptions together" +
         (runs.stamp ? "; the camera's clock is known" : "") + ".";
     } else if (prepare.state === "running" || prepare.state === "queued") {
