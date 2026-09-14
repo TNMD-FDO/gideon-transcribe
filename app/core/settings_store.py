@@ -934,7 +934,7 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Summary answer cap, Short",
             kind=NUMBER,
-            default=600,
+            default=800,
             least=100,
             most=16000,
             unit="tokens",
@@ -946,7 +946,7 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Summary answer cap, Standard",
             kind=NUMBER,
-            default=1200,
+            default=1600,
             least=100,
             most=16000,
             unit="tokens",
@@ -958,7 +958,7 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Summary answer cap, Detailed",
             kind=NUMBER,
-            default=2500,
+            default=3500,
             least=100,
             most=16000,
             unit="tokens",
@@ -1469,14 +1469,16 @@ def _rows() -> list[Definition]:
             page=ASSISTANT,
             name="Digest window",
             kind=NUMBER,
-            default=12000,
-            least=4000,
+            default=4000,
+            least=1000,
             most=40000,
             unit="tokens",
             needs="moments_available",
             what_it_does=(
                 "How much of the transcript one digest call condenses, about "
-                "twenty minutes of talk at the shipped figure; one call per window."
+                "ten minutes of talk at the shipped figure; one call per window. "
+                "A window whose part comes back cut off is split in two and "
+                "condensed again, whatever the figure."
             ),
             when_changed="The next summary; only the changed windows are remade.",
         ),

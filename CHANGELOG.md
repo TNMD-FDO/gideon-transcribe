@@ -21,6 +21,45 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.53.0, 2026-09-14
+
+```
+Models: unchanged
+Database: migrates (0042: the digest's splits, whether a part was cut off,
+and the hash of the shipped wording a template took)
+```
+
+### Changed
+
+- The Standard, Video and Body camera summaries are written as a memo a
+  member of staff hands to an attorney: a summary paragraph, the people as
+  the recording identifies them, what happened grouped by subject rather
+  than minute by minute, the statements that carry weight, then the names
+  and dates and the unclear stretches. Third person, past tense, a time only
+  where a reader would want to check. A person is named, or given a role,
+  only as the words give it; the People part says where. No closing section
+  of points for the attorney: the memo ends at the facts.
+- The digest is condensed in windows of about 4,000 tokens (12,000 before),
+  one time per line, exact quotes only where the words carry weight, filler
+  folded, camera lines only where they add what the words do not. A part
+  that comes back cut off at its cap splits its window in two and the halves
+  are condensed afresh; a one-line window still cut is kept and marked, and
+  the Admin's fold under Details says which part and how many splits.
+- The summary answer caps start at 800, 1,600 and 3,500 tokens (600, 1,200
+  and 2,500 before), so a Detailed memo of a long recording is not cut off.
+- A shipped template the office has not edited follows the wording of each
+  new release by itself, its version rising as if reset. One the office has
+  edited keeps its words, and the Templates page marks it "shipped wording
+  changed" so Reset is a choice. Until now a built-in was made once and never
+  followed a later release: the v1.52.0 Video summary never reached a server
+  that had used the v1.43.0 one.
+
+### Fixed
+
+- The digest of a fifty-minute video stopped at minute four: each part hit
+  its cap on timestamps and filler quotes and nobody was told. See the split
+  rule above; the cut is recorded from now on.
+
 ## v1.52.2, 2026-09-12
 
 ```

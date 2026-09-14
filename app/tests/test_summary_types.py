@@ -84,8 +84,84 @@ def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):
         assert one.text == prompts.SHIPPED_SUMMARIES[one.key]
         if one.key != "dictation":
             assert "Unclear parts" in one.text
-            # The Video summary opens with an executive summary (v1.52.0).
-            assert "Overview" in one.text or "Executive summary" in one.text
+    # The Standard, Video and Body camera summaries are memos to the attorney
+    # (v1.53.0): a summary, the people as the words identify them, what
+    # happened by subject, the statements that matter.
+    for key in ("standard", "video", "body_camera"):
+        text = SummaryTemplate.objects.get(key=key).text
+        assert "memo a member of staff hands to an attorney" in text
+        assert "Summary:" in text and "People:" in text
+        assert "What happened:" in text and "Statements that matter:" in text
+        assert "Never infer a name or a role" in text
+        assert "never minute by minute" in text
+    assert "Commands, warnings, and rights:" in (
+        SummaryTemplate.objects.get(key="body_camera").text
+    )
+
+
+def test_an_unedited_built_in_follows_the_shipped_wording_on_upgrade(db):
+    """The server's Video summary was still the v1.43.0 text at v1.52.2: a
+    built-in was made once and never followed a later release. Now an
+    unedited copy takes the new wording, its version rising as if reset; an
+    edited copy is left, and says it is behind; Reset takes the wording and
+    clears that; prompt templates do the same (v1.53.0)."""
+    from core.assistant import PromptTemplate
+
+    SummaryTemplate.shipped()
+    video = SummaryTemplate.objects.get(key="video")
+    assert video.shipped_hash == prompts.text_hash(video.text) and not video.behind
+    # The copy an earlier release stored, unedited (its hash known).
+    video.text = "The older shipped wording."
+    video.description = "Older."
+    video.shipped_hash = prompts.text_hash(video.text)
+    video.save()
+    SummaryTemplate.shipped()
+    video.refresh_from_db()
+    assert video.text == prompts.SHIPPED_SUMMARIES["video"] and video.version == 2
+    assert video.description.startswith("A memo from the words and the picture")
+    assert not video.behind
+    # An edited copy: left as it is, and behind since the wording moved on.
+    body = SummaryTemplate.objects.get(key="body_camera")
+    body.save_text("Our own wording.")
+    assert not body.behind
+    body.shipped_hash = "0000000000000000"
+    body.save(update_fields=["shipped_hash"])
+    SummaryTemplate.shipped()
+    body.refresh_from_db()
+    assert body.text == "Our own wording." and body.behind
+    body.reset()
+    body.refresh_from_db()
+    assert body.text == prompts.SHIPPED_SUMMARIES["body_camera"] and not body.behind
+    # Prompt templates: the same on every named().
+    digest = PromptTemplate.named(PromptTemplate.DIGEST)
+    digest.text = "The older digest wording."
+    digest.shipped_hash = prompts.text_hash(digest.text)
+    digest.save()
+    digest = PromptTemplate.named(PromptTemplate.DIGEST)
+    assert digest.text == prompts.DIGEST and digest.version == 2
+    # A copy with no known hash (an office's own words) is left alone.
+    chat = PromptTemplate.named(PromptTemplate.CHAT)
+    chat.text = "Ours."
+    chat.shipped_hash = ""
+    chat.save()
+    chat = PromptTemplate.named(PromptTemplate.CHAT)
+    assert chat.text == "Ours." and chat.behind
+    history = prompts.SHIPPED_HISTORY
+    assert prompts.text_hash(prompts.DIGEST) in history["prompt:digest"]
+    assert prompts.text_hash(prompts.STANDARD_SUMMARY) in history["standard"]
+
+
+def test_the_templates_page_says_when_an_edited_copy_is_behind(on, admin, client):
+    SummaryTemplate.shipped()
+    signed_in(client, admin)
+    page = client.get("/panel/templates").content.decode()
+    assert "shipped wording changed" not in page
+    row = SummaryTemplate.objects.get(key="hearing")
+    row.save_text("Our own wording.")
+    row.shipped_hash = "0000000000000000"
+    row.save(update_fields=["shipped_hash"])
+    page = client.get("/panel/templates").content.decode()
+    assert page.count("shipped wording changed") == 1
 
 
 def test_the_type_chooses_the_template_and_no_type_keeps_the_default(db, admin):

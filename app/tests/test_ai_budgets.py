@@ -124,8 +124,8 @@ def test_the_assistant_reads_the_settings_at_every_call():
     assert assistant.time_limit("chat_turn") == 120
     assert assistant.cap(1500) == 1500
     assert assistant.window() == 131072
-    assert settings_store.summary_answer_cap("detailed") == 2500
-    assert settings_store.summary_answer_cap("nonsense") == 1200
+    assert settings_store.summary_answer_cap("detailed") == 3500
+    assert settings_store.summary_answer_cap("nonsense") == 1600
     assert case_chat.time_limit_for_the_question() == 15 * 60
 
     settings_store.set_to("chat_time_seconds", 45)

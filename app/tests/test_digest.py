@@ -142,6 +142,17 @@ def test_the_transcript_is_cut_into_windows_on_line_boundaries():
     assert assistant.digest_windows([], 100) == [(0, 0)]
     # A line larger than the budget is a window of its own, never cut.
     assert assistant.digest_windows(lines, 1) == [(n, n + 1) for n in range(10)]
+    # A forced split (a part came back cut off) cuts before that line whatever
+    # the budget says; an unknown id changes nothing (v1.53.0).
+    forced = {str(lines[4].segment_id), "not-a-line"}
+    assert assistant.digest_windows(lines, 10**6, forced) == [(0, 4), (4, 10)]
+    assert assistant.digest_windows(lines, one * 3, forced) == [
+        (0, 3),
+        (3, 4),
+        (4, 7),
+        (7, 9),
+        (9, 10),
+    ]
 
 
 def test_the_digest_block_and_the_words_are_as_the_chapter_says():
@@ -152,8 +163,11 @@ def test_the_digest_block_and_the_words_are_as_the_chapter_says():
     assert "(none transcribed)" in prompts.digest_input(1, 1, 0.0, 9.0, "", "")
     assert "(said), (seen), or (both)" in prompts.DIGEST
     assert "Unchanged" in prompts.DIGEST and "Unchanged:" in prompts.RECORD_NEW
+    # One time per line, quotes only where the words carry weight (v1.53.0).
+    assert "One time per line" in prompts.DIGEST
+    assert "only words that carry weight" in prompts.DIGEST
     assert "numbered lines only" in prompts.DIGEST_FORMAT
-    assert prompts.DIGEST_CAP == 1200 and prompts.DIGEST_WINDOW_TOKENS == 12000
+    assert prompts.DIGEST_CAP == 1200 and prompts.DIGEST_WINDOW_TOKENS == 4000
 
 
 # With a database ----------------------------------------------------------------------
@@ -261,6 +275,69 @@ def test_a_summary_makes_the_digest_and_is_written_from_it(ready, person, monkey
     fourth.refresh_from_db()
     assert fourth.digest_parts == 0 and DigestPart.objects.count() == 0
     assert prompts.CAMERA_HEADING in asked[5]["messages"][-1]["content"]
+
+
+@pytest.mark.django_db
+def test_a_part_cut_off_splits_its_window_and_the_halves_are_made_afresh(
+    ready, person, client, monkeypatch
+):
+    """The v1.52.0 digest of a fifty-minute video stopped at minute four:
+    the part hit its cap and nobody knew. A part that comes back cut off now
+    splits its window in two and the plan starts over; parts already made
+    keep their signatures and are not made again; a one-line window that is
+    still cut is kept and marked, and the Admin fold says so (v1.53.0)."""
+    transcript = ready.transcript
+    no_scan_no_stamp(monkeypatch)
+    described(transcript, 0.0, 900.0, "A doorway.")
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    asked = []
+    # Whole window: cut. First half: fine. Second half: cut. Its first line:
+    # fine. Its last line, alone: cut, and nothing left to split.
+    answers = [
+        ("1. [00:00:00]-[00:15:00] (both) Cut", "length"),
+        ("1. [00:00:00]-[00:00:12] (said) Ruiz introduces himself.", "stop"),
+        ("1. [00:00:12]-[00:15:00] (said) Cut again", "length"),
+        ("1. [00:00:12]-[00:12:04] (said) Look at that.", "stop"),
+        ("1. [00:12:04]-[00:15:00] (said) The car, cut", "length"),
+    ]
+
+    def complete(messages, **options):
+        asked.append(messages)
+        text, reason = answers.pop(0)
+        return {
+            "text": text,
+            "finish_reason": reason,
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "model": "the-model",
+        }
+
+    monkeypatch.setattr(engine, "complete", complete)
+    text = assistant.make_digest(transcript, asked_by=person)
+    transcript.refresh_from_db()
+    assert len(asked) == 5
+    parts = list(transcript.digest_parts.order_by("number"))
+    assert [one.number for one in parts] == [1, 2, 3]
+    assert [one.cut_short for one in parts] == [False, False, True]
+    assert text.count("\n") == 2 and "Cut again" not in text
+    lines = prompts.lines_of(transcript)
+    assert transcript.digest_splits == [
+        str(lines[1].segment_id),
+        str(lines[2].segment_id),
+    ]
+    assert assistant.digest_current(transcript) is True
+    # Nothing is made again: the splits are kept on the Transcript.
+    assert assistant.make_digest(transcript, asked_by=person) == text
+    assert len(asked) == 5
+    rows = Row.objects.filter(event="AI assistant call", details__feature="digest")
+    assert rows.count() == 5
+    assert rows.filter(details__split=True).count() == 2
+    # The Admin fold says which part was cut and how often the window split.
+    signed_in(client, person)
+    fold = client.get(f"/recording/{ready.pk}/details").json()["digest"]
+    assert fold["splits"] == 2
+    assert [one["cut_short"] for one in fold["parts"]] == [False, False, True]
 
 
 @pytest.mark.django_db

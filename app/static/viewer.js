@@ -1309,7 +1309,8 @@
     if (!digest) { return; }
     var parts = (digest.parts || []).map(function (one) {
       return "<h4>Part " + one.number + " <span class='muted small'>" + escape(one.span) +
-        (one.made ? " · " + escape(one.made) : "") + (one.model ? " · " + escape(one.model) : "") + "</span></h4>" +
+        (one.made ? " · " + escape(one.made) : "") + (one.model ? " · " + escape(one.model) : "") +
+        (one.cut_short ? " · cut short at the cap" : "") + "</span></h4>" +
         "<pre>" + escape(one.text) + "</pre>";
     }).join("");
     var descriptions = (digest.descriptions || []).map(function (one) {
@@ -1322,7 +1323,9 @@
     box.innerHTML =
       "<details class='admin-digest'><summary>The digest and the descriptions (admins only)</summary>" +
       "<p class='muted small'>" + escape(digest.prepared || "Not prepared") + ". Templates: " + escape(versions) + ". " +
-      "What the summary and the chat are written from, as the model wrote it; nobody else sees this.</p>" +
+      "What the summary and the chat are written from, as the model wrote it; nobody else sees this." +
+      (digest.splits ? " The transcript was split " + digest.splits + " more time" + (digest.splits === 1 ? "" : "s") +
+        " where a part came back cut off at the cap." : "") + "</p>" +
       (parts || "<p class='muted small'>No digest yet.</p>") +
       "<h4>Descriptions</h4>" + (descriptions ? "<ul class='admin-descriptions'>" + descriptions + "</ul>" : "<p class='muted small'>None yet.</p>") +
       "</details>";

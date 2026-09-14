@@ -336,7 +336,7 @@ def test_a_summary_is_written_whole_with_its_citations(
     assert "Speakers were separated automatically" in user
     assert "[3] [00:12:04] Speaker 1: Tell me about the car." in user
     assert "under about 250 words" in user and "Concentrate on: the car." in user
-    assert call["max_completion_tokens"] == 600 and call["temperature"] == 0.3
+    assert call["max_completion_tokens"] == 800 and call["temperature"] == 0.3
     assert call["thinking"] is False and call["timeout"] == 300
 
     state = client.get(f"/recording/{ready.pk}/assistant").json()
@@ -614,7 +614,7 @@ def test_thinking_gets_its_own_room_and_an_empty_answer_says_why(
     )
     assistant.write_summary(summary.pk)
     summary.refresh_from_db()
-    assert asked[0]["max_completion_tokens"] == 600 + assistant.THINKING_ALLOWANCE
+    assert asked[0]["max_completion_tokens"] == 800 + assistant.THINKING_ALLOWANCE
     assert asked[0]["thinking"] is True and asked[0]["timeout"] == 600
     assert summary.state == assistant.FAILED
     assert summary.reason_class == assistant.THOUGHT_AWAY
@@ -633,7 +633,7 @@ def test_thinking_gets_its_own_room_and_an_empty_answer_says_why(
         length="short",
     )
     assistant.write_summary(again.pk)
-    assert asked[0]["max_completion_tokens"] == 600 and asked[0]["thinking"] is False
+    assert asked[0]["max_completion_tokens"] == 800 and asked[0]["thinking"] is False
 
 
 @pytest.mark.django_db

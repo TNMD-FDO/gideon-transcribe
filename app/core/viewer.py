@@ -823,9 +823,11 @@ def _digest_for_admins(transcript) -> dict:
                 "text": one.text,
                 "model": one.model,
                 "made": f"{one.made_at:%d %B %Y %H:%M}" if one.made_at else "",
+                "cut_short": one.cut_short,
             }
             for one in transcript.digest_parts.all()
         ],
+        "splits": len(transcript.digest_splits or []),
         "descriptions": [
             {
                 "span": prompts.span_clock(one),

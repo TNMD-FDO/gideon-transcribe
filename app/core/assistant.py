@@ -80,6 +80,10 @@ class PromptTemplate(models.Model):
     text = models.TextField()
     version = models.IntegerField(default=1)
     updated = models.DateTimeField(auto_now=True)
+    # The hash of the shipped wording this row last took (made, reset, or
+    # followed), so an upgrade can tell an unedited copy from the office's
+    # own words (v1.53.0): unedited, it follows the new shipped wording.
+    shipped_hash = models.CharField(max_length=16, blank=True, default="")
 
     @property
     def name(self) -> str:
@@ -89,13 +93,41 @@ class PromptTemplate(models.Model):
     def default_text(self) -> str:
         return self.DEFAULTS[self.key][1]
 
+    @property
+    def behind(self) -> bool:
+        """Whether the shipped wording changed since this copy took it: an
+        edited copy the Templates page tells about, so Reset is a choice."""
+        return self.shipped_hash != prompts.text_hash(self.default_text)
+
     @classmethod
     def named(cls, key: str) -> PromptTemplate:
-        """The template, made from the chapter's wording when first asked for."""
+        """The template, made from the chapter's wording when first asked for,
+        and brought to a later release's wording while nobody has edited it."""
+        default = cls.DEFAULTS[key][1]
         row, _ = cls.objects.get_or_create(
-            key=key, defaults={"text": cls.DEFAULTS[key][1], "version": 1}
+            key=key,
+            defaults={
+                "text": default,
+                "version": 1,
+                "shipped_hash": prompts.text_hash(default),
+            },
         )
+        row.follow_shipped()
         return row
+
+    def follow_shipped(self) -> bool:
+        """An unedited copy takes the shipped wording of this release; the
+        version rises as if reset. An edited copy is left as it is."""
+        default = self.default_text
+        if self.text == default:
+            return False
+        if prompts.text_hash(self.text) != self.shipped_hash:
+            return False
+        self.text = default
+        self.version += 1
+        self.shipped_hash = prompts.text_hash(default)
+        self.save(update_fields=["text", "version", "shipped_hash", "updated"])
+        return True
 
     def save_text(self, text: str) -> None:
         """Save raises the version by one; the text is never logged."""
@@ -105,6 +137,8 @@ class PromptTemplate(models.Model):
 
     def reset(self) -> None:
         self.save_text(self.default_text)
+        self.shipped_hash = prompts.text_hash(self.default_text)
+        self.save(update_fields=["shipped_hash"])
 
 
 # The templates the app ships: the Standard summary and one per shipped
@@ -115,14 +149,15 @@ SHIPPED_TEMPLATES = (
     (
         "standard",
         "Standard summary",
-        "Overview, key points, notable statements, names and dates, unclear parts.",
+        "A memo to the attorney: summary, people, what happened, statements "
+        "that matter, names and dates, unclear parts.",
         (),
     ),
     (
         "video",
         "Video summary",
-        "What happened, seen and said together; seen but not said; notable "
-        "statements; names and dates.",
+        "A memo from the words and the picture together: summary, people, what "
+        "happened, statements that matter, names and dates.",
         (),
     ),
     (
@@ -134,7 +169,8 @@ SHIPPED_TEMPLATES = (
     (
         "body_camera",
         "Body camera summary",
-        "Timeline of the encounter, commands and rights, what the person stopped says.",
+        "A memo of the encounter from the words and the picture: people, what "
+        "happened, commands and rights, statements that matter.",
         ("Body camera",),
     ),
     (
@@ -172,6 +208,9 @@ SHIPPED_TEMPLATES = (
 )
 
 
+SHIPPED_DESCRIPTIONS = {key: line for key, _, line, _ in SHIPPED_TEMPLATES}
+
+
 class SummaryTemplate(models.Model):
     """The shape a Summary takes.
 
@@ -197,6 +236,9 @@ class SummaryTemplate(models.Model):
     # stays here, as a removed Role stays on a Person.
     recording_types = models.JSONField(default=list, blank=True)
     created = models.DateTimeField(auto_now_add=True)
+    # The hash of the shipped wording a built-in row last took (v1.53.0);
+    # empty for an office's own template. See PromptTemplate.shipped_hash.
+    shipped_hash = models.CharField(max_length=16, blank=True, default="")
 
     class Meta:
         ordering = ["-built_in", "name"]
@@ -216,10 +258,12 @@ class SummaryTemplate(models.Model):
 
     @classmethod
     def shipped(cls) -> None:
-        """Make any shipped template that is not there yet."""
-        have = set(cls.objects.filter(built_in=True).values_list("key", flat=True))
+        """Make any shipped template that is not there yet, and bring every
+        unedited one to this release's wording (v1.53.0)."""
+        rows = {one.key: one for one in cls.objects.filter(built_in=True)}
         for key, name, description, types in SHIPPED_TEMPLATES:
-            if key in have:
+            if key in rows:
+                rows[key].follow_shipped()
                 continue
             text = (
                 prompts.STANDARD_SUMMARY
@@ -233,6 +277,7 @@ class SummaryTemplate(models.Model):
                 text=text,
                 built_in=True,
                 recording_types=list(types),
+                shipped_hash=prompts.text_hash(text),
                 is_default=(
                     key == "standard"
                     and not cls.objects.filter(is_default=True).exists()
@@ -295,6 +340,35 @@ class SummaryTemplate(models.Model):
         self.text = text
         self.version += 1
         self.save(update_fields=["text", "version"])
+
+    def reset(self) -> None:
+        """Reset to default: the shipped wording back, the version up."""
+        self.save_text(self.shipped_text)
+        self.shipped_hash = prompts.text_hash(self.shipped_text)
+        self.save(update_fields=["shipped_hash"])
+
+    @property
+    def behind(self) -> bool:
+        """A built-in copy the office edited, whose shipped wording has since
+        changed: the Templates page says so, and Reset is the office's choice."""
+        return self.built_in and self.shipped_hash != prompts.text_hash(
+            self.shipped_text
+        )
+
+    def follow_shipped(self) -> bool:
+        """An unedited built-in copy takes this release's shipped wording and
+        description; the version rises as if reset. Edited, it is left."""
+        shipped = self.shipped_text
+        if not self.built_in or self.text == shipped:
+            return False
+        if prompts.text_hash(self.text) != self.shipped_hash:
+            return False
+        self.text = shipped
+        self.description = SHIPPED_DESCRIPTIONS.get(self.key, self.description)
+        self.version += 1
+        self.shipped_hash = prompts.text_hash(shipped)
+        self.save(update_fields=["text", "description", "version", "shipped_hash"])
+        return True
 
 
 # What the features store -------------------------------------------------------
@@ -505,6 +579,9 @@ class DigestPart(models.Model):
     model = models.CharField(max_length=120, blank=True, default="")
     made_at = models.DateTimeField(null=True, blank=True)
     seconds = models.FloatField(default=0.0)
+    # The part came back cut off at the cap and its window could not be
+    # split further (one line): kept, and the Admin fold says so.
+    cut_short = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["number"]
@@ -1605,14 +1682,9 @@ def prepare_plan(recording, transcript) -> dict:
     # A Digest is made only once there are descriptions to condense.
     will_have = bool(spans) or bool(moments_for_answers(transcript))
     if digests_on() and will_have:
-        existing = {one.number: one for one in transcript.digest_parts.all()}
+        have = {one.signature for one in transcript.digest_parts.all() if one.text}
         for window_plan in digest_plan(transcript):
-            part = existing.get(window_plan["number"])
-            if (
-                part is None
-                or part.signature != window_plan["signature"]
-                or not part.text
-            ):
+            if window_plan["signature"] not in have:
                 parts += 1
     seconds = len(spans) * seconds_per_description() + parts * seconds_per_part()
     return {
@@ -1833,14 +1905,20 @@ def prepare_json(transcript) -> dict | None:
 # remakes only the parts whose words or descriptions changed. Nobody reads it.
 
 
-def digest_windows(lines: list, budget: int) -> list[tuple[int, int]]:
-    """The windows of the Transcript, cut on line boundaries, each within the budget."""
+def digest_windows(
+    lines: list, budget: int, forced: set[str] | None = None
+) -> list[tuple[int, int]]:
+    """The windows of the Transcript, cut on line boundaries, each within the
+    budget, and cut before any line in `forced` (the splits a cut-off part
+    made) whatever the budget says."""
     windows: list[tuple[int, int]] = []
+    forced = forced or set()
     start = 0
     used = 0
     for index, line in enumerate(lines):
         cost = prompts.tokens(prompts.render([line])) + 1
-        if index > start and used + cost > budget:
+        split_here = str(line.segment_id) in forced
+        if index > start and (split_here or used + cost > budget):
             windows.append((start, index))
             start, used = index, 0
         used += cost
@@ -1880,7 +1958,11 @@ def digest_plan(transcript) -> list[dict]:
     if not lines:
         return []
     moments = list(transcript.moments.filter(state=DONE).exclude(text=""))
-    windows = digest_windows(lines, settings_store.digest_window_tokens())
+    windows = digest_windows(
+        lines,
+        settings_store.digest_window_tokens(),
+        set(transcript.digest_splits or []),
+    )
     length = float(recording.duration_seconds or 0.0) or (lines[-1].start + 1.0)
     plan = []
     for number, (first, last) in enumerate(windows, start=1):
@@ -1903,16 +1985,12 @@ def digest_plan(transcript) -> list[dict]:
 
 def digest_current(transcript) -> bool:
     """Whether every part stands for what the Transcript and the record hold now."""
-    parts = {one.number: one for one in transcript.digest_parts.all()}
+    parts = list(transcript.digest_parts.all())
     plan = digest_plan(transcript)
     if not plan or len(parts) != len(plan):
         return False
-    return all(
-        parts.get(one["number"]) is not None
-        and parts[one["number"]].signature == one["signature"]
-        and parts[one["number"]].text
-        for one in plan
-    )
+    have = {one.signature for one in parts if one.text}
+    return all(one["signature"] in have for one in plan)
 
 
 def digest_text(transcript) -> str:
@@ -1935,22 +2013,70 @@ def make_digest(transcript, *, asked_by, summary=None, progress=None) -> str:
     Problem, which fails the Summary the ordinary way.
     """
     recording = transcript.recording
-    plan = digest_plan(transcript)
-    if not plan:
-        return ""
-    existing = {one.number: one for one in transcript.digest_parts.all()}
     ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
     template = PromptTemplate.named(PromptTemplate.DIGEST)
     templates_line = f"ground-rules v{ground.version}; Digest v{template.version}"
+    # A part that comes back cut off at the cap means the window held more
+    # than the cap could condense: the window is split in two at its middle
+    # line, the split kept on the Transcript, and the plan started over. The
+    # parts already made keep their signatures and are not made again; a
+    # one-line window cannot split and its part is kept, marked cut.
+    while True:
+        plan = digest_plan(transcript)
+        if not plan:
+            return ""
+        texts, split = _make_digest_parts(
+            transcript,
+            recording,
+            plan,
+            ground,
+            template,
+            templates_line,
+            asked_by=asked_by,
+            summary=summary,
+            progress=progress,
+        )
+        if not split:
+            break
+    transcript.digest_parts.exclude(
+        signature__in=[one["signature"] for one in plan]
+    ).delete()
+    return "\n".join(texts).strip()
+
+
+def _split_window(transcript, window_plan) -> None:
+    lines = window_plan["lines"]
+    middle = lines[len(lines) // 2]
+    splits = list(transcript.digest_splits or [])
+    splits.append(str(middle.segment_id))
+    transcript.digest_splits = splits
+    transcript.save(update_fields=["digest_splits"])
+
+
+def _make_digest_parts(
+    transcript,
+    recording,
+    plan,
+    ground,
+    template,
+    templates_line,
+    *,
+    asked_by,
+    summary,
+    progress,
+) -> tuple[list[str], bool]:
+    """One pass over the plan: the stale parts made, in order. Returns the
+    texts and whether a window was split, in which case the pass stopped
+    there and the caller plans again."""
+    existing = {one.signature: one for one in transcript.digest_parts.all()}
     texts = []
     for window_plan in plan:
         number = window_plan["number"]
-        part = existing.get(number)
-        if (
-            part is not None
-            and part.signature == window_plan["signature"]
-            and part.text
-        ):
+        part = existing.get(window_plan["signature"])
+        if part is not None and part.text:
+            if part.number != number:
+                part.number = number
+                part.save(update_fields=["number"])
             texts.append(part.text)
             continue
         if summary is not None:
@@ -2010,12 +2136,32 @@ def make_digest(transcript, *, asked_by, summary=None, progress=None) -> str:
                 parts=window_plan["total"],
             )
             raise
+        cut = answer["finish_reason"] == "length"
+        if cut and len(window_plan["lines"]) > 1:
+            _record(
+                "digest",
+                recording,
+                actor=asked_by,
+                templates=templates_line,
+                model=answer["model"],
+                usage=usage,
+                started=started,
+                outcome="ok",
+                part=number,
+                parts=window_plan["total"],
+                cut=True,
+                split=True,
+            )
+            _split_window(transcript, window_plan)
+            return texts, True
         if part is None:
             part = DigestPart(transcript=transcript, number=number)
+        part.number = number
         part.span_start = window_plan["start"]
         part.span_end = window_plan["end"]
         part.signature = window_plan["signature"]
         part.text = text
+        part.cut_short = cut
         part.moments_used = len(mine)
         part.model = answer["model"]
         part.made_at = timezone.now()
@@ -2032,12 +2178,12 @@ def make_digest(transcript, *, asked_by, summary=None, progress=None) -> str:
             outcome="ok",
             part=number,
             parts=window_plan["total"],
+            cut=cut,
         )
         texts.append(text)
         if progress is not None:
             progress()
-    transcript.digest_parts.filter(number__gt=len(plan)).delete()
-    return "\n".join(texts).strip()
+    return texts, False
 
 
 def unnamed_speakers(transcript) -> list[str]:

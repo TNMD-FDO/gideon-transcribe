@@ -9,6 +9,7 @@ that. Nothing here is logged anywhere.
 
 from __future__ import annotations
 
+import hashlib
 import math
 import re
 from dataclasses import dataclass
@@ -30,14 +31,28 @@ GROUND_RULES = (
 )
 
 STANDARD_SUMMARY = (
-    "Write a summary of this transcript with these parts, in this order, using "
-    "these headings.\n"
-    "Overview: one short paragraph. What kind of recording this is, who takes "
-    "part, and what it is about.\n"
-    "Key points: a bulleted list in the order things happen. Each point ends "
-    "with the time it happens.\n"
-    "Notable statements: short quotes that matter, each with the speaker and "
-    "the time. Quote exactly; never paraphrase inside quotation marks.\n"
+    "Write this summary as a memo a member of staff hands to an attorney: what "
+    "the recording is, who took part, what happened, and what was said that "
+    "matters, so the reader knows the situation without listening to it. "
+    "Third person, past tense, plain words. Group what happened by subject, "
+    "never minute by minute, and never retell the recording line by line. "
+    "Give a time as [hh:mm:ss] only where a reader would want to check the "
+    "recording, after the sentence it supports. These parts, in this order, "
+    "using these headings.\n"
+    "Summary: one paragraph a reader in a hurry could stop at: what kind of "
+    "recording this is, who took part, what it was about, what happened, and "
+    "how it ended.\n"
+    "People: each person who speaks or is spoken of, one line each, with how "
+    "the recording identifies them and where: a name only as the words give "
+    "it, a role only as the words give it, and otherwise the transcript's own "
+    "label for the speaker. Never infer a name or a role from what someone "
+    "does.\n"
+    "What happened: the substance in a few paragraphs, each on one subject: "
+    "what was done and what was said, in your own words, quoting only where "
+    "the words themselves matter.\n"
+    "Statements that matter: exact quotes that carry weight, each with the "
+    "speaker as the transcript labels them and the time. Quote exactly; never "
+    "paraphrase inside quotation marks.\n"
     "Names, places, and dates: every person, place, organisation, date, and "
     "time of day mentioned, each with the time of its first mention.\n"
     "Unclear parts: stretches where the transcript is garbled, cut off, "
@@ -45,10 +60,45 @@ STANDARD_SUMMARY = (
     "if there are none."
 )
 
+
+def text_hash(text: str) -> str:
+    """The short hash a stored template keeps of the shipped wording it took,
+    so an upgrade can tell an unedited copy from an office's own words."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+# Every shipped wording each template has carried, by its hash, so a copy
+# stored before the hash was kept can still be told unedited (v1.53.0). A
+# hash is added here whenever a shipped text changes; nothing is removed.
+SHIPPED_HISTORY = {
+    "standard": ("77493e20d40da8c2", "f76d2d1e0c15c0de"),
+    "video": ("2e247929fe7a40eb", "29aa0cb5855e3303", "4ed91dd19571870e"),
+    "jail_call": ("05d6764a931302ea",),
+    "body_camera": (
+        "c7815e388b0aa161",
+        "4f92a41fd993cfd1",
+        "aa5c4e55f36ddebb",
+        "e420ebc4c6b26842",
+    ),
+    "interview": ("8b9b3615694561bb",),
+    "phone_call": ("c139726a47bb696e",),
+    "hearing": ("3d40afd97acf18f4",),
+    "dictation": ("8f9d3f1bc76a9956",),
+    "meeting": ("f6b5d89ac94a5842",),
+    "prompt:ground_rules": ("7a65498ab25fbf63",),
+    "prompt:chat": ("0db99390974f3bef", "a31c1f00877b1dce"),
+    "prompt:suggestions": ("122c6e749064c4d6",),
+    "prompt:case_chat": ("0003b7162b10fbfd",),
+    "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
+    "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
+}
+
+
 # The Summary templates the app ships for the Recording types it ships, each
-# in the Standard summary's shape: named parts, in order, every point with its
-# time, quotes exact. Editable and resettable on the Templates page, like the
-# Standard summary; an office reviews them there. Keyed by the template key.
+# a memo to the attorney in the Standard summary's shape: named parts, in
+# order, grouped by subject, a time only where a reader would check, quotes
+# exact. Editable and resettable on the Templates page, like the Standard
+# summary; an office reviews them there. Keyed by the template key.
 SHIPPED_SUMMARIES = {
     "jail_call": (
         "Write a summary of this recorded jail call with these parts, in this "
@@ -74,41 +124,73 @@ SHIPPED_SUMMARIES = {
         "if there are none."
     ),
     "body_camera": (
-        "Write a summary of this body camera recording with these parts, in this "
-        "order, using these headings.\n"
-        "Overview: one short paragraph. What the encounter is, where it takes "
-        "place as far as the recording says, and who takes part.\n"
-        "Timeline: a bulleted list of what happens in order, each point ending "
-        "with its time: arrival, contact, commands, searches, handcuffing, any "
-        "use of force, transport, and the end of the recording, what was seen "
-        "and what was said together in one account.\n"
+        "Write this summary of a body camera recording as a memo a member of "
+        "staff hands to an attorney, from what was said and what the camera "
+        "showed together: what the encounter was, who took part, what happened, "
+        "and what was said and seen that matters, so the reader knows the "
+        "situation without watching it. Third person, past tense, plain words, "
+        "one account, never saying which sentence came from the words and which "
+        "from the picture. Group what happened by subject, never minute by "
+        "minute, and never retell the recording line by line. Give a time as "
+        "[hh:mm:ss] only where a reader would want to check the recording, "
+        "after the sentence it supports. These parts, in this order, using "
+        "these headings.\n"
+        "Summary: one paragraph a reader in a hurry could stop at: what the "
+        "encounter was, where it was as far as the recording says, who took "
+        "part, what happened, and how it ended.\n"
+        "People: each person who speaks, is spoken of, or is in view, one line "
+        "each, with how the recording identifies them and where: a name only "
+        "as the words give it, a role such as officer only as the words give "
+        "it, and otherwise the transcript's own label for the speaker; a person "
+        "seen only in the picture is described by clothing, position, or what "
+        "they did, never named. Never infer a name or a role from what someone "
+        "does or wears.\n"
+        "What happened: the encounter in a few paragraphs, each on one subject: "
+        "how it began, what the officers did and said, what the person "
+        "contacted did and said, any search, handcuffing, use of force, or "
+        "transport, and how it ended; what was done, said, and in view as one "
+        "account, in your own words, quoting only where the words themselves "
+        "matter.\n"
         "Commands, warnings, and rights: every command, warning, and advisement "
-        "of rights spoken by an officer, quoted exactly with the time. Never "
-        "paraphrase inside quotation marks.\n"
-        "What the person stopped says: their statements, quoted exactly with "
-        "the time, and for each whether it answers an officer's question or is "
-        "said unprompted.\n"
-        "What officers say to each other: statements between officers or over "
-        "the radio about the person, the scene, or what to do next, with times.\n"
+        "of rights spoken, quoted exactly with the speaker as the transcript "
+        "labels them and the time. Never paraphrase inside quotation marks.\n"
+        "Statements that matter: exact quotes that carry weight, each with the "
+        "speaker as the transcript labels them and the time, and for the person "
+        "contacted whether it answered a question or was said unprompted.\n"
         "Names, places, and dates: every person, place, organisation, date, and "
-        "time of day mentioned, each with the time of its first mention.\n"
+        "time of day mentioned in the words, each with the time of its first "
+        "mention.\n"
         "Unclear parts: stretches where the audio is garbled, cut off, "
-        'overlapping, or hard to follow, with their times. Write "None noticed" '
-        "if there are none."
+        "overlapping, or hard to follow, and stretches the camera could not "
+        'make out, with their times. Write "None noticed" if there are none.'
     ),
     "video": (
-        "Write a summary of this video recording as one account of the events, "
-        "drawn from what was said and what the camera showed together, with "
-        "these parts, in this order, using these headings.\n"
-        "Executive summary: one short paragraph a reader in a hurry could stop "
-        "at. What kind of recording this is, where it is, who takes part, what "
-        "happens, and how it ends.\n"
-        "What happened: the events in the order they happen, as prose in a few "
-        "paragraphs, each paragraph covering one stretch of the recording and "
-        "opening with its time. Say what people did and said and what was in "
-        "view as one story; give the time of each thing that matters.\n"
-        "Notable statements: short quotes that matter, each with the speaker "
-        "and the time. Quote exactly; never paraphrase inside quotation marks.\n"
+        "Write this summary of a video recording as a memo a member of staff "
+        "hands to an attorney, from what was said and what the camera showed "
+        "together: what the recording is, who took part, what happened, and "
+        "what was said and seen that matters, so the reader knows the situation "
+        "without watching it. Third person, past tense, plain words, one "
+        "account, never saying which sentence came from the words and which "
+        "from the picture. Group what happened by subject, never minute by "
+        "minute, and never retell the recording line by line. Give a time as "
+        "[hh:mm:ss] only where a reader would want to check the recording, "
+        "after the sentence it supports. These parts, in this order, using "
+        "these headings.\n"
+        "Summary: one paragraph a reader in a hurry could stop at: what kind of "
+        "recording this is, where it was as far as the recording says, who took "
+        "part, what happened, and how it ended.\n"
+        "People: each person who speaks, is spoken of, or is in view, one line "
+        "each, with how the recording identifies them and where: a name only "
+        "as the words give it, a role only as the words give it, and otherwise "
+        "the transcript's own label for the speaker; a person seen only in the "
+        "picture is described by clothing, position, or what they did, never "
+        "named. Never infer a name or a role from what someone does or wears.\n"
+        "What happened: the substance in a few paragraphs, each on one subject: "
+        "what was done, said, and in view, as one account in your own words, "
+        "quoting only where the words themselves matter.\n"
+        "Statements that matter: exact quotes that carry weight, each with the "
+        "speaker as the transcript labels them and the time. Quote exactly; "
+        "never paraphrase inside quotation marks.\n"
         "Names, places, and dates: every person, place, organisation, date, and "
         "time of day mentioned in the words, each with the time of its first "
         "mention.\n"
@@ -386,15 +468,18 @@ CAMERA_RULES = (
 NARRATIVE_RULES = (
     "The record of this recording joins what was said and what the camera "
     "showed; write one account from both and do not label which source a "
-    "sentence came from. Keep these rules whatever the account says. Names: a "
-    "person is named only as the words name them; a person only the camera "
-    "shows is described by clothing, position, or what they do, never given "
-    "a name. Objects: a thing stays what the description saw (a small bag "
-    "stays a small bag) and is never called more. Never state a legal fact "
-    "such as consent, arrest, search, or force as a conclusion; say what was "
-    "done and said. A stretch the camera could not make out is reported as "
-    "not visible, not filled in. Give every time as [hh:mm:ss] copied from "
-    "the record."
+    "sentence came from. Keep these rules whatever the account says. Names "
+    "and roles: a person is named, or given a role such as officer or "
+    "homeowner, only as the words give it, and the memo says where; otherwise "
+    "the transcript's label for the speaker is used as it is, and a person "
+    "only the camera shows is described by clothing, position, or what they "
+    "do, never given a name or a role. Objects: a thing stays what the "
+    "description saw (a small bag stays a small bag) and is never called "
+    "more. Never state a legal fact such as consent, arrest, search, or force "
+    "as a conclusion; say what was done and said. A stretch the camera could "
+    "not make out is reported as not visible, not filled in. A time is "
+    "[hh:mm:ss] copied from the record, given only where a reader would want "
+    "to check."
 )
 
 # The most the camera block may cost a Summary or a Chat without a Digest,
@@ -422,15 +507,21 @@ DIGEST = (
     "into a record of what happened, in time order. Write one numbered line "
     "per thing that happened, in this shape: the span of time it covers as "
     "[hh:mm:ss]-[hh:mm:ss], then (said), (seen), or (both) for where it comes "
-    "from, then what happened in plain words. Keep the exact words inside "
-    "quotation marks for any statement about the case or the events behind it, "
-    "any request, instruction, threat, or admission, and any name, place, date, "
-    "or time of day, each with its line's time. Name a person only as the "
-    "words name them; a person the camera shows stays described by clothing "
-    "and position. A run of camera lines that say Unchanged is one line. Leave "
-    "nothing out that a careful reader would want to know; leave out filler, "
-    "repetition, and the setting said twice. Never add what neither source "
-    "carries, and never a legal conclusion."
+    "from, then what happened in plain words, in the third person and the "
+    "past tense. One time per line, the span's, and no other: never a time "
+    "after a quotation or inside the line. Quote exactly, inside quotation "
+    "marks, only words that carry weight: a statement about the case or the "
+    "events behind it, a request, an instruction, a warning, a threat, an "
+    "admission, a denial, a promise, or an advisement of rights, with the "
+    "speaker as the transcript labels them; report everything else in your "
+    "own words. Fold agreement, filler, repetition, and small talk into a "
+    "phrase, or leave it out. Keep every name, place, date, and time of day "
+    "the words give. Name a person only as the words name them; a person the "
+    "camera shows stays described by clothing and position. Use a camera line "
+    "only where it adds what the words do not, and a run of camera lines that "
+    "say Unchanged is no line at all. Leave nothing out that a careful reader "
+    "would want to know; leave out the setting said twice. Never add what "
+    "neither source carries, and never a legal conclusion."
 )
 DIGEST_FORMAT = (
     "Answer in plain text, numbered lines only, no headings and no preamble. "
@@ -438,7 +529,7 @@ DIGEST_FORMAT = (
     "comes from."
 )
 DIGEST_CAP = 1200
-DIGEST_WINDOW_TOKENS = 12000
+DIGEST_WINDOW_TOKENS = 4000
 RECORD_HEADING = (
     "The record of this recording (a model's condensation of the words and the "
     "camera, in time order; every time is the transcript's):"
@@ -550,7 +641,7 @@ LENGTH_LINES = {
     "standard": "Keep the whole summary to about 600 words.",
     "detailed": "Write up to about 1,500 words; be thorough.",
 }
-ANSWER_CAPS = {"short": 600, "standard": 1200, "detailed": 2500}
+ANSWER_CAPS = {"short": 800, "standard": 1600, "detailed": 3500}
 CHAT_CAP = 1500
 SUGGESTIONS_CAP = 1500
 # The history a Chat carries back to the model, in tokens, oldest dropped first.

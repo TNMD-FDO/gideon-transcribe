@@ -214,7 +214,7 @@ def summary_template(request: HttpRequest, template_id) -> HttpResponse:
             object_label=row.name,
         )
     elif action == "reset" and row.built_in and row.shipped_text:
-        row.save_text(row.shipped_text)
+        row.reset()
         _row(
             request,
             "summary template reset",

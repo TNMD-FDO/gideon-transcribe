@@ -273,6 +273,9 @@ class Transcript(models.Model):
     prepare_total = models.IntegerField(default=0)
     prepare_started = models.DateTimeField(null=True, blank=True)
     prepared_at = models.DateTimeField(null=True, blank=True)
+    # The Digest's forced cuts (v1.53.0): the ids of the Segments before which
+    # a window is split, added whenever a part came back cut off at the cap.
+    digest_splits = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["-created"]

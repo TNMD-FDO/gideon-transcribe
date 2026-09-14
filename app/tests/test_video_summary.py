@@ -127,7 +127,7 @@ def test_the_wording_is_clean_and_the_templates_say_seen_but_not_said():
         text = prompts.SHIPPED_SUMMARIES[key]
         assert "Seen but not said" not in text and "the camera shows" not in text
         assert "Unclear parts" in text
-    assert "Executive summary" in prompts.SHIPPED_SUMMARIES["video"]
+    assert "Summary:" in prompts.SHIPPED_SUMMARIES["video"]
     assert "one account" in prompts.SHIPPED_SUMMARIES["video"]
     assert "never given a name" in prompts.NARRATIVE_RULES
     assert "the camera shows" in prompts.CAMERA_RULES
@@ -305,7 +305,7 @@ def test_the_summary_is_told_the_rules_and_remembers_what_it_drew_on(
     system = asked[0]["messages"][0]["content"]
     user = asked[0]["messages"][-1]["content"]
     assert system.endswith(prompts.SUMMARY_FORMAT + "\n\n" + prompts.CAMERA_RULES)
-    assert "Executive summary" in system
+    assert "memo a member of staff hands to an attorney" in system
     assert prompts.CAMERA_HEADING + "\n" + prompts.CAMERA_NOTE in user
     assert "[00:00:30] [camera] A clear bag. (edited by staff)" in user
     assert (

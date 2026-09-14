@@ -1117,7 +1117,7 @@ def test_a_summary_prepares_the_video_first_and_writes_one_account(
     assert "Write one account from it" in user
     assert system.endswith(prompts.NARRATIVE_RULES)
     assert prompts.CAMERA_RULES not in system
-    assert "Executive summary" in prompts.SHIPPED_SUMMARIES["video"]
+    assert "hands to an attorney" in prompts.SHIPPED_SUMMARIES["video"]
     assert "Seen but not said" not in prompts.SHIPPED_SUMMARIES["video"]
     assert "Seen but not said" not in prompts.SHIPPED_SUMMARIES["body_camera"]
     assert summary.citations == {"[00:10:00]": 600.0}
@@ -1155,7 +1155,7 @@ def test_the_record_and_digest_settings_start_as_the_chapter_says():
         ("moment_interval_most", 600),
         ("picture_frames_most", 16),
         ("digests_available", True),
-        ("digest_window_tokens", 12000),
+        ("digest_window_tokens", 4000),
         ("digest_part_tokens", 1200),
         ("chat_descriptions_near", 6),
         ("stamp_available", True),

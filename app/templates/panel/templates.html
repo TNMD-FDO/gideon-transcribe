@@ -20,6 +20,7 @@
           <div class="row">
             <b class="grow">{{ row.name }}</b>
             <span class="muted small">version {{ row.version }}</span>
+            {% if row.behind %}<span class="pill warn small" title="This copy was edited, and a later release changed the shipped wording. Reset to default takes the new wording; your edits are lost.">shipped wording changed</span>{% endif %}
           </div>
           <textarea name="text" rows="6" style="width: 100%; margin: 8px 0">{{ row.text }}</textarea>
           <div class="row">
@@ -68,6 +69,7 @@
             {% if row.is_default %}<span class="pill ok">Default</span>{% endif %}
             {% if row.enabled %}<span class="pill">Enabled</span>{% else %}<span class="pill warn">Disabled</span>{% endif %}
             <span class="muted small">version {{ row.version }}</span>
+            {% if row.behind %}<span class="pill warn small" title="This copy was edited, and a later release changed the shipped wording. Reset to default takes the new wording; your edits are lost.">shipped wording changed</span>{% endif %}
           </div>
           <input type="text" name="description" value="{{ row.description }}" maxlength="200"
                  placeholder="One line about what this summary is for" style="width: 100%; margin: 8px 0 0">
