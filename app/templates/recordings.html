@@ -95,6 +95,7 @@
                         {% if recording.transcript and not recording.being_replaced %}
                           <button type="button" class="small process-again"
                                   data-recording="{{ recording.pk }}"
+                                  data-diarize="{% if recording.diarize %}yes{% else %}no{% endif %}"
                                   data-title="{{ recording.title }}">Process again</button>
                           {% if folder_management and not someone_elses %}
                             <button type="button" class="small move"

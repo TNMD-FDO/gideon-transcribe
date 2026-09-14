@@ -176,10 +176,25 @@ def test_the_preparation_is_queued_as_the_transcript_lands_and_waits_for_the_cop
     ready.save(update_fields=["playback_ready"])
     tasks.prepare_video(str(transcript.pk), attempt=2)
     assert ran == [transcript.pk]
+    # A transcript not marked queued on the first go is looked at again in a
+    # few seconds (the mark may not have been committed yet, v1.54.1); on the
+    # second go it is left alone.
+    transcript.prepare_state = ""
+    transcript.save(update_fields=["prepare_state"])
+    del later[:]
+    tasks.prepare_video(str(transcript.pk))
+    assert later == [
+        (
+            {"schedule_in": {"seconds": 5}},
+            {"transcript_id": str(transcript.pk), "attempt": 2},
+        )
+    ]
+    tasks.prepare_video(str(transcript.pk), attempt=2)
+    assert later[1:] == [] and ran == [transcript.pk]
     # A transcript no longer queued (prepared meanwhile, or gone) is left alone.
     transcript.prepare_state = assistant.DONE
     transcript.save(update_fields=["prepare_state"])
-    tasks.prepare_video(str(transcript.pk))
+    tasks.prepare_video(str(transcript.pk), attempt=2)
     assert ran == [transcript.pk]
 
 

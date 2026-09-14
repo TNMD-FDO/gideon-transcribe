@@ -202,6 +202,34 @@ def ahead_of(transcript) -> int:
     return waiting_tonight().filter(created__lt=transcript.created).count()
 
 
+def queued_without_a_task(older_than_seconds: int = 120):
+    """The transcripts marked queued for vision with no task waiting or at
+    them: what the minute sweep queues again (v1.54.1)."""
+    from core.jobs import Transcript
+
+    stale = timezone.now() - dt.timedelta(seconds=older_than_seconds)
+    queued = Transcript.objects.filter(
+        prepare_state=assistant.QUEUED, prepare_started=None, created__lt=stale
+    )
+    return [one for one in queued if not task_waiting_for(one)]
+
+
+def task_waiting_for(transcript) -> bool:
+    """Whether a prepare_video job for this transcript is waiting or running.
+    Read from the queue's own table; when that cannot be read, the answer is
+    yes, so nothing is queued twice on a guess."""
+    try:
+        from procrastinate.contrib.django.models import ProcrastinateJob
+
+        return ProcrastinateJob.objects.filter(
+            task_name="prepare_video",
+            status__in=("todo", "doing"),
+            args__transcript_id=str(transcript.pk),
+        ).exists()
+    except Exception:  # noqa: BLE001 - the table is the queue's, not the app's
+        return True
+
+
 def busy() -> bool:
     """Whether a video is being enriched now, in the vision lane."""
     from core.jobs import Transcript
@@ -262,9 +290,16 @@ def unenriched(case, recording=None) -> list:
         rows = rows.filter(recording=recording)
     found = []
     for transcript in rows:
-        if transcript.prepare_state in (assistant.QUEUED, assistant.PREPARING, TONIGHT):
+        # By the state the row shows: enriched, at it, or waiting for tonight
+        # is not "not yet enriched", whatever the digest's currency.
+        if transcript.prepare_state in (
+            assistant.QUEUED,
+            assistant.PREPARING,
+            assistant.DONE,
+            TONIGHT,
+        ):
             continue
-        if eligible(transcript.recording) and not assistant.prepared(transcript):
+        if eligible(transcript.recording):
             found.append(transcript)
     return found
 

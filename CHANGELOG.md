@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.54.1, 2026-09-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- Two videos sat at "Enriching now, about 5 minutes" with nothing running.
+  The vision task can be taken up before the mark that queued it is
+  committed, and it took the transcript for one with nothing to do. On its
+  first go it now looks again in a few seconds, and the queue's minute
+  sweep queues again any video left queued for two minutes with no task
+  behind it.
+- The Vision switch's help still spoke of the Moments tab.
+- The case page's "not yet enriched" count took in an enriched video whose
+  digest was stale.
+- The transcript's "Following paused while you read. Resume" pill was six
+  pixels tall and could not be read: its holder stretched it to no height.
+  It keeps its own height now.
+
+### Added
+
+- **Process again** offers **Tell the speakers apart** in its box, starting
+  as the recording had it, so a recording transcribed without the speakers
+  told apart can be sent back with them, or the other way round. And where
+  the recording page says Not diarized, a button, **Tell the speakers
+  apart**, does the same in one press, after the upload page's own warning
+  about speaker separation.
+
 ## v1.54.0, 2026-09-14
 
 ```

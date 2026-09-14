@@ -504,6 +504,39 @@ def test_the_exports_keep_the_camera_section_inside_when_the_office_says(
 
 
 @pytest.mark.django_db
+def test_a_video_left_queued_with_no_task_is_queued_again(
+    admin, tmp_path, settings, monkeypatch
+):
+    from core import tasks
+
+    case, video = a_case_video(admin, tmp_path, settings)
+    transcript = video.transcript
+    transcript.prepare_state = assistant.QUEUED
+    transcript.created = timezone.now() - dt.timedelta(minutes=5)
+    transcript.save(update_fields=["prepare_state", "created"])
+    monkeypatch.setattr(vision, "task_waiting_for", lambda t: False)
+    assert [one.pk for one in vision.queued_without_a_task()] == [transcript.pk]
+    monkeypatch.setattr(vision, "task_waiting_for", lambda t: True)
+    assert vision.queued_without_a_task() == []
+    # Too new to judge: the task may simply not have started.
+    monkeypatch.setattr(vision, "task_waiting_for", lambda t: False)
+    transcript.created = timezone.now()
+    transcript.save(update_fields=["created"])
+    assert vision.queued_without_a_task() == []
+    transcript.created = timezone.now() - dt.timedelta(minutes=5)
+    transcript.save(update_fields=["created"])
+    deferred = []
+    monkeypatch.setattr(
+        tasks.prepare_video, "defer", lambda **fields: deferred.append(fields)
+    )
+    from core import uploads
+
+    monkeypatch.setattr(uploads, "drop_abandoned", lambda: 0)
+    tasks.keep_the_queue_moving(0)
+    assert deferred == [{"transcript_id": str(transcript.pk)}]
+
+
+@pytest.mark.django_db
 def test_the_words_for_every_state(admin, tmp_path, settings):
     case, video = a_case_video(admin, tmp_path, settings)
     transcript = video.transcript

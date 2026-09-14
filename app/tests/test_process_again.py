@@ -69,6 +69,30 @@ def test_it_prepares_the_audio_again_before_making_a_job(
     assert done.batch.is_reprocessing
 
 
+@pytest.mark.django_db
+def test_the_box_offers_the_speakers_tick_and_the_request_honours_it(
+    done, person, client, monkeypatch
+):
+    """A recording transcribed without the speakers told apart is sent back
+    with them (v1.54.1): the buttons carry the recording's setting for the
+    box's tick, and the request changes it."""
+    monkeypatch.setattr(whisperx, "is_alive", lambda: True)
+    monkeypatch.setattr(tasks.prepare_audio_again, "defer", lambda **fields: None)
+    done.diarize = False
+    done.save(update_fields=["diarize"])
+    signed_in(client, person)
+    page = client.get(f"/recording/{done.pk}").content.decode()
+    assert 'class="process-again"' in page and 'data-diarize="no"' in page
+    # Where the transcript says the speakers were not told apart, the offer.
+    assert 'class="ghost tiny tell-speakers"' in page
+    answer = client.post(
+        f"/recording/{done.pk}/process-again", '{"diarize": true}', "application/json"
+    )
+    assert answer.status_code == 200
+    done.refresh_from_db()
+    assert done.diarize is True
+
+
 def test_the_audio_is_made_from_the_uploaded_bytes(done, monkeypatch):
     from core import media
     from core.recordings import Side

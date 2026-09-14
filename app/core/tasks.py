@@ -231,6 +231,13 @@ def keep_the_queue_moving(timestamp: int) -> None:
         job = queue.make_job(recording)
         hand_over_job.defer(job_id=str(job.pk))
 
+    # A video left queued for vision with no task behind it (v1.54.1).
+    from core import vision
+
+    for transcript in vision.queued_without_a_task():
+        log.warning("vision for %s had no task; queued again", transcript.pk)
+        prepare_video.defer(transcript_id=str(transcript.pk))
+
     if queue.live_jobs().exists():
         _poll_again(1)
 
@@ -346,10 +353,16 @@ def prepare_video(transcript_id: str, attempt: int = 1) -> None:
     transcript = (
         Transcript.objects.filter(pk=transcript_id).select_related("recording").first()
     )
-    if transcript is None or transcript.prepare_state not in (
-        assistant.QUEUED,
-        assistant.PREPARING,
-    ):
+    if transcript is None:
+        return
+    if transcript.prepare_state not in (assistant.QUEUED, assistant.PREPARING):
+        # On its first go the job may have been taken up before the mark
+        # that queued it was committed (v1.54.0 lost two videos this way):
+        # look again in a few seconds rather than take it for nothing to do.
+        if attempt == 1:
+            prepare_video.configure(
+                schedule_in={"seconds": assistant.QUEUE_GRACE_SECONDS}
+            ).defer(transcript_id=transcript_id, attempt=attempt + 1)
         return
     if (
         not assistant.playable_video(transcript.recording)

@@ -1673,6 +1673,9 @@ STAMP_HEIGHT = 720
 DIGEST_SECONDS_GUESS = 30
 PREPARE_WAIT_SECONDS = 3 * 3600
 PLAYBACK_RETRY_SECONDS = 60
+# How long the task waits before looking again at a transcript it found not
+# yet marked queued on its first go (v1.54.1).
+QUEUE_GRACE_SECONDS = 5
 PLAYBACK_RETRIES = 120
 
 

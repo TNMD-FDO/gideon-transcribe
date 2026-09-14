@@ -88,6 +88,7 @@
               {% if transcript and not being_replaced %}
                 <li><button type="button" class="process-again"
                             data-recording="{{ recording.pk }}"
+                            data-diarize="{% if recording.diarize %}yes{% else %}no{% endif %}"
                             data-title="{{ recording.title }}">{% icon "again" %} Process again</button></li>
               {% endif %}
               <li class="sep"></li>
@@ -293,6 +294,13 @@
                 <button type="button" id="cast-toggle" class="ghost tiny" title="Fold the speakers away to one line">fold</button>
               {% else %}
                 <span class="pill">Not diarized</span>
+                {% if transcript and not being_replaced %}
+                  {# The offer where the lack is said (v1.54.1): a Process again with the speakers told apart, after the upload page's own warning. #}
+                  <button type="button" class="ghost tiny tell-speakers"
+                          data-recording="{{ recording.pk }}"
+                          data-title="{{ recording.title }}"
+                          title="Transcribe this recording again with the speakers told apart">Tell the speakers apart</button>
+                {% endif %}
               {% endif %}
             </div>
             {% if speakers %}

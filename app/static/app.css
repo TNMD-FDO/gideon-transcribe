@@ -1205,7 +1205,14 @@ body.no-speakers .seg .actions { grid-column: 3; }
 
 /* The follow pill sits in a holder of no height, stuck under the cast, so
    its coming and going moves no line of the transcript. */
-.followhold { position: sticky; top: 52px; height: 0; z-index: 5; display: flex; justify-content: center; overflow: visible; }
+/* The holder has no height so the pill's coming and going moves nothing;
+   the pill keeps its own height rather than stretching to the holder's
+   (v1.54.1: it was six pixels tall and unreadable). */
+.followhold { position: sticky; top: 52px; height: 0; z-index: 5; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
+.followpill { flex: none; }
+
+/* The one tick a confirm box may carry (Process again). */
+.ui-dialog-check { margin: 10px 0 0; gap: 8px; align-items: center; font-size: var(--t-small); }
 .followpill {
   display: block;
   width: max-content;

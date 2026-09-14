@@ -120,7 +120,7 @@ Click a segment, or press E on the one that is playing, to correct its text. **S
 
 **Export**, in the header, offers **Export to Word** for a document with the speakers and times laid out, **Export as text** for the plain words, and **Captions** for a subtitle file (.srt) that plays with the video in a media player. Each carries the office's notice about machine transcription, and a translated transcript carries its translation notice too. **More**, beside it, holds the keyboard shortcuts, **Process again** and **Delete this recording**.
 
-**Process again** sends the recording back through transcription with new settings, replacing the transcript. **Delete** removes the recording and everything about it.
+**Process again** sends the recording back through transcription, replacing the transcript; its box carries the tick **Tell the speakers apart**, so a recording transcribed without the speakers told apart can be sent back with them, or the other way round; where the page says Not diarized, the button **Tell the speakers apart** beside it does the same in one press. **Delete** removes the recording and everything about it.
 
 ### The AI assistant
 

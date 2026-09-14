@@ -35,6 +35,7 @@
         "<h2 class='ui-dialog-title'></h2>" +
         "<div class='ui-dialog-body'></div>" +
         "<div class='ui-dialog-field' hidden><input type='text' class='ui-dialog-input' maxlength='200' autocomplete='off'></div>" +
+        "<label class='ui-dialog-check row' hidden><input type='checkbox' class='ui-dialog-tick'> <span class='ui-dialog-check-label'></span></label>" +
         "<div class='ui-dialog-buttons'>" +
           "<button type='button' class='ui-cancel'>Cancel</button>" +
           "<button type='submit' class='primary ui-ok'>OK</button>" +
@@ -69,6 +70,15 @@
       input.placeholder = options.placeholder || "";
       if (options.list) { input.setAttribute("list", options.list); } else { input.removeAttribute("list"); }
     }
+    // One tick under the words, when the question carries a choice (Process
+    // again's Tell the speakers apart): the answer is then {ok, checked}.
+    var check = box.querySelector(".ui-dialog-check");
+    var tick = box.querySelector(".ui-dialog-tick");
+    check.hidden = !options.check;
+    if (options.check) {
+      tick.checked = !!options.check.checked;
+      box.querySelector(".ui-dialog-check-label").textContent = options.check.label || "";
+    }
     var ok = box.querySelector(".ui-ok");
     var cancel = box.querySelector(".ui-cancel");
     ok.textContent = options.ok || "OK";
@@ -77,7 +87,9 @@
     ok.className = "ui-ok " + (options.danger ? "danger primary" : "primary");
     box.classList.toggle("danger", !!options.danger);
     return new Promise(function (resolve) {
-      settle = resolve;
+      settle = options.check
+        ? function (yes) { resolve({ ok: yes, checked: tick.checked }); }
+        : resolve;
       box.showModal();
       // The safe choice has the focus for a destructive question; the field
       // for a prompt; the action otherwise.

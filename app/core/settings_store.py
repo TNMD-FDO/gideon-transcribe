@@ -1282,14 +1282,15 @@ def _rows() -> list[Definition]:
             kind=TOGGLE,
             default=False,
             what_it_does=(
-                "Describing what the camera shows at a chosen time of a video "
-                "recording, on request, from a short clip and the words spoken in "
-                "it. Off by default: it needs an engine that takes video, and an "
-                "office tries it and judges before leaving it on."
+                "The picture step of a video: the scan, the camera's stamp, a "
+                "description of each stretch, and the digest the summary and "
+                "the chat are written from. Off by default: it needs an engine "
+                "that takes video, and an office tries it and judges before "
+                "leaving it on."
             ),
             when_changed=(
-                "Off hides the Moments tab and the camera buttons; existing "
-                "Moments are hidden, not deleted."
+                "Off offers no Enrich with vision tick and enriches nothing; "
+                "what was described stays and is hidden, not deleted."
             ),
         ),
         Definition(
