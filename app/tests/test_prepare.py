@@ -359,6 +359,30 @@ def test_a_chat_question_waits_for_a_preparation_already_running(
 
 
 @pytest.mark.django_db
+def test_a_summary_deleted_while_the_video_is_prepared_is_not_written(
+    ready, person, monkeypatch
+):
+    """A summary asked for before the video was prepared waits for the
+    preparation; deleted meanwhile, it is neither written nor brought back
+    by a save on a row that is gone (v1.53.1). The preparation itself stands:
+    it is the transcript's."""
+    transcript = ready.transcript
+    transcript.prepare_state = assistant.PREPARING
+    transcript.save(update_fields=["prepare_state"])
+    asked = engine_answering(monkeypatch, ["never written"])
+    summary = Summary.objects.create(
+        recording=ready, asked_by=person, template_name="Video summary", length="short"
+    )
+
+    def sleep(seconds):
+        Summary.objects.filter(pk=summary.pk).delete()
+
+    monkeypatch.setattr(assistant.time, "sleep", sleep)
+    assistant.write_summary(summary.pk)
+    assert asked == [] and not Summary.objects.filter(pk=summary.pk).exists()
+
+
+@pytest.mark.django_db
 def test_the_batch_mail_waits_for_the_videos_and_says_how_they_went(
     person, tmp_path, settings, monkeypatch
 ):

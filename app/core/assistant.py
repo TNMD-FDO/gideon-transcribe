@@ -795,7 +795,15 @@ def write_summary(summary_id) -> None:
         if record_on() and has_picture(recording) and not prepared(transcript):
             summary.stage = "preparing"
             summary.save(update_fields=["stage"])
-            wait_or_prepare(transcript, asked_by=summary.asked_by)
+            wait_or_prepare(
+                transcript,
+                asked_by=summary.asked_by,
+                still_wanted=lambda: Summary.objects.filter(pk=summary.pk).exists(),
+            )
+            # Deleted while the video was prepared: the preparation stands,
+            # the transcript's own, and there is nothing left to write.
+            if not Summary.objects.filter(pk=summary.pk).exists():
+                return
             transcript.refresh_from_db()
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
@@ -1800,14 +1808,18 @@ def prepare(transcript, *, asked_by=None) -> bool:
     return not reason
 
 
-def wait_or_prepare(transcript, *, asked_by=None) -> bool:
-    """Prepared by the transcript's own task if it is at it, else here and now."""
+def wait_or_prepare(transcript, *, asked_by=None, still_wanted=None) -> bool:
+    """Prepared by the transcript's own task if it is at it, else here and now.
+    `still_wanted` says whether the caller's summary or question still exists;
+    the wait ends early when it does not."""
     transcript.refresh_from_db(fields=["prepare_state"])
     if transcript.prepare_state in (QUEUED, PREPARING):
         waited = 0
         while waited < PREPARE_WAIT_SECONDS:
             time.sleep(5)
             waited += 5
+            if still_wanted is not None and not still_wanted():
+                return False
             transcript.refresh_from_db(fields=["prepare_state"])
             if transcript.prepare_state not in (QUEUED, PREPARING):
                 return transcript.prepare_state == DONE
@@ -2044,13 +2056,48 @@ def make_digest(transcript, *, asked_by, summary=None, progress=None) -> str:
     return "\n".join(texts).strip()
 
 
-def _split_window(transcript, window_plan) -> None:
-    lines = window_plan["lines"]
-    middle = lines[len(lines) // 2]
+def _split_windows(transcript, plan, number) -> int:
+    """The window whose part came back cut off is split at its middle line,
+    and so is every later window no part has been made for yet: they were cut
+    to the same budget from the same kind of talk, and one call each to learn
+    the same thing would be the v1.53.0 waste (ten calls thrown away on one
+    video). Returns how many windows were split, so the count the pages show
+    can grow by as many."""
+    made = {one.signature for one in transcript.digest_parts.all() if one.text}
     splits = list(transcript.digest_splits or [])
-    splits.append(str(middle.segment_id))
+    added = 0
+    for window_plan in plan:
+        if window_plan["number"] < number:
+            continue
+        if window_plan["number"] > number and window_plan["signature"] in made:
+            continue
+        lines = window_plan["lines"]
+        if len(lines) < 2:
+            continue
+        # A later window keeps its start as a cut too, or the budget would
+        # pack the lines afresh across the old boundaries and move them.
+        if window_plan["number"] > number:
+            first = str(lines[0].segment_id)
+            if first not in splits:
+                splits.append(first)
+        middle = str(lines[len(lines) // 2].segment_id)
+        if middle not in splits:
+            splits.append(middle)
+            added += 1
     transcript.digest_splits = splits
     transcript.save(update_fields=["digest_splits"])
+    _prepare_grow(transcript, added)
+    return added
+
+
+def _prepare_grow(transcript, more: int) -> None:
+    """More parts to make than the plan counted: the total the pages show
+    grows with them, so the count never reads 5 of 4."""
+    if more <= 0 or transcript.prepare_state != PREPARING:
+        return
+    transcript.prepare_total = models.F("prepare_total") + more
+    transcript.save(update_fields=["prepare_total"])
+    transcript.refresh_from_db(fields=["prepare_total"])
 
 
 def _make_digest_parts(
@@ -2152,7 +2199,7 @@ def _make_digest_parts(
                 cut=True,
                 split=True,
             )
-            _split_window(transcript, window_plan)
+            _split_windows(transcript, plan, number)
             return texts, True
         if part is None:
             part = DigestPart(transcript=transcript, number=number)

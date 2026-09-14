@@ -341,6 +341,63 @@ def test_a_part_cut_off_splits_its_window_and_the_halves_are_made_afresh(
 
 
 @pytest.mark.django_db
+def test_a_cut_splits_every_window_still_to_come_and_the_count_grows(
+    ready, person, monkeypatch
+):
+    """The v1.53.0 build learnt the same lesson ten times on one video, one
+    thrown-away call per window, and its count read 5 of 4. A cut now splits
+    the cut window and every later window no part exists for, and the
+    preparation's total grows by as many (v1.53.1)."""
+    transcript = ready.transcript
+    no_scan_no_stamp(monkeypatch)
+    # Six long lines, two to a window of 1,000 tokens: three windows.
+    for one in transcript.segments.all():
+        one.text = "many words " * 150
+        one.save(update_fields=["text"])
+    for start in (800.0, 820.0, 840.0):
+        Segment.objects.create(
+            transcript=transcript,
+            start=start,
+            end=start + 5,
+            text="more words " * 150,
+            speaker="Speaker 1",
+            speaker_label="SPEAKER_1",
+        )
+    settings_store.set_to("digest_window_tokens", 1000)
+    assert len(assistant.digest_plan(transcript)) == 3
+    transcript.prepare_state = assistant.PREPARING
+    transcript.prepare_total = 3
+    transcript.save(update_fields=["prepare_state", "prepare_total"])
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    asked = []
+
+    def complete(messages, **options):
+        asked.append(messages)
+        return {
+            "text": f"1. [00:00:00]-[00:15:00] (said) Part {len(asked)}.",
+            "finish_reason": "length" if len(asked) == 1 else "stop",
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "model": "the-model",
+        }
+
+    monkeypatch.setattr(engine, "complete", complete)
+    assistant.make_digest(
+        transcript,
+        asked_by=person,
+        progress=lambda: assistant._prepare_tick(transcript),
+    )
+    transcript.refresh_from_db()
+    # One cut, three windows split at once (and the later two held at their
+    # starts), six one-line parts: seven calls in all.
+    assert len(asked) == 7
+    assert len(transcript.digest_splits) == 5
+    assert transcript.digest_parts.count() == 6
+    assert transcript.prepare_total == 6 and transcript.prepare_done == 6
+
+
+@pytest.mark.django_db
 def test_a_transcript_too_long_is_summarised_from_the_digest_alone(
     ready, person, monkeypatch
 ):

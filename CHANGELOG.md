@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.53.1, 2026-09-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- A video being prepared read "5 of 4": a digest window that split made more
+  parts than the plan had counted. The total now grows with the splits.
+- A digest part cut off at its cap split only its own window, and the next
+  window, cut to the same size from the same talk, was cut off too: ten
+  calls thrown away on one fifty-minute video. A cut now splits the cut
+  window and every later window no part has been made for, in one go.
+- The player's one-frame-back and one-frame-forward buttons had each
+  other's picture.
+- A summary deleted while it waited for the video to be prepared was still
+  written at the end, or failed the worker's job with an error. The wait
+  ends when the summary is gone and nothing is written; the preparation
+  itself finishes, since it is the transcript's.
+
 ## v1.53.0, 2026-09-14
 
 ```
