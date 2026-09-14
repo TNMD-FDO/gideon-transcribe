@@ -582,4 +582,48 @@
     // "shut", so the button hands it the state it is in now.
     reopen.addEventListener("click", function () { draw(open()); });
   }
+
+  // The recordings' state while a video is being prepared (Phase 4 chapter
+  // 7, v1.53.2): the page fetches itself every fifteen seconds and swaps
+  // the State and Prepared cells of each row, and the line above the table,
+  // until nothing is preparing. The rows themselves stay, so their handlers
+  // do; nothing is polled once every video is prepared.
+  var recordings = document.getElementById("recordings");
+  if (recordings && window.fetch && window.DOMParser) {
+    var EVERY = 15000;
+    function preparing() {
+      return Array.prototype.some.call(
+        recordings.querySelectorAll("td.prepared .pill.warn"),
+        function (pill) { return /^(Preparing|Queued)/.test(pill.textContent.trim()); }
+      );
+    }
+    function swap(fresh) {
+      Array.prototype.forEach.call(recordings.querySelectorAll("tr.pick[data-recording]"), function (row) {
+        var other = fresh.querySelector('tr.pick[data-recording="' + row.dataset.recording + '"]');
+        if (!other) { return; }
+        ["state", "prepared"].forEach(function (name) {
+          var mine = row.querySelector("td." + name);
+          var theirs = other.querySelector("td." + name);
+          if (mine && theirs && mine.innerHTML !== theirs.innerHTML) { mine.innerHTML = theirs.innerHTML; }
+        });
+      });
+      var line = document.getElementById("prepare-line");
+      var newLine = fresh.getElementById("prepare-line");
+      if (line && !newLine) { line.remove(); }
+      else if (line && newLine) { line.innerHTML = newLine.innerHTML; }
+      else if (!line && newLine) { recordings.parentNode.parentNode.insertBefore(newLine, recordings.parentNode); }
+    }
+    function tick() {
+      if (!preparing()) { return; }
+      if (document.hidden) { window.setTimeout(tick, EVERY); return; }
+      fetch(window.location.pathname, { credentials: "same-origin", headers: { "Accept": "text/html" } })
+        .then(function (answer) { return answer.ok ? answer.text() : ""; })
+        .then(function (html) {
+          if (html) { swap(new DOMParser().parseFromString(html, "text/html")); }
+        })
+        .catch(function () { /* the next tick tries again */ })
+        .then(function () { window.setTimeout(tick, EVERY); });
+    }
+    window.setTimeout(tick, EVERY);
+  }
 }());

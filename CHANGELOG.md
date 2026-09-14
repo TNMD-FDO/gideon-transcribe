@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.53.2, 2026-09-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- The case page's recordings list only changed when the page was reloaded.
+  While any video is being prepared the page now refreshes each row's State
+  and Prepared cells, and the line above the list, every fifteen seconds,
+  and stops once nothing is preparing.
+- The recordings table, wider since the Prepared column, ran under About
+  this case and covered its buttons. It scrolls inside its own pane now;
+  the Prepared pill wraps and the date stays on one line.
+
 ## v1.53.1, 2026-09-14
 
 ```

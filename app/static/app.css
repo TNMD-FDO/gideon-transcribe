@@ -1432,6 +1432,14 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
    Bench is the same idea for the viewer; these rules are for the pages that
    are documents: Upload, Recordings, Batch. */
 .panes { display: grid; gap: 16px; align-items: start; }
+/* A grid item is as wide as its widest content unless told otherwise, so a
+   wide table would run under the pane beside it; the wrap scrolls instead. */
+.pane-list, .pane-detail { min-width: 0; }
+.tbl-wrap { overflow-x: auto; }
+.tbl td.prepared .pill { white-space: normal; }
+.tbl td.nowrap { white-space: nowrap; }
+/* A file name is one long word; let it break rather than widen the table. */
+#recordings td:first-child b { overflow-wrap: anywhere; }
 .tbl tr.pick { cursor: pointer; }
 .tbl tr.pick:hover td { background: var(--surface-2); }
 .tbl tr.pick.on td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
