@@ -67,6 +67,7 @@ class PromptTemplate(models.Model):
     CASE_CHAT = "case_chat"
     MOMENT = "moment"
     DIGEST = "digest"
+    SPEAKER_CHECK = "speaker_check"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
@@ -74,6 +75,7 @@ class PromptTemplate(models.Model):
         CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
         MOMENT: ("Moment", prompts.MOMENT),
         DIGEST: ("Digest", prompts.DIGEST),
+        SPEAKER_CHECK: ("Speaker check", prompts.SPEAKER_CHECK),
     }
 
     key = models.CharField(max_length=30, unique=True)
@@ -505,6 +507,65 @@ class SuggestionRun(models.Model):
         ordering = ["-created"]
 
 
+class SpeakerCheck(models.Model):
+    """One run of the Speaker check (Phase 5 chapter 3): queued as the
+    Transcript lands or pressed on the Speakers page, so the page can wait
+    for it and say how it went."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="speaker_checks"
+    )
+    # Nobody when the check ran by itself as the Transcript landed.
+    asked_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
+    reason_class = models.CharField(max_length=40, blank=True, default="")
+    found = models.IntegerField(default=0)
+    windows = models.IntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created"]
+
+
+class SpeakerCorrection(models.Model):
+    """One line the Speaker check says belongs to another Speaker: proposed,
+    never applied, until a person accepts it on the Speakers page. Hangs on
+    the Transcript, so Process again takes it. Holds the line's words as the
+    quote the page shows, and never a name that is not already a Speaker."""
+
+    PENDING, ACCEPTED, DISMISSED = "pending", "accepted", "dismissed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="corrections"
+    )
+    segment = models.ForeignKey(
+        "core.Segment", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    start = models.FloatField(default=0.0)
+    quote = models.CharField(max_length=300, blank=True, default="")
+    speaker_from = models.CharField(max_length=60)
+    speaker_to = models.CharField(max_length=60)
+    reason = models.CharField(max_length=120, blank=True, default="")
+    state = models.CharField(max_length=10, default=PENDING)
+    decided_by = models.ForeignKey(
+        "core.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["start", "created"]
+
+
 class Moment(models.Model):
     """What the camera showed at one time of a video Recording, as a model described it.
 
@@ -629,6 +690,7 @@ def features() -> dict:
         "chat": on and bool(settings_store.get("chat_available")),
         "suggestions": on and bool(settings_store.get("suggestions_available")),
         "moments": on and bool(settings_store.get("moments_available")),
+        "speaker_check": on and bool(settings_store.get("speaker_check_available")),
         "reachable": reachable,
         "unavailable_line": engine.WHAT_TO_SAY.get(engine.UNREACHABLE, ""),
     }

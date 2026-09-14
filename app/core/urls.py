@@ -156,6 +156,23 @@ urlpatterns = [
         assistant_pages.decide,
         name="decide-suggestion",
     ),
+    # The Speaker check (Phase 5 chapter 3): a run, one correction decided,
+    # every pending correction accepted.
+    path(
+        "recording/<uuid:recording_id>/speaker-check",
+        assistant_pages.speaker_check_run,
+        name="speaker-check",
+    ),
+    path(
+        "correction/<uuid:correction_id>/<str:verdict>",
+        assistant_pages.decide_correction,
+        name="decide-correction",
+    ),
+    path(
+        "recording/<uuid:recording_id>/corrections/accept-all",
+        assistant_pages.accept_corrections,
+        name="accept-corrections",
+    ),
     # The sign-out dialog's two downloads, across the whole Workspace.
     path(
         "download/<str:shape>",

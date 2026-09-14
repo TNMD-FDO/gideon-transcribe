@@ -330,6 +330,14 @@ def suggest_names(run_id: str) -> None:
     assistant.suggest_names(run_id)
 
 
+@app.task(queue="llm", name="check_speakers")
+def check_speakers(check_id: str) -> None:
+    """The Speaker check (Phase 5 chapter 3): one run, window by window."""
+    from core import speaker_check
+
+    speaker_check.run(check_id)
+
+
 @app.task(queue="llm", name="describe_moment")
 def describe_moment(moment_id: str) -> None:
     """One Moment: the clip cut here, on this worker, and shown to the engine."""

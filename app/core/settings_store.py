@@ -31,6 +31,7 @@ LIMITS = "limits"
 TRANSCRIPTION = "transcription"
 ASSISTANT = "assistant"
 VISION = "vision"
+SPEAKERS = "speakers"
 NOTICES = "notices"
 SIGN_IN = "sign-in"
 AUDIT = "audit"
@@ -62,6 +63,7 @@ PAGES = [
     (TRANSCRIPTION, "Transcription defaults"),
     (ASSISTANT, "AI assistant"),
     (VISION, "Vision"),
+    (SPEAKERS, "Speakers"),
     (NOTICES, "Notices"),
     (SIGN_IN, "Sign-in and directory"),
     (AUDIT, "Audit log"),
@@ -1294,6 +1296,95 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="speaker_check_available",
+            page=SPEAKERS,
+            group="Speaker check",
+            name="Speaker check",
+            kind=TOGGLE,
+            default=False,
+            needs="assistant_available",
+            what_it_does=(
+                "After a transcript lands with its speakers told apart, the "
+                "engine reads it in windows and proposes the lines whose words "
+                "show they belong to another speaker. Nothing moves until a "
+                "person accepts a correction on the Speakers page. Off by "
+                "default: an office tries it and judges before leaving it on."
+            ),
+            when_changed=(
+                "Off runs no check and hides the corrections; what was found "
+                "stays and is hidden, not deleted."
+            ),
+        ),
+        Definition(
+            key="speaker_check_runs",
+            page=SPEAKERS,
+            group="Speaker check",
+            name="Speaker check runs",
+            kind=CHOICE,
+            default="lands",
+            choices=("lands", "overnight"),
+            needs="speaker_check_available",
+            what_it_does=(
+                '"lands": the check runs the moment each transcript lands. '
+                '"overnight": a check queued by day waits for the Vision '
+                "window to open. Check the speakers on the Speakers page runs "
+                "at once either way."
+            ),
+            when_changed="The next transcript.",
+        ),
+        Definition(
+            key="speaker_check_window_seconds",
+            page=SPEAKERS,
+            group="Speaker check",
+            name="Speaker check window",
+            kind=NUMBER,
+            default=600,
+            least=120,
+            most=1800,
+            unit="seconds",
+            needs="speaker_check_available",
+            what_it_does=(
+                "How much talk one engine call reads at a time. A shorter "
+                "window means more calls, each with less to hold in view."
+            ),
+            when_changed="The next check.",
+        ),
+        Definition(
+            key="speaker_check_answer_tokens",
+            page=SPEAKERS,
+            group="Speaker check",
+            name="Speaker check answer cap",
+            kind=NUMBER,
+            default=3000,
+            least=500,
+            most=16000,
+            unit="tokens",
+            needs="speaker_check_available",
+            what_it_does=(
+                "The most one window's answer, a JSON list of moves, may run "
+                "to. An answer cut off at the cap keeps the moves that were "
+                "finished."
+            ),
+            when_changed="The next check.",
+        ),
+        Definition(
+            key="speaker_check_time_seconds",
+            page=SPEAKERS,
+            group="Speaker check",
+            name="Speaker check time limit",
+            kind=NUMBER,
+            default=180,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="speaker_check_available",
+            what_it_does=(
+                "How long one window's call may take. Doubled while the model "
+                "may think."
+            ),
+            when_changed="The next check.",
+        ),
+        Definition(
             key="vision_runs",
             page=VISION,
             group="Vision",
@@ -2121,6 +2212,7 @@ def time_limit_seconds(feature: str) -> int:
         "summary": "summary_time_seconds",
         "speaker_suggestions": "suggestions_time_seconds",
         "moment": "moments_time_seconds",
+        "speaker_check": "speaker_check_time_seconds",
     }[feature]
     return get(key)
 
@@ -2220,6 +2312,19 @@ VISION_LANDS, VISION_OVERNIGHT, VISION_ASKED = "lands", "overnight", "asked"
 def vision_runs() -> str:
     """When the picture is described: lands, overnight, or asked."""
     return get("vision_runs")
+
+
+def speaker_check_runs() -> str:
+    """When a check queued as a transcript lands runs: lands or overnight."""
+    return get("speaker_check_runs")
+
+
+def speaker_check_window_seconds() -> int:
+    return get("speaker_check_window_seconds")
+
+
+def speaker_check_answer_cap() -> int:
+    return get("speaker_check_answer_tokens")
 
 
 def vision_window() -> tuple[str, str]:

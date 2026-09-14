@@ -741,42 +741,136 @@
   // A suggestion lands on its speaker's card with Accept and Reject.
   var suggestLine = document.getElementById("suggest-line");
   var suggestTimer = null;
+  var checkLine = document.getElementById("check-line");
+  var correctionsBox = document.getElementById("corrections");
+
+  function drawNameSuggestions(body) {
+    if (!suggestLine || !V.assistant.suggestions) { return false; }
+    var unnamed = body.unnamed || [];
+    suggestLine.hidden = unnamed.length < 2;
+    var button = document.getElementById("suggest-names");
+    var said = document.getElementById("suggest-said");
+    var run = body.suggestion_run;
+    var busy = run && (run.state === "queued" || run.state === "running");
+    button.disabled = !body.reachable || !!busy;
+    button.title = body.reachable ? "" : (body.unavailable_line || "");
+    if (busy) { said.textContent = "Reading the transcript..."; }
+    else if (run && run.state === "failed") { said.textContent = run.said || ""; }
+    else if (run && run.state === "done" && !(body.pending || []).length) { said.textContent = "Nothing in the transcript shows who these speakers are."; }
+    else { said.textContent = ""; }
+    cards().forEach(function (card) {
+      var box = card.querySelector(".suggested");
+      box.hidden = true;
+      box.innerHTML = "";
+    });
+    (body.pending || []).forEach(function (one) {
+      var card = cardOf(one.speaker);
+      if (!card) { return; }
+      var box = card.querySelector(".suggested");
+      box.hidden = false;
+      box.innerHTML = "Probably <b>" + escape(one.name) + "</b>" + (one.role ? " (" + escape(one.role) + ")" : "") +
+        ", from <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>: “" + escape(one.quote) + "” " +
+        "<button type='button' class='tiny accept' data-suggestion='" + one.id + "' data-name='" + escape(one.name) + "'>Accept</button> " +
+        "<button type='button' class='ghost tiny reject' data-suggestion='" + one.id + "'>Reject</button>";
+    });
+    return !!busy;
+  }
+
+  // The Speaker check (Phase 5 chapter 3): the button, its state line, and
+  // the Suggested corrections under the cards, each row a line the check
+  // says belongs to another speaker.
+  function drawCorrections(body) {
+    if (!checkLine || !correctionsBox || !V.assistant.speakerCheck) { return false; }
+    var check = body.speaker_check || {};
+    var run = check.run;
+    var pending = check.pending || [];
+    var busy = run && (run.state === "queued" || run.state === "running");
+    checkLine.hidden = !check.offered;
+    var button = document.getElementById("check-speakers");
+    var said = document.getElementById("check-said");
+    button.disabled = !body.reachable || !!busy;
+    button.title = body.reachable ? "" : (body.unavailable_line || "");
+    if (busy) { said.textContent = "Reading the transcript, " + (run.windows ? run.windows + " windows so far..." : "window by window..."); }
+    else if (run && run.state === "failed") { said.textContent = run.said || ""; }
+    else if (run && run.state === "done" && !pending.length) { said.textContent = "Checked " + run.when + "; nothing to move."; }
+    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + "."; }
+    else { said.textContent = ""; }
+    correctionsBox.hidden = !pending.length;
+    document.getElementById("corrections-title").textContent =
+      "Suggested corrections (" + pending.length + ")";
+    document.getElementById("accept-corrections").hidden = pending.length < 2;
+    document.getElementById("corrections-list").innerHTML = pending.map(function (one) {
+      return "<li class='correction' data-correction='" + one.id + "' data-segment='" + one.segment + "' data-to='" + escape(one.to) + "'>" +
+        "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
+        "<span class='move'><b>" + escape(one.to) + "</b>, not " + escape(one.from) + "</span>" +
+        "<p class='q'>“" + escape(one.quote) + "”</p>" +
+        (one.reason ? "<p class='why small muted'>" + escape(one.reason) + "</p>" : "") +
+        "<span class='row acts'><button type='button' class='tiny accept-correction'>Accept</button> " +
+        "<button type='button' class='ghost tiny dismiss-correction'>Dismiss</button></span></li>";
+    }).join("");
+    return !!busy;
+  }
+
   function refreshSuggestions() {
-    if (!suggestLine || !V.assistant || !V.assistant.suggestions) { return; }
+    if (!V.assistant || (!V.assistant.suggestions && !V.assistant.speakerCheck)) { return; }
     fetch("/recording/" + V.recording + "/assistant")
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
-        var unnamed = body.unnamed || [];
-        suggestLine.hidden = unnamed.length < 2;
-        var button = document.getElementById("suggest-names");
-        var said = document.getElementById("suggest-said");
-        var run = body.suggestion_run;
-        var busy = run && (run.state === "queued" || run.state === "running");
-        button.disabled = !body.reachable || !!busy;
-        button.title = body.reachable ? "" : (body.unavailable_line || "");
-        if (busy) { said.textContent = "Reading the transcript..."; }
-        else if (run && run.state === "failed") { said.textContent = run.said || ""; }
-        else if (run && run.state === "done" && !(body.pending || []).length) { said.textContent = "Nothing in the transcript shows who these speakers are."; }
-        else { said.textContent = ""; }
-        cards().forEach(function (card) {
-          var box = card.querySelector(".suggested");
-          box.hidden = true;
-          box.innerHTML = "";
-        });
-        (body.pending || []).forEach(function (one) {
-          var card = cardOf(one.speaker);
-          if (!card) { return; }
-          var box = card.querySelector(".suggested");
-          box.hidden = false;
-          box.innerHTML = "Probably <b>" + escape(one.name) + "</b>" + (one.role ? " (" + escape(one.role) + ")" : "") +
-            ", from <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>: “" + escape(one.quote) + "” " +
-            "<button type='button' class='tiny accept' data-suggestion='" + one.id + "' data-name='" + escape(one.name) + "'>Accept</button> " +
-            "<button type='button' class='ghost tiny reject' data-suggestion='" + one.id + "'>Reject</button>";
-        });
+        var busy = drawNameSuggestions(body);
+        busy = drawCorrections(body) || busy;
         if (suggestTimer) { window.clearTimeout(suggestTimer); suggestTimer = null; }
         if (busy) { suggestTimer = window.setTimeout(refreshSuggestions, 2000); }
       })
       .catch(function () { /* the button waits for the next look */ });
+  }
+
+  // A correction accepted moves the line here as give() does, so the lanes,
+  // the counts and the reading pane change at once; Accept all reloads the
+  // lines instead, since many may have moved.
+  function moved(segmentId, name) {
+    var segment = segments.filter(function (one) { return String(one.id) === String(segmentId); })[0];
+    if (!segment) { return; }
+    segment.speaker = name;
+    buildBlocks();
+    fillCounts();
+    var keep = here;
+    draw();
+    here = keep;
+    var row = column ? column.children[keep] : null;
+    if (row) { row.classList.add("here"); }
+    drawLanes();
+    tell({ kind: "segments-changed" });
+  }
+  if (checkLine) {
+    document.getElementById("check-speakers").addEventListener("click", function () {
+      this.disabled = true;
+      send("/recording/" + V.recording + "/speaker-check").then(refreshSuggestions);
+    });
+  }
+  if (correctionsBox) {
+    correctionsBox.addEventListener("click", function (event) {
+      var cite = event.target.closest(".cite");
+      if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.seconds)); play(); return; }
+      var row = event.target.closest(".correction");
+      if (event.target.closest("#accept-corrections")) {
+        send("/recording/" + V.recording + "/corrections/accept-all").then(function (answer) {
+          if (!answer.ok) { UI.toast(answer.said.error || "Nothing was moved.", { problem: true, icon: "warning" }); return; }
+          sayUndo(answer.said.undo);
+          load().then(refreshSuggestions);
+        });
+        return;
+      }
+      if (!row) { return; }
+      var accept = event.target.closest(".accept-correction");
+      var dismiss = event.target.closest(".dismiss-correction");
+      if (!accept && !dismiss) { return; }
+      send("/correction/" + row.dataset.correction + "/" + (accept ? "accept" : "dismiss")).then(function (answer) {
+        if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+        if (accept && answer.said.stale) { UI.toast("That line changed since the check, so it was left as it is.", { icon: "info" }); }
+        else if (accept) { moved(row.dataset.segment, row.dataset.to); sayUndo(answer.said.undo); }
+        refreshSuggestions();
+      });
+    });
   }
   if (suggestLine) {
     document.getElementById("suggest-names").addEventListener("click", function () {

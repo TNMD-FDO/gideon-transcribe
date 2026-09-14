@@ -32,6 +32,17 @@
           <span id="suggest-said" class="small muted"></span>
         </span>
       {% endif %}
+      {% if assistant.speaker_check %}
+        {% comment %}
+          The Speaker check (Phase 5 chapter 3): shown by the script only
+          while two or more speakers are told apart. One press, one run over
+          the whole transcript; nothing moves until a correction is accepted.
+        {% endcomment %}
+        <span id="check-line" hidden>
+          <button type="button" class="small" id="check-speakers" title="Ask the AI assistant which lines the words show were given to the wrong speaker">Check the speakers</button>
+          <span id="check-said" class="small muted"></span>
+        </span>
+      {% endif %}
     {% endif %}
     <span class="small muted" id="win-state"></span>
     {% if not in_window %}
@@ -103,6 +114,22 @@
             </div>
           </div>
         {% endfor %}
+        {% if assistant.speaker_check %}
+          {% comment %}
+            Suggested corrections (Phase 5 chapter 3): the lines the check
+            says belong to another speaker, each with the words, a time that
+            plays it, and the reason. Accept moves the line as the number
+            keys do, with the same audit row and Undo; Dismiss puts it away.
+          {% endcomment %}
+          <section class="sp-corrections" id="corrections" hidden>
+            <div class="row head">
+              <b class="grow" id="corrections-title">Suggested corrections</b>
+              <button type="button" class="ghost tiny" id="accept-corrections" hidden>Accept all</button>
+            </div>
+            <p class="small muted" id="corrections-said" hidden></p>
+            <ol id="corrections-list" class="corrections"></ol>
+          </section>
+        {% endif %}
         <p class="small muted keys">
           <kbd>1</kbd> to <kbd>9</kbd> give the line being spoken to a speaker.
           <kbd>Space</kbd> plays, <kbd>B</kbd> goes back three seconds, <kbd>&larr;</kbd> <kbd>&rarr;</kbd> five.
@@ -192,7 +219,7 @@
       isVideo: {% if is_video %}true{% else %}false{% endif %},
       inCase: {% if in_case %}true{% else %}false{% endif %},
       inWindow: {% if in_window %}true{% else %}false{% endif %},
-      assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %} }{% else %}null{% endif %},
+      assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, speakerCheck: {% if assistant.speaker_check %}true{% else %}false{% endif %} }{% else %}null{% endif %},
       windowPanel: "speakers",
       backUrl: "{{ back_url }}",
       windowUrl: "{{ window_url }}"

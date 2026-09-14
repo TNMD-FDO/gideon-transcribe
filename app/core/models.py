@@ -272,6 +272,8 @@ from core.assistant import (  # noqa: E402, F401
     DigestPart,
     Moment,
     PromptTemplate,
+    SpeakerCheck,
+    SpeakerCorrection,
     Suggestion,
     SuggestionRun,
     Summary,

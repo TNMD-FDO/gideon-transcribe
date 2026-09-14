@@ -504,9 +504,30 @@ def line_speaker(request: HttpRequest, recording_id, segment_id) -> JsonResponse
     segment = transcript.segments.filter(pk=segment_id).first()
     if segment is None:
         return JsonResponse({"error": "no such line"}, status=404)
+    if segment.speaker == now:
+        return JsonResponse({"changed": 0, "undo": last_change_line(transcript)})
+    move_line(transcript, segment, now, by=request.user, request=request)
+    return JsonResponse({"changed": 1, "undo": last_change_line(transcript)})
+
+
+def move_line(
+    transcript,
+    segment,
+    now: str,
+    *,
+    by,
+    request=None,
+    event: str = "Speaker changed on a line",
+    **details,
+) -> int:
+    """One line given to a Speaker: the change, remembered for Undo, the
+    Person joined inside a Case, and the audit row. The number keys and an
+    accepted Speaker correction (Phase 5 chapter 3) both come through here,
+    so a correction is a change like any other."""
+    recording = transcript.recording
     was = segment.speaker
     if was == now:
-        return JsonResponse({"changed": 0, "undo": last_change_line(transcript)})
+        return 0
     segment.speaker = now
     segment.save(update_fields=["speaker"])
     changes = list(transcript.speaker_changes or [])
@@ -524,23 +545,22 @@ def line_speaker(request: HttpRequest, recording_id, segment_id) -> JsonResponse
     transcript.save(update_fields=["speaker_changes"])
     from core import people
 
-    people.on_named(
-        recording, now, by=request.user, how="named in the viewer", request=request
-    )
+    people.on_named(recording, now, by=by, how="named in the viewer", request=request)
     audit.write(
         audit.Category.EDITS,
-        "Speaker changed on a line",
-        actor=request.user,
+        event,
+        actor=by,
         request=request,
         affected_user=(
-            recording.user if recording.user_id != request.user.pk else None
+            recording.user if by is not None and recording.user_id != by.pk else None
         ),
         object_type="recording",
         object_id=recording.pk,
         object_label=recording.original_filename,
         segments_changed=1,
+        **details,
     )
-    return JsonResponse({"changed": 1, "undo": last_change_line(transcript)})
+    return 1
 
 
 @login_required

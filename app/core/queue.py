@@ -253,6 +253,10 @@ def merge(job: Job) -> Job:
     from core import vision
 
     vision.on_transcript(job.recording)
+    # The Speaker check, when the office has it on (Phase 5 chapter 3).
+    from core import speaker_check
+
+    speaker_check.on_transcript(job.recording)
     _the_batch_may_have_finished(job)
 
     seconds = (job.finished - job.created).total_seconds()

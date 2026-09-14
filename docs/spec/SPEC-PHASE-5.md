@@ -1,12 +1,12 @@
 # Gideon Transcribe, Phase 5 specification
 
-The Speakers release, published as `v1.50.0`.
+The Speakers release, published as `v1.50.0`; chapter 3, the Speaker check, built as `v1.55.0`.
 
 ## About this document
 
 This is the build specification for Phase 5 of Gideon Transcribe: managing Speakers as a job of its own. A Transcript arrives with its Speakers labelled by the engine, Speaker 1 and Speaker 2 and on, and someone has to listen and say who each one is. Phase 1 gave that job a strip at the head of the Transcript and Phase 4's releases a window beside the page; the maintainer asked on 2026-09-12 for "more of a suite": a page whose one job is turning the engine's Speakers into people, with the Transcript in view while it happens. It builds on Phase 1 (`docs/spec/SPEC-PHASE-1.md`, the Transcript viewer and player chapter and the AI assistant chapter), Phase 2 (`docs/spec/SPEC-PHASE-2.md`, People and the Speakers tab), and Phase 4 (`docs/spec/SPEC-PHASE-4.md`), and changes nothing in them beyond what "What changes from earlier phases" lists.
 
-Read it with the same companions: `CONTEXT.md` (the glossary, with the Phase 5 terms Speakers page, Lane, Sample, and Voice print), `docs/spec/ADMIN-SETTINGS-CATALOGUE.md` (unchanged by chapter 1), and `docs/whisperx-api.md` (unchanged by chapter 1; chapter 2 will open its door for embeddings).
+Read it with the same companions: `CONTEXT.md` (the glossary, with the Phase 5 terms Speakers page, Lane, Sample, Voice print, Speaker check, and Speaker correction), `docs/spec/ADMIN-SETTINGS-CATALOGUE.md` (unchanged by chapter 1; chapter 3 adds the Speakers page), and `docs/whisperx-api.md` (unchanged by chapters 1 and 3; chapter 2 will open its door for embeddings).
 
 Nothing in this document is office-specific. No new environment key is needed and no new service. The conventions of the Phase 1 document apply here unchanged.
 
@@ -15,13 +15,16 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **The Speakers page** (chapter 1, v1.50.0): a page of its own for one Recording, reached by Manage speakers on the Speakers strip and left by Done, that plays the Recording, lists its Speakers as cards with three Samples each, shows a Lane per Speaker across the whole Recording, and keeps the Transcript's Ledger under them filtered to the Speaker in hand. Naming offers the Case's People first. Rename, merge, giving one line to a Speaker, Suggest names, and Undo all live on it. The Speakers window of v1.47.0 to v1.49.0 becomes this page opened in a window.
 - **Voice prints** (chapter 2, a later release): the app recognising a voice it has heard before in the same Case, by sound rather than words, and offering the name first. Written here as the reservation the page keeps for it and the rules it will have to meet; not built, and the earlier phases' rule against embeddings stands until the chapter is amended into force.
 
-Chapter 1 adds no admin setting, no audit row, no table, and no environment key.
+- **The Speaker check** (chapter 3, v1.55.0): after a Transcript lands with its Speakers told apart, the engine reads it in windows and proposes the lines whose words show they were given to the wrong Speaker. Every proposal is checked by the app, listed on the Speakers page as a Speaker correction with the words, the time and the reason, and moves a line only when a person accepts it, through the same move the number keys make. Shipped Off; a Speakers page in the Panel's Settings group holds its five settings.
+
+Chapter 1 adds no admin setting, no audit row, no table, and no environment key. Chapter 3 adds a Speakers settings page, five audit rows, and two tables.
 
 ## Contents
 
 1. The Speakers page
 2. Voice prints (deferred; the reservation and the rules)
-3. Deferred and ruled out
+3. The Speaker check
+4. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 5. B. Settings added in Phase 5.
 
@@ -149,7 +152,69 @@ The WhisperX service returns, on request, one vector per Speaker from its diariz
 
 Phase 1's ruled-out item 12 and Phase 2's Principle 4 (an amendment to each, recorded here and there); `return_speaker_embeddings` requested on every diarized job inside a Case while the setting is On; a field on the Person and a migration; the reservation line on the card drawn; an audit row for a match accepted and rejected (no name); the catalogue's row for the setting; the decision record in `docs/adr/` that says what is kept and why.
 
-## 3. Deferred and ruled out
+## 3. The Speaker check
+
+Written 2026-09-14 from the maintainer's ask, after a run of the office's engine over three corrected recordings in one case ("the results are very promising! build it"), and the decisions taken in the same conversation: the check works on the separation, which lines belong to which voice, and not on naming, which Suggest names already does; it proposes and never applies; it can be turned on and off in the Panel with its settings beside it. The probe that preceded it is recorded in `docs/research/speaker-check-probe.md`.
+
+### Principles
+
+1. **Separation, not naming.** Suggest names says who a Speaker is. The check says which lines are whose. They sit side by side on the Speakers page and never overlap: the check works on the labels as they stand, and a Speaker already named is proposed by that name.
+2. **It proposes; a person moves.** Nothing changes when the check runs. A Speaker correction is a proposal on the page until somebody presses Accept, and an accepted correction is a line move like any other: the viewer's own function, the viewer's own audit row, the viewer's own Undo.
+3. **Only among the Speakers there are.** A line may be moved only to a Speaker already on the Transcript. The engine is given that list and may answer with nothing else; the app checks every answer again. The check never adds a Speaker, never merges two, and never touches a word.
+4. **What the words give.** The check finds the moves the words make plain: a question and its answer under one label, a person addressed by name answering under the asker's label, a command under the label of the one it was given to. Where either Speaker could have said a line, nothing is proposed. The fine separations the words cannot settle are a voice question, chapter 2's, not this chapter's.
+5. **Off until judged.** Shipped Off. An office turns it on after seeing it do well on its own recordings, as with Suggest names.
+
+### Words
+
+Speaker check, Speaker correction, as the glossary has them. On the page: **Check the speakers**, **Suggested corrections**, **Accept**, **Dismiss**, **Accept all**. A correction reads "Speaker 2, not Speaker 1" with the words, the time, and the reason.
+
+### When it runs
+
+- **As the Transcript lands**, from the queue's hook, when the switch is on and the Recording was transcribed with its Speakers told apart and two or more Speakers came out of it. One run at a time per Transcript; nothing is queued twice.
+- **Under the overnight position**, a run queued by day waits for the Vision window to open (the Vision page's Overnight from), so a shared engine is not asked by day. A run pressed on the page runs at once whatever the position.
+- **On a press** of Check the speakers on the Speakers page, at any time, for a Transcript the check never ran on or after a merge or a rename changed the labels.
+- **Process again** takes the corrections with the old Transcript, as it takes the name suggestions; the new Transcript is checked afresh as it lands.
+
+### The run
+
+The engine's lane, one job. The Transcript is read as the assistant reads it, one numbered line per Segment with its time and its label, in windows of about ten minutes of talk (a setting), each window starting six lines before the one before it ended so a line at an edge keeps its question or its answer in view. Every window is one call: the Ground rules, the Speaker check template, the answer's shape, the list of Speakers, and the lines. The answer is a JSON list of moves, each a line number, the label as shown, the Speaker it belongs to, and a reason; vLLM's structured output holds the Speaker to the list given. Thinking is off; the sampling is the suggestions' own, deterministic.
+
+The app then checks every move: the line is one of the window's, the Speaker is on the Transcript, the label is the one the engine was shown, and the move is to somebody else. One correction per line; the rest are dropped without a word to anyone. An unreadable window is a lost window, not a lost run. A problem mid-run fails the run with its reason and keeps what the earlier windows found, since every one passed the checks. A run replaces the pending corrections with its own and offers again nothing a person dismissed.
+
+### The Speakers page
+
+- In the head, beside Suggest names, **Check the speakers** with a state line: reading the transcript, window by window; checked at a time; nothing to move; or the engine's reason.
+- Under the cards, **Suggested corrections (N)**: one row per correction, oldest time first, with a time that plays the line, "Speaker 2, not Speaker 1", the words, and the reason; **Accept** and **Dismiss** on each, **Accept all** at the top when two or more wait.
+- Accept moves the line at once on the page, in the Lanes, the counts and the reading pane, and the Undo line says so. A correction whose line changed hands since the check is dismissed rather than applied, and the page says so.
+- On the recording page's Speakers strip, a pill, **3 speaker corrections**, while any wait; a press opens the Speakers page.
+
+### What changes from earlier phases
+
+- **Phase 1, the Transcript viewer and player chapter, Speaker changed on a line**: the move a line makes by the number keys is one function, and an accepted correction goes through it. The row it writes for a correction is Speaker correction accepted, with the same details.
+- **Phase 4 chapter 5, Vision**: the overnight position's window is read by the check too, as the time its day-queued runs wait for. Nothing else in the Vision flow changes; the check is never a stage the batch page or the mail waits for.
+- Nothing changes for Suggest names, the Speakers tab on the Case page, exports, Clips, Summary, or Chat.
+
+### Audit rows
+
+Speaker check queued (how: landed or pressed; the wait in seconds under overnight); the AI assistant call for `speaker_check` (the windows and the corrections found, never the words); Speaker correction accepted (as Speaker changed on a line, with how: check); Speaker correction dismissed. None holds a name or a word.
+
+### Settings
+
+A **Speakers** page in the Panel's Settings group: Speaker check (Off); Speaker check runs (as each transcript lands; overnight); Speaker check window (600 seconds); Speaker check answer cap (3,000 tokens); Speaker check time limit (180 seconds). The wording lives as the **Speaker check** template on the Templates page, editable and resettable, following the shipped wording while unedited.
+
+### Not in this phase
+
+- Accepting the sure ones automatically. A later switch, once an office has watched the check for a while.
+- Splitting a line between two Speakers at a word.
+- A check across a Case, or on a Recording whose Speakers were not told apart.
+- Any listening: the check reads words only. Voice prints are chapter 2.
+
+### Left to the build
+
+- The overlap between windows and the cap on moves per window, within the rule that a window is about ten minutes of talk.
+- The exact wording of the state line and of the dismissed-because-stale notice.
+
+## 4. Deferred and ruled out
 
 - **Voice prints**: deferred to a later release; chapter 2.
 - **An office-wide list of people or voices**: ruled out, as Phase 2 rules it out for names.
@@ -159,16 +224,30 @@ Phase 1's ruled-out item 12 and Phase 2's Principle 4 (an amendment to each, rec
 
 ## Appendix A. Audit rows added in Phase 5
 
+| Category | Row | Chapter |
+|---|---|---|
+| Recordings | Speaker check queued | 3, v1.55.0 |
+| AI assistant | AI assistant call, feature `speaker_check` | 3, v1.55.0 |
+| Edits | Speaker correction accepted; Speaker correction dismissed | 3, v1.55.0 |
+
 None in chapter 1.
 
 ## Appendix B. Settings added in Phase 5
 
-None in chapter 1.
+| Setting | Page | Default | Chapter |
+|---|---|---|---|
+| Speaker check | Speakers | Off | 3, v1.55.0 |
+| Speaker check runs | Speakers | as each transcript lands | 3, v1.55.0 |
+| Speaker check window | Speakers | 600 seconds | 3, v1.55.0 |
+| Speaker check answer cap | Speakers | 3,000 tokens | 3, v1.55.0 |
+| Speaker check time limit | Speakers | 180 seconds | 3, v1.55.0 |
+
+And the Speaker check prompt template on the Templates page. None in chapter 1.
 
 ## Sources
 
-The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose from ("the line-up with lanes"); the Phase 1 Transcript viewer and player chapter (the Speakers panel, the Speakers window, Speaker suggestions) and AI assistant chapter; the Phase 2 People chapter; the Phase 3 Live recording chapter's use of embeddings across stretches; `docs/whisperx-api.md`.
+The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose from ("the line-up with lanes"); the Phase 1 Transcript viewer and player chapter (the Speakers panel, the Speakers window, Speaker suggestions) and AI assistant chapter; the Phase 2 People chapter; the Phase 3 Live recording chapter's use of embeddings across stretches; `docs/whisperx-api.md`. For chapter 3: the maintainer's questions and decisions of 2026-09-14 and the probe recorded in `docs/research/speaker-check-probe.md`.
 
 ## Amendments applied
 
-None yet.
+- 2026-09-14: chapter 3, the Speaker check, written and built as v1.55.0 the same day, with these decisions left to the build: windows overlap by six lines, at most sixty moves per window's answer, the state line's and the stale notice's wording as the page has them.

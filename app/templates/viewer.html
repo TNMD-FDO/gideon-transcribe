@@ -290,6 +290,10 @@
                 </ul>
                 <span id="cast-count" class="small muted"></span>
                 <button type="button" id="manage-speakers" class="ghost tiny" data-href="{% url 'speakers' recording.pk %}" title="A page of its own for saying who each speaker is: hear each voice, name it, merge the ones the engine split">Manage speakers</button>
+                {% if assistant.speaker_check %}
+                  {# The Speaker check's count (Phase 5 chapter 3), filled by assistant.js; a press opens the Speakers page. #}
+                  <button type="button" id="corrections-pill" class="pill warn corrections-pill" hidden title="Lines the AI assistant says were given to the wrong speaker; decide them on the Speakers page"></button>
+                {% endif %}
                 <button type="button" id="speakers-toggle" class="ghost tiny" title="Hide or show the speaker names on the lines">hide</button>
                 <button type="button" id="cast-toggle" class="ghost tiny" title="Fold the speakers away to one line">fold</button>
               {% else %}

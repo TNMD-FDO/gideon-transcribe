@@ -473,11 +473,30 @@
 
   // Polling -------------------------------------------------------------------------
 
+  // The Speaker check's pill on the strip (Phase 5 chapter 3): how many
+  // corrections wait on the Speakers page. A press goes there.
+  function drawCorrectionsPill() {
+    var pill = document.getElementById("corrections-pill");
+    if (!pill || !state) { return; }
+    var check = state.speaker_check || {};
+    var count = (check.pending || []).length;
+    pill.hidden = !count;
+    pill.textContent = count + " speaker correction" + (count === 1 ? "" : "s");
+  }
+  var correctionsPill = document.getElementById("corrections-pill");
+  if (correctionsPill) {
+    correctionsPill.addEventListener("click", function () {
+      var manage = document.getElementById("manage-speakers");
+      if (manage) { manage.click(); }
+    });
+  }
+
   function draw() {
     drawSummaries();
     drawChat();
     drawSuggestions();
     drawPrepareNote();
+    drawCorrectionsPill();
   }
 
   function refresh() {

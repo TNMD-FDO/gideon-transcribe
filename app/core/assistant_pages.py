@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, exports, settings_store, tasks
+from core import assistant, audit, cases, exports, settings_store, speaker_check, tasks
 from core.assistant import (
     Chat,
     ChatTurn,
@@ -345,6 +345,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             # "pending", not "suggestions": that word is the feature's own flag above.
             "pending": suggestions,
             "suggestion_run": run,
+            # The Speaker check (Phase 5 chapter 3): its corrections and its run.
+            "speaker_check": speaker_check.state_json(transcript),
         }
     )
 
@@ -559,6 +561,98 @@ def decide(request: HttpRequest, suggestion_id, verdict: str) -> JsonResponse:
         segments_changed=changed,
     )
     return JsonResponse({"ok": True, "changed": changed})
+
+
+# The Speaker check (Phase 5 chapter 3) ----------------------------------------
+
+
+@login_required
+@require_POST
+def speaker_check_run(request: HttpRequest, recording_id) -> JsonResponse:
+    """Check the speakers, pressed on the Speakers page: one run, now."""
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if not speaker_check.on():
+        return JsonResponse({"error": "The speaker check is off"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=409)
+    if not speaker_check.possible(transcript):
+        return JsonResponse(
+            {"error": "fewer than two speakers were told apart"}, status=409
+        )
+    if speaker_check.busy(transcript):
+        return JsonResponse({"error": "a check is already running"}, status=409)
+    cases.used(recording, by=request.user)
+    check = speaker_check.queue_check(recording, by=request.user, how="pressed")
+    return JsonResponse({"id": str(check.pk) if check else ""})
+
+
+@login_required
+@require_POST
+def decide_correction(
+    request: HttpRequest, correction_id, verdict: str
+) -> JsonResponse:
+    """Accept moves the line as a person would; Dismiss puts it away."""
+    from core.assistant import SpeakerCorrection
+
+    correction = get_object_or_404(
+        SpeakerCorrection.objects.select_related("transcript", "segment"),
+        pk=correction_id,
+        state=SpeakerCorrection.PENDING,
+    )
+    recording = _recording(request, correction.transcript.recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if verdict not in ("accept", "dismiss"):
+        return JsonResponse({"error": "accept or dismiss"}, status=400)
+    from core.viewer import being_replaced, last_change_line
+
+    if being_replaced(recording):
+        return JsonResponse({"error": "This transcript is being replaced."}, status=409)
+    cases.used(recording, by=request.user)
+    changed = 0
+    if verdict == "accept":
+        changed = speaker_check.accept(correction, by=request.user, request=request)
+    else:
+        speaker_check.dismiss(correction, by=request.user, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "changed": changed,
+            "stale": verdict == "accept" and changed == 0,
+            "undo": last_change_line(correction.transcript),
+        }
+    )
+
+
+@login_required
+@require_POST
+def accept_corrections(request: HttpRequest, recording_id) -> JsonResponse:
+    """Accept all: every pending correction, each through the same move."""
+    from core.assistant import SpeakerCorrection
+    from core.viewer import being_replaced, last_change_line
+
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=409)
+    if being_replaced(recording):
+        return JsonResponse({"error": "This transcript is being replaced."}, status=409)
+    cases.used(recording, by=request.user)
+    changed = 0
+    for one in list(
+        transcript.corrections.filter(state=SpeakerCorrection.PENDING).select_related(
+            "segment"
+        )
+    ):
+        changed += speaker_check.accept(one, by=request.user, request=request)
+    return JsonResponse(
+        {"ok": True, "changed": changed, "undo": last_change_line(transcript)}
+    )
 
 
 # Exports ------------------------------------------------------------------------------

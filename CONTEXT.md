@@ -374,6 +374,12 @@ One pass of the AI assistant over whole Transcripts that fit together in one cal
 **Speaker suggestion**:
 A name or role the AI assistant proposes for an unnamed Speaker when a user asks, with the Segment that shows why. Nothing changes until the user accepts it. Inside a Case, the AI assistant is told the Case's People, so it can recognise a Person already named elsewhere.
 
+**Speaker check**:
+The AI assistant reading a Transcript whose Speakers were told apart, in windows of a few minutes, for lines whose words show they belong to a different Speaker than the voice split gave them (Phase 5 chapter 3). It runs by itself as the Transcript lands, when the office has it on, or from Check the speakers on the Speakers page. It proposes and never applies: its findings are Speaker corrections. It never adds or merges a Speaker and never changes a word. Words to avoid: relabel, re-diarize, auto-correct.
+
+**Speaker correction**:
+One line the Speaker check says belongs to another Speaker already on the Transcript: the line's words, its time, who it is labelled as, who it should be, and the assistant's reason in a few words. Listed under Suggested corrections on the Speakers page until a person accepts or dismisses it. Accepting moves the line exactly as the number keys do, with the same audit row and the same Undo; a correction whose line changed since the check is dismissed rather than applied. Words to avoid: reassignment, fix, auto-fix.
+
 **Moment**:
 A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it, or its answer to a question about the picture from a few close frames. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4.
 _Avoid_: frame, snapshot, scene, screenshot

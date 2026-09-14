@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.55.0, 2026-09-14
+
+```
+Models: unchanged
+Database: migrates (0044: the Speaker check's runs and its corrections)
+```
+
+### Added
+
+- **The Speaker check** (Phase 5 chapter 3). After a transcript lands with
+  its speakers told apart, the AI assistant reads it in windows of about
+  ten minutes and proposes the lines whose words show they were given to
+  the wrong speaker: a question and its answer under one label, a person
+  addressed by name answering under the asker's label. It proposes and
+  never applies. Every proposal is checked by the app (a real line, a
+  speaker already on the transcript, the label as shown) and waits on the
+  Speakers page under **Suggested corrections**, each with the words, a time
+  that plays the line, "Speaker 2, not Speaker 1", and the reason, with
+  **Accept**, **Dismiss** and **Accept all**. Accepting moves the line as
+  the number keys do, with the same audit row and the same Undo; a line
+  that changed hands since the check is dismissed rather than applied. The
+  check never adds or merges a speaker and never changes a word.
+- **Check the speakers** on the Speakers page runs it on request, and the
+  recording page's speaker strip shows a pill with how many corrections
+  wait.
+- **A Speakers page** in the Panel's Settings group: Speaker check (shipped
+  Off), Speaker check runs (as each transcript lands, or overnight, when a
+  check queued by day waits for the Vision window), Speaker check window,
+  answer cap and time limit. The wording is the **Speaker check** template
+  on the Templates page.
+- Audit rows Speaker check queued, Speaker correction accepted and Speaker
+  correction dismissed, and the AI assistant call for `speaker_check` with
+  the windows and the corrections found; never a word of the transcript.
+- `docs/research/speaker-check-probe.md` records the probe on the office's
+  recordings that preceded the chapter.
+
 ## v1.54.2, 2026-09-14
 
 ```

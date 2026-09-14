@@ -91,6 +91,7 @@ SHIPPED_HISTORY = {
     "prompt:case_chat": ("0003b7162b10fbfd",),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
+    "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
 }
 
 
@@ -337,6 +338,19 @@ SUGGESTIONS = (
     "who a speaker is, say unknown."
 )
 
+SPEAKER_CHECK = (
+    "The speakers of this transcript were told apart by their voices, and some "
+    "lines were given to the wrong speaker. Read the lines and find the ones "
+    "whose words show they belong to a different speaker than the one they "
+    "are labelled with: a question and its answer given to the same speaker, "
+    "a person addressed by name answering under the name of the one who "
+    "asked, a command given by the person it is labelled as receiving. Move a "
+    "line only to a speaker already in the list of speakers. Never invent a "
+    "speaker, never merge speakers, never change any words. Suggest a move "
+    "only when the words make it clear; when either speaker could have said "
+    "the line, leave it. Give a reason of a few words for each move."
+)
+
 # What the app adds after a feature's template: the answer's shape, which no
 # Admin edits. The chapter leaves the exact prose text to the build.
 SUMMARY_FORMAT = (
@@ -371,6 +385,12 @@ SUGGESTIONS_FORMAT = (
     "Witness. A role is the expected answer when no name is spoken; say unknown "
     "only when even a role cannot be told. A speaker's label, such as Speaker 3 "
     "or Side 1 Speaker 2, is never a name or a role."
+)
+SPEAKER_CHECK_FORMAT = (
+    "Answer with the JSON asked for: a list under moves, each item the line's "
+    "number as shown in brackets, the speaker the line is labelled with as "
+    "shown, the speaker it belongs to from the list of speakers, and a reason "
+    "of a few words. An empty list when nothing should move."
 )
 
 # A Moment: what the camera showed at one time (Phase 4). The template is the
@@ -692,6 +712,78 @@ def suggestions_schema(unnamed: list[str]) -> dict:
     schema = copy.deepcopy(SUGGESTIONS_SCHEMA)
     schema["properties"]["suggestions"]["maxItems"] = max(1, len(unnamed))
     return schema
+
+
+def speaker_check_schema(speakers: list[str]) -> dict:
+    """The Speaker check's answer: a list of moves, each to a Speaker already
+    on the Transcript, so the engine cannot answer with a name of its own."""
+    return {
+        "type": "object",
+        "properties": {
+            "moves": {
+                "type": "array",
+                "maxItems": 60,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line": {"type": "integer"},
+                        "from": {"type": "string"},
+                        "to": {"type": "string", "enum": list(speakers)},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["line", "from", "to", "reason"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["moves"],
+        "additionalProperties": False,
+    }
+
+
+def speaker_check_input(lines: list, speakers: list[str]) -> str:
+    """One window as the engine reads it: the Speakers it may move a line to,
+    then the lines with their numbers, times and labels."""
+    return f"Speakers: {', '.join(speakers)}\n\nLines:\n{render(lines)}"
+
+
+def plain_speaker(label: str) -> str:
+    """A line's Speaker as labelled, without the corrected mark a rendered
+    line carries."""
+    return label.replace(" (corrected)", "").strip()
+
+
+def keep_corrections(raw: list, lines: list, speakers: list[str]) -> list[dict]:
+    """The moves that pass every check: a line of this window, a Speaker on
+    the Transcript, the label still what the engine was shown, and a move
+    to somebody else. One per line; the rest are dropped without a word."""
+    by_number = {line.number: line for line in lines}
+    allowed = set(speakers)
+    kept: dict = {}
+    for one in raw:
+        if not isinstance(one, dict):
+            continue
+        try:
+            line = by_number[int(one.get("line"))]
+        except (KeyError, TypeError, ValueError):
+            continue
+        to = str(one.get("to", "")).strip()
+        labelled = plain_speaker(line.speaker)
+        if to not in allowed or to == labelled:
+            continue
+        if plain_speaker(str(one.get("from", ""))) != labelled:
+            continue
+        if line.segment_id in kept:
+            continue
+        kept[line.segment_id] = {
+            "segment_id": line.segment_id,
+            "start": line.start,
+            "quote": line.text[:300],
+            "from": labelled,
+            "to": to,
+            "reason": str(one.get("reason", "")).strip()[:120],
+        }
+    return list(kept.values())
 
 
 def salvage_json(text: str) -> str:
