@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 4 specification
 
-The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, its fifth in `v1.43.0`, its sixth in `v1.51.0`, and its seventh in `v1.52.0`.
+The Moments release, published as `v1.38.0`, its second chapter in `v1.39.0`, its third in `v1.40.0`, its fourth in `v1.41.0`, its fifth in `v1.43.0`, its sixth in `v1.51.0`, its seventh in `v1.52.0`, and its eighth in `v1.54.0`.
 
 ## About this document
 
@@ -21,6 +21,7 @@ Nothing in this document is office-specific. No new environment key is needed an
 - **The video summary and the video-aware chat** (chapter 5, v1.43.0): a shipped Video summary template that writes from the words and the described Moments together, fixed camera rules that keep the two sources apart whenever Camera lines are handed to Summary or Chat, a Chat that answers "what was in his hand at 12:40?" from both feeds, a look-first line in the summary dialog that says the cost in numbers and starts ticked by a rule, and camera citations drawn with the camera glyph.
 - **Prepared videos, one account, and the digest for Admins** (chapter 7, v1.52.0): a video is prepared by itself as its transcript lands, on first use, or from the case page, never by a press on the recording page; the Moments tab and every moment button are gone; the Video summary is one account of the events from the words and the picture together, an executive summary first; the batch page, the case page and the cards say the count and the time left, and the Batch's mail waits for its videos; an Admin reads the Digest under Details, and the Digest's instructions are a template.
 - **The picture record, the Digest, and the camera's stamp** (chapter 6, v1.51.0): the recording cut where the picture and the sound change and described once per span, never twice and never overlapping, as the foundation a video's summary is written from, made when a summary is asked for; one Digest per Transcript, a model's time-ordered condensation of the words and the camera that the Summary, the Chat and the Case Chat are written from; the date, the time and the camera id burned into the picture read once and told to the model as the camera's clock; Cues and the camera lines among the transcript's rows withdrawn.
+- **Vision: the tick, the night, and what an Admin allows** (chapter 8, v1.54.0): the picture step named Vision on every page and chosen by a tick on the upload page; run as each transcript lands, overnight in a window, or only when an Admin allows it; queued for tonight by anyone with the case, started by day only by an Admin, asked for through a request an Admin allows or declines; the transcript usable at once and the summary written from it until the vision is; two mails for a case batch; and the Panel's Vision page, with the settings of the earlier chapters regrouped and three retired.
 
 It adds twenty-six admin settings in all (thirty-three added, seven withdrawn in chapter 6), one prompt template (two, the second withdrawn in chapter 6), one shipped Summary template, three audit row features in all (the finder's withdrawn), one Recordings row, two Viewer-edit rows, one reason class, three tables in all (migrations 0035 to 0040; the Cues table made in 0037 dropped in 0040), and no environment key.
 
@@ -33,7 +34,8 @@ It adds twenty-six admin settings in all (thirty-three added, seven withdrawn in
 5. The video summary and the video-aware chat
 6. The picture record, the Digest, and the camera's stamp
 7. Prepared videos, one account, and the digest for Admins
-8. Deferred and ruled out
+8. Vision: the tick, the night, and what an Admin allows
+9. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 4. B. Settings added in Phase 4.
 
@@ -471,7 +473,108 @@ Recordings: **Video prepared**, with the descriptions and the parts made and the
 - The task's wait for the Playback copy (a minute, up to a hundred and twenty times), the on-first-use wait for a running preparation (five seconds at a time, up to three hours), and the estimate's window of fifty (`assistant.prepare`, `wait_or_prepare`, `seconds_per_description`).
 - The batch page's and the case page's wording, within the words fixed here.
 
-## 8. Deferred and ruled out
+## 8. Vision: the tick, the night, and what an Admin allows
+
+Written 2026-09-14, after the maintainer had judged the first memos and turned to the cost of the picture: "I'm wondering if we should build in some scheduling, where the vlm part runs overnight ... I think we need a tick that turns on this part of the processing. Someone may just want transcripts completed." The decisions that followed, in the maintainer's words: the option needs a better name, "maybe something like 'enrich with vision'"; the person is told it runs overnight and that an email follows; "only an admin should be able to make this urgent, otherwise everyone will just click it", with a request an Admin can allow; two mails, one when each stage is complete; "intuitive but not overexplanatory" communication of what has occurred and what will occur; a user may change their mind after a case is made ("not yet enriched with vision"); and, on session recordings, that vision runs for recordings in a case, and for session recordings too when the office sets it to run as each transcript lands. The engine is GIDEON's, shared with its own users by day; every description is a request on it; the night is where the bulk of that work belongs, and a person's need for it now is a decision an Admin makes.
+
+### Principles
+
+1. **The picture is a choice, made on the upload page.** A tick, **Enrich with vision**, says whether the picture is described and joined to the words. Its starting position is the office's. An office that wants transcripts alone never sees it ticked, and a batch with it off is finished when the transcripts are, mail and all, as a batch of sound recordings is today.
+2. **The office says when.** Vision runs as each transcript lands, or overnight in a window the Admin sets, or only when an Admin allows it. The shipped position is as each transcript lands, which is what chapter 7 built; the day a dedicated model arrives, the office turns the schedule off and nothing else changes.
+3. **The night needs a case.** A session's recordings are gone at sign-out or after the idle hours, so under the two scheduled positions vision is offered only for a recording in a case. As each transcript lands, a session video is enriched straight away, as today, and dropped with the session if not reached.
+4. **Urgency is an Admin's.** Anyone with a case may queue its videos for tonight; only an Admin may start the work by day. Anyone may ask; the Admin allows or declines; the asker is told. Nothing a person can press on their own makes the shared engine work by day, and a summary or a chat question never starts the vision work under a scheduled position.
+5. **The transcript is usable at once.** Reading, search, Speakers, clips, exports, Summary and Chat are all there the moment the transcript lands, the summary and the chat written from the transcript alone until the vision is, and Regenerate takes the vision in afterwards.
+6. **Two mails, each a few lines.** A case batch's people hear when it is transcribed and again when it is enriched; a session batch's, once. Each message says what has happened and, in one line, what will.
+7. **The pages say the state in one family of words.** Enrich with vision, Enriching tonight, Enriching now, Enriched with vision, Not yet enriched with vision. "Prepared" leaves the pages; the field keeps its name.
+
+### Words
+
+**Vision** is added to the glossary: the picture step of chapter 7 (the scan, the stamp, the record, the Digest) as every page names it, and **Enrich** its verb. **Vision request** is added: what a person makes when they ask for it now. **Prepared** stays as the field's name and gains the note that the pages say Vision.
+
+### The tick
+
+- **On the upload page**, for videos only and while Vision is On: **Enrich with vision**, starting in the position **Enrich with vision starts ticked** gives it. Its caption is one line, worded from the office's schedule: "The picture is described and joined to the words as each transcript lands." / "... tonight between 20:00 and 06:00. You get an email when it is done." / "... when an Admin allows it for this case." A batch is ticked as one; a tick applies to its videos and means nothing for its sound recordings.
+- **Under the scheduled positions the tick appears when Into a case is chosen.** With This session only chosen it is not there, and one muted line says why: "Vision runs tonight and needs a case; a session's recordings are gone by then. Put it in a case to enrich it." Under as-each-transcript-lands the tick is offered for both.
+- **What the tick does.** As each transcript lands: the video is queued for vision the moment its transcript lands, as chapter 7 has it. Overnight: it is marked **tonight** and waits for the window. Only when asked: the tick is absent; the case page offers the asking.
+- **A video uploaded without the tick** is transcribed and finished. Its case page row reads Not yet enriched with vision, with the ways to change that below. Nothing decided at upload is final.
+
+### When vision runs
+
+- **The setting** is **Vision runs**, on the Vision page: **as each transcript lands** (shipped), **overnight**, or **only when asked**.
+- **Overnight** runs between **Overnight from** and **Overnight until**, two clock times in the server's time zone (20:00 and 06:00 shipped; the page shows the server's current time beside them so nobody sets a window in the wrong zone). Inside the window the app takes the videos marked tonight, oldest first, one at a time in the vision lane, and enriches each as chapter 7 prepares it. At the window's close a video part-way finishes; the rest keep their place for the next night. A video not reached says so on its row ("Not reached last night; tonight again") and is first in line the night after. The count ahead of a video is on its row.
+- **The engine unreachable during the night** puts the video back to tonight rather than failing it; any other failure keeps its reason as chapter 7 has it. How the app should behave across GIDEON's own maintenance nights is parked, at the maintainer's word, for a later chapter.
+- **Only when asked** queues nothing by itself. Every ticked or untied video waits as Not yet enriched with vision until an Admin's Enrich now, or a request allowed.
+- **Switching the position** changes nothing already enriched or running. Videos marked tonight under overnight are taken as they stand when the position moves to as-each-transcript-lands (queued at once, oldest first) and wait for an Admin when it moves to only-when-asked.
+
+### On the case page
+
+- **The column** is **Vision** (Prepared before), with one of: **Enriched with vision**; **Enriching now, 12 of 60, about 18 minutes**; **Enriching tonight** (with "3 ahead of it" when there are); **Requested now, waiting for an Admin**; **Not yet enriched with vision**; **Not enriched: <reason>** after a failure; nothing for sound alone. The State pill of chapter 7 says Preparing only while the vision is running now; a video waiting for tonight is Ready.
+- **The line above the list**, while any video is not yet enriched: "3 videos not yet enriched with vision", with the buttons below for all of them at once; the Prepare them now of chapter 7 is withdrawn in favour of these.
+- **Enrich tonight** (overnight only), on a row and on the line: marks the video, or all of them, tonight. Anyone with the case may press it; it costs nothing by day. Its confirm is one line: "Enriched tonight, between 20:00 and 06:00; the people on this case get an email when it is done."
+- **Ask for it now** (overnight and only-when-asked), on a row and on the line: records a Vision request, with an optional line of why, and the row reads Requested now, waiting for an Admin. Anyone with the case may ask; one open request per case or video at a time. A request is for a case's videos as they stand when it is made, or for one video.
+- **Enrich now**, an Admin's only, on a row and on the line: queues the work now, whatever the position, as chapter 7's press did. The row reads Enriching now.
+- **Declined**: the row reads "Not yet enriched with vision; the request was declined" with the Admin's line if there is one, until the next request or the vision itself. No mail for a decline.
+- **Shares.** Anyone the case is shared with sees the state and may press Enrich tonight and Ask for it now; Enrich now stays an Admin's on any case.
+
+### Requests
+
+- **What a request is**: who asked, for which case or video, when, and an optional line of why; its state, waiting, allowed, or declined; who decided and when. A request is a row, never a mail alone, so the Panel can show what is waiting.
+- **Where an Admin sees them**: the Vision page of the Panel carries **Requests** at the top: each with the asker, the case or video, how long the work would take (chapter 7's estimate), the line of why, and **Allow** and **Decline** with an optional line back. The Panel's rail shows the count of waiting requests beside Vision. Allow queues the work at once as Enrich now does; Decline records the line.
+- **Mail.** When a request is made, every Admin with an email address gets one message, "Vision requested now", with the asker, the case or video, the estimate, the line, and a link to the Panel; the operator's address is the fallback when no Admin has one. When it is allowed, the asker gets one, "Vision allowed", with the estimate and a link to the case; when the work is done, the asker gets the Vision done message below. Each only while Email notifications are on, and the three are templates on the Email page like the others.
+- **Audit rows**: Vision requested (the asker), Vision allowed and Vision declined (the Admin), each with the case or recording as its object and no words of why.
+
+### Before the vision, and after
+
+- **Summary and Chat** on a video not yet enriched are written from the transcript, at once, under the two scheduled positions; the summary card says "Written from the transcript", and nothing about what it lacks. Once the video is enriched the same card says "Written from the transcript; Regenerate to include the vision", and Regenerate writes the memo from both, its card saying "Written from the transcript and the vision". A chat answer is dated by nature and needs no line. As each transcript lands, chapter 7's rule stands: the summary and the chat prepare the video first and wait.
+- **The case chat** reads what is enriched, and the words of what is not, as chapter 7 has it.
+- **Nothing on the recording page** starts the vision work under a scheduled position.
+
+### Mail
+
+- **A case batch, under a scheduled position**, gets two messages. When its transcripts are done: the Batch finished message of Phase 3, its `{prepared}` line now saying "The 4 videos are enriched with vision tonight; you will get a second message when that is done." (or "... when an Admin allows it."). When its ticked videos are all enriched, or could not be: **Vision done**, "Enriched with vision: 4 videos in the batch Grove Loop are ready for summaries and chat." with a line for any that could not be, and a link to the case.
+- **A case batch, as each transcript lands**, gets the one message that waits, as chapter 7 has it.
+- **A session batch** gets one message with no line about vision.
+- **A video enriched by a press or a request** sends the Vision done message to the person who pressed or asked, for what they pressed or asked; a batch's second message goes when the batch's videos are all done, whoever caused it.
+- The words are shipped as templates on the Email page: Batch finished (amended), Vision done, Vision requested, Vision allowed, each a Subject and a Body with a fixed set of placeholders, edited like the others.
+
+### What moves with the recording
+
+- **Move to case.** A session recording moved into a case becomes eligible: its row reads Not yet enriched with vision, with the buttons.
+- **Process again** makes a new transcript and the vision starts over. A video that was ticked, or enriched, is marked tonight again (or queued at once, by the position) without being asked; its row says so.
+- **Retention and the recycle bin.** A case that expires or is deleted takes its waiting vision and its open requests with it; a restored case's videos come back Not yet enriched with vision, to be queued by hand.
+- **The sweep during the window.** A video being enriched when its case is deleted stops cleanly at the next span and is not marked failed.
+
+### The Panel: the Vision page
+
+- **A page of its own** in the Settings group, **Vision**, between AI assistant and Email, holding everything about the picture, grouped: **Vision** (the switch, Vision runs, the window, the tick's starting position); **The descriptions** (frames a second, frame height, brief or full, the answer cap, the time limit, descriptions reach summaries and chat); **The scan** (the picture change threshold, the loudness rise, the gap); **The record** (longest span, shortest span, most descriptions, frames per description); **The digest** (Digests, the window, the part cap); **The chat** (descriptions near a question); **The camera stamp**; **Exports** (Exports carry what the camera showed). Every one of these moves from the AI assistant page, keeping its key; the AI assistant page keeps the engine, the three features and their budgets.
+- **Renamed on the page**: Moments becomes **Vision**; Moments in answers becomes **Descriptions reach summaries and chat**; the Moment prefix becomes Description ("Description frames a second", "Description frame height", "Description style", "Description answer cap", "Description time limit"); Picture record: longest span and its three keep their names. Keys do not change; the catalogue records each rename.
+- **Retired**: Moment clip length, Look closer frame height and Look closer frames, whose features chapter 7 withdrew. Their rows leave the page and the catalogue marks them withdrawn; a stored value is ignored.
+- **Requests** at the top of the page, as above, with the count in the rail.
+- **Exports carry what the camera showed** (On shipped): Off leaves the "What the camera showed" section and its legend out of the summary and transcript Word exports and the text export. The descriptions stay in the app.
+
+### Audit rows
+
+Recordings: **Video enriched** takes the place of Video prepared for new rows, with the same details; **Vision queued**, when a person presses Enrich tonight or an Admin Enrich now, with how; **Vision requested**, **Vision allowed**, **Vision declined**. Nothing in any row is a word of the picture or of the line of why.
+
+### Settings
+
+Vision runs; Overnight from; Overnight until; Enrich with vision starts ticked; Exports carry what the camera showed; the Vision done, Vision requested and Vision allowed templates on the Email page; Batch finished's body amended. The moves, renames and retirements above.
+
+### What changes from earlier chapters
+
+- Chapter 7's "as the transcript lands" becomes one of three positions; its case page Prepared column becomes Vision with the words above; its Prepare them now becomes Enrich tonight, Ask for it now and Enrich now; its "the mail waits" holds under as-each-transcript-lands and becomes two messages under the scheduled positions; its summary and chat prepare-first rule holds under as-each-transcript-lands only.
+- Chapter 1's Moments switch and the settings of chapters 1 to 6 move to the Vision page under the names above; three are retired.
+- Phase 3's Batch finished template gains the vision line's new wording in its `{prepared}` placeholder.
+
+### Not in this phase
+
+The engine unreachable across GIDEON's maintenance nights (parked); a per-person or per-case priority in the night's line; a cap on requests; vision for a session recording under a scheduled position; Enrich now for anyone but an Admin.
+
+### Left to the build
+
+The night runner's tick (a periodic task each minute, one video at a time in the vision lane); the request model's shape; the exact caption wordings within the words fixed here; where the count badge sits in the rail; the Vision done mail's placeholders.
+
+## 9. Deferred and ruled out
 
 - **A second model for pictures**: ruled out for this phase. The engine the app talks to is a vision model, and a model of the app's own on the shared server's cards would be a ledger change first.
 - **Sending a picture anywhere but the engine**: ruled out, as Phase 1's rules have it; nothing leaves the building.
@@ -486,7 +589,8 @@ Recordings: **Video prepared**, with the descriptions and the parts made and the
 | LLM | AI assistant call, feature `moment_finder` | The finders (withdrawn in chapter 6) |
 | LLM | AI assistant call, feature `digest`; feature `stamp` | The picture record, the Digest, and the camera's stamp |
 | Recordings | Picture and sound scanned | The finders |
-| Recordings | Video prepared | Prepared videos |
+| Recordings | Video prepared | Prepared videos (Video enriched from chapter 8) |
+| Recordings | Video enriched; Vision queued; Vision requested; Vision allowed; Vision declined | Vision |
 | Viewer edits | Moment edited; Moment deleted | Moments (withdrawn in chapter 7) |
 
 ## Appendix B. Settings added in Phase 4
@@ -497,12 +601,12 @@ Recordings: **Video prepared**, with the descriptions and the parts made and the
 | Moments in answers | AI assistant | On or Off; greyed while Moments is Off | On |
 | Moment answer cap | AI assistant | tokens, 100 to 4,000; greyed while Moments is Off | 250 (400 in v1.38.0) |
 | Moment time limit | AI assistant | seconds, 30 to 3,600; greyed while Moments is Off | 120 |
-| Moment clip length | AI assistant | seconds, 4 to 30; greyed while Moments is Off | 10 |
+| Moment clip length | AI assistant | seconds, 4 to 30; greyed while Moments is Off | 10. Withdrawn in chapter 8 (v1.54.0). |
 | Moment frames a second | AI assistant | 1 to 4; greyed while Moments is Off | 2 |
 | Moment frame height | AI assistant | pixels, 180 to 720; greyed while Moments is Off | 360 |
 | Moment style | AI assistant | brief or full; greyed while Moments is Off | brief |
-| Look closer frame height | AI assistant | pixels, 360 to 1,080; greyed while Moments is Off | 720 |
-| Look closer frames | AI assistant | 1 to 5; greyed while Moments is Off | 3 |
+| Look closer frame height | AI assistant | pixels, 360 to 1,080; greyed while Moments is Off | 720. Withdrawn in chapter 8 (v1.54.0). |
+| Look closer frames | AI assistant | 1 to 5; greyed while Moments is Off | 3. Withdrawn in chapter 8 (v1.54.0). |
 | Find moments from the words | AI assistant | On or Off; greyed while Moments is Off | On |
 | Find moments from the picture and sound | AI assistant | On or Off; greyed while Moments is Off | Off |
 | Most suggested moments | AI assistant | 3 to 40; greyed while Moments is Off | 12 |
@@ -519,10 +623,16 @@ Recordings: **Video prepared**, with the descriptions and the parts made and the
 | Enough moments for a video summary | AI assistant | 0 to 200; greyed while Moments is Off | 10 |
 | Video summary (template) | Templates | a Summary template for no Recording type, editable, resettable, not deletable | the chapter 5 wording |
 | Moment (template) | Templates | a prompt template, Reset to default, a version that rises on every save | the chapter's wording |
+| Vision runs | Vision | as each transcript lands, overnight, or only when asked | as each transcript lands |
+| Overnight from; Overnight until | Vision | two clock times, server time; greyed unless overnight | 20:00; 06:00 |
+| Enrich with vision starts ticked | Vision | On or Off; greyed while Vision is Off | On |
+| Exports carry what the camera showed | Vision | On or Off | On |
+| Vision done; Vision requested; Vision allowed (templates) | Email | a Subject and a Body each, with fixed placeholders | the chapter 8 wording |
+| Every Moments setting of chapters 1 to 6 still in force | Vision (moved from AI assistant in chapter 8, keys unchanged; Moments renamed Vision, Moments in answers renamed Descriptions reach summaries and chat, the Moment prefix renamed Description) | as before | as before |
 
 ## Sources
 
-The maintainer's ask and decisions of 2026-09-11; `docs/research/moments-vision-engine.md` (the model card, vLLM's multimodal guide and recipe, the Qwen3-VL report, BodyCam-VQA, and the probes against the office's engine); the Phase 1 AI assistant chapter; the box ledger's shared-engine paragraph and GIDEON's line 17.
+The maintainer's ask and decisions of 2026-09-11, and of 2026-09-14 for chapter 8; `docs/research/moments-vision-engine.md` (the model card, vLLM's multimodal guide and recipe, the Qwen3-VL report, BodyCam-VQA, and the probes against the office's engine); the Phase 1 AI assistant chapter; the box ledger's shared-engine paragraph and GIDEON's line 17.
 
 ## Amendments applied
 
