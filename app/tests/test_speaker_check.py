@@ -132,7 +132,7 @@ def test_keep_corrections_drops_what_fails_the_checks():
 
 @pytest.mark.django_db
 def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
-    admin, tmp_path, settings, client, monkeypatch
+    admin, tmp_path, settings, client, monkeypatch, django_capture_on_commit_callbacks
 ):
     switched_on()
     # One window over the whole recording: its lines span twelve minutes.
@@ -140,8 +140,10 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     deferred = swallow(monkeypatch)
     recording = a_recording(admin, tmp_path, settings)
     transcript = recording.transcript
-    # As the transcript lands: one check queued at once under lands.
-    speaker_check.on_transcript(recording)
+    # As the transcript lands: one check queued at once under lands, its
+    # task sent once the row is committed (v1.56.1).
+    with django_capture_on_commit_callbacks(execute=True):
+        speaker_check.on_transcript(recording)
     check = SpeakerCheck.objects.get()
     assert check.asked_by is None and check.state == assistant.QUEUED
     assert deferred == [({}, {"check_id": str(check.pk)})]
@@ -289,7 +291,7 @@ def test_accept_all_moves_every_pending_line(admin, tmp_path, settings, client):
 
 @pytest.mark.django_db
 def test_a_press_runs_now_and_the_switch_off_runs_nothing(
-    admin, tmp_path, settings, client, monkeypatch
+    admin, tmp_path, settings, client, monkeypatch, django_capture_on_commit_callbacks
 ):
     deferred = swallow(monkeypatch)
     recording = a_recording(admin, tmp_path, settings)
@@ -310,7 +312,8 @@ def test_a_press_runs_now_and_the_switch_off_runs_nothing(
     # On: a press queues a run at once, whatever the position, and not twice.
     switched_on()
     settings_store.set_to("speaker_check_runs", "overnight")
-    answer = client.post(f"/recording/{recording.pk}/speaker-check")
+    with django_capture_on_commit_callbacks(execute=True):
+        answer = client.post(f"/recording/{recording.pk}/speaker-check")
     assert answer.status_code == 200
     check = SpeakerCheck.objects.get()
     assert check.asked_by == admin
@@ -327,7 +330,7 @@ def test_a_press_runs_now_and_the_switch_off_runs_nothing(
 
 @pytest.mark.django_db
 def test_under_overnight_a_check_queued_by_day_waits_for_the_window(
-    admin, tmp_path, settings, monkeypatch
+    admin, tmp_path, settings, monkeypatch, django_capture_on_commit_callbacks
 ):
     switched_on()
     settings_store.set_to("speaker_check_runs", "overnight")
@@ -342,7 +345,8 @@ def test_under_overnight_a_check_queued_by_day_waits_for_the_window(
     monkeypatch.setattr(timezone, "now", lambda: now - dt.timedelta(hours=0))
     deferred = swallow(monkeypatch)
     recording = a_recording(admin, tmp_path, settings)
-    speaker_check.on_transcript(recording)
+    with django_capture_on_commit_callbacks(execute=True):
+        speaker_check.on_transcript(recording)
     ((options, fields),) = deferred
     assert options["schedule_in"]["seconds"] == 6 * 3600
     assert Row.objects.get(event="Speaker check queued").details["waits_seconds"] == (
@@ -482,6 +486,46 @@ def test_a_window_cut_short_at_the_cap_is_counted_and_said(
     assert state["run"]["cut_short"] == 1
     schema = prompts.speaker_check_schema(["Speaker 1", "Speaker 2"])
     assert schema["properties"]["moves"]["maxItems"] == 400
+
+
+@pytest.mark.django_db
+def test_a_job_ahead_of_its_row_looks_again_and_the_sweep_queues_again(
+    admin, tmp_path, settings, monkeypatch
+):
+    import uuid
+
+    from core import tasks
+
+    switched_on()
+    deferred = swallow(monkeypatch)
+    # No row yet on the first go: look again in a few seconds; on the second
+    # go, nothing.
+    missing = uuid.uuid4()
+    speaker_check.run(missing)
+    assert deferred == [
+        ({"schedule_in": {"seconds": 5}}, {"check_id": str(missing), "attempt": 2})
+    ]
+    speaker_check.run(missing, attempt=2)
+    assert len(deferred) == 1
+    # A check left queued for two minutes with no task is queued again by the
+    # minute sweep; a fresh one, or one with a task, is left alone.
+    recording = a_recording(admin, tmp_path, settings)
+    check = SpeakerCheck.objects.create(transcript=recording.transcript)
+    monkeypatch.setattr(speaker_check, "task_waiting_for", lambda one: False)
+    assert speaker_check.queued_without_a_task() == []
+    SpeakerCheck.objects.filter(pk=check.pk).update(
+        created=timezone.now() - dt.timedelta(minutes=5)
+    )
+    assert [one.pk for one in speaker_check.queued_without_a_task()] == [check.pk]
+    monkeypatch.setattr(speaker_check, "task_waiting_for", lambda one: True)
+    assert speaker_check.queued_without_a_task() == []
+    monkeypatch.setattr(speaker_check, "task_waiting_for", lambda one: False)
+    del deferred[:]
+    from core import uploads
+
+    monkeypatch.setattr(uploads, "drop_abandoned", lambda: 0)
+    tasks.keep_the_queue_moving(0)
+    assert deferred == [({}, {"check_id": str(check.pk)})]
 
 
 @pytest.mark.django_db

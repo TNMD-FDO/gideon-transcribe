@@ -18,6 +18,7 @@ import json
 import logging
 import time
 
+from django.db import transaction
 from django.utils import timezone
 
 from core import assistant, audit, engine, prompts, settings_store
@@ -112,12 +113,19 @@ def queue_check(recording, *, by=None, how: str = "landed") -> SpeakerCheck | No
     wait = 0
     if by is None and settings_store.speaker_check_runs() == OVERNIGHT:
         wait = seconds_until_the_night()
-    if wait:
-        tasks.check_speakers.configure(schedule_in={"seconds": wait}).defer(
-            check_id=str(check.pk)
-        )
-    else:
-        tasks.check_speakers.defer(check_id=str(check.pk))
+
+    # Queued once the row is committed (v1.56.1): the transcript lands inside
+    # a transaction, and a job taken up before the commit found no row and
+    # left the check queued for good.
+    def send():
+        if wait:
+            tasks.check_speakers.configure(schedule_in={"seconds": wait}).defer(
+                check_id=str(check.pk)
+            )
+        else:
+            tasks.check_speakers.defer(check_id=str(check.pk))
+
+    transaction.on_commit(send)
     audit.write(
         audit.Category.RECORDINGS,
         "Speaker check queued",
@@ -161,7 +169,34 @@ def windows(lines: list, seconds: int) -> list[tuple[int, int]]:
     return out
 
 
-def run(check_id) -> None:
+def queued_without_a_task(older_than_seconds: int = 120):
+    """The checks marked queued with no task waiting or at them: what the
+    minute sweep queues again (v1.56.1)."""
+    stale = timezone.now() - dt.timedelta(seconds=older_than_seconds)
+    return [
+        one
+        for one in SpeakerCheck.objects.filter(state=QUEUED, created__lt=stale)
+        if not task_waiting_for(one)
+    ]
+
+
+def task_waiting_for(check) -> bool:
+    """Whether a check_speakers job for this check is waiting or running.
+    Read from the queue's own table; when that cannot be read, the answer is
+    yes, so nothing is queued twice on a guess."""
+    try:
+        from procrastinate.contrib.django.models import ProcrastinateJob
+
+        return ProcrastinateJob.objects.filter(
+            task_name="check_speakers",
+            status__in=("todo", "doing"),
+            args__check_id=str(check.pk),
+        ).exists()
+    except Exception:  # noqa: BLE001 - the table is the queue's, not the app's
+        return True
+
+
+def run(check_id, attempt: int = 1) -> None:
     """The check: one call per window, the answers checked, the corrections
     kept in place of the pending ones. One audit row for the run, metadata
     only."""
@@ -170,7 +205,17 @@ def run(check_id) -> None:
         .select_related("transcript", "transcript__recording")
         .first()
     )
-    if check is None or check.state not in (QUEUED, RUNNING):
+    if check is None:
+        # The job may still be taken up before the row is there (v1.56.1):
+        # look again in a few seconds rather than take it for nothing.
+        if attempt == 1:
+            from core import tasks
+
+            tasks.check_speakers.configure(
+                schedule_in={"seconds": assistant.QUEUE_GRACE_SECONDS}
+            ).defer(check_id=str(check_id), attempt=attempt + 1)
+        return
+    if check.state not in (QUEUED, RUNNING):
         return
     transcript = check.transcript
     recording = transcript.recording

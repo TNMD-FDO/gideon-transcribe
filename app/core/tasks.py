@@ -238,6 +238,13 @@ def keep_the_queue_moving(timestamp: int) -> None:
         log.warning("vision for %s had no task; queued again", transcript.pk)
         prepare_video.defer(transcript_id=str(transcript.pk))
 
+    # A speaker check left queued with no task behind it (v1.56.1).
+    from core import speaker_check
+
+    for check in speaker_check.queued_without_a_task():
+        log.warning("speaker check %s had no task; queued again", check.pk)
+        check_speakers.defer(check_id=str(check.pk))
+
     if queue.live_jobs().exists():
         _poll_again(1)
 
@@ -331,11 +338,11 @@ def suggest_names(run_id: str) -> None:
 
 
 @app.task(queue="llm", name="check_speakers")
-def check_speakers(check_id: str) -> None:
+def check_speakers(check_id: str, attempt: int = 1) -> None:
     """The Speaker check (Phase 5 chapter 3): one run, window by window."""
     from core import speaker_check
 
-    speaker_check.run(check_id)
+    speaker_check.run(check_id, attempt)
 
 
 @app.task(queue="llm", name="describe_moment")

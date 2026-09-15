@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.56.1, 2026-09-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- A recording processed again had Check the speakers greyed out from the
+  start: the check queued as the transcript landed was taken up before the
+  row that queued it was committed, so the job found nothing, ended, and
+  the row stayed queued for good. The task is now queued once the row is
+  committed, looks again in a few seconds when it finds no row, and the
+  queue's minute sweep queues again any check left queued for two minutes
+  with no task behind it. The same cure as the vision task's in v1.54.1.
+
 ## v1.56.0, 2026-09-15
 
 ```
