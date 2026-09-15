@@ -187,6 +187,7 @@ def run(check_id) -> None:
     model = ""
     kept: dict = {}
     calls = 0
+    cut = 0
     try:
         problem = assistant._unreachable()
         if problem:
@@ -217,6 +218,8 @@ def run(check_id) -> None:
                 **assistant.SUGGESTION_SAMPLING,
             )
             calls += 1
+            if answer.get("finish_reason") == "length":
+                cut += 1
             model = answer.get("model", "") or model
             usage["input_tokens"] += answer.get("input_tokens", 0)
             usage["output_tokens"] += answer.get("output_tokens", 0)
@@ -240,6 +243,7 @@ def run(check_id) -> None:
         _store(transcript, kept)
         check.found = len(kept)
         check.windows = calls
+        check.cut_short = cut
         check.state = DONE
         check.reason_class = ""
         check.finished_at = timezone.now()
@@ -255,6 +259,7 @@ def run(check_id) -> None:
             outcome="ok",
             windows=calls,
             found=len(kept),
+            cut_short=cut,
         )
     except engine.Problem as problem:
         # What was found before the problem is kept: every one passed the checks.
@@ -262,6 +267,7 @@ def run(check_id) -> None:
             _store(transcript, kept)
         check.found = len(kept)
         check.windows = calls
+        check.cut_short = cut
         check.state = FAILED
         check.reason_class = problem.reason
         check.finished_at = timezone.now()
@@ -278,6 +284,7 @@ def run(check_id) -> None:
             reason=problem.reason,
             windows=calls,
             found=len(kept),
+            cut_short=cut,
         )
 
 
@@ -335,6 +342,7 @@ def state_json(transcript) -> dict:
                 "state": last.state,
                 "found": last.found,
                 "windows": last.windows,
+                "cut_short": last.cut_short,
                 "said": assistant.what_to_say(last.reason_class)
                 if last.reason_class
                 else "",

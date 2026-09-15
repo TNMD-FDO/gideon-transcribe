@@ -1966,6 +1966,12 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sp-lanes .lane.fold .head { font-weight: 400; }
 .sp-lanes .foot { display: flex; gap: 10px; align-items: center; margin-left: 108px; flex-wrap: wrap; }
 .sp-lanes .zoom button.on { border-color: var(--accent); color: var(--accent); }
+/* Swap two speakers between times (v1.56.0). */
+.sp-lanes .swap-form { gap: 8px; flex-wrap: wrap; margin: 6px 0 0 108px; font-size: var(--t-small); align-items: center; }
+.sp-lanes .swap-form label { display: inline-flex; align-items: center; gap: 4px; }
+.sp-lanes .swap-form select { max-width: 11rem; }
+.sp-lanes .swap-form input { width: 5.5rem; }
+.sp-corrections .swap-offer { margin: 6px 0 0; }
 .sp-filter { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex: none; font-size: var(--t-small); }
 .sp-filter .sw { border: 1px solid var(--line); border-radius: 999px; padding: 0 10px; min-height: 22px; background: none; color: inherit; }
 .sp-filter .sw.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }

@@ -524,6 +524,9 @@ class SpeakerCheck(models.Model):
     reason_class = models.CharField(max_length=40, blank=True, default="")
     found = models.IntegerField(default=0)
     windows = models.IntegerField(default=0)
+    # Windows whose list was cut off at the answer cap (v1.56.0), so the
+    # page can say the run did not see everything.
+    cut_short = models.IntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 

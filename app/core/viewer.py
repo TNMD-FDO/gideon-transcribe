@@ -458,12 +458,117 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     )
 
 
+@login_required
+@require_POST
+def speakers_swap(request: HttpRequest, recording_id) -> JsonResponse:
+    """Swap two Speakers between two times (v1.56.0): every line of one in
+    the stretch becomes the other's, and the other way round. The shape a
+    diarizer's error takes when it confuses two voices for a passage, and
+    the shape a run of Speaker corrections between the same two takes.
+    Remembered for Undo; the row holds no name."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=404)
+    if being_replaced(recording):
+        return JsonResponse({"error": "This transcript is being replaced."}, status=409)
+    try:
+        wanted = json.loads(request.body or b"{}")
+        start = float(wanted.get("start", 0))
+        end = float(wanted.get("end", 0))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({"error": "that could not be read"}, status=400)
+    a = (wanted.get("a") or "").strip()
+    b = (wanted.get("b") or "").strip()
+    if not a or not b or a == b:
+        return JsonResponse({"error": "two different speakers are needed"}, status=400)
+    if not (0 <= start < end):
+        return JsonResponse({"error": "the times must run forward"}, status=400)
+    names = set(
+        transcript.segments.exclude(speaker="").values_list("speaker", flat=True)
+    )
+    if a not in names or b not in names:
+        return JsonResponse({"error": "no such speaker"}, status=404)
+    cases.used(recording, by=request.user)
+    inside = transcript.segments.filter(start__gte=start, start__lt=end)
+    were_a = list(inside.filter(speaker=a).values_list("pk", flat=True))
+    were_b = list(inside.filter(speaker=b).values_list("pk", flat=True))
+    if not were_a and not were_b:
+        return JsonResponse(
+            {"error": "neither speaker has a line in that stretch"}, status=409
+        )
+    transcript.segments.filter(pk__in=were_a).update(speaker=b)
+    transcript.segments.filter(pk__in=were_b).update(speaker=a)
+    changes = list(transcript.speaker_changes or [])
+    changes.append(
+        {
+            "swap": True,
+            "a": a,
+            "b": b,
+            "segments_a": were_a,
+            "segments_b": were_b,
+            "start": start,
+            "end": end,
+            "at": timezone.now().isoformat(),
+        }
+    )
+    transcript.speaker_changes = changes[-20:]
+    transcript.save(update_fields=["speaker_changes"])
+    # The Speaker check's corrections in the stretch are settled by the swap:
+    # the ones it fulfilled are accepted, the others put away.
+    from core.assistant import SpeakerCorrection
+
+    for one in transcript.corrections.filter(
+        state=SpeakerCorrection.PENDING, segment_id__in=were_a + were_b
+    ):
+        landed = b if one.segment_id in were_a else a
+        one.state = (
+            SpeakerCorrection.ACCEPTED
+            if one.speaker_to == landed
+            else SpeakerCorrection.DISMISSED
+        )
+        one.decided_by = request.user
+        one.decided_at = timezone.now()
+        one.save(update_fields=["state", "decided_by", "decided_at"])
+    audit.write(
+        audit.Category.EDITS,
+        "Speakers swapped",
+        actor=request.user,
+        request=request,
+        affected_user=(
+            recording.user if recording.user_id != request.user.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        segments_changed=len(were_a) + len(were_b),
+        seconds=round(end - start),
+    )
+    return JsonResponse(
+        {"changed": len(were_a) + len(were_b), "undo": last_change_line(transcript)}
+    )
+
+
+def _clock(seconds: float) -> str:
+    whole = max(0, int(seconds))
+    hours, rest = divmod(whole, 3600)
+    minutes, secs = divmod(rest, 60)
+    return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
+
+
 def last_change_line(transcript) -> str:
     """What Undo would undo, in words, or nothing."""
     changes = transcript.speaker_changes or []
     if not changes:
         return ""
     last = changes[-1]
+    if last.get("swap"):
+        return (
+            f"swapping {last['a']} and {last['b']} between "
+            f"{_clock(last.get('start', 0))} and {_clock(last.get('end', 0))}"
+        )
     if last.get("line"):
         return f"giving one line of {last['from']} to {last['to']}"
     if last.get("merged"):
@@ -582,12 +687,22 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
 
     changes = list(transcript.speaker_changes)
     last = changes.pop()
-    restored = transcript.segments.filter(
-        pk__in=last.get("segments") or [], speaker=last.get("to", "")
-    ).update(speaker=last.get("from", ""))
+    if last.get("swap"):
+        # A swap goes back on both sides, each line only where it still
+        # carries the other's name (v1.56.0).
+        restored = transcript.segments.filter(
+            pk__in=last.get("segments_a") or [], speaker=last.get("b", "")
+        ).update(speaker=last.get("a", ""))
+        restored += transcript.segments.filter(
+            pk__in=last.get("segments_b") or [], speaker=last.get("a", "")
+        ).update(speaker=last.get("b", ""))
+    else:
+        restored = transcript.segments.filter(
+            pk__in=last.get("segments") or [], speaker=last.get("to", "")
+        ).update(speaker=last.get("from", ""))
     transcript.speaker_changes = changes
     transcript.save(update_fields=["speaker_changes"])
-    if recording.case_id:
+    if recording.case_id and not last.get("swap"):
         from core import people
 
         people.on_named(
@@ -610,6 +725,7 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
         object_label=recording.original_filename,
         segments_changed=restored,
         was_merge=bool(last.get("merged")),
+        was_swap=bool(last.get("swap")),
     )
     return JsonResponse({"restored": restored, "undo": last_change_line(transcript)})
 

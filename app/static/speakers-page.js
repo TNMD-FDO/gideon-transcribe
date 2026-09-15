@@ -795,10 +795,17 @@
     else if (run && run.state === "done" && !pending.length) { said.textContent = "Checked " + run.when + "; nothing to move."; }
     else if (run && run.state === "done") { said.textContent = "Checked " + run.when + "."; }
     else { said.textContent = ""; }
+    if (run && run.cut_short) {
+      // A window's list ran past the answer cap (v1.56.0): the run did not
+      // see everything, and the page says so rather than looking finished.
+      said.textContent += " " + run.cut_short + (run.cut_short === 1 ? " window's list was" : " windows' lists were") +
+        " cut short at the answer cap; raise the cap on the Panel's Speakers page or shorten the window, then check again.";
+    }
     correctionsBox.hidden = !pending.length;
     document.getElementById("corrections-title").textContent =
       "Suggested corrections (" + pending.length + ")";
     document.getElementById("accept-corrections").hidden = pending.length < 2;
+    drawSwapOffer(pending);
     document.getElementById("corrections-list").innerHTML = pending.map(function (one) {
       return "<li class='correction' data-correction='" + one.id + "' data-segment='" + one.segment + "' data-to='" + escape(one.to) + "'>" +
         "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
@@ -809,6 +816,80 @@
         "<button type='button' class='ghost tiny dismiss-correction'>Dismiss</button></span></li>";
     }).join("");
     return !!busy;
+  }
+
+  // A run of corrections between the same two speakers is a swapped
+  // stretch (v1.56.0): the diarizer confused two voices for a passage. The
+  // section offers the one press that fixes it instead of many accepts.
+  function drawSwapOffer(pending) {
+    var line = document.getElementById("corrections-said");
+    if (!line) { return; }
+    line.hidden = true;
+    line.innerHTML = "";
+    if (pending.length < 8) { return; }
+    var pair = null;
+    var same = pending.every(function (one) {
+      var key = [one.from, one.to].sort().join("\u0000");
+      if (pair === null) { pair = key; }
+      return key === pair;
+    });
+    if (!same) { return; }
+    var two = pair.split("\u0000");
+    var first = pending[0].start;
+    var lastOne = pending[pending.length - 1];
+    var lastSegment = segments.filter(function (one) { return String(one.id) === String(lastOne.segment); })[0];
+    var end = lastSegment ? lastSegment.end : lastOne.start + 5;
+    line.hidden = false;
+    line.className = "small swap-offer";
+    line.innerHTML = "These look like a swapped stretch: every move is between the same two speakers. " +
+      "<button type='button' class='tiny swap-stretch' data-a='" + escape(two[0]) + "' data-b='" + escape(two[1]) + "' data-start='" + first + "' data-end='" + end + "'>" +
+      "Swap " + escape(two[0]) + " and " + escape(two[1]) + " between " + clock(first) + " and " + clock(end) + "</button>";
+  }
+
+  function swap(a, b, start, end) {
+    return UI.confirm({
+      title: "Swap " + a + " and " + b + " between " + clock(start) + " and " + clock(end) + "?",
+      body: "Every line of " + a + " in that stretch becomes " + b + "'s, and the other way round. Undo puts them all back.",
+      ok: "Swap"
+    }).then(function (yes) {
+      if (!yes) { return; }
+      return send("/recording/" + V.recording + "/speakers/swap", { a: a, b: b, start: start, end: end }).then(function (answer) {
+        if (!answer.ok) { UI.toast(answer.said.error || "Nothing was swapped.", { problem: true, icon: "warning" }); return; }
+        sayUndo(answer.said.undo);
+        tell({ kind: "segments-changed" });
+        load().then(refreshSuggestions);
+      });
+    });
+  }
+
+  // "mm:ss", "h:mm:ss" or plain seconds, as a person types a time.
+  function secondsOf(text) {
+    var parts = String(text || "").trim().split(":").map(function (one) { return parseFloat(one); });
+    if (!parts.length || parts.some(isNaN)) { return NaN; }
+    return parts.reduce(function (total, one) { return total * 60 + one; }, 0);
+  }
+
+  var swapForm = document.getElementById("swap-form");
+  if (swapForm) {
+    document.getElementById("swap-open").addEventListener("click", function () {
+      swapForm.hidden = !swapForm.hidden;
+      if (!swapForm.hidden) {
+        document.getElementById("swap-from").value = clock(now());
+        document.getElementById("swap-to").value = clock(duration);
+        var a = document.getElementById("swap-a");
+        if (picked && names().indexOf(picked) !== -1) { a.value = picked; }
+      }
+    });
+    document.getElementById("swap-cancel").addEventListener("click", function () { swapForm.hidden = true; });
+    document.getElementById("swap-go").addEventListener("click", function () {
+      var a = document.getElementById("swap-a").value;
+      var b = document.getElementById("swap-b").value;
+      var start = secondsOf(document.getElementById("swap-from").value);
+      var end = secondsOf(document.getElementById("swap-to").value);
+      if (a === b) { UI.toast("Choose two different speakers.", { problem: true, icon: "warning" }); return; }
+      if (isNaN(start) || isNaN(end) || start >= end) { UI.toast("The times must run forward, as mm:ss.", { problem: true, icon: "warning" }); return; }
+      swap(a, b, start, end).then(function () { swapForm.hidden = true; });
+    });
   }
 
   function refreshSuggestions() {
@@ -851,6 +932,11 @@
     correctionsBox.addEventListener("click", function (event) {
       var cite = event.target.closest(".cite");
       if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.seconds)); play(); return; }
+      var stretch = event.target.closest(".swap-stretch");
+      if (stretch) {
+        swap(stretch.dataset.a, stretch.dataset.b, parseFloat(stretch.dataset.start), parseFloat(stretch.dataset.end));
+        return;
+      }
       var row = event.target.closest(".correction");
       if (event.target.closest("#accept-corrections")) {
         send("/recording/" + V.recording + "/corrections/accept-all").then(function (answer) {

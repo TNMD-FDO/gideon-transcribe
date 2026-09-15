@@ -73,6 +73,11 @@ urlpatterns = [
         name="speakers-undo",
     ),
     path(
+        "recording/<uuid:recording_id>/speakers/swap",
+        viewer.speakers_swap,
+        name="speakers-swap",
+    ),
+    path(
         "recording/<uuid:recording_id>/rename", viewer.rename, name="rename-recording"
     ),
     # GET is the Speakers page (v1.50.0); POST renames or merges, as before.

@@ -122,6 +122,9 @@ One Speaker's row on the Speakers page's timeline: the Speaker's name at the lef
 **Sample**:
 One of up to three lines of a Speaker that the Speakers page offers to play to hear the voice, chosen from the first, middle and last thirds of that Speaker's lines and a few seconds long. Playing a Sample plays the Recording from the line's start and pauses at its end. Avoid: snippet, excerpt (that is a Clip's), clip.
 
+**Swap**:
+Exchanging two Speakers for a stretch of a Recording on the Speakers page, from one time to another: every line of the first in the stretch becomes the second's and the other way round, in one press, remembered for Undo. The shape a diarizer's error takes when it confuses two voices for a passage, and what the Suggested corrections offer when a run of them lies between the same two Speakers. Since v1.56.0. Avoid: flip, exchange, relabel.
+
 **Voice print**:
 Phase 5 chapter 2, not built: one vector per Person in a Case, made from a Speaker's voice when the Speaker is named, that lets the app say an unnamed Speaker in another Recording of the Case "sounds like" that Person. Content, never logged or exported, deleted with the Person. Until the chapter is in force the app keeps no such thing. Avoid: embedding (on a page; the service's word), voice signature, biometric.
 

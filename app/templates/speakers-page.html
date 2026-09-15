@@ -211,6 +211,20 @@
               <button type="button" class="tiny" data-zoom="120">2 min</button>
               <button type="button" class="tiny" data-zoom="30">30 s</button>
             </span>
+            <button type="button" class="tiny" id="swap-open" title="Exchange two speakers for a stretch of the recording: the shape the engine's mistake takes when it confuses two voices for a passage">Swap two speakers between times</button>
+          </div>
+          {% comment %}
+            Swap two speakers between times (v1.56.0): every line of one in
+            the stretch becomes the other's and the other way round. Undo
+            puts both sides back.
+          {% endcomment %}
+          <div class="swap-form row" id="swap-form" hidden>
+            <label>Swap <select id="swap-a">{% for card in cards %}<option>{{ card.name }}</option>{% endfor %}</select></label>
+            <label>and <select id="swap-b">{% for card in cards %}<option{% if forloop.counter == 2 %} selected{% endif %}>{{ card.name }}</option>{% endfor %}</select></label>
+            <label>from <input type="text" id="swap-from" class="mono" size="7" placeholder="mm:ss"></label>
+            <label>to <input type="text" id="swap-to" class="mono" size="7" placeholder="mm:ss"></label>
+            <button type="button" class="tiny" id="swap-go">Swap</button>
+            <button type="button" class="ghost tiny" id="swap-cancel">Cancel</button>
           </div>
         </div>
 

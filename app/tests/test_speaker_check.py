@@ -389,6 +389,102 @@ def test_an_unreadable_window_is_lost_and_a_problem_keeps_what_was_found(
 
 
 @pytest.mark.django_db
+def test_a_swap_between_times_moves_both_ways_and_undo_puts_both_back(
+    admin, tmp_path, settings, client
+):
+    switched_on()
+    recording = a_recording(admin, tmp_path, settings)
+    transcript = recording.transcript
+    # Lines at 0 (Speaker 1), 12.4 (Speaker 2), 724 (Speaker 1). A correction
+    # on the 12.4 line to Speaker 1 is fulfilled by the swap; one on the
+    # first line to Speaker 2 is not.
+    fulfilled = SpeakerCorrection.objects.create(
+        transcript=transcript,
+        segment=Segment.objects.get(start=12.4),
+        start=12.4,
+        speaker_from="Speaker 2",
+        speaker_to="Speaker 1",
+    )
+    outside = SpeakerCorrection.objects.create(
+        transcript=transcript,
+        segment=Segment.objects.get(start=724.0),
+        start=724.0,
+        speaker_from="Speaker 1",
+        speaker_to="Speaker 2",
+    )
+    signed_in(client, admin)
+    answer = client.post(
+        f"/recording/{recording.pk}/speakers/swap",
+        {"a": "Speaker 1", "b": "Speaker 2", "start": 0, "end": 60},
+        content_type="application/json",
+    ).json()
+    assert answer["changed"] == 2
+    assert answer["undo"] == "swapping Speaker 1 and Speaker 2 between 0:00 and 1:00"
+    assert Segment.objects.get(start=0.0).speaker == "Speaker 2"
+    assert Segment.objects.get(start=12.4).speaker == "Speaker 1"
+    assert Segment.objects.get(start=724.0).speaker == "Speaker 1"
+    fulfilled.refresh_from_db()
+    outside.refresh_from_db()
+    assert fulfilled.state == SpeakerCorrection.ACCEPTED
+    assert outside.state == SpeakerCorrection.PENDING
+    row = Row.objects.get(event="Speakers swapped")
+    assert row.details["segments_changed"] == 2 and row.details["seconds"] == 60
+    assert "Speaker" not in json.dumps(row.details)
+    # Undo puts both sides back.
+    undone = client.post(f"/recording/{recording.pk}/speakers/undo").json()
+    assert undone["restored"] == 2
+    assert Segment.objects.get(start=0.0).speaker == "Speaker 1"
+    assert Segment.objects.get(start=12.4).speaker == "Speaker 2"
+    assert Row.objects.get(event="Speaker change undone").details["was_swap"] is True
+    # The refusals: the same speaker twice, times backwards, a stranger, an
+    # empty stretch.
+    for body, status in (
+        ({"a": "Speaker 1", "b": "Speaker 1", "start": 0, "end": 60}, 400),
+        ({"a": "Speaker 1", "b": "Speaker 2", "start": 60, "end": 0}, 400),
+        ({"a": "Speaker 1", "b": "Nobody", "start": 0, "end": 60}, 404),
+        ({"a": "Speaker 1", "b": "Speaker 2", "start": 100, "end": 200}, 409),
+    ):
+        assert (
+            client.post(
+                f"/recording/{recording.pk}/speakers/swap",
+                body,
+                content_type="application/json",
+            ).status_code
+            == status
+        ), body
+    page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    assert 'id="swap-form"' in page and 'id="swap-open"' in page
+
+
+@pytest.mark.django_db
+def test_a_window_cut_short_at_the_cap_is_counted_and_said(
+    admin, tmp_path, settings, client, monkeypatch
+):
+    switched_on()
+    settings_store.set_to("speaker_check_window_seconds", 1800)
+    recording = a_recording(admin, tmp_path, settings)
+    engine_answering(monkeypatch, [moves((2, "Speaker 2", "Speaker 1", "asks"))])
+    good = engine.complete
+
+    def cut(messages, **options):
+        answer = good(messages, **options)
+        answer["finish_reason"] = "length"
+        return answer
+
+    monkeypatch.setattr(engine, "complete", cut)
+    check = SpeakerCheck.objects.create(transcript=recording.transcript)
+    speaker_check.run(check.pk)
+    check.refresh_from_db()
+    assert check.state == assistant.DONE and check.found == 1 and check.cut_short == 1
+    assert Row.objects.get(event="AI assistant call").details["cut_short"] == 1
+    signed_in(client, admin)
+    state = client.get(f"/recording/{recording.pk}/assistant").json()["speaker_check"]
+    assert state["run"]["cut_short"] == 1
+    schema = prompts.speaker_check_schema(["Speaker 1", "Speaker 2"])
+    assert schema["properties"]["moves"]["maxItems"] == 400
+
+
+@pytest.mark.django_db
 def test_the_settings_page_the_templates_page_and_the_documents(admin, client):
     signed_in(client, admin)
     page = client.get("/panel/settings/speakers").content.decode()

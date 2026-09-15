@@ -722,7 +722,9 @@ def speaker_check_schema(speakers: list[str]) -> dict:
         "properties": {
             "moves": {
                 "type": "array",
-                "maxItems": 60,
+                # Room for a whole swapped stretch (v1.56.0); the answer cap
+                # is the real ceiling, and a cut-off list is said on the page.
+                "maxItems": 400,
                 "items": {
                     "type": "object",
                     "properties": {

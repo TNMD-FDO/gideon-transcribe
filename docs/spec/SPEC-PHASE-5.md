@@ -107,7 +107,7 @@ The Transcript's twenty-deep record of renames, merges, and lines given (the Tra
 
 ### Audit rows
 
-None new. The page writes the rows the strip and the window write: Speaker renamed, Speakers merged, Speaker changed on a line, Speaker suggestion accepted and rejected, and the AI assistant call for `speaker_suggestions`; and, inside a Case, the People chapter's rows when a Person is made, joined, or merged. None holds a name.
+None new in v1.50.0; Speakers swapped since v1.56.0. The page writes the rows the strip and the window write: Speaker renamed, Speakers merged, Speakers swapped, Speaker changed on a line, Speaker suggestion accepted and rejected, and the AI assistant call for `speaker_suggestions`; and, inside a Case, the People chapter's rows when a Person is made, joined, or merged. None holds a name.
 
 ### Settings
 
@@ -250,5 +250,6 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- 2026-09-15 (v1.56.0): **Swap two speakers between times** on the Speakers page, under the Lanes: two Speakers and two times, every line of one in the stretch becomes the other's and the other way round, one Undo entry that puts both sides back, the audit row Speakers swapped with the count and the stretch's length. The Speaker check's Suggested corrections offer the swap when eight or more of them lie between the same two Speakers, and a swap settles the corrections in its stretch (the ones it fulfilled accepted, the others dismissed). The check's answer holds up to 400 moves per window, and the page says when a window's list was cut short at the answer cap.
 - 2026-09-14 (v1.55.1): the Speakers page in three columns, the maintainer's pick from three mockups ("the transcript in the middle"): the cards, the Ledger at full height, and the player over the Lanes; the Ledger had been squeezed under the Lanes to a few lines. On a window under 1280 pixels the cards sit beside the player and the Lanes in a band across the top, and the Ledger runs full width under it.
 - 2026-09-14: chapter 3, the Speaker check, written and built as v1.55.0 the same day, with these decisions left to the build: windows overlap by six lines, at most sixty moves per window's answer, the state line's and the stale notice's wording as the page has them.

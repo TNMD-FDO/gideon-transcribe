@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.56.0, 2026-09-15
+
+```
+Models: unchanged
+Database: migrates (0045: how many of a Speaker check's windows were cut short)
+```
+
+### Added
+
+- **Swap two speakers between times** on the Speakers page, under the
+  lanes: two speakers and two times, and every line of one in that stretch
+  becomes the other's and the other way round, in one press. It is the
+  shape the engine's mistake takes when it confuses two voices for a
+  passage. Undo puts both sides back; the audit row Speakers swapped holds
+  the count and the stretch's length, never a name.
+- The Speaker check's **Suggested corrections offer the swap** when eight
+  or more of them lie between the same two speakers, and a swap settles
+  the corrections in its stretch.
+
+### Fixed
+
+- A Speaker check window could propose at most sixty moves, so a swapped
+  stretch was listed only to its sixtieth line and the rest never
+  proposed. A window may now propose up to four hundred; the answer cap
+  is the real ceiling, and the page says when a window's list was cut
+  short there.
+
 ## v1.55.1, 2026-09-14
 
 ```
