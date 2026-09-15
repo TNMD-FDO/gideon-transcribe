@@ -217,6 +217,7 @@ A **Speakers** page in the Panel's Settings group: Speaker check (Off); Speaker 
 ## 4. Deferred and ruled out
 
 - **Voice prints**: deferred to a later release; chapter 2.
+- **The speaker accuracy plan** (2026-09-15): deferred, held as future work at the maintainer's word. Four stages, none assuming a speaker count: measure the pipeline against hand-corrected transcripts; split lines where the voice changes mid-line, mark each line's voice call firm or mixed, and enforce hard rules in code; the voice veto (a per-line embedding held only until the Speaker check has run, every proposed move tested against the voices; needs Phase 1's stored-embeddings rule amended); the recording sketch and the rewrite form for the check. Default speaker counts ruled out: the office's videos vary too much.
 - **An office-wide list of people or voices**: ruled out, as Phase 2 rules it out for names.
 - **Sending sound to the engine to name a voice**: ruled out; the engine reads words and pictures, and nothing about a voice leaves the WhisperX service.
 - **Splitting a line at a word**: deferred; not asked for.
