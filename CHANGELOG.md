@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.57.0, 2026-09-16
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **A case's Chat says what it read without the vision.** An answer opens
+  by naming the videos it read from the transcript alone ("Recording 2 and
+  Recording 4 were read from the transcript alone"), the way a summary's
+  card does, so a reader knows which recordings' pictures are not yet in
+  the answer. Nothing is said when Digests are off.
+- **A transcript's exports are the words.** The What the camera showed
+  section no longer prints in a transcript's Word or text export unless
+  the office turns on the new Vision page switch **Transcript exports
+  carry what the camera showed** (Off). **Exports carry what the camera
+  showed** (On) keeps governing a summary's export and a clip's captions,
+  and the Details panel counts the descriptions whatever the switches say.
+
 ## v1.56.1, 2026-09-15
 
 ```

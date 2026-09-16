@@ -232,6 +232,7 @@ def test_the_moment_template_and_its_settings_start_as_the_chapter_says():
         "Overnight from; Overnight until",
         "Enrich with vision starts ticked",
         "Exports carry what the camera showed",
+        "Transcript exports carry what the camera showed",
     ):
         # A row may carry its old name in brackets after the new one.
         assert f"| {name} " in text, f"the catalogue has no row for {name}"
@@ -687,6 +688,8 @@ def test_summary_and_chat_carry_the_camera_block_only_while_the_office_says_so(
 
 @pytest.mark.django_db
 def test_the_exports_carry_the_camera_lines_in_their_own_section(ready, person):
+    # A transcript's exports carry the section when the office asks (v1.57.0).
+    settings_store.set_to("transcript_exports_camera_section", True)
     Moment.objects.create(
         transcript=ready.transcript,
         at=12.4,
@@ -723,11 +726,17 @@ def test_the_exports_carry_the_camera_lines_in_their_own_section(ready, person):
         "2 described by the-model, 1 edited by staff"
     )
 
-    word = exports.word(ready, "asker")
-    assert word[:2] == b"PK"
+    # Without the transcript switch the Word export is the words alone.
     import io
     import zipfile
 
+    settings_store.set_to("transcript_exports_camera_section", False)
+    word = exports.word(ready, "asker")
+    document = zipfile.ZipFile(io.BytesIO(word)).read("word/document.xml").decode()
+    assert "What the camera showed" not in document
+    settings_store.set_to("transcript_exports_camera_section", True)
+    word = exports.word(ready, "asker")
+    assert word[:2] == b"PK"
     document = zipfile.ZipFile(io.BytesIO(word)).read("word/document.xml").decode()
     assert (
         "What the camera showed" in document and "A hand holds a small bag." in document
@@ -774,6 +783,7 @@ def test_question_frames_are_spread_a_second_either_side():
 
 @pytest.mark.django_db
 def test_a_question_is_answered_from_close_frames(ready, person, client, monkeypatch):
+    settings_store.set_to("transcript_exports_camera_section", True)
     asked = reachable(
         monkeypatch,
         "Visible: a dark, flat object on the seat. Consistent with: a phone or a "

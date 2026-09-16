@@ -45,15 +45,32 @@ CAMERA_LEGEND = (
 CAMERA_HEADING = "What the camera showed"
 
 
-def camera_moments(transcript) -> list:
-    """The described Moments of a Transcript, in time order, for the exports."""
+def camera_moments(transcript, *, for_transcript: bool = False) -> list:
+    """The described Moments of a Transcript, in time order, for the exports.
+
+    Two switches (v1.57.0): a summary's export and a clip's captions carry
+    them unless the office says otherwise; a transcript's export carries
+    them only when the office asks, since a transcript export is the words.
+    """
+    from core import settings_store
+
+    allowed = (
+        settings_store.transcript_exports_camera_section()
+        if for_transcript
+        else settings_store.exports_camera_section()
+    )
+    if not allowed:
+        return []
+    return described_moments(transcript)
+
+
+def described_moments(transcript) -> list:
+    """The described Moments themselves, whatever the export switches say:
+    what the Details panel counts."""
     if transcript is None or not hasattr(transcript, "moments"):
         return []
-    from core import assistant, settings_store
+    from core import assistant
 
-    # The office may keep the descriptions inside the app (Phase 4 chapter 5).
-    if not settings_store.exports_camera_section():
-        return []
     return list(transcript.moments.filter(state=assistant.DONE).exclude(text=""))
 
 
@@ -363,7 +380,7 @@ def plain_text(recording: Recording) -> str:
 
 def camera_lines_text(transcript) -> list[str]:
     """The end section of a plain-text export: the record, one line per Moment."""
-    moments = camera_moments(transcript)
+    moments = camera_moments(transcript, for_transcript=True)
     if not moments:
         return []
     return ["", CAMERA_HEADING, CAMERA_LEGEND] + [
@@ -514,8 +531,9 @@ def word(recording: Recording, exported_by: str) -> bytes:
         document.add_paragraph("This transcript has no segments.")
 
     # What the camera showed, in a section of its own after the talk
-    # (v1.51.0; among the lines before that).
-    _camera_section(document, transcript)
+    # (v1.51.0; among the lines before that), when the office asks for it in
+    # a transcript's export (v1.57.0).
+    _camera_section(document, transcript, for_transcript=True)
 
     # The processing record -----------------------------------------------------
     record = document.add_section(WD_SECTION.NEW_PAGE)
@@ -674,7 +692,7 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
         ("Processed", f"{transcript.created:{DAY_AND_TIME}}"),
         ("Segments", str(len(segments))),
         ("Corrections", str(corrections)),
-        ("Camera moments", camera_moments_row(transcript)),
+        ("Camera moments", camera_moments_row(transcript, for_transcript=True)),
         ("Camera stamp", stamp_row(transcript)),
         ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
     ]
@@ -689,9 +707,16 @@ def stamp_row(transcript) -> str:
     return prompts.stamp_row(stamp)
 
 
-def camera_moments_row(transcript) -> str:
-    """How many Moments the export carries, by which model, or nothing."""
-    moments = camera_moments(transcript)
+def camera_moments_row(
+    transcript, *, for_transcript: bool = False, gated: bool = True
+) -> str:
+    """How many Moments the export carries, by which model, or nothing; the
+    Details panel asks ungated, since it counts what is there."""
+    moments = (
+        camera_moments(transcript, for_transcript=for_transcript)
+        if gated
+        else described_moments(transcript)
+    )
     if not moments:
         return ""
     models = sorted({one.model for one in moments if one.model})
@@ -1206,11 +1231,11 @@ def summary_word(summary, exported_by: str) -> bytes:
     return holder.getvalue()
 
 
-def _camera_section(document, transcript) -> None:
+def _camera_section(document, transcript, *, for_transcript: bool = False) -> None:
     """What the camera showed: the described Moments a summary could draw on."""
     from docx.shared import Pt
 
-    moments = camera_moments(transcript)
+    moments = camera_moments(transcript, for_transcript=for_transcript)
     if not moments:
         return
     document.add_paragraph()

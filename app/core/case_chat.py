@@ -160,6 +160,27 @@ def what_to_say(turn: CaseChatTurn) -> str:
     return assistant.what_to_say(turn.reason_class)
 
 
+def transcript_alone_line(readings: list[dict]) -> str:
+    """The answer's line about the videos read without their vision (v1.57.0):
+    said the way the summary card says it, without what they lack."""
+    from core import assistant
+
+    if not assistant.digests_on():
+        return ""
+    alone = [
+        f"Recording {number}"
+        for number, one in enumerate(readings, start=1)
+        if one.get("video") and not one.get("digest")
+    ]
+    if not alone:
+        return ""
+    if len(alone) == 1:
+        return f"{alone[0]} was read from the transcript alone."
+    return (
+        f"{', '.join(alone[:-1])} and {alone[-1]} were read from the transcript alone."
+    )
+
+
 def not_read_line(skipped: list[dict]) -> str:
     """The answer's opening line about the Recordings it could not read."""
     if not skipped:
@@ -399,6 +420,7 @@ def answer_case_turn(turn_id) -> None:
             }
             reading = reading_of(recording, transcript)
             reading["digest"] = bool(digests[recording.pk])
+            reading["video"] = assistant.has_picture(recording)
             readings_kept.append(reading)
         rendered: list[tuple[int, str]] = [
             (number, text_of(number, recording, recording.pk in digest_only))
@@ -497,7 +519,11 @@ def answer_case_turn(turn_id) -> None:
             turn.cut_short = answer["finish_reason"] == "length"
             text = answer["text"].strip()
 
-        opening = not_read_line(skipped)
+        opening = "\n".join(
+            line
+            for line in (not_read_line(skipped), transcript_alone_line(readings_kept))
+            if line
+        )
         turn.answer = f"{opening}\n\n{text}".strip() if opening else text
         # The combined answer's Citations are checked again before display.
         turn.citations = citations(turn.answer, starts_by_number)

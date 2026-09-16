@@ -472,3 +472,29 @@ def test_the_settings_and_the_template_exist():
     assert settings_store.TEMPLATES not in dict(settings_store.PAGES)
     assert PromptTemplate.DEFAULTS["case_chat"] == ("Case chat", prompts.CASE_CHAT)
     assert engine.WHAT_TO_SAY["llm_case_too_large"]
+
+
+def test_the_answer_says_which_videos_were_read_from_the_transcript_alone(db):
+    from core import case_chat, settings_store
+
+    settings_store.set_to("assistant_available", True)
+    settings_store.set_to("moments_available", True)
+    settings_store.set_to("digests_available", True)
+    readings = [
+        {"video": True, "digest": True},
+        {"video": True, "digest": False},
+        {"video": False, "digest": False},
+        {"video": True, "digest": False},
+    ]
+    assert (
+        case_chat.transcript_alone_line(readings)
+        == "Recording 2 and Recording 4 were read from the transcript alone."
+    )
+    assert (
+        case_chat.transcript_alone_line(readings[:2])
+        == "Recording 2 was read from the transcript alone."
+    )
+    assert case_chat.transcript_alone_line(readings[:1]) == ""
+    # Digests off: every video reads from the transcript, so nothing is said.
+    settings_store.set_to("digests_available", False)
+    assert case_chat.transcript_alone_line(readings) == ""

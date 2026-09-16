@@ -506,11 +506,29 @@ def test_the_exports_keep_the_camera_section_inside_when_the_office_says(
         state=assistant.DONE,
         text="A doorway.",
     )
+    # Two switches (v1.57.0): the transcript's export carries the section
+    # only when the office asks; the summary's and a clip's unless the
+    # office says no; the Details panel counts either way.
     assert exports.camera_moments(video.transcript)
+    assert exports.camera_moments(video.transcript, for_transcript=True) == []
+    assert exports.CAMERA_HEADING not in exports.plain_text(video)
+    settings_store.set_to("transcript_exports_camera_section", True)
+    assert exports.camera_moments(video.transcript, for_transcript=True)
     assert exports.CAMERA_HEADING in exports.plain_text(video)
     settings_store.set_to("exports_camera_section", False)
     assert exports.camera_moments(video.transcript) == []
-    assert exports.CAMERA_HEADING not in exports.plain_text(video)
+    assert exports.camera_moments(video.transcript, for_transcript=True)
+    assert exports.camera_moments_row(video.transcript, gated=False)
+    import pathlib
+
+    catalogue = (
+        pathlib.Path(__file__).resolve().parents[2]
+        / "docs"
+        / "spec"
+        / "ADMIN-SETTINGS-CATALOGUE.md"
+    ).read_text(encoding="utf-8")
+    assert "| Exports carry what the camera showed" in catalogue
+    assert "| Transcript exports carry what the camera showed" in catalogue
 
 
 @pytest.mark.django_db

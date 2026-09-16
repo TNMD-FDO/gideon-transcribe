@@ -890,7 +890,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     # The Moments described so far, as a count; their words are content and
     # stay in the Moments tab and the exports.
     if transcript is not None:
-        camera = exports.camera_moments_row(transcript)
+        camera = exports.camera_moments_row(transcript, gated=False)
         if camera:
             rows.append(("Camera moments", camera))
         stamp = exports.stamp_row(transcript)

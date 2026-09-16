@@ -1786,11 +1786,26 @@ def _rows() -> list[Definition]:
             kind=TOGGLE,
             default=True,
             what_it_does=(
-                "Whether a summary's and a transcript's Word and text exports "
-                "carry the What the camera showed section and its legend. Off "
-                "leaves the descriptions in the app only."
+                "Whether a summary's Word export carries the What the camera "
+                "showed section and its legend, and a clip its camera captions. "
+                "Off leaves the descriptions in the app only. A transcript's "
+                "exports have their own switch below."
             ),
             when_changed="The next export.",
+        ),
+        Definition(
+            key="transcript_exports_camera_section",
+            page=VISION,
+            group="Exports",
+            name="Transcript exports carry what the camera showed",
+            kind=TOGGLE,
+            default=False,
+            what_it_does=(
+                "Whether a transcript's Word and text exports carry the What "
+                "the camera showed section after the talk. Off, the shipped "
+                "position since v1.57.0: a transcript export is the words."
+            ),
+            when_changed="The next transcript export.",
         ),
         Definition(
             key="engine_address",
@@ -2338,3 +2353,7 @@ def vision_tick_default() -> bool:
 
 def exports_camera_section() -> bool:
     return bool(get("exports_camera_section"))
+
+
+def transcript_exports_camera_section() -> bool:
+    return bool(get("transcript_exports_camera_section"))
