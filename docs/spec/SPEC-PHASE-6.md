@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 6 specification
 
-The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 as `v1.61.0`.
+The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 as `v1.61.0`; chapter 4, the page laid out for watching, is written for the build.
 
 ## About this document
 
@@ -14,16 +14,18 @@ Nothing in this document is office-specific. No new environment key is needed an
 
 - **Incidents, and the cameras in step** (chapter 1, for the build): a case's videos that ran at the same time become an Incident, offered by the app when their clocks overlap and made by hand otherwise. Each camera is placed on one clock, the time of day the cameras burn into their pictures, read as each playback copy lands; a camera without a clock is matched by sound to one that has, or placed by hand, and how each was placed is shown wherever it appears. The Incident page is a page of its own inside the case: up to six cameras playing in step under one transport and one clock, sound from one of them, a strip across the width with a lane per camera, and the words and the camera line under each picture. An Incidents page in the Panel holds its switches.
 - **The Chronology** (chapter 2, for the build): the Incident's list of Events, each a time of day on the Incident clock, a line of text, its source (a person, the words of a camera, or what a camera showed) and the cameras that show it, added by a person at the moment being watched, from a line under a tile, or from a chat's citation; drawn as the strip's Events lane; listed on the Chronology tab with a citation that plays every camera from there; and exported as a Word document with the strip as a picture, as a spreadsheet, and as the picture alone.
-- **The assistant on the Incident** (chapter 3, for the build): the Case Chat told each camera's place on the clock, so a time on one recording is the same moment on the others and an answer gives the time of day; Events the assistant proposes from the cameras' Digests on a press, accepted one by one; and the Incident memo, written across every synced camera from the incident record (the Digests merged onto the Incident clock) on the Chronology's Events, each cited so the citation plays every camera, on the Incident page's Memo tab, exported to Word with the Chronology as its last pages.
+- **The Incident page, laid out for watching** (chapter 4, for the build): a Layout menu in the transport with Focus (one camera large, the others in a filmstrip under it, any of them one press from the front, the sound following the focus unless pinned), Side by side (the grid beside the panel with the strip at the bottom) and Grid at 2, 3 or 4 across; lighter tile heads, the sound as a speaker icon, parked cameras as lanes in the strip, and the event box as a sheet. From the maintainer's finding after v1.61.0 that the page was "a bit smushed".
+- **The assistant on the Incident** (chapter 3, built as `v1.61.0`): the Case Chat told each camera's place on the clock, so a time on one recording is the same moment on the others and an answer gives the time of day; Events the assistant proposes from the cameras' Digests on a press, accepted one by one; and the Incident memo, written across every synced camera from the incident record (the Digests merged onto the Incident clock) on the Chronology's Events, each cited so the citation plays every camera, on the Incident page's Memo tab, exported to Word with the Chronology as its last pages.
 
-Chapter 1 adds an Incidents settings page with six settings, four audit rows, two tables, and one migration that moves the camera stamp from the Transcript to the Recording. Chapter 2 adds one table, four audit rows, three exports and no setting. Chapter 3 adds one table, seven settings, two prompt templates, four audit rows and one export.
+Chapter 1 adds an Incidents settings page with six settings, four audit rows, two tables, and one migration that moves the camera stamp from the Transcript to the Recording. Chapter 2 adds one table, four audit rows, three exports and no setting. Chapter 3 adds one table, seven settings, two prompt templates, four audit rows and one export. Chapter 4 adds one setting and no row.
 
 ## Contents
 
 1. Incidents, and the cameras in step
 2. The Chronology
 3. The assistant on the Incident
-4. Deferred and ruled out
+4. The Incident page, laid out for watching
+5. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 6. B. Settings added in Phase 6.
 
@@ -314,7 +316,78 @@ On the Incidents page, a group **The assistant**, every row greyed while Inciden
 - The incident record's line shape and the order in which transcript-only cameras drop to a line when the whole does not fit, within the rule that the longest goes first and the memo says so.
 - The Word document's layout for the memo with the Chronology as its last pages, in the app's export shape.
 
-## 4. Deferred and ruled out
+## 4. The Incident page, laid out for watching
+
+Written 2026-09-17, after v1.61.0 had gone to the server, from the maintainer's finding that the page is "a bit smushed" and the ask to make it more intuitive, and the choice made the same day from three mock-ups (`docs/spec/mockups/phase-6-layouts.html`): one camera large with the others in a filmstrip under it, and a Layout menu that also gives the cameras side by side with the strip at the bottom. Chapters 1 to 3 are unchanged in what the page does; this chapter changes where things sit and how much room the pictures get.
+
+### Principles
+
+1. **The pictures come first.** Whatever the layout, the cameras get the width and the controls stay out of their way: one head, one transport, one strip.
+2. **One camera at a time is how people look; every camera in step is the point.** The Focus layout gives one camera the room to be read and heard while the rest play small in step, and any of them is one press from the front.
+3. **The person chooses, the app remembers.** The Layout menu is the person's; the browser keeps the choice as it keeps Across today, and the office sets what a new person starts with.
+4. **Nothing present is taken away.** Every control of chapters 1 to 3 stays on the page; some move, some shrink, none goes.
+
+### Words
+
+**Layout**, as `CONTEXT.md` defines it from this chapter: the Incident page's arrangement, one of **Focus**, **Side by side**, and **Grid** (2, 3 or 4 across). The large camera in Focus is the **focus camera**; the row of small ones under it is the **filmstrip**. The pages never say view mode, multiview, mosaic or split screen.
+
+### The Layout menu
+
+- In the transport, in the place Across held: **Focus** (the shipped default), **Side by side**, **Grid, 2 across**, **Grid, 3 across**, **Grid, 4 across**. One press changes the layout at once, keeping the moment, whether it is playing, the sound and Follow.
+- The choice is kept in the browser per person, as Across was; a new person starts with the office's **Incident layout** setting. Below 1280 pixels every layout folds to one column: the cameras, the transport, the strip, the panel.
+
+### Focus
+
+- **The focus camera** is one tile that takes the stage's width, beside the work panel (about a third of the width on a wide screen). Its head is a tile's head; its picture is as large as the width allows; under it the line being spoken in the viewer's reading size, with + event on hover, and the camera line's + event for a video with vision.
+- **The filmstrip** under the focus: every other camera of the Incident as a small tile (about 170 pixels wide), in the Wall's order, with its colour dot, its id and a short pill, playing in step and muted. A press on a tile makes it the focus and puts the former focus in its place in the strip; tiles are dragged into place as the Wall's tiles are today. A camera that has not started at the moment is dimmed with "in 0:41"; one that has ended is dimmed with "ended". The Cameras on the wall setting says how many filmstrip tiles play live; beyond it a tile is parked as today (its id and pill, no picture) and a press swaps it in and makes it the focus.
+- **The sound follows the focus** unless a person pins it: the speaker icon on any tile takes the sound and keeps it there through focus changes; a press on the icon of the focus camera lets the sound follow again. The transport says which camera is heard.
+- **The work panel** beside the focus holds the Chronology, Memo, Cameras and Details tabs as chapters 2 and 3 have them; the transport sits under the filmstrip and the strip under the transport, across the whole width.
+
+### Side by side
+
+- Every camera at the same size in a grid on the left: two across at four cameras or fewer, three across at five or more, in the Wall's order, dragged into place as today; the work panel on the right; the transport and the strip across the whole width at the bottom. This is today's page with the tidy-ups below, and the layout for comparing cameras while reading the chronology.
+
+### Grid, 2, 3 or 4 across
+
+- The cameras alone across the whole width at the chosen count, the transport and the strip under them, and the work panel under the strip at the full width. The layout for a wall of pictures and nothing beside them; the chronology is a scroll away.
+
+### Tidy-ups, in every layout
+
+- **Tile heads lighter**: the colour dot, the camera id, one short pill (**Clock**, **Clock?** for unchecked, **Sound**, **File**, **Hand**, **Guess**, each with chapter 1's full words as its hover title), the speaker icon, **Sync**, and the three-dot menu. The Sound radio button and its label go.
+- **Sound is one press**, the speaker icon on a tile; the Sound from list leaves the transport, which shows the heard camera's id instead.
+- **Parked cameras live in the strip** as thin lanes with **Swap in** on the lane's head; the row of parked tiles under the transport goes.
+- **The event box is a sheet** that opens over the head, at the right, and never pushes the page down; Escape and Cancel close it as today.
+- **The words under a tile** keep the small size on a grid or filmstrip tile and take the viewer's reading size on the focus camera.
+- The head, the strip, the tabs and every action stay as chapters 1 to 3 have them.
+
+### What changes from chapters 1 to 3
+
+- **Chapter 1, The Incident page**: the Wall is one of three layouts; the parked tiles move into the strip; the tile head's pill is short with the full words on hover; the Sound radio and the Sound from list are replaced by the speaker icon; Across is replaced by the Layout menu; the event box is a sheet. The 1280 pixel rule stays; the 1900 pixel rule widens the work panel as before.
+- **Chapters 2 and 3**: nothing but where the panel sits.
+- **Amendment v1.60.0**: Across (Auto, 2, 3, 4) is withdrawn in favour of the Layout menu; the wall's grid rules survive as the Grid layouts.
+
+### Audit rows
+
+None. A layout is the person's browser's, not a case's activity.
+
+### Settings
+
+**Incident layout** on the Incidents page, under The wall: Focus (shipped), Side by side, Grid 2, Grid 3, Grid 4; the layout a person starts with before they choose. Cameras on the wall keeps its meaning as the count of pictures that play live at once.
+
+### Not in this chapter
+
+- **Two focus cameras** side by side with the filmstrip under both. A later ask if staff want it.
+- **A pop-out window** for the focus camera. Chapter 1 ruled Open in a window out of the page.
+- **Keyboard focus switching** (number keys to the cameras). Left to a later tuning pass; the number keys are the viewer's speaker keys.
+
+### Left to the build
+
+- The filmstrip tile's exact width and the focus picture's proportion, within the rule that the focus camera takes the stage's width.
+- The 1280 pixel fold's order and the filmstrip's scrolling when it does not fit.
+- The short pills' exact words.
+- Whether the sheet's opening steals the focus from the transport's keys (it should not while the box is closed).
+
+## 5. Deferred and ruled out
 
 - **A Clip across cameras** (side by side, one file): deferred by the maintainer on 2026-09-17.
 - **Sound recordings in an Incident**: deferred; not asked for.
@@ -353,17 +426,19 @@ On the Incidents page, a group **The assistant**, every row greyed while Inciden
 | Incident memo | Incidents | On | 3 |
 | Incident memo answer cap | Incidents | 4,000 tokens | 3 |
 | Incident memo time limit | Incidents | 600 seconds | 3 |
+| Incident layout | Incidents | Focus | 4 |
 
 And, in chapter 3, the Proposed events and Incident memo prompt templates on the Templates page.
 
 ## Sources
 
-The maintainer's ask and answers of 2026-09-17, and the mock-ups chosen the same day (`docs/spec/mockups/phase-6-incidents.html`); the Phase 2 Cases, Sharing, Retention policy, Case Chat and Backup chapters; Phase 4 chapter 3 (the stamp and the Digest), chapter 4 (the memo and the chat) and chapter 7 (the templates); Phase 5 chapter 1 (the Lanes) and chapter 3 (propose, never apply); `docs/research/media-pipeline-facts.md` (the playback copy plays in every browser; the probe keeps the file's own facts).
+The maintainer's ask and answers of 2026-09-17, and the mock-ups chosen the same day (`docs/spec/mockups/phase-6-incidents.html`) and the layout mock-ups chosen after v1.61.0 (`docs/spec/mockups/phase-6-layouts.html`); the Phase 2 Cases, Sharing, Retention policy, Case Chat and Backup chapters; Phase 4 chapter 3 (the stamp and the Digest), chapter 4 (the memo and the chat) and chapter 7 (the templates); Phase 5 chapter 1 (the Lanes) and chapter 3 (propose, never apply); `docs/research/media-pipeline-facts.md` (the playback copy plays in every browser; the probe keeps the file's own facts).
 
 ## Amendments applied
 
+- 2026-09-17: chapter 4 written for the build after v1.61.0 on the server, from the maintainer's finding ("the incident layout is a bit smushed") and the choice of the Focus layout with a Layout menu that also gives Side by side; the Deferred and ruled out chapter becomes chapter 5.
 - 2026-09-17: chapter 3 built as v1.61.0 the same day, with these decisions left to the build: the proposals' answer is a JSON list of up to sixty items per call, thirty kept per camera, each item the time in the recording, an end, the line and the words it rests on, the first forty folded characters of which must be found in what the camera was given; a transcript-only camera is read in as few calls as fit the window, whole lines only; a dismissed proposal is kept as a dismissed row and a later run offers nothing within five seconds of it on the same camera; the incident record's line shape is "camera: [hh:mm:ss] ..." with a Digest line's number dropped and a transcript line's numbered label dropped, hh:mm:ss into the incident when it has no clock; transcript-only cameras drop to a line the longest first; the memo is one row per Incident, reset by Regenerate; its citations are the [hh:mm:ss] inside the span and its marks the (Event n) of the Chronology's numbering at the time of writing; the Word export prints the memo's parts as headings, then the Chronology's pages after a page break. The speaker-label rule is applied in the lines endpoint (a numbered label blanked), in the record, and in the fixed incident rules.
-- 2026-09-17: Speaker labels on the Incident page: a name set or accepted on a recording's Speakers page carries over; a numbered label does not show, on the page, in the event box, on the Chronology, or to the assistant. Reconciling labels across cameras is deferred (chapter 4). For the build with chapter 3.
+- 2026-09-17: Speaker labels on the Incident page: a name set or accepted on a recording's Speakers page carries over; a numbered label does not show, on the page, in the event box, on the Chronology, or to the assistant. Reconciling labels across cameras is deferred (chapter 5). For the build with chapter 3.
 - 2026-09-17: chapter 3 written for the build after v1.60.1, from the maintainer's asks (the memo across cameras on a page of its own, people's Events first with the assistant proposing later, the memo written on the Chronology, and the chronology as a smarter presentation built on the model's summaries); the incident record, the app's merge of the Digests onto the Incident clock, is what the memo is written from.
 - 2026-09-17 (v1.60.1): Sync is a button on every tile's head, not a menu entry; the Wall follows the saved order; Add cameras is drawn from the page's state.
 - 2026-09-17 (v1.60.0): the tuning pass from the maintainer's first use. Sync is the one control for a camera's place, on a menu at each tile's top right (Sync this camera, Swap out, Open the recording, Remove from incident) and on the Cameras tab; a camera with no clock is on the Wall at the app's guess (the file's time when the Incident has a clock, else the Incident's start) marked Not synced yet, so Not placed no longer keeps a camera off the Wall and the pill Placed by hand reads Synced by hand; tiles are dragged into place; Across in the transport (Auto, 2, 3, 4) sets the columns, Auto using four on a screen 1900 pixels wide or wider, where the work area also widens; the camera line under a tile is withdrawn (the words stay); the Clock column leaves the recordings tab and a video with no clock shows nothing rather than a warning. All cameras and the sound match wait for a camera to be synced, not merely guessed.

@@ -1,0 +1,321 @@
+<title>Incident Page Layouts</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --ink: #16202b; --muted: #5b6876; --line: #d7dee7; --card: #ffffff; --accent: #1f6fb2;
+    --app-bg: #0f1620; --app-panel: #17202b; --app-panel-2: #1d2833; --app-line: #2a3644; --app-ink: #e6edf3; --app-muted: #8b98a8;
+    --app-accent: #58a6ff; --app-warn: #d29922; --app-ok: #3fb950; --app-video: #05080c;
+    --c1: #58a6ff; --c2: #f0883e; --c3: #3fb950; --c4: #bc8cff; --c5: #39c5cf; --c6: #ff7b72;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0b1017; --ink: #e6edf3; --muted: #97a3b1; --line: #263242; --card: #121a24; --accent: #58a6ff; }
+  }
+  :root[data-theme="dark"] { --bg: #0b1017; --ink: #e6edf3; --muted: #97a3b1; --line: #263242; --card: #121a24; --accent: #58a6ff; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 20px; margin: 44px 0 4px; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p { max-width: 70ch; margin: 0 0 10px; }
+  .lead { color: var(--muted); }
+  .rec { display: inline-block; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 9px; margin-left: 8px; vertical-align: middle; }
+  ul { max-width: 72ch; padding-left: 20px; margin: 0 0 10px; }
+  li { margin: 0 0 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+  .note { border-left: 3px solid var(--accent); padding: 6px 12px; background: var(--card); border-radius: 0 6px 6px 0; margin: 14px 0; }
+
+  /* A screen: a 1200 px wide rendering of the app, scaled to the page's width. */
+  .screen-box { width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--app-bg); margin: 12px 0 8px; }
+  .screen { width: 1200px; transform-origin: 0 0; background: var(--app-bg); color: var(--app-ink); font-size: 13px; line-height: 1.35; }
+  .bar { display: flex; align-items: center; gap: 18px; padding: 8px 16px; border-bottom: 1px solid var(--app-line); background: #0c1219; }
+  .bar b { font-size: 14px; } .bar span { color: var(--app-muted); } .bar .on { color: var(--app-ink); background: #1c2b3b; padding: 2px 8px; border-radius: 6px; }
+  .head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+  .lbl { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--app-muted); }
+  .head .name { font-size: 16px; font-weight: 600; }
+  .head .sub { color: var(--app-muted); font-size: 12px; }
+  .clock { font: 600 24px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .02em; margin-left: auto; }
+  .btn { border: 1px solid var(--app-line); background: var(--app-panel); color: var(--app-ink); border-radius: 6px; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+  .btn.p { background: var(--app-accent); border-color: var(--app-accent); color: #04121f; font-weight: 600; }
+  .btn.g { background: transparent; }
+  .tiny { font-size: 11px; padding: 1px 7px; }
+  .pill { font-size: 11px; border-radius: 999px; padding: 1px 8px; background: #1d3a2a; color: var(--app-ok); }
+  .pill.w { background: #3a2f12; color: var(--app-warn); }
+  .grow { flex: 1; }
+  .wall { display: grid; gap: 8px; padding: 0 16px; }
+  .tile { background: var(--app-panel); border: 1px solid var(--app-line); border-radius: 8px; overflow: hidden; }
+  .tile .th { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 12px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+  .video { background: var(--app-video); aspect-ratio: 16 / 9; display: grid; place-items: center; color: #3a4655; font-size: 12px; position: relative; }
+  .video .figure { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 70%, #1a2430 0, #05080c 60%); }
+  .video .who { position: absolute; left: 10px; bottom: 8px; color: #6b7a8a; font-size: 11px; }
+  .words { padding: 6px 8px; font-size: 12px; color: var(--app-ink); border-top: 1px solid var(--app-line); display: flex; gap: 6px; align-items: baseline; }
+  .words .n { color: var(--c); font-weight: 600; }
+  .words .m { color: var(--app-muted); }
+  .transport { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 12px; }
+  .transport .time { font-family: ui-monospace, Menlo, monospace; color: var(--app-muted); }
+  .sel { border: 1px solid var(--app-line); border-radius: 6px; padding: 2px 8px; background: var(--app-panel); font-size: 12px; }
+  .strip { margin: 0 16px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-panel); overflow: hidden; }
+  .ruler { display: flex; justify-content: space-between; padding: 3px 10px 3px 118px; color: var(--app-muted); font-size: 10px; font-family: ui-monospace, Menlo, monospace; border-bottom: 1px solid var(--app-line); }
+  .lane { display: flex; align-items: center; height: 18px; border-bottom: 1px solid #1f2a36; }
+  .lane .ln { width: 108px; padding-left: 10px; font-size: 11px; color: var(--app-muted); display: flex; gap: 6px; align-items: center; }
+  .lane .tr { flex: 1; position: relative; height: 100%; }
+  .lane .tr i { position: absolute; top: 4px; height: 10px; border-radius: 3px; background: var(--c); opacity: .85; }
+  .lane .tr i.thin { top: 7px; height: 4px; opacity: .5; }
+  .lane .tr .ev { position: absolute; top: 3px; width: 2px; height: 12px; background: var(--app-accent); }
+  .lane .tr .ev.w { background: var(--app-warn); }
+  .lane .tr .evl { position: absolute; top: 2px; font-size: 10px; color: var(--app-ink); padding-left: 5px; white-space: nowrap; }
+  .lane .tr .ph { position: absolute; top: 0; bottom: 0; width: 1px; background: #ff5c5c; }
+  .tabs { display: flex; gap: 4px; padding: 0 16px; margin-top: 12px; border-bottom: 1px solid var(--app-line); }
+  .tab { padding: 6px 12px; font-size: 13px; color: var(--app-muted); border-bottom: 2px solid transparent; }
+  .tab.on { color: var(--app-ink); border-bottom-color: var(--app-accent); }
+  .panel { padding: 12px 16px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 5px 6px; border-top: 1px solid #1f2a36; vertical-align: top; }
+  td.t { font-family: ui-monospace, Menlo, monospace; color: var(--app-accent); white-space: nowrap; }
+  td .m { color: var(--app-muted); font-size: 11px; display: block; }
+  tr.here td { background: #1b2a3a; }
+  .eventbox { display: flex; gap: 8px; align-items: center; background: var(--app-panel-2); border: 1px solid var(--app-line); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  .inp { border: 1px solid var(--app-line); border-radius: 6px; padding: 3px 8px; background: var(--app-bg); color: var(--app-muted); font-size: 12px; }
+  .side { display: grid; grid-template-columns: 1fr 380px; gap: 12px; padding: 0 16px; }
+  .work { background: var(--app-panel); border: 1px solid var(--app-line); border-radius: 8px; overflow: hidden; }
+  .work .tabs { margin: 0; padding: 0 8px; }
+  .rail { width: 30px; background: var(--app-panel); border: 1px solid var(--app-line); border-radius: 8px; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 10px 0; color: var(--app-muted); font-size: 11px; writing-mode: vertical-rl; }
+  .film { display: flex; gap: 8px; padding: 8px 16px 0; }
+  .film .tile { width: 168px; flex: none; }
+  .film .tile .video { aspect-ratio: 16 / 9; }
+  .film .tile.on { outline: 2px solid var(--app-accent); }
+  .caption { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+  .callouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 22px; margin: 10px 0 0; padding: 0; list-style: none; max-width: none; }
+  .callouts li { display: flex; gap: 8px; font-size: 14px; }
+  .callouts b { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; display: grid; place-items: center; }
+  .mark { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--app-accent); color: #04121f; font: 700 12px/20px sans-serif; text-align: center; box-shadow: 0 0 0 3px rgba(88,166,255,.25); }
+  .rel { position: relative; }
+  .menu { position: absolute; right: 0; top: 26px; z-index: 3; background: var(--app-panel-2); border: 1px solid var(--app-line); border-radius: 8px; padding: 4px; min-width: 150px; box-shadow: 0 10px 24px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+  .menu .mi { padding: 5px 10px; font-size: 12px; color: var(--app-ink); border-radius: 5px; white-space: nowrap; }
+  .menu .mi.on { background: #1c2b3b; color: var(--app-accent); }
+  .sheet { position: absolute; right: 24px; top: 46px; width: 520px; z-index: 2; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  .tradeoffs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; max-width: none; }
+  @media (max-width: 760px) { .tradeoffs { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <h1>The incident page: three ways to lay it out</h1>
+  <div class="note"><p><b>Second round.</b> Option B is chosen. The Layout menu in its transport gains <b>Side by side</b>, the grid of cameras beside the panel with the strip at the bottom, drawn under option B below. The other options stay for the record.</p></div>
+  <p class="lead">Mock-ups for review, drawn in the app's own look at a 1200 pixel desktop width with four cameras of a traffic stop. Nothing here is built. Each option keeps every feature of v1.61.0; what changes is where things sit and how much room the pictures get.</p>
+
+  <div class="note">
+    <p><b>What makes the page feel smushed today.</b> The wall shares the width with the work panel, so with four or more cameras each picture is a quarter of half the screen. Three rows of controls (the head, the transport, the tile heads) sit between the pictures and the words. The strip is at the bottom, far from the wall it drives, and the parked tiles take a row of their own. The event box pushes everything down when it opens.</p>
+  </div>
+
+  <h2>Option A. Stage first, then the story</h2>
+  <p>The wall takes the whole width. The transport sits under it, the strip directly under that, and the Chronology, Memo, Cameras and Details tabs run full width below. Watching happens at the top; reading and adding events happens below, in a natural scroll.</p>
+  <div class="screen-box"><div class="screen">
+    <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span class="on">Cases</span><span>My recordings</span><span>Clips</span><span>Panel</span><span>Help</span></div>
+    <div class="head rel">
+      <span class="lbl">Incident</span><span class="name">Traffic stop</span><span class="sub">in the case Traffic stop, 7 June 2025 &middot; 4 cameras &middot; 4 events</span>
+      <span class="clock">21:57:28</span><span class="sub">06/07/2025</span>
+      <span class="btn p">+ Add event here</span><span class="btn">Export &#9662;</span><span class="btn g">Done</span>
+      <span class="mark" style="left: 1100px; top: 4px">1</span>
+    </div>
+    <div class="wall rel" style="grid-template-columns: repeat(4, 1fr)">
+      <span class="mark" style="left: 250px; top: 2px">2</span>
+      <div class="tile" style="--c: var(--c1)"><div class="th"><span class="dot"></span><b>BWC2-098679</b><span class="pill">clock</span><span class="grow"></span><span title="sound">&#128266;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">driver's window</span></div><div class="words"><span class="n">Officer Hale:</span>Step out of the vehicle for me.</div></div>
+      <div class="tile" style="--c: var(--c2)"><div class="th"><span class="dot"></span><b>BWC2-098702</b><span class="pill">clock</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">passenger side</span></div><div class="words"><span class="m">Stay in the car, please.</span></div></div>
+      <div class="tile" style="--c: var(--c3)"><div class="th"><span class="dot"></span><b>DC-12</b><span class="pill">clock</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">in-car, unit 12</span></div><div class="words"><span class="m">&hellip;</span></div></div>
+      <div class="tile" style="--c: var(--c4)"><div class="th"><span class="dot"></span><b>BWC2-0451</b><span class="pill w">by hand</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">Starts in 0:41</span></div><div class="words"><span class="m"></span></div></div>
+    </div>
+    <div class="transport rel">
+      <span class="btn p">&#9654; Play</span><span class="btn">&#9664; 3s</span><span class="btn">&minus;5s</span><span class="btn">+5s</span><span class="time">1:45 / 41:24</span>
+      <span class="grow"></span><span class="sel">Speed 1</span><span class="sel">Layout: Grid &#9662;</span><span class="sel">&#9745; Follow</span>
+      <span class="mark" style="left: 1010px; top: 8px">3</span>
+    </div>
+    <div class="strip rel">
+      <span class="mark" style="left: 60px; top: 30px">4</span>
+      <div class="ruler"><span>21:55</span><span>22:00</span><span>22:05</span><span>22:10</span><span>22:15</span><span>22:20</span><span>22:25</span><span>22:30</span><span>22:35</span></div>
+      <div class="lane" style="--c: var(--c1)"><div class="ln"><span class="dot"></span>BWC2-098679</div><div class="tr"><i style="left: 1%; width: 96%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c2)"><div class="ln"><span class="dot"></span>BWC2-098702</div><div class="tr"><i style="left: 8%; width: 88%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c3)"><div class="ln"><span class="dot"></span>DC-12</div><div class="tr"><i style="left: 0%; width: 98%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c4)"><div class="ln"><span class="dot"></span>BWC2-0451</div><div class="tr"><i style="left: 3%; width: 70%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c6)"><div class="ln"><span class="dot"></span>BWC2-1133</div><div class="tr"><i class="thin" style="left: 12%; width: 60%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane"><div class="ln">Events</div><div class="tr"><span class="ev" style="left: 2%"></span><span class="evl" style="left: 2%">Vehicle stopped</span><span class="ev" style="left: 6%"></span><span class="evl" style="left: 6%">Step out of the vehicle&hellip;</span><span class="ev" style="left: 13%"></span><span class="evl" style="left: 13%">Pat-down; a small bag&hellip;</span><span class="ev w" style="left: 22%"></span><span class="evl" style="left: 22%">Officer radios for a tow (proposed)</span><span class="ev" style="left: 36%"></span><span class="evl" style="left: 36%">Tow truck arrives</span><span class="ph" style="left: 6%"></span></div></div>
+    </div>
+    <div class="tabs rel"><span class="tab on">Chronology</span><span class="tab">Memo</span><span class="tab">Cameras</span><span class="tab">Details</span><span class="mark" style="left: 330px; top: 4px">5</span></div>
+    <div class="panel">
+      <div class="row" style="margin-bottom: 8px"><span>4 events on the chronology. The memo was written on 4 of them.</span><span class="grow"></span><span class="btn">Propose events</span><span class="sub" style="color: var(--app-muted)">Proposed 1 event at 14:02</span></div>
+      <table>
+        <tr><td class="t">21:56:26</td><td>Vehicle stopped on the shoulder<span class="m">Seen on DC-12, BWC2-098679</span></td><td><span class="pill" style="background:#2a2340;color:#bc8cff">Added by J. Alvarez</span></td><td style="text-align:right"><span class="btn tiny g">Edit</span></td></tr>
+        <tr class="here"><td class="t">21:57:28</td><td>Step out of the vehicle for me.<span class="m">Seen on BWC2-098679, BWC2-0451</span></td><td><span class="pill" style="background:#1c2b3b;color:#9cc7ff">Words, BWC2-098679</span></td><td style="text-align:right"><span class="btn tiny g">Edit</span></td></tr>
+        <tr><td class="t">22:00:39</td><td>Pat-down; a small bag handled<span class="m">Seen on BWC2-0451, BWC2-098702</span></td><td><span class="pill" style="background:#1c2b3b;color:#9cc7ff">Camera, BWC2-0451</span></td><td style="text-align:right"><span class="btn tiny g">Edit</span></td></tr>
+      </table>
+    </div>
+  </div></div>
+  <ul class="callouts">
+    <li><b>1</b>One head: the name, the clock, Add event here, Export, Done. Nothing else competes with the pictures.</li>
+    <li><b>2</b>The wall has the full width; four cameras each get a quarter of the screen, six get a third in two rows. Sound is a speaker icon on the tile, not a radio button with a label.</li>
+    <li><b>3</b>One transport row. Across becomes a Layout menu: Grid, Focus (option B), 2, 3, 4 across.</li>
+    <li><b>4</b>The strip sits right under the transport, where a timeline belongs, and parked cameras live here as thin lanes instead of a row of tiles.</li>
+    <li><b>5</b>The tabs run the full width below, so the chronology, the memo and the cameras table have room to read.</li>
+  </ul>
+
+  <h2>Option B. Focus and filmstrip<span class="rec">Chosen</span></h2>
+  <p>One camera is large, the others sit in a strip of small tiles under it, and a press on any of them makes it the large one. All cameras still play in step. This is the layout for reading and hearing one camera while keeping the others in view, and it scales to twenty cameras without shrinking anything. It would be a Layout choice in option A rather than a page of its own.</p>
+  <div class="screen-box"><div class="screen">
+    <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span class="on">Cases</span><span>My recordings</span><span>Clips</span><span>Panel</span><span>Help</span></div>
+    <div class="head"><span class="lbl">Incident</span><span class="name">Traffic stop</span><span class="sub">in the case Traffic stop, 7 June 2025 &middot; 4 cameras &middot; 4 events</span><span class="clock">21:57:28</span><span class="sub">06/07/2025</span><span class="btn p">+ Add event here</span><span class="btn">Export &#9662;</span><span class="btn g">Done</span></div>
+    <div class="side" style="grid-template-columns: 1fr 420px">
+      <div class="tile rel" style="--c: var(--c1)">
+        <span class="mark" style="left: 12px; top: 12px">1</span>
+        <div class="th"><span class="dot"></span><b>BWC2-098679</b><span class="pill">clock</span><span class="grow"></span><span>&#128266;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div>
+        <div class="video" style="aspect-ratio: 16 / 8"><div class="figure"></div><span class="who">driver's window</span></div>
+        <div class="words" style="font-size: 13px; padding: 8px 10px"><span class="n">Officer Hale:</span>Step out of the vehicle for me.<span class="grow"></span><span class="btn tiny g">+ event</span></div>
+      </div>
+      <div class="work rel">
+        <span class="mark" style="right: 12px; top: 8px">2</span>
+        <div class="tabs"><span class="tab on">Chronology</span><span class="tab">Memo</span><span class="tab">Cameras</span><span class="tab">Details</span></div>
+        <div class="panel">
+          <table>
+            <tr><td class="t">21:56:26</td><td>Vehicle stopped on the shoulder<span class="m">DC-12, BWC2-098679</span></td></tr>
+            <tr class="here"><td class="t">21:57:28</td><td>Step out of the vehicle for me.<span class="m">Words, BWC2-098679</span></td></tr>
+            <tr><td class="t">22:00:39</td><td>Pat-down; a small bag handled<span class="m">Camera, BWC2-0451</span></td></tr>
+            <tr><td class="t">22:11:12</td><td>Tow truck arrives<span class="m">Added by J. Alvarez</span></td></tr>
+            <tr><td class="t" style="color: var(--app-warn)">22:05:54</td><td>Officer radios for a tow<span class="m">Proposed from BWC2-098702 &middot; Accept &middot; Dismiss</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="film rel">
+      <span class="mark" style="left: 12px; top: -4px">3</span>
+      <div class="tile on" style="--c: var(--c1)"><div class="th"><span class="dot"></span><b>BWC2-098679</b></div><div class="video"><div class="figure"></div></div></div>
+      <div class="tile" style="--c: var(--c2)"><div class="th"><span class="dot"></span><b>BWC2-098702</b></div><div class="video"><div class="figure"></div></div></div>
+      <div class="tile" style="--c: var(--c3)"><div class="th"><span class="dot"></span><b>DC-12</b></div><div class="video"><div class="figure"></div></div></div>
+      <div class="tile" style="--c: var(--c4)"><div class="th"><span class="dot"></span><b>BWC2-0451</b><span class="pill w" style="margin-left:auto">hand</span></div><div class="video"><div class="figure"></div><span class="who">in 0:41</span></div></div>
+      <div class="tile" style="--c: var(--c6); opacity: .6"><div class="th"><span class="dot"></span><b>BWC2-1133</b></div><div class="video"><div class="figure"></div><span class="who">not started</span></div></div>
+    </div>
+    <div class="transport"><span class="btn p">&#9654; Play</span><span class="btn">&#9664; 3s</span><span class="btn">&minus;5s</span><span class="btn">+5s</span><span class="time">1:45 / 41:24</span><span class="grow"></span><span class="sel">Speed 1</span><span class="sel rel" style="position: relative">Layout: Focus &#9662;<span class="menu"><span class="mi on">&#10003; Focus</span><span class="mi">Side by side</span><span class="mi">Grid, 2 across</span><span class="mi">Grid, 3 across</span><span class="mi">Grid, 4 across</span></span><span class="mark" style="left: 118px; top: -8px">4</span></span><span class="sel">&#9745; Follow</span></div>
+    <div class="strip" style="margin-bottom: 120px">
+      <div class="ruler"><span>21:55</span><span>22:00</span><span>22:05</span><span>22:10</span><span>22:15</span><span>22:20</span><span>22:25</span><span>22:30</span><span>22:35</span></div>
+      <div class="lane" style="--c: var(--c1)"><div class="ln"><span class="dot"></span>BWC2-098679</div><div class="tr"><i style="left: 1%; width: 96%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c2)"><div class="ln"><span class="dot"></span>BWC2-098702</div><div class="tr"><i class="thin" style="left: 8%; width: 88%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane"><div class="ln">Events</div><div class="tr"><span class="ev" style="left: 2%"></span><span class="ev" style="left: 6%"></span><span class="evl" style="left: 6%">Step out of the vehicle&hellip;</span><span class="ev" style="left: 13%"></span><span class="ev w" style="left: 22%"></span><span class="ev" style="left: 36%"></span><span class="ph" style="left: 6%"></span></div></div>
+    </div>
+  </div></div>
+  <ul class="callouts">
+    <li><b>1</b>The focus camera is large, with its words in a readable size and + event right beside them.</li>
+    <li><b>2</b>The chronology sits beside the picture, so a person reads events and watches at once.</li>
+    <li><b>3</b>Every other camera is a small live tile; a press swaps it into focus. A camera that has not started is dimmed with its countdown.</li>
+    <li><b>4</b>The Layout menu in the transport: Focus is the default; Side by side is the layout below; the Grid choices are the wall as it is today, at two, three or four across.</li>
+  </ul>
+
+
+  <h2>Layout: Side by side</h2>
+  <p>The second choice on the Layout menu. Every camera at the same size in a grid on the left, the Chronology, Memo, Cameras and Details panel on the right, and the strip across the whole width at the bottom, as it is today. A press on Side by side keeps the moment, the sound and the follow; a press on Focus goes back to one large camera.</p>
+  <div class="screen-box"><div class="screen">
+    <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span class="on">Cases</span><span>My recordings</span><span>Clips</span><span>Panel</span><span>Help</span></div>
+    <div class="head"><span class="lbl">Incident</span><span class="name">Traffic stop</span><span class="sub">in the case Traffic stop, 7 June 2025 &middot; 4 cameras &middot; 4 events</span><span class="clock">21:57:28</span><span class="sub">06/07/2025</span><span class="btn p">+ Add event here</span><span class="btn">Export &#9662;</span><span class="btn g">Done</span></div>
+    <div class="side rel" style="grid-template-columns: 1fr 400px">
+      <span class="mark" style="left: 4px; top: -6px">1</span>
+      <div class="wall" style="grid-template-columns: repeat(2, 1fr); padding: 0">
+        <div class="tile" style="--c: var(--c1)"><div class="th"><span class="dot"></span><b>BWC2-098679</b><span class="pill">clock</span><span class="grow"></span><span>&#128266;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">driver's window</span></div><div class="words"><span class="n">Officer Hale:</span>Step out of the vehicle for me.</div></div>
+        <div class="tile" style="--c: var(--c2)"><div class="th"><span class="dot"></span><b>BWC2-098702</b><span class="pill">clock</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">passenger side</span></div><div class="words"><span class="m">Stay in the car, please.</span></div></div>
+        <div class="tile" style="--c: var(--c3)"><div class="th"><span class="dot"></span><b>DC-12</b><span class="pill">clock</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">in-car, unit 12</span></div><div class="words"><span class="m">&hellip;</span></div></div>
+        <div class="tile" style="--c: var(--c4)"><div class="th"><span class="dot"></span><b>BWC2-0451</b><span class="pill w">by hand</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">Starts in 0:41</span></div><div class="words"><span class="m"></span></div></div>
+      </div>
+      <div class="work rel">
+        <span class="mark" style="right: 10px; top: 8px">2</span>
+        <div class="tabs"><span class="tab on">Chronology</span><span class="tab">Memo</span><span class="tab">Cameras</span><span class="tab">Details</span></div>
+        <div class="panel">
+          <div class="row" style="margin-bottom: 6px; font-size: 12px"><span>4 events. Memo written on 4.</span><span class="grow"></span><span class="btn tiny">Propose events</span></div>
+          <table>
+            <tr><td class="t">21:56:26</td><td>Vehicle stopped on the shoulder<span class="m">DC-12, BWC2-098679</span></td></tr>
+            <tr class="here"><td class="t">21:57:28</td><td>Step out of the vehicle for me.<span class="m">Words, BWC2-098679</span></td></tr>
+            <tr><td class="t">22:00:39</td><td>Pat-down; a small bag handled<span class="m">Camera, BWC2-0451</span></td></tr>
+            <tr><td class="t">22:11:12</td><td>Tow truck arrives<span class="m">Added by J. Alvarez</span></td></tr>
+            <tr><td class="t" style="color: var(--app-warn)">22:05:54</td><td>Officer radios for a tow<span class="m">Proposed from BWC2-098702 &middot; Accept &middot; Dismiss</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="transport rel"><span class="btn p">&#9654; Play</span><span class="btn">&#9664; 3s</span><span class="btn">&minus;5s</span><span class="btn">+5s</span><span class="time">1:45 / 41:24</span><span class="grow"></span><span class="sel">Speed 1</span><span class="sel">Layout: Side by side &#9662;</span><span class="sel">&#9745; Follow</span><span class="mark" style="left: 1000px; top: 8px">3</span></div>
+    <div class="strip rel" style="margin-bottom: 14px">
+      <span class="mark" style="left: 60px; top: 30px">4</span>
+      <div class="ruler"><span>21:55</span><span>22:00</span><span>22:05</span><span>22:10</span><span>22:15</span><span>22:20</span><span>22:25</span><span>22:30</span><span>22:35</span></div>
+      <div class="lane" style="--c: var(--c1)"><div class="ln"><span class="dot"></span>BWC2-098679</div><div class="tr"><i style="left: 1%; width: 96%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c2)"><div class="ln"><span class="dot"></span>BWC2-098702</div><div class="tr"><i style="left: 8%; width: 88%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c3)"><div class="ln"><span class="dot"></span>DC-12</div><div class="tr"><i style="left: 0%; width: 98%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c4)"><div class="ln"><span class="dot"></span>BWC2-0451</div><div class="tr"><i style="left: 3%; width: 70%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c6)"><div class="ln"><span class="dot"></span>BWC2-1133 <span class="btn tiny g">Swap in</span></div><div class="tr"><i class="thin" style="left: 12%; width: 60%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane"><div class="ln">Events</div><div class="tr"><span class="ev" style="left: 2%"></span><span class="evl" style="left: 2%">Vehicle stopped</span><span class="ev" style="left: 6%"></span><span class="evl" style="left: 6%">Step out of the vehicle&hellip;</span><span class="ev" style="left: 13%"></span><span class="evl" style="left: 13%">Pat-down; a small bag&hellip;</span><span class="ev w" style="left: 22%"></span><span class="evl" style="left: 22%">Officer radios for a tow (proposed)</span><span class="ev" style="left: 36%"></span><span class="evl" style="left: 36%">Tow truck arrives</span><span class="ph" style="left: 6%"></span></div></div>
+    </div>
+  </div></div>
+  <ul class="callouts">
+    <li><b>1</b>The grid on the left: two across at four cameras, three across at five or more, the wall's order kept and tiles still dragged into place.</li>
+    <li><b>2</b>The panel on the right, always open in this layout, with the same four tabs.</li>
+    <li><b>3</b>The Layout menu reads Side by side; the app remembers the choice per person, as Across is remembered today.</li>
+    <li><b>4</b>The strip across the whole width at the bottom, with the parked cameras as thin lanes and Swap in on each.</li>
+  </ul>
+
+  <h2>Option C. Watch and read side by side, with a panel that folds</h2>
+  <p>The closest to today. The wall keeps two thirds of the width and the work panel one third, but the panel folds to a rail when you only want to watch, the parked tiles go into the strip, and the event box opens as a sheet over the page instead of pushing it down.</p>
+  <div class="screen-box"><div class="screen">
+    <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span class="on">Cases</span><span>My recordings</span><span>Clips</span><span>Panel</span><span>Help</span></div>
+    <div class="head rel"><span class="lbl">Incident</span><span class="name">Traffic stop</span><span class="sub">in the case Traffic stop, 7 June 2025 &middot; 4 cameras &middot; 4 events</span><span class="clock">21:57:28</span><span class="sub">06/07/2025</span><span class="btn p">+ Add event here</span><span class="btn">Export &#9662;</span><span class="btn g">Done</span>
+      <div class="eventbox sheet rel"><span class="mark" style="left: -10px; top: -10px">2</span><span class="lbl">New event</span><span class="inp">21:57:28</span><span class="inp">until</span><span class="inp grow" style="color: var(--app-ink)">Step out of the vehicle for me.</span><span class="btn p tiny">Add</span><span class="btn g tiny">Cancel</span></div>
+    </div>
+    <div class="side rel" style="grid-template-columns: 1fr 30px">
+      <div class="wall" style="grid-template-columns: repeat(2, 1fr); padding: 0">
+        <div class="tile" style="--c: var(--c1)"><div class="th"><span class="dot"></span><b>BWC2-098679</b><span class="pill">clock</span><span class="grow"></span><span>&#128266;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">driver's window</span></div><div class="words"><span class="n">Officer Hale:</span>Step out of the vehicle for me.</div></div>
+        <div class="tile" style="--c: var(--c2)"><div class="th"><span class="dot"></span><b>BWC2-098702</b><span class="pill">clock</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">passenger side</span></div><div class="words"><span class="m">Stay in the car, please.</span></div></div>
+        <div class="tile" style="--c: var(--c3)"><div class="th"><span class="dot"></span><b>DC-12</b><span class="pill">clock</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">in-car, unit 12</span></div><div class="words"><span class="m">&hellip;</span></div></div>
+        <div class="tile" style="--c: var(--c4)"><div class="th"><span class="dot"></span><b>BWC2-0451</b><span class="pill w">by hand</span><span class="grow"></span><span style="opacity:.35">&#128264;</span><span class="btn tiny">Sync</span><span>&#8943;</span></div><div class="video"><div class="figure"></div><span class="who">Starts in 0:41</span></div><div class="words"><span class="m"></span></div></div>
+      </div>
+      <div class="rail rel"><span class="mark" style="left: -8px; top: -8px; writing-mode: horizontal-tb">1</span><span>Chronology</span><span>Memo</span><span>Cameras</span><span>Details</span></div>
+    </div>
+    <div class="transport"><span class="btn p">&#9654; Play</span><span class="btn">&#9664; 3s</span><span class="btn">&minus;5s</span><span class="btn">+5s</span><span class="time">1:45 / 41:24</span><span class="grow"></span><span class="sel">Speed 1</span><span class="sel">Layout: Grid &#9662;</span><span class="sel">&#9745; Follow</span></div>
+    <div class="strip" style="margin-bottom: 14px">
+      <div class="ruler"><span>21:55</span><span>22:00</span><span>22:05</span><span>22:10</span><span>22:15</span><span>22:20</span><span>22:25</span><span>22:30</span><span>22:35</span></div>
+      <div class="lane" style="--c: var(--c1)"><div class="ln"><span class="dot"></span>BWC2-098679</div><div class="tr"><i style="left: 1%; width: 96%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c4)"><div class="ln"><span class="dot"></span>BWC2-0451</div><div class="tr"><i style="left: 3%; width: 70%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane" style="--c: var(--c6)"><div class="ln"><span class="dot"></span>BWC2-1133 <span class="btn tiny g">Swap in</span></div><div class="tr"><i class="thin" style="left: 12%; width: 60%"></i><span class="ph" style="left: 6%"></span></div></div>
+      <div class="lane"><div class="ln">Events</div><div class="tr"><span class="ev" style="left: 2%"></span><span class="evl" style="left: 2%">Vehicle stopped</span><span class="ev" style="left: 6%"></span><span class="evl" style="left: 6%">Step out of the vehicle&hellip;</span><span class="ev" style="left: 13%"></span><span class="evl" style="left: 13%">Pat-down; a small bag&hellip;</span><span class="ph" style="left: 6%"></span></div></div>
+    </div>
+  </div></div>
+  <ul class="callouts">
+    <li><b>1</b>The work panel folded to a rail; a press on Chronology opens it back to a third of the width.</li>
+    <li><b>2</b>The event box as a sheet over the head: the wall and the strip stay where they were while you type.</li>
+  </ul>
+
+  <h2>Tidy-ups that go with any option</h2>
+  <ul>
+    <li><b>Tile heads lighter.</b> The colour dot, the camera id, one short pill (clock, sound, file, hand, guess), a speaker icon for the sound, Sync, and the three-dot menu. The long pill words move into the pill's hover.</li>
+    <li><b>Sound is one press.</b> The speaker icon on a tile picks the sound; the Sound from list leaves the transport.</li>
+    <li><b>Across becomes Layout</b>: Grid, Focus, 2, 3, 4 across, in one menu.</li>
+    <li><b>Parked cameras live in the strip</b> as thin lanes with Swap in, not as a row of tiles under the transport.</li>
+    <li><b>The event box is a sheet</b> that opens over the head, never pushing the wall down.</li>
+    <li><b>The words under a tile</b> in a slightly larger size, with + event on hover as today, and the camera line's + event kept for videos with vision.</li>
+  </ul>
+
+  <h2>The earlier recommendation, for the record</h2>
+  <p>Before the choice: build option A, with option B as its Focus layout and the tidy-ups above. A gives the pictures the whole width, which is what "smushed" is about, and puts the timeline where the eye expects it. B answers the other half of the problem, that a person usually cares about one camera at a time while wanting the rest in view, and it is what makes eight or twelve cameras workable. C keeps today's shape and fixes its worst habits, but it still divides the width between watching and reading, so I would only take it if you want the chronology always beside the pictures.</p>
+  <div class="tradeoffs">
+    <div><h3>A, stage first</h3><ul><li>Biggest pictures at every camera count.</li><li>Timeline under the transport.</li><li>Reading the chronology means scrolling down.</li></ul></div>
+    <div><h3>B, focus</h3><ul><li>One camera large, words readable.</li><li>Scales to twenty cameras.</li><li>No side-by-side comparison in this mode.</li></ul></div>
+    <div><h3>C, side by side</h3><ul><li>Chronology always in view.</li><li>Least change from today.</li><li>Pictures still share the width.</li></ul></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    function fit() {
+      Array.prototype.forEach.call(document.querySelectorAll(".screen-box"), function (box) {
+        var screen = box.querySelector(".screen");
+        var scale = Math.min(1, box.clientWidth / 1200);
+        screen.style.transform = "scale(" + scale + ")";
+        box.style.height = (screen.offsetHeight * scale) + "px";
+      });
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    window.setTimeout(fit, 300);
+  })();
+</script>
