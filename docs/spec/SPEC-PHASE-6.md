@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 6 specification
 
-The Incidents release. Chapter 1 was built as `v1.58.0`; chapter 2 is written for the build; chapter 3 is proposed and takes its shape here so that the earlier chapters leave room for it.
+The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 is written for the build.
 
 ## About this document
 
@@ -14,15 +14,15 @@ Nothing in this document is office-specific. No new environment key is needed an
 
 - **Incidents, and the cameras in step** (chapter 1, for the build): a case's videos that ran at the same time become an Incident, offered by the app when their clocks overlap and made by hand otherwise. Each camera is placed on one clock, the time of day the cameras burn into their pictures, read as each playback copy lands; a camera without a clock is matched by sound to one that has, or placed by hand, and how each was placed is shown wherever it appears. The Incident page is a page of its own inside the case: up to six cameras playing in step under one transport and one clock, sound from one of them, a strip across the width with a lane per camera, and the words and the camera line under each picture. An Incidents page in the Panel holds its switches.
 - **The Chronology** (chapter 2, for the build): the Incident's list of Events, each a time of day on the Incident clock, a line of text, its source (a person, the words of a camera, or what a camera showed) and the cameras that show it, added by a person at the moment being watched, from a line under a tile, or from a chat's citation; drawn as the strip's Events lane; listed on the Chronology tab with a citation that plays every camera from there; and exported as a Word document with the strip as a picture, as a spreadsheet, and as the picture alone.
-- **The assistant on the Incident** (chapter 3, proposed): the Case Chat told each camera's place on the clock, so a time on one recording is the same moment on the others; All cameras on a citation; Events the assistant proposes from the words and the cameras, accepted one by one; and the Incident memo, written across every camera on the Chronology's events, each cited, on the Incident page's Memo tab.
+- **The assistant on the Incident** (chapter 3, for the build): the Case Chat told each camera's place on the clock, so a time on one recording is the same moment on the others and an answer gives the time of day; Events the assistant proposes from the cameras' Digests on a press, accepted one by one; and the Incident memo, written across every synced camera from the incident record (the Digests merged onto the Incident clock) on the Chronology's Events, each cited so the citation plays every camera, on the Incident page's Memo tab, exported to Word with the Chronology as its last pages.
 
-Chapter 1 adds an Incidents settings page with six settings, four audit rows, two tables, and one migration that moves the camera stamp from the Transcript to the Recording. Chapter 2 adds one table, four audit rows, three exports and no setting.
+Chapter 1 adds an Incidents settings page with six settings, four audit rows, two tables, and one migration that moves the camera stamp from the Transcript to the Recording. Chapter 2 adds one table, four audit rows, three exports and no setting. Chapter 3 adds one table, seven settings, two prompt templates, four audit rows and one export.
 
 ## Contents
 
 1. Incidents, and the cameras in step
 2. The Chronology
-3. The assistant on the Incident (proposed)
+3. The assistant on the Incident
 4. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 6. B. Settings added in Phase 6.
@@ -233,14 +233,85 @@ None new. Incidents governs the whole.
 - The Event box's wording and its keyboard details, within the words fixed here.
 - How the cited line reaches the address from the viewer's head (the line being spoken at the playhead) and from a citation (the citation's own line).
 
-## 3. The assistant on the Incident (proposed)
+## 3. The assistant on the Incident
 
-Not yet written for the build; the shape decided on 2026-09-17.
+Written 2026-09-17, after the tuning pass (v1.60.0 and v1.60.1) had gone to the server, from the maintainer's asks of the same day: the deliverable is "an incident memo written by the assistant across all cameras", on a page of its own where staff scroll and investigate; people add Events first and the assistant may propose them later; the memo is written on the Chronology so the two match; and "the chronology should eventually be a smarter presentation based on LLM summaries". Chapters 1 and 2 left the room: the placements as seconds on one clock, the Event's source **assistant** and its proposed state, the working colour on the Events lane, and the Memo tab's place in the tabbar.
 
-- **The Case Chat is told the placements.** One line per placed camera after its nature line ("Recording 3, Dash cam unit 12, starts at 21:55:44 by the cameras' clocks and runs 41 min 26 s"), so a question about one camera's moment is answered from every camera at that moment; asked what another camera showed, it reads the description whose span holds the same clock time. **All cameras** beside a citation is chapter 1's; the answer giving the time of day is this chapter's.
-- **Proposed Events.** On request from the Chronology tab, the assistant reads the cameras' Digests on the Incident clock and proposes Events, each with its time, its line, its source camera and the words or the description it rests on; they sit under Proposed by the assistant with Accept and Dismiss and join the Chronology only when accepted, on the Speaker check's pattern of propose, never apply.
-- **The Incident memo.** On the Incident page's **Memo** tab: a memo in the shape of Phase 4's memos, written across every placed camera from their transcripts and Digests on the Incident clock, on the Chronology's Events, each cited by its clock time so the citation plays every camera; a sentence written on an Event carries the Event's mark. The memo says which cameras it drew on and which it left out (not placed); when Events change after it was written the tab says so and offers Regenerate. Its instructions are the **Incident memo** template on the Templates page. Its Word export carries the Chronology as its last pages.
-- **Rows and settings.** Audit rows for the proposals and the memo as the AI assistant call with features `incident_events` and `incident_memo`; settings Assistant proposes events (On), the memo's answer cap and time limit, on the Incidents page; the template.
+### Principles
+
+1. **The cameras' clock is the assistant's clock.** Every synced camera's place is a number of seconds on the Incident clock (chapter 1). The assistant is told each camera's start by that clock, so a time on one recording is the same moment on every other, and an answer can say when a thing happened by the time of day rather than by minutes into one file.
+2. **Written on the Chronology.** The memo is written on the Events the office recorded: a sentence that rests on an Event carries the Event's number, the memo never contradicts an Event, and when the Chronology changes after the memo was written the page says so and offers to write it again. The Events are the office's; the memo is the assistant's account of them and of what the cameras add.
+3. **It proposes; a person accepts.** An Event the assistant proposes sits under Proposed by the assistant until somebody presses Accept, on the Speaker check's pattern (Phase 5 chapter 3): propose, never apply. Nothing the assistant proposes reaches the Chronology, the exports or the memo unaccepted.
+4. **What the words and the cameras give.** The narrative rules of Phase 4 stand throughout: names and roles only as the words give them, a person the camera shows by clothing and position, a thing what the description saw, never a legal fact such as consent, arrest, search or force as a conclusion. The assistant reads the cameras' Digests and transcripts and nothing else; it is never asked to guess what a camera did not show.
+5. **Every time is a place to look.** A time in the memo, in a proposal, or in a Case Chat answer that names the time of day is a citation that plays every camera from there.
+6. **One switch per thing.** Each of the three parts has its own switch on the Incidents page, and Incidents Off hides all three with the page.
+
+### Words
+
+**Incident memo**, as `CONTEXT.md` defines it from this chapter; **Proposed**, the state of an Event the assistant offered and nobody has accepted; and the **incident record**, the app's own merge of the cameras' Digests onto the Incident clock, plumbing that the memo is written from. On the pages: **Propose events**, **Proposed by the assistant**, **Accept**, **Dismiss**, **Accept all**, **Write the memo**, **Regenerate**, **Memo to Word**. The pages never say report, narrative, story, auto-events or timeline.
+
+### The Case Chat is told the placements
+
+- **What is added.** When any recording the question reads is a synced camera of an Incident, one block per Incident follows the People line: "Incident <name>, <N> cameras on one clock, <date>. Recording 1 (<camera>) starts at 21:55:44 by the cameras' clock and runs to 22:37:10. Recording 3 (<camera>) starts at 21:56:31 and runs to 22:31:05. ..." with the rule under it: "A time in a recording plus that recording's start is the time of day; the same time of day on another camera is that time of day less the other camera's start. Where a camera's own stamp and the incident's clock differ, the incident's clock is right: the office synced the cameras." A camera guessed and not yet synced is named as running at about a time, not placed. An Incident with no clock (chapter 1: it counts from its first camera) gives each camera's start as minutes and seconds into the incident, and the answer gives times the same way.
+- **What the answer does.** The Case chat template gains two sentences, editable with the rest: asked when something happened on a camera of an incident, give the time of day by the cameras' clock beside the citation; asked what another camera showed at that moment, read that camera's record at the same time of day, and say when the camera had not started or had stopped. The citations stay `[Recording n, hh:mm:ss]` of the recording, so the viewer and the all cameras link of chapter 1 work as they do; the time of day is words in the answer.
+- **Nothing else changes** in the Case Chat: the readings, the hours ceiling, the Digest standing in for a transcript, the combining call. The block costs a few lines per Incident. Its switch is **Case chat knows the incidents** (On); Off, the Case Chat reads the transcripts as Phase 4 has it.
+
+### Proposed Events
+
+- **On a press.** **Propose events** sits at the top of the Chronology tab beside Add event here, for whoever can open the Incident, while **Assistant proposes events** is On and at least one camera is synced. It never runs by itself: people add Events first (the maintainer's decision of 2026-09-17), and a proposal is asked for. One run at a time per Incident; a state line beside the button reads "Reading 7 cameras...", "Proposed 4 events at 14:02", "Nothing to propose", or the engine's reason in the assistant's words.
+- **The run**, on the engine's lane, one job, feature `incident_events`, thinking off and the suggestions' deterministic sampling as the Speaker check has it. One call per synced camera, in the order the cameras start: the Ground rules, the **Proposed events** template, the answer's shape, the camera's start by the Incident clock, the camera's Digest on the recording's own times (or, for a camera with no Digest, its transcript as the Case Chat renders it, in windows of the Reading size), the Events that stand and the proposals the earlier cameras of this run made, each as its time of day and its line, with the instruction to propose only what this camera adds. The answer is a JSON list, each item a time in the recording, an end when the thing ran a while, a line of up to 200 characters, and the words or the description it rests on; vLLM's structured output holds the shape.
+- **What makes an Event**, in the template's shipped wording: a person or a vehicle arriving or leaving; a command, a warning or an advisement of rights; a statement that carries weight; a search, a restraint, a use of force or an arrest as the words or the camera describe it and never as a conclusion ("handcuffs put on", not "arrested"); a thing handed over, found or taken; a move to another place; a camera starting or stopping. Plain words, third person, past tense; the line says what happened, not what it means.
+- **The app checks every item**: the time falls inside the camera's span; the line is not empty; the text it rests on is a real line of what the camera was given; and no Event or proposal already stands on the same camera within five seconds of it. What fails is dropped without a word. A run replaces the pending proposals with its own and offers again nothing a person dismissed (the same camera within five seconds of a dismissed one), as the check does. A problem mid-run keeps the earlier cameras' proposals and reports the reason; an unreadable camera is a lost camera, not a lost run.
+- **On the page.** Under the Chronology's list, **Proposed by the assistant (N)**, oldest time first: the time as a citation that plays every camera, the line, "From the words on <camera>" or "From the camera <camera>", the words it rests on as the hover title, **Accept** and **Dismiss** on each, **Accept all** at the top when two or more wait. On the strip's Events lane a proposal is drawn in the working colour with "(proposed)" after its label, as chapter 2 has it.
+- **Accept** makes an Event at once with source **assistant**, the camera it came from, the cameras running at that moment ticked, the accepting person as who added it, and the audit row Event added (source assistant); it lands on the lane, the list and the exports like any other, and Edit works on it. **Dismiss** keeps the proposal out and off the lane. Neither stops playing. A proposal counts nowhere: not in the Chronology's count, not in the exports, not in the memo.
+- **Where a proposal goes.** With the Incident, as an Event does. A camera removed from the Incident takes its pending proposals with it.
+
+### The Incident memo
+
+- **The Memo tab**, second in the tabbar (Chronology, Memo, Cameras, Details), while **Incident memo** is On. With no memo: a line saying what it will be written from ("7 cameras synced, 12 events on the chronology; Dash cam unit 4 is not synced and will be left out"), **Write the memo**, and, when no camera is synced, why it cannot be written yet. While it is written: the card's waiting line, as a Summary's, with the stage ("Reading 7 cameras", "Writing the memo") and a cancel. With a memo: the AI notice at the top as every Summary carries it; the memo; under its head "Written <date> from the transcripts and the vision of 7 cameras, on the chronology's 12 events. One camera (Dash cam unit 4) is not synced and was left out."; **Regenerate** and **Memo to Word**.
+- **Stale, and said so.** The memo keeps a signature of the Events it was written on (their ids, times and text) and of the cameras (their ids and starts). When either changes the tab says "The chronology has changed since this memo was written: 2 events added" (or changed, removed; "a camera was synced"; "a camera joined"), and offers Regenerate; the memo itself stays readable and exportable as it was. The Chronology tab's head reads "12 events on the chronology. The memo was written on 10 of them." and the case page's Incidents tab line reads "memo written 17 Sep" with "2 events newer" when stale, or "no memo yet".
+- **One memo per Incident.** Regenerate replaces it; the Word export is how an earlier one is kept. The memo goes with the Incident: deleted with it, into the Recycle bin with the case and back.
+- **The incident record**, made by the app with no engine call, is what the memo is written from: every synced camera's Digest with each line's times rewritten from the recording's own to the Incident clock (the recording's time plus the camera's start), each line prefixed with the camera's name, the lines of all cameras merged in time order. A camera with no Digest contributes its transcript's lines the same way, rewritten and prefixed, while the whole fits the engine's window beside everything else; when it does not, the transcript-only cameras drop to a line saying the camera ran from one time to another and its words were not read, the longest first, and the memo's "written from" line says so. An Incident that still does not fit fails as `llm_too_long` with "The incident is too long for one memo. Prepare its videos so their Digests can stand in for the transcripts." Nothing of the record is stored; it is made for the call and shown to nobody, though an Admin's Details fold on the Incident page says how many lines it had and from which cameras, as the Digest's fold does.
+- **What the memo is given.** The Ground rules; the **Incident memo** template; the narrative rules (fixed); a fixed block of incident rules: every time is written as the time of day by the Incident clock in the form `[hh:mm:ss]`, never a recording's own elapsed time; a sentence that rests on an Event carries its number as `(Event 4)` after the time; what one camera shows and another does not is said by the camera's name; a camera's description of the picture stays a description; the memo covers every camera it was given and names none it was not. Then the Incident line (name, date, the cameras with their starts and ends by the clock and how each was placed, said as the pills say it), the Chronology as the office wrote it ("Event 1, 21:57:02, Vehicle stopped on the shoulder; seen on Dash cam unit 12, BWC2-098679; added by a person" and "from the words on BWC2-098679" for a quoted one), the incident record under a heading of its own, and the Length line (the Detailed length). No Focus; the memo has one shape.
+- **The shape**, in the Incident memo template's shipped wording, a memo a member of staff hands to an attorney, across cameras: **Summary** (one paragraph a reader in a hurry could stop at, with the date and the times of day the incident ran); **The cameras** (one line each: what the camera is, when it starts and ends by the clock, whose it is only as the words say); **People** (as the Body camera summary has it, and which cameras show each); **What happened** (the substance in paragraphs, each on one subject, the Events in their order, what each camera adds where it adds something); **Commands, warnings, and rights** (every one spoken, quoted exactly with the speaker's label, the time of day and the camera it was heard on); **Statements that matter**; **Names, places, and dates**; **Unclear parts** (a stretch no camera showed, a thing the cameras or the words disagree on, and an Event the record does not bear out, said plainly). No closing section of points for the attorney, as Phase 4 decided. Third person, past tense, plain words; grouped by subject inside What happened, never minute by minute. The template is editable and resettable on the Templates page, following the shipped wording while unedited.
+- **The call**, on the engine's lane, one job, feature `incident_memo`, thinking as the switch says (the memo is a Summary in kind), capped at **Incident memo answer cap** (4,000 tokens; a cap hit shown as "The memo was cut short."), within **Incident memo time limit** (600 seconds, doubled while the model may think). The audit row is the AI assistant call with the cameras drawn on, the Events written on and whether it was cut; never a word.
+- **Citations.** A `[hh:mm:ss]` in the memo that falls inside the Incident's span is a citation that plays every camera from there, on the page and from the export's table of contents; one that does not stays plain text. An `(Event n)` is the Event's mark, as the mock-up draws it, and a press on it seeks the Event and shows it on the Chronology tab. The memo's text is the assistant's; the app changes no word of it.
+- **Memo to Word**: the app's export shape (the office's name and logo on the cover as the other exports carry them): the title "Incident memo: <incident>", the case, the Incident clock's date, the cameras with how each was placed and which were left out, the AI notice, the memo with the times as printed and the Event numbers as printed, and then the Chronology as its last pages, the table and the strip as a picture exactly as chapter 2's Chronology to Word has them, so the two travel together. The audit row is **Incident memo exported**. Offered to whoever can open the Incident; a Collaborator exports as the owner does. Download everything and the case's Download all transcripts do not carry it, as they do not carry the Chronology.
+- **Who may write it.** Whoever can open the Incident, as a Summary in a case is written by whoever can open the recording. The memo remembers who asked for it.
+
+### What changes from chapters 1 and 2 and earlier phases
+
+- **Phase 2, the Case Chat chapter, and Phase 4 chapter 4, The chat**: the Incident block after the People line and the two sentences in the Case chat template, under the switch Case chat knows the incidents.
+- **Phase 4 chapter 7, The templates**: two prompt templates join the Templates page, **Proposed events** and **Incident memo**, editable, resettable, following the shipped wording while unedited; the incident rules join the fixed rules that are never edited.
+- **Phase 4 chapter 8**: the AI assistant call gains features `incident_events` and `incident_memo`; the never-logged list gains a proposal's line and the words it rests on, the memo, and the incident record.
+- **Chapter 1, The Incident page**: the tabbar reads Chronology, Memo, Cameras, Details; the Details fold for an Admin says what the last memo's record held. The case page's Incidents tab line gains the memo's state.
+- **Chapter 2, Events**: the source **assistant** and the proposed state are made; the Word export's AI notice line prints, as chapter 2 provided, when any Event's source is assistant; the Chronology tab's head gains "The memo was written on N of them."
+- **Phase 1, the Exports chapter**: a fifth export kind, the Incident memo, in the same shape and under the same audit row pattern.
+- Nothing changes in the viewer, in a recording's own Summary or Chat, in Vision, or in the Speaker check.
+
+### Audit rows
+
+Category LLM: **AI assistant call** with feature `incident_events` (the camera's number in the run, the proposals kept) and `incident_memo` (the cameras drawn on, the Events written on, whether it was cut). Category Cases: **Events proposed** (how many, from how many cameras, on a run's end), **Event added** with source assistant on an Accept (chapter 2's row), **Event dismissed**. Category Exports: **Incident memo exported**. None holds a word of a proposal, an Event, or the memo, a camera id, or a time.
+
+### Settings
+
+On the Incidents page, a group **The assistant**, every row greyed while Incidents is Off or the AI assistant is Off: **Case chat knows the incidents** (On); **Assistant proposes events** (On); **Proposed events answer cap** (2,000 tokens); **Proposed events time limit** (180 seconds); **Incident memo** (On; Off hides the Memo tab and keeps every memo); **Incident memo answer cap** (4,000 tokens); **Incident memo time limit** (600 seconds). On the Templates page, the **Proposed events** and **Incident memo** prompt templates.
+
+### Not in this phase
+
+- **Proposals made by themselves**, as the vision lands or the memo is written, and **accepting the sure ones automatically**: later switches, once an office has watched the proposals for a while.
+- **A memo per camera** (that is the recording's Summary), **a memo across Incidents**, and **a Chat grounded in one Incident** (the Case Chat with the placements is that).
+- **Proposals from the picture alone** on a camera with no Digest: the assistant proposes from what the Digest or the transcript carries.
+- **The memo in Download everything**, as the Chronology is not.
+- **Editing the memo in place.** The memo is the assistant's text under the AI notice; a person's account is the Chronology.
+
+### Left to the build
+
+- The proposals' answer shape and the most per camera, within the rule that every proposal rests on a real line; the window for a camera read from its transcript.
+- The exact wording of the state lines, the stale line and the "written from" line.
+- Whether the Case Chat prints the time of day beside each line of a synced camera's Digest, within the rule that citations stay the recording's own time.
+- The incident record's line shape and the order in which transcript-only cameras drop to a line when the whole does not fit, within the rule that the longest goes first and the memo says so.
+- The Word document's layout for the memo with the Chronology as its last pages, in the app's export shape.
 
 ## 4. Deferred and ruled out
 
@@ -250,7 +321,7 @@ Not yet written for the build; the shape decided on 2026-09-17.
 - **Re-encoding or stitching the cameras into one file**: ruled out; the browser plays the playback copies as they are, and nothing new lands on disk.
 - **Reading the clock from anything but the picture, the file, the sound and a person**: ruled out; the app never invents a time.
 - **Frame-accurate sync**: ruled out for this phase; see chapter 1.
-- **A tuning pass over the Incident page** from staff's first use (2026-09-17, the maintainer: "it's gonna need some fine tuning to make it all very intuitive for users"): held as the step after chapter 2, before or beside chapter 3.
+- **A tuning pass over the Incident page** from staff's first use (2026-09-17, the maintainer: "it's gonna need some fine tuning to make it all very intuitive for users"): done as v1.60.0 and v1.60.1 (see the amendments); a second pass follows chapter 3 on the server the same way.
 
 ## Appendix A. Audit rows added in Phase 6
 
@@ -259,7 +330,9 @@ Not yet written for the build; the shape decided on 2026-09-17.
 | Cases | Incident made; Incident changed; Incident deleted; Camera placed | 1 |
 | Cases | Event added; Event changed; Event removed | 2 |
 | Exports | Chronology exported | 2 |
-| AI assistant | AI assistant call, features `incident_events` and `incident_memo` | 3 (proposed) |
+| LLM | AI assistant call, features `incident_events` and `incident_memo` | 3 |
+| Cases | Events proposed; Event dismissed | 3 |
+| Exports | Incident memo exported | 3 |
 
 ## Appendix B. Settings added in Phase 6
 
@@ -271,16 +344,23 @@ Not yet written for the build; the shape decided on 2026-09-17.
 | Most cameras in an incident | Incidents | 20 | 1 |
 | Stamp reads early | Incidents | On | 1 |
 | Match by sound | Incidents | On | 1 |
-| Assistant proposes events; Incident memo answer cap; Incident memo time limit | Incidents | On; to be fixed; to be fixed | 3 (proposed) |
+| Case chat knows the incidents | Incidents | On | 3 |
+| Assistant proposes events | Incidents | On | 3 |
+| Proposed events answer cap | Incidents | 2,000 tokens | 3 |
+| Proposed events time limit | Incidents | 180 seconds | 3 |
+| Incident memo | Incidents | On | 3 |
+| Incident memo answer cap | Incidents | 4,000 tokens | 3 |
+| Incident memo time limit | Incidents | 600 seconds | 3 |
 
-And, in chapter 3, the Incident memo template on the Templates page.
+And, in chapter 3, the Proposed events and Incident memo prompt templates on the Templates page.
 
 ## Sources
 
-The maintainer's ask and answers of 2026-09-17, and the mock-ups chosen the same day (`docs/spec/mockups/phase-6-incidents.html`); the Phase 2 Cases, Sharing, Retention policy, Case Chat and Backup chapters; Phase 4 chapter 3 (the stamp) and chapter 4 (the Digest and the Case Chat); Phase 5 chapter 1 (the Lanes) and chapter 3 (propose, never apply); `docs/research/media-pipeline-facts.md` (the playback copy plays in every browser; the probe keeps the file's own facts).
+The maintainer's ask and answers of 2026-09-17, and the mock-ups chosen the same day (`docs/spec/mockups/phase-6-incidents.html`); the Phase 2 Cases, Sharing, Retention policy, Case Chat and Backup chapters; Phase 4 chapter 3 (the stamp and the Digest), chapter 4 (the memo and the chat) and chapter 7 (the templates); Phase 5 chapter 1 (the Lanes) and chapter 3 (propose, never apply); `docs/research/media-pipeline-facts.md` (the playback copy plays in every browser; the probe keeps the file's own facts).
 
 ## Amendments applied
 
+- 2026-09-17: chapter 3 written for the build after v1.60.1, from the maintainer's asks (the memo across cameras on a page of its own, people's Events first with the assistant proposing later, the memo written on the Chronology, and the chronology as a smarter presentation built on the model's summaries); the incident record, the app's merge of the Digests onto the Incident clock, is what the memo is written from.
 - 2026-09-17 (v1.60.1): Sync is a button on every tile's head, not a menu entry; the Wall follows the saved order; Add cameras is drawn from the page's state.
 - 2026-09-17 (v1.60.0): the tuning pass from the maintainer's first use. Sync is the one control for a camera's place, on a menu at each tile's top right (Sync this camera, Swap out, Open the recording, Remove from incident) and on the Cameras tab; a camera with no clock is on the Wall at the app's guess (the file's time when the Incident has a clock, else the Incident's start) marked Not synced yet, so Not placed no longer keeps a camera off the Wall and the pill Placed by hand reads Synced by hand; tiles are dragged into place; Across in the transport (Auto, 2, 3, 4) sets the columns, Auto using four on a screen 1900 pixels wide or wider, where the work area also widens; the camera line under a tile is withdrawn (the words stay); the Clock column leaves the recordings tab and a video with no clock shows nothing rather than a warning. All cameras and the sound match wait for a camera to be synced, not merely guessed.
 - 2026-09-17 (v1.59.1): the case page's doorway is an Incidents tab beside Chat, at the maintainer's word after v1.58.0 on the server ("the incident floats on top of the cases page, that's not intuitive"); the strip under the case name and the header's New incident go; the tab lists the Incidents with their Events count, the offers, New incident, and every video with its clock. Held as a later step: a tuning pass over the Incident page once staff have used it.

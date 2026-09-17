@@ -309,8 +309,12 @@ An Incident's list of Events, in time order, drawn as the last lane of the Incid
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
 
 **Event**:
-One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; in chapter 3 the assistant may propose one, which joins only when accepted. Phase 6 chapter 2.
+One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; or proposed by the assistant from a camera's Digest (source assistant, chapter 3), which stays Proposed under the Chronology and joins it only when a person accepts it. Phase 6 chapter 2.
 _Avoid_: mark (that is a live recording's), moment (that is a description), bookmark, flag
+
+**Incident memo**:
+The memo the AI assistant writes across every synced camera of an Incident, on the Incident page's Memo tab: written from the incident record (the cameras' Digests merged onto the Incident clock, made by the app for the call and never stored) and on the Chronology's Events, each sentence that rests on an Event carrying its number, every time the time of day and a citation that plays every camera. One per Incident, replaced by Regenerate, marked stale when the Events or the cameras change, exported to Word with the Chronology as its last pages. Its instructions are the Incident memo template. Phase 6 chapter 3.
+_Avoid_: report, narrative, incident summary (a Summary is one recording's), timeline
 
 **Person**:
 One human being in a Case, as named across its Recordings: every Speaker in the Case's Transcripts given the same name is that Person. Holds an optional Role and notes, lives only inside its Case, and stays until someone deletes or merges it. A Person shows up as a Speaker in each Recording they are in.

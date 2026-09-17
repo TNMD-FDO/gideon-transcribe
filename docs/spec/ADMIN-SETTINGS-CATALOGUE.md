@@ -108,7 +108,7 @@ What every Upload page starts with.
 
 ## Incidents (Phase 6 chapter 1)
 
-An Incidents page in the Settings group between Vision and Speakers, specified in `docs/spec/SPEC-PHASE-6.md` and built in v1.58.0 (keys `incidents`, `incidents_proposed`, `incidents_wall`, `incidents_most_cameras`, `incidents_stamp_early`, `incidents_sound_match`). Every row but the first is greyed while Incidents is Off; Incidents itself is greyed while Folder management is Off, since an Incident lives inside a Case.
+An Incidents page in the Settings group between Vision and Speakers, specified in `docs/spec/SPEC-PHASE-6.md` and built in v1.58.0 (keys `incidents`, `incidents_proposed`, `incidents_wall`, `incidents_most_cameras`, `incidents_stamp_early`, `incidents_sound_match`). Every row but the first is greyed while Incidents is Off; Incidents itself is greyed while Folder management is Off, since an Incident lives inside a Case. Chapter 3 adds a group, The assistant, whose rows are greyed while the AI assistant is Off as well, and two prompt templates on the Templates page, Proposed events and Incident memo.
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
@@ -118,6 +118,13 @@ An Incidents page in the Settings group between Vision and Speakers, specified i
 | Most cameras in an incident | 2 to 40; greyed while Incidents is Off | 20 | 6 | New incident and the offer refuse more than this. | The next Incident made; an Incident already over the figure keeps its cameras. |
 | Stamp reads early | On or Off; greyed while Incidents or Read the camera's stamp is Off | On | 6 | Read the camera's stamp as each playback copy lands, for every video in a case, so its cameras can be placed at once: two small engine calls per video, by day. Off leaves the stamp to the vision work as Phase 4 has it. | The next playback copy. |
 | Match by sound | On or Off; greyed while Incidents is Off | On | 6 | Offer to place a camera that has no clock by comparing its sound with a placed camera's, on the media worker, with no engine call. | The next Cameras tab drawn. |
+| Case chat knows the incidents | On or Off; greyed while Incidents or the AI assistant is Off | On | 6 (chapter 3, for the build) | The Case Chat is told each synced camera's start by the Incident clock, so it answers with the time of day and reads every camera at the same moment. | The next Case Chat question. Off reads the transcripts as Phase 4 has it. |
+| Assistant proposes events | On or Off; greyed while Incidents or the AI assistant is Off | On | 6 (chapter 3, for the build) | Propose events on the Chronology tab: the assistant reads each synced camera's Digest and proposes Events, which join the Chronology only when a person accepts them. | The next Incident page drawn. Off hides Propose events and keeps the proposals that wait. |
+| Proposed events answer cap | 500 to 16,000 tokens; greyed while Assistant proposes events is Off | 2,000 | 6 (chapter 3, for the build) | The most one camera's answer, a JSON list of proposals, may run to; an answer cut off at the cap keeps the proposals that were finished. | The next run. |
+| Proposed events time limit | 30 to 3,600 seconds; greyed while Assistant proposes events is Off | 180 | 6 (chapter 3, for the build) | How long one camera's call may take. | The next run. |
+| Incident memo | On or Off; greyed while Incidents or the AI assistant is Off | On | 6 (chapter 3, for the build) | The Memo tab on the Incident page: a memo written across every synced camera on the Chronology's events, exported to Word with the Chronology. | The next Incident page drawn. Off hides the tab and keeps every memo. |
+| Incident memo answer cap | 500 to 16,000 tokens; greyed while Incident memo is Off | 4,000 | 6 (chapter 3, for the build) | The most a memo may run to; a cap hit shows "The memo was cut short." | The next memo. |
+| Incident memo time limit | 30 to 3,600 seconds; greyed while Incident memo is Off | 600 | 6 (chapter 3, for the build) | How long the memo's call may take. Doubled while Let the model think is On. | The next memo. |
 
 ## Notices
 
