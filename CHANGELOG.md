@@ -21,6 +21,45 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.62.0, 2026-09-17
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 6 chapter 4: the incident page laid out for watching, from the
+maintainer's finding after v1.61.0 that the page was "a bit smushed".
+
+### Added
+
+- **The Layout menu** in the transport, in Across's place: Focus (the
+  shipped default), Side by side, and Grid at 2, 3 or 4 across. One press
+  switches at once, keeping the moment, the play state, the sound and
+  Follow; the browser remembers each person's choice, and the new setting
+  Incident layout on the Incidents page says what a new person starts with.
+- **Focus**: one camera large beside the panel, its words in the reading
+  size, every other camera in a filmstrip under it playing in step; a
+  press on a small tile brings it to the front. Parked cameras sit at the
+  end of the filmstrip and a press swaps one in and to the front.
+- **Side by side**: every camera at the same size in a grid beside the
+  panel with the strip at the bottom. **Grid**: the cameras alone across
+  the width at the chosen count, the panel under the strip.
+
+### Changed
+
+- The sound is a speaker on each tile: a press pins the sound there; in
+  Focus it follows the camera at the front until pinned, and a second
+  press on the front camera's speaker lets it follow again. The transport
+  says which camera is heard; the Sound from list and the Sound radio go.
+- Tile heads are lighter: a short pill (Clock, Clock?, Sound, File, Hand,
+  Guess) with the full words on hover.
+- Parked cameras are thin lanes in the strip with Swap in; the row of
+  parked tiles under the transport goes.
+- The event box opens as a sheet over the head and no longer pushes the
+  page down.
+- Two icons, a speaker heard and muted, join the sprite.
+
 ## v1.61.0, 2026-09-17
 
 ```

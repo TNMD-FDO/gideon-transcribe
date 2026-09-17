@@ -23,7 +23,6 @@
   var eventWords = eventWordsNode ? JSON.parse(eventWordsNode.textContent) : "";
 
   var wallBox = document.getElementById("wall");
-  var parkedBox = document.getElementById("parked");
   var lanesBox = document.getElementById("lanes");
   var ticksBox = document.getElementById("ticks");
   var strip = document.getElementById("strip");
@@ -33,7 +32,10 @@
   var clockSmall = document.getElementById("clock");
   var playButton = document.getElementById("play");
   var speedBox = document.getElementById("speed");
-  var soundBox = document.getElementById("sound");
+  var soundSaid = document.getElementById("sound-said");
+  var filmBox = document.getElementById("film");
+  var deskBox = document.querySelector(".inc-desk");
+  var workBox = document.querySelector(".inc-work");
   var followBox = document.getElementById("follow");
   var trouble = document.getElementById("player-trouble");
   var eventBox = document.getElementById("event-box");
@@ -53,7 +55,13 @@
   var pollTimer = null;
   var currentEventId = null;
   var draggedTile = null;
-  var across = 0;              // columns on the wall; 0 is auto
+  var layout = "focus";        // focus, side, grid2, grid3, grid4 (chapter 4)
+  var focusCamera = null;      // the large camera in the Focus layout
+  var soundPinned = false;     // the sound stays put rather than following the focus
+  var LAYOUTS = ["focus", "side", "grid2", "grid3", "grid4"];
+  // The tile's short pill (chapter 4); the full words are its hover title.
+  var SHORT_PILL = { clock: "Clock", clock_unchecked: "Clock?", sound: "Sound", file: "File", hand: "Hand", guess: "Guess" };
+  function shortPill(cam) { return SHORT_PILL[cam.placed] || cam.placed_words || ""; }
 
   function now() {
     if (!playing) { return moment; }
@@ -161,8 +169,8 @@
     drawMemo();
     drawCameras();
     drawDetails();
-    if (soundCamera && !cameraById(soundCamera)) { soundCamera = null; }
-    if (!soundCamera && wallCameras().length) { soundCamera = wallCameras()[0].id; }
+    if (soundCamera && !cameraById(soundCamera)) { soundCamera = null; soundPinned = false; }
+    if (!soundCamera && wallCameras().length) { soundCamera = (layout === "focus" && focusCamera) ? focusCamera : wallCameras()[0].id; }
     drawSoundChoice();
     tick();
     // The assistant at work (chapter 3): the page asks again until it lands.
@@ -194,8 +202,8 @@
     tile.draggable = true;
     tile.innerHTML =
       "<div class='inc-tile-head'><span class='dot'></span><b title='" + quoted(cam.title) + "'>" + escape(cam.camera_id) + "</b>" +
-      "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(cam.placed_words) + "</span>" +
-      "<label class='small sound-pick'><input type='radio' name='sound-tile' value='" + cam.id + "'> Sound</label>" +
+      "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(shortPill(cam)) + "</span>" +
+      "<button type='button' class='tiny ghost snd' data-tile='sound' title='Hear this camera'><svg class='i' aria-hidden='true'><use href='#i-muted'></use></svg></button>" +
       "<button type='button' class='tiny sync-open' data-tile='sync' title='Nudge this camera into step, or set its start'>Sync</button>" +
       "<details class='menu tile-menu'><summary class='tiny' title='Swap out, open, remove'>⋯</summary><ul>" +
       "<li><button type='button' data-tile='swap'>Swap out</button></li>" +
@@ -211,6 +219,7 @@
       if (!button) { return; }
       tile.querySelector(".tile-menu").removeAttribute("open");
       if (button.dataset.tile === "sync") { toggleSync(tile, cam); }
+      else if (button.dataset.tile === "sound") { pickSound(cam.id); }
       else if (button.dataset.tile === "swap") { swapOut(cam.id); }
       else if (button.dataset.tile === "remove") {
         window.UI.confirm({ title: "Remove " + cam.camera_id + " from this incident?", body: "The recording stays in the case; only its place here goes.", ok: "Remove" }).then(function (yes) { if (yes) { post({ action: "remove", camera: cam.id }); } });
@@ -245,9 +254,10 @@
       video.src = cam.media_url;
       video.addEventListener("error", function () { trouble.textContent = "One of the cameras could not be played: " + cam.camera_id + "."; trouble.hidden = false; });
     }
-    tile.querySelector("input[type=radio]").addEventListener("change", function () { setSound(cam.id); });
     tile.querySelector(".inc-well").addEventListener("click", function (event) {
       if (event.target.closest("label")) { return; }
+      // A filmstrip tile's picture brings that camera to the front (chapter 4).
+      if (tile.classList.contains("film")) { setFocus(cam.id); return; }
       if (playing) { pause(); } else { play(); }
     });
     Array.prototype.forEach.call(tile.querySelectorAll(".add-line"), function (button) {
@@ -291,39 +301,90 @@
         players[cam.id].cam = cam;
         var pill = players[cam.id].tile.querySelector(".pill");
         pill.className = "pill " + cam.placed_tone + " small";
-        pill.textContent = cam.placed_words;
+        pill.textContent = shortPill(cam);
+        pill.title = cam.placed_words;
       }
     });
-    wanted.forEach(function (cam) { wallBox.appendChild(players[cam.id].tile); });
+    // The layout (chapter 4): in Focus one camera is large and the rest sit
+    // in the filmstrip under it; otherwise every camera is on the wall.
+    var focusId = null;
+    if (layout === "focus" && wanted.length) {
+      focusId = wanted.some(function (one) { return one.id === focusCamera; }) ? focusCamera : wanted[0].id;
+      focusCamera = focusId;
+    }
+    wanted.forEach(function (cam) {
+      var tile = players[cam.id].tile;
+      var film = focusId !== null && cam.id !== focusId;
+      tile.classList.toggle("film", film);
+      (film ? filmBox : wallBox).appendChild(tile);
+    });
     layWall(wanted.length);
     if (!wanted.length) {
       wallBox.innerHTML = "<p class='muted' style='padding: 20px'>No camera is placed yet. Place one on the Cameras tab, and it plays here.</p>";
     }
-    drawParked();
+    drawFilmParked(focusId !== null);
+    placeWork();
   }
 
-  // How many across: the person's choice, else by the count and the width.
+  // The wall's columns by the layout: one in Focus, by the count Side by
+  // side, the chosen count in a Grid.
   function layWall(count) {
-    var columns = across;
-    if (!columns) {
-      var wide = window.innerWidth >= 1900;
-      columns = count <= 1 ? 1 : (count === 2 || count === 4 ? 2 : (wide && count >= 5 ? 4 : 3));
-    }
+    var columns;
+    if (layout === "focus") { columns = 1; }
+    else if (layout === "side") { columns = count <= 4 ? 2 : 3; }
+    else { columns = parseInt(layout.slice(4), 10) || 3; }
     wallBox.className = "inc-wall";
     wallBox.style.gridTemplateColumns = "repeat(" + Math.min(columns, Math.max(1, count)) + ", minmax(0, 1fr))";
   }
 
-  var acrossBox = document.getElementById("across");
-  if (acrossBox) {
-    try { across = parseInt(window.localStorage.getItem("wall-across") || "0", 10) || 0; } catch (ignored) { /* this page only */ }
-    acrossBox.value = String(across);
-    acrossBox.addEventListener("change", function () {
-      across = parseInt(acrossBox.value, 10) || 0;
-      try { window.localStorage.setItem("wall-across", String(across)); } catch (ignored) { /* this page only */ }
-      layWall(wallCameras().length);
+  // The parked cameras (beyond the wall's size) in the filmstrip, in Focus:
+  // the id and the pill, no picture; a press swaps one in and brings it to
+  // the front. In the other layouts they are lanes in the strip alone.
+  function drawFilmParked(inFocus) {
+    Array.prototype.forEach.call(filmBox.querySelectorAll(".parked"), function (one) { one.remove(); });
+    filmBox.hidden = !inFocus;
+    if (!inFocus) { return; }
+    parkedCameras().forEach(function (cam) {
+      var tile = document.createElement("div");
+      tile.className = "inc-tile film parked";
+      tile.style.setProperty("--speaker", cam.colour);
+      tile.title = "Swap " + cam.camera_id + " in and bring it to the front";
+      tile.innerHTML = "<div class='inc-tile-head'><span class='dot'></span><b>" + escape(cam.camera_id) + "</b>" +
+        "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(shortPill(cam)) + "</span></div>" +
+        "<div class='inc-well'><p class='preparing small'>Swap in</p></div>";
+      tile.addEventListener("click", function () { swapIn(cam.id, true); });
+      filmBox.appendChild(tile);
     });
-    window.addEventListener("resize", function () { layWall(wallCameras().length); });
   }
+
+  // Where the work panel sits: beside the cameras, or under the strip in a Grid.
+  function placeWork() {
+    deskBox.dataset.layout = layout;
+    var below = layout.indexOf("grid") === 0;
+    workBox.classList.toggle("below", below);
+    if (below) { if (strip.nextElementSibling !== workBox) { strip.after(workBox); } }
+    else if (workBox.parentNode !== deskBox) { deskBox.appendChild(workBox); }
+  }
+
+  // The Layout menu: the person's choice, kept in the browser; the office's
+  // setting until they choose.
+  var layoutBox = document.getElementById("layout");
+  (function () {
+    var kept = "";
+    try { kept = window.localStorage.getItem("incident-layout") || ""; } catch (ignored) { /* this page only */ }
+    layout = LAYOUTS.indexOf(kept) !== -1 ? kept : (LAYOUTS.indexOf(S.incident.layout) !== -1 ? S.incident.layout : "focus");
+    if (layoutBox) {
+      layoutBox.value = layout;
+      layoutBox.addEventListener("change", function () {
+        layout = LAYOUTS.indexOf(layoutBox.value) !== -1 ? layoutBox.value : "focus";
+        try { window.localStorage.setItem("incident-layout", layout); } catch (ignored) { /* this page only */ }
+        drawWall();
+        if (!soundPinned && layout === "focus" && focusCamera) { setSound(focusCamera); } else { sayWhoIsHeard(); }
+        drawStrip();
+      });
+    }
+    window.addEventListener("resize", function () { layWall(wallCameras().length); });
+  })();
 
   // Sync, on the tile: the nudges, the clock, the file, the sound, a typed time.
   function toggleSync(tile, cam) {
@@ -373,31 +434,12 @@
     var next = parkedCameras()[0];
     if (next) { order.push(next.id); }
     if (soundCamera === id) { soundCamera = null; }
+    if (focusCamera === id) { focusCamera = null; }
     post({ action: "wall", cameras: order.join(",") });
   }
 
-  function drawParked() {
-    var rest = parkedCameras();
-    var html = "";
-    if (rest.length) {
-      html += "<span class='muted'>" + rest.length + " more camera" + (rest.length === 1 ? "" : "s") + " on the strip, not on the wall:</span>";
-      rest.forEach(function (cam) {
-        html += "<span class='tile' style='--speaker: " + cam.colour + "'><span class='dot'></span>" + escape(cam.camera_id) +
-          " <button type='button' class='tiny' data-swap='" + cam.id + "'>Swap in</button></span>";
-      });
-      html += "<span class='muted'>" + S.incident.wall_size + " play at once; the office sets how many.</span>";
-    }
-    parkedBox.innerHTML = html;
-  }
-
-  parkedBox.addEventListener("click", function (event) {
-    var swap = event.target.closest("[data-swap]");
-    if (swap) { swapIn(swap.dataset.swap); return; }
-    var place = event.target.closest("[data-place]");
-    if (place) { showTab("cameras"); flashRow(place.dataset.place); }
-  });
-
-  function swapIn(id) {
+  function swapIn(id, toFront) {
+    if (toFront) { focusCamera = id; if (!soundPinned) { soundCamera = id; } }
     var order = wallCameras().map(function (one) { return one.id; });
     if (order.length >= S.incident.wall_size) {
       var out = order[order.length - 1];
@@ -532,21 +574,37 @@
       var entry = players[one];
       if (entry.video) { entry.video.muted = one !== id; }
       entry.tile.classList.toggle("sound", one === id);
-      var radio = entry.tile.querySelector("input[type=radio]");
-      if (radio) { radio.checked = one === id; }
+      var speaker = entry.tile.querySelector(".snd use");
+      if (speaker) { speaker.setAttribute("href", one === id ? "#i-sound" : "#i-muted"); }
     });
-    if (soundBox.value !== id) { soundBox.value = id; }
+    sayWhoIsHeard();
+  }
+
+  // The speaker on a tile (chapter 4): takes the sound and pins it there; on
+  // the focus camera a second press lets the sound follow the focus again.
+  function pickSound(id) {
+    if (layout === "focus" && soundPinned && soundCamera === id && id === focusCamera) {
+      soundPinned = false;
+      setSound(focusCamera);
+      return;
+    }
+    soundPinned = true;
+    setSound(id);
+  }
+
+  function setFocus(id) {
+    focusCamera = id;
+    drawWall();
+    if (!soundPinned) { setSound(id); }
+  }
+
+  function sayWhoIsHeard() {
+    var cam = cameraById(soundCamera);
+    soundSaid.textContent = cam ? "Sound: " + cam.camera_id + (layout === "focus" && !soundPinned ? " (follows the focus)" : "") : "";
   }
 
   function drawSoundChoice() {
-    soundBox.innerHTML = "";
-    wallCameras().forEach(function (cam) {
-      var option = document.createElement("option");
-      option.value = cam.id;
-      option.textContent = cam.camera_id;
-      soundBox.appendChild(option);
-    });
-    if (soundCamera) { setSound(soundCamera); }
+    if (soundCamera) { setSound(soundCamera); } else { sayWhoIsHeard(); }
   }
 
   playButton.addEventListener("click", function () { if (playing) { pause(); } else { play(); } });
@@ -560,7 +618,6 @@
     if (playing) { anchorMoment = now(); anchorNow = performance.now(); }
     speed = parseFloat(speedBox.value) || 1;
   });
-  soundBox.addEventListener("change", function () { setSound(soundBox.value); });
 
   document.addEventListener("keydown", function (event) {
     if (event.altKey || event.ctrlKey || event.metaKey) { return; }
@@ -627,7 +684,8 @@
       var start = placed ? cam.starts_at : (S.incident.span_low || 0);
       var width = ((cam.length) / (shown[1] - shown[0])) * 100;
       html += "<div class='lane" + (placed ? "" : " unplaced") + "' data-camera='" + cam.id + "' style='--speaker: " + cam.colour + "'>" +
-        "<div class='head' title='" + quoted(cam.title + ", " + cam.placed_words) + "'><span class='dot'></span><span class='name'>" + escape(cam.camera_id) + "</span></div>" +
+        "<div class='head' title='" + quoted(cam.title + ", " + cam.placed_words) + "'><span class='dot'></span><span class='name'>" + escape(cam.camera_id) + "</span>" +
+        (placed && !cam.on_wall ? "<button type='button' class='tiny swap' data-swap='" + cam.id + "' title='Onto the wall, and to the front'>Swap in</button>" : "") + "</div>" +
         "<div class='track'><i class='" + (cam.on_wall ? "" : "thin") + (placed ? "" : " ghost") + "' draggable='false' style='left: " + percent(start, shown) + "; width: " + Math.max(0.3, width) + "%' title='" + timeOfDay(start) + " to " + timeOfDay(start + cam.length) + "'></i>" +
         "<span class='playhead'></span></div></div>";
     });
@@ -652,6 +710,8 @@
       return;
     }
     if (dragging && dragging.moved) { return; }
+    var swap = event.target.closest("[data-swap]");
+    if (swap) { swapIn(swap.dataset.swap, true); return; }
     var mark = event.target.closest("[data-event]");
     if (mark) {
       var found = eventById(mark.dataset.event);
@@ -666,7 +726,7 @@
     var lane = track.closest(".lane");
     if (lane && lane.dataset.camera) {
       var cam = cameraById(lane.dataset.camera);
-      if (cam && cam.starts_at !== null && cam.placed && !cam.on_wall) { swapIn(cam.id); }
+      if (cam && cam.starts_at !== null && cam.placed && !cam.on_wall) { swapIn(cam.id, true); }
     }
     seek(at);
   });

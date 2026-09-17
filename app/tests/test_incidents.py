@@ -513,6 +513,32 @@ def test_a_strong_match_places_the_camera_by_sound(
 # The words ---------------------------------------------------------------------
 
 
+def test_the_layouts_of_chapter_4(person, a_case, client):
+    """v1.62.0: the Layout menu and the setting behind it, the speaker on the
+    tile in place of the Sound from list, no parked row, the sprite's icons."""
+    definition = settings_store.definition("incidents_layout")
+    assert definition.page == "incidents" and definition.default == "focus"
+    assert definition.choices == ("focus", "side", "grid2", "grid3", "grid4")
+    first = video(person, a_case, "first", stamp=stamp("21:56:19", camera="BWC2-1"))
+    incident = incidents.make(a_case, "Stop", [first], by=person)
+    signed_in(client, person)
+    page = client.get(incident.url()).content.decode()
+    assert 'id="layout"' in page and 'value="side">Side by side' in page
+    assert 'id="sound-said"' in page and 'id="film"' in page
+    assert "Sound from" not in page and 'id="across"' not in page
+    assert 'id="parked"' not in page
+    state = client.get(incident.url() + "/state").json()
+    assert state["incident"]["layout"] == "focus"
+    settings_store.set_to("incidents_layout", "side")
+    assert client.get(incident.url() + "/state").json()["incident"]["layout"] == "side"
+    sprite = (APP / "templates" / "icons.html").read_text(encoding="utf-8")
+    assert 'id="i-sound"' in sprite and 'id="i-muted"' in sprite
+    guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    assert "**Layout**" in guide and "**Focus**" in guide
+    glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+    assert "**Layout**:" in glossary
+
+
 def test_the_words_are_in_the_glossary_the_guide_and_the_catalogue():
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
     for word in ("**Incident**", "**Incident clock**", "**Placed**", "**Wall**"):

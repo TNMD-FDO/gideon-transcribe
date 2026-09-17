@@ -6,10 +6,12 @@
 
 {% block content %}
   {% comment %}
-    The Incident page (Phase 6 chapters 1 to 3): the cameras of one event
-    played in step, its Chronology, and the assistant's memo. The head with
-    the clock, Add event here and Export; the Wall of cameras on the left,
-    the Chronology, Memo, Cameras and Details tabs on the right; the strip across the width under
+    The Incident page (Phase 6 chapters 1 to 4): the cameras of one event
+    played in step, its Chronology, and the assistant's memo, in the layout
+    the person chooses (Focus, Side by side, or a Grid; chapter 4). The head
+    with the clock, Add event here and Export; the cameras on the left with
+    the filmstrip under the focus camera, the Chronology, Memo, Cameras and
+    Details tabs on the right (under the strip in a Grid); the strip across the width under
     them, a lane per camera and the Events lane last. incident.js draws
     everything below the head from the state, keeps the players in step,
     and posts every change to the one act endpoint.
@@ -63,6 +65,7 @@
   <div class="inc-desk">
     <div class="inc-stage">
       <div class="inc-wall" id="wall"></div>
+      <div class="inc-film" id="film" hidden></div>
       <div class="transport inc-transport">
         <button type="button" id="play" class="big">{% icon "play" %} Play</button>
         <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
@@ -76,14 +79,19 @@
             <option>1.5</option><option>2</option>
           </select>
         </label>
-        <label>Sound from <select id="sound"></select></label>
-        <label title="How many cameras across the wall">Across
-          <select id="across"><option value="0">Auto</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+        <span class="small muted" id="sound-said" title="The camera you hear; press the speaker on a tile to change it"></span>
+        <label title="How the cameras are laid out">Layout
+          <select id="layout">
+            <option value="focus">Focus</option>
+            <option value="side">Side by side</option>
+            <option value="grid2">Grid, 2 across</option>
+            <option value="grid3">Grid, 3 across</option>
+            <option value="grid4">Grid, 4 across</option>
+          </select>
         </label>
         <label><input type="checkbox" id="follow" checked> Follow</label>
         <p id="player-trouble" class="problem" hidden></p>
       </div>
-      <div class="inc-parked" id="parked"></div>
     </div>
     <div class="work inc-work">
       <div class="tabbar" role="tablist">
@@ -105,7 +113,7 @@
     <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
     <div id="lanes"></div>
     <div class="foot small muted">
-      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall. A mark on the Events lane is an event.</span>
+      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>

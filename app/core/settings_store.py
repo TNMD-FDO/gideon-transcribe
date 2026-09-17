@@ -1368,6 +1368,27 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="incidents_layout",
+            page=INCIDENTS,
+            group="The wall",
+            name="Incident layout",
+            kind=CHOICE,
+            default="focus",
+            choices=("focus", "side", "grid2", "grid3", "grid4"),
+            needs="incidents",
+            what_it_does=(
+                '"focus": one camera large with the others in a filmstrip under '
+                'it. "side": the cameras in a grid beside the panel, the strip '
+                'at the bottom. "grid2", "grid3", "grid4": the cameras alone '
+                "across the width at that count. The layout a person starts "
+                "with; the browser remembers each person's own choice from the "
+                "Layout menu."
+            ),
+            when_changed=(
+                "The next incident page opened by a person who has not chosen."
+            ),
+        ),
+        Definition(
             key="incidents_stamp_early",
             page=INCIDENTS,
             group="Placing",

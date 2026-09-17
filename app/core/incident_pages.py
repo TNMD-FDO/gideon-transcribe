@@ -15,7 +15,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, chronology, incident_assistant, incidents, sharing
+from core import (
+    cases,
+    chronology,
+    incident_assistant,
+    incidents,
+    settings_store,
+    sharing,
+)
 from core.case_pages import _their_case
 from core.incidents import Incident, IncidentCamera
 from core.media_access import media_root
@@ -169,6 +176,9 @@ def state_json(incident: Incident, user) -> dict:
             "wall_size": incidents.wall_size(),
             "most": incidents.most_cameras(),
             "sound_match": incidents.sound_match_on(),
+            # The layout a person starts with (chapter 4); the browser keeps
+            # the person's own choice.
+            "layout": settings_store.get("incidents_layout"),
             "created_by": incident.created_by.shown_name if incident.created_by else "",
             "created": incident.created.isoformat(),
             "how": incident.how,

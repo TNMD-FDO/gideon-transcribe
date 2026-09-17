@@ -2101,3 +2101,29 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 @media (min-width: 1900px) {
   .inc-desk { grid-template-columns: minmax(0, 1fr) 560px; }
 }
+
+/* v1.62.0 (chapter 4): the layouts. Focus has one camera large and the
+   filmstrip under it; Side by side keeps the panel beside the wall; a Grid
+   puts the panel under the strip. The sound is a speaker on the tile, the
+   pills are short, the parked cameras are lanes, and the event box is a
+   sheet over the head. */
+.inc-film { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 4px; }
+.inc-film .inc-tile { flex: 0 0 170px; width: 170px; }
+.inc-tile.film .inc-tile-head { padding: 3px 6px; gap: 5px; font-size: 11px; }
+.inc-tile.film .inc-tile-head .sync-open, .inc-tile.film .inc-tile-head .tile-menu, .inc-tile.film .inc-lines, .inc-tile.film .inc-sync { display: none; }
+.inc-tile.film .inc-well .state { font-size: 11px; }
+.inc-tile.film.parked { cursor: pointer; border-style: dashed; }
+.inc-tile.film.parked .inc-well { cursor: pointer; }
+.inc-desk[data-layout="focus"] .inc-wall .inc-lines { font-size: var(--t-body); padding: 8px 12px 10px; }
+.inc-desk[data-layout^="grid"] { grid-template-columns: minmax(0, 1fr); }
+.inc-work.below { margin: 0 16px 16px; max-height: none; }
+.inc-tile-head .snd { flex: none; padding: 0 4px; color: var(--muted); }
+.inc-tile.sound .inc-tile-head .snd { color: var(--accent); }
+.inc-tile-head .pill { max-width: 6rem; }
+.inc-strip .ruler, .inc-strip .lane { grid-template-columns: 150px minmax(0, 1fr); }
+.inc-strip .lane .head .swap { padding: 0 5px; font-size: 10px; flex: none; }
+.incident-page main.wide { position: relative; }
+.inc-event-box { position: absolute; right: 16px; top: 58px; z-index: 6; width: min(760px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); }
+@media (max-width: 1279px) {
+  .inc-event-box { left: 16px; right: 16px; width: auto; }
+}
