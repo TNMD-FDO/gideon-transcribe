@@ -118,22 +118,12 @@
       <h2 style="margin: 0 0 4px">Add cameras</h2>
       <p class="muted small" style="margin: 0 0 10px">The case's other videos. Up to {{ state.incident.most }} cameras in an incident.</p>
       <form id="add-form">
-        {% if others %}
-          <div class="inc-checks">
-            {% for one in others %}
-              <label class="inc-check">
-                <input type="checkbox" name="recordings" value="{{ one.recording.pk }}">
-                <span><b>{{ one.recording.title }}</b>{% if one.elsewhere %} <span class="muted">in {{ one.elsewhere }}</span>{% endif %}</span>
-                {% if one.clock %}<span class="pill {{ one.tone }} small">{{ one.clock }}</span>{% else %}<span></span>{% endif %}
-              </label>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="muted">Every video in this case is already here.</p>
-        {% endif %}
+        {% comment %}Drawn by incident.js from the state each time the box opens (v1.60.1).{% endcomment %}
+        <div class="inc-checks" id="add-list"></div>
+        <p class="muted" id="add-none" hidden>Every video in this case is already here.</p>
         <div class="dialog" style="justify-content: flex-end">
           <button type="button" class="ghost" id="add-cancel">Cancel</button>
-          <button type="submit" class="primary"{% if not others %} disabled{% endif %}>Add</button>
+          <button type="submit" class="primary" id="add-go">Add</button>
         </div>
       </form>
     </div>

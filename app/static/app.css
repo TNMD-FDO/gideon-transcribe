@@ -2088,6 +2088,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-tile.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
 .inc-tile[draggable="true"] .inc-tile-head { cursor: grab; }
 .inc-tile-head .tile-menu { flex: none; }
+.inc-tile-head .sync-open { flex: none; }
 .inc-tile-head .tile-menu > summary { padding: 0 6px; }
 .inc-tile-head .tile-menu > ul { right: 0; left: auto; }
 .inc-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--accent-soft); font-size: var(--t-small); }

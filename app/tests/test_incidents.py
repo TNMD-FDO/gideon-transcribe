@@ -337,8 +337,12 @@ def test_the_incident_page_and_its_act_endpoint(person, a_case, client):
     client.post(act, {"action": "rename", "name": "The stop"})
     incident.refresh_from_db()
     assert incident.name == "The stop"
-    client.post(act, {"action": "remove", "camera": cam_second.pk})
+    said = client.post(act, {"action": "remove", "camera": cam_second.pk}).json()
     assert incident.cameras.count() == 1
+    # The removed camera is offered straight back, and the wall's order rides
+    # in the state (v1.60.1).
+    assert [one["title"] for one in said["state"]["others"]] == ["second"]
+    assert said["state"]["wall"] == [str(cam_first.pk)]
     third = video(person, a_case, "third", stamp={})
     client.post(act, {"action": "add", "recordings": [str(third.pk)]})
     assert incident.cameras.count() == 2

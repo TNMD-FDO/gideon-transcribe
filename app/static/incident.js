@@ -141,7 +141,11 @@
   }
 
   function placedCameras() { return S.cameras.filter(function (one) { return one.starts_at !== null && one.placed; }); }
-  function wallCameras() { return placedCameras().filter(function (one) { return one.on_wall; }); }
+  function wallCameras() {
+    var order = S.wall || [];
+    return placedCameras().filter(function (one) { return one.on_wall; })
+      .sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+  }
   function parkedCameras() { return placedCameras().filter(function (one) { return !one.on_wall; }); }
 
   // Taking a state: redraw everything but keep the clock where it is.
@@ -182,8 +186,8 @@
       "<div class='inc-tile-head'><span class='dot'></span><b title='" + quoted(cam.title) + "'>" + escape(cam.camera_id) + "</b>" +
       "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(cam.placed_words) + "</span>" +
       "<label class='small sound-pick'><input type='radio' name='sound-tile' value='" + cam.id + "'> Sound</label>" +
-      "<details class='menu tile-menu'><summary class='tiny' title='Sync, swap out, remove, open'>⋯</summary><ul>" +
-      "<li><button type='button' data-tile='sync'>Sync this camera</button></li>" +
+      "<button type='button' class='tiny sync-open' data-tile='sync' title='Nudge this camera into step, or set its start'>Sync</button>" +
+      "<details class='menu tile-menu'><summary class='tiny' title='Swap out, open, remove'>⋯</summary><ul>" +
       "<li><button type='button' data-tile='swap'>Swap out</button></li>" +
       "<li><a href='" + escape(cam.viewer_url) + "'>Open the recording</a></li>" +
       "<li class='sep'></li><li><button type='button' class='danger' data-tile='remove'>Remove from incident</button></li></ul></details></div>" +
@@ -192,7 +196,7 @@
       "<div class='state' hidden></div></div>" +
       "<div class='inc-lines'>" +
       "<div class='said'><span class='who'></span> <span class='txt muted'>…</span> <button type='button' class='tiny ghost add-line' data-kind='words' title='Add this line as an event' hidden>+ event</button></div></div>";
-    tile.querySelector(".tile-menu").addEventListener("click", function (event) {
+    tile.querySelector(".inc-tile-head").addEventListener("click", function (event) {
       var button = event.target.closest("[data-tile]");
       if (!button) { return; }
       tile.querySelector(".tile-menu").removeAttribute("open");
@@ -203,7 +207,7 @@
       }
     });
     tile.addEventListener("dragstart", function (event) {
-      if (event.target.closest("video, button, input, details")) { event.preventDefault(); return; }
+      if (event.target.closest("button, input, select, details, label, .inc-sync")) { event.preventDefault(); return; }
       draggedTile = cam.id;
       event.dataTransfer.effectAllowed = "move";
       try { event.dataTransfer.setData("text/plain", cam.id); } catch (ignored) { /* an older browser */ }
@@ -225,6 +229,9 @@
     tile.addEventListener("dragend", function () { draggedTile = null; });
     var video = tile.querySelector("video");
     if (video) {
+      // The picture is where a person takes hold of the tile to drag it, so
+      // the video must not start a drag of its own.
+      video.setAttribute("draggable", "false");
       video.src = cam.media_url;
       video.addEventListener("error", function () { trouble.textContent = "One of the cameras could not be played: " + cam.camera_id + "."; trouble.hidden = false; });
     }
@@ -1025,7 +1032,7 @@
       }
       return;
     }
-    if (event.target.closest("#add-cameras")) { document.getElementById("add-box").hidden = false; return; }
+    if (event.target.closest("#add-cameras")) { openAddBox(); return; }
     if (event.target.closest("#rename-incident")) {
       window.UI.prompt({ title: "Rename this incident", body: "", ok: "Rename", value: S.incident.name }).then(function (name) {
         if (name) { post({ action: "rename", name: name }).then(function () { document.getElementById("inc-title").firstChild.textContent = S.incident.name + " "; }); }
@@ -1038,12 +1045,24 @@
   });
 
   var addBox = document.getElementById("add-box");
+  function openAddBox() {
+    var list = document.getElementById("add-list");
+    var others = S.others || [];
+    list.innerHTML = others.map(function (one) {
+      return "<label class='inc-check'><input type='checkbox' name='recordings' value='" + one.recording + "'>" +
+        "<span><b>" + escape(one.title) + "</b>" + (one.elsewhere ? " <span class='muted'>in " + escape(one.elsewhere) + "</span>" : "") + "</span>" +
+        (one.clock ? "<span class='pill " + escape(one.tone) + " small'>" + escape(one.clock) + "</span>" : "<span></span>") + "</label>";
+    }).join("");
+    document.getElementById("add-none").hidden = others.length > 0;
+    document.getElementById("add-go").disabled = !others.length;
+    addBox.hidden = false;
+  }
   document.getElementById("add-cancel").addEventListener("click", function () { addBox.hidden = true; });
   document.getElementById("add-form").addEventListener("submit", function (event) {
     event.preventDefault();
     var chosen = Array.prototype.map.call(addBox.querySelectorAll("input:checked"), function (one) { return one.value; });
     addBox.hidden = true;
-    if (chosen.length) { post({ action: "add", recordings: chosen }).then(function () { window.location.reload(); }); }
+    if (chosen.length) { post({ action: "add", recordings: chosen }); }
   });
 
   // The Details tab ----------------------------------------------------------------------

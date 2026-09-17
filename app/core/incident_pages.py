@@ -147,7 +147,8 @@ def state_json(incident: Incident, user) -> dict:
     unplaced = [one for one in cameras if not one.is_placed()]
     ordered = placed + unplaced
     colours = {str(one.pk): colour_for(index) for index, one in enumerate(ordered)}
-    wall = {str(one.pk) for one in incidents.wall_of(incident)}
+    on_wall = [str(one.pk) for one in incidents.wall_of(incident)]
+    wall = set(on_wall)
     low, high = incidents.span_of(incident)
     placed_words, placed_tone = incidents.placed_words(incident)
     return {
@@ -175,6 +176,20 @@ def state_json(incident: Incident, user) -> dict:
         "cameras": [
             _camera_json(one, colours[str(one.pk)], str(one.pk) in wall)
             for one in ordered
+        ],
+        # The Wall's order, the person's or the clock's (v1.60.1).
+        "wall": on_wall,
+        # The case's other videos, for Add cameras, drawn afresh on every
+        # answer so a camera just removed can come straight back.
+        "others": [
+            {
+                "recording": str(one["recording"].pk),
+                "title": one["recording"].title,
+                "clock": one["clock"],
+                "tone": one["tone"],
+                "elsewhere": one["elsewhere"],
+            }
+            for one in _others(incident.case, incident)
         ],
         # The Chronology (chapter 2).
         "events": chronology.events_json(incident),

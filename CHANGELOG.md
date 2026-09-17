@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.60.1, 2026-09-17
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Fixed
+
+- A camera removed from an incident did not appear in Add cameras until
+  the page was reloaded: the list was drawn once with the page. It is
+  drawn from the page's state each time the box opens.
+- Dragging a tile to another place on the wall changed nothing: the order
+  was saved but the wall was drawn in clock order. The wall now follows the
+  saved order, and a tile can be taken hold of by its picture.
+- Sync was behind a three-dot menu that was easy to miss. Every tile now
+  carries a Sync button in its head; the menu keeps Swap out, Open the
+  recording and Remove from incident.
+
 ## v1.60.0, 2026-09-17
 
 ```
