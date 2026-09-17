@@ -1312,9 +1312,9 @@ def _rows() -> list[Definition]:
                 "on the clock its picture carries."
             ),
             when_changed=(
-                "Off hides the Incidents strip and New incident on every case "
-                "page, the Incident column, every incident page and every All "
-                "cameras button; keeps every incident and placement."
+                "Off hides the Incidents tab on every case page, the Incident "
+                "column, every incident page and every All cameras button; "
+                "keeps every incident and placement."
             ),
         ),
         Definition(

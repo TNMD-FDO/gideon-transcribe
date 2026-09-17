@@ -2008,7 +2008,8 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
    in the Speakers page's shape: the Wall, the transport, the parked tiles,
    the Cameras and Details tabs, and the strip of lanes. */
 .inc-strip-card { margin-top: 10px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 16px; align-items: center; border-left: 4px solid var(--accent); }
-.inc-strip-card .pill.offer { background: var(--accent-soft); color: var(--accent); }
+.inc-strip-card .pill.offer, .inc-offer .pill.offer { background: var(--accent-soft); color: var(--accent); }
+.inc-offer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; border-left: 4px solid var(--accent); }
 .inc-checks { border: 1px solid var(--line); border-radius: var(--radius); max-height: 330px; overflow: auto; }
 .inc-check { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; padding: 8px 8px; border-top: 1px solid var(--line); font-size: var(--t-small); cursor: pointer; }
 .inc-check:first-child { border-top: 0; }

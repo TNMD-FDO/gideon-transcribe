@@ -233,8 +233,11 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     first = video(person, a_case, "first", stamp=stamp("21:56:19"))
     second = video(person, a_case, "second", stamp=stamp("22:01:00", camera="BWC2-2"))
     page = client.get(f"/case/{a_case.pk}").content.decode()
-    assert "Make them an incident?" in page and "New incident" in page
+    assert 'tab=incidents"' in page and "Incidents (0)" in page
+    assert "Make them an incident?" not in page
     assert "Clock in the picture" in page and "06/07/2025 21:56:19, checked" in page
+    page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
+    assert "Make them an incident?" in page and "New incident" in page
 
     # New incident from the page: named by the date, opened on its own page.
     answer = client.post(
@@ -244,9 +247,9 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     incident = Incident.objects.get()
     assert answer.status_code == 302 and answer["Location"] == incident.url()
     assert incident.name == "06/07/2025" and incident.how == "offer"
-    page = client.get(f"/case/{a_case.pk}").content.decode()
+    page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Open the incident" in page and "2 of 2 placed" in page
-    assert "Make them an incident?" not in page
+    assert "Make them an incident?" not in page and "Incidents (1)" in page
 
     # Not these, for a further offer.
     third = video(person, a_case, "third", stamp=stamp("22:03:00", camera="BWC2-3"))
@@ -258,8 +261,9 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
 
     # Off: the strip, the columns and the page itself are gone; the rows stay.
     settings_store.set_to("incidents", False)
-    page = client.get(f"/case/{a_case.pk}").content.decode()
+    page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Open the incident" not in page and "Clock in the picture" not in page
+    assert "tab=incidents" not in page
     assert client.get(incident.url()).status_code == 404
     assert Incident.objects.count() == 1
 

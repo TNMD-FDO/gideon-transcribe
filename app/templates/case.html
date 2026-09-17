@@ -20,56 +20,8 @@
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
       {% if live_recording and role != "admin" %}<a href="{% url 'record-new' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
-      {% if incidents_on %}<button type="button" class="btn" id="new-incident">{% icon "camera" %} New incident</button>{% endif %}
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
     </div>
-
-    {% if incidents_on and incident_rows or incident_offers %}
-      {% comment %}
-        The Incidents strip (Phase 6 chapter 1): the doorway to each incident's
-        own page, and the app's offer when the case's videos overlap on their
-        clocks. New incident, in the header, is for the rest.
-      {% endcomment %}
-      <div class="card inc-strip-card" id="incidents">
-        <span class="eyebrow">Incidents</span>
-        <span class="muted small">The cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.</span>
-        <span></span>
-        {% for offer in incident_offers %}
-          <span class="pill small offer">Offer</span>
-          <span class="small"><b>{{ offer.line }}</b>
-            {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
-          </span>
-          <span class="nowrap">
-            {% if offer.kind == "new" %}
-              <form method="post" action="{% url 'new-incident' case.pk %}" style="display: inline">
-                {% csrf_token %}
-                <input type="hidden" name="how" value="offer">
-                {% for one in offer.recordings %}<input type="hidden" name="recordings" value="{{ one.pk }}">{% endfor %}
-                <button type="submit" class="small primary">Make it</button>
-              </form>
-              <button type="button" class="small ghost choose-myself" data-recordings="{% for one in offer.recordings %}{{ one.pk }} {% endfor %}">Choose myself</button>
-            {% else %}
-              <form method="post" action="{% url 'add-to-incident' case.pk %}" style="display: inline">
-                {% csrf_token %}
-                <input type="hidden" name="incident" value="{{ offer.incident.pk }}">
-                <input type="hidden" name="recording" value="{{ offer.recording.pk }}">
-                <button type="submit" class="small primary">Add it</button>
-              </form>
-            {% endif %}
-            <form method="post" action="{% url 'decline-incident-offer' case.pk %}" style="display: inline">
-              {% csrf_token %}
-              <input type="hidden" name="key" value="{{ offer.key }}">
-              <button type="submit" class="tiny ghost">Not these</button>
-            </form>
-          </span>
-        {% endfor %}
-        {% for row in incident_rows %}
-          <b>{{ row.incident.name }}</b>
-          <span class="small">{{ row.cameras }} camera{{ row.cameras|pluralize }}, {{ row.span }} &middot; <span class="pill {{ row.tone }} small">{{ row.placed }}</span></span>
-          <a href="{{ row.url }}" class="btn primary small nowrap">Open the incident</a>
-        {% endfor %}
-      </div>
-    {% endif %}
 
     {% if incidents_on %}
       {% comment %}New incident: the case's videos, ticked; the same dialog the offer's Choose myself opens with its videos ticked.{% endcomment %}
@@ -126,6 +78,10 @@
             <a href="{% url 'case' case.pk %}?tab=chat"
                class="tab{% if tab == 'chat' %} on{% endif %}">Chat</a>
           {% endif %}
+          {% if incidents_on %}
+            <a href="{% url 'case' case.pk %}?tab=incidents"
+               class="tab{% if tab == 'incidents' %} on{% endif %}">Incidents ({{ incident_rows|length }})</a>
+          {% endif %}
         </div>
 
         {% if tab == "recordings" %}
@@ -173,6 +129,92 @@
           {% endcomment %}
           <div class="panel chat case-chat" id="case-chat" data-case="{{ case.pk }}" style="margin-top: 10px"></div>
 
+        {% elif tab == "incidents" %}
+          {% comment %}
+            The Incidents tab (Phase 6 chapter 1, as amended in v1.59.1): the
+            doorway to each incident's own page, the app's offer when the
+            case's videos overlap on their clocks, New incident, and the
+            videos not yet in one. A tab beside Chat at the maintainer's word,
+            after the strip under the case name had floated over the page.
+          {% endcomment %}
+          <div class="row" style="align-items: center; margin: 14px 0 8px">
+            <p class="lead grow" style="margin: 0">
+              {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}.{% else %}No incident yet.{% endif %}
+              An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.
+            </p>
+            <button type="button" class="btn small" id="new-incident">{% icon "camera" %} New incident</button>
+          </div>
+          {% for offer in incident_offers %}
+            <div class="card inc-offer" style="margin-bottom: 10px">
+              <span class="pill small offer">Offer</span>
+              <span class="small"><b>{{ offer.line }}</b>
+                {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
+              </span>
+              <span class="nowrap">
+                {% if offer.kind == "new" %}
+                  <form method="post" action="{% url 'new-incident' case.pk %}" style="display: inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="how" value="offer">
+                    {% for one in offer.recordings %}<input type="hidden" name="recordings" value="{{ one.pk }}">{% endfor %}
+                    <button type="submit" class="small primary">Make it</button>
+                  </form>
+                  <button type="button" class="small ghost choose-myself" data-recordings="{% for one in offer.recordings %}{{ one.pk }} {% endfor %}">Choose myself</button>
+                {% else %}
+                  <form method="post" action="{% url 'add-to-incident' case.pk %}" style="display: inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="incident" value="{{ offer.incident.pk }}">
+                    <input type="hidden" name="recording" value="{{ offer.recording.pk }}">
+                    <button type="submit" class="small primary">Add it</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{% url 'decline-incident-offer' case.pk %}" style="display: inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="key" value="{{ offer.key }}">
+                  <button type="submit" class="tiny ghost">Not these</button>
+                </form>
+              </span>
+            </div>
+          {% endfor %}
+          {% if incident_rows %}
+            <div class="tbl-wrap">
+              <table class="tbl" id="incidents">
+                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th><th>Events</th><th>Made</th><th></th></tr></thead>
+                <tbody>
+                  {% for row in incident_rows %}
+                    <tr class="goes" tabindex="0" data-open="{{ row.url }}">
+                      <td><b>{{ row.incident.name }}</b></td>
+                      <td>{{ row.cameras }}</td>
+                      <td class="mono">{{ row.span }}</td>
+                      <td><span class="pill {{ row.tone }} small">{{ row.placed }}</span></td>
+                      <td>{{ row.events }}</td>
+                      <td class="muted nowrap">{{ row.incident.created|date:"d M Y" }}{% if row.incident.created_by %} by {{ row.incident.created_by.shown_name }}{% endif %}</td>
+                      <td class="acts"><a href="{{ row.url }}" class="btn primary small">Open the incident</a></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+          {% with loose=incident_videos %}
+            <h2 style="margin-top: 26px; font-size: var(--t-heading)">Videos in this case</h2>
+            <p class="muted small" style="margin: 0 0 8px">Each video's clock, as read from its picture, and the incident it is in. A video with no clock is placed on the incident page, by sound or by hand.</p>
+            {% if loose %}
+              <table class="tbl">
+                <thead><tr><th>Recording</th><th>Clock in the picture</th><th>Incident</th></tr></thead>
+                <tbody>
+                  {% for one in loose %}
+                    <tr>
+                      <td><b>{{ one.recording.title }}</b></td>
+                      <td>{% if one.clock %}<span class="pill {{ one.tone }} small">{{ one.clock }}</span>{% endif %}</td>
+                      <td>{% if one.elsewhere %}{{ one.elsewhere }}{% else %}<span class="muted">none</span>{% endif %}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p class="muted">This case has no videos yet.</p>
+            {% endif %}
+          {% endwith %}
         {% elif tab == "speakers" %}
           {% comment %}
             The Speakers tab: inside a case a name means a person. The People

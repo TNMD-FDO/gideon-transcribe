@@ -230,10 +230,14 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     asked = request.GET.get("q", "").strip()
     # The four tabs the chapter gives this page; Chat only while the Case
     # Chat exists.
-    from core import case_chat
+    from core import case_chat, incidents
 
     chat_here = case_chat.available()
-    tabs = ("clips", "speakers") + (("chat",) if chat_here else ())
+    tabs = (
+        ("clips", "speakers")
+        + (("chat",) if chat_here else ())
+        + (("incidents",) if incidents.on() else ())
+    )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
 
     # The pane about the case says where its clock stands, as its row on the

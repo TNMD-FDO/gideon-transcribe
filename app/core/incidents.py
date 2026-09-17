@@ -771,6 +771,7 @@ def strip_rows(case) -> list[dict]:
                 "span": span_words(incident),
                 "placed": words,
                 "tone": tone,
+                "events": incident.events.count(),
                 "url": incident.url(),
             }
         )

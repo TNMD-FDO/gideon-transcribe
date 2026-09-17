@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.59.1, 2026-09-17
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+### Changed
+
+- **Incidents are a tab on the case page.** The strip under the case name
+  and the New incident button in the header, which floated over the page,
+  are gone; an **Incidents** tab beside Chat holds the case's incidents
+  with Open the incident, the app's offer when videos overlap on their
+  clocks, New incident, and every video with its clock and the incident it
+  is in. The recordings tab keeps its Clock in the picture and Incident
+  columns.
+
 ## v1.59.0, 2026-09-17
 
 ```
