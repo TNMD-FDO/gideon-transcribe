@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 6 specification
 
-The Incidents release. Chapter 1 is written for the build; chapters 2 and 3 are proposed and take their shape here so that chapter 1 leaves room for them.
+The Incidents release. Chapter 1 was built as `v1.58.0`; chapter 2 is written for the build; chapter 3 is proposed and takes its shape here so that the earlier chapters leave room for it.
 
 ## About this document
 
@@ -13,15 +13,15 @@ Nothing in this document is office-specific. No new environment key is needed an
 ## What Phase 6 adds
 
 - **Incidents, and the cameras in step** (chapter 1, for the build): a case's videos that ran at the same time become an Incident, offered by the app when their clocks overlap and made by hand otherwise. Each camera is placed on one clock, the time of day the cameras burn into their pictures, read as each playback copy lands; a camera without a clock is matched by sound to one that has, or placed by hand, and how each was placed is shown wherever it appears. The Incident page is a page of its own inside the case: up to six cameras playing in step under one transport and one clock, sound from one of them, a strip across the width with a lane per camera, and the words and the camera line under each picture. An Incidents page in the Panel holds its switches.
-- **The Chronology** (chapter 2, proposed): the Incident's list of Events, each a time of day, a line of text, its source and the cameras that show it, added by a person at the playhead or from a transcript line, drawn as the strip's last lane, and exported as a Word table with the strip as a picture, and as a spreadsheet.
+- **The Chronology** (chapter 2, for the build): the Incident's list of Events, each a time of day on the Incident clock, a line of text, its source (a person, the words of a camera, or what a camera showed) and the cameras that show it, added by a person at the moment being watched, from a line under a tile, or from a chat's citation; drawn as the strip's Events lane; listed on the Chronology tab with a citation that plays every camera from there; and exported as a Word document with the strip as a picture, as a spreadsheet, and as the picture alone.
 - **The assistant on the Incident** (chapter 3, proposed): the Case Chat told each camera's place on the clock, so a time on one recording is the same moment on the others; All cameras on a citation; Events the assistant proposes from the words and the cameras, accepted one by one; and the Incident memo, written across every camera on the Chronology's events, each cited, on the Incident page's Memo tab.
 
-Chapter 1 adds an Incidents settings page with six settings, four audit rows, two tables, and one migration that moves the camera stamp from the Transcript to the Recording.
+Chapter 1 adds an Incidents settings page with six settings, four audit rows, two tables, and one migration that moves the camera stamp from the Transcript to the Recording. Chapter 2 adds one table, four audit rows, three exports and no setting.
 
 ## Contents
 
 1. Incidents, and the cameras in step
-2. The Chronology (proposed)
+2. The Chronology
 3. The assistant on the Incident (proposed)
 4. Deferred and ruled out
 
@@ -148,14 +148,90 @@ An **Incidents** page in the Panel's Settings group, between Vision and Speakers
 - The exact wording of the offer, the pills, the "no camera clock" line, and the swap's confirmation, within the words fixed here.
 - Whether the case page's Clock in the picture column shows the date or the time alone when every clock is on one day.
 
-## 2. The Chronology (proposed)
+## 2. The Chronology
 
-Not yet written for the build; what is fixed here is what chapter 1 leaves room for and what the maintainer decided on 2026-09-17, so that chapter 1 is not redesigned when it comes.
+Written 2026-09-17, after chapter 1 had gone to the server, from the maintainer's ask for "a visual timeline that can also be exported and integrated within the investigative analysis by staff" and the decisions of the same day: people add events first, with the assistant able to propose them later (chapter 3); an event added while playing carries the clock's moment, so it lands on every camera; and the memo of chapter 3 is written on these events, so the two match. Chapter 1 left the room: the Events lane on the strip, Add event here and Export in the head, and the Chronology tab.
 
-- **What it is.** The Incident's list of **Events**: each a time of day on the Incident clock (or a span), a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Drawn as the strip's Events lane with a mark and a short label per Event, and listed on the **Chronology** tab in time order with a citation that plays every camera from there, the source as a pill, and Edit.
-- **How an Event is made.** By a person: **Add event here** in the head, stamped with the clock's moment, with a line of text; or from a transcript line under a tile (the line's words become the text, the camera its source); or from a Case Chat citation on a camera. An Event added while playing lands at the clock's moment, so it lines up on every camera.
-- **The exports.** From Export in the head: the Chronology as a Word document (the strip as a picture, then the table: number, time, event, source, seen on), as a spreadsheet (.csv) of the same table, and the picture alone. Each carries the AI notice only when an Event was proposed by the assistant (chapter 3). The chapter fixes the words of the legend and the placement pills as printed.
-- **Rows and settings.** Event rows on the Incident; audit rows Event added, changed and removed (no words); no new setting beyond the Incidents switch.
+### Principles
+
+1. **A person's record, on the cameras' clock.** An Event is something a person says happened, at a time of day the cameras agree on. The app never adds one by itself in this chapter; the assistant's proposals are chapter 3's and join only when accepted.
+2. **Every Event is a place to look.** Its time plays every camera from there, on the page and from the export's table. An Event is worth adding only because someone will want to see that moment again.
+3. **Made where the moment is.** The clock's moment while watching, a line being spoken under a tile, or a citation from a chat: the Event is made at the moment a person is already looking at, never typed from memory.
+4. **The source stays on it.** An Event says whether a person wrote it, whether it quotes what a camera heard, or what a camera showed; the export prints the same. Words quoted from a transcript are a copy as the transcript stood, and the pill says Words so a reader knows to check the transcript itself.
+5. **The picture is drawn from the rows, never kept.** The strip as a picture is made by the page from the same rows the strip is drawn from, at the moment of the export, and travels inside the document; nothing image-like is stored, as Phase 4 has it.
+6. **Nothing new to switch.** The Chronology is part of an Incident: Incidents Off hides it with the page, and no setting of its own is needed.
+
+### Words
+
+**Chronology** and **Event**, as `CONTEXT.md` defines them, in force from this chapter. The pages say "event" and "chronology"; they never say timeline, log, mark (a live recording's) or moment (a description). The strip's last lane is the **Events lane**.
+
+### Events
+
+- **What an Event holds.** A time on the Incident clock (seconds from the Incident's zero, shown as the time of day when the Incident has a clock, else as elapsed time); optionally an end, for something that ran a while; a line of text, up to 500 characters; its source, one of **person**, **words** or **camera**, with the camera it came from when it has one; the cameras that show it, a list the person may change, filled at first with the cameras running at that moment; who added it and when; who last changed it and when. Chapter 3 adds the source **assistant** and a proposed state; nothing in this chapter makes either.
+- **Add event here**, in the head and on the E key: a box under the head with the moment prefilled as the clock shows it (editable as hh:mm:ss, or m:ss without a clock), an optional end, the line of text with the focus, the running cameras as ticks, and **Add**. Playing does not stop for it; the moment is the one at the press. Escape or Cancel closes it. The Event's source is person.
+- **From a line being spoken**: the line under a tile carries **+ event** on hover. The Event takes that line's words as its text, the moment as its time, that camera as its source and its only ticked camera at first, and opens the box for the person to edit the words or accept them; its source is words.
+- **From a camera line** under a tile (a video enriched with vision): the same, with the description as the text and camera as the source.
+- **From a chat's citation**: the all cameras link beside a citation (chapter 1) opens the page at that moment with the box open and the cited line's words in it, when the address says so; the person edits or accepts. Its source is words. The viewer's All cameras does the same when its playhead is on a line.
+- **Edit** on the Chronology tab opens the same box on that Event, with **Remove**. Changing the time moves it on the lane; changing the cameras changes Seen on. An Event whose source camera has left the Incident keeps its text and reads "a camera no longer in the incident" for its source.
+- **Where an Event goes.** With the Incident: deleting the Incident removes its Events; a case in the Recycle bin takes them and brings them back; a recording deleted leaves its Events standing without their camera. Adding, changing or removing an Event counts as the case's activity.
+
+### The Chronology tab
+
+- First in the tabbar, before Cameras and Details, and the tab the page opens on once any camera is placed (Cameras until then). Its head line says how many Events there are and, from chapter 3, how many the memo was written on.
+- **The list**, in time order: the time as a citation that plays every camera from there; the text, with "Seen on" and the cameras under it; the source pill (**Added by <name>**, **Words, <camera>**, **Camera, <camera>**); Edit. An Event with an end shows both times. The Event whose time is the latest at or before the clock's moment is the current one, marked as the line being spoken is, and Follow keeps it in view.
+- **Add event here** repeated at the top of the list, so the tab has its own way in.
+
+### The Events lane
+
+- The strip's last lane, drawn from chapter 1's empty one: a mark at each Event's time, or a short bar from its time to its end, with the first few words of its text beside it; a person's Event and a quoted one in the accent colour, and chapter 3's proposed ones in the working colour. A press on a mark seeks every camera there; hovering shows the whole line. When two labels would overlap at the zoom in hand the later one is drawn as a mark alone, and the Zoom buttons of the strip spread them.
+
+### The exports
+
+- **Export** in the head offers three: **Chronology to Word**, **Chronology as a spreadsheet** (.csv), and **The strip as a picture** (.png). Each writes the audit row Chronology exported with the format, never a word of an Event.
+- **The Word document**, in the app's export shape (the office's name and logo on the cover as the other exports carry them): the title "Chronology: <incident>", the case, the Incident clock's date, the cameras with how each was placed (the pills as printed), the strip as a picture, then the table: number, time (the time of day), event, source, seen on. Under the table two lines: that an event marked Words or Camera was taken from a transcript or from a model's description of the picture and accepted by a person, and that a quoted transcript may have been corrected since. The AI notice prints only when any Event was proposed by the assistant (chapter 3); the transcription notice does not print, since the document is not a transcript.
+- **The spreadsheet**: one row per Event with number, time of day, seconds into the incident, end, event, source, source camera, seen on, added by, added on; the first row the column names; UTF-8 with a byte order mark so a desktop spreadsheet reads it as it is.
+- **The picture**: the strip as the page draws it, at twice the screen's resolution, with the ruler, a lane per camera with its id and bar, and the Events lane with its marks and labels, in the light palette whatever the person's theme, so it reads on paper. The page draws it on a canvas from the same rows as the strip and hands it to the export; the Word document embeds it, and The strip as a picture saves it alone. Nothing of it is stored.
+- The exports are offered to whoever can open the Incident; a Collaborator exports as the owner does.
+
+### In and out
+
+- The E key opens Add event here at the moment; Escape closes the box; Enter in the text adds. Space, B, Left and Right stay the transport's while the box is closed.
+- The address gains `?t=<moment>&event=<words>`: the page opens at the moment with the box open and the words in it, which is how a citation makes an Event.
+
+### What changes from chapter 1 and earlier phases
+
+- **Chapter 1, The Incident page**: Add event here and Export join the head; the Events lane is drawn; the tabbar reads Chronology, Cameras, Details, and the page opens on Chronology once a camera is placed.
+- **Chapter 1, In and out**: the all cameras link beside a citation, and All cameras in the viewer's head, carry the cited or spoken line into the address so the Event box opens with it.
+- **Phase 2, the Cases chapter, Last activity**: adding, changing and removing an Event count.
+- **Phase 1, the Exports chapter**: a fourth kind of export, the Chronology's three, in the same shape and under the same audit row pattern; Download everything and the case's Download all transcripts do not carry them.
+- Nothing changes on the case page, in the viewer's transcript, or in Vision.
+
+### Carried for chapter 3
+
+- The Event's source may be **assistant** and an Event may be **proposed**, with Accept and Dismiss; chapter 2 draws proposed Events on the lane in the working colour and lists them under the Chronology as chapter 3 will fill them, and makes none.
+- The Chronology tab's head keeps room for "written on N of them" and the memo's staleness line.
+
+### Audit rows
+
+Category Cases: **Event added** (source), **Event changed**, **Event removed**; category Exports: **Chronology exported** (format). None holds a word of an Event, a camera id, or a time.
+
+### Settings
+
+None new. Incidents governs the whole.
+
+### Not in this phase
+
+- **Events the app makes by itself**, from the words or the picture: chapter 3, and only as proposals.
+- **A clip from an Event**, side by side across cameras: deferred with clips across cameras.
+- **Events on the case page or in the case chat's answers**: an Event lives on its Incident page and in the exports; chapter 3 tells the assistant about them.
+- **Attaching a file or a picture to an Event.** An Event is a line and a time.
+
+### Left to the build
+
+- The picture's exact size and the rule for thinning overlapping labels, within the rule that every Event has a mark and the strip stays legible on a Letter page.
+- The Word document's table widths and the picture's placement, in the app's export shape.
+- The Event box's wording and its keyboard details, within the words fixed here.
+- How the cited line reaches the address from the viewer's head (the line being spoken at the playhead) and from a citation (the citation's own line).
 
 ## 3. The assistant on the Incident (proposed)
 
@@ -180,7 +256,8 @@ Not yet written for the build; the shape decided on 2026-09-17.
 | Category | Row | Chapter |
 |---|---|---|
 | Cases | Incident made; Incident changed; Incident deleted; Camera placed | 1 |
-| Cases | Event added; Event changed; Event removed | 2 (proposed) |
+| Cases | Event added; Event changed; Event removed | 2 |
+| Exports | Chronology exported | 2 |
 | AI assistant | AI assistant call, features `incident_events` and `incident_memo` | 3 (proposed) |
 
 ## Appendix B. Settings added in Phase 6
