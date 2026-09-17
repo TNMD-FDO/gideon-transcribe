@@ -20,8 +20,87 @@
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
       {% if live_recording and role != "admin" %}<a href="{% url 'record-new' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
+      {% if incidents_on %}<button type="button" class="btn" id="new-incident">{% icon "camera" %} New incident</button>{% endif %}
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
     </div>
+
+    {% if incidents_on and incident_rows or incident_offers %}
+      {% comment %}
+        The Incidents strip (Phase 6 chapter 1): the doorway to each incident's
+        own page, and the app's offer when the case's videos overlap on their
+        clocks. New incident, in the header, is for the rest.
+      {% endcomment %}
+      <div class="card inc-strip-card" id="incidents">
+        <span class="eyebrow">Incidents</span>
+        <span class="muted small">The cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.</span>
+        <span></span>
+        {% for offer in incident_offers %}
+          <span class="pill small offer">Offer</span>
+          <span class="small"><b>{{ offer.line }}</b>
+            {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
+          </span>
+          <span class="nowrap">
+            {% if offer.kind == "new" %}
+              <form method="post" action="{% url 'new-incident' case.pk %}" style="display: inline">
+                {% csrf_token %}
+                <input type="hidden" name="how" value="offer">
+                {% for one in offer.recordings %}<input type="hidden" name="recordings" value="{{ one.pk }}">{% endfor %}
+                <button type="submit" class="small primary">Make it</button>
+              </form>
+              <button type="button" class="small ghost choose-myself" data-recordings="{% for one in offer.recordings %}{{ one.pk }} {% endfor %}">Choose myself</button>
+            {% else %}
+              <form method="post" action="{% url 'add-to-incident' case.pk %}" style="display: inline">
+                {% csrf_token %}
+                <input type="hidden" name="incident" value="{{ offer.incident.pk }}">
+                <input type="hidden" name="recording" value="{{ offer.recording.pk }}">
+                <button type="submit" class="small primary">Add it</button>
+              </form>
+            {% endif %}
+            <form method="post" action="{% url 'decline-incident-offer' case.pk %}" style="display: inline">
+              {% csrf_token %}
+              <input type="hidden" name="key" value="{{ offer.key }}">
+              <button type="submit" class="tiny ghost">Not these</button>
+            </form>
+          </span>
+        {% endfor %}
+        {% for row in incident_rows %}
+          <b>{{ row.incident.name }}</b>
+          <span class="small">{{ row.cameras }} camera{{ row.cameras|pluralize }}, {{ row.span }} &middot; <span class="pill {{ row.tone }} small">{{ row.placed }}</span></span>
+          <a href="{{ row.url }}" class="btn primary small nowrap">Open the incident</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if incidents_on %}
+      {% comment %}New incident: the case's videos, ticked; the same dialog the offer's Choose myself opens with its videos ticked.{% endcomment %}
+      <div class="modal-bg" id="incident-box" hidden>
+        <div class="modal">
+          <h2 style="margin: 0 0 4px">New incident</h2>
+          <p class="muted small" style="margin: 0 0 12px">Tick the cameras that ran at the same time. Up to {{ incident_most }} in an incident; {{ incident_wall }} play at once. A video without a clock in its picture is placed on the incident page, by sound or by hand.</p>
+          <form method="post" action="{% url 'new-incident' case.pk %}" id="incident-form">
+            {% csrf_token %}
+            <label class="field">Name<input type="text" name="name" maxlength="200" placeholder="The date of the first clock, unless you type one"></label>
+            {% if incident_videos %}
+              <div class="inc-checks">
+                {% for one in incident_videos %}
+                  <label class="inc-check">
+                    <input type="checkbox" name="recordings" value="{{ one.recording.pk }}">
+                    <span><b>{{ one.recording.title }}</b>{% if one.elsewhere %} <span class="muted">in {{ one.elsewhere }}</span>{% endif %}</span>
+                    {% if one.clock %}<span class="pill {{ one.tone }} small">{{ one.clock }}</span>{% else %}<span></span>{% endif %}
+                  </label>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="muted">This case has no videos yet.</p>
+            {% endif %}
+            <div class="dialog" style="justify-content: flex-end">
+              <button type="button" class="ghost" id="incident-cancel">Cancel</button>
+              <button type="submit" class="primary"{% if not incident_videos %} disabled{% endif %}>Make the incident</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
 
     {% comment %}
       Two panes from 1280 pixels: what is in the case on the left, what is
@@ -313,7 +392,7 @@
           <div class="tbl-wrap">
           <table class="tbl" id="recordings">
             <thead>
-              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Vision</th><th>Added</th><th></th></tr>
+              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Vision</th>{% if incidents_on %}<th>Clock in the picture</th><th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
@@ -325,6 +404,10 @@
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
                   <td class="prepared">{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>
+                  {% if incidents_on %}
+                    <td class="clock">{% if recording.clock_words %}<span class="pill {{ recording.clock_tone }} small">{{ recording.clock_words }}</span>{% endif %}</td>
+                    <td class="incident">{% if recording.incident_name %}<a href="{{ recording.incident_url }}">{{ recording.incident_name }}</a>{% elif recording.clock_words %}<span class="muted">none</span>{% endif %}</td>
+                  {% endif %}
                   <td class="muted nowrap">
                     {{ recording.created|date:"d M Y" }}
                     {% if recording.user_id != case.owner_id %}by {{ recording.user.shown_name }}{% endif %}
@@ -336,7 +419,7 @@
                   </td>
                 </tr>
                 <tr class="detail-row" hidden>
-                  <td colspan="7">
+                  <td colspan="{% if incidents_on %}9{% else %}7{% endif %}">
                     <div class="detail" id="detail-{{ recording.pk }}" data-recording="{{ recording.pk }}">
                       {% if recording.description %}
                         <p class="small" style="margin: 0 0 8px">{{ recording.description }}</p>

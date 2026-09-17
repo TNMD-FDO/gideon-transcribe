@@ -1932,3 +1932,16 @@
 
   drawTimeline();
 })();
+
+// All cameras (Phase 6 chapter 1): the incident page at the playhead's moment,
+// worked out when the link is pressed rather than when the page was drawn.
+(function () {
+  "use strict";
+  var link = document.getElementById("all-cameras");
+  if (!link) { return; }
+  link.addEventListener("click", function () {
+    var player = document.getElementById("player");
+    var at = parseFloat(link.dataset.starts || "0") + (player ? player.currentTime : 0);
+    link.href = link.href.split("?")[0] + "?t=" + at.toFixed(2);
+  });
+})();

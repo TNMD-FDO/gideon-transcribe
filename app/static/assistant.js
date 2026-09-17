@@ -75,17 +75,25 @@
         var seen = cameraAt(citations[whole]);
         if (seen) {
           return "<a href='#' class='cite camera' data-seconds='" + citations[whole] + "' title='Camera: " + quoted(seen.text) + "'>" +
-            window.VIEWER.icon("camera") + whole + "</a>";
+            window.VIEWER.icon("camera") + whole + "</a>" + allCameras(citations[whole]);
         }
-        return "<a href='#' class='cite' data-seconds='" + citations[whole] + "'>" + whole + "</a>";
+        return "<a href='#' class='cite' data-seconds='" + citations[whole] + "'>" + whole + "</a>" + allCameras(citations[whole]);
       }
       return whole;
     });
   }
 
+  // All cameras (Phase 6 chapter 1): the incident page at the cited moment,
+  // beside a citation on a placed camera of an incident.
+  function allCameras(seconds) {
+    if (!state || !state.all_cameras) { return ""; }
+    var at = state.all_cameras.starts_at + seconds;
+    return " <a href='" + escape(state.all_cameras.url) + "?t=" + at.toFixed(2) + "' class='cite all' title='Every camera of the incident at this moment'>all cameras</a>";
+  }
+
   document.addEventListener("click", function (event) {
     var cite = event.target.closest(".cite");
-    if (!cite || cite.classList.contains("play")) { return; }
+    if (!cite || cite.classList.contains("play") || cite.classList.contains("all")) { return; }
     event.preventDefault();
     window.VIEWER.seek(parseFloat(cite.dataset.seconds));
     window.VIEWER.play();

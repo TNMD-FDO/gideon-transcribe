@@ -260,10 +260,8 @@ class Transcript(models.Model):
     # scan, kept once per Transcript for the picture record's cut (Phase 4
     # chapter 6); null until scanned.
     change_points = models.JSONField(null=True, blank=True)
-    # The camera's burned-in stamp, read from the picture near the start:
-    # date, time, camera id, and the second it was read at; null until read,
-    # an empty dict when nothing was found.
-    stamp = models.JSONField(null=True, blank=True)
+    # The camera's burned-in stamp lived here until v1.58.0; it is the
+    # Recording's now (Phase 6 chapter 1), so a Process again keeps it.
     # Prepared (Phase 4 chapter 7): the picture record and the Digest made,
     # by themselves as the transcript landed, on first use, or on purpose
     # from the case. The state, its count as it goes, and when it ended.

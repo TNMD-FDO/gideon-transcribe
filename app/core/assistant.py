@@ -725,8 +725,13 @@ def stamp_on() -> bool:
 
 
 def clock_line(transcript) -> str:
-    """The camera's clock for a prompt, when the stamp was read."""
-    return prompts.stamp_line(getattr(transcript, "stamp", None))
+    """The camera's clock for a prompt, when the stamp was read.
+
+    The stamp is the Recording's (Phase 6 chapter 1); the Transcript is what
+    every caller holds.
+    """
+    recording = getattr(transcript, "recording", None)
+    return prompts.stamp_line(getattr(recording, "stamp", None))
 
 
 def time_limit(feature: str) -> int:
@@ -1548,8 +1553,8 @@ def describe_intervals(run_id) -> None:
             run.save(update_fields=["state", "reason_class", "finished_at"])
             return
         transcript.refresh_from_db(fields=["change_points"])
-    if transcript.stamp is None and stamp_on():
-        read_stamp(transcript, asked_by=run.asked_by)
+    if recording.stamp is None and stamp_on():
+        read_stamp(recording, asked_by=run.asked_by)
     spans, _ = planned_spans(recording, transcript)
     moments = [
         Moment.objects.create(
@@ -1613,7 +1618,7 @@ def _read_stamp_frame(recording, transcript, at: float) -> tuple[dict, dict]:
     system = prompts.system_message(ground.text, prompts.STAMP, prompts.STAMP_FORMAT)
     text = "\n\n".join(
         [
-            prompts.nature_line(recording, transcript),
+            _stamp_nature(recording, transcript),
             f"The frame is from {prompts.clock(at)} of the recording.",
         ]
     )
@@ -1656,11 +1661,25 @@ def _read_stamp_frame(recording, transcript, at: float) -> tuple[dict, dict]:
     return read, answer
 
 
-def read_stamp(transcript, *, asked_by) -> dict:
-    """The stamp read and checked, kept on the Transcript; empty when none."""
+def _stamp_nature(recording, transcript) -> str:
+    """What the frame is from: the nature line when the transcript exists, else
+    the recording's length alone, since the stamp may be read before it."""
+    from core import exports
+
+    if transcript is not None:
+        return prompts.nature_line(recording, transcript)
+    return f"This is a frame from a {exports.length_of(recording)} video recording."
+
+
+def read_stamp(recording, *, asked_by) -> dict:
+    """The stamp read and checked, kept on the Recording; empty when none.
+
+    Read as the playback copy lands (Phase 6 chapter 1) or when the picture
+    record is first made, whichever comes first; never twice.
+    """
     from core import media
 
-    recording = transcript.recording
+    transcript = getattr(recording, "transcript", None)
     started = time.monotonic()
     length = float(recording.duration_seconds or 0.0)
     at = min(STAMP_AT, length) if length > 0 else STAMP_AT
@@ -1699,8 +1718,8 @@ def read_stamp(transcript, *, asked_by) -> dict:
         stamp = {}
         outcome = getattr(why, "reason", getattr(why, "reason_class", "media_failed"))
         reason = outcome
-    transcript.stamp = stamp
-    transcript.save(update_fields=["stamp"])
+    recording.stamp = stamp
+    recording.save(update_fields=["stamp"])
     _record(
         "stamp",
         recording,
@@ -1852,8 +1871,8 @@ def prepare(transcript, *, asked_by=None) -> bool:
             plan = prepare_plan(recording, transcript)
             transcript.prepare_total = plan["descriptions"] + plan["parts"]
             transcript.save(update_fields=["prepare_total"])
-        if transcript.stamp is None and stamp_on():
-            read_stamp(transcript, asked_by=asked_by)
+        if recording.stamp is None and stamp_on():
+            read_stamp(recording, asked_by=asked_by)
         if record_on():
             run = CueRun.objects.create(
                 transcript=transcript, source=CueRun.INTERVAL, asked_by=asked_by

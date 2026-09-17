@@ -18,7 +18,16 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, exports, settings_store, speaker_check, tasks
+from core import (
+    assistant,
+    audit,
+    cases,
+    exports,
+    incidents,
+    settings_store,
+    speaker_check,
+    tasks,
+)
 from core.assistant import (
     Chat,
     ChatTurn,
@@ -327,6 +336,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             "moments": moments,
             "cue_runs": cue_runs,
             "video": assistant.playable_video(recording),
+            # All cameras (Phase 6 chapter 1), for a placed camera of an incident.
+            "all_cameras": incidents.link_for(recording),
             # The office's starter questions for an empty chat; none by default.
             "starters": settings_store.lines_of("chat_starters"),
             "templates": [

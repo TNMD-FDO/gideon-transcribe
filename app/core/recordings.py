@@ -252,6 +252,11 @@ class Recording(models.Model):
     # The raw ffprobe output, kept for the Provenance. It is a fact about the
     # file, not content.
     probe = models.JSONField(default=dict, blank=True)
+    # The camera's burned-in stamp (Phase 4 chapter 3, the Recording's since
+    # Phase 6 chapter 1): date, time, camera id, and the second it was read
+    # at; null until read, an empty dict when nothing was found. Read as the
+    # playback copy lands when the office says so, else with the vision.
+    stamp = models.JSONField(null=True, blank=True)
 
     # A Live recording's facts (Phase 3): when it started, its sources, the
     # browser, the pauses, how it ended, and the sidecar upload its pieces

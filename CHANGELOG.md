@@ -21,6 +21,57 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.58.0, 2026-09-17
+
+```
+Models: unchanged
+Database: migrates
+```
+
+### Added
+
+- **Incidents** (Phase 6 chapter 1, `docs/spec/SPEC-PHASE-6.md`). A case's
+  videos that ran at the same time become an incident and play in step on
+  a page of their own. Each camera is placed on the incident clock, the
+  time of day the cameras burn into their pictures: from its checked stamp,
+  matched by sound against a placed camera, from the time its file
+  carries, or by hand, and a pill beside every camera says which. The case
+  page carries an Incidents strip under its name with Open the incident,
+  New incident in the header, and the app's offer when two or more videos
+  overlap on their clocks ("8 videos ran at the same time on 7 June 2025.
+  Make them an incident?"), with Make it, Choose myself and Not these; a
+  later video that ran during an incident is offered to it. The recordings
+  list gains Clock in the picture and Incident. The incident page: up to
+  six cameras on the wall (the office sets how many), one transport, the
+  clock in large figures, Sound from one camera, "Starts in" and "Ended
+  at" on a camera not running at the moment, the words being said and the
+  camera line under each picture, parked cameras to swap in, a strip with
+  a lane per camera (click to seek, drag to place by hand, zoom), and the
+  Cameras and Details tabs. All cameras in the viewer's head and beside a
+  chat's citation opens the incident at that moment.
+- **The sound match.** A camera without a clock is placed by comparing its
+  sound with a placed camera's, on the media worker, with no engine call:
+  the loudness of the two over time, cross-correlated; a strong match is
+  applied, a weak one shown and left to the person. NumPy joins the app
+  image for it.
+- **An Incidents page in the Panel** between Vision and Speakers: Incidents
+  (On), Incidents proposed (On), Cameras on the wall (6), Most cameras in
+  an incident (20), Stamp reads early (On), Match by sound (On).
+- Audit rows Incident made, Incident changed, Incident deleted and Camera
+  placed, in the Cases category, without a camera id or a word.
+
+### Changed
+
+- **The camera stamp is the recording's, read early.** It moves from the
+  transcript to the recording (the migration copies every stamp), so a
+  Process again keeps it, and while Stamp reads early is On it is read as
+  each playback copy lands for every video in a case, two small engine
+  calls by day, rather than with the night's vision work. Vision reads a
+  stamp only when none has been read.
+- A recording moved to another case leaves its incident; a recording
+  deleted leaves it. Opening an incident, making one and placing a camera
+  count as the case's activity.
+
 ## v1.57.0, 2026-09-16
 
 ```

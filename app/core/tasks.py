@@ -102,6 +102,35 @@ def make_playback_copy(recording_id: str) -> None:
     if recording is None:
         return
     pipeline.make_playback(recording)
+    # The copy is there: read the camera's stamp now, when the office says so
+    # (Phase 6 chapter 1), so the case page can place the camera at once.
+    from core import incidents
+
+    incidents.after_playback(recording)
+
+
+@app.task(queue="llm", name="read_stamp_early")
+def read_stamp_early(recording_id: str) -> None:
+    """The camera's stamp, read as the playback copy lands (Phase 6 chapter 1)."""
+    from core import incidents
+    from core.recordings import Recording
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is not None:
+        incidents.read_early(recording)
+
+
+@app.task(queue="media", name="match_sound")
+def match_sound(camera_id: str) -> None:
+    """One camera's sound compared with a placed camera's (Phase 6 chapter 1)."""
+    from core import incidents
+    from core.incidents import IncidentCamera
+
+    camera = (
+        IncidentCamera.objects.filter(pk=camera_id).select_related("recording").first()
+    )
+    if camera is not None and camera.match_state == incidents.MATCH_QUEUED:
+        incidents.run_match(camera)
 
 
 @app.task(queue="default", name="hand_over_job")

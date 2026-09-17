@@ -31,6 +31,7 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | whitenoise | MIT | |
 | python-docx | MIT | |
 | lxml | BSD-3-Clause | python-docx's own dependency |
+| NumPy | BSD-3-Clause | the sound match of Phase 6 chapter 1 (the cross-correlation of two cameras' loudness), in the app image since v1.58.0 |
 | python-ldap | Python-style (its own permissive licence) | directory sign-in; see ADR 0010 |
 | Markdown (Python-Markdown) | BSD-3-Clause | renders the two guides at build time; see ADR 0012 |
 | restic | BSD-2-Clause | the Backup's tool, from its official image `restic/restic` pinned by digest, run as the `backup` Compose service behind its own profile and never on the host; the image carries Alpine's openssh client for SFTP |

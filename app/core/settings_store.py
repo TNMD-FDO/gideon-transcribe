@@ -31,6 +31,7 @@ LIMITS = "limits"
 TRANSCRIPTION = "transcription"
 ASSISTANT = "assistant"
 VISION = "vision"
+INCIDENTS = "incidents"
 SPEAKERS = "speakers"
 NOTICES = "notices"
 SIGN_IN = "sign-in"
@@ -63,6 +64,7 @@ PAGES = [
     (TRANSCRIPTION, "Transcription defaults"),
     (ASSISTANT, "AI assistant"),
     (VISION, "Vision"),
+    (INCIDENTS, "Incidents"),
     (SPEAKERS, "Speakers"),
     (NOTICES, "Notices"),
     (SIGN_IN, "Sign-in and directory"),
@@ -1294,6 +1296,107 @@ def _rows() -> list[Definition]:
                 "Off offers no Enrich with vision tick and enriches nothing; "
                 "what was described stays and is hidden, not deleted."
             ),
+        ),
+        # Incidents (Phase 6 chapter 1) -------------------------------------
+        Definition(
+            key="incidents",
+            page=INCIDENTS,
+            group="Incidents",
+            name="Incidents",
+            kind=TOGGLE,
+            default=True,
+            needs="folder_management",
+            what_it_does=(
+                "A case's videos that ran at the same time become an incident "
+                "and play in step on a page of their own, each camera placed "
+                "on the clock its picture carries."
+            ),
+            when_changed=(
+                "Off hides the Incidents strip and New incident on every case "
+                "page, the Incident column, every incident page and every All "
+                "cameras button; keeps every incident and placement."
+            ),
+        ),
+        Definition(
+            key="incidents_proposed",
+            page=INCIDENTS,
+            group="Incidents",
+            name="Incidents proposed",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "The case page offers the videos whose clocks overlap as an "
+                "incident in one line with one button, and a later video to "
+                "the incident it ran during."
+            ),
+            when_changed=(
+                "The next case page drawn. Off makes no offer; New incident stays."
+            ),
+        ),
+        Definition(
+            key="incidents_wall",
+            page=INCIDENTS,
+            group="The wall",
+            name="Cameras on the wall",
+            kind=NUMBER,
+            default=6,
+            least=2,
+            most=9,
+            needs="incidents",
+            what_it_does=(
+                "How many of an incident's cameras play at once; the rest wait "
+                "as parked tiles to swap in. A workstation decodes this many "
+                "videos at once, so the figure is the office's to judge."
+            ),
+            when_changed="The next incident page opened.",
+        ),
+        Definition(
+            key="incidents_most_cameras",
+            page=INCIDENTS,
+            group="The wall",
+            name="Most cameras in an incident",
+            kind=NUMBER,
+            default=20,
+            least=2,
+            most=40,
+            needs="incidents",
+            what_it_does="New incident and the offer refuse more than this.",
+            when_changed=(
+                "The next incident made; an incident already over the figure "
+                "keeps its cameras."
+            ),
+        ),
+        Definition(
+            key="incidents_stamp_early",
+            page=INCIDENTS,
+            group="Placing",
+            name="Stamp reads early",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "Read the camera's stamp as each playback copy lands, for every "
+                "video in a case, so its cameras can be placed at once: two "
+                "small engine calls per video, by day. Needs Vision's Read the "
+                "camera's stamp. Off leaves the stamp to the vision work."
+            ),
+            when_changed="The next playback copy.",
+        ),
+        Definition(
+            key="incidents_sound_match",
+            page=INCIDENTS,
+            group="Placing",
+            name="Match by sound",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "Offer to place a camera that has no clock by comparing its "
+                "sound with a placed camera's, on the media worker, with no "
+                "engine call."
+            ),
+            when_changed="The next Cameras tab drawn.",
         ),
         Definition(
             key="speaker_check_available",

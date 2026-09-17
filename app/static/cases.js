@@ -656,3 +656,25 @@
     window.setTimeout(tick, EVERY);
   }
 }());
+
+// Incidents (Phase 6 chapter 1): the New incident dialog on the case page,
+// opened empty from the header or with the offer's videos ticked by Choose
+// myself.
+(function () {
+  "use strict";
+  var box = document.getElementById("incident-box");
+  if (!box) { return; }
+  function openWith(ids) {
+    box.querySelectorAll("input[type=checkbox]").forEach(function (one) { one.checked = ids.indexOf(one.value) !== -1; });
+    box.hidden = false;
+    var name = box.querySelector("input[name=name]");
+    if (name) { name.focus(); }
+  }
+  var open = document.getElementById("new-incident");
+  if (open) { open.addEventListener("click", function () { openWith([]); }); }
+  document.querySelectorAll(".choose-myself").forEach(function (button) {
+    button.addEventListener("click", function () { openWith(button.dataset.recordings.trim().split(/\s+/)); });
+  });
+  document.getElementById("incident-cancel").addEventListener("click", function () { box.hidden = true; });
+  box.addEventListener("click", function (event) { if (event.target === box) { box.hidden = true; } });
+})();

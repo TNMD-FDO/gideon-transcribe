@@ -20,7 +20,7 @@
       if (!Object.prototype.hasOwnProperty.call(citations, whole)) { return null; }
       var where = citations[whole];
       if (where.removed) { return { removed: true }; }
-      return { name: where.title, clock: where.clock, href: where.href, line: where.line };
+      return { name: where.title, clock: where.clock, href: where.href, line: where.line, all: where.all };
     },
     grounding: function (now) {
       if (!now.readable) { return "No recording in this case has a transcript to read yet."; }

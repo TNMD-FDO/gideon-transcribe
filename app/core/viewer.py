@@ -222,9 +222,13 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         ]
 
     job = recording.jobs.order_by("-created").first()
+    from core import incidents
 
     return {
         "recording": recording,
+        # All cameras (Phase 6 chapter 1): the incident page at this moment,
+        # for a placed camera of an incident.
+        "all_cameras": incidents.link_for(recording),
         # Which of the AI assistant's three features the page offers;
         # the panels' contents come from the assistant's own endpoint.
         "assistant": assistant.features(),

@@ -63,6 +63,10 @@
             <input type="search" id="search" placeholder="Find in transcript" aria-label="Find in transcript">
             <span id="matches" class="small muted"></span>
           </span>
+          {% if all_cameras %}
+            <a class="btn small" id="all-cameras" href="{{ all_cameras.url }}" data-starts="{{ all_cameras.starts_at }}"
+               title="Every camera of {{ all_cameras.name }} at this moment">{% icon "camera" %} All cameras</a>
+          {% endif %}
           {% if in_case %}
             <button type="button" class="tiny" id="show-case"
                     title="Show or hide the rest of the case">{% icon "menu" %} Case</button>

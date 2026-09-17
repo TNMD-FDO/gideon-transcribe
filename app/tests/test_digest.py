@@ -582,12 +582,12 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
             ),
         ],
     )
-    stamp = assistant.read_stamp(transcript, asked_by=person)
+    stamp = assistant.read_stamp(transcript.recording, asked_by=person)
     assert stamp["date"] == "06/07/2025" and stamp["time"] == "21:56:19"
     assert stamp["camera"] == "BWC2-098679" and stamp["at"] == 2.0
     assert stamp["checked"] is True
-    transcript.refresh_from_db()
-    assert transcript.stamp == stamp
+    transcript.recording.refresh_from_db()
+    assert transcript.recording.stamp == stamp
     # Two frames at the look-closer height, two seconds in and a minute on.
     assert grabbed == [([2.0], 720), ([62.0], 720)]
     system = asked[0]["messages"][0]["content"]
@@ -607,8 +607,8 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
 
     # A second frame whose clock did not move as the recording did: the
     # time is dropped, the camera id kept, and the stamp says so.
-    transcript.stamp = None
-    transcript.save(update_fields=["stamp"])
+    transcript.recording.stamp = None
+    transcript.recording.save(update_fields=["stamp"])
     asked.clear()
     answering(
         monkeypatch,
@@ -617,15 +617,15 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
             json.dumps({"date": "", "time": "21:56:19", "camera": "BWC2", "other": ""}),
         ],
     )
-    stamp = assistant.read_stamp(transcript, asked_by=person)
+    stamp = assistant.read_stamp(transcript.recording, asked_by=person)
     assert stamp["time"] == "" and stamp["camera"] == "BWC2" and not stamp["checked"]
     # Nothing read at all: an empty stamp, kept so it is not read again.
-    transcript.stamp = None
-    transcript.save(update_fields=["stamp"])
+    transcript.recording.stamp = None
+    transcript.recording.save(update_fields=["stamp"])
     answering(monkeypatch, ["not json at all"])
-    assert assistant.read_stamp(transcript, asked_by=person) == {}
-    transcript.refresh_from_db()
-    assert transcript.stamp == {} and assistant.clock_line(transcript) == ""
+    assert assistant.read_stamp(transcript.recording, asked_by=person) == {}
+    transcript.recording.refresh_from_db()
+    assert transcript.recording.stamp == {} and assistant.clock_line(transcript) == ""
 
 
 @pytest.mark.django_db
@@ -646,14 +646,14 @@ def test_the_details_and_the_state_say_the_digest_exists_but_never_show_it(
         moments_used=1,
         made_at=timezone.now(),
     )
-    transcript.stamp = {
+    ready.stamp = {
         "date": "06/07/2025",
         "time": "21:56:19",
         "camera": "BWC2-098679",
         "at": 2.0,
         "checked": True,
     }
-    transcript.save(update_fields=["stamp"])
+    ready.save(update_fields=["stamp"])
     rows = dict(client.get(f"/recording/{ready.pk}/details").json()["rows"])
     assert (
         rows["Digest"].startswith("made ")

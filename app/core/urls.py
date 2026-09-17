@@ -9,6 +9,7 @@ from core import (
     clip_pages,
     dictation_pages,
     exports,
+    incident_pages,
     live_pages,
     media_access,
     pages,
@@ -203,6 +204,43 @@ urlpatterns = [
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     # The case's videos prepared for summaries and chat, on purpose (Phase 4 ch. 7).
     path("case/<uuid:case_id>/vision", case_pages.vision_case, name="vision-case"),
+    # Incidents (Phase 6 chapter 1): the page of its own, its state and its
+    # one act endpoint; and, from the case page, New incident and the offer.
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>",
+        incident_pages.page,
+        name="incident",
+    ),
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/state",
+        incident_pages.state,
+        name="incident-state",
+    ),
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/act",
+        incident_pages.act,
+        name="incident-act",
+    ),
+    path(
+        "incident-camera/<uuid:camera_id>/lines",
+        incident_pages.lines,
+        name="incident-camera-lines",
+    ),
+    path(
+        "case/<uuid:case_id>/incidents/new",
+        incident_pages.new_incident,
+        name="new-incident",
+    ),
+    path(
+        "case/<uuid:case_id>/incidents/decline",
+        incident_pages.decline_offer,
+        name="decline-incident-offer",
+    ),
+    path(
+        "case/<uuid:case_id>/incidents/add",
+        incident_pages.add_to_incident,
+        name="add-to-incident",
+    ),
     path("case/<uuid:case_id>", case_pages.case_page, name="case"),
     # The Record page (Phase 3): a Recording made in the browser.
     # Recorded here (its old tab address redirects home), and the New recording page,

@@ -23,6 +23,7 @@ from core import (
     cases,
     engine,
     exports,
+    incidents,
     settings_store,
     tasks,
 )
@@ -72,6 +73,9 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
             "href": f"{reverse('viewer', args=[recording.pk])}?t={where['seconds']}",
             # The line it points to, for the pill's hover; never logged.
             "line": _line_at(recording, where["seconds"]),
+            # All cameras (Phase 6 chapter 1): the incident page at that
+            # moment, for a placed camera of an incident; "" otherwise.
+            "all": incidents.all_cameras_url(recording, where["seconds"]),
         }
     running = turn.state in (assistant.QUEUED, assistant.RUNNING)
     count = len(turn.readings or [])

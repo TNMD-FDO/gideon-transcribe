@@ -75,6 +75,10 @@ class Case(models.Model):
     # is restored or wiped; its files and rows stay meanwhile.
     deleted_on = models.DateField(null=True, blank=True)
 
+    # The Incident offers a person answered Not these (Phase 6 chapter 1):
+    # one key per offer, so the same set of videos is not offered twice.
+    declined_offers = models.JSONField(default=list, blank=True)
+
     class Meta:
         ordering = ["name"]
         indexes = [models.Index(fields=["owner", "name"])]
@@ -413,9 +417,15 @@ def move_recording(recording, case: Case, actor, description="", request=None) -
         recording.case = from_case
         raise
     # A Recording moved in brings its named Speakers as People of the Case.
-    from core import people
+    from core import incidents, people
 
     people.moved_in(recording, by=actor, request=request)
+    # An Incident cannot cross a case's edge (Phase 6 chapter 1): the
+    # recording leaves the one it was in, and the stamp is read for the
+    # new case when the copy is already there.
+    if from_case is not None:
+        incidents.left_the_case(recording)
+    incidents.after_playback(recording)
 
     audit.write(
         CATEGORY,

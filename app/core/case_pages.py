@@ -270,8 +270,40 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "hits": _search(case, asked) if asked else None,
             "types": cases.recording_types(),
             "size": uploads.as_gb(case.disk_bytes()),
+            # Incidents (Phase 6 chapter 1): the strip under the case name,
+            # the offers, and the videos New incident lists.
+            **_incidents_context(case),
         },
     )
+
+
+def _incidents_context(case: Case) -> dict:
+    from core import incidents
+
+    if not incidents.on():
+        return {"incidents_on": False}
+    videos = []
+    for recording in case.recordings.order_by("created"):
+        if not incidents.is_video(recording):
+            continue
+        words, tone = incidents.stamp_words(recording)
+        elsewhere = incidents.incident_of(recording)
+        videos.append(
+            {
+                "recording": recording,
+                "clock": words,
+                "tone": tone,
+                "elsewhere": elsewhere.incident.name if elsewhere else "",
+            }
+        )
+    return {
+        "incidents_on": True,
+        "incident_rows": incidents.strip_rows(case),
+        "incident_offers": incidents.offers(case),
+        "incident_videos": videos,
+        "incident_most": incidents.most_cameras(),
+        "incident_wall": incidents.wall_size(),
+    }
 
 
 def _sharing_context(case: Case, role: str) -> dict:
@@ -348,6 +380,13 @@ def _rows_for(case: Case) -> list:
         transcript = getattr(one, "transcript", None)
         one.vision_state = getattr(transcript, "prepare_state", "")
         one.vision_offered = bool(transcript is not None and vision.eligible(one))
+        # The Clock in the picture and Incident columns (Phase 6 chapter 1).
+        from core import incidents
+
+        one.clock_words, one.clock_tone = incidents.stamp_words(one)
+        camera = incidents.incident_of(one) if incidents.on() else None
+        one.incident_name = camera.incident.name if camera else ""
+        one.incident_url = camera.incident.url() if camera else ""
         rows.append(one)
     return rows
 

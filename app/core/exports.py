@@ -703,7 +703,10 @@ def stamp_row(transcript) -> str:
     """The camera's burned-in stamp as read, or nothing."""
     from core import prompts
 
-    stamp = getattr(transcript, "stamp", None) or {}
+    # The stamp is the Recording's (Phase 6 chapter 1); a caller may hold
+    # either.
+    recording = getattr(transcript, "recording", transcript)
+    stamp = getattr(recording, "stamp", None) or {}
     return prompts.stamp_row(stamp)
 
 
