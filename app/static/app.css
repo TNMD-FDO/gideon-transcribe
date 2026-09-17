@@ -2057,3 +2057,27 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
   .inc-wall, .inc-wall.count-7, .inc-wall.count-8, .inc-wall.count-9 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inc-work { max-height: none; }
 }
+
+/* The Chronology (Phase 6 chapter 2): the event box under the head, the
+   Events lane's marks and labels, the list on the Chronology tab, and the
+   add buttons under a tile. */
+.inc-event-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--accent-soft); flex: none; }
+.inc-event-box label { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-small); }
+.inc-event-box input[name="text"] { flex: 1 1 18rem; min-width: 12rem; }
+.inc-event-cams { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.inc-event-cams label { display: inline-flex; align-items: center; gap: 3px; color: var(--speaker, inherit); font-weight: 500; }
+.inc-lines .add-line { visibility: hidden; padding: 0 5px; }
+.inc-tile:hover .inc-lines .add-line:not([hidden]) { visibility: visible; }
+.inc-lines .cam-line { display: flex; gap: 6px; align-items: baseline; }
+.inc-strip .lane.events .track { height: 30px; }
+.inc-strip .lane.events .track .mk-ev { position: absolute; top: 0; bottom: 12px; width: 3px; background: var(--accent); border-radius: 2px; cursor: pointer; opacity: 0.85; }
+.inc-strip .lane.events .track .mk-ev.proposed { background: var(--warn); }
+.inc-strip .lane.events .track .lbl { position: absolute; top: 14px; font-size: 11px; white-space: nowrap; color: var(--text); padding-left: 5px; line-height: 1.3; cursor: pointer; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; }
+.inc-strip .lane.events .track .lbl.proposed { color: var(--muted); }
+.inc-events { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
+.inc-events td { padding: 6px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.inc-events tr.here td { background: var(--now); color: var(--now-ink); }
+.inc-events tr.here .muted { color: inherit; opacity: 0.8; }
+.inc-events td.t { font-family: var(--mono); white-space: nowrap; }
+.inc-events .pill.person { background: var(--clip-soft); color: var(--clip); }
+.inc-events tr.proposed td { color: var(--muted); }

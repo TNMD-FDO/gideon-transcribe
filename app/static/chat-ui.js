@@ -148,7 +148,7 @@
             (where.seconds !== undefined ? " data-seconds='" + where.seconds + "'" : "") + title + ">" +
             "<svg class='i' aria-hidden='true'><use href='#i-" + (where.camera ? "camera" : "play") + "'></use></svg> " + label + "</a>" +
             // All cameras (Phase 6 chapter 1): the incident page at that moment.
-            (where.all ? " <a href='" + escape(where.all) + "' class='cite all' title='Every camera of the incident at this moment'>all cameras</a>" : "");
+            (where.all ? " <a href='" + escape(where.all + (where.line ? "&event=" + encodeURIComponent(where.line.slice(0, 500)) : "")) + "' class='cite all' title='Every camera of the incident at this moment, with this line ready as an event'>all cameras</a>" : "");
         });
       };
     }

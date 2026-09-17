@@ -305,11 +305,11 @@ The Incident page's grid of cameras playing in step, up to the number the office
 _Avoid_: multiview, grid, mosaic, split screen
 
 **Chronology**:
-An Incident's list of Events, in time order, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2, proposed.
+An Incident's list of Events, in time order, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2.
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
 
 **Event**:
-One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person; in chapter 3 the assistant may propose one, which joins only when accepted. Phase 6 chapter 2, proposed.
+One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; in chapter 3 the assistant may propose one, which joins only when accepted. Phase 6 chapter 2.
 _Avoid_: mark (that is a live recording's), moment (that is a description), bookmark, flag
 
 **Person**:

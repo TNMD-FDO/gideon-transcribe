@@ -1942,6 +1942,8 @@
   link.addEventListener("click", function () {
     var player = document.getElementById("player");
     var at = parseFloat(link.dataset.starts || "0") + (player ? player.currentTime : 0);
-    link.href = link.href.split("?")[0] + "?t=" + at.toFixed(2);
+    var said = document.getElementById("now-text");
+    var words = said && said.textContent.trim() ? "&event=" + encodeURIComponent(said.textContent.trim().slice(0, 500)) : "";
+    link.href = link.href.split("?")[0] + "?t=" + at.toFixed(2) + words;
   });
 })();

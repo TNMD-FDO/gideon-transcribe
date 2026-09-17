@@ -222,6 +222,11 @@ urlpatterns = [
         name="incident-act",
     ),
     path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/export/<str:kind>",
+        incident_pages.export,
+        name="incident-export",
+    ),
+    path(
         "incident-camera/<uuid:camera_id>/lines",
         incident_pages.lines,
         name="incident-camera-lines",

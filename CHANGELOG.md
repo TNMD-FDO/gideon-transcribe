@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.59.0, 2026-09-17
+
+```
+Models: unchanged
+Database: migrates
+```
+
+### Added
+
+- **The Chronology** (Phase 6 chapter 2). An incident's list of events,
+  each a time of day on the cameras' clock, an optional end, a line of
+  text, its source (a person, the words of a camera, or what a camera
+  showed) and the cameras that show it. Add event here in the head, or
+  the E key, adds one at the moment being watched; + event on the line
+  being spoken under a camera adds those words, quoted as they stand, and
+  on a camera line adds what the camera showed; a chat citation's all
+  cameras link, and All cameras in the viewer's head, open the incident
+  with the cited or spoken line ready as an event. The Chronology tab is
+  first on the incident page, its times play every camera from there, the
+  event nearest the moment is marked as the page plays, and Edit changes
+  or removes one. The Events lane at the foot of the strip shows every
+  event as a mark with its first words.
+- **Three exports** from the incident page's head: the chronology as a
+  Word document (the cameras and how each was placed, the strip drawn by
+  the page as a picture in the light palette, the events in a table), as a
+  spreadsheet (.csv), and the picture alone. Nothing image-like is
+  stored; the picture is drawn when asked for. Each writes the audit row
+  Chronology exported with the format.
+- Audit rows Event added (with the source), Event changed and Event
+  removed, in the Cases category, without a word of an event.
+- No new setting: Incidents governs the whole.
+
 ## v1.58.0, 2026-09-17
 
 ```

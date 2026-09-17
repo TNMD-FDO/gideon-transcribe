@@ -6,12 +6,13 @@
 
 {% block content %}
   {% comment %}
-    The Incident page (Phase 6 chapter 1): the cameras of one event played
-    in step. The head with the clock; the Wall of cameras on the left, the
+    The Incident page (Phase 6 chapters 1 and 2): the cameras of one event
+    played in step, and its Chronology. The head with the clock, Add event
+    here and Export; the Wall of cameras on the left, the Chronology,
     Cameras and Details tabs on the right; the strip across the width under
-    them, a lane per camera. incident.js draws everything below the head
-    from the state, keeps the players in step, and posts every change to
-    the one act endpoint.
+    them, a lane per camera and the Events lane last. incident.js draws
+    everything below the head from the state, keeps the players in step,
+    and posts every change to the one act endpoint.
   {% endcomment %}
   {% if role == "admin" %}
     <p class="banner">
@@ -27,8 +28,36 @@
     </b>
     <span class="inc-clock" id="inc-clock" title="The incident clock: the time of day the cameras' clocks give">00:00:00</span>
     <span class="muted small" id="inc-date"></span>
+    <button type="button" class="small primary" id="add-event" title="An event at this moment (E)">{% icon "plus" %} Add event here</button>
+    <details class="menu" id="export-menu">
+      <summary class="btn small" title="Export the chronology">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
+      <ul>
+        <li><button type="button" id="export-word">{% icon "word" %} Chronology to Word</button></li>
+        <li><a href="{% url 'incident-export' case.pk incident.pk 'csv' %}">{% icon "text" %} Chronology as a spreadsheet (.csv)</a></li>
+        <li><button type="button" id="export-picture">{% icon "camera" %} The strip as a picture (.png)</button></li>
+      </ul>
+    </details>
     <a class="button small" id="done" href="{% url 'case' case.pk %}">Done</a>
   </div>
+
+  {% comment %}
+    The event box (chapter 2): under the head, opened by Add event here, E,
+    a line under a tile, a citation's address, or Edit on the Chronology.
+  {% endcomment %}
+  <form class="inc-event-box" id="event-box" hidden autocomplete="off">
+    <input type="hidden" name="event">
+    <input type="hidden" name="source" value="person">
+    <input type="hidden" name="camera">
+    <span class="eyebrow" id="event-title">New event</span>
+    <label>At <input type="text" name="when" class="mono" size="9" aria-label="When it happened"></label>
+    <label>until <input type="text" name="until_when" class="mono" size="9" placeholder="optional" aria-label="When it ended"></label>
+    <input type="text" name="text" class="grow" maxlength="500" placeholder="What happened" aria-label="What happened">
+    <span class="inc-event-cams" id="event-cams" title="The cameras that show it"></span>
+    <button type="submit" class="small primary" id="event-save">Add</button>
+    <button type="button" class="small ghost" id="event-cancel">Cancel</button>
+    <button type="button" class="small ghost danger" id="event-remove" hidden>Remove</button>
+    <span class="small muted" id="event-said"></span>
+  </form>
 
   <div class="inc-desk">
     <div class="inc-stage">
@@ -54,11 +83,13 @@
     </div>
     <div class="work inc-work">
       <div class="tabbar" role="tablist">
-        <button type="button" class="tab on" data-panel="cameras">Cameras</button>
+        <button type="button" class="tab" data-panel="chronology">Chronology</button>
+        <button type="button" class="tab" data-panel="cameras">Cameras</button>
         <button type="button" class="tab" data-panel="details">Details</button>
       </div>
       <div class="panels">
-        <div class="panel" id="panel-cameras"></div>
+        <div class="panel" id="panel-chronology" hidden></div>
+        <div class="panel" id="panel-cameras" hidden></div>
         <div class="panel" id="panel-details" hidden></div>
       </div>
     </div>
@@ -68,7 +99,7 @@
     <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
     <div id="lanes"></div>
     <div class="foot small muted">
-      <span>Click a lane to play every camera from there. Drag a camera's bar to place it by hand; a thin bar is a camera not on the wall.</span>
+      <span>Click a lane to play every camera from there. Drag a camera's bar to place it by hand; a thin bar is a camera not on the wall. A mark on the Events lane is an event.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>
@@ -110,10 +141,13 @@
     window.INCIDENT = {
       act: "{% url 'incident-act' case.pk incident.pk %}",
       state: "{% url 'incident-state' case.pk incident.pk %}",
+      exportWord: "{% url 'incident-export' case.pk incident.pk 'word' %}",
+      exportPicture: "{% url 'incident-export' case.pk incident.pk 'picture' %}",
       lines: "/incident-camera/",
       at: {{ at|floatformat:2 }},
       role: "{{ role }}"
     };
   </script>
+  {{ event_words|json_script:"event-words" }}
   <script src="{% static 'incident.js' %}"></script>
 {% endblock %}

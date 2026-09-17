@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, incidents, sharing
+from core import cases, chronology, incidents, sharing
 from core.case_pages import _their_case
 from core.incidents import Incident, IncidentCamera
 from core.media_access import media_root
@@ -55,6 +55,8 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "state": state,
             "at": _asked_moment(request, incident, state),
             "others": _others(case, incident),
+            # A citation's words, for the event box to open with (chapter 2).
+            "event_words": request.GET.get("event", "")[: chronology.TEXT_MOST],
         },
     )
 
@@ -172,6 +174,8 @@ def state_json(incident: Incident, user) -> dict:
             _camera_json(one, colours[str(one.pk)], str(one.pk) in wall)
             for one in ordered
         ],
+        # The Chronology (chapter 2).
+        "events": chronology.events_json(incident),
     }
 
 
@@ -298,9 +302,73 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
     elif action == "delete":
         incidents.delete(incident, by=user, request=request)
         return JsonResponse({"ok": True, "redirect": reverse("case", args=[case.pk])})
+    elif action == "event_add":
+        try:
+            chronology.add(incident, _event_fields(request), by=user, request=request)
+        except ValueError as why:
+            return JsonResponse({"error": str(why)}, status=400)
+    elif action == "event_change":
+        event = get_object_or_404(
+            chronology.Event, pk=request.POST.get("event"), incident=incident
+        )
+        try:
+            chronology.change(event, _event_fields(request), by=user, request=request)
+        except ValueError as why:
+            return JsonResponse({"error": str(why)}, status=400)
+    elif action == "event_remove":
+        event = get_object_or_404(
+            chronology.Event, pk=request.POST.get("event"), incident=incident
+        )
+        chronology.remove(event, by=user, request=request)
     else:
         return JsonResponse({"error": "Unknown action"}, status=400)
     return JsonResponse({"ok": True, "said": said, "state": state_json(incident, user)})
+
+
+def _event_fields(request) -> dict:
+    """An Event's fields as the box posts them; the cameras only when given."""
+    fields = {
+        key: request.POST.get(key, "")
+        for key in ("at", "until", "text", "source", "camera")
+    }
+    if request.POST.get("cameras_given"):
+        fields["cameras"] = request.POST.getlist("cameras")
+    return fields
+
+
+@login_required
+def export(request: HttpRequest, case_id, incident_id, kind: str) -> HttpResponse:
+    """The Chronology's three exports (chapter 2): Word with the strip as the
+    page drew it, the spreadsheet, and the picture alone."""
+    _, incident = _incident(request, case_id, incident_id)
+    if kind == "csv":
+        body = chronology.spreadsheet(incident)
+        content_type = "text/csv; charset=utf-8"
+        name = chronology.export_name(incident, "csv")
+    elif kind == "word":
+        if request.method != "POST":
+            raise Http404("the Word export is asked for from the page")
+        picture = request.FILES.get("picture")
+        body = chronology.word(
+            incident, picture.read() if picture else None, request.user.shown_name
+        )
+        content_type = (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        name = chronology.export_name(incident, "docx")
+    elif kind == "picture":
+        picture = request.FILES.get("picture") if request.method == "POST" else None
+        if picture is None:
+            raise Http404("the picture is drawn by the page")
+        body = picture.read()
+        content_type = "image/png"
+        name = chronology.export_name(incident, "png")
+    else:
+        raise Http404("no such export")
+    chronology.record_export(request, incident, kind)
+    response = HttpResponse(body, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{name}"'
+    return response
 
 
 # From the case page --------------------------------------------------------------
