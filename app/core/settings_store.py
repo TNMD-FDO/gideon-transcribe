@@ -1398,6 +1398,125 @@ def _rows() -> list[Definition]:
             ),
             when_changed="The next Cameras tab drawn.",
         ),
+        # The assistant on the Incident (Phase 6 chapter 3) --------------
+        Definition(
+            key="incidents_case_chat",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Case chat knows the incidents",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "The case chat is told each synced camera's start by the "
+                "incident clock, so it answers with the time of day and reads "
+                "every camera at the same moment."
+            ),
+            when_changed=(
+                "The next case chat question. Off reads the transcripts as "
+                "before, with no incident block."
+            ),
+        ),
+        Definition(
+            key="incidents_propose",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Assistant proposes events",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "Propose events on the Chronology tab: the assistant reads each "
+                "synced camera's record and proposes events, which join the "
+                "chronology only when a person accepts them."
+            ),
+            when_changed=(
+                "The next incident page drawn. Off hides Propose events and "
+                "keeps the proposals that wait."
+            ),
+        ),
+        Definition(
+            key="incidents_events_answer_tokens",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Proposed events answer cap",
+            kind=NUMBER,
+            default=2000,
+            least=500,
+            most=16000,
+            unit="tokens",
+            needs="incidents_propose",
+            what_it_does=(
+                "The most one camera's answer, a JSON list of proposals, may "
+                "run to; an answer cut off at the cap keeps the proposals that "
+                "were finished."
+            ),
+            when_changed="The next run.",
+        ),
+        Definition(
+            key="incidents_events_time_seconds",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Proposed events time limit",
+            kind=NUMBER,
+            default=180,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="incidents_propose",
+            what_it_does="How long one camera's call may take.",
+            when_changed="The next run.",
+        ),
+        Definition(
+            key="incidents_memo",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Incident memo",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "The Memo tab on the incident page: a memo written across every "
+                "synced camera on the chronology's events, exported to Word "
+                "with the chronology."
+            ),
+            when_changed=(
+                "The next incident page drawn. Off hides the tab and keeps every memo."
+            ),
+        ),
+        Definition(
+            key="incidents_memo_answer_tokens",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Incident memo answer cap",
+            kind=NUMBER,
+            default=4000,
+            least=500,
+            most=16000,
+            unit="tokens",
+            needs="incidents_memo",
+            what_it_does=(
+                'The most a memo may run to; a cap hit shows "The memo was cut short."'
+            ),
+            when_changed="The next memo.",
+        ),
+        Definition(
+            key="incidents_memo_time_seconds",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Incident memo time limit",
+            kind=NUMBER,
+            default=600,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="incidents_memo",
+            what_it_does=(
+                "How long the memo's call may take. Doubled while Let the model "
+                "think is On."
+            ),
+            when_changed="The next memo.",
+        ),
         Definition(
             key="speaker_check_available",
             page=SPEAKERS,
@@ -2331,6 +2450,8 @@ def time_limit_seconds(feature: str) -> int:
         "speaker_suggestions": "suggestions_time_seconds",
         "moment": "moments_time_seconds",
         "speaker_check": "speaker_check_time_seconds",
+        "incident_events": "incidents_events_time_seconds",
+        "incident_memo": "incidents_memo_time_seconds",
     }[feature]
     return get(key)
 
@@ -2443,6 +2564,14 @@ def speaker_check_window_seconds() -> int:
 
 def speaker_check_answer_cap() -> int:
     return get("speaker_check_answer_tokens")
+
+
+def incident_events_answer_cap() -> int:
+    return get("incidents_events_answer_tokens")
+
+
+def incident_memo_answer_cap() -> int:
+    return get("incidents_memo_answer_tokens")
 
 
 def vision_window() -> tuple[str, str]:

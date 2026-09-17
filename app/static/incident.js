@@ -152,23 +152,33 @@
   function take(state) {
     S = state;
     S.events = S.events || [];
+    S.proposals = S.proposals || {};
+    S.memo = S.memo || {};
     drawHead();
     drawWall();
     drawStrip();
     drawChronology();
+    drawMemo();
     drawCameras();
     drawDetails();
     if (soundCamera && !cameraById(soundCamera)) { soundCamera = null; }
     if (!soundCamera && wallCameras().length) { soundCamera = wallCameras()[0].id; }
     drawSoundChoice();
     tick();
+    // The assistant at work (chapter 3): the page asks again until it lands.
+    if (S.proposals.busy || S.memo.busy) {
+      window.clearTimeout(pollTimer);
+      pollTimer = window.setTimeout(refresh, 3000);
+    }
   }
+
+  function keptEvents() { return S.events.filter(function (one) { return !one.proposed; }); }
 
   // The head ----------------------------------------------------------------------------
 
   function drawHead() {
     var count = S.incident.count;
-    var events = S.events.length;
+    var events = keptEvents().length;
     facts.textContent = count + " camera" + (count === 1 ? "" : "s") + " · " + S.incident.span_words +
       " · " + events + " event" + (events === 1 ? "" : "s");
     dateBox.textContent = S.incident.has_clock ? S.incident.clock_date : "no camera clock; times are from the first camera";
@@ -730,11 +740,20 @@
 
   function drawChronology() {
     var box = document.getElementById("panel-chronology");
-    var kept = S.events.filter(function (one) { return !one.proposed; });
+    var kept = keptEvents();
     var proposed = S.events.filter(function (one) { return one.proposed; });
+    var P = S.proposals || {};
+    var M = S.memo || {};
+    var lead = kept.length ? kept.length + " event" + (kept.length === 1 ? "" : "s") + " on the chronology." : "No events yet. Add one at the moment you are watching, or from a line under a camera.";
+    if (M.state === "done" && kept.length) { lead += " The memo was written on " + M.events_count + " of them."; }
     var html = "<div class='row' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
-      "<p class='lead grow' style='margin: 0'>" + (kept.length ? kept.length + " event" + (kept.length === 1 ? "" : "s") + " on the chronology." : "No events yet. Add one at the moment you are watching, or from a line under a camera.") + "</p>" +
+      "<p class='lead grow' style='margin: 0'>" + escape(lead) + "</p>" +
       "<button type='button' class='small primary' id='add-event-here'>Add event here</button></div>";
+    if (P.on) {
+      html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
+        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera and proposes events; nothing joins the chronology until you accept it'>Propose events</button>" +
+        "<span class='small muted' id='propose-said'>" + escape(P.words || (P.possible ? "" : "Sync a camera that has a transcript first.")) + "</span></div>";
+    }
     if (kept.length) {
       html += "<table class='inc-events'><tbody>";
       kept.forEach(function (one) {
@@ -747,11 +766,15 @@
       html += "</tbody></table>";
     }
     if (proposed.length) {
-      html += "<h3 style='font-size: var(--t-heading); margin: 18px 0 6px'>Proposed by the assistant <span class='muted small' style='font-weight: 400'>nothing joins the chronology until you accept it</span></h3>";
+      html += "<div class='row' style='align-items: baseline; gap: 8px; margin: 18px 0 6px'><h3 class='grow' style='font-size: var(--t-heading); margin: 0'>Proposed by the assistant (" + proposed.length + ") <span class='muted small' style='font-weight: 400'>nothing joins the chronology until you accept it</span></h3>" +
+        (proposed.length > 1 ? "<button type='button' class='tiny' id='accept-all'>Accept all</button>" : "") + "</div>";
       html += "<table class='inc-events'><tbody>";
       proposed.forEach(function (one) {
-        html += "<tr data-event='" + one.id + "' class='proposed'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a></td>" +
-          "<td>" + escape(one.text) + "</td><td><span class='pill warn small'>Proposed</span></td><td class='acts'></td></tr>";
+        html += "<tr data-event='" + one.id + "' class='proposed'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
+          (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
+          "<td title='" + quoted(one.rests_on ? "Rests on: " + one.rests_on : "") + "'>" + escape(one.text) + (one.rests_on ? "<div class='muted small rests'>Rests on: " + escape(one.rests_on) + "</div>" : "") + "</td>" +
+          "<td><span class='pill warn small'>" + escape(one.source_words) + "</span></td>" +
+          "<td class='acts nowrap'><button type='button' class='tiny primary' data-accept='" + one.id + "'>Accept</button> <button type='button' class='tiny ghost' data-dismiss='" + one.id + "'>Dismiss</button></td></tr>";
       });
       html += "</tbody></table>";
     }
@@ -761,12 +784,105 @@
     markCurrentEvent(now());
   }
 
+  // The Memo tab (chapter 3): the memo with its times as citations and its
+  // event marks, or the way to write one.
+  function memoHtml(text, citations, numbers) {
+    return text.split(/\n+/).filter(function (line) { return line.trim(); }).map(function (line) {
+      var stripped = line.replace(/^[#* ]+/, "").trim();
+      if (/:$/.test(stripped) && stripped.length <= 60) { return "<h3>" + escape(stripped.slice(0, -1)) + "</h3>"; }
+      var body = escape(stripped).replace(/\[(\d{1,2}):(\d{2}):(\d{2})\]/g, function (whole) {
+        if (citations && Object.prototype.hasOwnProperty.call(citations, whole)) {
+          return "<a href='#' class='cite' data-at='" + citations[whole] + "' title='Every camera at this moment'>" + whole + "</a>";
+        }
+        return whole;
+      }).replace(/\(Event (\d+)\)/g, function (whole, n) {
+        var id = numbers && numbers[n];
+        if (!id) { return whole; }
+        return "<a href='#' class='evmark' data-event='" + id + "' title='Event " + n + " on the chronology'>Event " + n + "</a>";
+      });
+      return "<p>" + body + "</p>";
+    }).join("");
+  }
+
+  function drawMemo() {
+    var box = document.getElementById("panel-memo");
+    var exportMemo = document.getElementById("export-memo");
+    if (!box) { return; }
+    var M = S.memo || {};
+    var html = "";
+    if (exportMemo) { exportMemo.hidden = M.state !== "done"; }
+    if (!M.state) {
+      html = "<p class='lead'>" + escape(M.before || "") + "</p>" +
+        (M.possible ? "<button type='button' class='small primary' id='memo-write'>Write the memo</button>" : "<p class='muted small'>" + escape(M.why_not || "") + "</p>") +
+        "<p class='muted small' style='margin-top: 10px'>The memo is written by the assistant across every synced camera, on the chronology's events. Every time in it plays every camera from there.</p>";
+    } else if (M.busy) {
+      html = "<p class='lead'>" + escape(M.stage || "Waiting for the engine") + "...</p>" +
+        "<p class='muted small'>The memo is being written; it will show here when it lands.</p>" +
+        "<button type='button' class='small ghost' id='memo-cancel'>Cancel</button>";
+    } else if (M.state === "failed") {
+      html = "<p class='problem'>" + escape(M.reason_words || "The memo could not be written.") + "</p>" +
+        "<button type='button' class='small primary' id='memo-write'>Try again</button>";
+    } else {
+      html = (M.notice ? "<p class='notice small' style='margin: 0 0 8px'>" + escape(M.notice) + "</p>" : "") +
+        "<div class='row' style='align-items: center; gap: 8px; margin: 0 0 6px'><b class='grow'>Incident memo</b>" +
+        "<button type='button' class='small' id='memo-export'>Memo to Word</button>" +
+        "<button type='button' class='small ghost' id='memo-write'>Regenerate</button></div>" +
+        "<p class='muted small' style='margin: 0 0 8px'>" + escape(M.written_words || "") + "</p>" +
+        (M.stale_words ? "<p class='notice warn small' style='margin: 0 0 10px'>" + escape(M.stale_words) + "</p>" : "") +
+        "<div class='inc-memo'>" + memoHtml(M.text || "", M.citations, M.event_numbers) + "</div>" +
+        (M.cut_short ? "<p class='muted small'>The memo was cut short.</p>" : "");
+    }
+    box.innerHTML = html;
+  }
+
+  var memoPanel = document.getElementById("panel-memo");
+  if (memoPanel) {
+    memoPanel.addEventListener("click", function (event) {
+      var cite = event.target.closest(".cite");
+      if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.at)); return; }
+      var mark = event.target.closest(".evmark");
+      if (mark) {
+        event.preventDefault();
+        var found = eventById(mark.dataset.event);
+        if (found) { seek(found.at); showTab("chronology"); flashRow(found.id); }
+        return;
+      }
+      if (event.target.closest("#memo-write")) {
+        var again = (S.memo || {}).state === "done";
+        (again ? window.UI.confirm({ title: "Write the memo again?", body: "The memo you have is replaced. Export it first if you want to keep it.", ok: "Regenerate" }) : Promise.resolve(true))
+          .then(function (yes) { if (yes) { post({ action: "memo" }); } });
+        return;
+      }
+      if (event.target.closest("#memo-cancel")) { post({ action: "memo_cancel" }); return; }
+      if (event.target.closest("#memo-export")) { drawPicture().then(function (blob) { return exportWith(C.exportMemo, blob); }); }
+    });
+  }
+  var exportMemoButton = document.getElementById("export-memo");
+  if (exportMemoButton) {
+    exportMemoButton.addEventListener("click", function () {
+      document.getElementById("export-menu").removeAttribute("open");
+      drawPicture().then(function (blob) { return exportWith(C.exportMemo, blob); });
+    });
+  }
+
   document.getElementById("panel-chronology").addEventListener("click", function (event) {
     var cite = event.target.closest(".cite");
     if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.at)); return; }
     var edit = event.target.closest("[data-edit]");
     if (edit) { var found = eventById(edit.dataset.edit); if (found) { openEventBox(found); } return; }
-    if (event.target.closest("#add-event-here")) { openEventBox({ at: now() }); }
+    if (event.target.closest("#add-event-here")) { openEventBox({ at: now() }); return; }
+    // The assistant's proposals (chapter 3).
+    var accept = event.target.closest("[data-accept]");
+    if (accept) { post({ action: "event_accept", event: accept.dataset.accept }); return; }
+    var dismiss = event.target.closest("[data-dismiss]");
+    if (dismiss) { post({ action: "event_dismiss", event: dismiss.dataset.dismiss }); return; }
+    if (event.target.closest("#accept-all")) { post({ action: "event_accept_all" }); return; }
+    if (event.target.closest("#propose-events")) {
+      var button = event.target.closest("#propose-events");
+      button.disabled = true;
+      document.getElementById("propose-said").textContent = "Reading the cameras...";
+      post({ action: "propose" });
+    }
   });
 
   document.getElementById("add-event").addEventListener("click", function () { openEventBox({ at: now() }); });
@@ -979,7 +1095,7 @@
       html += "<tr data-row='" + cam.id + "'" + (cam.synced ? "" : " class='unsynced'") + "><td><b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><div class='muted small'>" + escape(cam.title) + "</div>" +
         (cam.clock ? "<div class='small'><span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span></div>" : "") +
         (cam.file_time ? "<div class='muted small'>the file says " + escape(cam.file_time) + "</div>" : "") + "</td>" +
-        "<td class='mono'>" + (placed ? timeOfDay(cam.starts_at) : "—") + "</td>" +
+        "<td class='mono'>" + (placed ? timeOfDay(cam.starts_at) : "") + "</td>" +
         "<td><span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" +
         (cam.placed_by && cam.synced ? "<div class='muted small'>by " + escape(cam.placed_by) + "</div>" : "") + matchLine(cam) + "</td>" +
         "<td class='acts'><details class='inc-place'><summary class='small'>Sync</summary><div class='inc-place-box'>" + placeControls(cam) + "</div></details>" +
@@ -1076,7 +1192,10 @@
     html += "<dt>Clock</dt><dd>" + (I.has_clock ? "the time of day on " + escape(I.clock_date) + ", from the first camera placed from a checked clock" : "no camera clock; times count from the first camera") + "</dd>";
     html += "<dt>Span</dt><dd>" + escape(I.span_words) + "</dd>";
     html += "<dt>Cameras</dt><dd>" + I.count + ", " + escape(I.placed_words) + "</dd>";
-    html += "<dt>Events</dt><dd>" + S.events.length + "</dd>";
+    html += "<dt>Events</dt><dd>" + keptEvents().length + "</dd>";
+    if (C.role === "admin" && S.memo && S.memo.state === "done") {
+      html += "<dt>Memo</dt><dd>written on " + S.memo.events_count + " events from an incident record of " + S.memo.record_lines + " lines (" + escape((S.memo.cameras_used || []).concat(S.memo.cameras_transcript_only || []).join(", ") || "no camera") + ")</dd>";
+    }
     html += "</dl><h3 style='font-size: var(--t-body); margin: 14px 0 6px'>Each camera's stamp</h3><dl class='kv'>";
     S.cameras.forEach(function (cam) {
       html += "<dt>" + escape(cam.camera_id) + "</dt><dd>" + (cam.clock ? escape(cam.clock) : "no stamp read") + (cam.file_time ? "; the file says " + escape(cam.file_time) : "") + "</dd>";
@@ -1089,7 +1208,7 @@
 
   function showTab(name) {
     Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) { tab.classList.toggle("on", tab.dataset.panel === name); });
-    ["chronology", "cameras", "details"].forEach(function (one) { document.getElementById("panel-" + one).hidden = one !== name; });
+    ["chronology", "memo", "cameras", "details"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name; } });
     if (name === "chronology") { currentEventId = null; markCurrentEvent(now()); }
   }
   Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) {

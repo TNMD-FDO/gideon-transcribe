@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 6 specification
 
-The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 is written for the build.
+The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 as `v1.61.0`.
 
 ## About this document
 
@@ -362,6 +362,7 @@ The maintainer's ask and answers of 2026-09-17, and the mock-ups chosen the same
 
 ## Amendments applied
 
+- 2026-09-17: chapter 3 built as v1.61.0 the same day, with these decisions left to the build: the proposals' answer is a JSON list of up to sixty items per call, thirty kept per camera, each item the time in the recording, an end, the line and the words it rests on, the first forty folded characters of which must be found in what the camera was given; a transcript-only camera is read in as few calls as fit the window, whole lines only; a dismissed proposal is kept as a dismissed row and a later run offers nothing within five seconds of it on the same camera; the incident record's line shape is "camera: [hh:mm:ss] ..." with a Digest line's number dropped and a transcript line's numbered label dropped, hh:mm:ss into the incident when it has no clock; transcript-only cameras drop to a line the longest first; the memo is one row per Incident, reset by Regenerate; its citations are the [hh:mm:ss] inside the span and its marks the (Event n) of the Chronology's numbering at the time of writing; the Word export prints the memo's parts as headings, then the Chronology's pages after a page break. The speaker-label rule is applied in the lines endpoint (a numbered label blanked), in the record, and in the fixed incident rules.
 - 2026-09-17: Speaker labels on the Incident page: a name set or accepted on a recording's Speakers page carries over; a numbered label does not show, on the page, in the event box, on the Chronology, or to the assistant. Reconciling labels across cameras is deferred (chapter 4). For the build with chapter 3.
 - 2026-09-17: chapter 3 written for the build after v1.60.1, from the maintainer's asks (the memo across cameras on a page of its own, people's Events first with the assistant proposing later, the memo written on the Chronology, and the chronology as a smarter presentation built on the model's summaries); the incident record, the app's merge of the Digests onto the Incident clock, is what the memo is written from.
 - 2026-09-17 (v1.60.1): Sync is a button on every tile's head, not a menu entry; the Wall follows the saved order; Add cameras is drawn from the page's state.

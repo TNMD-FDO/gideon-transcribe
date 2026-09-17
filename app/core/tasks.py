@@ -133,6 +133,22 @@ def match_sound(camera_id: str) -> None:
         incidents.run_match(camera)
 
 
+@app.task(queue="llm", name="propose_incident_events")
+def propose_incident_events(incident_id: str, attempt: int = 1) -> None:
+    """Propose events on an Incident (Phase 6 chapter 3)."""
+    from core import incident_assistant
+
+    incident_assistant.propose(incident_id, attempt)
+
+
+@app.task(queue="llm", name="write_incident_memo")
+def write_incident_memo(memo_id: str, attempt: int = 1) -> None:
+    """The Incident memo (Phase 6 chapter 3)."""
+    from core import incident_assistant
+
+    incident_assistant.write_memo(memo_id, attempt)
+
+
 @app.task(queue="default", name="hand_over_job")
 def hand_over_job(job_id: str) -> None:
     """Give a Job's Sides to the WhisperX service, and start watching."""

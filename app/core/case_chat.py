@@ -435,6 +435,13 @@ def answer_case_turn(turn_id) -> None:
             prompts.with_camera_rules(prompts.CASE_CHAT_FORMAT, any(digests.values())),
         )
         people = people_line(case)
+        # The Incidents' placements (Phase 6 chapter 3): each synced camera's
+        # start by the incident clock, so an answer gives the time of day.
+        from core import incident_assistant
+
+        placements = incident_assistant.placements_block(case, read)
+        if placements:
+            people = people + "\n\n" + placements
         earlier = [
             (one.question, one.answer)
             for one in chat.turns.filter(state=DONE, number__lt=turn.number)

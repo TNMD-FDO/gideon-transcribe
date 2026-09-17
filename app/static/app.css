@@ -2082,6 +2082,11 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-events td.t { font-family: var(--mono); white-space: nowrap; }
 .inc-events .pill.person { background: var(--clip-soft); color: var(--clip); }
 .inc-events tr.proposed td { color: var(--muted); }
+.inc-events .rests { margin-top: 2px; }
+.inc-memo p { margin: 0 0 8px; }
+.inc-memo h3 { font-size: var(--t-heading); margin: 16px 0 6px; }
+.inc-memo .evmark { display: inline-block; font-size: 11px; border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0 6px; margin-left: 4px; vertical-align: middle; text-decoration: none; }
+.inc-memo .evmark:hover { background: var(--accent); color: var(--bg); }
 
 /* v1.60.0: Sync on every tile, tiles dragged into place, the Across control,
    and wide screens. */

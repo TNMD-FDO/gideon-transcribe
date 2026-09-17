@@ -52,8 +52,12 @@ class Event(models.Model):
     )
     # The cameras that show it: camera row ids, the person's to change.
     cameras = models.JSONField(default=list, blank=True)
-    # Chapter 3's: an Event the assistant proposed and nobody has accepted.
+    # Chapter 3's: an Event the assistant proposed and nobody has accepted,
+    # the words it rests on, and whether a person put it away (kept so a
+    # later run does not offer it again).
     proposed = models.BooleanField(default=False)
+    rests_on = models.CharField(max_length=TEXT_MOST, blank=True, default="")
+    dismissed = models.BooleanField(default=False)
     added_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
@@ -187,14 +191,16 @@ def source_words(event: Event, names: dict) -> str:
     if event.source == CAMERA:
         return f"Camera, {camera}"
     if event.source == ASSISTANT:
-        return "Proposed by the assistant"
+        return f"Proposed from {camera}" if event.proposed else f"Assistant, {camera}"
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
 
 
 def events_json(incident) -> list[dict]:
     names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
     rows = []
-    for event in incident.events.select_related("added_by", "changed_by"):
+    for event in incident.events.filter(dismissed=False).select_related(
+        "added_by", "changed_by"
+    ):
         rows.append(
             {
                 "id": str(event.pk),
@@ -209,6 +215,7 @@ def events_json(incident) -> list[dict]:
                     names[one] for one in event.cameras if one in names
                 ),
                 "proposed": event.proposed,
+                "rests_on": event.rests_on if event.proposed else "",
                 "added_by": event.added_by.shown_name if event.added_by else "",
             }
         )
@@ -222,7 +229,7 @@ def _rows(incident) -> list[dict]:
     """The table every export prints, numbered in time order."""
     names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
     rows = []
-    for number, event in enumerate(incident.events.all(), 1):
+    for number, event in enumerate(incident.events.filter(proposed=False), 1):
         rows.append(
             {
                 "number": number,
@@ -239,7 +246,7 @@ def _rows(incident) -> list[dict]:
                 ),
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 "added": event.added,
-                "proposed": event.proposed,
+                "assistant": event.source == ASSISTANT,
             }
         )
     return rows
@@ -294,13 +301,25 @@ QUOTE_LEGEND = (
 
 def word(incident, picture: bytes | None, exported_by: str) -> bytes:
     """The Chronology as a Word document, in the app's export shape."""
+    from core import exports
+
+    document = exports._open_record_document()
+    exports._office_head(document)
+    pages(document, incident, picture, exported_by)
+    holder = io.BytesIO()
+    document.save(holder)
+    return holder.getvalue()
+
+
+def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
+    """The Chronology's pages: the head, the cameras, the strip as a picture,
+    the events table and the legends. The memo's export (chapter 3) carries
+    them as its last pages."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt
 
     from core import exports
 
-    document = exports._open_record_document()
-    exports._office_head(document)
     heading = document.add_paragraph(f"Chronology: {incident.name}")
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     heading.runs[0].bold = True
@@ -376,16 +395,13 @@ def word(incident, picture: bytes | None, exported_by: str) -> bytes:
     for legend in (WORDS_LEGEND, QUOTE_LEGEND):
         line = document.add_paragraph(legend)
         line.runs[0].italic = True
-    if any(row["proposed"] for row in rows):
+    if any(row["assistant"] for row in rows):
         from core import assistant
 
         notice = assistant.notice("", timezone.now())
         if notice:
             line = document.add_paragraph(notice)
             line.runs[0].italic = True
-    holder = io.BytesIO()
-    document.save(holder)
-    return holder.getvalue()
 
 
 def export_name(incident, ending: str) -> str:

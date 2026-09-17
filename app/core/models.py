@@ -288,6 +288,7 @@ from core.chronology import Event  # noqa: E402, F401
 from core.clips import Clip  # noqa: E402, F401
 from core.dictation import DictationShare  # noqa: E402, F401
 from core.engine import EngineStatus  # noqa: E402, F401
+from core.incident_assistant import IncidentMemo  # noqa: E402, F401
 from core.incidents import Incident, IncidentCamera  # noqa: E402, F401
 from core.jobs import Job, Run, Segment, Transcript  # noqa: E402, F401
 from core.mail import MailStatus  # noqa: E402, F401

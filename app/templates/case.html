@@ -186,7 +186,7 @@
                       <td>{{ row.cameras }}</td>
                       <td class="mono">{{ row.span }}</td>
                       <td><span class="pill {{ row.tone }} small">{{ row.placed }}</span></td>
-                      <td>{{ row.events }}</td>
+                      <td>{{ row.events }}{% if row.memo %}<div class="muted small nowrap">{{ row.memo }}</div>{% endif %}</td>
                       <td class="muted nowrap">{{ row.incident.created|date:"d M Y" }}{% if row.incident.created_by %} by {{ row.incident.created_by.shown_name }}{% endif %}</td>
                       <td class="acts"><a href="{{ row.url }}" class="btn primary small">Open the incident</a></td>
                     </tr>

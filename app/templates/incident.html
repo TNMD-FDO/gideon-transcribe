@@ -6,10 +6,10 @@
 
 {% block content %}
   {% comment %}
-    The Incident page (Phase 6 chapters 1 and 2): the cameras of one event
-    played in step, and its Chronology. The head with the clock, Add event
-    here and Export; the Wall of cameras on the left, the Chronology,
-    Cameras and Details tabs on the right; the strip across the width under
+    The Incident page (Phase 6 chapters 1 to 3): the cameras of one event
+    played in step, its Chronology, and the assistant's memo. The head with
+    the clock, Add event here and Export; the Wall of cameras on the left,
+    the Chronology, Memo, Cameras and Details tabs on the right; the strip across the width under
     them, a lane per camera and the Events lane last. incident.js draws
     everything below the head from the state, keeps the players in step,
     and posts every change to the one act endpoint.
@@ -35,6 +35,7 @@
         <li><button type="button" id="export-word">{% icon "word" %} Chronology to Word</button></li>
         <li><a href="{% url 'incident-export' case.pk incident.pk 'csv' %}">{% icon "text" %} Chronology as a spreadsheet (.csv)</a></li>
         <li><button type="button" id="export-picture">{% icon "camera" %} The strip as a picture (.png)</button></li>
+        {% if state.memo.on %}<li><button type="button" id="export-memo" hidden>{% icon "word" %} Memo to Word</button></li>{% endif %}
       </ul>
     </details>
     <a class="button small" id="done" href="{% url 'case' case.pk %}">Done</a>
@@ -87,11 +88,13 @@
     <div class="work inc-work">
       <div class="tabbar" role="tablist">
         <button type="button" class="tab" data-panel="chronology">Chronology</button>
+        {% if state.memo.on %}<button type="button" class="tab" data-panel="memo">Memo</button>{% endif %}
         <button type="button" class="tab" data-panel="cameras">Cameras</button>
         <button type="button" class="tab" data-panel="details">Details</button>
       </div>
       <div class="panels">
         <div class="panel" id="panel-chronology" hidden></div>
+        {% if state.memo.on %}<div class="panel" id="panel-memo" hidden></div>{% endif %}
         <div class="panel" id="panel-cameras" hidden></div>
         <div class="panel" id="panel-details" hidden></div>
       </div>
@@ -136,6 +139,7 @@
       state: "{% url 'incident-state' case.pk incident.pk %}",
       exportWord: "{% url 'incident-export' case.pk incident.pk 'word' %}",
       exportPicture: "{% url 'incident-export' case.pk incident.pk 'picture' %}",
+      exportMemo: "{% url 'incident-export' case.pk incident.pk 'memo' %}",
       lines: "/incident-camera/",
       at: {{ at|floatformat:2 }},
       role: "{{ role }}"

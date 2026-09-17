@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, chronology, incidents, sharing
+from core import cases, chronology, incident_assistant, incidents, sharing
 from core.case_pages import _their_case
 from core.incidents import Incident, IncidentCamera
 from core.media_access import media_root
@@ -193,6 +193,9 @@ def state_json(incident: Incident, user) -> dict:
         ],
         # The Chronology (chapter 2).
         "events": chronology.events_json(incident),
+        # The assistant on the Incident (chapter 3).
+        "proposals": incident_assistant.proposals_json(incident),
+        "memo": incident_assistant.memo_json(incident),
     }
 
 
@@ -221,15 +224,17 @@ def lines(request: HttpRequest, camera_id) -> JsonResponse:
         .distinct()
     )
     colours = {name: colour_for(index) for index, name in enumerate(names)}
-    from core.assistant import DONE, Moment
+    from core.assistant import DONE, Moment, _is_a_label
 
+    # A numbered label (Speaker 1) is this recording's alone and means
+    # nothing beside another camera's, so only a name shows (chapter 3).
     return JsonResponse(
         {
             "segments": [
                 {
                     "start": one.start,
                     "end": one.end,
-                    "speaker": one.speaker,
+                    "speaker": "" if _is_a_label(one.speaker or "") else one.speaker,
                     "colour": colours.get(one.speaker, ""),
                     "text": one.text,
                 }
@@ -337,6 +342,37 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
             chronology.Event, pk=request.POST.get("event"), incident=incident
         )
         chronology.remove(event, by=user, request=request)
+    # The assistant on the Incident (chapter 3).
+    elif action == "propose":
+        if not incident_assistant.ask_for_proposals(incident, by=user):
+            return JsonResponse(
+                {"error": "Nothing to read yet: sync a camera that has a transcript."},
+                status=400,
+            )
+        said = "Reading the cameras; a minute or two."
+    elif action in ("event_accept", "event_dismiss"):
+        event = get_object_or_404(
+            chronology.Event,
+            pk=request.POST.get("event"),
+            incident=incident,
+            proposed=True,
+        )
+        if action == "event_accept":
+            incident_assistant.accept(event, by=user, request=request)
+        else:
+            incident_assistant.dismiss(event, by=user, request=request)
+    elif action == "event_accept_all":
+        count = incident_assistant.accept_all(incident, by=user, request=request)
+        said = f"{count} event{'' if count == 1 else 's'} added."
+    elif action == "memo":
+        if incident_assistant.ask_for_memo(incident, by=user) is None:
+            _, why = incident_assistant.memo_possible(incident)
+            return JsonResponse(
+                {"error": why or "The memo cannot be written."}, status=400
+            )
+        said = "Writing the memo."
+    elif action == "memo_cancel":
+        incident_assistant.cancel_memo(incident)
     else:
         return JsonResponse({"error": "Unknown action"}, status=400)
     return JsonResponse({"ok": True, "said": said, "state": state_json(incident, user)})
@@ -380,6 +416,25 @@ def export(request: HttpRequest, case_id, incident_id, kind: str) -> HttpRespons
         body = picture.read()
         content_type = "image/png"
         name = chronology.export_name(incident, "png")
+    elif kind == "memo":
+        # The Incident memo (chapter 3), with the Chronology as its last pages.
+        if request.method != "POST":
+            raise Http404("the memo export is asked for from the page")
+        memo = incident_assistant.memo_of(incident)
+        if memo is None or memo.state != incident_assistant.DONE:
+            raise Http404("no memo yet")
+        picture = request.FILES.get("picture")
+        body = incident_assistant.memo_word(
+            memo, picture.read() if picture else None, request.user.shown_name
+        )
+        content_type = (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        name = incident_assistant.memo_export_name(incident)
+        incident_assistant.record_memo_export(request, incident)
+        response = HttpResponse(body, content_type=content_type)
+        response["Content-Disposition"] = f'attachment; filename="{name}"'
+        return response
     else:
         raise Http404("no such export")
     chronology.record_export(request, incident, kind)

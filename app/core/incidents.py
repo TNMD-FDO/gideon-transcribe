@@ -140,6 +140,16 @@ class Incident(models.Model):
     # The camera rows on the Wall, in order, once a person has swapped one;
     # empty means the clock's order.
     wall = models.JSONField(default=list, blank=True)
+    # The last Propose events run (chapter 3): its state, why it failed, when
+    # it ended, who pressed it, and what it found.
+    proposals_state = models.CharField(max_length=10, blank=True, default="")
+    proposals_reason = models.CharField(max_length=40, blank=True, default="")
+    proposals_at = models.DateTimeField(null=True, blank=True)
+    proposals_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    proposals_found = models.IntegerField(default=0)
+    proposals_cameras = models.IntegerField(default=0)
 
     class Meta:
         ordering = ["created"]
@@ -801,6 +811,8 @@ def placed_words(incident: Incident) -> tuple[str, str]:
 
 def strip_rows(case) -> list[dict]:
     """The case page's Incidents strip, one line per Incident."""
+    from core import incident_assistant
+
     rows = []
     for incident in case.incidents.all():
         words, tone = placed_words(incident)
@@ -811,7 +823,8 @@ def strip_rows(case) -> list[dict]:
                 "span": span_words(incident),
                 "placed": words,
                 "tone": tone,
-                "events": incident.events.count(),
+                "events": incident.events.filter(proposed=False).count(),
+                "memo": incident_assistant.memo_line(incident),
                 "url": incident.url(),
             }
         )

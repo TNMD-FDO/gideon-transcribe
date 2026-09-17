@@ -444,7 +444,7 @@ The date, the clock time and the camera id a body-worn or fixed camera burns int
 The fixed instructions Summary and Chat are given whenever Camera lines are handed to them: the two sources kept apart in every sentence, neither winning, a person named only from the words, nothing inferred from the picture, only the listed times looked at, and a camera fact told briefly. Not editable; the templates are. Phase 4.
 
 **Prompt template**:
-An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, the Moment and Find moments instructions, and every Summary template. Each carries a version.
+An admin-editable instruction text the AI assistant works from: the Ground rules, the Chat instructions, the Speaker-suggestion instructions, the Moment and Find moments instructions, the Case chat, Digest and Speaker check instructions, the Proposed events and Incident memo instructions (Phase 6 chapter 3), and every Summary template. Each carries a version.
 
 **AI notice**:
 The admin-set wording shown at the top of every Summary and Chat and printed on their exports, saying the text is AI-generated and unverified.

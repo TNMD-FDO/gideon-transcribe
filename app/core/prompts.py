@@ -88,10 +88,12 @@ SHIPPED_HISTORY = {
     "prompt:ground_rules": ("7a65498ab25fbf63",),
     "prompt:chat": ("0db99390974f3bef", "a31c1f00877b1dce"),
     "prompt:suggestions": ("122c6e749064c4d6",),
-    "prompt:case_chat": ("0003b7162b10fbfd",),
+    "prompt:case_chat": ("0003b7162b10fbfd", "6ad6dc860e5113fb"),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
     "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
+    "prompt:incident_events": ("6414affa68b3ecb0",),
+    "prompt:incident_memo": ("bd737802d03d8bd6",),
 }
 
 
@@ -325,7 +327,12 @@ CASE_CHAT = (
     "recordings bear on the question, say which says what. Keep answers short "
     "unless the user asks for detail. If a question asks for legal advice, an "
     "opinion on guilt or credibility, or anything outside these transcripts, "
-    "reply: I can only answer from the transcripts in this case."
+    "reply: I can only answer from the transcripts in this case. When a "
+    "recording is a camera of an incident whose clock you were given and the "
+    "question asks when something happened, give the time of day by the "
+    "cameras' clock beside the reference; asked what another camera showed at "
+    "that moment, read that camera at the same time of day, and say when it "
+    "had not started or had stopped."
 )
 
 SUGGESTIONS = (
@@ -385,6 +392,83 @@ SUGGESTIONS_FORMAT = (
     "Witness. A role is the expected answer when no name is spoken; say unknown "
     "only when even a role cannot be told. A speaker's label, such as Speaker 3 "
     "or Side 1 Speaker 2, is never a name or a role."
+)
+# The assistant on the Incident (Phase 6 chapter 3). Proposed events: one
+# camera at a time, its record or its transcript, and the events that stand.
+INCIDENT_EVENTS = (
+    "You are reading one camera of an incident: the record of what happened "
+    "on it (a condensation of its words and its picture) or its transcript, "
+    "with the camera's start by the incident's clock. Propose the events a "
+    "member of staff would want on the incident's chronology: a person or a "
+    "vehicle arriving or leaving; a command, a warning or an advisement of "
+    "rights; a statement that carries weight; a search, a restraint, a use of "
+    "force or an arrest as the words or the camera describe it, never as a "
+    "conclusion (say handcuffs were put on, not that someone was arrested); a "
+    "thing handed over, found or taken; a move to another place; the camera "
+    "starting or stopping. One line each, plain words, third person, past "
+    "tense, saying what happened and not what it means, up to 200 characters. "
+    "A speaker's numbered label (Speaker 1, Speaker 4) is this camera's alone "
+    "and means nothing on another camera: name a person only by a name the "
+    "words give; otherwise say what was said, and who said it only as the "
+    "words make plain. Do not propose anything already on the list of events "
+    "given; propose only what this camera adds. Every proposal rests on a line "
+    "you were given: copy that line's words after it."
+)
+INCIDENT_EVENTS_FORMAT = (
+    "Answer with the JSON asked for: a list under events, each item the time "
+    "in this recording as hh:mm:ss copied from the line it rests on, an end as "
+    "hh:mm:ss when the thing ran a while or an empty string, the line of text, "
+    "and rests_on, the words of the line it rests on copied as given. An empty "
+    "list when this camera adds nothing."
+)
+# The Incident memo: a memo across cameras, written on the chronology.
+INCIDENT_MEMO = (
+    "Write a memo a member of staff hands to an attorney about one incident "
+    "seen across several cameras, from the incident record and the chronology "
+    "given. Third person, past tense, plain words, grouped by subject and never "
+    "minute by minute. The parts, in this order, each heading on its own line "
+    "followed by a colon. Summary: one paragraph a reader in a hurry could "
+    "stop at, with the date and the times of day the incident ran. The "
+    "cameras: one line each, what the camera is, when it starts and ends by "
+    "the clock, and whose it is only as the words say. People: each person who "
+    "speaks, is spoken of, or is in view, with how the record identifies them "
+    "and where, and which cameras show them; a name only as the words give "
+    "it, a role only as the words give it, a person seen only in the picture "
+    "by clothing, position or what they did, never named. What happened: the "
+    "substance in a few paragraphs, each on one subject, the chronology's "
+    "events in their order, and what each camera adds where it adds "
+    "something. Commands, warnings, and rights: every command, warning and "
+    "advisement of rights spoken, quoted exactly, with the speaker as the "
+    "words name them, the time of day and the camera it was heard on. "
+    "Statements that matter: exact quotes that carry weight, with who said "
+    "them as the words make plain, the time and the camera, and whether it "
+    "answered a question or was said unprompted. Names, places, and dates. "
+    "Unclear parts: a stretch no camera showed, a thing the cameras or the "
+    "words disagree on, and an event the record does not bear out, said "
+    "plainly. No closing section of points for the attorney: the memo ends at "
+    "the facts."
+)
+INCIDENT_MEMO_FORMAT = (
+    "Write the memo as plain text with each part's heading on its own line, "
+    "followed by a colon. Give every time as [hh:mm:ss] copied from the record "
+    "or the chronology. Do not add parts the template does not ask for."
+)
+# The incident rules, fixed: the clock, the events' marks, the cameras, and
+# the labels (a numbered label is one camera's alone).
+INCIDENT_RULES = (
+    "This memo is written across the cameras of one incident, on one clock. "
+    "Every time is the time of day by the incident's clock, written as "
+    "[hh:mm:ss] exactly as the record and the chronology give it, never a "
+    "recording's own elapsed time. A sentence that rests on one of the "
+    "chronology's events carries the event's number after its time, as "
+    "(Event 4); the memo never contradicts an event, and where the record "
+    "does not bear an event out, Unclear parts says so. What one camera shows "
+    "and another does not is said by the camera's name. A camera's "
+    "description of the picture stays a description. A speaker's numbered "
+    "label (Speaker 1, Speaker 4) belongs to one camera and means nothing on "
+    "another: attribute a line to a person only by a name the words give or "
+    "the office set, otherwise to the camera it was heard on. Cover every "
+    "camera in the record and name none that is not in it."
 )
 SPEAKER_CHECK_FORMAT = (
     "Answer with the JSON asked for: a list under moves, each item the line's "
@@ -741,6 +825,62 @@ def speaker_check_schema(speakers: list[str]) -> dict:
         "required": ["moves"],
         "additionalProperties": False,
     }
+
+
+def incident_events_schema() -> dict:
+    """The proposals' answer: a list of events, each a time, an end, a line
+    and the words it rests on."""
+    return {
+        "type": "object",
+        "properties": {
+            "events": {
+                "type": "array",
+                "maxItems": 60,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "time": {"type": "string"},
+                        "end": {"type": "string"},
+                        "text": {"type": "string"},
+                        "rests_on": {"type": "string"},
+                    },
+                    "required": ["time", "end", "text", "rests_on"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["events"],
+        "additionalProperties": False,
+    }
+
+
+def incident_events_input(
+    camera: str, starts: str, ends: str, nature: str, known: list[str]
+) -> str:
+    """One camera as the proposals read it: its place on the clock, the
+    events that stand, and what follows is its record or its transcript."""
+    listed = "\n".join(known) if known else "none yet"
+    return (
+        f"Camera {camera} starts {starts} and ends {ends}. Times in the lines "
+        "below are this recording's own, from its start.\n\n"
+        f"Events already on the chronology, by the incident's clock:\n{listed}\n\n"
+        f"What follows is {nature}:"
+    )
+
+
+def incident_memo_input(cameras_line: str, events: list[str], record: str) -> str:
+    """What the memo is written from: the cameras, the chronology, the record."""
+    listed = "\n".join(events) if events else "none; write on the record alone."
+    return "\n\n".join(
+        [
+            cameras_line,
+            "The chronology, as the office wrote it:\n" + listed,
+            "The incident record (the cameras' records merged onto the incident "
+            "clock; every time is by that clock, and each line names the camera "
+            "it comes from):\n" + record,
+            LENGTH_LINES["detailed"],
+        ]
+    )
 
 
 def speaker_check_input(lines: list, speakers: list[str]) -> str:

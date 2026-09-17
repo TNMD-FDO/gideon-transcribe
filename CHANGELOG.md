@@ -21,6 +21,65 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.61.0, 2026-09-17
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Phase 6 chapter 3, the assistant on the Incident, and the rule for
+speaker labels across cameras.
+
+### Added
+
+- **The case chat knows the incidents.** A recording that is a synced
+  camera of an incident is read with its start by the cameras' clock, in
+  a block after the case's people, so an answer says when something
+  happened by the time of day and reads every camera at that moment. The
+  Case chat template gains the sentences that say so (an unedited copy
+  takes the new wording by itself). Switch: Case chat knows the incidents.
+- **Proposed events.** Propose events on the Chronology tab: the assistant
+  reads each synced camera's record (or its transcript) one call at a
+  time and proposes events, each with the line it rests on, checked by
+  the app before it is shown. They wait under Proposed by the assistant
+  with Accept, Dismiss and Accept all; nothing joins the chronology, the
+  exports or the memo unaccepted, and a dismissed one is not offered
+  again. Switches: Assistant proposes events, its answer cap (2,000
+  tokens) and time limit (180 s). The Proposed events template on the
+  Templates page.
+- **The Incident memo.** A Memo tab on the incident page. The app merges
+  every synced camera's digest onto the incident clock, camera by camera,
+  into one time-ordered record (made for the call, never stored), and the
+  assistant writes a memo from it on the chronology's events: every time
+  the time of day and a citation that plays every camera, and a sentence
+  written on an event carrying its number. The tab says what the memo
+  was written from and which cameras were left out, says when the
+  chronology or the cameras changed since, and offers Regenerate. Memo
+  to Word carries the chronology as its last pages. Switches: Incident
+  memo, its answer cap (4,000 tokens) and time limit (600 s). The
+  Incident memo template on the Templates page.
+- The case page's Incidents tab says whether an incident has a memo and
+  whether events are newer than it.
+
+### Changed
+
+- **Speaker labels on an incident.** The words under a camera show a
+  speaker's name only when a person set or accepted it on that
+  recording's Speakers page; a numbered label (Speaker 1, Speaker 4) is
+  not shown, since each recording is labelled on its own and the same
+  person carries a different number on each camera. The assistant is
+  told the same rule for the memo and the proposals.
+- The chronology's exports and counts leave proposals out; an event
+  accepted from a proposal reads "Assistant, <camera>" and the Word
+  export prints the AI notice when any event came that way.
+
+### Audit rows
+
+AI assistant call with features `incident_events` and `incident_memo`;
+Events proposed; Event added (source assistant); Event dismissed;
+Incident memo exported. None holds a word of a proposal or the memo.
+
 ## v1.60.1, 2026-09-17
 
 ```
