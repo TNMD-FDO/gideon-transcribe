@@ -36,23 +36,31 @@ CLOCK_UNCHECKED = "clock_unchecked"
 SOUND = "sound"
 FILE = "file"
 HAND = "hand"
+# The app's best guess for a camera with no clock (v1.60.0): its file's time
+# when the Incident has a clock and the file carries one, else the
+# Incident's start. On the wall, marked Not synced yet, until Sync fixes it.
+GUESS = "guess"
 
 PLACED_WORDS = {
-    NOT_PLACED: "Not placed",
+    NOT_PLACED: "Not synced yet",
+    GUESS: "Not synced yet",
     CLOCK: "From its clock, checked",
     CLOCK_UNCHECKED: "From its clock, unchecked",
     SOUND: "Matched by sound",
     FILE: "From its file, unchecked",
-    HAND: "Placed by hand",
+    HAND: "Synced by hand",
 }
 PLACED_TONES = {
     NOT_PLACED: "warn",
+    GUESS: "warn",
     CLOCK: "ok",
     CLOCK_UNCHECKED: "warn",
     SOUND: "ok",
     FILE: "warn",
     HAND: "",
 }
+# The states a person has settled, as against the app's guess.
+SYNCED = (CLOCK, CLOCK_UNCHECKED, SOUND, FILE, HAND)
 
 # The sound match's states, on the camera row while one runs.
 MATCH_QUEUED = "queued"
@@ -187,7 +195,12 @@ class IncidentCamera(models.Model):
         return self.recording.title
 
     def is_placed(self) -> bool:
+        """On the clock, by a person's or the app's doing: on the wall."""
         return self.starts_at is not None and self.placed != NOT_PLACED
+
+    def is_synced(self) -> bool:
+        """Settled, as against the app's guess."""
+        return self.starts_at is not None and self.placed in SYNCED
 
     def length(self) -> float:
         return float(self.recording.duration_seconds or 0.0)
@@ -242,7 +255,8 @@ def stamp_words(recording) -> tuple[str, str]:
     if stamp is None:
         return "not read yet", ""
     if not stamp.get("time"):
-        return "no clock in the picture", "warn"
+        # Many videos carry no clock; that is not a fault, so nothing shows.
+        return "", ""
     date = (stamp.get("date") or "").strip()
     when = f"{date} {stamp['time']}".strip()
     return (
@@ -481,7 +495,33 @@ def _add(incident: Incident, recordings, *, by) -> list[IncidentCamera]:
     for camera in ordered:
         if clock_zero_of(camera.recording) is not None and not camera.is_placed():
             place_from_clock(camera, by=by, quietly=True)
+    for camera in ordered:
+        if not camera.is_placed():
+            guess(camera)
     return made
+
+
+def guess(camera: IncidentCamera) -> None:
+    """The app's best guess for a camera with no clock: on the wall, marked
+    Not synced yet, so Sync has something to nudge."""
+    incident = camera.incident
+    _, second = file_time_of(camera.recording)
+    if incident.clock_zero is not None and second is not None:
+        starts_at = _wrapped(second - incident.clock_zero)
+    else:
+        low, _ = span_of(incident)
+        starts_at = low if low is not None else 0.0
+    camera.starts_at = float(starts_at)
+    camera.placed = GUESS
+    camera.save(update_fields=["starts_at", "placed"])
+
+
+def guess_the_unplaced(incident: Incident) -> None:
+    """Cameras added before v1.60.0 with no place yet get the guess when the
+    page next draws them."""
+    for camera in incident.cameras.all():
+        if not camera.is_placed():
+            guess(camera)
 
 
 def add_cameras(incident: Incident, recordings, *, by, request=None) -> int:
@@ -641,7 +681,7 @@ def apply_match(camera: IncidentCamera, *, by, request=None) -> bool:
     against = camera.match_against
     if camera.match_state != MATCH_DONE or camera.match_lag is None or against is None:
         return False
-    if against.starts_at is None:
+    if not against.is_synced():
         return False
     _placed(
         camera,
@@ -656,7 +696,7 @@ def apply_match(camera: IncidentCamera, *, by, request=None) -> bool:
 
 def ask_for_match(camera: IncidentCamera, against: IncidentCamera, *, by) -> bool:
     """Queue the sound match on the media worker."""
-    if not sound_match_on() or not against.is_placed() or against.pk == camera.pk:
+    if not sound_match_on() or not against.is_synced() or against.pk == camera.pk:
         return False
     camera.match_state = MATCH_QUEUED
     camera.match_against = against
@@ -752,11 +792,11 @@ def span_words(incident: Incident) -> str:
 
 def placed_words(incident: Incident) -> tuple[str, str]:
     cameras = list(incident.cameras.all())
-    placed = sum(1 for one in cameras if one.is_placed())
+    synced = sum(1 for one in cameras if one.is_synced())
     if not cameras:
         return "no cameras", "warn"
-    words = f"{placed} of {len(cameras)} placed"
-    return words, "ok" if placed == len(cameras) else "warn"
+    words = f"{synced} of {len(cameras)} synced"
+    return words, "ok" if synced == len(cameras) else "warn"
 
 
 def strip_rows(case) -> list[dict]:
@@ -792,6 +832,9 @@ def link_for(recording) -> dict | None:
         return None
     camera = incident_of(recording)
     if camera is None or not camera.is_placed():
+        return None
+    # A guessed camera is on the wall but not in step: All cameras waits.
+    if not camera.is_synced():
         return None
     return {
         "url": camera.incident.url(),

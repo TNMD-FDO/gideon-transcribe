@@ -297,8 +297,8 @@ The time of day, with its date, that an Incident's cameras run on, taken from th
 _Avoid_: timeline, offset, master clock
 
 **Placed**:
-How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; Placed by hand; or Not placed. A camera not placed is never on the Wall. Phase 6.
-_Avoid_: aligned, synced, calibrated
+How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; Synced by hand; or Not synced yet (the app's guess, from v1.60.0: the file's time, else the Incident's start, until Sync on the camera fixes it). Every camera in an Incident is on the Wall; the page's control for a camera's place is **Sync**. Phase 6.
+_Avoid_: aligned, calibrated, offset
 
 **Wall**:
 The Incident page's grid of cameras playing in step, up to the number the office sets (six shipped), one of them with the sound; the rest of the Incident's cameras wait beside it as parked tiles to swap in. Phase 6.

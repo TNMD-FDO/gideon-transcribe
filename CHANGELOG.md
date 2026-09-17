@@ -21,6 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.60.0, 2026-09-17
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The tuning pass over the incident page from the maintainer's first use.
+
+### Changed
+
+- **Sync is the one control for a camera's place.** Every tile has a menu
+  at its top right with Sync this camera, Swap out, Open the recording and
+  Remove from incident. Sync opens the nudge buttons (a second or a tenth
+  either way, with the camera's start on the clock beside them), Type a
+  time, From its clock, From its file and Match the sound, right on the
+  camera, so a person nudges it into step while the wall plays. The
+  Cameras tab's Place and Adjust read Sync too.
+- **Every camera is on the wall.** A camera with no clock is no longer
+  parked as Not placed; the app puts it on the wall at its best guess, the
+  time its file carries or else the incident's start, marked **Not synced
+  yet** until Sync fixes it. Placed by hand reads Synced by hand; an
+  incident's line reads "3 of 4 synced".
+- **Tiles are dragged into place** on the wall, and **Across** in the
+  transport sets how many sit side by side (Auto, 2, 3 or 4), remembered
+  in the browser. Auto uses four across on a wide screen, and the
+  right-hand area gets more room from about 1900 pixels.
+- **What the vision model saw** no longer prints under the tiles; the words
+  being said stay.
+- **The clock is shown only where one was read.** The Clock column leaves
+  the recordings tab; the Incidents tab's list of videos and the New
+  incident dialog show a clock where the picture carries one and nothing
+  otherwise, since many videos have none and that is not a fault.
+
 ## v1.59.1, 2026-09-17
 
 ```

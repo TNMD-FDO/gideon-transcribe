@@ -28,7 +28,7 @@
       <div class="modal-bg" id="incident-box" hidden>
         <div class="modal">
           <h2 style="margin: 0 0 4px">New incident</h2>
-          <p class="muted small" style="margin: 0 0 12px">Tick the cameras that ran at the same time. Up to {{ incident_most }} in an incident; {{ incident_wall }} play at once. A video without a clock in its picture is placed on the incident page, by sound or by hand.</p>
+          <p class="muted small" style="margin: 0 0 12px">Tick the cameras that ran at the same time. Up to {{ incident_most }} in an incident; {{ incident_wall }} play at once. A video without a clock in its picture is synced on the incident page, by sound or by hand.</p>
           <form method="post" action="{% url 'new-incident' case.pk %}" id="incident-form">
             {% csrf_token %}
             <label class="field">Name<input type="text" name="name" maxlength="200" placeholder="The date of the first clock, unless you type one"></label>
@@ -197,10 +197,10 @@
           {% endif %}
           {% with loose=incident_videos %}
             <h2 style="margin-top: 26px; font-size: var(--t-heading)">Videos in this case</h2>
-            <p class="muted small" style="margin: 0 0 8px">Each video's clock, as read from its picture, and the incident it is in. A video with no clock is placed on the incident page, by sound or by hand.</p>
+            <p class="muted small" style="margin: 0 0 8px">Each video, the clock read from its picture where it carries one, and the incident it is in. A video with no clock is synced on the incident page, by sound or by hand.</p>
             {% if loose %}
               <table class="tbl">
-                <thead><tr><th>Recording</th><th>Clock in the picture</th><th>Incident</th></tr></thead>
+                <thead><tr><th>Recording</th><th>Clock</th><th>Incident</th></tr></thead>
                 <tbody>
                   {% for one in loose %}
                     <tr>
@@ -434,7 +434,7 @@
           <div class="tbl-wrap">
           <table class="tbl" id="recordings">
             <thead>
-              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Vision</th>{% if incidents_on %}<th>Clock in the picture</th><th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
+              <tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
@@ -447,8 +447,7 @@
                   <td class="muted">{{ recording.speakers_in_words }}</td>
                   <td class="prepared">{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>
                   {% if incidents_on %}
-                    <td class="clock">{% if recording.clock_words %}<span class="pill {{ recording.clock_tone }} small">{{ recording.clock_words }}</span>{% endif %}</td>
-                    <td class="incident">{% if recording.incident_name %}<a href="{{ recording.incident_url }}">{{ recording.incident_name }}</a>{% elif recording.clock_words %}<span class="muted">none</span>{% endif %}</td>
+                    <td class="incident">{% if recording.incident_name %}<a href="{{ recording.incident_url }}">{{ recording.incident_name }}</a>{% elif recording.is_video_for_incidents %}<span class="muted">none</span>{% endif %}</td>
                   {% endif %}
                   <td class="muted nowrap">
                     {{ recording.created|date:"d M Y" }}
@@ -461,7 +460,7 @@
                   </td>
                 </tr>
                 <tr class="detail-row" hidden>
-                  <td colspan="{% if incidents_on %}9{% else %}7{% endif %}">
+                  <td colspan="{% if incidents_on %}8{% else %}7{% endif %}">
                     <div class="detail" id="detail-{{ recording.pk }}" data-recording="{{ recording.pk }}">
                       {% if recording.description %}
                         <p class="small" style="margin: 0 0 8px">{{ recording.description }}</p>

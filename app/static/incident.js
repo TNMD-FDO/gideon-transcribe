@@ -52,6 +52,8 @@
   var dragging = null;
   var pollTimer = null;
   var currentEventId = null;
+  var draggedTile = null;
+  var across = 0;              // columns on the wall; 0 is auto
 
   function now() {
     if (!playing) { return moment; }
@@ -175,15 +177,52 @@
     tile.className = "inc-tile";
     tile.dataset.camera = cam.id;
     tile.style.setProperty("--speaker", cam.colour);
+    tile.draggable = true;
     tile.innerHTML =
       "<div class='inc-tile-head'><span class='dot'></span><b title='" + quoted(cam.title) + "'>" + escape(cam.camera_id) + "</b>" +
       "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(cam.placed_words) + "</span>" +
-      "<label class='small sound-pick'><input type='radio' name='sound-tile' value='" + cam.id + "'> Sound</label></div>" +
+      "<label class='small sound-pick'><input type='radio' name='sound-tile' value='" + cam.id + "'> Sound</label>" +
+      "<details class='menu tile-menu'><summary class='tiny' title='Sync, swap out, remove, open'>⋯</summary><ul>" +
+      "<li><button type='button' data-tile='sync'>Sync this camera</button></li>" +
+      "<li><button type='button' data-tile='swap'>Swap out</button></li>" +
+      "<li><a href='" + escape(cam.viewer_url) + "'>Open the recording</a></li>" +
+      "<li class='sep'></li><li><button type='button' class='danger' data-tile='remove'>Remove from incident</button></li></ul></details></div>" +
+      "<div class='inc-sync' hidden></div>" +
       "<div class='inc-well'>" + (cam.media_url ? "<video preload='metadata' playsinline muted></video>" : "<p class='preparing small'>Playback is being prepared.</p>") +
       "<div class='state' hidden></div></div>" +
       "<div class='inc-lines'>" +
-      "<div class='said'><span class='who'></span> <span class='txt muted'>…</span> <button type='button' class='tiny ghost add-line' data-kind='words' title='Add this line as an event' hidden>+ event</button></div>" +
-      "<div class='cam-line' hidden><span class='cam muted'></span> <button type='button' class='tiny ghost add-line' data-kind='camera' title='Add what the camera showed as an event'>+ event</button></div></div>";
+      "<div class='said'><span class='who'></span> <span class='txt muted'>…</span> <button type='button' class='tiny ghost add-line' data-kind='words' title='Add this line as an event' hidden>+ event</button></div></div>";
+    tile.querySelector(".tile-menu").addEventListener("click", function (event) {
+      var button = event.target.closest("[data-tile]");
+      if (!button) { return; }
+      tile.querySelector(".tile-menu").removeAttribute("open");
+      if (button.dataset.tile === "sync") { toggleSync(tile, cam); }
+      else if (button.dataset.tile === "swap") { swapOut(cam.id); }
+      else if (button.dataset.tile === "remove") {
+        window.UI.confirm({ title: "Remove " + cam.camera_id + " from this incident?", body: "The recording stays in the case; only its place here goes.", ok: "Remove" }).then(function (yes) { if (yes) { post({ action: "remove", camera: cam.id }); } });
+      }
+    });
+    tile.addEventListener("dragstart", function (event) {
+      if (event.target.closest("video, button, input, details")) { event.preventDefault(); return; }
+      draggedTile = cam.id;
+      event.dataTransfer.effectAllowed = "move";
+      try { event.dataTransfer.setData("text/plain", cam.id); } catch (ignored) { /* an older browser */ }
+    });
+    tile.addEventListener("dragover", function (event) { if (draggedTile && draggedTile !== cam.id) { event.preventDefault(); tile.classList.add("over"); } });
+    tile.addEventListener("dragleave", function () { tile.classList.remove("over"); });
+    tile.addEventListener("drop", function (event) {
+      event.preventDefault();
+      tile.classList.remove("over");
+      if (!draggedTile || draggedTile === cam.id) { return; }
+      var order = wallCameras().map(function (one) { return one.id; });
+      var from = order.indexOf(draggedTile), to = order.indexOf(cam.id);
+      if (from < 0 || to < 0) { return; }
+      order.splice(from, 1);
+      order.splice(to, 0, draggedTile);
+      draggedTile = null;
+      post({ action: "wall", cameras: order.join(",") });
+    });
+    tile.addEventListener("dragend", function () { draggedTile = null; });
     var video = tile.querySelector("video");
     if (video) {
       video.src = cam.media_url;
@@ -239,16 +278,89 @@
       }
     });
     wanted.forEach(function (cam) { wallBox.appendChild(players[cam.id].tile); });
-    wallBox.className = "inc-wall count-" + Math.min(9, wanted.length);
+    layWall(wanted.length);
     if (!wanted.length) {
       wallBox.innerHTML = "<p class='muted' style='padding: 20px'>No camera is placed yet. Place one on the Cameras tab, and it plays here.</p>";
     }
     drawParked();
   }
 
+  // How many across: the person's choice, else by the count and the width.
+  function layWall(count) {
+    var columns = across;
+    if (!columns) {
+      var wide = window.innerWidth >= 1900;
+      columns = count <= 1 ? 1 : (count === 2 || count === 4 ? 2 : (wide && count >= 5 ? 4 : 3));
+    }
+    wallBox.className = "inc-wall";
+    wallBox.style.gridTemplateColumns = "repeat(" + Math.min(columns, Math.max(1, count)) + ", minmax(0, 1fr))";
+  }
+
+  var acrossBox = document.getElementById("across");
+  if (acrossBox) {
+    try { across = parseInt(window.localStorage.getItem("wall-across") || "0", 10) || 0; } catch (ignored) { /* this page only */ }
+    acrossBox.value = String(across);
+    acrossBox.addEventListener("change", function () {
+      across = parseInt(acrossBox.value, 10) || 0;
+      try { window.localStorage.setItem("wall-across", String(across)); } catch (ignored) { /* this page only */ }
+      layWall(wallCameras().length);
+    });
+    window.addEventListener("resize", function () { layWall(wallCameras().length); });
+  }
+
+  // Sync, on the tile: the nudges, the clock, the file, the sound, a typed time.
+  function toggleSync(tile, cam) {
+    var box = tile.querySelector(".inc-sync");
+    if (!box.hidden) { box.hidden = true; return; }
+    box.innerHTML = "<span class='small'><b>Sync</b> " + escape(cam.placed_words) + (cam.synced ? "" : ": nudge it until it plays in step with the others") + "</span>" +
+      "<span class='inc-nudge'>" +
+      "<button type='button' class='tiny' data-sync='nudge' data-by='-1'>− s</button>" +
+      "<button type='button' class='tiny' data-sync='nudge' data-by='-0.1'>\u22120.1</button>" +
+      "<span class='mono small' title='When this camera starts, on the incident clock'>" + timeOfDay(cam.starts_at) + "</span>" +
+      "<button type='button' class='tiny' data-sync='nudge' data-by='0.1'>+0.1</button>" +
+      "<button type='button' class='tiny' data-sync='nudge' data-by='1'>+1 s</button></span> " +
+      (cam.has_clock ? "<button type='button' class='tiny' data-sync='clock'>From its clock</button> " : "") +
+      (cam.file_time && S.incident.has_clock ? "<button type='button' class='tiny' data-sync='file' title='The file says " + quoted(cam.file_time) + "'>From its file</button> " : "") +
+      "<button type='button' class='tiny' data-sync='type'>Type a time</button> " +
+      (S.incident.sound_match && placedCameras().some(function (one) { return one.id !== cam.id && one.synced; }) ? "<button type='button' class='tiny' data-sync='match'>Match the sound</button> " : "") +
+      "<button type='button' class='tiny ghost' data-sync='close'>Done</button>";
+    box.hidden = false;
+    box.onclick = function (event) {
+      var button = event.target.closest("[data-sync]");
+      if (!button) { return; }
+      var how = button.dataset.sync;
+      if (how === "close") { box.hidden = true; }
+      else if (how === "nudge") { post({ action: "place", camera: cam.id, how: "hand", starts_at: (cam.starts_at + parseFloat(button.dataset.by)).toFixed(2) }).then(function () { var fresh = cameraById(cam.id); if (fresh && players[cam.id]) { toggleSync(players[cam.id].tile, fresh); toggleSync(players[cam.id].tile, fresh); } }); }
+      else if (how === "clock" || how === "file") { post({ action: "place", camera: cam.id, how: how }); }
+      else if (how === "type") {
+        window.UI.prompt({ title: "When does " + cam.camera_id + " start?", body: S.incident.has_clock ? "A time of day, hh:mm:ss, by the cameras' clocks." : "Minutes and seconds from the first camera, m:ss.", ok: "Sync" }).then(function (text) {
+          if (!text) { return; }
+          var at = parseWhen(text);
+          if (at === null) { window.UI.toast("That is not a time.", { problem: true }); return; }
+          post({ action: "place", camera: cam.id, how: "hand", starts_at: at.toFixed(2) });
+        });
+      } else if (how === "match") {
+        var others = placedCameras().filter(function (one) { return one.id !== cam.id && one.synced; });
+        var against = others.length === 1 ? others[0] : null;
+        if (!against) {
+          // More than one to choose from: the Cameras tab has the list.
+          showTab("cameras"); flashRow(cam.id); return;
+        }
+        post({ action: "match", camera: cam.id, against: against.id });
+      }
+    };
+  }
+
+  function swapOut(id) {
+    var order = wallCameras().map(function (one) { return one.id; }).filter(function (one) { return one !== id; });
+    var next = parkedCameras()[0];
+    if (next) { order.push(next.id); }
+    if (soundCamera === id) { soundCamera = null; }
+    post({ action: "wall", cameras: order.join(",") });
+  }
+
   function drawParked() {
     var rest = parkedCameras();
-    var unplaced = S.cameras.filter(function (one) { return !(one.starts_at !== null && one.placed); });
     var html = "";
     if (rest.length) {
       html += "<span class='muted'>" + rest.length + " more camera" + (rest.length === 1 ? "" : "s") + " on the strip, not on the wall:</span>";
@@ -256,15 +368,6 @@
         html += "<span class='tile' style='--speaker: " + cam.colour + "'><span class='dot'></span>" + escape(cam.camera_id) +
           " <button type='button' class='tiny' data-swap='" + cam.id + "'>Swap in</button></span>";
       });
-    }
-    if (unplaced.length) {
-      html += "<span class='muted'>" + unplaced.length + " not placed:</span>";
-      unplaced.forEach(function (cam) {
-        html += "<span class='tile' style='--speaker: " + cam.colour + "'><span class='dot'></span>" + escape(cam.camera_id) +
-          " <button type='button' class='tiny' data-place='" + cam.id + "'>Place</button></span>";
-      });
-    }
-    if (rest.length || unplaced.length) {
       html += "<span class='muted'>" + S.incident.wall_size + " play at once; the office sets how many.</span>";
     }
     parkedBox.innerHTML = html;
@@ -321,10 +424,6 @@
       txt.classList.add("muted");
       addSaid.hidden = true;
     }
-    var seen = lineAt(got.moments, local);
-    var camLine = box.querySelector(".cam-line");
-    camLine.hidden = !seen;
-    if (seen) { camLine.querySelector(".cam").textContent = seen.text; }
   }
 
   // Keeping in step ---------------------------------------------------------------------
@@ -590,7 +689,7 @@
     var moved = done.at - done.from;
     window.UI.confirm({
       title: "Place " + done.cam.camera_id + " by hand?",
-      body: "Moved " + (moved >= 0 ? "+" : "") + moved.toFixed(1) + " s, to start at " + timeOfDay(done.at) + ". From then on it reads Placed by hand.",
+      body: "Moved " + (moved >= 0 ? "+" : "") + moved.toFixed(1) + " s, to start at " + timeOfDay(done.at) + ". From then on it reads Synced by hand.",
       ok: "Place it"
     }).then(function (yes) {
       if (yes) { post({ action: "place", camera: done.cam.id, how: "hand", starts_at: done.at.toFixed(2) }); }
@@ -834,7 +933,7 @@
     if (cam.has_clock) { html += "<button type='button' class='tiny' data-act='place' data-how='clock' data-camera='" + cam.id + "'>From its clock</button> "; }
     if (cam.file_time && S.incident.has_clock) { html += "<button type='button' class='tiny' data-act='place' data-how='file' data-camera='" + cam.id + "' title='The file says " + quoted(cam.file_time) + "'>From its file</button> "; }
     if (S.incident.sound_match) {
-      var others = placedCameras().filter(function (one) { return one.id !== cam.id; });
+      var others = placedCameras().filter(function (one) { return one.id !== cam.id && one.synced; });
       if (others.length) {
         html += "<span class='inc-match'><select data-against='" + cam.id + "' class='small'>";
         others.forEach(function (one) { html += "<option value='" + one.id + "'>" + escape(one.camera_id) + "</option>"; });
@@ -870,13 +969,13 @@
     html += "<table class='tbl inc-cameras'><thead><tr><th>Camera</th><th>Starts at</th><th>Placed</th><th></th></tr></thead><tbody>";
     S.cameras.forEach(function (cam) {
       var placed = cam.starts_at !== null && cam.placed;
-      html += "<tr data-row='" + cam.id + "'><td><b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><div class='muted small'>" + escape(cam.title) + "</div>" +
+      html += "<tr data-row='" + cam.id + "'" + (cam.synced ? "" : " class='unsynced'") + "><td><b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><div class='muted small'>" + escape(cam.title) + "</div>" +
         (cam.clock ? "<div class='small'><span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span></div>" : "") +
         (cam.file_time ? "<div class='muted small'>the file says " + escape(cam.file_time) + "</div>" : "") + "</td>" +
         "<td class='mono'>" + (placed ? timeOfDay(cam.starts_at) : "—") + "</td>" +
         "<td><span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" +
-        (cam.placed_by ? "<div class='muted small'>by " + escape(cam.placed_by) + "</div>" : "") + matchLine(cam) + "</td>" +
-        "<td class='acts'><details class='inc-place'><summary class='small'>" + (placed ? "Adjust" : "Place") + "</summary><div class='inc-place-box'>" + placeControls(cam) + "</div></details>" +
+        (cam.placed_by && cam.synced ? "<div class='muted small'>by " + escape(cam.placed_by) + "</div>" : "") + matchLine(cam) + "</td>" +
+        "<td class='acts'><details class='inc-place'><summary class='small'>Sync</summary><div class='inc-place-box'>" + placeControls(cam) + "</div></details>" +
         (placed && !cam.on_wall ? "<button type='button' class='tiny' data-swap='" + cam.id + "'>Swap in</button> " : "") +
         "<a class='tiny btn ghost' href='" + escape(cam.viewer_url) + "'>Open</a> " +
         "<button type='button' class='tiny ghost danger' data-act='remove' data-camera='" + cam.id + "'>Remove</button></td></tr>";
@@ -912,7 +1011,7 @@
         var from = cam.starts_at !== null && cam.placed ? cam.starts_at : (S.incident.span_low || 0);
         post({ action: "place", camera: cam.id, how: "hand", starts_at: (from + parseFloat(button.dataset.by)).toFixed(2) });
       } else if (act === "type") {
-        window.UI.prompt({ title: "When does " + cam.camera_id + " start?", body: S.incident.has_clock ? "A time of day, hh:mm:ss, by the cameras' clocks." : "Minutes and seconds from the first camera, m:ss.", ok: "Place it" }).then(function (text) {
+        window.UI.prompt({ title: "When does " + cam.camera_id + " start?", body: S.incident.has_clock ? "A time of day, hh:mm:ss, by the cameras' clocks." : "Minutes and seconds from the first camera, m:ss.", ok: "Sync" }).then(function (text) {
           if (!text) { return; }
           var at = parseWhen(text);
           if (at === null) { window.UI.toast("That is not a time.", { problem: true }); return; }

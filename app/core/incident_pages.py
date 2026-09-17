@@ -123,6 +123,7 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
         "clock_tone": tone,
         "file_time": file_words,
         "has_clock": incidents.clock_zero_of(recording) is not None,
+        "synced": camera.is_synced(),
         "has_transcript": hasattr(recording, "transcript"),
         "viewer_url": reverse("viewer", args=[recording.pk]),
         "match": {
@@ -137,6 +138,7 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
 
 def state_json(incident: Incident, user) -> dict:
     """Everything the page draws from, in one answer."""
+    incidents.guess_the_unplaced(incident)
     cameras = list(incident.cameras.select_related("recording", "placed_by"))
     placed = sorted(
         (one for one in cameras if one.is_placed()),

@@ -387,7 +387,7 @@ def _rows_for(case: Case) -> list:
         # The Clock in the picture and Incident columns (Phase 6 chapter 1).
         from core import incidents
 
-        one.clock_words, one.clock_tone = incidents.stamp_words(one)
+        one.is_video_for_incidents = incidents.on() and incidents.is_video(one)
         camera = incidents.incident_of(one) if incidents.on() else None
         one.incident_name = camera.incident.name if camera else ""
         one.incident_url = camera.incident.url() if camera else ""

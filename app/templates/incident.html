@@ -76,6 +76,9 @@
           </select>
         </label>
         <label>Sound from <select id="sound"></select></label>
+        <label title="How many cameras across the wall">Across
+          <select id="across"><option value="0">Auto</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+        </label>
         <label><input type="checkbox" id="follow" checked> Follow</label>
         <p id="player-trouble" class="problem" hidden></p>
       </div>
@@ -99,7 +102,7 @@
     <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
     <div id="lanes"></div>
     <div class="foot small muted">
-      <span>Click a lane to play every camera from there. Drag a camera's bar to place it by hand; a thin bar is a camera not on the wall. A mark on the Events lane is an event.</span>
+      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall. A mark on the Events lane is an event.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>

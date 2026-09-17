@@ -155,13 +155,17 @@ def test_making_an_incident_places_the_clocked_cameras_on_one_clock(person, a_ca
     by_title = {one.recording.title: one for one in incident.cameras.all()}
     assert by_title["early"].starts_at == 0.0 and by_title["early"].placed == "clock"
     assert by_title["late"].starts_at == pytest.approx(4 * 60 + 41)
-    assert by_title["mute"].starts_at is None and by_title["mute"].placed == ""
+    # A camera with no clock sits at the app's guess, the incident's start,
+    # marked Not synced yet, on the wall with the rest (v1.60.0).
+    assert by_title["mute"].starts_at == 0.0 and by_title["mute"].placed == "guess"
+    assert not by_title["mute"].is_synced() and by_title["mute"].is_placed()
     # The late camera: 22:01:00 read two seconds in, ten minutes long.
     assert incidents.span_words(incident) == "06/07/2025 21:56:17 to 22:10:58"
-    assert incidents.placed_words(incident) == ("2 of 3 placed", "warn")
-    # The Wall holds the placed ones, in clock order.
+    assert incidents.placed_words(incident) == ("2 of 3 synced", "warn")
+    # The Wall holds every camera, in clock order, the guess among them.
     assert [one.recording.title for one in incidents.wall_of(incident)] == [
         "early",
+        "mute",
         "late",
     ]
 
@@ -169,8 +173,8 @@ def test_making_an_incident_places_the_clocked_cameras_on_one_clock(person, a_ca
     incidents.place_by_hand(by_title["mute"], 120.5, by=person)
     by_title["mute"].refresh_from_db()
     assert by_title["mute"].placed == "hand" and by_title["mute"].starts_at == 120.5
-    assert incidents.PLACED_WORDS["hand"] == "Placed by hand"
-    assert incidents.placed_words(incident) == ("3 of 3 placed", "ok")
+    assert incidents.PLACED_WORDS["hand"] == "Synced by hand"
+    assert incidents.placed_words(incident) == ("3 of 3 synced", "ok")
 
     # From the clock again, and a nudged camera reads by hand.
     assert incidents.place_from_clock(by_title["late"], by=person)
@@ -192,6 +196,8 @@ def test_the_file_time_places_a_camera_unchecked(person, a_case, settings):
     assert words == "07 Jun 2025 21:58:17" and second == 21 * 3600 + 58 * 60 + 17
     incident = incidents.make(a_case, "Stop", [clocked, filed], by=person)
     camera = incident.cameras.get(recording=filed)
+    # The guess took the file's time already; From its file settles it.
+    assert camera.placed == "guess" and camera.starts_at == pytest.approx(120.0)
     assert incidents.place_from_file(camera, by=person)
     camera.refresh_from_db()
     assert camera.placed == "file" and camera.starts_at == pytest.approx(120.0)
@@ -204,9 +210,9 @@ def test_an_incident_without_a_clock_counts_from_its_first_camera(person, a_case
     one = video(person, a_case, "one", stamp={})
     two = video(person, a_case, "two", stamp={})
     incident = incidents.make(a_case, "Stop", [one, two], by=person)
-    assert (
-        not incident.has_clock()
-        and incidents.span_words(incident) == "no camera placed"
+    assert not incident.has_clock()
+    assert incidents.span_words(incident).endswith(
+        "from the first camera; no camera clock"
     )
     incidents.place_by_hand(incident.cameras.get(recording=one), 0.0, by=person)
     incidents.place_by_hand(incident.cameras.get(recording=two), 30.0, by=person)
@@ -234,10 +240,13 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     second = video(person, a_case, "second", stamp=stamp("22:01:00", camera="BWC2-2"))
     page = client.get(f"/case/{a_case.pk}").content.decode()
     assert 'tab=incidents"' in page and "Incidents (0)" in page
-    assert "Make them an incident?" not in page
-    assert "Clock in the picture" in page and "06/07/2025 21:56:19, checked" in page
+    assert "Make them an incident?" not in page and "Clock in the picture" not in page
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Make them an incident?" in page and "New incident" in page
+    assert "06/07/2025 21:56:19, checked" in page
+    # A video with no clock shows nothing for it: not a fault.
+    mute = video(person, a_case, "mute", stamp={})
+    assert incidents.stamp_words(mute) == ("", "")
 
     # New incident from the page: named by the date, opened on its own page.
     answer = client.post(
@@ -248,7 +257,7 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert answer.status_code == 302 and answer["Location"] == incident.url()
     assert incident.name == "06/07/2025" and incident.how == "offer"
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "Open the incident" in page and "2 of 2 placed" in page
+    assert "Open the incident" in page and "2 of 2 synced" in page
     assert "Make them an incident?" not in page and "Incidents (1)" in page
 
     # Not these, for a further offer.
@@ -262,8 +271,7 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     # Off: the strip, the columns and the page itself are gone; the rows stay.
     settings_store.set_to("incidents", False)
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "Open the incident" not in page and "Clock in the picture" not in page
-    assert "tab=incidents" not in page
+    assert "Open the incident" not in page and "tab=incidents" not in page
     assert client.get(incident.url()).status_code == 404
     assert Incident.objects.count() == 1
 
@@ -286,10 +294,8 @@ def test_the_incident_page_and_its_act_endpoint(person, a_case, client):
     assert state["incident"]["has_clock"] and state["incident"]["count"] == 2
     cameras = {one["title"]: one for one in state["cameras"]}
     assert cameras["first"]["on_wall"] and cameras["first"]["camera_id"] == "BWC2-1"
-    assert (
-        cameras["second"]["placed_words"] == "Not placed"
-        and not cameras["second"]["on_wall"]
-    )
+    assert cameras["second"]["placed_words"] == "Not synced yet"
+    assert cameras["second"]["on_wall"] and not cameras["second"]["synced"]
 
     # The lines under a tile.
     lines = json.loads(client.get(f"/incident-camera/{cam_first.pk}/lines").content)
@@ -491,7 +497,7 @@ def test_a_strong_match_places_the_camera_by_sound(
     incidents.ask_for_match(cam_third, cam_first, by=person)
     incidents.run_match(cam_third)
     cam_third.refresh_from_db()
-    assert cam_third.match_state == "done" and cam_third.placed == ""
+    assert cam_third.match_state == "done" and cam_third.placed == "guess"
     assert incidents.apply_match(cam_third, by=person)
     cam_third.refresh_from_db()
     assert cam_third.placed == "sound" and cam_third.starts_at == pytest.approx(10.0)
