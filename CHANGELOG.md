@@ -67,7 +67,10 @@ Database: migrates
   Process again keeps it, and while Stamp reads early is On it is read as
   each playback copy lands for every video in a case, two small engine
   calls by day, rather than with the night's vision work. Vision reads a
-  stamp only when none has been read.
+  stamp only when none has been read. Videos already in cases have no
+  clock until something reads it: after the upgrade, run
+  `docker compose exec app python manage.py read_stamps` once to queue
+  the read for every case video without one.
 - A recording moved to another case leaves its incident; a recording
   deleted leaves it. Opening an incident, making one and placing a camera
   count as the case's activity.
