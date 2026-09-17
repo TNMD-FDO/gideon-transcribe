@@ -320,6 +320,22 @@ _Avoid_: mark (that is a live recording's), moment (that is a description), book
 The memo the AI assistant writes across every synced camera of an Incident, on the Incident page's Memo tab: written from the incident record (the cameras' Digests merged onto the Incident clock, made by the app for the call and never stored) and on the Chronology's Events, each sentence that rests on an Event carrying its number, every time the time of day and a citation that plays every camera. One per Incident, replaced by Regenerate, marked stale when the Events or the cameras change, exported to Word with the Chronology as its last pages. Its instructions are the Incident memo template. Phase 6 chapter 3.
 _Avoid_: report, narrative, incident summary (a Summary is one recording's), timeline
 
+**Note**:
+A person's own line under an Event, up to 2,000 characters: what it means for the case, a page cite, a thing to do. Written and changed with the Event, printed in the Chronology's exports, told to the assistant as the office's own words and never written or rewritten by it. Phase 7 chapter 1.
+_Avoid_: comment, annotation, remark
+
+**To check**:
+A person's mark on an Event that something needs looking at, shown as a pill on the Chronology tab, counted in its head line, printed in the exports, and told to the memo, which says where a point is unsettled. Cleared only by a person. Phase 7 chapter 1.
+_Avoid_: flag, todo, open
+
+**About**:
+The Chronology's one paragraph before the events, up to 2,000 characters, kept on the Incident and edited from the top of the Chronology tab: the matter, the date, the cameras' owners as the office knows them. Printed on the export's cover and told to the memo. Phase 7 chapter 1.
+_Avoid_: description (that is a Recording's note), summary, introduction
+
+**Incident clip**:
+A Clip cut from an Event of an Incident: the event's cameras over its span, the focus camera large or a grid, the Incident clock and the camera ids burned in, the sound from one camera. A Clip like any other on the Clips page, whose Recording is the sound camera's, carrying besides the Incident, the Event, the cameras and the layout so Render again remakes it. Phase 7 chapter 1.
+_Avoid_: montage, multicam export, wall clip
+
 **Person**:
 One human being in a Case, as named across its Recordings: every Speaker in the Case's Transcripts given the same name is that Person. Holds an optional Role and notes, lives only inside its Case, and stays until someone deletes or merges it. A Person shows up as a Speaker in each Recording they are in.
 _Avoid_: speaker (that is the label in one Transcript), party, participant, contact

@@ -389,13 +389,13 @@ None. A layout is the person's browser's, not a case's activity.
 
 ## 5. Deferred and ruled out
 
-- **A Clip across cameras** (side by side, one file): deferred by the maintainer on 2026-09-17.
+- **A Clip across cameras** (side by side, one file): deferred by the maintainer on 2026-09-17, and taken up as Phase 7 chapter 1 (`docs/spec/SPEC-PHASE-7.md`) the same day.
 - **Sound recordings in an Incident**: deferred; not asked for.
 - **Incidents across cases, and any list of Incidents outside a case**: ruled out, as Phase 2 rules out anything that crosses a case's edge.
 - **Re-encoding or stitching the cameras into one file**: ruled out; the browser plays the playback copies as they are, and nothing new lands on disk.
 - **Reading the clock from anything but the picture, the file, the sound and a person**: ruled out; the app never invents a time.
 - **Frame-accurate sync**: ruled out for this phase; see chapter 1.
-- **Reconciling Speaker labels across the cameras of an Incident** (the same person is Speaker 1 on one camera and Speaker 4 on another): deferred by the maintainer on 2026-09-17 as a bigger problem than this phase. An Incident is the one place the app will ever hold the evidence for it, since the cameras are in step and a person talking during the same seconds on two cameras with the same words is one person, so a later chapter could propose matches from that overlap, with voice prints (Phase 5 chapter 2) for the rest; the names would then flow through the case. Until then the Incident page shows names and hides numbers.
+- **Reconciling Speaker labels across the cameras of an Incident** (the same person is Speaker 1 on one camera and Speaker 4 on another): deferred by the maintainer on 2026-09-17 as a bigger problem than this phase. An Incident is the one place the app will ever hold the evidence for it, since the cameras are in step and a person talking during the same seconds on two cameras with the same words is one person, so a later chapter could propose matches from that overlap, with voice prints (Phase 5 chapter 2) for the rest; the names would then flow through the case. Until then the Incident page shows names and hides numbers. Taken up as Phase 7 chapter 3, people across cameras, from the overlap of speech.
 - **A tuning pass over the Incident page** from staff's first use (2026-09-17, the maintainer: "it's gonna need some fine tuning to make it all very intuitive for users"): done as v1.60.0 and v1.60.1 (see the amendments); a second pass follows chapter 3 on the server the same way.
 
 ## Appendix A. Audit rows added in Phase 6
