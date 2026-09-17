@@ -24,8 +24,9 @@ Everything shipped beside the code keeps its own licence and is listed in
 
 ## How the work is organised
 
-- The specifications are `docs/spec/SPEC-PHASE-1.md` (the Workspace) and
-  `docs/spec/SPEC-PHASE-2.md` (Cases); the settings are catalogued in
+- The specifications are `docs/spec/SPEC-PHASE-1.md` (the Workspace),
+  `docs/spec/SPEC-PHASE-2.md` (Cases), and one document per later phase
+  up to `docs/spec/SPEC-PHASE-6.md` (Incidents); the settings are catalogued in
   `docs/spec/ADMIN-SETTINGS-CATALOGUE.md`; the WhisperX service's contract is
   `docs/whisperx-api.md`. The vocabulary is `CONTEXT.md`, and every decision
   behind the design is recorded in `docs/adr/`, with the facts they rest on

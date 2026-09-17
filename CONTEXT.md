@@ -99,7 +99,7 @@ The viewer behaviour that keeps the current Segment in view while the Recording 
 A user edit of a Segment's text in the viewer. Marked on the Segment and recorded in the audit log.
 
 **Timeline**:
-The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call.
+The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call. The Incident page's strip of lanes is not the Timeline, and a Chronology is a list of Events (Phase 6).
 
 **Stage**:
 The viewer's left-hand column on a window 1280 pixels or wider: the picture, the transport under it, the line being spoken, and Describe this moment, resizable by its right edge. On a narrower window the picture sits beside the title and the transport under it; a sound recording has no stage at any width. Avoid: Bench (the right-hand column of v1.4.0 to v1.45.1), player pane, dock (that is the laptop's arrangement of the same things).
@@ -288,6 +288,30 @@ _Avoid_: notes, comment, summary (that is the LLM's)
 An optional label for a Recording (Body camera, Jail call, Interview, and the like), picked at upload from a list an Admin keeps and changeable later.
 _Avoid_: source type, category
 
+**Incident**:
+A named group of a Case's videos that ran at the same time, laid on one clock so they play in step on the Incident page. Offered by the app when the videos' clocks overlap, or made by hand with New incident; a video is in at most one. Lives inside one Case and nowhere else, counts as its activity, and goes with it. Phase 6.
+_Avoid_: event (that is one entry on a Chronology), scene, sync set, group, session
+
+**Incident clock**:
+The time of day, with its date, that an Incident's cameras run on, taken from the clocks burned into their pictures; every camera's place is a number of seconds on it. An Incident with no camera clock counts from its first camera and the page says so. Phase 6.
+_Avoid_: timeline, offset, master clock
+
+**Placed**:
+How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; Placed by hand; or Not placed. A camera not placed is never on the Wall. Phase 6.
+_Avoid_: aligned, synced, calibrated
+
+**Wall**:
+The Incident page's grid of cameras playing in step, up to the number the office sets (six shipped), one of them with the sound; the rest of the Incident's cameras wait beside it as parked tiles to swap in. Phase 6.
+_Avoid_: multiview, grid, mosaic, split screen
+
+**Chronology**:
+An Incident's list of Events, in time order, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2, proposed.
+_Avoid_: timeline (that is the viewer's waveform strip), log, history
+
+**Event**:
+One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person; in chapter 3 the assistant may propose one, which joins only when accepted. Phase 6 chapter 2, proposed.
+_Avoid_: mark (that is a live recording's), moment (that is a description), bookmark, flag
+
 **Person**:
 One human being in a Case, as named across its Recordings: every Speaker in the Case's Transcripts given the same name is that Person. Holds an optional Role and notes, lives only inside its Case, and stays until someone deletes or merges it. A Person shows up as a Speaker in each Recording they are in.
 _Avoid_: speaker (that is the label in one Transcript), party, participant, contact
@@ -410,7 +434,7 @@ What a person with a case makes when they ask for its vision now rather than ton
 One text per Transcript, made by the AI assistant when a video is prepared: a time-ordered condensation of the words and the camera lines, each line marked said, seen or both, one time per line, exact quotes kept only where the words carry weight, that the Summary, the Chat and the Case Chat are written from. Made in windows of about ten minutes; a window whose part comes back cut off is split in two. Plumbing: nobody reads it but an Admin, under Details; Details says it exists and what it was made from, and it is remade part by part when the Transcript or the described Moments change. Its instructions are a template on the Templates page. Phase 4 chapters 6 and 7. Avoid: summary (that is what a person reads), notes, index, embedding.
 
 **Camera stamp**:
-The date, the clock time and the camera id a body-worn or fixed camera burns into its picture, read once per Transcript from two frames when the picture record is first made, checked against each other, kept on the Transcript, shown in Details and on an export's processing record, and told to the AI assistant as the camera's clock so a time can be given as the time of day. Copied as printed, never reordered or guessed. Phase 4 chapter 6. Avoid: overlay, OSD, watermark, metadata (that is the file's).
+The date, the clock time and the camera id a body-worn or fixed camera burns into its picture, read once per Recording from two frames as the playback copy lands (Phase 6; when the picture record is first made until then), checked against each other, kept on the Recording, shown in Details and on an export's processing record, and told to the AI assistant as the camera's clock so a time can be given as the time of day. Copied as printed, never reordered or guessed. Phase 4 chapter 6. Avoid: overlay, OSD, watermark, metadata (that is the file's).
 
 **Camera rules**:
 The fixed instructions Summary and Chat are given whenever Camera lines are handed to them: the two sources kept apart in every sentence, neither winning, a person named only from the words, nothing inferred from the picture, only the listed times looked at, and a camera fact told briefly. Not editable; the templates are. Phase 4.
