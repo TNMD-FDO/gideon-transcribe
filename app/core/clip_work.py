@@ -21,8 +21,55 @@ from core.clips import Clip, RenderState, transcript_mark
 log = logging.getLogger("transcribe.clips")
 
 # A render fails after the Clip's own length plus five minutes. A one-minute
-# clip that has not finished in six is not going to.
+# clip that has not finished in six is not going to. An Incident clip gets a
+# minute more per camera (Phase 7 chapter 1).
 EXTRA_SECONDS = 5 * 60
+CAMERA_SECONDS = 60
+
+
+def timeout_for(clip: Clip) -> int:
+    cameras = len((clip.picture or {}).get("cameras") or [])
+    return int(clip.seconds) + EXTRA_SECONDS + CAMERA_SECONDS * cameras
+
+
+def tiles_of(clip: Clip) -> tuple[list[media.Tile], int, str]:
+    """An Incident clip's tiles from its own picture, and the sound's index.
+
+    Nothing is read from the Incident, the Event or the camera rows: the
+    offsets, ids and recording ids were copied when the clip was made, so
+    Render again is the same render. The third value is the plain reason
+    when a tile cannot be made, with an empty list then.
+    """
+    from core.recordings import Recording
+
+    picture = clip.picture or {}
+    cameras = picture.get("cameras") or []
+    wanted = [str(one.get("recording", "")) for one in cameras]
+    found = {str(one.pk): one for one in Recording.objects.filter(pk__in=wanted)}
+    tiles = []
+    for one in cameras:
+        recording = found.get(str(one.get("recording", "")))
+        if recording is not None and recording.case_id != clip.recording.case_id:
+            # A camera moved to another case: its pictures stay there.
+            return [], 0, f"camera {one.get('label', '')} is no longer in this case"
+        source = recording.playback_path() if recording is not None else None
+        if source is None or not source.exists():
+            return (
+                [],
+                0,
+                f"the playback copy of camera {one.get('label', '')} is missing",
+            )
+        tiles.append(
+            media.Tile(
+                source=source,
+                offset=float(one.get("offset", 0.0)),
+                label=str(one.get("label", "")),
+            )
+        )
+    ids = [str(one.get("camera", "")) for one in cameras]
+    if not tiles or str(picture.get("sound", "")) not in ids:
+        return [], 0, "the sound camera is not among the clip's cameras"
+    return tiles, ids.index(str(picture.get("sound"))), ""
 
 
 def render(clip: Clip) -> Clip:
@@ -30,11 +77,20 @@ def render(clip: Clip) -> Clip:
 
     Burned captions are written to a temporary file and given to ffmpeg; they
     are never stored beside the rendered file, because everything else about a
-    Clip is built when it is downloaded.
+    Clip is built when it is downloaded. An Incident clip is cut from its own
+    picture instead, by cut_wall, with the same states and rows.
     """
-    source = clip.recording.playback_path()
-    if source is None or not source.exists():
-        return _failed(clip, "clip_render_failed", "there is no playback copy yet")
+    picture = clip.picture
+    tiles: list = []
+    sound = 0
+    if picture is None:
+        source = clip.recording.playback_path()
+        if source is None or not source.exists():
+            return _failed(clip, "clip_render_failed", "there is no playback copy yet")
+    else:
+        tiles, sound, why = tiles_of(clip)
+        if why:
+            return _failed(clip, "clip_render_failed", why)
 
     clip.state = RenderState.RENDERING
     clip.save(update_fields=["state"])
@@ -42,27 +98,46 @@ def render(clip: Clip) -> Clip:
     captions = None
     written = None
     try:
-        if clip.burn_captions and clip.is_video:
-            # ffmpeg reads it by name, so it is written and closed first and
-            # taken away in the finally below however this ends.
-            handle, name = tempfile.mkstemp(suffix=".srt")
-            written = Path(name)
-            with open(handle, "w", encoding="utf-8") as into:
-                into.write(srt_for(clip))
-            captions = written
+        if picture is not None:
+            burn_clock = (
+                bool(picture.get("burn_clock")) and picture.get("clock") is not None
+            )
+            media.cut_wall(
+                tiles,
+                clip.path,
+                clip.seconds,
+                layout=picture.get("layout", media.GRID),
+                sound=sound,
+                clock=int(picture["clock"]) if burn_clock else None,
+                labels=bool(picture.get("burn_ids", True)),
+                timeout=timeout_for(clip),
+            )
+        else:
+            if clip.burn_captions and clip.is_video:
+                # ffmpeg reads it by name, so it is written and closed first
+                # and taken away in the finally below however this ends.
+                handle, name = tempfile.mkstemp(suffix=".srt")
+                written = Path(name)
+                with open(handle, "w", encoding="utf-8") as into:
+                    into.write(srt_for(clip))
+                captions = written
 
-        media.cut_clip(
-            source,
-            clip.path,
-            clip.start,
-            clip.end,
-            captions=captions,
-            timeout=int(clip.seconds) + EXTRA_SECONDS,
-        )
+            media.cut_clip(
+                source,
+                clip.path,
+                clip.start,
+                clip.end,
+                captions=captions,
+                timeout=timeout_for(clip),
+            )
     except media.MediaError as problem:
         return _failed(clip, problem.reason_class, problem.message)
     except Exception:  # noqa: BLE001 - a render failing must not stop the worker
         log.exception("the render of clip %s failed", clip.id)
+        if picture is not None:
+            # A wall that timed out leaves a part-written file; it must not
+            # count against anybody's quota.
+            clip.path.unlink(missing_ok=True)
         return _failed(clip, "clip_render_failed", "the render failed")
     finally:
         if written is not None:
@@ -96,7 +171,7 @@ def _failed(clip: Clip, reason: str, why: str) -> Clip:
         affected_user=clip.recording.user,
         object_type="clip",
         object_id=clip.pk,
-        object_label=f"{clip.start:.1f}-{clip.end:.1f}",
+        object_label=clip.span_label,
         outcome=audit.Outcome.FAILURE,
         reason_class=reason,
     )

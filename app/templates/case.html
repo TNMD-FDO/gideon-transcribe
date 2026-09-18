@@ -339,7 +339,7 @@
               <table class="tbl">
                 <thead>
                   <tr>
-                    <th>Title</th><th>Recording</th><th>Span</th><th>Length</th>
+                    <th>Title</th><th>Recording</th><th>Cameras</th><th>Span</th><th>Length</th>
                     <th>Options</th><th>Status</th><th>Size</th>
                     <th>Saved</th><th>Saved by</th><th></th>
                   </tr>
@@ -347,10 +347,11 @@
                 <tbody>
                   {% for clip in clips_here %}
                     <tr>
-                      <td><b>{{ clip.title }}</b></td>
+                      <td><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}</td>
                       <td class="muted">{{ clip.recording_title }}</td>
-                      <td class="mono muted">{{ clip.start|floatformat:1 }}s to {{ clip.end|floatformat:1 }}s</td>
-                      <td>{{ clip.seconds|floatformat:0 }}s</td>
+                      <td class="muted">{{ clip.cameras }}</td>
+                      <td class="mono muted">{{ clip.span }}</td>
+                      <td>{{ clip.length }}</td>
                       <td class="muted">{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}</td>
                       <td>
                         {% if clip.state == "ready" and not clip.stale %}
@@ -371,8 +372,12 @@
                           {% if clip.state == "ready" %}
                             <a href="/clip/{{ clip.id }}/download" class="btn primary small">Download</a>
                           {% endif %}
-                          <a href="{% url 'viewer' clip.recording %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.id }}"
-                             class="btn small">Open in viewer</a>
+                          {% if clip.picture %}
+                            {% if clip.incident_url %}<a href="{{ clip.incident_url }}" class="btn small">Open the incident</a>{% endif %}
+                          {% else %}
+                            <a href="{% url 'viewer' clip.recording %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.id }}"
+                               class="btn small">Open in viewer</a>
+                          {% endif %}
                           {% if clip.may_change %}
                             {% if clip.state == "failed" or clip.stale %}
                               <button type="button" class="small rerender" data-clip="{{ clip.id }}">

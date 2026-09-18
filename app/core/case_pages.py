@@ -346,7 +346,7 @@ def _clips_in(case: Case, asker) -> list:
     return [
         _row(one, asker=asker)
         for one in Clip.objects.filter(recording__case=case)
-        .select_related("recording", "user")
+        .select_related("recording", "user", "event", "incident")
         .order_by("recording__created", "created")
     ]
 
@@ -743,6 +743,15 @@ def move_to_case(request: HttpRequest, recording_id) -> JsonResponse:
     )
     if not case.member(request.user) and not request.user.is_admin:
         raise Http404("not this person's case")
+
+    if recording.case_id and recording.case_id != case.pk:
+        # A clip cut from an incident stays with the incident's case
+        # (Phase 7 chapter 1).
+        from core.incident_clips import keeps_in_case
+
+        held = keeps_in_case(recording)
+        if held:
+            return JsonResponse({"ok": False, "why": held}, status=400)
 
     cases.move_recording(
         recording,

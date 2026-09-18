@@ -1538,6 +1538,28 @@ def _rows() -> list[Definition]:
             ),
             when_changed="The next memo.",
         ),
+        # Phase 7 chapter 1: the clip across cameras.
+        Definition(
+            key="incidents_clips",
+            page=INCIDENTS,
+            group="Clips",
+            name="Incident clips",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            needs_value=("clips_available", True),
+            what_it_does=(
+                "Clip this event on the Chronology tab: one file cut from an "
+                "event's cameras over its span, the focus camera large or a "
+                "grid, the incident clock and the camera ids burned in, the "
+                "sound from one camera, listed with the case's other clips. "
+                "The Clips page's own limits apply."
+            ),
+            when_changed=(
+                "The next incident page drawn. Off hides Clip this event and "
+                "keeps every clip made."
+            ),
+        ),
         Definition(
             key="speaker_check_available",
             page=SPEAKERS,
@@ -2326,6 +2348,11 @@ def greyed_because(known: Definition) -> str:
     if known.needs_value:
         other, wanted = known.needs_value
         if get(other) != wanted:
+            if wanted is True:
+                # A second toggle this setting needs on, said as the first is.
+                return (
+                    f"Greyed while {definition(other).name} is off; the value is kept."
+                )
             return (
                 f"Greyed unless {definition(other).name} is {wanted}; "
                 "the value is kept."

@@ -3,7 +3,11 @@
 A Clip is a start and an end and nothing more. It is linked to the Transcript
 by time only: the Segments in a Clip are whichever overlap its span at the
 moment somebody asks, never a stored list of Segment ids, so a Correction, a
-merge, a rename, or a Process again needs no bookkeeping here.
+merge, a rename, or a Process again needs no bookkeeping here. An Incident
+clip (Phase 7 chapter 1) is the same row with `picture` set: the cameras
+with each one's offset, the layout, the sound camera and the burn choices,
+everything Render again needs, on the Recording of the camera it is heard
+from.
 
 Nothing about a Clip goes stale except captions burned into a picture, which
 are the one part that is written into the file rather than built when it is
@@ -78,6 +82,29 @@ class Clip(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
+    # An Incident clip (Phase 7 chapter 1): the Incident and the Event it was
+    # cut from, kept while they live, and the picture: the cameras in tile
+    # order with each one's offset and id, the layout, the sound camera, the
+    # burn choices, the span on the Incident clock and the clock's second at
+    # the first frame. All copied when the clip is made, so that a camera
+    # re-synced or renamed afterwards changes nothing about this clip and
+    # Render again remakes it the same. Null on a recording's own Clip.
+    incident = models.ForeignKey(
+        "core.Incident",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clips",
+    )
+    event = models.ForeignKey(
+        "core.Event",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clips",
+    )
+    picture = models.JSONField(null=True, blank=True)
+
     class Meta:
         ordering = ["recording", "start"]
         indexes = [models.Index(fields=["user", "created"])]
@@ -90,7 +117,13 @@ class Clip(models.Model):
         return max(0.0, self.end - self.start)
 
     @property
+    def is_incident_clip(self) -> bool:
+        return self.picture is not None
+
+    @property
     def is_video(self) -> bool:
+        if self.picture is not None:
+            return True
         playback = self.recording.playback_path()
         return bool(playback and playback.suffix == ".mp4")
 
@@ -98,6 +131,56 @@ class Clip(models.Model):
     def suffix(self) -> str:
         """mp4 for a video Recording, mp3 for an audio one."""
         return ".mp4" if self.is_video else ".mp3"
+
+    @property
+    def span_label(self) -> str:
+        """The span as an audit row carries it: on the Incident clock for an
+        Incident clip, on the Recording's own for any other."""
+        low, high = self.incident_span if self.picture else (self.start, self.end)
+        return f"{low:.1f}-{high:.1f}"
+
+    @property
+    def incident_span(self) -> tuple[float, float]:
+        """An Incident clip's span in seconds on the Incident clock."""
+        low, high = (self.picture or {}).get("span") or (self.start, self.end)
+        return float(low), float(high)
+
+    @property
+    def span(self) -> str:
+        """The span as a person reads it: clocks, or the Incident's times."""
+        from core import exports, incidents
+
+        if self.picture:
+            low, high = self.incident_span
+            clock = self.picture.get("clock")
+            if clock is not None:
+                return (
+                    f"{incidents.hms(clock)} to {incidents.hms(clock + (high - low))}"
+                )
+            return f"{incidents.elapsed(low)} to {incidents.elapsed(high)}"
+        return f"{exports.clock(self.start)} to {exports.clock(self.end)}"
+
+    @property
+    def length(self) -> str:
+        return spell(self.seconds)
+
+    @property
+    def cameras_line(self) -> str:
+        """ "4 cameras, Focus" on an Incident clip; nothing on any other."""
+        if not self.picture:
+            return ""
+        count = len(self.picture.get("cameras") or [])
+        layout = "Focus" if self.picture.get("layout") == "focus" else "Grid"
+        return f"{count} camera{'' if count == 1 else 's'}, {layout}"
+
+    @property
+    def from_event(self) -> str:
+        """ "from the event ..." under an Incident clip's title."""
+        if not self.picture:
+            return ""
+        if self.event_id and self.event is not None:
+            return f"from the event {self.event.text}"
+        return "from an event since removed"
 
     @property
     def folder(self) -> Path:
@@ -156,3 +239,15 @@ def transcript_mark(recording) -> str:
 def next_title(recording) -> str:
     """`Clip 1`, `Clip 2`, per Recording. Two Clips may still share a title."""
     return f"Clip {recording.clips.count() + 1}"
+
+
+def spell(seconds: float) -> str:
+    """A length a person reads: "45 s", "1 min 37 s", "1 h 2 min"."""
+    whole = int(round(seconds or 0))
+    hours, rest = divmod(whole, 3600)
+    minutes, secs = divmod(rest, 60)
+    if hours:
+        return f"{hours} h {minutes} min" if minutes else f"{hours} h"
+    if minutes:
+        return f"{minutes} min {secs} s" if secs else f"{minutes} min"
+    return f"{secs} s"

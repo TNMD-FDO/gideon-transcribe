@@ -468,7 +468,10 @@ INCIDENT_RULES = (
     "label (Speaker 1, Speaker 4) belongs to one camera and means nothing on "
     "another: attribute a line to a person only by a name the words give or "
     "the office set, otherwise to the camera it was heard on. Cover every "
-    "camera in the record and name none that is not in it."
+    "camera in the record and name none that is not in it. The office's "
+    "notes, on the incident and on its events, are the office's own words: "
+    "respect them, never contradict or rewrite them, and where an event is "
+    "marked to check say that the office has not settled the point."
 )
 SPEAKER_CHECK_FORMAT = (
     "Answer with the JSON asked for: a list under moves, each item the line's "
@@ -868,12 +871,20 @@ def incident_events_input(
     )
 
 
-def incident_memo_input(cameras_line: str, events: list[str], record: str) -> str:
-    """What the memo is written from: the cameras, the chronology, the record."""
+def incident_memo_input(
+    cameras_line: str, events: list[str], record: str, about: str = ""
+) -> str:
+    """What the memo is written from: the cameras, the office's About, the
+    chronology with its notes, the record."""
     listed = "\n".join(events) if events else "none; write on the record alone."
     return "\n\n".join(
         [
             cameras_line,
+            *(
+                ["The office's note on the incident:\n" + about]
+                if about.strip()
+                else []
+            ),
             "The chronology, as the office wrote it:\n" + listed,
             "The incident record (the cameras' records merged onto the incident "
             "clock; every time is by that clock, and each line names the camera "

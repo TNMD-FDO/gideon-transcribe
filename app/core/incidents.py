@@ -150,6 +150,9 @@ class Incident(models.Model):
     )
     proposals_found = models.IntegerField(default=0)
     proposals_cameras = models.IntegerField(default=0)
+    # About this chronology (Phase 7 chapter 1): the office's paragraph
+    # before the events, printed on the export's cover and told to the memo.
+    about = models.TextField(max_length=2000, blank=True, default="")
 
     class Meta:
         ordering = ["created"]
@@ -553,6 +556,17 @@ def remove_camera(camera: IncidentCamera, *, by, request=None) -> None:
     incident = camera.incident
     camera.delete()
     _changed(incident, by, request, what="camera removed")
+
+
+def set_about(incident: Incident, about: str, *, by, request=None) -> None:
+    """About this chronology, saved; the row says only that it changed."""
+    # One line per line typed, the spacing tidied, blank lines dropped.
+    cleaned = "\n".join(
+        " ".join(line.split()) for line in (about or "").splitlines() if line.strip()
+    )[:2000]
+    incident.about = cleaned
+    incident.save(update_fields=["about"])
+    _changed(incident, by, request, about=True)
 
 
 def rename(incident: Incident, name: str, *, by, request=None) -> None:

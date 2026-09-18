@@ -28,6 +28,8 @@ ASSISTANT = "assistant"
 SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT)
 
 TEXT_MOST = 500
+# A person's note under an Event, and the Chronology's About (Phase 7).
+NOTE_MOST = 2000
 
 
 class Event(models.Model):
@@ -58,6 +60,15 @@ class Event(models.Model):
     proposed = models.BooleanField(default=False)
     rests_on = models.CharField(max_length=TEXT_MOST, blank=True, default="")
     dismissed = models.BooleanField(default=False)
+    # Phase 7 chapter 1: a person's own line under the event, with who wrote
+    # it and when it last changed, and the mark that it needs looking at.
+    # The assistant reads them and never writes them.
+    note = models.TextField(max_length=NOTE_MOST, blank=True, default="")
+    note_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    note_changed = models.DateTimeField(null=True, blank=True)
+    to_check = models.BooleanField(default=False)
     added_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
@@ -100,9 +111,23 @@ def _cleaned(incident, fields: dict) -> dict:
     text = " ".join(str(fields.get("text", "")).split())[:TEXT_MOST]
     if not text:
         raise ValueError("What happened? An event needs a line of text.")
+    # Only Accept makes an Event the assistant's (chapter 3); a request that
+    # says so is a person's.
     source = fields.get("source", PERSON)
     if source not in (PERSON, WORDS, CAMERA):
         source = PERSON
+    # One line per line typed, the spacing tidied, blank lines dropped.
+    note = "\n".join(
+        " ".join(line.split())
+        for line in str(fields.get("note", "")).splitlines()
+        if line.strip()
+    )[:NOTE_MOST]
+    to_check = str(fields.get("to_check", "")).strip().lower() in (
+        "1",
+        "yes",
+        "true",
+        "on",
+    )
     known = {str(one.pk) for one in incident.cameras.all()}
     wanted = fields.get("cameras")
     if wanted is None:
@@ -119,11 +144,16 @@ def _cleaned(incident, fields: dict) -> dict:
         "source": source,
         "camera": camera,
         "cameras": cameras,
+        "note": note,
+        "to_check": to_check,
     }
 
 
 def add(incident, fields: dict, *, by, request=None) -> Event:
     cleaned = _cleaned(incident, fields)
+    if cleaned["note"]:
+        cleaned["note_by"] = by
+        cleaned["note_changed"] = timezone.now()
     event = Event.objects.create(incident=incident, added_by=by, **cleaned)
     audit.write(
         incidents.CATEGORY,
@@ -144,6 +174,15 @@ def add(incident, fields: dict, *, by, request=None) -> Event:
 
 def change(event: Event, fields: dict, *, by, request=None) -> Event:
     cleaned = _cleaned(event.incident, fields)
+    # An Event keeps where it came from: Edit changes the words and the
+    # cameras, never the source (an accepted proposal stays the assistant's).
+    if event.source == ASSISTANT:
+        cleaned["source"] = ASSISTANT
+    if cleaned["note"] != event.note:
+        # The note's writer is whoever last wrote it, not whoever last
+        # touched the event; a cleared note has no writer.
+        cleaned["note_by"] = by if cleaned["note"] else None
+        cleaned["note_changed"] = timezone.now()
     for key, value in cleaned.items():
         setattr(event, key, value)
     event.changed_by = by
@@ -195,11 +234,45 @@ def source_words(event: Event, names: dict) -> str:
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
 
 
+def clips_per_event(incident) -> dict[str, int]:
+    """How many Incident clips were cut from each Event, by event id."""
+    from django.db.models import Count
+
+    from core.clips import Clip
+
+    return {
+        str(row["event_id"]): row["n"]
+        for row in Clip.objects.filter(event__incident=incident)
+        .values("event_id")
+        .annotate(n=Count("pk"))
+    }
+
+
+def clips_line(incident, numbers: dict) -> str:
+    """The line under the export's events table: the clips made from events,
+    by the event's number, the clip's title and its length."""
+    from core.clips import Clip
+
+    parts = []
+    for clip in (
+        Clip.objects.filter(incident=incident)
+        .select_related("event")
+        .order_by("created")
+    ):
+        number = numbers.get(str(clip.event_id)) if clip.event_id else None
+        where = f"#{number} " if number else ""
+        parts.append(f"{where}{clip.title} ({clip.length})")
+    if not parts:
+        return ""
+    return "Clips made from events: " + "; ".join(parts) + "."
+
+
 def events_json(incident) -> list[dict]:
     names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
+    clips = clips_per_event(incident)
     rows = []
     for event in incident.events.filter(dismissed=False).select_related(
-        "added_by", "changed_by"
+        "added_by", "changed_by", "note_by"
     ):
         rows.append(
             {
@@ -217,9 +290,20 @@ def events_json(incident) -> list[dict]:
                 "proposed": event.proposed,
                 "rests_on": event.rests_on if event.proposed else "",
                 "added_by": event.added_by.shown_name if event.added_by else "",
+                # Phase 7 chapter 1.
+                "note": event.note,
+                "to_check": event.to_check,
+                "note_by": (
+                    event.note_by.shown_name if event.note and event.note_by else ""
+                ),
+                "clips": clips.get(str(event.pk), 0),
             }
         )
     return rows
+
+
+def to_check_count(incident) -> int:
+    return incident.events.filter(proposed=False, to_check=True).count()
 
 
 # The exports ----------------------------------------------------------------------
@@ -232,6 +316,7 @@ def _rows(incident) -> list[dict]:
     for number, event in enumerate(incident.events.filter(proposed=False), 1):
         rows.append(
             {
+                "id": str(event.pk),
                 "number": number,
                 "time": incidents.time_of_day(incident, event.at),
                 "seconds": event.at,
@@ -247,6 +332,8 @@ def _rows(incident) -> list[dict]:
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 "added": event.added,
                 "assistant": event.source == ASSISTANT,
+                "note": event.note,
+                "to_check": event.to_check,
             }
         )
     return rows
@@ -268,6 +355,8 @@ def spreadsheet(incident) -> bytes:
             "Seen on",
             "Added by",
             "Added on",
+            "Note",
+            "To check",
         ]
     )
     for row in _rows(incident):
@@ -283,6 +372,8 @@ def spreadsheet(incident) -> bytes:
                 row["seen_on"],
                 row["added_by"],
                 f"{timezone.localtime(row['added']):%Y-%m-%d %H:%M}",
+                row["note"],
+                "yes" if row["to_check"] else "",
             ]
         )
     return holder.getvalue().encode("utf-8-sig")
@@ -351,6 +442,12 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
         ],
         Inches,
     )
+    if incident.about:
+        # About this chronology (Phase 7 chapter 1), the office's own words.
+        document.add_paragraph()
+        for line in incident.about.splitlines():
+            if line.strip():
+                document.add_paragraph(line.strip())
     document.add_paragraph()
     table = document.add_table(rows=1, cols=4)
     table.style = "Light Grid Accent 1"
@@ -386,12 +483,29 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
         cell.text = title
     for row in rows:
         cells = table.add_row().cells
-        cells[0].text = str(row["number"])
+        cells[0].text = str(row["number"]) + (" (to check)" if row["to_check"] else "")
         cells[1].text = row["time"] + (f" to {row['end']}" if row["end"] else "")
         cells[2].text = row["text"]
+        if row["note"]:
+            # The office's note under the event, in italics (Phase 7).
+            note = cells[2].add_paragraph()
+            run = note.add_run("Note: " + row["note"])
+            run.italic = True
         cells[3].text = row["source"]
         cells[4].text = row["seen_on"]
     document.add_paragraph()
+    to_check = sum(1 for row in rows if row["to_check"])
+    if to_check:
+        line = document.add_paragraph(
+            f"{to_check} event{'' if to_check == 1 else 's'} marked to check: "
+            "the office has not settled the point."
+        )
+        line.runs[0].italic = True
+    clips = clips_line(incident, {row["id"]: row["number"] for row in rows})
+    if clips:
+        # The clips cut from events (Phase 7 chapter 1), by number.
+        line = document.add_paragraph(clips)
+        line.runs[0].italic = True
     for legend in (WORDS_LEGEND, QUOTE_LEGEND):
         line = document.add_paragraph(legend)
         line.runs[0].italic = True

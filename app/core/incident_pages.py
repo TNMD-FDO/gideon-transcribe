@@ -19,7 +19,9 @@ from core import (
     cases,
     chronology,
     incident_assistant,
+    incident_clips,
     incidents,
+    media,
     settings_store,
     sharing,
 )
@@ -182,6 +184,14 @@ def state_json(incident: Incident, user) -> dict:
             "created_by": incident.created_by.shown_name if incident.created_by else "",
             "created": incident.created.isoformat(),
             "how": incident.how,
+            # About this chronology and the To check count (Phase 7 chapter 1).
+            "about": incident.about,
+            "to_check": chronology.to_check_count(incident),
+            # Clip this event, and the Clips chapter's limits for the box.
+            "clips": incident_clips.on(),
+            "clip_longest": settings_store.longest_clip_seconds(),
+            "clip_focus_most": media.FOCUS_MOST,
+            "clip_most": media.WALL_MOST,
         },
         "cameras": [
             _camera_json(one, colours[str(one.pk)], str(one.pk) in wall)
@@ -323,6 +333,10 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
         incidents.rename(
             incident, request.POST.get("name", ""), by=user, request=request
         )
+    elif action == "about":
+        incidents.set_about(
+            incident, request.POST.get("about", ""), by=user, request=request
+        )
     elif action == "add":
         wanted = request.POST.getlist("recordings")
         chosen = list(case.recordings.filter(pk__in=wanted))
@@ -392,7 +406,7 @@ def _event_fields(request) -> dict:
     """An Event's fields as the box posts them; the cameras only when given."""
     fields = {
         key: request.POST.get(key, "")
-        for key in ("at", "until", "text", "source", "camera")
+        for key in ("at", "until", "text", "source", "camera", "note", "to_check")
     }
     if request.POST.get("cameras_given"):
         fields["cameras"] = request.POST.getlist("cameras")

@@ -21,6 +21,86 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.63.0, 2026-09-17
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Phase 7 chapter 1 (`docs/spec/SPEC-PHASE-7.md`): the chronology as a
+document, and the clip across cameras.
+
+**The chronology as a document.** Every event takes a **Note** in a person's
+own words (up to 2,000 characters, folded under the Note button on the event
+box) and a **To check** mark for a point the office has not settled; the
+Chronology tab shows the note under the event with the writer's name and the
+mark as a pill, and counts the marks in its head line. **About this
+chronology**, one paragraph before the events, is edited at the top of the
+tab. The Word export prints About on its cover, each note in italics under
+its event, "(to check)" beside the event's number and a count line under the
+table; the spreadsheet gains Note and To check columns. The memo and the
+proposals are told the notes and About as the office's own words, which the
+incident rules now say the assistant respects and never rewrites, and where
+an event is marked to check the memo says the office has not settled the
+point; the memo's stale mark covers them. An accepted proposal edited by a
+person keeps its source, and only Accept makes an event the assistant's.
+The note keeps its writer's name whoever edits the event afterwards; in
+the Note field Enter saves and Shift+Enter starts a new line.
+
+**Clip this event.** On the event box (Edit) and as a Clip button on each
+event's row, while Incidents, Clips and the new Incident clips setting are
+on: the clip box offers the span from ten seconds before the event to ten
+after, the event's cameras ticked (a camera the span falls outside greyed
+with "not running then"), Focus or Grid starting from the page's layout, the
+sound from the camera the page hears, the clock and the camera ids burned in,
+and the event's text as the title. One file is cut on the media worker by
+ffmpeg: each camera from its own moment on its own clock, scaled into its
+tile without distortion, the tiles stacked 1280 wide (Focus: one at 1280 by
+720 with up to four 320 by 180 under it; Grid: two across at 640 by 360 up to
+four, three across at 426 by 240 up to nine), a camera that ends inside the
+span or starts inside it black in its tile with its id, silence where the
+sound camera was not running, the incident clock top right as hh:mm:ss
+running, each camera's id bottom left in the captions' typeface. The clip is
+a Clip like any other on the case's Clips tab and the Clips page, in the
+case's group, with a Cameras column ("2 cameras, Focus") and "from the event
+..." under its title, and Open the incident in place of Open in viewer; its
+picture (the cameras with their offsets and ids, the layout, the sound, the
+burn choices, the clock's second) is copied when it is made, so Render again
+remakes it the same whatever is re-synced or renamed afterwards, and a
+camera whose playback copy is gone fails the render plainly rather than
+painting a black stand-in. The Chronology tab's event row shows "1 clip";
+the Word export lists the clips made from events under the table. Incident
+clips render one at a time on the media worker; the time limit is the Clips
+chapter's plus a minute per camera. Adjust is not offered on an Incident
+clip (its span is its event's; a new clip changes it), and the viewer's own
+Clips sheet, which plays one recording, does not list it. Without an
+incident clock the clock is not burned: elapsed time would read as a time
+of day. Focus holds up to five cameras; past that the box starts from Grid.
+A recording that carries an incident clip cannot be moved to another case
+while the clip is on it (the file holds the other cameras' pictures), and a
+camera moved away afterwards fails Render again plainly; Process again on
+the sound camera refuses a new clip as it refuses any other.
+
+**Settings.** Incident clips (On) on the Incidents page under Clips, greyed
+while Incidents or Clips is off. The Clips page's own limits apply.
+
+**Audit.** Clip created carries `cameras` and `layout` for an Incident clip;
+Event changed covers a note or a mark; Incident changed carries `about`;
+none holds a word of a note, an About or an event.
+
+**Image.** The app image names `fonts-dejavu-core` and checks at build that
+ffmpeg carries drawtext, xstack and tpad and that DejaVu Sans is on disk, so
+an image that cannot draw the wall never reaches a server. CI now checks
+that every model change has its migration.
+
+**Database.** One migration: Note and To check on the Event, About on the
+Incident, and the Incident, the Event and the picture on the Clip.
+
+**Records.** `docs/research/incident-clip.md` records the filter graph, the
+reasons for each filter and the by-hand check owed on the worker; the Clips
+page now shows a clip's span and length, which it had left blank.
+
 ## v1.62.0, 2026-09-17
 
 ```

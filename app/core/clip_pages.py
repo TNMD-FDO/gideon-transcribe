@@ -21,11 +21,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import audit, cases, clip_work, exports, settings_store
-from core.clips import SHORTEST_SECONDS, Clip, RenderState, next_title
+from core.clips import SHORTEST_SECONDS, Clip, RenderState, next_title, spell
 from core.media_access import media_root
 from core.recordings import Recording
 
 log = logging.getLogger("transcribe.clips")
+
+__all__ = ["spell"]
 
 
 def clips_are_on() -> bool:
@@ -62,18 +64,6 @@ def _may_change(clip: Clip, asker) -> bool:
     return asker is None or cases.standing(clip.recording, asker) == "own"
 
 
-def spell(seconds: float) -> str:
-    """A length a person reads: "45 s", "1 min 37 s", "1 h 2 min"."""
-    whole = int(round(seconds or 0))
-    hours, rest = divmod(whole, 3600)
-    minutes, secs = divmod(rest, 60)
-    if hours:
-        return f"{hours} h {minutes} min" if minutes else f"{hours} h"
-    if minutes:
-        return f"{minutes} min {secs} s" if secs else f"{minutes} min"
-    return f"{secs} s"
-
-
 def _row(clip: Clip, here=None, asker=None) -> dict:
     """One Clip, as the sheet and the Case's Clips tab both draw it.
 
@@ -100,8 +90,18 @@ def _row(clip: Clip, here=None, asker=None) -> dict:
         "end": clip.end,
         "seconds": clip.seconds,
         # As a person reads them: clocks for the span, words for the length.
-        "span": f"{exports.clock(clip.start)} to {exports.clock(clip.end)}",
-        "length": spell(clip.seconds),
+        "span": clip.span,
+        "length": clip.length,
+        # An Incident clip (Phase 7 chapter 1): its cameras and layout, the
+        # event it came from, and the incident page to open it on. Its span
+        # is its event's; only a new clip changes it.
+        "picture": clip.picture is not None,
+        "cameras": clip.cameras_line,
+        "from_event": clip.from_event,
+        "incident_url": (
+            clip.incident.url() if clip.incident_id and clip.incident else ""
+        ),
+        "may_adjust": may_change and clip.picture is None,
         "burn_captions": clip.burn_captions,
         "include_excerpt": clip.include_excerpt,
         "state": clip.state,
@@ -125,8 +125,12 @@ def _row(clip: Clip, here=None, asker=None) -> dict:
     }
 
 
-def _record(request, clip: Clip, event: str) -> None:
-    """Every row carries the id, the span, and the options, never the title."""
+def _record(request, clip: Clip, event: str, **extra) -> None:
+    """Every row carries the id, the span, and the options, never the title.
+
+    An Incident clip's row adds its cameras and layout (Phase 7 chapter 1)
+    and never a word of the event.
+    """
     audit.write(
         audit.Category.CLIPS,
         event,
@@ -137,15 +141,24 @@ def _record(request, clip: Clip, event: str) -> None:
         ),
         object_type="clip",
         object_id=clip.pk,
-        object_label=f"{clip.start:.1f}-{clip.end:.1f}",
+        object_label=clip.span_label,
         burn_captions=clip.burn_captions,
         include_excerpt=clip.include_excerpt,
+        **extra,
     )
+
+
+# Incident clips render one at a time on the media worker, which runs several
+# jobs at once: nine decoders and one encoder are work enough for one slot.
+INCIDENT_CLIP_LOCK = "incident-clip"
 
 
 def _start_render(clip: Clip) -> None:
     from core.tasks import render_clip
 
+    if clip.picture is not None:
+        render_clip.configure(lock=INCIDENT_CLIP_LOCK).defer(clip_id=str(clip.pk))
+        return
     render_clip.defer(clip_id=str(clip.pk))
 
 
@@ -182,13 +195,20 @@ def clips_of(request: HttpRequest, recording_id) -> JsonResponse:
 
 
 def _the_ones_to_show(recording):
-    """This Recording's Clips, or the whole Case's with these first."""
-    if not recording.case_id or not cases.folder_management_on():
-        return list(recording.clips.all())
+    """This Recording's Clips, or the whole Case's with these first.
 
-    mine = list(recording.clips.all())
+    An Incident clip is left out: it is cut from several cameras and lives
+    on the case's Clips tab and the Clips page, where its cameras are said.
+    The viewer's tab plays and adjusts one recording's own spans, and nothing
+    in it changes (Phase 7 chapter 1).
+    """
+    own = recording.clips.filter(picture__isnull=True)
+    if not recording.case_id or not cases.folder_management_on():
+        return list(own)
+
+    mine = list(own)
     others = list(
-        Clip.objects.filter(recording__case_id=recording.case_id)
+        Clip.objects.filter(recording__case_id=recording.case_id, picture__isnull=True)
         .exclude(recording_id=recording.pk)
         .select_related("recording", "user")
         .order_by("recording__created", "created")
@@ -301,6 +321,17 @@ def change_clip(request: HttpRequest, clip_id) -> JsonResponse:
     if "note" in wanted:
         clip.note = (wanted.get("note") or "")[:1000]
 
+    if clip.picture is not None and any(
+        key in wanted for key in ("start", "end", "burn_captions")
+    ):
+        return JsonResponse(
+            {
+                "error": "An incident clip is cut from its event; make a new "
+                "one to change the span."
+            },
+            status=400,
+        )
+
     adjusting = False
     if "start" in wanted or "end" in wanted:
         problem, start, end = _span(
@@ -396,7 +427,7 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
             return redirect(reverse("clips"))
         clips = [
             one
-            for one in Clip.objects.filter(recording=recording)
+            for one in Clip.objects.filter(recording=recording, picture__isnull=True)
             .select_related("recording", "recording__case", "recording__user")
             .order_by("start")
             if one.state == RenderState.READY
@@ -439,7 +470,9 @@ def my_clips(user) -> list:
     return [
         one
         for one in Clip.objects.filter(user=user)
-        .select_related("recording", "recording__case", "recording__user")
+        .select_related(
+            "recording", "recording__case", "recording__user", "event", "incident"
+        )
         .order_by("-created")
         if cases.reachable(one.recording)
     ]

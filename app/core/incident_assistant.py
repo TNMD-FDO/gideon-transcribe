@@ -157,9 +157,10 @@ def _clock_words(incident, at: float) -> str:
 
 def events_signature(incident) -> str:
     parts = sorted(
-        f"{one.pk}:{one.at:.2f}:{one.until or ''}:{one.text}"
+        f"{one.pk}:{one.at:.2f}:{one.until or ''}:{one.text}:{one.note}:{one.to_check}"
         for one in incident.events.filter(proposed=False)
     )
+    parts.append(f"about:{incident.about}")
     return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:16]
 
 
@@ -353,6 +354,8 @@ def _chronology_lines(incident) -> tuple[list[str], dict]:
             f"Event {number}, {when}, {event.text}"
             + (f"; seen on {seen}" if seen else "")
             + f"; {origin}."
+            + (" To check: the office has not settled this." if event.to_check else "")
+            + (f" The office's note: {event.note}" if event.note else "")
         )
     return lines, numbers
 
@@ -552,6 +555,7 @@ def propose(incident_id, attempt: int = 1) -> None:
             ]
             known = [
                 f"{_clock(incident, one.at)} {one.text}"
+                + (f" (the office's note: {one.note})" if one.note else "")
                 for one in sorted([*standing, *made], key=lambda one: one.at)
             ]
             head = prompts.incident_events_input(
@@ -890,6 +894,7 @@ def write_memo(memo_id, attempt: int = 1) -> None:
                 _cameras_line(incident),
                 event_lines,
                 _record_text(incident, record, dropped),
+                about=incident.about,
             )
 
         # A transcript-only camera drops to a line when the whole does not

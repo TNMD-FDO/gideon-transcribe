@@ -94,6 +94,19 @@ jobs:
           POSTGRES_PASSWORD: postgres
         run: python -m pytest
 
+      # A model changed without its migration migrates green and then fails
+      # on the first query; the check makes it a build failure instead.
+      - name: Every model change has its migration
+        if: hashFiles('app/manage.py') != ''
+        working-directory: app
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
+          DJANGO_SETTINGS_MODULE: transcribe.settings_test
+        run: python manage.py makemigrations --check --dry-run
+
       - name: The WhisperX service's compose file is valid
         if: hashFiles('whisperx-service/compose.yaml') != ''
         run: |

@@ -959,3 +959,324 @@ def cut_clip(
         raise MediaError(
             "This clip could not be made from the recording", "clip_render_failed"
         )
+
+
+# The clip across cameras (Phase 7 chapter 1) -----------------------------------------
+#
+# One file from several Playback copies: each camera cut from its own moment
+# on its own clock, scaled into its tile, the tiles stacked into one picture
+# 1280 wide, the Incident clock and each camera's id drawn on, the sound from
+# one camera. The design and the reasons for each filter are in
+# docs/research/incident-clip.md.
+
+# The typeface the captions use by name, given here by path so that a missing
+# font is a loud ffmpeg error and never a quiet substitute. The app image
+# installs fonts-dejavu-core and checks the file at build.
+CAPTION_FONT_FILE = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+WALL_WIDTH = 1280
+WALL_FPS = 30
+FOCUS = "focus"
+GRID = "grid"
+# Focus holds the large tile and up to four small ones under it; Grid up to
+# nine. The chapter fixes both.
+FOCUS_MOST = 5
+WALL_MOST = 9
+# A camera id is cut to what fits its tile: drawtext neither wraps nor
+# shrinks, and DejaVu Sans is about nine pixels a character at 16 px.
+ID_LABEL_MOST = 40
+ID_LABEL_SMALL = 30
+
+
+@dataclass(frozen=True)
+class Tile:
+    """One camera in an Incident clip's picture."""
+
+    source: Path  # the camera's Playback copy
+    # The camera's own second at the clip's first frame; negative when the
+    # camera starts inside the span.
+    offset: float
+    label: str  # the camera id for the tile's bottom left
+
+    @property
+    def seek(self) -> float:
+        return max(0.0, self.offset)
+
+    @property
+    def lead(self) -> float:
+        """Seconds of black before the camera's first frame."""
+        return max(0.0, -self.offset)
+
+
+def tile_boxes(
+    layout: str, count: int
+) -> tuple[list[tuple[int, int, int, int]], tuple[int, int]]:
+    """Each tile's (x, y, w, h) in tile order, and the picture's (w, h).
+
+    Focus: the first tile at 1280 by 720 with up to four 320 by 180 tiles
+    centred on the row under it. Grid: two across at 640 by 360 for up to
+    four, three across at 426 by 240 for up to nine, the last row short when
+    the count is odd. Every size is even, as yuv420p needs; the three
+    columns sit at 0, 428 and 854 so the picture stays 1280 wide and every
+    tile starts on an even pixel.
+    """
+    if count < 1 or count > WALL_MOST:
+        raise ValueError("Up to nine cameras in one clip.")
+    if layout == FOCUS:
+        if count > FOCUS_MOST:
+            raise ValueError("Focus holds up to five cameras.")
+        boxes = [(0, 0, WALL_WIDTH, 720)]
+        if count == 1:
+            return boxes, (WALL_WIDTH, 720)
+        left = (WALL_WIDTH - 320 * (count - 1)) // 2
+        for index in range(count - 1):
+            boxes.append((left + 320 * index, 720, 320, 180))
+        return boxes, (WALL_WIDTH, 900)
+    if layout != GRID:
+        raise ValueError("Focus or Grid.")
+    if count == 1:
+        return [(0, 0, WALL_WIDTH, 720)], (WALL_WIDTH, 720)
+    if count <= 4:
+        across, width, height, columns = 2, 640, 360, (0, 640)
+    else:
+        # Even columns, because a tile at an odd x would have its colour
+        # planes copied half a chroma sample (one luma pixel) off its luma.
+        across, width, height, columns = 3, 426, 240, (0, 428, 854)
+    rows = -(-count // across)
+    boxes = [
+        (columns[index % across], (index // across) * height, width, height)
+        for index in range(count)
+    ]
+    return boxes, (WALL_WIDTH, rows * height)
+
+
+def clock_text(delta: int) -> str:
+    """The clock drawtext's text: the frame's second plus `delta`, as hh:mm:ss.
+
+    The string passes three of ffmpeg's parsers. The graph parser copies what
+    is inside single quotes literally; the option parser then turns each
+    backslash-colon into a colon; drawtext's own expander splits the
+    function's arguments on the colons that are left. %T is strftime's own
+    spelling of %H:%M:%S, so no colon inside the format needs a third layer
+    of escaping. gmtime rather than localtime, because `delta` is already the
+    second of the day on the Incident clock and the container's time zone
+    must not be applied; and rather than hms, because gmtime wraps at
+    midnight as the page's clock does.
+    """
+    return r"%{pts\:gmtime\:" + str(int(delta)) + r"\:%T}"
+
+
+def filter_path(path: Path | str) -> str:
+    """A file name inside a filter: slashes, the colon escaped, in quotes."""
+    escaped = str(path).replace("\\", "/").replace(":", r"\:")
+    return f"'{escaped}'"
+
+
+def id_label(label: str, width: int) -> str:
+    """The camera id as the tile draws it: one line, cut to what fits."""
+    flat = " ".join(str(label or "").split())
+    return flat[: ID_LABEL_MOST if width >= 640 else ID_LABEL_SMALL]
+
+
+def _text_style(size: int) -> str:
+    """The captions' look: white with a half-transparent black outline."""
+    return (
+        f"fontfile={filter_path(CAPTION_FONT_FILE)}:fontsize={size}:"
+        "fontcolor=white:borderw=2:bordercolor=black@0.5"
+    )
+
+
+def wall_filter(
+    tiles: list[Tile],
+    layout: str,
+    length: float,
+    *,
+    sound: int,
+    clock: int | None,
+    id_files: list[Path] | None,
+) -> str:
+    """The whole -filter_complex string, one chain per tile and the stack.
+
+    Per tile, in order: setpts pins the first frame to zero whatever fraction
+    of a frame the seek landed on; fps gives every tile one frame rate before
+    they are stacked (xstack would otherwise emit at the combined rate of a
+    25 and a 30 fps camera and the clock would tick unevenly), and tells
+    tpad how many frames a second of black is; scale fits the picture by its
+    display aspect (a 4:3 or a portrait phone gets black bars, an anamorphic
+    source is not squashed); pad centres it in the tile; setsar squares the
+    pixels; tpad IS the black tile, before a camera that starts inside the
+    span and after one that ends inside it, bounded so no stream is ever
+    infinite; format makes every stacked input the same; drawtext, after
+    tpad so the id is on the black frames too, reads the id from a file with
+    no expansion, so a colon, a quote or a percent sign in a title is drawn
+    as it is. With one tile there is no stack. The sound is the one camera's,
+    silence put where it was not yet running and after it ends.
+    """
+    boxes, _ = tile_boxes(layout, len(tiles))
+    chains = []
+    for index, (tile, box) in enumerate(zip(tiles, boxes, strict=True)):
+        _, _, width, height = box
+        chain = (
+            f"[{index}:v]setpts=PTS-STARTPTS,fps={WALL_FPS},"
+            f"scale=w='trunc(min({width},{height}*dar)/2)*2'"
+            f":h='trunc(min({height},{width}/dar)/2)*2',"
+            f"pad={width}:{height}:-1:-1:color=black,setsar=1,"
+            f"tpad=start_duration={tile.lead:.3f}:stop_duration={length:.3f}"
+            ":color=black,format=yuv420p"
+        )
+        if id_files is not None:
+            chain += (
+                f",drawtext={_text_style(22 if height >= 360 else 16)}"
+                f":textfile={filter_path(id_files[index])}:expansion=none"
+                ":x=8:y=h-th-8"
+            )
+        chains.append(chain)
+    if len(tiles) > 1:
+        positions = "|".join(f"{x}_{y}" for x, y, _, _ in boxes)
+        chains = [chain + f"[t{index}]" for index, chain in enumerate(chains)]
+        picture = (
+            "".join(f"[t{index}]" for index in range(len(tiles)))
+            + f"xstack=inputs={len(tiles)}:layout={positions}:fill=black"
+        )
+    else:
+        picture = chains.pop()
+    if clock is not None:
+        picture += (
+            f",drawtext={_text_style(28)}:x=w-tw-16:y=16:text='{clock_text(clock)}'"
+        )
+    chains.append(picture + "[v]")
+    heard = tiles[sound]
+    if heard.lead > 0:
+        # adelay writes the lead as silence (ffmpeg 7.1 emits the common
+        # delay as silent frames before the first input frame); the resample
+        # with a first pts of zero then pins the track's start to zero
+        # whatever the copy's own start time, as every playback copy gets.
+        audio = (
+            f"[{sound}:a]adelay=delays={round(heard.lead * 1000)}:all=1,"
+            f"{KEEP_THE_CLOCK},apad=whole_dur={length:.3f}[a]"
+        )
+    else:
+        audio = f"[{sound}:a]apad=whole_dur={length:.3f}[a]"
+    chains.append(audio)
+    return ";".join(chains)
+
+
+def wall_arguments(
+    tiles: list[Tile],
+    target: Path,
+    length: float,
+    *,
+    layout: str,
+    sound: int,
+    clock: int | None,
+    id_files: list[Path] | None,
+) -> list[str]:
+    """The ffmpeg command for one Incident clip, from "ffmpeg" to the target.
+
+    Each input carries its own seek and length, written before it, so each
+    camera is cut frame-accurately from its own moment (cut_clip's rule) and
+    nothing past the span is decoded. The thread cap goes before every input
+    and before the encoder, because the one _run() prepends reaches the
+    first input alone.
+    """
+    threads = str(threads_per_job())
+    arguments = ["ffmpeg", "-nostdin", "-y", "-v", "error"]
+    for tile in tiles:
+        arguments += [
+            "-threads",
+            threads,
+            "-ss",
+            f"{tile.seek:.3f}",
+            "-t",
+            f"{max(0.0, length - tile.lead):.3f}",
+            "-i",
+            str(tile.source),
+        ]
+    arguments += [
+        "-filter_complex_threads",
+        threads,
+        "-filter_complex",
+        wall_filter(tiles, layout, length, sound=sound, clock=clock, id_files=id_files),
+        "-map",
+        "[v]",
+        "-map",
+        "[a]",
+        "-t",
+        f"{length:.3f}",
+        "-threads",
+        threads,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        PLAYBACK_BITRATE_STEREO,
+        "-movflags",
+        "+faststart",
+        str(target),
+    ]
+    return arguments
+
+
+def cut_wall(
+    tiles: list[Tile],
+    target: Path,
+    length: float,
+    *,
+    layout: str,
+    sound: int,
+    clock: int | None,
+    labels: bool = True,
+    timeout: int = 600,
+) -> None:
+    """Several Playback copies as one file: cut_clip's sibling for an Incident.
+
+    The camera ids are written to files in a folder of their own, which goes
+    however this ends, so that no id ever passes through the filter string.
+    A partial file is removed on failure so it never counts against a quota.
+    """
+    import tempfile
+
+    if not tiles:
+        raise MediaError("This clip has no cameras", "clip_render_failed")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    boxes, _ = tile_boxes(layout, len(tiles))
+    with tempfile.TemporaryDirectory(prefix="wall-") as folder:
+        id_files = None
+        if labels:
+            id_files = []
+            for index, (tile, box) in enumerate(zip(tiles, boxes, strict=True)):
+                path = Path(folder) / f"tile-{index}.txt"
+                path.write_text(id_label(tile.label, box[2]), encoding="utf-8")
+                id_files.append(path)
+        arguments = wall_arguments(
+            tiles,
+            target,
+            length,
+            layout=layout,
+            sound=sound,
+            clock=clock,
+            id_files=id_files,
+        )
+        try:
+            finished = _run(arguments, timeout=timeout)
+        except BaseException:
+            target.unlink(missing_ok=True)
+            raise
+    if finished.returncode != 0 or not target.exists() or not target.stat().st_size:
+        # With -v error the output is short and names codecs, filters and a
+        # missing font, never a word of content.
+        log.warning(
+            "the wall of %d cameras could not be cut: %s",
+            len(tiles),
+            (finished.stderr or "")[-2000:],
+        )
+        target.unlink(missing_ok=True)
+        raise MediaError(
+            "This clip could not be made from the cameras", "clip_render_failed"
+        )

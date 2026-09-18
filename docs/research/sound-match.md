@@ -69,6 +69,13 @@ do true matches within earshot always score over 1.5, and does any pair out
 of earshot score over it? Record the counts here, never the words; nothing
 of the sound leaves the server.
 
+**First report, 2026-09-17.** The maintainer ran the match on the server on
+two videos of one interview filmed from different angles, and it placed
+the second camera correctly. One pair, within earshot, with no numbers
+recorded: it says the method works on real sound in a quiet room, and
+nothing yet about a street with wind and traffic, or about a pair out of
+earshot. The counts above are still owed.
+
 ## Sources
 
 The app's own media facts (`docs/research/media-pipeline-facts.md`: the ASR

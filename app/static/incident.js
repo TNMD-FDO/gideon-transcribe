@@ -39,6 +39,8 @@
   var followBox = document.getElementById("follow");
   var trouble = document.getElementById("player-trouble");
   var eventBox = document.getElementById("event-box");
+  var clipBox = document.getElementById("clip-box");      // Clip this event (Phase 7 chapter 1)
+  var sheets = document.getElementById("sheets");         // holds the two boxes over the wall
 
   // The clock ------------------------------------------------------------------------
 
@@ -173,6 +175,8 @@
     if (!soundCamera && wallCameras().length) { soundCamera = (layout === "focus" && focusCamera) ? focusCamera : wallCameras()[0].id; }
     drawSoundChoice();
     tick();
+    // A clip box left open follows the cameras as they stand now.
+    if (clipBox && !clipBox.hidden) { refreshClipBox(); }
     // The assistant at work (chapter 3): the page asks again until it lands.
     if (S.proposals.busy || S.memo.busy) {
       window.clearTimeout(pollTimer);
@@ -621,6 +625,7 @@
 
   document.addEventListener("keydown", function (event) {
     if (event.altKey || event.ctrlKey || event.metaKey) { return; }
+    if (event.key === "Escape" && !clipBox.hidden) { closeClipBox(); return; }
     if (event.key === "Escape" && !eventBox.hidden) { closeEventBox(); return; }
     if (event.target.closest("input, textarea, select")) { return; }
     if (event.key === " ") { event.preventDefault(); if (playing) { pause(); } else { play(); } }
@@ -804,11 +809,21 @@
     var proposed = S.events.filter(function (one) { return one.proposed; });
     var P = S.proposals || {};
     var M = S.memo || {};
-    var lead = kept.length ? kept.length + " event" + (kept.length === 1 ? "" : "s") + " on the chronology." : "No events yet. Add one at the moment you are watching, or from a line under a camera.";
+    var toCheck = kept.filter(function (one) { return one.to_check; }).length;
+    var lead = kept.length ? kept.length + " event" + (kept.length === 1 ? "" : "s") + " on the chronology" + (toCheck ? ", " + toCheck + " to check" : "") + "." : "No events yet. Add one at the moment you are watching, or from a line under a camera.";
     if (M.state === "done" && kept.length) { lead += " The memo was written on " + M.events_count + " of them."; }
     var html = "<div class='row' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
       "<p class='lead grow' style='margin: 0'>" + escape(lead) + "</p>" +
       "<button type='button' class='small primary' id='add-event-here'>Add event here</button></div>";
+    // About this chronology (Phase 7 chapter 1): the office's paragraph
+    // before the events, edited in place.
+    var about = S.incident.about || "";
+    html += "<div class='inc-about' id='about-line'><span class='small'><b>About this chronology:</b> " +
+      (about ? escape(about.length > 160 ? about.slice(0, 158) + "\u2026" : about) : "<span class='muted'>none yet. What a reader should know before the events.</span>") +
+      "</span> <button type='button' class='tiny ghost' id='about-edit'>" + (about ? "Edit" : "Write it") + "</button></div>" +
+      "<form class='inc-about-box' id='about-box' hidden><textarea name='about' rows='4' maxlength='2000' aria-label='About this chronology'>" + escape(about) + "</textarea>" +
+      "<div class='row' style='gap: 6px; margin-top: 6px'><button type='submit' class='small primary'>Save</button><button type='button' class='small ghost' id='about-cancel'>Cancel</button>" +
+      "<span class='muted small'>Printed on the export's cover and told to the memo as the office's own words.</span></div></form>";
     if (P.on) {
       html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
         "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera and proposes events; nothing joins the chronology until you accept it'>Propose events</button>" +
@@ -819,9 +834,14 @@
       kept.forEach(function (one) {
         html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td>" + escape(one.text) + (one.seen_on ? "<div class='muted small'>Seen on " + escape(one.seen_on) + "</div>" : "") + "</td>" +
-          "<td><span class='pill small" + (one.source === "person" ? " person" : "") + "'>" + escape(one.source_words) + "</span></td>" +
-          "<td class='acts'><button type='button' class='tiny ghost' data-edit='" + one.id + "'>Edit</button></td></tr>";
+          "<td>" + escape(one.text) + (one.seen_on ? "<div class='muted small'>Seen on " + escape(one.seen_on) + "</div>" : "") +
+          (one.note ? "<div class='small note'><i>Note: " + escape(one.note) + "</i>" + (one.note_by ? " <span class='muted'>" + escape(one.note_by) + "</span>" : "") + "</div>" : "") + "</td>" +
+          "<td><span class='pill small" + (one.source === "person" ? " person" : "") + "'>" + escape(one.source_words) + "</span>" +
+          (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</td>" +
+          "<td class='acts nowrap'>" +
+          (one.clips ? "<span class='pill small clipmark' title='Clips made from this event, on the case&#39;s Clips tab'>" + one.clips + " clip" + (one.clips === 1 ? "" : "s") + "</span>" : "") +
+          (mayClip(one) ? "<button type='button' class='tiny ghost' data-clip='" + one.id + "' title='Cut one file from this event&#39;s cameras over its span'>Clip</button> " : "") +
+          "<button type='button' class='tiny ghost' data-edit='" + one.id + "'>Edit</button></td></tr>";
       });
       html += "</tbody></table>";
     }
@@ -930,7 +950,18 @@
     if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.at)); return; }
     var edit = event.target.closest("[data-edit]");
     if (edit) { var found = eventById(edit.dataset.edit); if (found) { openEventBox(found); } return; }
+    var clip = event.target.closest("[data-clip]");
+    if (clip) { var clipped = eventById(clip.dataset.clip); if (clipped) { openClipBox(clipped); } return; }
     if (event.target.closest("#add-event-here")) { openEventBox({ at: now() }); return; }
+    // About this chronology (Phase 7 chapter 1).
+    if (event.target.closest("#about-edit")) {
+      document.getElementById("about-line").hidden = true;
+      var box = document.getElementById("about-box");
+      box.hidden = false;
+      box.elements.about.focus();
+      return;
+    }
+    if (event.target.closest("#about-cancel")) { drawChronology(); return; }
     // The assistant's proposals (chapter 3).
     var accept = event.target.closest("[data-accept]");
     if (accept) { post({ action: "event_accept", event: accept.dataset.accept }); return; }
@@ -945,18 +976,32 @@
     }
   });
 
+  document.getElementById("panel-chronology").addEventListener("submit", function (event) {
+    var form = event.target.closest("#about-box");
+    if (!form) { return; }
+    event.preventDefault();
+    post({ action: "about", about: form.elements.about.value });
+  });
+
   document.getElementById("add-event").addEventListener("click", function () { openEventBox({ at: now() }); });
 
   // The event box: one form for a new Event and for Edit.
   function openEventBox(given) {
     var at = given.at !== undefined ? given.at : now();
     eventBox.hidden = false;
+    syncSheets();
     eventBox.elements.event.value = given.id || "";
+    // Clip this event, on Edit, while clips are on and a camera can be cut.
+    document.getElementById("event-clip").hidden = !mayClip(given);
     eventBox.elements.source.value = given.source || "person";
     eventBox.elements.camera.value = given.camera || "";
     eventBox.elements.when.value = timeOfDay(at);
     eventBox.elements.until_when.value = given.until ? timeOfDay(given.until) : "";
     eventBox.elements.text.value = given.text || "";
+    eventBox.elements.note.value = given.note || "";
+    eventBox.elements.to_check.checked = !!given.to_check;
+    // The note folds closed until pressed, or open when the event has one.
+    eventBox.elements.note.hidden = !given.note;
     document.getElementById("event-title").textContent = given.id ? "Edit event" : "New event";
     document.getElementById("event-save").textContent = given.id ? "Save" : "Add";
     document.getElementById("event-remove").hidden = !given.id;
@@ -973,7 +1018,11 @@
   function closeEventBox() {
     eventBox.hidden = true;
     eventBox.reset();
+    syncSheets();
   }
+
+  // The sheets over the wall show while either box does.
+  function syncSheets() { sheets.hidden = eventBox.hidden && clipBox.hidden; }
 
   eventBox.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -988,18 +1037,248 @@
       text: eventBox.elements.text.value,
       source: eventBox.elements.source.value,
       camera: eventBox.elements.camera.value,
+      note: eventBox.elements.note.value,
+      to_check: eventBox.elements.to_check.checked ? "yes" : "",
       cameras_given: "yes",
       cameras: Array.prototype.map.call(eventBox.querySelectorAll("input[name=cameras]:checked"), function (one) { return one.value; })
     };
     post(fields).then(function (got) { if (got.ok) { closeEventBox(); showTab("chronology"); } });
   });
   document.getElementById("event-cancel").addEventListener("click", closeEventBox);
+  document.getElementById("event-note-open").addEventListener("click", function () {
+    var note = eventBox.elements.note;
+    note.hidden = !note.hidden;
+    if (!note.hidden) { note.focus(); }
+  });
+  // The Note field: Enter adds or saves as everywhere on the box; Shift+Enter
+  // starts a new line (Phase 7 chapter 1).
+  eventBox.elements.note.addEventListener("keydown", function (event) {
+    if (event.key !== "Enter" || event.shiftKey) { return; }
+    event.preventDefault();
+    if (eventBox.requestSubmit) { eventBox.requestSubmit(); } else { eventBox.dispatchEvent(new Event("submit", { cancelable: true })); }
+  });
   document.getElementById("event-remove").addEventListener("click", function () {
     var id = eventBox.elements.event.value;
     if (!id) { return; }
     window.UI.confirm({ title: "Remove this event?", body: "It leaves the chronology and the exports.", ok: "Remove", danger: true }).then(function (yes) {
       if (yes) { post({ action: "event_remove", event: id }).then(closeEventBox); }
     });
+  });
+  document.getElementById("event-clip").addEventListener("click", function () {
+    var found = eventById(eventBox.elements.event.value);
+    if (found) { openClipBox(found); }
+  });
+
+  // The clip box (Phase 7 chapter 1): one file from the event's cameras over
+  // its span. The cameras are tiles in the picture's order, the first the
+  // large one in Focus; a camera the span falls outside is greyed.
+
+  function clipCameras() {
+    // Synced, with a playback copy: the ones ffmpeg can cut.
+    return placedCameras().filter(function (cam) { return cam.synced && cam.media_url; });
+  }
+
+  function mayClip(ev) {
+    // While clips are on and at least one of the event's own cameras (its
+    // Seen on list) is synced with a playback copy, as the chapter says.
+    if (!S.incident.clips || !ev || !ev.id) { return false; }
+    var cuttable = clipCameras().map(function (cam) { return cam.id; });
+    return (ev.cameras || []).some(function (id) { return cuttable.indexOf(id) !== -1; });
+  }
+
+  function clipSpan() {
+    var from = parseWhen(clipBox.elements.from.value), until = parseWhen(clipBox.elements.until.value);
+    if (from === null || until === null) { return null; }
+    return [from, until];
+  }
+
+  function isRunning(cam, span) {
+    return cam.starts_at < span[1] && cam.starts_at + cam.length > span[0];
+  }
+
+  function clipTiles() { return Array.prototype.slice.call(clipBox.querySelectorAll(".clip-cam")); }
+
+  function tickedCameras() {
+    return clipTiles().filter(function (tile) { var box = tile.querySelector("input"); return box.checked && !box.disabled; })
+      .map(function (tile) { return tile.dataset.camera; });
+  }
+
+  function openClipBox(ev) {
+    var from = Math.floor(ev.at) - 10, until = Math.ceil(ev.until || ev.at) + 10;
+    if (!S.incident.has_clock && from < 0) { from = 0; }
+    clipBox.hidden = false;
+    syncSheets();
+    clipBox.elements.event.value = ev.id;
+    document.getElementById("clip-event-text").textContent = timeOfDay(ev.at) + "  " + ev.text;
+    clipBox.elements.from.value = timeOfDay(from);
+    clipBox.elements.until.value = timeOfDay(until);
+    clipBox.elements.title.value = (ev.text || "").slice(0, 120);
+    clipBox.elements.layout.value = layout === "focus" ? "focus" : "grid";
+    clipBox.elements.burn_ids.checked = true;
+    // The clock is burned only from an Incident clock: elapsed time would
+    // read as a time of day just after midnight.
+    var clockLabel = document.getElementById("clip-clock-label");
+    clipBox.elements.burn_clock.checked = !!S.incident.has_clock;
+    clipBox.elements.burn_clock.disabled = !S.incident.has_clock;
+    clockLabel.title = S.incident.has_clock ? "The time of day on the incident clock, top right, running" : "No camera clock on this incident";
+    clockLabel.classList.toggle("muted", !S.incident.has_clock);
+    // The Wall's order, then the parked cameras; ticked from Seen on.
+    var order = wallCameras().concat(parkedCameras()).filter(function (cam) { return cam.synced && cam.media_url; });
+    var ticked = ev.cameras || [];
+    var cams = document.getElementById("clip-cams");
+    cams.innerHTML = order.map(function (cam) {
+      return "<label class='clip-cam' draggable='true' data-camera='" + cam.id + "' style='--speaker: " + cam.colour + "'>" +
+        "<input type='checkbox' name='cameras' value='" + cam.id + "'" + (ticked.indexOf(cam.id) !== -1 ? " checked" : "") + "> " +
+        "<span class='name'>" + escape(cam.camera_id) + "</span><span class='muted small why' hidden> not running then</span>" +
+        "<button type='button' class='tiny ghost large' title='Make this the large tile'>Large</button></label>";
+    }).join("");
+    // The sound: the camera the page hears, when it is in the clip. The
+    // choices are built afresh, so the last box's first camera cannot win.
+    clipBox.elements.sound.innerHTML = "";
+    clipBox.elements.sound.dataset.wanted = soundCamera || "";
+    refreshClipBox();
+    clipBox.elements.title.focus();
+  }
+
+  function closeClipBox() {
+    clipBox.hidden = true;
+    clipBox.reset();
+    syncSheets();
+  }
+
+  function refreshClipBox() {
+    var span = clipSpan();
+    var lengthBox = document.getElementById("clip-length");
+    var make = document.getElementById("clip-make");
+    var wrong = "";
+    if (span === null) {
+      wrong = S.incident.has_clock ? "Times of day, hh:mm:ss." : "Minutes and seconds, m:ss.";
+    } else if (span[1] - span[0] < 1) {
+      wrong = "A clip is at least one second long.";
+    } else if (span[1] - span[0] > S.incident.clip_longest) {
+      wrong = "A clip may be up to " + Math.floor(S.incident.clip_longest / 60) + " minutes long.";
+    }
+    lengthBox.textContent = wrong || (spell(span[1] - span[0]));
+    lengthBox.classList.toggle("danger", !!wrong);
+    // Grey a camera the span falls outside; the first ticked is the large one.
+    // A camera gone from the incident while the box was open says so.
+    var first = true;
+    clipTiles().forEach(function (tile) {
+      var cam = cameraById(tile.dataset.camera), box = tile.querySelector("input");
+      var running = !!(span && cam && isRunning(cam, span));
+      tile.classList.toggle("off", !running);
+      tile.querySelector(".why").hidden = running;
+      tile.querySelector(".why").textContent = cam ? " not running then" : " removed from the incident";
+      box.disabled = !running;
+      var on = running && box.checked;
+      tile.classList.toggle("first", on && first && clipBox.elements.layout.value === "focus");
+      tile.querySelector(".large").hidden = !(on && !first && clipBox.elements.layout.value === "focus");
+      if (on) { first = false; }
+    });
+    var ticked = tickedCameras();
+    // Focus holds up to five cameras; past that the box starts from Grid.
+    var focusOption = clipBox.elements.layout.options[0];
+    focusOption.disabled = ticked.length > S.incident.clip_focus_most;
+    focusOption.title = focusOption.disabled ? "Focus holds up to five cameras" : "";
+    if (focusOption.disabled && clipBox.elements.layout.value === "focus") { clipBox.elements.layout.value = "grid"; }
+    if (ticked.length > S.incident.clip_most) { wrong = "Up to nine cameras in one clip."; }
+    // The sound: from one of the ticked cameras, the page's when it is one.
+    var sound = clipBox.elements.sound;
+    var wanted = sound.value || sound.dataset.wanted || "";
+    sound.innerHTML = ticked.map(function (id) {
+      var cam = cameraById(id);
+      return "<option value='" + id + "'>" + escape(cam ? cam.camera_id : id) + "</option>";
+    }).join("");
+    if (ticked.indexOf(wanted) !== -1) { sound.value = wanted; }
+    var said = document.getElementById("clip-sound-said");
+    var heard = cameraById(sound.value);
+    said.textContent = (heard && span && heard.starts_at > span[0]) ? "silent until " + timeOfDay(heard.starts_at) : "";
+    if (!ticked.length) { wrong = wrong || "Tick at least one camera."; }
+    make.disabled = !!wrong;
+    if (wrong && !lengthBox.textContent) { lengthBox.textContent = wrong; }
+    var says = document.getElementById("clip-said");
+    says.textContent = wrong || (ticked.length + " camera" + (ticked.length === 1 ? "" : "s") + ", " + (clipBox.elements.layout.value === "focus" ? "Focus" : "Grid") + ": one file, 1280 wide, each camera cut from its own moment. It renders on the media worker and lands on the case's Clips tab.");
+  }
+
+  function spell(seconds) {
+    var whole = Math.round(seconds), h = Math.floor(whole / 3600), m = Math.floor((whole % 3600) / 60), s = whole % 60;
+    if (h) { return h + " h" + (m ? " " + m + " min" : ""); }
+    if (m) { return m + " min" + (s ? " " + s + " s" : ""); }
+    return s + " s";
+  }
+
+  clipBox.addEventListener("input", function () { refreshClipBox(); });
+  clipBox.addEventListener("change", function () { refreshClipBox(); });
+  document.getElementById("clip-cancel").addEventListener("click", closeClipBox);
+
+  // The tiles: dragged to reorder, or Large to bring one to the front.
+  var draggedClip = null;
+  var clipCams = document.getElementById("clip-cams");
+  clipCams.addEventListener("click", function (event) {
+    var large = event.target.closest(".large");
+    if (!large) { return; }
+    event.preventDefault();
+    var tile = large.closest(".clip-cam");
+    clipCams.insertBefore(tile, clipCams.firstChild);
+    refreshClipBox();
+  });
+  clipCams.addEventListener("dragstart", function (event) {
+    var tile = event.target.closest(".clip-cam");
+    if (!tile) { return; }
+    draggedClip = tile;
+    event.dataTransfer.effectAllowed = "move";
+    try { event.dataTransfer.setData("text/plain", tile.dataset.camera); } catch (ignored) { /* an old browser */ }
+  });
+  clipCams.addEventListener("dragover", function (event) {
+    var tile = event.target.closest(".clip-cam");
+    if (draggedClip && tile && tile !== draggedClip) { event.preventDefault(); tile.classList.add("over"); }
+  });
+  clipCams.addEventListener("dragleave", function (event) {
+    var tile = event.target.closest(".clip-cam");
+    if (tile) { tile.classList.remove("over"); }
+  });
+  clipCams.addEventListener("drop", function (event) {
+    var tile = event.target.closest(".clip-cam");
+    if (!draggedClip || !tile || tile === draggedClip) { return; }
+    event.preventDefault();
+    tile.classList.remove("over");
+    var after = Array.prototype.indexOf.call(clipCams.children, draggedClip) < Array.prototype.indexOf.call(clipCams.children, tile);
+    clipCams.insertBefore(draggedClip, after ? tile.nextSibling : tile);
+    draggedClip = null;
+    refreshClipBox();
+  });
+  clipCams.addEventListener("dragend", function () { draggedClip = null; });
+
+  clipBox.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var span = clipSpan();
+    if (span === null) { window.UI.toast(S.incident.has_clock ? "Times of day, hh:mm:ss." : "Minutes and seconds, m:ss.", { problem: true }); return; }
+    var body = {
+      from: span[0].toFixed(2),
+      until: span[1].toFixed(2),
+      cameras: tickedCameras(),
+      sound: clipBox.elements.sound.value,
+      layout: clipBox.elements.layout.value,
+      burn_clock: clipBox.elements.burn_clock.checked,
+      burn_ids: clipBox.elements.burn_ids.checked,
+      title: clipBox.elements.title.value
+    };
+    var make = document.getElementById("clip-make");
+    make.disabled = true;
+    fetch(C.eventClip + clipBox.elements.event.value + "/clip", {
+      method: "POST",
+      headers: { "X-CSRFToken": cookie("csrftoken"), "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, said: said }; }); })
+      .then(function (got) {
+        make.disabled = false;
+        if (!got.ok) { window.UI.toast(got.said.error || "That did not work.", { problem: true }); return; }
+        closeClipBox();
+        if (got.said.said) { window.UI.toast(got.said.said); }
+        if (got.said.state) { take(got.said.state); }
+        showTab("chronology");
+      })
+      .catch(function () { make.disabled = false; window.UI.toast("That did not work.", { problem: true }); });
   });
 
   // The picture: the strip drawn on a canvas from the same rows, in the light

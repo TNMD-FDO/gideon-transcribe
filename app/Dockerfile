@@ -27,6 +27,7 @@ RUN apt-get update \
       python3 \
       python3-venv \
       ffmpeg \
+      fonts-dejavu-core \
       ca-certificates \
       curl \
       libmad0 \
@@ -53,9 +54,15 @@ RUN curl -fsSL -o /tmp/audiowaveform.deb \
  && rm -f /tmp/audiowaveform.deb \
  && rm -rf /var/lib/apt/lists/*
 
-# The two media checks, made at build time so that a broken image never reaches
-# a server: ffmpeg must decode G.729, and audiowaveform must run.
+# The media checks, made at build time so that a broken image never reaches a
+# server: ffmpeg must decode G.729 and carry the three filters the clip across
+# cameras is drawn with, the typeface the captions and the clip burn in must
+# be on disk, and audiowaveform must run.
 RUN ffmpeg -hide_banner -decoders | grep -qw g729 \
+ && ffmpeg -hide_banner -filters | grep -qw drawtext \
+ && ffmpeg -hide_banner -filters | grep -qw xstack \
+ && ffmpeg -hide_banner -filters | grep -qw tpad \
+ && test -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
  && audiowaveform --version
 
 ENV VIRTUAL_ENV=/opt/venv

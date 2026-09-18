@@ -2083,6 +2083,11 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-events .pill.person { background: var(--clip-soft); color: var(--clip); }
 .inc-events tr.proposed td { color: var(--muted); }
 .inc-events .rests { margin-top: 2px; }
+.inc-events .note { margin-top: 3px; white-space: pre-line; }
+.inc-event-box .inc-event-note { flex: 1 1 100%; min-height: 3em; font: inherit; font-size: var(--t-small); }
+.inc-about { display: flex; gap: 8px; align-items: baseline; margin: 0 0 10px; padding: 6px 10px; border: 1px dashed var(--line); border-radius: var(--radius); }
+.inc-about-box { margin: 0 0 10px; }
+.inc-about-box textarea { width: 100%; font: inherit; font-size: var(--t-small); }
 .inc-memo p { margin: 0 0 8px; }
 .inc-memo h3 { font-size: var(--t-heading); margin: 16px 0 6px; }
 .inc-memo .evmark { display: inline-block; font-size: 11px; border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0 6px; margin-left: 4px; vertical-align: middle; text-decoration: none; }
@@ -2123,7 +2128,19 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-strip .ruler, .inc-strip .lane { grid-template-columns: 150px minmax(0, 1fr); }
 .inc-strip .lane .head .swap { padding: 0 5px; font-size: 10px; flex: none; }
 .incident-page main.wide { position: relative; }
-.inc-event-box { position: absolute; right: 16px; top: 58px; z-index: 6; width: min(760px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); }
+.inc-sheets { position: absolute; right: 16px; top: 58px; z-index: 6; width: min(760px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); background: var(--bg); overflow: hidden; }
+.inc-sheets .inc-event-box:last-child, .inc-sheets .inc-event-box[hidden] + .inc-clip-box { border-bottom: 0; }
 @media (max-width: 1279px) {
-  .inc-event-box { left: 16px; right: 16px; width: auto; }
+  .inc-sheets { left: 16px; right: 16px; width: auto; }
 }
+/* The clip box (Phase 7 chapter 1): under the event box, its cameras as
+   tiles in the picture's order, the first the large one in Focus. */
+.inc-clip-box { display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 12px; border-top: 1px solid var(--line); }
+.inc-clip-box label { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-small); }
+.inc-clip-cams { display: flex; flex-wrap: wrap; gap: 6px; }
+.clip-cam { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); border-left: 4px solid var(--speaker, var(--line)); font-size: var(--t-small); cursor: grab; background: var(--bg); }
+.clip-cam.first { box-shadow: inset 0 0 0 1px var(--accent); }
+.clip-cam.off { opacity: 0.55; cursor: default; }
+.clip-cam.over { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.clip-cam .large { padding: 0 5px; }
+.inc-events .clipmark { background: var(--clip-soft); color: var(--clip); margin-right: 4px; }

@@ -9,6 +9,7 @@ from core import (
     clip_pages,
     dictation_pages,
     exports,
+    incident_clips,
     incident_pages,
     live_pages,
     media_access,
@@ -230,6 +231,12 @@ urlpatterns = [
         "incident-camera/<uuid:camera_id>/lines",
         incident_pages.lines,
         name="incident-camera-lines",
+    ),
+    # Clip this event (Phase 7 chapter 1).
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/event/<uuid:event_id>/clip",
+        incident_clips.make_clip,
+        name="incident-clip",
     ),
     path(
         "case/<uuid:case_id>/incidents/new",

@@ -47,6 +47,11 @@
     The event box (chapter 2): under the head, opened by Add event here, E,
     a line under a tile, a citation's address, or Edit on the Chronology.
   {% endcomment %}
+  {% comment %}
+    The sheets over the wall: the event box, and under it the clip box
+    (Phase 7 chapter 1), which cuts one file from the event's cameras.
+  {% endcomment %}
+  <div class="inc-sheets" id="sheets" hidden>
   <form class="inc-event-box" id="event-box" hidden autocomplete="off">
     <input type="hidden" name="event">
     <input type="hidden" name="source" value="person">
@@ -56,11 +61,47 @@
     <label>until <input type="text" name="until_when" class="mono" size="9" placeholder="optional" aria-label="When it ended"></label>
     <input type="text" name="text" class="grow" maxlength="500" placeholder="What happened" aria-label="What happened">
     <span class="inc-event-cams" id="event-cams" title="The cameras that show it"></span>
+    <button type="button" class="tiny ghost" id="event-note-open" title="A note in your own words">Note</button>
+    <label class="small" title="Mark that this event needs looking at"><input type="checkbox" name="to_check"> To check</label>
+    <textarea name="note" class="inc-event-note" rows="2" maxlength="2000" placeholder="A note in your own words: what it means for the case, a page cite, a thing to do. The assistant reads it and never writes it." aria-label="Note" hidden></textarea>
     <button type="submit" class="small primary" id="event-save">Add</button>
     <button type="button" class="small ghost" id="event-cancel">Cancel</button>
     <button type="button" class="small ghost danger" id="event-remove" hidden>Remove</button>
+    <button type="button" class="small ghost" id="event-clip" title="Cut one file from this event's cameras over its span" hidden>Clip this event</button>
     <span class="small muted" id="event-said"></span>
   </form>
+  <form class="inc-clip-box" id="clip-box" hidden autocomplete="off">
+    <input type="hidden" name="event">
+    <div class="row" style="gap: 8px; align-items: baseline; flex-wrap: wrap">
+      <span class="eyebrow">Clip this event</span>
+      <span class="small grow" id="clip-event-text"></span>
+    </div>
+    <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
+      <label>From <input type="text" name="from" class="mono" size="9" aria-label="From"></label>
+      <label>to <input type="text" name="until" class="mono" size="9" aria-label="To"></label>
+      <span class="small muted" id="clip-length"></span>
+    </div>
+    <div class="inc-clip-cams" id="clip-cams" title="The cameras in the clip, in the picture's order. Drag one to move it; the first is the large tile in Focus."></div>
+    <div class="row" style="gap: 12px; flex-wrap: wrap; align-items: center">
+      <label>Layout
+        <select name="layout" aria-label="Layout">
+          <option value="focus">Focus</option>
+          <option value="grid">Grid</option>
+        </select>
+      </label>
+      <label>Sound <select name="sound" aria-label="The camera the sound comes from"></select></label>
+      <span class="small muted" id="clip-sound-said"></span>
+      <label class="small" id="clip-clock-label"><input type="checkbox" name="burn_clock" checked> Burn the clock</label>
+      <label class="small"><input type="checkbox" name="burn_ids" checked> Burn the camera ids</label>
+    </div>
+    <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
+      <label class="grow" style="display: flex; gap: 6px; align-items: center">Title <input type="text" name="title" maxlength="120" class="grow" aria-label="The clip's title"></label>
+      <button type="submit" class="small primary" id="clip-make">Make the clip</button>
+      <button type="button" class="small ghost" id="clip-cancel">Cancel</button>
+    </div>
+    <span class="small muted" id="clip-said">One file, 1280 wide, each camera cut from its own moment; it renders on the media worker and lands on the case's Clips tab.</span>
+  </form>
+  </div>
 
   <div class="inc-desk">
     <div class="inc-stage">
@@ -149,6 +190,7 @@
       exportPicture: "{% url 'incident-export' case.pk incident.pk 'picture' %}",
       exportMemo: "{% url 'incident-export' case.pk incident.pk 'memo' %}",
       lines: "/incident-camera/",
+      eventClip: "{% url 'incident' case.pk incident.pk %}/event/",
       at: {{ at|floatformat:2 }},
       role: "{{ role }}"
     };
