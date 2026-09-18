@@ -177,8 +177,10 @@
     tick();
     // A clip box left open follows the cameras as they stand now.
     if (clipBox && !clipBox.hidden) { refreshClipBox(); }
-    // The assistant at work (chapter 3): the page asks again until it lands.
-    if (S.proposals.busy || S.memo.busy) {
+    // The assistant at work (chapter 3), or a clip rendering (v1.63.1): the
+    // page asks again until it lands, so the row's words change by themselves.
+    var rendering = S.events.some(function (one) { return one.clips_rendering; });
+    if (S.proposals.busy || S.memo.busy || rendering) {
       window.clearTimeout(pollTimer);
       pollTimer = window.setTimeout(refresh, 3000);
     }
@@ -839,8 +841,9 @@
           "<td><span class='pill small" + (one.source === "person" ? " person" : "") + "'>" + escape(one.source_words) + "</span>" +
           (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</td>" +
           "<td class='acts nowrap'>" +
-          (one.clips ? "<span class='pill small clipmark' title='Clips made from this event, on the case&#39;s Clips tab'>" + one.clips + " clip" + (one.clips === 1 ? "" : "s") + "</span>" : "") +
-          (mayClip(one) ? "<button type='button' class='tiny ghost' data-clip='" + one.id + "' title='Cut one file from this event&#39;s cameras over its span'>Clip</button> " : "") +
+          (one.clips ? "<a class='pill small clipmark' href='" + S.incident.clips_url + "' title='Open the case&#39;s Clips tab, where the clip is'>" + escape(one.clips_words) + "</a>" : "") +
+          (mayClip(one) ? "<button type='button' class='tiny ghost' data-clip='" + one.id + "' title='Cut one file from this event&#39;s cameras over its span'>Clip</button> " :
+            (S.incident.clips && one.id ? "<button type='button' class='tiny ghost' disabled title='Sync a camera first: the clip needs a synced camera with a playback copy'>Clip</button> " : "")) +
           "<button type='button' class='tiny ghost' data-edit='" + one.id + "'>Edit</button></td></tr>";
       });
       html += "</tbody></table>";

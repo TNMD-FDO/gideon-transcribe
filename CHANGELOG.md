@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.63.1, 2026-09-17
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the maintainer's first use of Clip this event: it was not clear why
+the button was missing, where the clip went, or whether it finished.
+
+- The event's row now says where its clips stand, as a link to the case's
+  Clips tab: "1 clip, rendering", then "1 clip ready", or "1 clip failed"
+  (and "2 clips, 1 rendering" and the like). The incident page keeps asking
+  while a clip renders, so the words change by themselves.
+- On an event none of whose cameras is synced with a playback copy, Clip
+  shows greyed with "Sync a camera first", instead of not at all.
+- The words after Make the clip say where it lands and that the row will
+  say when it is ready.
+
 ## v1.63.0, 2026-09-17
 
 ```

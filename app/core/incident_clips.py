@@ -234,7 +234,10 @@ def make_clip(request: HttpRequest, case_id, incident_id, event_id) -> JsonRespo
             "ok": True,
             "clip": clip_pages._row(clip, asker=request.user),
             "event_clips": Clip.objects.filter(event=event).count(),
-            "said": "The clip is rendering; it is on the case's Clips tab.",
+            "said": (
+                "Rendering. The clip lands on the case's Clips tab; the event's "
+                "row says when it is ready."
+            ),
             "state": state_json(incident, request.user),
         }
     )

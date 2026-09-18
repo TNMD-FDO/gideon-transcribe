@@ -189,6 +189,7 @@ def state_json(incident: Incident, user) -> dict:
             "to_check": chronology.to_check_count(incident),
             # Clip this event, and the Clips chapter's limits for the box.
             "clips": incident_clips.on(),
+            "clips_url": reverse("case", args=[incident.case_id]) + "?tab=clips",
             "clip_longest": settings_store.longest_clip_seconds(),
             "clip_focus_most": media.FOCUS_MOST,
             "clip_most": media.WALL_MOST,

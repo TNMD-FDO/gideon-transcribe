@@ -662,6 +662,13 @@ def test_a_good_press_makes_the_clip(incident, event, person, client, no_render)
     assert got["event_clips"] == 1
     events = {one["id"]: one for one in got["state"]["events"]}
     assert events[str(event.pk)]["clips"] == 1
+    assert events[str(event.pk)]["clips_words"] == "1 clip, rendering"
+    assert events[str(event.pk)]["clips_rendering"] == 1
+    assert got["state"]["incident"]["clips_url"].endswith("?tab=clips")
+    clip.state = RenderState.READY
+    clip.save(update_fields=["state"])
+    words = chronology.events_json(incident)[0]["clips_words"]
+    assert words == "1 clip ready"
     # Without an Incident clock the clock is not burned, whatever was asked.
     incident.clock_zero = None
     incident.save(update_fields=["clock_zero"])
@@ -800,6 +807,30 @@ def test_the_row_and_the_span_words(incident, event, person):
 
 
 # The setting and the words ---------------------------------------------------------
+
+
+def test_the_rows_words_for_its_clips():
+    assert chronology.clips_words({}) == ""
+    assert (
+        chronology.clips_words({"count": 1, "rendering": 1, "failed": 0})
+        == "1 clip, rendering"
+    )
+    assert (
+        chronology.clips_words({"count": 2, "rendering": 1, "failed": 0})
+        == "2 clips, 1 rendering"
+    )
+    assert (
+        chronology.clips_words({"count": 1, "rendering": 0, "failed": 1})
+        == "1 clip failed"
+    )
+    assert (
+        chronology.clips_words({"count": 3, "rendering": 0, "failed": 1})
+        == "3 clips, 1 failed"
+    )
+    assert (
+        chronology.clips_words({"count": 2, "rendering": 0, "failed": 0})
+        == "2 clips ready"
+    )
 
 
 def test_the_setting_is_greyed_under_either_switch():

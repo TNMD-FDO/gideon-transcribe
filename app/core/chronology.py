@@ -234,18 +234,46 @@ def source_words(event: Event, names: dict) -> str:
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
 
 
-def clips_per_event(incident) -> dict[str, int]:
-    """How many Incident clips were cut from each Event, by event id."""
+def clips_per_event(incident) -> dict[str, dict]:
+    """The Incident clips cut from each Event, by event id: how many, and how
+    many are still rendering or have failed, so the row can say where they
+    stand (v1.63.1)."""
     from django.db.models import Count
 
     from core.clips import Clip
 
-    return {
-        str(row["event_id"]): row["n"]
-        for row in Clip.objects.filter(event__incident=incident)
-        .values("event_id")
+    found: dict[str, dict] = {}
+    for row in (
+        Clip.objects.filter(event__incident=incident)
+        .values("event_id", "state")
         .annotate(n=Count("pk"))
-    }
+    ):
+        one = found.setdefault(
+            str(row["event_id"]), {"count": 0, "rendering": 0, "failed": 0}
+        )
+        one["count"] += row["n"]
+        if row["state"] == "rendering":
+            one["rendering"] += row["n"]
+        elif row["state"] == "failed":
+            one["failed"] += row["n"]
+    return found
+
+
+def clips_words(clips: dict) -> str:
+    """ "1 clip, rendering", "2 clips ready", "1 clip failed": the row's mark."""
+    count = clips.get("count", 0)
+    if not count:
+        return ""
+    head = f"{count} clip{'' if count == 1 else 's'}"
+    if clips.get("rendering"):
+        return (
+            f"{head}, rendering"
+            if count == 1
+            else f"{head}, {clips['rendering']} rendering"
+        )
+    if clips.get("failed"):
+        return f"{head} failed" if count == 1 else f"{head}, {clips['failed']} failed"
+    return f"{head} ready"
 
 
 def clips_line(incident, numbers: dict) -> str:
@@ -296,7 +324,9 @@ def events_json(incident) -> list[dict]:
                 "note_by": (
                     event.note_by.shown_name if event.note and event.note_by else ""
                 ),
-                "clips": clips.get(str(event.pk), 0),
+                "clips": clips.get(str(event.pk), {}).get("count", 0),
+                "clips_rendering": clips.get(str(event.pk), {}).get("rendering", 0),
+                "clips_words": clips_words(clips.get(str(event.pk), {})),
             }
         )
     return rows
