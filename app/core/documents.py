@@ -304,10 +304,15 @@ def paragraphs_of(words: list[dict]) -> list[dict]:
     heights = [line["bottom"] - line["top"] for line in lines]
     height = max(1.0, statistics.median(heights))
     left = min(line["x0"] for line in lines)
+    right = max(line["x1"] for line in lines)
     groups: list[list[dict]] = [[lines[0]]]
     for before, line in zip(lines, lines[1:], strict=False):
         gap = line["top"] - before["bottom"]
-        indented = line["x0"] - left > height * 1.2 and before["x1"] < line["x1"]
+        # An indented line starts a paragraph only after a line that ended
+        # short of the block's right edge: a bullet's hanging second line
+        # follows a full line and stays with it (measured 2026-09-19).
+        ended_short = before["x1"] < right - height * 2
+        indented = line["x0"] - left > height * 1.2 and ended_short
         if gap > height * 0.9 or indented:
             groups.append([line])
         else:

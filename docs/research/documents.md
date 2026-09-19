@@ -39,10 +39,13 @@ pypi.org/project/pytesseract, packages.debian.org/trixie/tesseract-ocr, all on
 
 ## What it costs the image
 
-Measured on the build of v1.71.0 (to be filled in from the server's
-`./transcribe upgrade v1.71.0` output): the app image before, after, and the
-difference. Expected: about a hundred megabytes for Tesseract and its English
-data plus the PDFium wheel.
+Measured on the server after `./transcribe upgrade v1.71.0` on 2026-09-19
+(`docker images`):
+
+| Image | v1.70.0 | v1.71.0 | Difference |
+|---|---|---|---|
+| gideon-transcribe-app | 1.17 GB | 1.35 GB | 180 MB: Tesseract with its English data, PDFium, Pillow, pdfminer.six and cryptography |
+| gideon-transcribe-whisperx | 13.8 GB | 13.8 GB | unchanged; nothing of this chapter touches it |
 
 ## The rules in code
 
@@ -57,16 +60,32 @@ data plus the PDFium wheel.
 
 ## What is measured on the server before part 2
 
-To be recorded here after the first real report and the first real scan are
-put through v1.71.0 on the office's server:
+Recorded from the office's server after the first real documents went through
+v1.71.0.
 
-1. A text PDF from the agency: pages, seconds to read, the paragraph count
-   per page against what a reader would count, any paragraph split or joined
-   wrongly and why (tables, two columns, headers and footers).
-2. A scanned report: pages, seconds to read (OCR is the slow step; expect a
-   few seconds a page on the server's CPU), the poorly read count, and three
-   paragraphs checked word by word against the picture.
-3. The image's size before and after.
+**A text PDF, 2026-09-19.** A three-page office notice (a vacancy
+announcement, 202 KB, made by a word processor, not the agency's report; the
+first file to hand). Read in 0.21 seconds, no OCR: 809 words on three pages,
+split into 13, 15 and 6 paragraphs. Checked against the page: the letterhead's
+four short lines came out as four paragraphs (acceptable; a letterhead has no
+paragraphs), the headed blocks ("Position:", "Location:") each as one, the
+prose paragraphs each as one, and the bullets each as one, with one miss: a
+bullet whose text ran to a second line had that line split off as a paragraph
+of its own, because a hanging indent looked like an indented new paragraph.
+The rule was tightened the same day (an indented line starts a paragraph only
+after a line that ended short of the block's right edge) and a test holds it;
+documents read before the fix are read again by part 2's upgrade. The page
+pictures came to 26 to 42 KB each at 110 dots an inch, far under the 150 KB
+estimated above.
+
+**A scanned report.** Not yet measured: pages, seconds to read (OCR is the
+slow step; expect a few seconds a page on the server's CPU), the poorly read
+count, and three paragraphs checked word by word against the picture. To be
+recorded here when one is put through.
+
+**The agency's own report layout.** Not yet measured: a real incident report
+from the agency, for the paragraph rules against its headers, footers, form
+fields and any two-column stretches.
 
 Part 2 (the Report tab and Gideon's citations) is written against these
 figures, in particular the paragraph splitter's rules for the agency's report

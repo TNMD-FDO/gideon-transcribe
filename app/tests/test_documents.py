@@ -485,3 +485,10 @@ def test_paragraphs_follow_the_gaps_and_the_indents():
     assert [one["text"] for one in got] == ["One two three", "Four", "Five"]
     assert got[0]["box"] == [72, 100, 140, 124]
     assert documents.paragraphs_of([]) == []
+    # A bullet's hanging second line follows a full line and stays with it
+    # (a real vacancy notice split one off, 2026-09-19).
+    bullet = [word("Manage", 72, 100), word("files", 110, 100)]
+    bullet += [word("unit,", 86, 114), word("tracking", 110, 114)]
+    bullet += [word("Next", 72, 128), word("bullet", 110, 128)]
+    got = documents.paragraphs_of(bullet)
+    assert [one["text"] for one in got] == ["Manage files unit, tracking Next bullet"]
