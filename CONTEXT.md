@@ -296,6 +296,14 @@ _Avoid_: dashboard (the line has no heading), status bar, alerts
 The box on the incident page's work panel that searches the synced cameras' words, the Chronology's events and the memo, and whose hits are moments: pressing one seeks every camera there and brings the camera it was heard on to the front with the sound. Never logged. Phase 7 chapter 3. The case page's own box is Search.
 _Avoid_: search (on the incident page), query, results
 
+**Work panel**:
+The incident page's panel beside the wall: its tabs (Chronology, Memo, Cameras, Gideon, Details), always there, and the layers that open over a tab for a job in hand. Phase 8 chapter 1.
+_Avoid_: sidebar, pane (that is the case page's)
+
+**Layer**:
+One job opened over a tab of the work panel (Proposed events, Sync, an event, a clip, Find), with the same head on every one: Back with the tab's name, the layer's name, its one main button. Back or Escape returns exactly to the tab, its scroll and the row marked. The wall and the strip never move for a layer. Phase 8 chapter 1.
+_Avoid_: modal, dialog (a layer is not one), popup, pop-out, sheet (Phase 6's word for what a layer replaced)
+
 **Incident**:
 A named group of a Case's videos that ran at the same time, laid on one clock so they play in step on the Incident page. Offered by the app when the videos' clocks overlap, or made by hand with New incident; a video is in at most one. Lives inside one Case and nowhere else, counts as its activity, and goes with it. Phase 6.
 _Avoid_: event (that is one entry on a Chronology), scene, sync set, group, session
