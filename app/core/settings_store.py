@@ -39,6 +39,7 @@ AUDIT = "audit"
 CASES = "cases"
 APPEARANCE = "appearance"
 EMAIL = "email"
+DOCUMENTS = "documents"
 # Not a Settings page: these rows are edited on the Templates page, at once,
 # outside the tray, like the prompt templates beside them.
 TEMPLATES = "templates"
@@ -136,6 +137,7 @@ PAGES = [
     (SIGN_IN, "Sign-in and directory"),
     (AUDIT, "Audit log"),
     (CASES, "Cases"),
+    (DOCUMENTS, "Documents"),
     (APPEARANCE, "Appearance"),
     (EMAIL, "Email"),
 ]
@@ -221,6 +223,64 @@ def _rows() -> list[Definition]:
                 "in the navigation, and drops Clips from the sign-out dialog "
                 'and "Download everything". Clip files already made stay '
                 "until their Recording goes."
+            ),
+        ),
+        # Documents beside the cameras (Phase 8 chapter 4, part 1).
+        Definition(
+            key="documents",
+            page=DOCUMENTS,
+            name="Documents",
+            kind=TOGGLE,
+            default=True,
+            what_it_does=(
+                "People may add a PDF to an incident or a recording as the "
+                "report about it (Add the report)."
+            ),
+            when_changed=(
+                "Off hides the Documents tab, Add the report and the Report tab; "
+                "documents already there stay and are read by nothing. At once."
+            ),
+        ),
+        Definition(
+            key="documents_pages_most",
+            page=DOCUMENTS,
+            name="Largest document",
+            kind=NUMBER,
+            default=60,
+            least=1,
+            most=500,
+            unit="pages",
+            needs="documents",
+            what_it_does="A PDF over it is refused at upload with the reason.",
+            when_changed="The next upload.",
+        ),
+        Definition(
+            key="documents_per_home",
+            page=DOCUMENTS,
+            name="Documents per incident or recording",
+            kind=NUMBER,
+            default=3,
+            least=1,
+            most=20,
+            unit="documents",
+            needs="documents",
+            what_it_does="Add the report is refused with the reason at the count.",
+            when_changed="The next upload.",
+        ),
+        Definition(
+            key="documents_ocr",
+            page=DOCUMENTS,
+            name="Read scans with OCR",
+            kind=TOGGLE,
+            default=True,
+            needs="documents",
+            what_it_does=(
+                "A page without words of its own is read from its picture "
+                "(Tesseract, English), and marked read by OCR."
+            ),
+            when_changed=(
+                "The next upload. Off keeps and shows a scan and says its words "
+                "were not read."
             ),
         ),
         Definition(

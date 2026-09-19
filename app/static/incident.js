@@ -1675,6 +1675,18 @@
       html += "<dt>" + escape(cam.camera_id) + "</dt><dd>" + (cam.clock ? escape(cam.clock) : "no stamp read") + (cam.file_time ? "; the file says " + escape(cam.file_time) : "") + "</dd>";
     });
     html += "</dl>";
+    // The report for this incident (Phase 8 chapter 4, part 1).
+    if (I.documents_on) {
+      html += "<h3 style='font-size: var(--t-body); margin: 14px 0 6px'>The report</h3>";
+      if (I.documents && I.documents.length) {
+        html += "<ul class='plain'>" + I.documents.map(function (one) {
+          return "<li><a href='" + escape(one.url) + "'>" + escape(one.title) + "</a> <span class='muted small'>" + escape(one.pages_line) + "</span></li>";
+        }).join("") + "</ul>";
+      } else {
+        html += "<p class='muted small' style='margin: 0 0 6px'>No report yet for this incident. Add the police report as a PDF and it is kept beside the cameras.</p>";
+      }
+      html += "<a class='btn small' href='" + escape(I.add_document_url) + "' id='add-document'>Add the report</a>";
+    }
     box.innerHTML = html;
   }
 

@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from core import exports, incident_assistant, incidents
+from core import documents, exports, incident_assistant, incidents
 from core.assistant import DONE, Summary
 from core.chronology import Event
 from core.clips import Clip
@@ -31,6 +31,7 @@ KINDS = (
     ("memos", "Memos"),
     ("summaries", "Summaries"),
     ("clips", "Clips"),
+    ("documents", "Documents"),
 )
 
 
@@ -164,6 +165,26 @@ def search(case, asked: str, kind: str = "") -> dict:
                     at=one.start,
                 )
             )
+
+    # Documents (Phase 8 chapter 4): one hit per paragraph, opening the page
+    # with the paragraph lit.
+    if documents.on():
+        found_paragraphs = documents.paragraph_hits(case, words, MOST)
+        counts["documents"] = min(len(found_paragraphs), MOST)
+        more = more or len(found_paragraphs) > MOST
+        if wanted("documents"):
+            for one in found_paragraphs[:MOST]:
+                document = one["document"]
+                here = group(("document", document.pk), document.title, document.url())
+                here["hits"].append(
+                    _hit(
+                        f"page {one['page']}, paragraph {one['n']}",
+                        mark(one["text"], words),
+                        url=f"{document.url()}?page={one['page']}&para={one['n']}",
+                        who="Document" + (", read by OCR" if one["ocr"] else ""),
+                        at=float(one["page"] * 1000 + one["n"]),
+                    )
+                )
 
     # Notes on lines (Phase 8 chapter 2), found with the notes on events.
     line_notes = list(

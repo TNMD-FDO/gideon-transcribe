@@ -27,6 +27,20 @@ python-docx==1.2.0
 # cross-correlated with a fast Fourier transform. Pure wheels, no compiler.
 numpy==2.3.4
 
+# Documents beside the cameras (Phase 8 chapter 4): the PDF reader with word
+# positions (pdfplumber over pdfminer.six), the page renderer (pypdfium2, a
+# wheel carrying PDFium) and the bridge to the Tesseract OCR engine, which the
+# Dockerfile installs from Debian. Pillow is their shared dependency. The
+# reasons and what was measured are in docs/research/documents.md.
+pdfplumber==0.11.10
+pdfminer.six==20260107
+pypdfium2==5.13.0
+pillow==12.3.0
+pytesseract==0.3.13
+charset-normalizer==3.5.1
+cryptography==50.0.1
+packaging==26.3
+
 # Directory sign-in over LDAPS. python-ldap alone, not
 # django-auth-ldap: the reasons are in ADR 0010.
 python-ldap==3.4.7

@@ -209,6 +209,19 @@ The Email page of the Settings group, absent from the Phase 1 build. Built in v1
 | Notification templates (seven from v1.54.0, one per Notification kind: the Retention digest, a Case shared, a Case handed over, a Batch finished, and Phase 4 chapter 5's Vision done, Vision requested, and Vision allowed) | a Subject and a Body each, plain text with a fixed set of placeholders per kind, Reset to default; no versions | the Email notifications chapter's wordings | 2 | The text of each Notification. | Saved through the tray, so the Setting changed row holds the old and new text; Apply refuses an unknown placeholder. |
 | Test message | an action outside the tray, not a setting | - | 2 | Mails the signed-in Admin and shows the relay's reply. | At once. |
 
+## Documents (Phase 8 chapter 4)
+
+The Documents page of the Settings group, built in v1.71.0 (part 1). Every row but the switch is greyed while Documents is Off.
+
+| Setting | Type | Default | Phase | What it does | When changed |
+|---|---|---|---|---|---|
+| Documents | On or Off | On | 8 | People may add a PDF to an incident or a recording as the report about it (Add the report). | Off hides the Documents tab, Add the report and the Report tab; documents already there stay and are read by nothing. At once. |
+| Largest document | pages, 1 to 500 | 60 | 8 | A PDF over it is refused at upload with the reason. | The next upload. |
+| Documents per incident or recording | documents, 1 to 20 | 3 | 8 | Add the report is refused with the reason at the count. | The next upload. |
+| Read scans with OCR | On or Off | On | 8 | A page without words of its own is read from its picture (Tesseract, English) and marked read by OCR. | The next upload; Off keeps and shows a scan and says its words were not read. |
+
+Parts 2 and 3 of the chapter add the Reading ceiling and the comparison's switch and budgets to this page.
+
 ## Phase 3: Live recording
 
 Four rows and a template, specified in `docs/spec/SPEC-PHASE-3.md`. Live recording and Longest live recording were built in v1.23.0 (keys `live_recording`, greyed through `needs` under Folder management, and `live_longest_minutes`, greyed under Live recording); Dictation (`dictation`, under Live recording), Dictation by email (`dictation_by_email`, greyed while mail is not configured) and the Dictation sent template (`dictation_subject`, `dictation_body`) in v1.26.0.

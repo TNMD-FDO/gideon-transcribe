@@ -21,6 +21,50 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.71.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0054, two tables for documents and their pages)
+```
+
+Phase 8 chapter 4, part 1 of 3: Documents beside the cameras. The police
+report that corresponds to the body-worn cameras, added to the incident or
+the camera it is about and read page by page. Parts 2 (the Report tab and
+Gideon's citations) and 3 (the comparison) follow.
+
+- **Add the report**, on the incident page's and the recording page's
+  Details tab, and nowhere else: a document is the report for that incident
+  or that camera, never loose in a case. The page says what fits before a
+  file is chosen: PDFs only, the report for this incident or camera and
+  nothing else, up to 60 pages (the Admin's figure), a scan is read by OCR
+  and its words may carry mistakes, nothing leaves the building. A file
+  that does not fit is refused with the reason.
+- **Read at upload**, on the media queue: each page's words with their
+  positions, a page without words of its own read by OCR (Tesseract,
+  English) and marked so, a page the OCR read poorly said so, the words
+  split into numbered paragraphs by the gaps on the page, every page drawn
+  to a picture.
+- **The Documents tab** on the case page, with the count: every document,
+  its pages ("42 pages, read by OCR, 3 poorly read"), what it is the report
+  for, who added it, and Open, Re-link and Remove. Both Details tabs list
+  their reports.
+- **The document page**: the page pictures down the middle, the words of the
+  page in view beside them paragraph by paragraph with their numbers, a page
+  box, Find within the document, Download. A press on a paragraph's box on
+  the picture lights its words and the other way round; a citation opens
+  the page with the paragraph lit. A page read by OCR says so; a poorly read
+  page says to read the picture.
+- **Search** gains a Documents kind: one hit per paragraph, opening the page
+  with it lit.
+- **Nothing new to install.** The PDF reader, the page renderer and the OCR
+  engine are in the app image, pinned, on the CPU; the image grows by about
+  a hundred megabytes for the OCR engine and its English data. Settings on
+  a new Documents page of the Panel: Documents (On), Largest document (60
+  pages), Documents per incident or recording (3), Read scans with OCR
+  (On). Audit rows Document added, Document re-linked, Document removed,
+  never with a word of a page.
+
 ## v1.70.0, 2026-09-19
 
 ```

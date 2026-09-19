@@ -255,7 +255,13 @@ Each camera carries a pill saying how it came to sit on the clock: **From its cl
 
 A recording in an incident has **All cameras** in its viewer's head, which opens the incident at the moment being played with the line being spoken ready to add as an event, and a case chat's citation on such a recording carries an **all cameras** link that does the same with the cited line. An incident belongs to its case: everyone the case is shared with can work in it, it counts as using the case, and it goes with the case to the Recycle bin and back.
 
-### How long a case is kept
+### Documents: the police report beside the cameras
+
+A police report belongs beside the cameras it describes, so it is added from the incident's or the recording's **Details** tab with **Add the report**, never loose in the case. The page says what fits before you choose a file: PDFs only (save a Word file as a PDF first); the report for this incident or this camera and nothing else, since it is read beside the cameras and a document about something else only slows the reading; up to the number of pages your Admin allows; a scan is read by OCR, and its words may carry mistakes, so the page itself is always shown beside them; nothing leaves the building. Give it a title if the file's name is not one, and press **Add**. The document is read in the background: every page's words, split into numbered paragraphs, and every page drawn as a picture. The row says how it went: "42 pages", or "42 pages, read by OCR, 3 poorly read".
+
+The case's **Documents** tab lists every document with its pages, what it is the report for and who added it; **Open** reads it, **Re-link** moves it to another incident or recording of the case, **Remove** takes it out with its pages. On the document's own page the pictures of the pages run down the middle and the words of the page in view sit beside them, each paragraph numbered: press a paragraph on the picture and its words light, or the other way round. **Find** marks every paragraph carrying the words; **Download** gives the PDF as it arrived. A page read by OCR says so above its words, and a poorly read page says to read the picture rather than the words. The case's **Search** tab has a Documents kind that opens a document at the paragraph it found.
+
+## How long a case is kept
 
 A case is kept for as long as somebody uses it. Every use starts its clock over: opening the case or a recording in it, adding or moving a recording in, correcting, naming a speaker, exporting, saving or downloading a clip, renaming. Looking at the list of cases does not count, and neither does an Admin looking in.
 

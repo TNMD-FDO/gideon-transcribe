@@ -36,6 +36,13 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | Markdown (Python-Markdown) | BSD-3-Clause | renders the two guides at build time; see ADR 0012 |
 | restic | BSD-2-Clause | the Backup's tool, from its official image `restic/restic` pinned by digest, run as the `backup` Compose service behind its own profile and never on the host; the image carries Alpine's openssh client for SFTP |
 | IBM Plex Sans and IBM Plex Mono (fonts) | OFL-1.1 | the app's typeface since v1.14.0, six woff2 files in `app/static/fonts/` with the licence beside them (`OFL-ibm-plex.txt`); the Open Font License permits bundling and use, forbids selling the fonts alone, and reserves the name "Plex", which the app does not use for anything of its own |
+| pdfplumber | MIT | reads a PDF's words with their positions (Phase 8 chapter 4), in the app image since v1.71.0 |
+| pdfminer.six | MIT | pdfplumber's own dependency |
+| pypdfium2 | Apache-2.0 or BSD-3-Clause (the wheel carries PDFium, BSD-3-Clause) | draws a PDF's pages to pictures; pdfplumber's own dependency |
+| Pillow | MIT-CMU (HPND) | the pictures in memory; pdfplumber's and pytesseract's dependency |
+| pytesseract | Apache-2.0 | the bridge to the OCR engine, which it calls as a separate program |
+| Tesseract OCR (with its English data) | Apache-2.0 | in the app image from Debian's `tesseract-ocr` and `tesseract-ocr-eng` packages, called as a separate program; reads a scanned page's words |
+| charset-normalizer, cryptography, packaging | MIT; Apache-2.0 or BSD-3-Clause; Apache-2.0 or BSD-2-Clause | pdfminer.six's and pytesseract's own dependencies, pinned so the image builds the same way every time |
 | audiowaveform | GPL-3.0-or-later | in the app image, fetched as a `.deb` by version and hash and called as a separate program; source at `github.com/bbc/audiowaveform`; see note 1 |
 | Caddy | Apache-2.0 | upstream image |
 | PostgreSQL | the PostgreSQL Licence | upstream image |

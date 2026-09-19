@@ -39,6 +39,8 @@ RUN apt-get update \
       libboost-regex1.83.0 \
       libldap2 \
       libsasl2-2 \
+      tesseract-ocr \
+      tesseract-ocr-eng \
  && rm -rf /var/lib/apt/lists/*
 
 # audiowaveform draws the waveform under the player. It is not in the Debian
@@ -87,6 +89,11 @@ RUN apt-get update \
 # The directory library must import in the finished image, so that a missing
 # shared library is a build failure rather than a sign-in failure.
 RUN python -c "import ldap; print(ldap.__version__)"
+
+# The PDF reader, the page renderer and the OCR bridge must import, and the
+# OCR engine must answer, in the finished image (Phase 8 chapter 4).
+RUN python -c "import pdfplumber, pypdfium2, pytesseract; print(pdfplumber.__version__)" \
+ && tesseract --version | head -n 1
 
 # The container runs as the office's own account, which has no home folder on
 # the server, so HOME points somewhere writable.

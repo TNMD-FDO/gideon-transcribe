@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}{{ document.title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+  {% comment %}
+    The document page (Phase 8 chapter 4, part 1): the page pictures down the
+    middle at reading size, the words read from the open page beside them
+    paragraph by paragraph with their numbers, a page box, Find within the
+    document, Download. A citation (?page=4&para=2) opens that page with the
+    paragraph lit on the picture and in the words. The page is the truth; the
+    words are a reading, and a page read by OCR says so.
+  {% endcomment %}
+  <div class="page doc-page" id="document"
+       data-pages="{{ document.pages }}" data-open="{{ open_page }}" data-lit="{{ lit }}"
+       data-picture="{% url 'document-picture' case.pk document.pk 0 %}">
+    <header class="welcome row" style="align-items: flex-start; gap: 12px">
+      <div class="grow">
+        <span class="crumb muted small"><a href="{% url 'case' case.pk %}?tab=documents">{{ case.name }}</a> &rsaquo; Documents</span>
+        <h1 style="margin: 0">{{ document.title }}</h1>
+        <p class="muted small" style="margin: 4px 0 0">
+          {{ document.pages_line }}{% if document.home_name %} &middot; the report for <a href="{{ document.home_url }}">{{ document.home_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}
+        </p>
+      </div>
+      <div class="row" style="gap: 6px">
+        <label class="row small" style="gap: 4px">Page <input type="number" id="doc-page-box" class="small" min="1" max="{{ document.pages }}" value="{{ open_page }}" style="width: 4.5em"> of {{ document.pages }}</label>
+        <input type="search" id="doc-find" class="small" maxlength="200" placeholder="Find in this document" value="{{ asked }}" aria-label="Find in this document">
+        <a class="btn small" href="{% url 'document-download' case.pk document.pk %}">{% icon "download" %} Download</a>
+      </div>
+    </header>
+
+    {% if document.state != "ready" %}
+      <p class="notice {% if document.state == 'failed' %}danger{% else %}warn{% endif %}">
+        {% if document.state == "failed" %}This document could not be read{% if document.error %}: {{ document.error }}{% endif %}. Its file is kept; Download has it.{% else %}This document is being read; its pages appear when it is done.{% endif %}
+      </p>
+    {% endif %}
+
+    <div class="doc-body">
+      <div class="doc-pictures" id="doc-pictures">
+        {% for row in rows %}
+          <figure class="doc-sheet" id="sheet-{{ row.number }}" data-number="{{ row.number }}" data-width="{{ row.width }}" data-height="{{ row.height }}" style="aspect-ratio: {{ row.width }} / {{ row.height }}">
+            <img src="{% url 'document-picture' case.pk document.pk row.number %}" alt="Page {{ row.number }}" loading="lazy">
+            <figcaption class="muted small">Page {{ row.number }}{% if row.ocr %} &middot; read by OCR{% endif %}{% if row.poor %} &middot; <span class="warn-ink">poorly read</span>{% endif %}</figcaption>
+            {% for b in row.boxes %}
+              <span class="doc-box" data-page="{{ row.number }}" data-n="{{ b.n }}" title="Page {{ row.number }}, paragraph {{ b.n }}"
+                    style="left: {{ b.left }}%; top: {{ b.top }}%; width: {{ b.width }}%; height: {{ b.height }}%"></span>
+            {% endfor %}
+          </figure>
+        {% endfor %}
+      </div>
+      <aside class="doc-words" id="doc-words">
+        {% for row in rows %}
+          <section class="doc-text" id="text-{{ row.number }}" data-number="{{ row.number }}" hidden>
+            <h2 class="small muted">Page {{ row.number }}{% if row.ocr %} &middot; read by OCR: the words may carry mistakes{% endif %}</h2>
+            {% if row.poor %}<p class="notice warn small">This page was poorly read. Read the picture, not the words.</p>{% endif %}
+            {% for p in row.paragraphs %}
+              <p class="doc-para" data-page="{{ row.number }}" data-n="{{ p.n }}"><span class="doc-n muted small">{{ p.n }}</span> {{ p.text }}</p>
+            {% empty %}
+              <p class="muted small">No words were read from this page.</p>
+            {% endfor %}
+          </section>
+        {% endfor %}
+      </aside>
+    </div>
+  </div>
+  <script src="{% static 'document.js' %}"></script>
+{% endblock %}

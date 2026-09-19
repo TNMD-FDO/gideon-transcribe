@@ -8,6 +8,7 @@ from core import (
     case_pages,
     clip_pages,
     dictation_pages,
+    document_pages,
     exports,
     incident_clips,
     incident_pages,
@@ -208,6 +209,32 @@ urlpatterns = [
     ),
     path("cases/bin/empty", case_pages.empty_bin, name="empty-bin"),
     path("case/<uuid:case_id>/keep", case_pages.keep_case, name="keep-case"),
+    # Documents beside the cameras (Phase 8 chapter 4, part 1).
+    path(
+        "case/<uuid:case_id>/documents/add",
+        document_pages.add,
+        name="add-document",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>",
+        document_pages.page,
+        name="document",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/page/<int:number>.png",
+        document_pages.picture,
+        name="document-picture",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/download",
+        document_pages.download,
+        name="document-download",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/act",
+        document_pages.act,
+        name="document-act",
+    ),
     # Download notes (Phase 8 chapter 2): every note in the case, as Word.
     path("case/<uuid:case_id>/notes.docx", case_pages.notes_export, name="case-notes"),
     path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),

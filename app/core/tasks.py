@@ -65,6 +65,14 @@ def prepare_recording(recording_id: str) -> None:
         mail.note_batch_progress(recording)
 
 
+@app.task(queue="media", name="read_document")
+def read_document(document_id: str) -> None:
+    """A Document's pages read, split and drawn (Phase 8 chapter 4, part 1)."""
+    from core import documents
+
+    documents.read(document_id)
+
+
 @app.task(queue="media", name="prepare_audio_again")
 def prepare_audio_again(recording_id: str) -> None:
     """Remake a Recording's prepared audio, then put it in the line.

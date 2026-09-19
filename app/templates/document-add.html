@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Add the report{% endblock %}
+{% block content %}
+  {% comment %}
+    Add the report (Phase 8 chapter 4, part 1): the upload page for one
+    document, headed for the incident or the recording it is about. It says
+    what fits before a file is chosen, and refuses with the reason.
+  {% endcomment %}
+  <div class="page">
+    <header class="welcome">
+      <span class="crumb muted small"><a href="{% url 'case' case.pk %}">{{ case.name }}</a> &rsaquo; <a href="{{ home_url }}">{{ home_name }}</a></span>
+      <h1>Add the report</h1>
+      <p class="lead">
+        The police report for this {{ home_kind }}, <b>{{ home_name }}</b>, as a PDF. It is read page by page and kept with the case, beside the cameras.
+      </p>
+    </header>
+
+    <div class="card" id="document-fits">
+      <h2 class="small" style="margin: 0 0 6px">What fits</h2>
+      <ul class="plain document-rules">
+        <li><b>PDFs only.</b> A Word file is saved as a PDF first.</li>
+        <li><b>The report for this {{ home_kind }}, nothing else.</b> A document is read beside the cameras, so a document about something else only slows the reading and clouds the answers.</li>
+        <li><b>Up to {{ most_pages }} pages.</b> A larger file is refused; cut a production down to the report that matters.</li>
+        <li><b>{{ per_home }} documents per {{ home_kind }}</b>{% if here %}; this one has {{ here }}{% endif %}.</li>
+        {% if ocr %}<li><b>A scan is read by OCR</b>, and its words may carry mistakes; the page itself is always shown beside them.</li>{% elif ocr_missing %}<li><b>A scan is kept and shown</b>, but its words are not read: the OCR engine is not in this build.</li>{% else %}<li><b>A scan is kept and shown</b>, but its words are not read: OCR is off.</li>{% endif %}
+        <li><b>Nothing leaves the building.</b> The document is read by the office's own engine and kept with the case.</li>
+      </ul>
+    </div>
+
+    {% if refused %}<p class="notice danger" id="document-refused">{{ refused }}</p>{% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="card" id="document-form">
+      {% csrf_token %}
+      <input type="hidden" name="{{ home_kind }}" value="{{ home_id }}">
+      <label class="field">
+        <span>The PDF</span>
+        <input type="file" name="file" accept="application/pdf,.pdf" required>
+      </label>
+      <label class="field">
+        <span>Title <span class="muted small">(the file's name unless you change it)</span></span>
+        <input type="text" name="title" maxlength="200" placeholder="Incident report, 7 June 2025">
+      </label>
+      <div class="row" style="gap: 8px; margin-top: 12px">
+        <button type="submit" class="primary">Add</button>
+        <a class="btn ghost" href="{{ home_url }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

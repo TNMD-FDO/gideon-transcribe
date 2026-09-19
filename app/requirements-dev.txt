@@ -28,3 +28,14 @@ openai==3.8.0
 # The sound match (Phase 6 chapter 1). Same pin as the image's.
 numpy==2.3.4
 
+# Documents beside the cameras (Phase 8 chapter 4). Same pins as the image's;
+# the OCR engine itself is not on the runner, so the tests stand in for it.
+pdfplumber==0.11.10
+pdfminer.six==20260107
+pypdfium2==5.13.0
+pillow==12.3.0
+pytesseract==0.3.13
+charset-normalizer==3.5.1
+cryptography==50.0.1
+packaging==26.3
+

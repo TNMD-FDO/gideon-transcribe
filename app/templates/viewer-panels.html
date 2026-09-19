@@ -142,6 +142,22 @@
             processed. Printed on every export. Never the transcript itself.
           </p>
           <dl id="details" class="kv"></dl>
+          {% if documents_on %}
+            {% comment %}The report for this recording (Phase 8 chapter 4, part 1).{% endcomment %}
+            <div id="recording-documents" class="documents-here">
+              <h3 class="small" style="margin: 12px 0 4px">The report</h3>
+              {% if documents %}
+                <ul class="plain">
+                  {% for one in documents %}
+                    <li><a href="{{ one.url }}">{{ one.title }}</a> <span class="muted small">{{ one.pages_line }}</span></li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="muted small" style="margin: 0 0 6px">No report yet for this recording. Add the police report as a PDF and it is read beside the transcript.</p>
+              {% endif %}
+              <a class="btn small" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
+            </div>
+          {% endif %}
           <div id="marks" hidden>
             <h3 class="small" style="margin: 12px 0 4px">Marks</h3>
             <ul class="plain marks"></ul>

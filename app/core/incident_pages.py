@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 from core import (
     cases,
     chronology,
+    documents,
     engine,
     incident_assistant,
     incident_chat,
@@ -253,6 +254,18 @@ def state_json(incident: Incident, user) -> dict:
             "clip_longest": settings_store.longest_clip_seconds(),
             "clip_focus_most": media.FOCUS_MOST,
             "clip_most": media.WALL_MOST,
+            # The report for this incident (Phase 8 chapter 4, part 1), on Details.
+            "documents_on": documents.on(),
+            "documents": (
+                [documents.as_json(one) for one in documents.for_incident(incident)]
+                if documents.on()
+                else []
+            ),
+            "add_document_url": (
+                documents.add_url(incident.case, incident=incident)
+                if documents.on()
+                else ""
+            ),
         },
         "cameras": [
             _camera_json(one, colours[str(one.pk)], str(one.pk) in wall)

@@ -287,6 +287,7 @@ from core.cases import Case, OffSpell  # noqa: E402, F401
 from core.chronology import Event  # noqa: E402, F401
 from core.clips import Clip  # noqa: E402, F401
 from core.dictation import DictationShare  # noqa: E402, F401
+from core.documents import Document, DocumentPage  # noqa: E402, F401
 from core.engine import EngineStatus  # noqa: E402, F401
 from core.incident_assistant import IncidentMemo  # noqa: E402, F401
 from core.incidents import Incident, IncidentCamera  # noqa: E402, F401

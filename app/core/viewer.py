@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, engine, notes, settings_store
+from core import assistant, audit, cases, documents, engine, notes, settings_store
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -268,6 +268,18 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # The Export menu's with-notes entries show only while a line has one.
         "has_notes": bool(
             transcript is not None and transcript.segments.exclude(note="").exists()
+        ),
+        # The report for this recording (Phase 8 chapter 4, part 1), on Details.
+        "documents_on": documents.on() and bool(recording.case_id),
+        "documents": (
+            documents.for_recording(recording)
+            if documents.on() and recording.case_id
+            else []
+        ),
+        "add_document_url": (
+            documents.add_url(recording.case, recording=recording)
+            if documents.on() and recording.case_id
+            else ""
         ),
         "media_url": (f"{media_root(recording)}/{playback.name}" if playback else ""),
         # While the copy is still being written there is no file to judge

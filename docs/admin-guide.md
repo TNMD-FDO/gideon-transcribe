@@ -66,6 +66,10 @@ What people sent with **Report a problem** at the foot of any page: a problem or
 
 When mail is configured and the Operator address is set (see Email), each report is also mailed to that address with the same words and a link back here, so IT sees it without opening the Panel; the Panel is the record either way. The words of a report are read here and mailed there, never written to the audit log, and nothing leaves the building. **Reports**, on the Features page, turns the link off; the page and its reports stay.
 
+## Documents
+
+The **Documents** page of the settings turns the police report beside the cameras on or off and sets its limits: **Largest document** (pages; a bigger PDF is refused at upload with the reason), **Documents per incident or recording**, and **Read scans with OCR**. A scan is a PDF of pictures; with OCR on, the Tesseract engine in the app image reads its words on the CPU at upload and marks the page "read by OCR", and a page it read poorly is marked so and its words are not to be trusted. With OCR off a scan is kept and shown and its words are not read. Nothing about documents needs configuring at install and nothing leaves the building: the reader, the renderer and the OCR engine are in the app image, and the pages are kept under the case's folder and go with it.
+
 ## The Queue page
 
 Every transcription job in the office, whoever started it: the user, the recording, its batch, its length, its state and its step. One runs at a time, in arrival order, with no priority for anyone, and this page is where you see whose turn it is.

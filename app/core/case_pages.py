@@ -28,6 +28,7 @@ from core import (
     case_search,
     cases,
     dashboard,
+    documents,
     engine,
     exports,
     live,
@@ -233,8 +234,10 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
 
     chat_here = case_chat.available()
     # The Gideon tab went with Phase 8 chapter 1: the panel is Gideon's place.
-    tabs = ("search", "clips", "notes", "speakers") + (
-        ("incidents",) if incidents.on() else ()
+    tabs = (
+        ("search", "clips", "notes", "speakers")
+        + (("incidents",) if incidents.on() else ())
+        + (("documents",) if documents.on() else ())
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
@@ -280,6 +283,11 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 if tab == "notes"
                 else None
             ),
+            # Documents beside the cameras (Phase 8 chapter 4, part 1).
+            "documents_on": documents.on(),
+            "documents_count": documents.count(case) if documents.on() else 0,
+            "documents": documents.of_case(case) if tab == "documents" else [],
+            "document_homes": _document_homes(case) if tab == "documents" else [],
             "is_owner": role == "owner",
             "role": role,
             **_sharing_context(case, role),
@@ -326,6 +334,24 @@ def notes_export(request: HttpRequest, case_id) -> HttpResponse:
         kind="notes",
     )
     return exports.hand_over(body, notes.export_name(case), exports.WORD_TYPE)
+
+
+def _document_homes(case: Case) -> list[dict]:
+    """Where a document of this case may be re-linked to: its incidents and
+    its recordings, for the Re-link menu."""
+    from core import incidents
+
+    homes = []
+    if incidents.on():
+        for incident in case.incidents.order_by("created"):
+            homes.append(
+                {"kind": "incident", "id": str(incident.pk), "name": incident.name}
+            )
+    for recording in case.recordings.order_by("created"):
+        homes.append(
+            {"kind": "recording", "id": str(recording.pk), "name": recording.title}
+        )
+    return homes
 
 
 def _incidents_context(case: Case) -> dict:
