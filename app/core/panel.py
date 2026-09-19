@@ -36,6 +36,7 @@ RAIL = [
         "Overview",
         [
             ("Status", "panel-status"),
+            ("Reports", "panel-reports"),
             ("Queue", "panel-queue"),
             ("Users", "panel-users"),
             ("Audit log", "panel-audit"),
@@ -107,9 +108,12 @@ def furniture(request, page: str = "") -> dict:
                             if key in dict(settings_store.PAGES)
                             else 0
                         ),
-                        # The requests waiting for an Admin, beside Vision.
+                        # The requests waiting for an Admin, beside Vision;
+                        # the New reports, beside Reports (Phase 8 chapter 3).
                         "alerts": (
-                            _requests_waiting() if key == settings_store.VISION else 0
+                            _requests_waiting()
+                            if key == settings_store.VISION
+                            else (_new_reports() if key == "panel-reports" else 0)
                         ),
                     }
                     for name, key in pages
@@ -422,6 +426,12 @@ def _file_has_something(path: str) -> bool:
 
 
 # Vision requests (Phase 4 chapter 5) -----------------------------------------------
+
+
+def _new_reports() -> int:
+    from core import reports
+
+    return reports.new_count()
 
 
 def _requests_waiting() -> int:

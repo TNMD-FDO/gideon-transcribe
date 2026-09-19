@@ -1,0 +1,56 @@
+{% extends "panel/base.html" %}
+{% block title %}Reports{% endblock %}
+
+{% block panel %}
+  <h1>Reports</h1>
+  <p class="lead">
+    What people sent with Report a problem: a problem or an idea in their own
+    words, and where they were when they ticked to include it. Newest first,
+    New before Seen before Done. Every mark applies at once, outside the tray.
+    {% if not reports_on %}<b>Reports are off</b> on the Features page; the link is hidden and nothing new arrives.{% endif %}
+  </p>
+
+  <div class="row" style="margin: 0 0 8px; gap: 8px">
+    <a href="{% url 'panel-reports' %}" class="btn small{% if not state %} primary{% endif %}">All ({{ total }})</a>
+    <a href="{% url 'panel-reports' %}?state=new" class="btn small{% if state == 'new' %} primary{% endif %}">New ({{ counts.new }})</a>
+    <a href="{% url 'panel-reports' %}?state=seen" class="btn small{% if state == 'seen' %} primary{% endif %}">Seen ({{ counts.seen }})</a>
+    <a href="{% url 'panel-reports' %}?state=done" class="btn small{% if state == 'done' %} primary{% endif %}">Done ({{ counts.done }})</a>
+  </div>
+
+  {% if rows %}
+    <div class="card" style="overflow-x: auto">
+      <table class="tbl" id="reports">
+        <thead>
+          <tr><th>Mark</th><th>Kind</th><th>Report</th><th>From</th><th>Where</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for one in rows %}
+            <tr class="report-row" data-state="{{ one.state }}">
+              <td><span class="pill small{% if one.state == 'new' %} warn{% elif one.state == 'done' %} ok{% endif %}">{% if one.state == 'new' %}New{% elif one.state == 'seen' %}Seen{% else %}Done{% endif %}</span></td>
+              <td class="nowrap">{% if one.kind == 'idea' %}An idea{% else %}A problem{% endif %}</td>
+              <td>
+                <details class="report-words">
+                  <summary>{{ one.first_line }}</summary>
+                  <p class="report-text"><b>{% if one.kind == 'idea' %}What would help:{% else %}What happened:{% endif %}</b> {{ one.happened|linebreaksbr }}</p>
+                  {% if one.expected %}<p class="report-text"><b>What was expected:</b> {{ one.expected|linebreaksbr }}</p>{% endif %}
+                </details>
+              </td>
+              <td class="nowrap">{{ one.sent_by_name }}<div class="muted small">{{ one.made|date:"j M Y H:i" }}</div></td>
+              <td class="small muted">{{ one.where_line }}{% if one.state != 'new' and one.marked_by %}<div>{{ one.state|capfirst }} by {{ one.marked_by.shown_name }}, {{ one.marked_at|date:"j M Y H:i" }}</div>{% endif %}</td>
+              <td class="nowrap">
+                {% if one.state == 'new' %}
+                  <form method="post" action="{% url 'panel-report-mark' one.pk 'seen' %}" style="display: inline">{% csrf_token %}<input type="hidden" name="back" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Seen</button></form>
+                {% endif %}
+                {% if one.state != 'done' %}
+                  <form method="post" action="{% url 'panel-report-mark' one.pk 'done' %}" style="display: inline">{% csrf_token %}<input type="hidden" name="back" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Done</button></form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">{% if state %}None {{ state }}.{% else %}None yet. A person sends one with Report a problem at the foot of any page.{% endif %}</p>
+  {% endif %}
+{% endblock %}

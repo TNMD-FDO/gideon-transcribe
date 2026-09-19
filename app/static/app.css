@@ -1818,6 +1818,18 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
   box-shadow: var(--shadow);
 }
 .ui-dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
+/* Report a problem (Phase 8 chapter 3): the link at the foot, the box. */
+.page-foot { margin-top: 28px; text-align: right; }
+.page-foot a { color: var(--muted); }
+.inc-report { margin-left: 8px; white-space: nowrap; align-self: center; }
+.report-dialog { width: min(600px, 92vw); }
+.report-kinds { gap: 16px; margin: 0 0 10px; }
+.report-kinds label { display: inline-flex; gap: 6px; align-items: center; }
+.report-field { display: block; margin: 0 0 10px; }
+.report-field span { display: block; font-size: var(--t-small); color: var(--muted); margin-bottom: 4px; }
+.report-field textarea { width: 100%; }
+.report-words summary { cursor: pointer; }
+.report-text { white-space: pre-wrap; margin: 6px 0 0; }
 .ui-dialog-title { font-size: var(--t-heading); margin: 0 0 8px; }
 .ui-dialog-body { color: var(--muted); margin: 0 0 16px; }
 .ui-dialog-body p { margin: 0 0 6px; }

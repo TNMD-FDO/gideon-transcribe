@@ -72,6 +72,13 @@
         {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
       {% endif %}
       {% block content %}{% endblock %}
+      {% comment %}
+        Report a problem (Phase 8 chapter 3): one small link at the right of
+        every page's foot, for a signed-in person, while Reports is on. The
+        incident page fills the window and carries the link in its panel's
+        head instead, so it empties this block.
+      {% endcomment %}
+      {% block foot %}{% if user.is_authenticated and reports_on %}<footer class="page-foot"><a href="#" id="report-open" class="small muted">Report a problem</a></footer>{% endif %}{% endblock %}
     </main>
     {% if user.is_authenticated %}
       <aside id="help-pane" class="help-pane" hidden aria-label="The guide">
@@ -85,6 +92,7 @@
     {% endif %}
   </div>
 
+  {% if user.is_authenticated and reports_on %}{% include "report-box.html" %}<script src="{% static 'report.js' %}"></script>{% endif %}
   <script src="{% static 'theme.js' %}"></script>
   {% if user.is_authenticated %}<script src="{% static 'help-pane.js' %}"></script>{% endif %}
 </body>

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from core import settings_store
+from core import reports, settings_store
 
 
 def workspace(request) -> dict:
@@ -21,6 +21,10 @@ def workspace(request) -> dict:
         "chat_name": settings_store.chat_name(),
         # Off hides the Clips page and every way to reach it.
         "clips_available": settings_store.get("clips_available"),
+        # Report a problem (Phase 8 chapter 3): the link, and the Release the
+        # box names in its where line.
+        "reports_on": bool(settings_store.get("reports")),
+        "report_release": reports.release(),
         # Off hides every Case from everyone, Admins included, and keeps them:
         # the pages go, the rows and the files stay.
         "folder_management": settings_store.get("folder_management"),

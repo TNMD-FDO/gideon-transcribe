@@ -60,6 +60,12 @@ Everything on it is read again every five seconds. It has six blocks.
 
 **Versions**: the Release this server is running, and the versions of the things underneath it. If it says "not tagged", the server was not installed by `./transcribe upgrade`; the install guide says how to put that right.
 
+## The Reports page
+
+What people sent with **Report a problem** at the foot of any page: a problem or an idea in their own words, and, when they ticked to include it, where they were (the page's path, the Release, the browser, the window's size) and their name. Newest first, New before Seen before Done; **New**, **Seen**, **Done** and **All** filter the list. Press a report's first line to read the whole of it. **Seen** marks a new one as read, **Done** closes it; each applies at once and writes a row, and a Done report is removed ninety days later by the daily sweeper. The rail shows how many are new, and the Status page says so while any is.
+
+When mail is configured and the Operator address is set (see Email), each report is also mailed to that address with the same words and a link back here, so IT sees it without opening the Panel; the Panel is the record either way. The words of a report are read here and mailed there, never written to the audit log, and nothing leaves the building. **Reports**, on the Features page, turns the link off; the page and its reports stay.
+
 ## The Queue page
 
 Every transcription job in the office, whoever started it: the user, the recording, its batch, its length, its state and its step. One runs at a time, in arrival order, with no priority for anyone, and this page is where you see whose turn it is.

@@ -17,6 +17,7 @@ from core import (
     panel,
     panel_pages,
     people_pages,
+    reports,
     speakers_page,
     template_pages,
     uploads,
@@ -411,6 +412,14 @@ urlpatterns = [
     # The Admin panel. Users never see any of it.
     path("panel/", panel.panel, name="panel"),
     path("panel/status", panel_pages.status, name="panel-status"),
+    # Report a problem (Phase 8 chapter 3): the box's Send, and the Panel's page.
+    path("report", reports.send, name="report"),
+    path("panel/reports", panel_pages.reports_page, name="panel-reports"),
+    path(
+        "panel/reports/<uuid:report_id>/<str:state>",
+        panel_pages.report_mark,
+        name="panel-report-mark",
+    ),
     path("panel/status/lines", panel_pages.status_lines, name="panel-status-lines"),
     path("panel/queue", panel_pages.queue_page, name="panel-queue"),
     path("panel/queue/state", panel_pages.queue_state, name="panel-queue-state"),

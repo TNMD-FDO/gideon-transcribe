@@ -4,6 +4,7 @@
 {% block body_class %}viewer incident-page{% endblock %}
 {% block main_class %}wide{% endblock %}
 
+{% block foot %}{% endblock %}
 {% block content %}
   {% comment %}
     The Incident page (Phase 6 chapters 1 to 4): the cameras of one event
@@ -93,6 +94,7 @@
         {% if state.memo.on %}<button type="button" class="tiny ghost" id="two-panels" hidden title="The Memo beside the Chronology, on a very wide window">Two panels</button>{% endif %}
         {% comment %}Find (Phase 7 chapter 3): a hit is a moment; pressing it takes every camera there.{% endcomment %}
         <input type="search" id="find" class="small inc-find" maxlength="200" placeholder="Find" aria-label="Find a moment on the cameras" title="Words said on any synced camera, an event or the memo; press a hit and every camera goes there. Enter for the next hit, Shift+Enter for the one before, Escape to clear.">
+        {% if reports_on %}<a href="#" id="report-open" class="small muted inc-report" title="Report a problem or send an idea to your Admins">Report a problem</a>{% endif %}
       </div>
       {% comment %}
         Phase 8 chapter 1: the layers. One job opened over the tab, with the same

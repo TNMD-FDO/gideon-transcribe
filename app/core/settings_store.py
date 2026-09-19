@@ -223,6 +223,18 @@ def _rows() -> list[Definition]:
                 "until their Recording goes."
             ),
         ),
+        Definition(
+            key="reports",
+            page=FEATURES,
+            name="Reports",
+            kind=TOGGLE,
+            default=True,
+            what_it_does="People may send a Report from any page (Report a problem).",
+            when_changed=(
+                "Off hides the link on every page and refuses the endpoint; "
+                "the Reports page and its reports stay for the Admins. At once."
+            ),
+        ),
         # Cases ----------------------------------------------------------------
         Definition(
             key="folder_management",

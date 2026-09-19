@@ -35,10 +35,14 @@ DISCARDING_TOO_LONG = timedelta(hours=1)
 
 def sweep() -> dict:
     """Run all three, count what went, and write the row."""
+    from core import reports
+
     counts = {
         "upload_pieces": old_upload_pieces(),
         "orphan_folders": folders_without_a_recording(),
         "unfinished_discards": unfinished_discards(),
+        # Done reports past their ninety days (Phase 8 chapter 3).
+        "done_reports": reports.sweep(),
     }
     audit.write(
         audit.Category.SYSTEM,

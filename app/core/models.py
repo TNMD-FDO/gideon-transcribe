@@ -294,6 +294,7 @@ from core.jobs import Job, Run, Segment, Transcript  # noqa: E402, F401
 from core.mail import MailStatus  # noqa: E402, F401
 from core.people import Person  # noqa: E402, F401
 from core.recordings import Batch, Recording, Side  # noqa: E402, F401
+from core.reports import Report  # noqa: E402, F401
 from core.settings_store import Setting  # noqa: E402, F401
 from core.sharing import Share  # noqa: E402, F401
 from core.vision import VisionRequest  # noqa: E402, F401

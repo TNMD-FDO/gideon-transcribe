@@ -310,6 +310,7 @@ On a wide monitor, the **?** at the top of every page opens this guide in a colu
 - **The transcript is wrong.** Correct the segments, or **Process again** with different settings: a speaker count, a vocabulary, the right language.
 - **The page says transcription is not available.** The transcription service is down or the server is low on space. Your recordings are safe; try again later, or tell IT.
 - **You cannot sign in.** Your account may not be in the sign-in group, or your password may have changed. Ask IT.
+- **Anything else, or an idea.** **Report a problem**, at the foot of every page (on the incident page, in the work panel's head beside Find), opens a small box: say whether it is a problem or an idea, what happened or what would help, and what you expected, in your own words. Leave **Include where I was** ticked and the app adds the line it shows you: the page you were on (without any search words), the app's version, your browser, the window's size and your name; untick it and it adds your name and the version only. Describe the problem; do not paste a transcript's words. It goes to your Admins and stays inside the office; nobody outside sees it.
 
 ## What the app records about you
 

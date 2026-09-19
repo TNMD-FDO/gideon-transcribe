@@ -9,6 +9,7 @@ Every setting the panel exposes, in both phases, grouped as the panel's pages gr
 | Diarization available | On or Off | On | 1 | Users may separate a Recording into Speakers, with a speaker-count hint. | Off hides the Diarization choice on the Upload page; Recordings already processed keep their Speakers; Queued Jobs run as submitted. |
 | Translation available | On or Off | On | 1 | Users may ask for "Translate to English". | Off hides the choice; a Recording holding more than one language is then transcribed in its winning language with a warning, whatever the mixed-language setting says. |
 | Clips available | On or Off | On | 1 | Users may save a chosen span of a Recording as a playable file, a Clip. | Off hides New Clip and the Clips sheet, hides the Clips page in the navigation, and drops Clips from the sign-out dialog and "Download everything"; Clip files already made stay until their Recording goes. In Phase 2, Off hides the Case page's Clips tab too. |
+| Reports | On or Off | On | 8 | People may send a Report from any page (Report a problem, Phase 8 chapter 3). | Off hides the link on every page and refuses the endpoint; the Panel's Reports page and its reports stay for the Admins. At once. |
 
 ## Limits
 

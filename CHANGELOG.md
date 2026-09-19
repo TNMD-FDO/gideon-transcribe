@@ -21,6 +21,39 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.70.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0053, a table for reports)
+```
+
+Phase 8 chapter 3: Report a problem. From the maintainer's list of
+2026-09-19 ("bug report button").
+
+- **Report a problem**, a small link at the right of every page's foot (on
+  the incident page, in the work panel's head beside Find), opens the app's
+  own box: **A problem** or **An idea**, what happened (or what would help)
+  and what you expected, in your own words. **Include where I was**, ticked,
+  adds the line shown under it before you send: this page's address without
+  its search words, the Release, the browser, the window's size and your
+  name. Nothing else, no screenshot, never a transcript's words. Send says
+  "Thank you. Your report went to the Admins." and nothing leaves the
+  building.
+- **The Panel's Reports page**, beside Status: every report, newest first,
+  New before Seen before Done, with a filter and **Seen** and **Done** on
+  each row; the whole words fold open on a press. The rail carries the count
+  of New reports as a badge, and the Status page a line while any is new.
+- **The Operator's copy.** When mail is configured and the Operator address
+  is set, each report also goes to that mailbox as the app's own mail, with
+  the words and the where line and a link to the Reports page; the Panel is
+  the record whether or not the mail goes.
+- **Housekeeping.** A Done report is removed ninety days after its mark by
+  the daily sweeper. A new setting, **Reports** on the Features page, is on;
+  off hides the link and refuses new reports, keeping the page for Admins.
+  Audit rows Report made, Report seen, Report done and Reports swept, never
+  with a word of the report.
+
 ## v1.69.0, 2026-09-19
 
 ```

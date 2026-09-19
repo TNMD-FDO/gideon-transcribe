@@ -1,0 +1,31 @@
+{% comment %}
+  Report a problem (Phase 8 chapter 3): the app's own dialog, opened by the
+  link in the page's foot (or the incident page's panel head). A problem or
+  an idea, in the person's own words; where they were is added only with
+  their tick, and the line the app will add is drawn before it goes. Never a
+  transcript's words, no screenshot, nothing leaves the building.
+{% endcomment %}
+<dialog class="ui-dialog report-dialog" id="report-dialog" data-release="{{ report_release }}" data-name="{{ user.shown_name }}">
+  <form class="ui-dialog-form" id="report-form">
+    <h2 class="ui-dialog-title">Report a problem</h2>
+    <div class="row report-kinds" role="radiogroup" aria-label="What is it?">
+      <label><input type="radio" name="report_kind" value="problem" checked> A problem</label>
+      <label><input type="radio" name="report_kind" value="idea"> An idea</label>
+    </div>
+    <label class="report-field">
+      <span id="report-happened-label">What happened</span>
+      <textarea name="happened" rows="4" maxlength="4000" required placeholder="In your own words. Describe it; do not paste a transcript's words."></textarea>
+    </label>
+    <label class="report-field" id="report-expected-field">
+      <span>What you expected</span>
+      <textarea name="expected" rows="2" maxlength="4000"></textarea>
+    </label>
+    <label class="ui-dialog-check row"><input type="checkbox" name="include" id="report-include" checked> <span>Include where I was</span></label>
+    <p class="muted small" id="report-where"></p>
+    <p class="muted small">It goes to your Admins and stays inside the office.</p>
+    <div class="ui-dialog-buttons">
+      <button type="button" class="ui-cancel" id="report-cancel">Cancel</button>
+      <button type="submit" class="primary ui-ok" id="report-send">Send</button>
+    </div>
+  </form>
+</dialog>

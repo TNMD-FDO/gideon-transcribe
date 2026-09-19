@@ -5,6 +5,9 @@
 {% block panel %}
   <h1>Status</h1>
   <p class="lead">Everything here is read again every five seconds.</p>
+  {% if reports_new %}
+    <p class="notice warn" id="reports-line"><a href="{% url 'panel-reports' %}">{{ reports_new }} report{{ reports_new|pluralize }} not yet seen</a>: what people sent with Report a problem.</p>
+  {% endif %}
 
   <div class="grid2">
     <div class="card">

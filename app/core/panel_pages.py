@@ -48,7 +48,49 @@ log = logging.getLogger("transcribe.panel")
 @admins_only
 def status(request: HttpRequest) -> HttpResponse:
     """One page of lines, asked for again every five seconds."""
-    return render(request, "panel/status.html", furniture(request, "panel-status"))
+    from core import reports
+
+    return render(
+        request,
+        "panel/status.html",
+        {**furniture(request, "panel-status"), "reports_new": reports.new_count()},
+    )
+
+
+@admins_only
+def reports_page(request: HttpRequest) -> HttpResponse:
+    """The Reports page (Phase 8 chapter 3): every Report, newest first, New
+    before Seen before Done, with a filter and the marks."""
+    from core import reports
+
+    listed = reports.listed(request.GET.get("state", ""))
+    return render(
+        request,
+        "panel/reports.html",
+        {
+            **furniture(request, "panel-reports"),
+            **listed,
+            "kinds": reports.KINDS,
+            "state_words": reports.STATE_WORDS,
+            "reports_on": reports.on(),
+        },
+    )
+
+
+@admins_only
+@require_POST
+def report_mark(request: HttpRequest, report_id, state: str) -> HttpResponse:
+    """Seen or Done on one Report, then back to the list as it was."""
+    from django.shortcuts import get_object_or_404
+
+    from core import reports
+
+    report = get_object_or_404(reports.Report, pk=report_id)
+    reports.mark(report, state, by=request.user, request=request)
+    back = request.POST.get("back", "")
+    if not back.startswith(reverse("panel-reports")):
+        back = reverse("panel-reports")
+    return redirect(back)
 
 
 @admins_only
