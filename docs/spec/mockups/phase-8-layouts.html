@@ -1,0 +1,265 @@
+<title>Layout Choices</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --ink: #16202b; --muted: #5b6876; --line: #d7dee7; --card: #ffffff; --accent: #1f6fb2;
+    --app-bg: #0f1620; --app-panel: #17202b; --app-panel-2: #1d2833; --app-line: #2a3644; --app-ink: #e6edf3; --app-muted: #8b98a8;
+    --app-accent: #58a6ff; --app-warn: #d29922; --app-ok: #3fb950; --app-video: #05080c;
+    --c1: #58a6ff; --c2: #f0883e; --c3: #3fb950; --c4: #bc8cff; --c5: #39c5cf; --c6: #ff7b72;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0b1017; --ink: #e6edf3; --muted: #97a3b1; --line: #263242; --card: #121a24; --accent: #58a6ff; }
+  }
+  :root[data-theme="dark"] { --bg: #0b1017; --ink: #e6edf3; --muted: #97a3b1; --line: #263242; --card: #121a24; --accent: #58a6ff; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 20px; margin: 44px 0 4px; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p { max-width: 70ch; margin: 0 0 10px; }
+  .lead { color: var(--muted); }
+  .rec { display: inline-block; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; background: var(--accent); color: #fff; border-radius: 999px; padding: 1px 9px; margin-left: 6px; vertical-align: middle; }
+  ul { max-width: 72ch; padding-left: 20px; margin: 0 0 10px; }
+  li { margin: 0 0 4px; }
+  .note { border-left: 3px solid var(--accent); padding: 6px 12px; background: var(--card); border-radius: 0 6px 6px 0; margin: 14px 0; }
+
+  /* A screen: a rendering of the app at a given width, scaled to the page. */
+  .screen-box { width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--app-bg); margin: 12px 0 8px; }
+  .screen { transform-origin: 0 0; background: var(--app-bg); color: var(--app-ink); font-size: 13px; line-height: 1.35; }
+  .bar { display: flex; align-items: center; gap: 18px; padding: 8px 16px; border-bottom: 1px solid var(--app-line); background: #0c1219; }
+  .bar b { font-size: 14px; } .bar span { color: var(--app-muted); } .bar .on { color: var(--app-ink); background: #1c2b3b; padding: 2px 8px; border-radius: 6px; }
+  .lbl { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--app-muted); }
+  .btn { border: 1px solid var(--app-line); background: var(--app-panel); color: var(--app-ink); border-radius: 6px; padding: 4px 10px; font-size: 12px; white-space: nowrap; display: inline-block; }
+  .btn.p { background: var(--app-accent); border-color: var(--app-accent); color: #04121f; font-weight: 600; }
+  .pill { display: inline-block; border: 1px solid var(--app-line); border-radius: 999px; padding: 0 8px; font-size: 11px; color: var(--app-muted); }
+  .pill.warn { color: var(--app-warn); border-color: var(--app-warn); }
+  .panel { background: var(--app-panel); border: 1px solid var(--app-line); border-radius: 8px; padding: 10px 12px; }
+  .video { background: var(--app-video); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--app-muted); }
+  .muted { color: var(--app-muted); }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .grow { flex: 1; }
+  .line { height: 8px; border-radius: 4px; background: #24303d; margin: 6px 0; }
+  .line.short { width: 60%; } .line.mid { width: 80%; }
+  .tile { background: var(--app-video); border-radius: 6px; position: relative; display: flex; align-items: flex-end; padding: 6px; color: var(--app-muted); font-size: 11px; }
+  .tile::before { content: ""; position: absolute; left: 8px; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--dot, var(--c1)); }
+  .kicker { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+  .choices { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; max-width: 72ch; }
+  .choices li { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; background: var(--card); }
+  .choices b { display: inline-block; min-width: 1.6em; }
+</style>
+
+<div class="wrap">
+  <h1>Layout choices for the next chapter</h1>
+  <p class="lead">Four questions from the list of 19 September, each drawn two or three ways. Pick a letter for each; the chapter is written from the picks. Drawings are wireframes of the app at the width named, not finished pages.</p>
+
+  <!-- 1. The Start page ------------------------------------------------------ -->
+  <h2>1. The Start page: what the door to the cases says</h2>
+  <p>Today the tile reads "Open a case". The word Case is the glossary's and is on every page, in every export and in the audit log.</p>
+  <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div>
+      <h3>A. "Cases" <span class="rec">Recommended</span></h3>
+      <div class="screen-box"><div class="screen" style="width:600px;transform:scale(.9)">
+        <div class="bar"><b>Gideon Transcribe</b><span class="on">Start</span><span>Cases</span><span>My recordings</span></div>
+        <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div class="panel"><b>Upload files</b><div class="muted">Recordings to transcribe</div></div>
+          <div class="panel"><b>Record now</b><div class="muted">A dictation or a call</div></div>
+          <div class="panel" style="border-color:var(--app-accent)"><b>Cases</b><div class="muted">12 cases, 2 shared with you</div></div>
+        </div>
+      </div></div>
+      <p>The tile says the noun, as the menu does, with the counts under it. One word changes; nothing else moves.</p>
+    </div>
+    <div>
+      <h3>B. "Workspaces"</h3>
+      <div class="screen-box"><div class="screen" style="width:600px;transform:scale(.9)">
+        <div class="bar"><b>Gideon Transcribe</b><span class="on">Start</span><span>Workspaces</span><span>My recordings</span></div>
+        <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div class="panel"><b>Upload files</b><div class="muted">Recordings to transcribe</div></div>
+          <div class="panel"><b>Record now</b><div class="muted">A dictation or a call</div></div>
+          <div class="panel" style="border-color:var(--app-accent)"><b>Workspaces</b><div class="muted">12 workspaces</div></div>
+        </div>
+      </div></div>
+      <p>Renames the word everywhere: the glossary, the menu, the pages, the exports' covers, the guides and the audit rows' labels. A big change for a word that would still mean a case; and Workspace already names a person's own uploads.</p>
+    </div>
+  </div>
+
+  <!-- 2. The case page's tabs ---------------------------------------------- -->
+  <h2>2. The case page: the tabs made prominent</h2>
+  <p>Recordings, Search, Clips, Speakers, Gideon, Incidents are small underlined words today. Three ways to make them the page's spine.</p>
+
+  <h3>A. A bar of sections with icons and counts, the open one filled <span class="rec">Recommended</span></h3>
+  <div class="screen-box"><div class="screen" style="width:1200px;transform:scale(.95)">
+    <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span class="on">Cases</span><span>My recordings</span><span>Clips</span></div>
+    <div style="padding:12px 16px 0"><div class="lbl">Case</div><div class="row"><div style="font-size:18px;font-weight:600">Traffic stop, 7 June 2025</div><span class="grow"></span><span class="btn p">Add recordings</span></div>
+      <div class="row" style="gap:6px;margin:6px 0 0"><span class="pill">2 transcribing</span><span class="pill warn">1 incident not synced</span><span class="pill warn">4 events to check</span></div></div>
+    <div style="display:flex;gap:4px;margin:12px 16px 0;border-bottom:1px solid var(--app-line)">
+      <div style="padding:9px 16px;border-radius:8px 8px 0 0;background:var(--app-panel-2);border:1px solid var(--app-line);border-bottom:0;font-weight:600">&#9654; Recordings <span class="muted">5</span></div>
+      <div style="padding:9px 16px;color:var(--app-muted)">&#9906; Search</div>
+      <div style="padding:9px 16px;color:var(--app-muted)">&#9986; Clips <span>3</span></div>
+      <div style="padding:9px 16px;color:var(--app-muted)">&#9787; Speakers <span>6</span></div>
+      <div style="padding:9px 16px;color:var(--app-muted)">&#9993; Gideon</div>
+      <div style="padding:9px 16px;color:var(--app-muted)">&#9635; Incidents <span>1</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;padding:12px 16px 16px">
+      <div class="panel" style="min-height:120px"><div class="line mid"></div><div class="line"></div><div class="line short"></div><div class="line"></div></div>
+      <div class="panel"><div class="lbl">About this case</div><div class="line short"></div><div class="line short"></div><div class="line short"></div></div>
+    </div>
+  </div></div>
+  <p>Larger type, an icon each, the count beside the name, the open section drawn as a card joined to its content. The same order as today; nothing moves; every page that has tabs (the recording page, the incident page's work panel) takes the same look.</p>
+
+  <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div>
+      <h3>B. A rail down the left</h3>
+      <div class="screen-box"><div class="screen" style="width:600px;transform:scale(.9)">
+        <div class="bar"><b>Gideon Transcribe</b><span class="on">Cases</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr;gap:12px;padding:12px">
+          <div class="panel" style="padding:6px">
+            <div style="padding:6px 8px;background:var(--app-panel-2);border-radius:6px;font-weight:600">Recordings 5</div>
+            <div style="padding:6px 8px;color:var(--app-muted)">Search</div>
+            <div style="padding:6px 8px;color:var(--app-muted)">Clips 3</div>
+            <div style="padding:6px 8px;color:var(--app-muted)">Speakers 6</div>
+            <div style="padding:6px 8px;color:var(--app-muted)">Gideon</div>
+            <div style="padding:6px 8px;color:var(--app-muted)">Incidents 1</div>
+          </div>
+          <div class="panel" style="min-height:120px"><div class="line mid"></div><div class="line"></div><div class="line short"></div></div>
+        </div>
+      </div></div>
+      <p>Always in view, room for more sections later; costs 150 pixels of width on a laptop and moves the About pane to the bottom.</p>
+    </div>
+    <div>
+      <h3>C. Pills in the head, beside the name</h3>
+      <div class="screen-box"><div class="screen" style="width:600px;transform:scale(.9)">
+        <div class="bar"><b>Gideon Transcribe</b><span class="on">Cases</span></div>
+        <div style="padding:12px"><div class="row"><div style="font-size:16px;font-weight:600">Traffic stop</div><span class="grow"></span>
+          <span class="btn p">Recordings 5</span><span class="btn">Search</span><span class="btn">Clips 3</span><span class="btn">Speakers 6</span><span class="btn">Gideon</span><span class="btn">Incidents 1</span></div>
+          <div class="panel" style="margin-top:12px;min-height:100px"><div class="line mid"></div><div class="line"></div></div></div>
+      </div></div>
+      <p>Compact and high on the page; six pills beside a long case name wrap on a narrower window.</p>
+    </div>
+  </div>
+
+  <!-- 3. The recording page's dead space ---------------------------------- -->
+  <h2>3. The recording page: the space under the camera view</h2>
+  <p>On a video the stage sits above and the transcript to the right; under the stage the space is empty, and the case's section (the other recordings, Download all transcripts) sits below the transcript where it is hidden or scrolled to.</p>
+
+  <h3>A. The case's recordings under the video <span class="rec">Recommended</span></h3>
+  <div class="screen-box"><div class="screen" style="width:1200px;transform:scale(.95)">
+    <div class="bar"><b>Gideon Transcribe</b><span class="on">Cases</span><span>My recordings</span></div>
+    <div style="display:grid;grid-template-columns:560px 1fr;gap:14px;padding:12px 16px">
+      <div>
+        <div class="video" style="height:300px">BWC2-098679</div>
+        <div class="row" style="margin:8px 0"><span class="btn">&#9654; Play</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="muted">21:57:27 / 41:26</span></div>
+        <div class="panel" style="margin-top:6px">
+          <div class="row"><div class="lbl">This case: Traffic stop, 7 June 2025</div><span class="grow"></span><span class="btn">Download all transcripts</span></div>
+          <div style="margin-top:6px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:12px">
+            <div style="color:var(--app-accent)">&#9654; BWC2-098679 (this one)</div><div class="muted">41 min</div>
+            <div>BWC2-098702</div><div class="muted">47 min</div>
+            <div>Unit12_dash</div><div class="muted">38 min</div>
+            <div>BWC2-0451</div><div class="muted">21 min</div>
+            <div class="muted">and 1 more</div><div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="min-height:460px"><div class="row" style="gap:12px;border-bottom:1px solid var(--app-line);padding-bottom:6px"><b>Transcript</b><span class="muted">Summary</span><span class="muted">Gideon</span><span class="muted">Clips</span><span class="muted">Details</span></div>
+        <div class="line mid"></div><div class="line"></div><div class="line short"></div><div class="line"></div><div class="line mid"></div><div class="line"></div></div>
+    </div>
+  </div></div>
+  <p>The case's list moves under the video, where it is seen without scrolling, and the transcript column runs the full height beside it. The section below the transcript goes, and so does the control that hid it.</p>
+
+  <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div>
+      <h3>B. A fold under the video, closed until pressed</h3>
+      <div class="screen-box"><div class="screen" style="width:600px;transform:scale(.9)">
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:10px;padding:10px">
+          <div><div class="video" style="height:150px">BWC2-098679</div><div class="panel" style="margin-top:8px;padding:6px 10px"><b>&#9656; This case</b> <span class="muted">5 recordings</span></div></div>
+          <div class="panel" style="min-height:200px"><div class="line mid"></div><div class="line"></div><div class="line short"></div></div>
+        </div>
+      </div></div>
+      <p>Keeps the space quiet until wanted; one more press to see the list.</p>
+    </div>
+    <div>
+      <h3>C. The next and previous recording only</h3>
+      <div class="screen-box"><div class="screen" style="width:600px;transform:scale(.9)">
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:10px;padding:10px">
+          <div><div class="video" style="height:150px">BWC2-098679</div><div class="row" style="margin-top:8px"><span class="btn">&#9664; Unit12_dash</span><span class="grow"></span><span class="btn">BWC2-098702 &#9654;</span></div></div>
+          <div class="panel" style="min-height:200px"><div class="line mid"></div><div class="line"></div><div class="line short"></div></div>
+        </div>
+      </div></div>
+      <p>Smallest change; a case of nine recordings is still a walk.</p>
+    </div>
+  </div>
+
+  <!-- 4. The ultrawide --------------------------------------------------------- -->
+  <h2>4. The 49-inch screen: the incident page at full width and at half</h2>
+  <p>A 49-inch ultrawide is 5120 by 1440 pixels; a window across half of it is 2560 by 1440, the same shape as an ordinary monitor. Today the incident page stops growing at about 1900 pixels, so at full width the cameras sit in the middle with margins either side.</p>
+
+  <h3>A. Columns that follow the width <span class="rec">Recommended</span></h3>
+  <p class="kicker">Full width, 5120 pixels: the wall takes six cameras across, the strip runs the whole width, and the work panel on the right shows the Chronology and the Memo side by side.</p>
+  <div class="screen-box"><div class="screen" style="width:2560px;transform:scale(.45)">
+    <div class="bar"><b>Gideon Transcribe</b><span class="on">Cases</span></div>
+    <div style="display:grid;grid-template-columns:1fr 760px;gap:16px;padding:12px 16px">
+      <div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
+          <div class="tile" style="height:190px;--dot:var(--c1)">DC-12</div><div class="tile" style="height:190px;--dot:var(--c2)">BWC2-098679</div><div class="tile" style="height:190px;--dot:var(--c3)">BWC2-0451</div>
+          <div class="tile" style="height:190px;--dot:var(--c4)">BWC2-098702</div><div class="tile" style="height:190px;--dot:var(--c5)">Unit12_dash</div><div class="tile" style="height:190px;--dot:var(--c6)">BWC2-1201</div>
+        </div>
+        <div class="row" style="margin:10px 0"><span class="btn">&#9654; Play</span><span class="btn">-5s</span><span class="btn">+5s</span><span style="font:600 22px ui-monospace,monospace">21:57:27</span><span class="grow"></span><span class="btn">Sync</span><span class="btn">Layout: Grid, 6 across</span></div>
+        <div class="panel" style="height:150px"><div class="lbl">Strip, the whole width</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="panel" style="min-height:360px"><b>Chronology</b><div class="line mid"></div><div class="line"></div><div class="line short"></div><div class="line"></div><div class="line mid"></div></div>
+        <div class="panel" style="min-height:360px"><b>Memo</b><div class="line"></div><div class="line mid"></div><div class="line"></div><div class="line short"></div><div class="line"></div></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="kicker">Half width, 2560 pixels: four cameras across, the work panel with its tabs as today, the strip below.</p>
+  <div class="screen-box"><div class="screen" style="width:1280px;transform:scale(.9)">
+    <div class="bar"><b>Gideon Transcribe</b><span class="on">Cases</span></div>
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:14px;padding:12px 16px">
+      <div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="tile" style="height:120px;--dot:var(--c1)">DC-12</div><div class="tile" style="height:120px;--dot:var(--c2)">BWC2-098679</div><div class="tile" style="height:120px;--dot:var(--c3)">BWC2-0451</div><div class="tile" style="height:120px;--dot:var(--c4)">BWC2-098702</div>
+        </div>
+        <div class="row" style="margin:8px 0"><span class="btn">&#9654; Play</span><span style="font:600 18px ui-monospace,monospace">21:57:27</span><span class="grow"></span><span class="btn">Sync</span><span class="btn">Layout</span></div>
+        <div class="panel" style="height:90px"><div class="lbl">Strip</div><div class="line"></div><div class="line"></div><div class="line"></div></div>
+      </div>
+      <div class="panel" style="min-height:250px"><div class="row" style="gap:10px;border-bottom:1px solid var(--app-line);padding-bottom:6px"><b>Chronology</b><span class="muted">Memo</span><span class="muted">Cameras</span><span class="muted">Details</span></div><div class="line mid"></div><div class="line"></div><div class="line short"></div></div>
+    </div>
+  </div></div>
+  <ul>
+    <li>The rule: the wall's columns follow the width (2 at 1280, 3 at 1920, 4 at 2560, 6 from 3840), the work panel is 380 pixels to 2559 and 760 from 2560 with two tabs open side by side from 3840, and the page never caps its width. Focus keeps one camera large and lets the filmstrip grow to two rows.</li>
+    <li>The same rule for the other wide pages: the case page's two panes become three from 2560 (the list, the open recording's details or the search hits, the About pane); the recording page shows the transcript, the stage and the case list side by side from 2560.</li>
+    <li>Nothing is remembered per screen: the page reads its width when drawn and when the window changes, so dragging it from half to full re-lays it.</li>
+  </ul>
+
+  <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div>
+      <h3>B. Two work panels at full width only</h3>
+      <div class="screen-box"><div class="screen" style="width:1200px;transform:scale(.45)">
+        <div style="display:grid;grid-template-columns:1fr 300px 300px;gap:10px;padding:10px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div class="tile" style="height:110px">DC-12</div><div class="tile" style="height:110px;--dot:var(--c2)">BWC2-098679</div><div class="tile" style="height:110px;--dot:var(--c3)">BWC2-0451</div></div>
+          <div class="panel"><b>Chronology</b><div class="line"></div><div class="line"></div></div>
+          <div class="panel"><b>Memo</b><div class="line"></div><div class="line"></div></div>
+        </div>
+      </div></div>
+      <p>As A at full width but the wall stays at three across; the extra width goes to the panels, not the pictures.</p>
+    </div>
+    <div>
+      <h3>C. A widest width, centred</h3>
+      <div class="screen-box"><div class="screen" style="width:1200px;transform:scale(.45)">
+        <div style="padding:10px 200px"><div style="display:grid;grid-template-columns:1fr 240px;gap:10px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div class="tile" style="height:110px">DC-12</div><div class="tile" style="height:110px;--dot:var(--c2)">BWC2-098679</div><div class="tile" style="height:110px;--dot:var(--c3)">BWC2-0451</div></div><div class="panel"><b>Chronology</b><div class="line"></div></div></div></div>
+      </div></div>
+      <p>Today's behaviour made deliberate: a cap at 2560 with margins either side of it. Nothing to build; the space stays unused.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>What the chapter will also carry, whichever letters are picked:</b> the Notes chapter alongside (notes in a transcript, a Notes section on the case page that lists them with the moment each points at), written for the build after these choices.
+  </div>
+
+  <h2>Your picks</h2>
+  <ul class="choices">
+    <li><b>1.</b> Start page: A (Cases) or B (Workspaces)</li>
+    <li><b>2.</b> Tabs: A (bar with icons and counts), B (rail), C (pills in the head)</li>
+    <li><b>3.</b> Under the video: A (the case's recordings), B (a fold), C (next and previous)</li>
+    <li><b>4.</b> Ultrawide: A (columns follow the width), B (two panels at full width only), C (a cap, centred)</li>
+  </ul>
+</div>
