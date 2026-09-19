@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 6 specification
 
-The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 as `v1.61.0`; chapter 4, the page laid out for watching, as `v1.62.0`.
+The Incidents release. Chapter 1 was built as `v1.58.0` and chapter 2 as `v1.59.0`, with the tuning pass as `v1.60.0`; chapter 3 as `v1.61.0`; chapter 4, the page laid out for watching, as `v1.62.0`; chapter 5, Sync as one control with the clip from the strip, is written for the build (2026-09-19).
 
 ## About this document
 
@@ -25,7 +25,8 @@ Chapter 1 adds an Incidents settings page with six settings, four audit rows, tw
 2. The Chronology
 3. The assistant on the Incident
 4. The Incident page, laid out for watching
-5. Deferred and ruled out
+5. Sync, one control (with the clip from the strip)
+6. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 6. B. Settings added in Phase 6.
 
@@ -387,7 +388,78 @@ None. A layout is the person's browser's, not a case's activity.
 - The short pills' exact words.
 - Whether the sheet's opening steals the focus from the transport's keys (it should not while the box is closed).
 
-## 5. Deferred and ruled out
+## 5. Sync, one control
+
+Written 2026-09-19, after v1.65.0, from the maintainer's list of the same day: "we need to refine the sync functionality, maybe we have a single sync button that then allows selecting the specific videos or a 'sync all' feature. How do we handle a timestamp detection or sound sync attempt failure? Upon testing it looks like the auto sync feature utilizing embedded timestamps works well." Chapter 1 gave every camera a place and five ways to it; the tuning pass (v1.60.0) put Sync on every tile and on the Cameras tab. This chapter puts the whole of syncing behind one button, lets the app do the rounds by itself in the order that works, and says plainly what it could not do and what to do next.
+
+### Principles
+
+1. **One button, and the app does the rounds.** **Sync** in the transport opens one sheet with every camera on it. **Sync all** has the app try each camera in the order that works: its clock when the picture carries one and the read was checked, then the clock unchecked, then the sound against a camera already in step, and only then a person's hand. A person presses once and reads the result; nothing is typed until the app has said it cannot.
+2. **Every failure has a next step.** A camera the app could not sync is not a pill saying so; its row says why in plain words (no clock in the picture; the clock was read from one frame only; the sounds did not line up; the file carries no time) and offers what a person does next, on the same row.
+3. **Nothing learned is lost.** The five ways of chapter 1 stand, the pills stand, the audit rows stand, and the tile's Sync and the Cameras tab's Sync stay as doors to the same sheet with that camera's row open. Dragging a bar on the strip stays.
+4. **A clip from the strip.** The strip is where a person sees the moment; dragging across it should give the clip. Phase 7 chapter 1's clip box opens with the dragged span, and the clip is cut whatever the cameras' sync state, with the page saying so.
+
+### Words
+
+**Sync** (the button, the sheet), **Sync all**, **Sync ticked**, **needs a hand** (the state of a camera the app could not sync). The pages never say auto-sync, calibrate, align, offset or drift.
+
+### The Sync sheet
+
+- **Where.** **Sync** in the transport, beside Layout, opens the sheet under the head where the event and clip sheets open. The tile's Sync button and the Cameras tab's Sync open the same sheet with that camera's row expanded. Escape or Done closes it.
+- **The rows.** One row per camera, in the Wall's order: the colour dot and camera id, the clock pill (the stamp read from the picture: "06/07/2025 21:56:19, checked", "unchecked", "no clock in the picture", "not read yet"), the placed pill as chapter 1 has it, who synced it and when, a tick box, and the row's controls.
+- **Sync all** at the top runs the rounds on every camera not yet synced (a synced camera is left alone); **Sync ticked** runs them on the ticked rows only, synced or not, so a person can redo one. Either is one press; the sheet stays open and polls while the app works.
+- **The rounds**, per camera, each tried only when the one before did not sync it:
+  1. **From its clock, checked**: the stamp was read from two frames and the clock moved on between them. Placed at once.
+  2. **From its clock, unchecked**: the stamp was read from one frame. Placed, and the row says "from its clock, read once: listen to a moment where two cameras hear the same thing" with **Listen** (seeks every camera to the first moment the two run together and plays them, the sound from the other camera).
+  3. **Matched by sound**: while Match by sound is On and some other camera is synced, queued against the synced camera with the longest overlap; a strong match places it; a weak one is shown as chapter 1 has it, with **Use it anyway**; none is said with the reason.
+  4. **Needs a hand**: the row says why in one line and shows the controls: the nudges (a second and a tenth either way, while the cameras play with the sound from one), **Type a time**, **From its file** when the file carries a time, and **Match the sound** against a chosen camera.
+- **The state line**, at the top of the sheet while the rounds run and after: "Syncing 6 cameras: 3 from their clocks, 1 matching the sound, 2 need a hand", then "5 synced, 1 needs a hand". A camera being matched shows "matching the sound, about a minute". The line is the page's, not stored.
+- **Not read yet.** A camera whose stamp has not been read (the playback copy is not there, or Stamp reads early is Off and the vision has not run) is queued for the read as chapter 1's early read does, when the engine is on, and its row says "reading the clock..."; with no engine it needs a hand.
+- **The Cameras tab** keeps its table and its placed pills, who synced and when, and one Sync per row that opens the sheet; the per-row Match the sound control and its select leave the tab for the sheet.
+- **Audit.** Nothing new: each placement writes Camera placed with how, as chapter 1 has it, and a sound match its rows. Sync all is a press, not a row.
+- **Settings.** None new. Match by sound and Stamp reads early gate their rounds as they gate the controls today.
+
+### The clip from the strip
+
+- **Dragging on the ruler** (the ticks row above the lanes), or dragging on a lane with Shift held, draws a band across the strip; on release the clip box of Phase 7 chapter 1 opens with that span, no event needed. Escape while dragging cancels; the band stays while the box is open and goes when it closes.
+- **The box** is the chapter 1 box with these differences: the title starts as the span's times ("21:57:02 to 21:57:40"); every camera with a playback copy that runs inside the span is offered and ticked, synced or not; a camera not synced shows its placed pill in the row and the box carries one line above the cameras, in the warning tone: "A camera not synced is cut at its guessed place, so its tile may not play in step. Sync it first for a clip that does." The person may go on.
+- **What is made** is chapter 1's file, cut at the cameras' places as they stand, the clock burned from the Incident clock. The Clip has the Incident and no Event; on the Clips tab and page its line under the title reads "from the strip, 21:57:02 to 21:57:40" instead of "from the event ..."; the Chronology's Word export lists it under the events' clips as "from the strip". Render again cuts at the places as they stand then, so a camera synced after the clip was made plays in step on the next render.
+- **Chapter 1's principle 3** ("there is no clip from nowhere: add the event first") is amended: a clip is cut from an event or from a span dragged on the strip; the event's clip keeps its mark on the event's row, the strip's clip has none.
+- **Who may**: as chapter 1.
+
+### In and out
+
+- **In**: the Sync sheet with Sync all, Sync ticked, the rounds, the state line, the per-row next steps; the Cameras tab's Sync opening the sheet; the clip from a span dragged on the strip, unsynced cameras allowed with the warning; the Clips words "from the strip".
+- **Out**: a sync that runs by itself when a camera joins (it is a press), matching by the picture, a drift correction along a recording, and a clip from more than one span.
+
+### What changes from chapters 1 to 4 and Phase 7 chapter 1
+
+- **Chapter 1, Placing a camera and The Incident page**: the Sync sheet is the one place; the tile's Sync and the Cameras tab's Sync open it; the rounds order the five ways; the wording of the failures.
+- **Chapter 4, the transport**: a Sync button beside Layout.
+- **Phase 7 chapter 1, The clip across cameras**: the box opens from the strip as well as from an event; a camera not synced may be ticked, with the warning; the Clip may have no Event; the Clips words and the Word export's line for a strip clip; principle 3 amended. `docs/spec/SPEC-PHASE-7.md` carries a pointer.
+
+### Audit rows
+
+None new.
+
+### Settings
+
+None new.
+
+### Not in this chapter
+
+- **A sync by itself** as cameras join or their stamps are read; a press stays the rule until an office has watched Sync all for a while.
+- **Matching by the picture** (a flash, a door), and **drift** between cameras whose clocks run at different speeds.
+- **A clip from several spans** joined.
+
+### Left to the build
+
+- The sheet's layout on a narrow window (rows that wrap, controls under the row).
+- The exact wording of the reasons and of the state line, within the substance above.
+- How the "longest overlap" partner for a sound match is chosen when two cameras tie.
+- The drag threshold for the band (a few pixels) and its colour; whether a band may be dragged on a lane without Shift once the bar drag of chapter 1 is not in the way.
+
+## 6. Deferred and ruled out
 
 - **A Clip across cameras** (side by side, one file): deferred by the maintainer on 2026-09-17, and taken up as Phase 7 chapter 1 (`docs/spec/SPEC-PHASE-7.md`) the same day.
 - **Sound recordings in an Incident**: deferred; not asked for.
@@ -436,6 +508,7 @@ The maintainer's ask and answers of 2026-09-17, and the mock-ups chosen the same
 
 ## Amendments applied
 
+- 2026-09-19: chapter 5 written for the build (Sync as one control with Sync all and the rounds, every failure with its next step; the clip from a span dragged on the strip, unsynced cameras allowed with the warning), from the maintainer's list of 2026-09-19; Deferred and ruled out becomes chapter 6.
 - 2026-09-19 (v1.63.2): from the maintainer's list. While the proposals run is going, Accept, Dismiss and Accept all are greyed and refused (a proposal accepted mid-run was proposed again by the cameras read after it). The strip zoomed in draws only the part of a bar inside the window, and the window moves with the wheel over the lanes or the arrows beside the zoom buttons, following the playhead again once it plays out of view.
 - 2026-09-17: chapter 4 built as v1.62.0 the same day, with these decisions left to the build: the filmstrip tile is 170 pixels wide and the row scrolls sideways when it does not fit; the focus picture keeps the 16:9 well; below 1280 pixels the order is the cameras, the transport, the strip, the panel, as chapter 1 had it; the short pills read Clock, Clock?, Sound, File, Hand, Guess; the sheet does not take the transport's keys; the sound follows the focus only in Focus, and in the other layouts a press on a speaker simply picks the camera; a parked lane's Swap in and a filmstrip's parked tile both bring the camera to the front; the panel moves under the strip in a Grid by moving the one element, so the tabs keep their state.
 - 2026-09-17: chapter 4 written for the build after v1.61.0 on the server, from the maintainer's finding ("the incident layout is a bit smushed") and the choice of the Focus layout with a Layout menu that also gives Side by side; the Deferred and ruled out chapter becomes chapter 5.

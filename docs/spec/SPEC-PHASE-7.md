@@ -37,7 +37,7 @@ Written 2026-09-17 from the maintainer's choice of ideas and the decisions taken
 
 1. **The office's words stay the office's.** A Note is a person's line under an event: what it means for the case, a page cite, a thing to do. The assistant reads notes and never writes one, and a note is never mixed into the memo's text; it reaches the memo only as "the office's note" the memo must respect.
 2. **A document staff finish.** The Chronology's Word export was a table of facts; with notes, marks and an About paragraph it is the working document the ask was about, and it is still made from the rows at the moment of export, nothing stored twice.
-3. **A clip is an event, seen.** An Incident clip is cut from an Event: its cameras, its span, its name. A person adjusts before it is made and never types times from memory. There is no clip from nowhere: add the event first.
+3. **A clip is an event, seen.** An Incident clip is cut from an Event: its cameras, its span, its name. A person adjusts before it is made and never types times from memory. There is no clip from nowhere: add the event first. (Amended by Phase 6 chapter 5, v1.66.0: a clip may also be cut from a span dragged on the strip, with no Event; its line then reads "from the strip".)
 4. **A clip is a Clip.** It lands where Clips land, lists where Clips list, downloads as Clips download, and counts against the same rules. The only new thing is what is inside the picture.
 5. **Nothing new to switch for notes; one switch for clips.** Notes and About are part of an Incident. Incident clips have their own switch, under Clips and Incidents both.
 

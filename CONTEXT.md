@@ -344,6 +344,10 @@ _Avoid_: flag, todo, open
 The Chronology's one paragraph before the events, up to 2,000 characters, kept on the Incident and edited from the top of the Chronology tab: the matter, the date, the cameras' owners as the office knows them. Printed on the export's cover and told to the memo. Phase 7 chapter 1.
 _Avoid_: description (that is a Recording's note), summary, introduction
 
+**Sync sheet**:
+The one place syncing is done on the incident page (Phase 6 chapter 5): opened by Sync in the transport, on a tile, or on the Cameras tab; one row per camera with its clock, its place, a tick and its controls; Sync all has the app try each camera in the order that works (its clock checked, its clock unchecked, the sound against a camera in step, then a person's hand), and a camera the app could not sync says why and shows what to do next (needs a hand).
+_Avoid_: auto-sync, calibrate, align, offset, drift
+
 **Incident clip**:
 A Clip cut from an Event of an Incident: the event's cameras over its span, the focus camera large or a grid, the Incident clock and the camera ids burned in, the sound from one camera. A Clip like any other on the Clips page, whose Recording is the sound camera's, carrying besides the Incident, the Event, the cameras and the layout so Render again remakes it. Phase 7 chapter 1.
 _Avoid_: montage, multicam export, wall clip
