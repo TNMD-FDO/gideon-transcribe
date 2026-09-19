@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out, and notes. Chapters 1 and 2 are written for the build; chapters 3 and 4 are outlined and take their shape here so that the built chapters leave room for them.
+The pages laid out, notes, and a way to report a problem. Chapters 1 to 3 are written for the build; chapter 4 is outlined and takes its shape here so that the built chapters leave room for it.
 
 ## About this document
 
@@ -12,14 +12,14 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 
 - **The pages laid out** (chapter 1, for the build): one rule for the incident page's work panel (tabs, and layers over them, with a Back that returns exactly), the Chronology tab unbunched, the proposals and Find's hits as layers, Gideon as one floating panel with the same shape on the three pages that have it (the case page, the recording page, the incident page) and nowhere else; the case page's tabs as a bar of sections with icons and counts, the same look on every page that has tabs; the recording page's case list under the video; the Start page's door saying Cases; and columns that follow the width up to the 49-inch screen.
 - **Notes** (chapter 2, for the build): a note on a line of a transcript under the rules an Event's note already has, exports that carry notes only when chosen, a Notes tab on the case page that lists every note in the case with the moment each points at, and Gideon told the notes as the office's own words.
-- **The bug report button** (chapter 3, outlined): a way for a person to report a problem or ask for a feature from any page, landing in the app for Admins and by mail to the Operator address, since nothing leaves the building.
+- **Report a problem** (chapter 3, for the build): one link on every page that opens a small box for a problem or an idea, in the person's own words, with where they were added only with their tick; a Report kept on the Panel's Reports page with New, Seen and Done marks, counted on the rail and the Status page, and mailed to the Operator address when mail is configured. Nothing leaves the building.
 - **Documents in a case** (chapter 4, outlined): PDFs uploaded to a case, read page by page, searched with everything else, and cited by page in Gideon's answers.
 
 ## Contents
 
 1. The pages laid out
 2. Notes
-3. The bug report button (outlined)
+3. Report a problem
 4. Documents in a case (outlined)
 5. Deferred and ruled out
 
@@ -233,13 +233,78 @@ None. A note needs nothing switched on beyond the recording page; the Notes tab 
 - The date's form beside the writer, within the app's date rules.
 - Whether the with-notes entries stand in the Export menu or under one "with notes" tick; two entries are the picture here.
 
-## 3. The bug report button (outlined)
+## 3. Report a problem
 
-Not yet written for the build; the shape from the maintainer's list of 2026-09-19.
+Written 2026-09-19 from the maintainer's list of the same day ("bug report button") and the shape outlined beside chapter 1. Today a person who hits a problem tells IT in the corridor or by the office's own mail, and what they were doing, on which page, in which release, is lost by the time IT looks. This chapter gives every page one small way to say what went wrong, or what would help, that lands where the Admins already look and reaches the IT mailbox the app already writes to. Nothing leaves the building; the app never phones home.
 
-- **Report a problem**, in the page's foot on every page: a small box with what happened, what was expected, and a tick to include the page's address, the app's version, the browser and the person's name (never a transcript's words). It lands as a Report in the Panel, for Admins, and goes by mail to the Operator address when mail is configured. Nothing leaves the building.
-- **The Panel's Reports page**: the reports, newest first, with Seen and Done marks; a count on the Status page while any is unseen.
-- **What changes**: Phase 1's Panel and the foot of every page; the Email chapter (one more message kind). An audit row Report made; a setting Reports (On).
+### Principles
+
+1. **One link, every page, the same words.** "Report a problem" sits in the same place on every page a signed-in person sees, and opens the same small box. A person never hunts for it.
+2. **Say what happened, in your own words.** The box asks for what happened and what was expected, and nothing else is required. The app adds where the person was (the page, the Release, the browser) only with their tick, and shows what it will add before it goes.
+3. **It lands where Admins look.** A Report is kept in the app, on a Reports page of the Panel with New, Seen and Done marks, and the Panel's rail and the Status page say how many are new. Mail to the Operator address is the second copy, when mail is configured; the Panel is the record.
+4. **Never a transcript's words.** The app adds nothing that could carry the words of a recording: the page's address without its query, the Release, the browser's name and version, the window's size, the person's name. The guide asks the person to describe the problem and not to paste the words. No screenshot.
+5. **A report is not a ticket.** The app keeps it, shows it and marks it; the conversation about it, if one is needed, happens the way the office talks. Replies, assignment and threads are not built.
+
+### Words
+
+**Report**: a person's own account, sent from a page of the app, of a problem they hit or a thing that would help, kept for the Admins with where the person was. **A problem** and **An idea** are its two kinds. **The Reports page**: the Panel's list of Reports. **New**, **Seen** and **Done** are its marks. The pages never say bug, ticket, issue (that is GitHub's word for other offices' reports, CLAUDE.md), feedback or complaint.
+
+### The link and the box
+
+- **Where.** **Report a problem**, a small link at the right of every page's foot, on every page a signed-in person sees, the Panel's pages included; not on the sign-in page. The incident page, which fills the window and has no foot, carries it in its work panel's head beside Find's magnifier. Hidden while the Reports setting is Off.
+- **The box.** The app's own dialog (never the browser's), headed "Report a problem", with:
+  - **What is it?** Two choices, **A problem** (chosen) and **An idea**.
+  - **What happened** (for an idea: **What would help**): a box for plain words, required, up to 4,000 characters.
+  - **What you expected**: a box, optional, the same length; absent for an idea.
+  - **Include where I was**: a tick, on, and under it the line the app will add, drawn before sending: "This page (/case/…/incident/…), Release v1.69.0, Chrome 129 on Windows, a window of 1920 by 1080, sent by Daniel Meehan." The page's address is its path alone, never its query (a search term lives there and is never logged; a moment's `?t=` goes with it, which loses nothing). Unticked, the report carries the person's name and the Release only, so an Admin can still ask.
+  - **Send** and **Cancel**. Esc cancels. A box that has been typed in asks before closing, as the correction box does.
+- **After Send** the app says "Thank you. Your report went to the Admins." in its toast, and the page is as it was. A person has no list of their own reports (below, Not in this chapter).
+- **What the app adds** and how: the Release from the environment's `RELEASE_TAG` ("not tagged" when empty); the browser's name and version worked out by the build from the User-Agent header, short ("Chrome 129 on Windows", "Edge 128 on Windows", "Firefox 130 on Windows", else "a browser"); the window's size from the page; the person's shown name. Nothing from the page's contents.
+
+### Where it lands
+
+- **The Report** is kept: its kind, the words of both boxes, the where line's parts (page, release, browser, window), who sent it and when, its mark (New, Seen, Done) with who set the mark and when. It belongs to nobody's Case and is not deleted with anything; a Report of a person who leaves stays, named for them.
+- **The Reports page** in the Panel, beside Status in its group, listed on the rail with the count of New reports as a badge in the warning tone, as the Vision page carries its requests. Newest first, New before Seen before Done; a filter of pills at the head (**New**, **Seen**, **Done**, **All**, each with its count). Each row: the kind as a pill, the first line of what happened, who and when, the where line, then the whole words folded open on a press; **Seen** on a New report, **Done** on a New or Seen one, each one press with no question; a Done report shows who marked it and when. Nothing on the page edits the person's words.
+- **The Status page** gains one line, "2 reports not yet seen", a link to the Reports page, shown only when the count is not zero.
+- **The mail.** When mail is configured and the Operator address is set (the rules of the Email chapter for the app's own mail: `SMTP_HOST`, `MAIL_FROM` and `OPERATOR_EMAIL`, unaffected by the Email notifications switch), each Report goes as one message to the Operator address, kind `report`: subject "Report from <name>: <the first words>" (or "Idea from <name>: …"), body the kind, what happened, what was expected, the where line, and "Seen and marked on the Panel's Reports page at <the page's address>". The mail is the second copy: a report is kept and shown whether or not the mail goes, and a mail that fails is the Email page's business as every mail is. Nothing goes to the person.
+- **Sweeping.** A Done report is kept ninety days from its Done mark and then removed by the daily sweeper, with one System row saying how many went. New and Seen reports are kept until they are Done.
+
+### In and out
+
+- **In**: the link and its place on every page; the dialog with its kinds, boxes and tick; the where line and how it is made; the Report kept; the Reports page with its marks, filter and rail badge; the Status line; the Operator mail; the sweep; the setting; the audit rows.
+- **Out**: a screenshot or any capture of the page; a person's own list of reports; replies, assignment, threads, priorities; mail to the person; any report leaving the building; reports on the sign-in page.
+
+### What changes from earlier phases
+
+- **Phase 1, every page**: the foot gains the link (the incident page its head). **The Panel**: the Reports page; the Status page's line; the rail's badge. **The daily sweeper**: the sweep of Done reports.
+- **Phase 2, the Email chapter**: one more kind of the app's own mail, `report`, to the Operator address, under the rules the backup reports follow.
+- **The settings catalogue**: Reports on the Features page.
+- The exports, the glossary's other words, Gideon and Search are unchanged; a Report is not searched.
+
+### Audit rows
+
+Category System: **Report made** (who, the kind, the page's path, the release; never the words), **Report seen** and **Report done** (which report, by whom), **Reports swept** (how many). The words of a report are the report's own and are read on the Reports page by Admins, never in the audit log.
+
+### Settings
+
+| Setting | Page | Default | What it does | When changed |
+|---|---|---|---|---|
+| Reports | Features | On | People may send a Report from any page. | Off hides the link on every page and refuses the endpoint; the Reports page and its reports stay for the Admins. At once. |
+
+### Not in this chapter
+
+- **A person's own reports** and an answer in the app: a Report is one message to the Admins; the office answers the way it talks. Deferred, to be asked for.
+- **A screenshot**: ruled out; it could carry a transcript's words out of the page.
+- **Reports to GitHub**: ruled out; the repository's Issues are other offices', and nothing leaves the building.
+- **A count of open reports for people**: nothing is shown to people beyond the toast.
+
+### Left to the build
+
+- The dialog's layout and the toast's words, within those above.
+- How the browser's name is worked out from the User-Agent header, and the words when it is not one of the three.
+- Whether the rail's badge counts New alone (it does here) or New and Seen.
+- The Reports page's paging past two hundred.
+- The sweeper's hour, with the other daily sweeps.
 
 ## 4. Documents in a case (outlined)
 
@@ -265,7 +330,7 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 | (none) | | 1 |
 | Edits | Note added; Note changed; Note removed; Note carried | 2 |
 | Exports | Exported gains notes; Download notes | 2 |
-| System | Report made; Report seen; Report done | 3 (outlined) |
+| System | Report made; Report seen; Report done; Reports swept | 3 |
 | Cases | Document added; Document removed | 4 (outlined) |
 
 ## Appendix B. Settings added in Phase 8
@@ -274,7 +339,7 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 |---|---|---|---|
 | (none) | | | 1 |
 | (none) | | | 2 |
-| Reports | Features | On | 3 (outlined) |
+| Reports | Features | On | 3 |
 | Documents; Largest document | Cases | On; to be fixed | 4 (outlined) |
 
 ## Sources
@@ -283,6 +348,7 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-19.** Chapter 3 (Report a problem) written for the build from the outline: two kinds (a problem, an idea); the where line added only with the person's tick and shown before sending, the page's path without its query; the Panel is the record and the Operator mail the second copy; a Done report swept after ninety days; no screenshot, no reply in the app.
 - **2026-09-19, v1.69.0.** Chapter 2 built the same day, with these decisions left to the build: the note's key is N and Escape closes the box; the box replaces the note's line under the words and Save with the box empty asks "Remove this note?"; the mark on the timeline is a small tick at the foot of the strip, with no hover; a note whose moment no new line spans takes the line with the nearest start, and two notes landing on one line are joined with a line break ("Note carried" rows say the old times); the date beside the writer is "19 Sep 2026"; the with-notes exports are two entries in the Export menu, and the Word one adds "with notes" to its kind line and running head and a count to the processing record; the Notes tab's rows carry the line's words shortened to 140 characters and a note opened from the tab or a Notes hit is lit under its line (?note=1); Download notes is one table (when, rests on, writer, note); the incident's Gideon lists the cameras' notes after the chronology and before the question. **Not built:** nothing of the chapter.
 - **2026-09-19.** Chapter 2 (Notes) written for the build from the outline: the audit rows move from Cases to Edits, beside Segment corrected, since a note on a line is a change to a transcript's record and a recording need not be in a case; a note is carried on Process again; the exports that carry notes are separate entries.
 - **2026-09-19, v1.68.0.** Chapter 1 built the same day, with these decisions left to the build: the layers are a stack, so a clip opened from an event returns to the event, then the tab; the moment is not moved back on Back; the work panel is 460 pixels to 1899, 560 to 2559 and 760 from 2560; the wall's columns follow the width in the Side by side layout only (a Grid a person chose wins, Focus wraps its filmstrip from 2560); Two panels shows from 3840 and puts the Memo beside the Chronology, remembered in the browser; the row menu is Edit, Add a note (Edit the note), Clip this event, Remove, with Remove asking first; the case card under the video shows eight recordings and "and N more"; the tabs' icons are play, search, clip, people, camera on the case page and text, clip, summary, info on the recording page and text, summary, camera, info on the work panel; Gideon's window of its own is the same page with only the panel showing (?gideon=window), which follows that case, recording or incident. **Not built in v1.68.0:** the case page's third pane and the recording page's three columns from 2560 (the pages lift their caps and the About pane widens; the third column waits for a build with the page's fold in hand), and the icons' being one drawn set (the app's existing icons serve).

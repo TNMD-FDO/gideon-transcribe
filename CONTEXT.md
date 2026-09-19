@@ -600,6 +600,10 @@ _Avoid_: test restore, backup test
 The one IT mailbox, named in the environment file, that receives the app's own mail: backup, drill, and restore reports, the nightly lines about Cases whose owner has left, and the test message. Replies to every message the app sends go there. Never a person's Notification.
 _Avoid_: admin email, alert address, IT address
 
+**Report**:
+A person's own account, sent from any page with Report a problem, of a problem they hit or an idea that would help, kept for the Admins with where they were (the page's path, the Release, the browser, the window's size, their name) when they ticked to include it. Listed on the Panel's Reports page with the marks New, Seen and Done, counted on the rail and the Status page, and mailed to the Operator address when mail is configured. Never a transcript's words, never a screenshot, never anything that leaves the building. Phase 8 chapter 3.
+_Avoid_: bug, ticket, issue (GitHub's word for other offices' reports), feedback, complaint
+
 **Release**:
 A tagged version of the app published on GitHub with its notes, the only thing an installer ever installs or upgrades to. The notes always say whether the models or the database change.
 _Avoid_: version (that is the number), build, deploy
