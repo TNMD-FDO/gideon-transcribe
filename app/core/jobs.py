@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -309,6 +310,19 @@ class Segment(models.Model):
     # Somebody changed the text. The viewer marks it and exports say so, so
     # that machine text and human text are never confused for one another.
     corrected = models.BooleanField(default=False)
+
+    # A person's own line under this one (Phase 8 chapter 2): the words, who
+    # last wrote them, when they last changed. Never the assistant's, never
+    # in a plain export, a caption or a Clip.
+    note = models.TextField(max_length=2000, blank=True, default="")
+    note_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    note_changed = models.DateTimeField(null=True, blank=True)
 
     # The other Side said the same words at the same moment, which is what a
     # phone system's recorded announcement does: both parties hear it, so both

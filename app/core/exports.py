@@ -36,6 +36,15 @@ log = logging.getLogger("transcribe.exports")
 
 CORRECTED_LEGEND_TEXT = "Lines marked (corrected) were corrected by staff."
 CORRECTED_LEGEND_WORD = "Segments marked * were corrected by staff."
+# The exports that say "with notes" (Phase 8 chapter 2) carry the office's
+# own notes under the lines; the plain exports never do.
+NOTES_LEGEND_TEXT = (
+    "Lines beginning Note are the office's own notes, not the words spoken."
+)
+NOTES_LEGEND_WORD = (
+    "The lines in italics beginning Note are the office's own notes, not the "
+    "words spoken."
+)
 # The described Moments, in a section of their own at the end of an export
 # (v1.51.0; among the lines before that).
 CAMERA_LEGEND = (
@@ -322,15 +331,28 @@ def appearances(segments) -> list[Appearance]:
 # Plain text -------------------------------------------------------------------
 
 
-def plain_text(recording: Recording) -> str:
+def note_line(segment) -> str:
+    """A note as the exports print it: "Note (writer, date): the words"."""
+    from core import notes
+
+    who = segment.note_by.shown_name if segment.note_by else ""
+    when = notes.date_of(segment.note_changed)
+    inside = ", ".join(one for one in (who, when) if one)
+    return f"Note ({inside}): " if inside else "Note: "
+
+
+def plain_text(recording: Recording, with_notes: bool = False) -> str:
     """The four-line head, a blank line, then one line per Segment.
 
     This is also the shape the AI assistant reads and the shape a Clip's
     excerpt uses, so it stays one thing rather than three that drift apart.
+    With notes (Phase 8 chapter 2), and only then, each note follows its line.
     """
     transcript = recording.transcript
     segments = list(
-        transcript.segments.filter(same_as_other_side=False).select_related("side")
+        transcript.segments.filter(same_as_other_side=False).select_related(
+            "side", "note_by"
+        )
     )
     who = appearances(segments)
 
@@ -357,6 +379,8 @@ def plain_text(recording: Recording) -> str:
     shared = both_sides_legend(transcript)
     if shared:
         notice += " " + shared
+    if with_notes and any(segment.note for segment in segments):
+        notice += " " + NOTES_LEGEND_TEXT
     head.append(notice)
     head.append("")
 
@@ -371,6 +395,8 @@ def plain_text(recording: Recording) -> str:
         lines.append(
             f"{start} {name}: {segment.text}" if name else f"{start} {segment.text}"
         )
+        if with_notes and segment.note:
+            lines.append("    " + note_line(segment) + segment.note.replace("\n", " "))
 
     # What the camera showed, after the talk (v1.51.0; among the lines before).
     lines.extend(camera_lines_text(transcript))
@@ -421,11 +447,12 @@ def srt_time(seconds: float) -> str:
 # Word -------------------------------------------------------------------------
 
 
-def word(recording: Recording, exported_by: str) -> bytes:
+def word(recording: Recording, exported_by: str, with_notes: bool = False) -> bytes:
     """Layout "Record": a cover page, the line-numbered talk, then the record.
 
     US Letter, one-inch margins, the talk in a fixed-width face so that a
-    printed page cites the same way whoever prints it.
+    printed page cites the same way whoever prints it. With notes (Phase 8
+    chapter 2), and only then, each note prints in italics under its line.
     """
     from docx import Document
     from docx.enum.section import WD_SECTION
@@ -434,8 +461,11 @@ def word(recording: Recording, exported_by: str) -> bytes:
 
     transcript = recording.transcript
     segments = list(
-        transcript.segments.filter(same_as_other_side=False).select_related("side")
+        transcript.segments.filter(same_as_other_side=False).select_related(
+            "side", "note_by"
+        )
     )
+    noted = sum(1 for segment in segments if segment.note) if with_notes else 0
     who = appearances(segments)
     # Inside a Case the Role column fills from the People; blank otherwise.
     if recording.case_id:
@@ -445,7 +475,7 @@ def word(recording: Recording, exported_by: str) -> bytes:
             one.role = people.role_of(recording, one.name)
     corrections = sum(1 for segment in segments if segment.corrected)
     title = title_of(recording)
-    kind = kind_line(transcript)
+    kind = kind_line(transcript) + (", with notes" if with_notes else "")
 
     document = Document()
     normal = document.styles["Normal"]
@@ -507,6 +537,12 @@ def word(recording: Recording, exported_by: str) -> bytes:
     if shared:
         both = document.add_paragraph(shared)
         both.runs[0].italic = True
+    if with_notes:
+        counted = document.add_paragraph(f"With the office's notes: {noted}.")
+        counted.runs[0].italic = True
+        if noted:
+            legend = document.add_paragraph(NOTES_LEGEND_WORD)
+            legend.runs[0].italic = True
     if who:
         document.add_paragraph()
         appearing = document.add_paragraph("Appearances")
@@ -526,6 +562,14 @@ def word(recording: Recording, exported_by: str) -> bytes:
         run = line.add_run(f"[{clock(segment.start)}]{mark} {name}{segment.text}")
         run.font.name = "Consolas"
         run.font.size = Pt(10)
+        if with_notes and segment.note:
+            # The office's note under its line, in italics (Phase 8 chapter 2).
+            under = document.add_paragraph()
+            under.paragraph_format.left_indent = Inches(0.5)
+            under.paragraph_format.space_after = Pt(6)
+            told = under.add_run(note_line(segment) + segment.note)
+            told.italic = True
+            told.font.size = Pt(10)
 
     if not segments:
         document.add_paragraph("This transcript has no segments.")
@@ -544,7 +588,12 @@ def word(recording: Recording, exported_by: str) -> bytes:
     label.runs[0].font.size = Pt(14)
     _facts(
         document,
-        _provenance(recording, transcript, segments, corrections, exported_by),
+        _provenance(recording, transcript, segments, corrections, exported_by)
+        + (
+            [("Office's notes", f"{noted} printed under their lines")]
+            if with_notes
+            else []
+        ),
         Inches,
     )
 
@@ -999,17 +1048,23 @@ def export(request: HttpRequest, recording_id, shape: str) -> HttpResponse:
     # Exporting is use of the Case the Recording is in.
     cases.used(recording, by=request.user)
 
+    # With notes (Phase 8 chapter 2): a separate choice, never the default.
+    with_notes = request.GET.get("notes") == "1"
+    suffix = " with notes" if with_notes else ""
+
     if shape == "word":
-        body = word(recording, request.user.username)
-        record_export(request, recording, "transcript word")
-        return hand_over(body, export_name(recording, "transcript.docx"), WORD_TYPE)
+        body = word(recording, request.user.username, with_notes=with_notes)
+        record_export(request, recording, "transcript word" + suffix)
+        return hand_over(
+            body, export_name(recording, f"transcript{suffix}.docx"), WORD_TYPE
+        )
 
     if shape == "text":
-        body = plain_text(recording).encode("utf-8")
-        record_export(request, recording, "transcript text")
+        body = plain_text(recording, with_notes=with_notes).encode("utf-8")
+        record_export(request, recording, "transcript text" + suffix)
         return hand_over(
             body,
-            export_name(recording, "transcript.txt"),
+            export_name(recording, f"transcript{suffix}.txt"),
             "text/plain; charset=utf-8",
         )
 

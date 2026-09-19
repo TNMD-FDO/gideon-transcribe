@@ -58,6 +58,12 @@ urlpatterns = [
         viewer.correct,
         name="correct",
     ),
+    # A note on a line (Phase 8 chapter 2).
+    path(
+        "recording/<uuid:recording_id>/segment/<int:segment_id>/note",
+        viewer.note,
+        name="line-note",
+    ),
     path(
         "recording/<uuid:recording_id>/details",
         viewer.details,
@@ -201,6 +207,8 @@ urlpatterns = [
     ),
     path("cases/bin/empty", case_pages.empty_bin, name="empty-bin"),
     path("case/<uuid:case_id>/keep", case_pages.keep_case, name="keep-case"),
+    # Download notes (Phase 8 chapter 2): every note in the case, as Word.
+    path("case/<uuid:case_id>/notes.docx", case_pages.notes_export, name="case-notes"),
     path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     # The case's videos prepared for summaries and chat, on purpose (Phase 4 ch. 7).

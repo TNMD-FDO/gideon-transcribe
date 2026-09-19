@@ -281,7 +281,14 @@ def merge(job: Job) -> Job:
 
 
 def _store(job: Job, results: dict) -> Transcript:
-    """Write the Transcript and its Segments, and keep the Provenance."""
+    """Write the Transcript and its Segments, and keep the Provenance.
+
+    The notes on the old Transcript's lines are remembered first and carried
+    to the new lines at their moments (Phase 8 chapter 2).
+    """
+    from core import notes
+
+    kept = notes.remember(job.recording)
     Transcript.objects.filter(recording=job.recording).delete()
 
     first = next(iter(results.values()))
@@ -364,6 +371,7 @@ def _store(job: Job, results: dict) -> Transcript:
         transcript.shared_segments = shared
         transcript.save(update_fields=["shared_segments"])
     Segment.objects.bulk_create(segments, batch_size=500)
+    notes.carry(kept, transcript)
 
     for run_id, result in results.items():
         run = runs[run_id]

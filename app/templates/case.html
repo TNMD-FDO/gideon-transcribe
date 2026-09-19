@@ -76,6 +76,8 @@
             <a href="{% url 'case' case.pk %}?tab=clips"
                class="tab{% if tab == 'clips' %} on{% endif %}">{% icon "clip" %} Clips <span class="count">{{ clips_count }}</span></a>
           {% endif %}
+          <a href="{% url 'case' case.pk %}?tab=notes"
+             class="tab{% if tab == 'notes' %} on{% endif %}">{% icon "note" %} Notes <span class="count">{{ notes_count }}</span></a>
           <a href="{% url 'case' case.pk %}?tab=speakers"
              class="tab{% if tab == 'speakers' %} on{% endif %}">{% icon "people" %} Speakers <span class="count">{{ people_count }}</span></a>
           {% if incidents_on %}
@@ -129,6 +131,44 @@
         {% endif %}
 
         {% if False %}
+        {% elif tab == "notes" %}
+          {% comment %}
+            The Notes tab (Phase 8 chapter 2): every note in the case, on lines
+            of transcripts and on events, newest first, each opening where it
+            was written. Nothing is edited here.
+          {% endcomment %}
+          <div class="row" style="align-items: center; margin: 14px 0 8px; gap: 8px">
+            <p class="lead grow" style="margin: 0">
+              {% if notes.total %}{{ notes.total }} note{{ notes.total|pluralize }} in this case, the office's own words: {{ notes.lines }} on line{{ notes.lines|pluralize }} of transcripts, {{ notes.events }} on event{{ notes.events|pluralize }}.{% else %}None yet. A note is written under a line of a transcript (<b>note</b> on the line, or N) or on an event of a chronology; every note in the case is listed here.{% endif %}
+            </p>
+            {% if notes.total %}
+              <a class="btn small" href="{% url 'case' case.pk %}?tab=search&kind=notes" title="The Search tab, notes only">{% icon "search" %} Search notes</a>
+              <a class="btn small" href="{% url 'case-notes' case.pk %}" title="Every note in the case as a Word document, for the office's own reading">{% icon "word" %} Download notes</a>
+            {% endif %}
+          </div>
+          {% if notes.lines and notes.events %}
+            <div class="row search-kinds" style="margin-bottom: 8px">
+              <a class="pill small{% if not notes.kind %} on{% endif %}" href="?tab=notes">All ({{ notes.total }})</a>
+              <a class="pill small{% if notes.kind == 'lines' %} on{% endif %}" href="?tab=notes&kind=lines">On lines ({{ notes.lines }})</a>
+              <a class="pill small{% if notes.kind == 'events' %} on{% endif %}" href="?tab=notes&kind=events">On events ({{ notes.events }})</a>
+            </div>
+          {% endif %}
+          {% if notes.rows %}
+            <ul class="notes-list" id="case-notes">
+              {% for one in notes.rows %}
+                <li class="note-row" data-kind="{{ one.kind }}">
+                  <a class="note-text" href="{{ one.url }}" title="Open where this note was written">{{ one.text|linebreaksbr }}</a>
+                  <div class="muted small note-meta">
+                    <a href="{{ one.url }}" class="mono">{{ one.when }}</a>{% if one.all_cameras %} <a class="cite all" href="{{ one.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}
+                    &middot; {{ one.where }}
+                    &middot; {% if one.kind == "event" %}on the event: {% elif one.who %}{{ one.who }}: {% endif %}<i>{{ one.rests_on|truncatechars:140 }}</i>
+                    {% if one.by or one.on %}&middot; {{ one.by }}{% if one.by and one.on %}, {% endif %}{{ one.on }}{% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+            {% if notes.more %}<p class="muted small">and {{ notes.more }} more; Download notes has them all.</p>{% endif %}
+          {% endif %}
         {% elif tab == "incidents" %}
           {% comment %}
             The Incidents tab (Phase 6 chapter 1, as amended in v1.59.1): the

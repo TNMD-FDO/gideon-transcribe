@@ -165,6 +165,43 @@ def search(case, asked: str, kind: str = "") -> dict:
                 )
             )
 
+    # Notes on lines (Phase 8 chapter 2), found with the notes on events.
+    line_notes = list(
+        Segment.objects.filter(
+            transcript__recording__case=case, same_as_other_side=False
+        )
+        .exclude(note="")
+        .filter(_all(["note"], words))
+        .select_related("transcript__recording", "note_by")
+        .order_by("transcript__recording__created", "start")[: MOST + 1]
+    )
+    counts["notes"] = min(len(line_notes), MOST)
+    more = more or len(line_notes) > MOST
+    if wanted("notes"):
+        for one in line_notes[:MOST]:
+            recording = one.transcript.recording
+            here = group(
+                ("recording", recording.pk),
+                recording.title,
+                reverse("viewer", args=[recording.pk]),
+            )
+            here["hits"].append(
+                _hit(
+                    exports.clock(one.start),
+                    mark(one.text, words)
+                    if matches(one.text, words)
+                    else mark_safe(escape(one.text)),
+                    url=(
+                        f"{reverse('viewer', args=[recording.pk])}"
+                        f"?t={one.start:.1f}&note=1"
+                    ),
+                    who="Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
+                    under=mark(one.note, words),
+                    all_cameras=incidents.all_cameras_url(recording, one.start),
+                    at=one.start,
+                )
+            )
+
     if incidents.on():
         # Events: the line, the why, and each chronology's About.
         events = list(
@@ -221,7 +258,7 @@ def search(case, asked: str, kind: str = "") -> dict:
             .select_related("incident", "note_by")
             .order_by("incident__created", "at")[: MOST + 1]
         )
-        counts["notes"] = min(len(notes), MOST)
+        counts["notes"] = min(counts["notes"] + len(notes), MOST)
         more = more or len(notes) > MOST
         if wanted("notes"):
             for event in notes[:MOST]:
@@ -377,6 +414,30 @@ def find(incident, asked: str) -> dict:
                     "html": str(mark(one.text, words)),
                     "text": one.text,
                     "who": one.speaker,
+                    "line_at": one.start,
+                }
+            )
+        # The office's notes on this camera's lines (Phase 8 chapter 2).
+        noted = (
+            Segment.objects.filter(
+                transcript=camera.recording.transcript, same_as_other_side=False
+            )
+            .exclude(note="")
+            .filter(_all(["note"], words))
+            .select_related("note_by")
+            .order_by("start")[:MOST]
+        )
+        for one in noted:
+            hits.append(
+                {
+                    "at": round(camera.starts_at + one.start, 2),
+                    "camera": str(camera.pk),
+                    "camera_id": camera.camera_id(),
+                    "kind": "note",
+                    "html": str(mark(one.note, words)),
+                    "text": one.note,
+                    "who": "Note"
+                    + (f", {one.note_by.shown_name}" if one.note_by else ""),
                     "line_at": one.start,
                 }
             )

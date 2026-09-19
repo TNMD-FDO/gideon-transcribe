@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, engine, settings_store
+from core import assistant, audit, cases, engine, notes, settings_store
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -265,6 +265,10 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # What Undo in the Speakers panel would undo, in words.
         "last_change": last_change_line(transcript) if transcript else "",
         "being_replaced": being_replaced(recording),
+        # The Export menu's with-notes entries show only while a line has one.
+        "has_notes": bool(
+            transcript is not None and transcript.segments.exclude(note="").exists()
+        ),
         "media_url": (f"{media_root(recording)}/{playback.name}" if playback else ""),
         # While the copy is still being written there is no file to judge
         # by, so the overlay's word comes from the probe: "Preparing
@@ -309,11 +313,15 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
                     "speaker": segment.speaker,
                     "corrected": segment.corrected,
                     "words": segment.words or [],
+                    # The note on the line (Phase 8 chapter 2).
+                    **notes.line_json(segment),
                 }
                 # The second copy of what both Sides heard is kept in the
                 # database and left out of the reading, so the announcement at
                 # the head of a call is read once rather than twice.
-                for segment in transcript.segments.filter(same_as_other_side=False)
+                for segment in transcript.segments.filter(
+                    same_as_other_side=False
+                ).select_related("note_by")
             ],
         }
     )
@@ -385,6 +393,43 @@ def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
         object_label=f"{segment.start:.1f}-{segment.end:.1f}",
     )
     return JsonResponse({"corrected": True})
+
+
+@login_required
+@require_POST
+def note(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
+    """A note on one line (Phase 8 chapter 2): written, changed or cleared by
+    whoever may correct the transcript. The audit row never holds the words."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    cases.used(recording, by=request.user)
+
+    if being_replaced(recording):
+        return JsonResponse(
+            {
+                "error": "This transcript is being replaced, so a note cannot be "
+                "written until the new one lands."
+            },
+            status=409,
+        )
+
+    segment = Segment.objects.filter(
+        pk=segment_id, transcript__recording=recording, same_as_other_side=False
+    ).first()
+    if segment is None:
+        return JsonResponse({"error": "no such segment"}, status=404)
+
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "that could not be read"}, status=400)
+
+    saved = notes.set_note(
+        segment, wanted.get("note", ""), by=request.user, request=request
+    )
+    return JsonResponse({"saved": True, **saved})
 
 
 @login_required

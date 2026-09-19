@@ -160,6 +160,10 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         if not record["rows"]:
             raise engine.Problem(engine.ERROR, "the cameras gave nothing to read")
         event_lines, _ = _chronology_lines(incident)
+        # The office's notes on the synced cameras' lines (Phase 8 chapter 2).
+        from core import notes
+
+        noted = notes.incident_block(incident)
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -167,7 +171,8 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             + "\n\n"
             + prompts.NARRATIVE_RULES
             + "\n\n"
-            + prompts.INCIDENT_RULES,
+            + prompts.INCIDENT_RULES
+            + ("\n\n" + notes.RULE if noted else ""),
         )
         wanted = settings_store.incident_chat_answer_cap()
         dropped: set[str] = set()
@@ -184,6 +189,7 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
                     _record_text(incident, record, dropped),
                     about=incident.about,
                 )
+                + ("\n\n" + noted if noted else "")
                 + "\n\nThe question: "
                 + turn.question
             )

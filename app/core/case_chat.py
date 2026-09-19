@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import models
 from django.utils import timezone
 
-from core import audit, engine, prompts, settings_store
+from core import audit, engine, notes, prompts, settings_store
 from core.assistant import (
     DONE,
     FAILED,
@@ -413,10 +413,13 @@ def answer_case_turn(turn_id) -> None:
             transcript = recording.transcript
             header = header_line(number, total, recording, transcript)
             digest = prompts.digest_block(digests[recording.pk])
+            # The office's notes on the lines, after the words (Phase 8 chapter 2).
+            noted = notes.recording_block(recording)
+            after = "\n\n" + noted if noted else ""
             if alone and digest:
-                return header + "\n" + digest
+                return header + "\n" + digest + after
             body = header + "\n" + prompts.render(prompts.lines_of(transcript))
-            return body + ("\n\n" + digest if digest else "")
+            return body + ("\n\n" + digest if digest else "") + after
 
         for number, recording in enumerate(read, start=1):
             transcript = recording.transcript
@@ -441,7 +444,8 @@ def answer_case_turn(turn_id) -> None:
         system = prompts.system_message(
             ground.text,
             template.text,
-            prompts.with_camera_rules(prompts.CASE_CHAT_FORMAT, any(digests.values())),
+            prompts.with_camera_rules(prompts.CASE_CHAT_FORMAT, any(digests.values()))
+            + ("\n\n" + notes.RULE if notes.any_on(read) else ""),
         )
         people = people_line(case)
         # The Incidents' placements (Phase 6 chapter 3): each synced camera's

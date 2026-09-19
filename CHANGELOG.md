@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.69.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0052, three columns on a transcript's segments)
+```
+
+Phase 8 chapter 2: Notes. From the maintainer's list of 2026-09-19 ("notes
+in transcript"), under the rules an event's note already has.
+
+- **A note on a line.** On the recording page every line of the transcript
+  has **note** beside edit and clip start (or N on the line being played).
+  A small box opens under the line: your own words, up to 2,000 characters,
+  Save and Cancel, Ctrl + Enter and Esc. The note shows under the line in
+  italics with the writer's name and the date; press it to change it, and
+  save it empty to remove it, after a question. Whoever may correct the
+  transcript may write a note; the writer is whoever last wrote it. A small
+  mark on the timeline shows where the noted lines are.
+- **Nothing leaves by default.** Export to Word, Export as text and Captions
+  are unchanged and never carry a note; two new entries, **Export to Word,
+  with notes** and **Export as text, with notes**, appear only while a line
+  has one. A clip's excerpt and captions never carry a note.
+- **The Notes tab** on the case page, between Clips and Speakers, with a
+  count: every note in the case, on lines of transcripts and on events of
+  chronologies, newest first, each a citation that opens where the note was
+  written (with **all cameras** when the recording is a synced camera).
+  **On lines** and **On events** filter it; **Search notes** opens the Search
+  tab on notes; **Download notes** is a Word document of them all, for the
+  office's own reading.
+- **Gideon reads the notes and never writes one.** On the case page each
+  recording's notes are given after its words as the office's own; on the
+  incident page the notes on the synced cameras' lines, on the incident
+  clock. The Summary, the memo and Propose events do not read them.
+- **Search's Notes kind and Find** read the notes on lines with the notes on
+  events.
+- **Processing again** carries every note to the new transcript's line at
+  its moment, so nothing is lost.
+- **Audit rows** Note added, Note changed, Note removed and Note carried,
+  under Edits beside Segment corrected, never with a word of the note; an
+  export with notes says so in its row. No setting.
+
 ## v1.68.0, 2026-09-19
 
 ```

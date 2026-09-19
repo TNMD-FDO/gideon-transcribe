@@ -195,6 +195,14 @@
       editButton.innerHTML = icon("correct") + " edit";
       actions.appendChild(editButton);
 
+      // A note on the line (Phase 8 chapter 2), beside edit and clip start.
+      var noteButton = document.createElement("button");
+      noteButton.type = "button";
+      noteButton.className = "ghost tiny note-row";
+      noteButton.title = segment.note ? "Change the note on this line (N)" : "A note on this line (N)";
+      noteButton.innerHTML = icon("note") + " note";
+      actions.appendChild(noteButton);
+
       if (window.VIEWER.clips) {
         var clipButton = document.createElement("button");
         clipButton.type = "button";
@@ -234,6 +242,8 @@
       said.className = "txt";
       said.innerHTML = wordsOf(segment);
       body.appendChild(said);
+      // The office's note under the words, whole, with the writer and the date.
+      if (segment.note) { body.appendChild(noteLine(segment)); }
 
       row.appendChild(when);
       row.appendChild(who);
@@ -248,6 +258,18 @@
     if (clipStartsAt !== null) { showsStart(clipStartsAt); }
     // The AI assistant puts its suggestion pills on the rows after they exist.
     document.dispatchEvent(new Event("transcript-drawn"));
+  }
+
+  function noteLine(segment) {
+    var line = document.createElement("p");
+    line.className = "note-line";
+    line.title = "Press to change this note";
+    var head = document.createElement("b");
+    head.textContent = "Note" + (segment.note_by ? ", " + segment.note_by : "") +
+      (segment.note_on ? ", " + segment.note_on : "") + ": ";
+    line.appendChild(head);
+    line.appendChild(document.createTextNode(segment.note));
+    return line;
   }
 
   function wordsOf(segment) {
@@ -470,6 +492,14 @@
           pen.fillRect(x, top, 1, Math.max(1, (high - low) * (lane / 2 - 1)));
         }
       }
+    }
+    // A noted line: a small mark at its time along the foot (Phase 8 chapter 2).
+    if (duration && segments && segments.length) {
+      pen.fillStyle = unplayed;
+      segments.forEach(function (segment) {
+        if (!segment.note) { return; }
+        pen.fillRect(Math.round((segment.start / duration) * width), height - 6, 2, 6);
+      });
     }
   }
 
@@ -820,6 +850,7 @@
 
       if (event.target.closest(".edit-row")) { edit(index); return; }
       if (event.target.closest(".clip-row")) { markFrom(index); return; }
+      if (event.target.closest(".note-row") || event.target.closest(".note-line")) { noteOn(index); return; }
       if (row.querySelector("textarea")) { return; }
       window.VIEWER.seek(segments[index].start);
     });
@@ -1031,6 +1062,121 @@
       row.classList.toggle("unfinished", false);
     });
 
+    box.addEventListener("keydown", function (event) {
+      event.stopPropagation();
+      if (event.key === "Escape") { stop(); return; }
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { keep(); }
+    });
+  }
+
+  // A note on a line (Phase 8 chapter 2) ---------------------------------------
+  //
+  // One box under the line, as the correction box is: the office's own words,
+  // Save and Cancel, Ctrl + Enter and Esc. Saving with the box empty removes
+  // the note, after asking. The words go to the app and come back as kept.
+
+  var noting = null;
+
+  function askToRemove() {
+    return UI.confirm({
+      title: "Remove this note?",
+      body: "The note's words are kept nowhere else.",
+      ok: "Remove"
+    });
+  }
+
+  function noteOn(index) {
+    var segment = segments[index];
+    var row = column ? column.children[index] : null;
+    if (!segment || !row || row.querySelector("textarea")) { return; }
+    tidyUp();
+    if (editing) { return; }
+    if (noting) { noting.stop(); }
+
+    var body = row.querySelector(".words");
+    var shown = row.querySelector(".note-line");
+    var holder = document.createElement("div");
+    holder.className = "noting";
+
+    var box = document.createElement("textarea");
+    box.rows = 3;
+    box.maxLength = 2000;
+    box.placeholder = "A note on this line: what it means for the case, a page cite, a thing to do";
+    box.value = segment.note || "";
+    holder.appendChild(box);
+
+    var tools = document.createElement("div");
+    tools.className = "row small";
+    var save = document.createElement("button");
+    save.type = "button";
+    save.className = "primary small";
+    save.textContent = "Save";
+    var cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "ghost small";
+    cancel.textContent = "Cancel";
+    var hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = "Ctrl + Enter saves, Esc cancels" + (segment.note ? "; saved empty, the note is removed" : "");
+    tools.appendChild(save);
+    tools.appendChild(cancel);
+    tools.appendChild(hint);
+    holder.appendChild(tools);
+
+    if (shown) { shown.replaceWith(holder); } else { body.appendChild(holder); }
+    row.classList.add("noting-row");
+    box.focus();
+
+    function stop() {
+      if (segment.note) { holder.replaceWith(noteLine(segment)); } else { holder.remove(); }
+      row.classList.remove("noting-row");
+      if (noting && noting.box === box) { noting = null; }
+    }
+    noting = { row: row, box: box, stop: stop };
+
+    function send(text) {
+      box.disabled = true;
+      save.disabled = true;
+      fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id + "/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+        body: JSON.stringify({ note: text })
+      }).then(function (answer) {
+        if (!answer.ok) { return Promise.reject(answer.status); }
+        return answer.json();
+      }).then(function (told) {
+        if (!told.saved) { return Promise.reject("refused"); }
+        segment.note = told.note || "";
+        segment.note_by = told.note_by || "";
+        segment.note_on = told.note_on || "";
+        noting = null;
+        draw();
+        here = -1;
+        follow();
+        if (search && search.value.trim()) { look(); }
+        drawTimeline();
+      }).catch(function () {
+        box.disabled = false;
+        save.disabled = false;
+        UI.alert({
+          title: "That note was not saved",
+          body: "You may have been signed out. Open the page again and check before retyping it."
+        });
+      });
+    }
+
+    function keep() {
+      var text = box.value.trim();
+      if (text === (segment.note || "")) { stop(); return; }
+      if (!text) {
+        askToRemove().then(function (yes) { if (yes) { send(""); } else { box.focus(); } });
+        return;
+      }
+      send(text);
+    }
+
+    save.addEventListener("click", keep);
+    cancel.addEventListener("click", stop);
     box.addEventListener("keydown", function (event) {
       event.stopPropagation();
       if (event.key === "Escape") { stop(); return; }
@@ -1652,6 +1798,10 @@
       if (here >= 0) { event.preventDefault(); edit(here); }
       return;
     }
+    if (event.key === "n" || event.key === "N") {
+      if (here >= 0) { event.preventDefault(); noteOn(here); }
+      return;
+    }
 
     if (event.key === "ArrowUp" || event.key === "ArrowDown") {
       event.preventDefault();
@@ -1773,6 +1923,11 @@
       if (row) {
         row.classList.add("here");
         row.scrollIntoView({ block: "center" });
+        // Opened from the Notes tab or a Notes hit: the note lit under the line.
+        if (asked.get("note") === "1") {
+          var noted = row.querySelector(".note-line");
+          if (noted) { noted.classList.add("lit"); }
+        }
       }
     }
 

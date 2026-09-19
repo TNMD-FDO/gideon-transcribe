@@ -1902,7 +1902,7 @@
       html += "<div class='inc-find-hit' data-n='" + n + "'>" +
         "<span class='t mono'>" + (one.at === null ? "" : timeOfDay(one.at)) + "</span>" +
         "<span class='who small'>" + who + (one.kind === "words" && one.who ? " <span class='muted'>" + escape(one.who) + "</span>" : "") + "</span>" +
-        "<span class='grow'>" + one.html + "<div class='muted small'>" + (one.kind === "words" ? "Said on " + escape(one.camera_id) + (one.who ? ", " + escape(one.who) : "") : (one.kind === "event" ? "An event on the chronology" : "The memo")) + "</div></span>" +
+        "<span class='grow'>" + one.html + "<div class='muted small'>" + (one.kind === "words" ? "Said on " + escape(one.camera_id) + (one.who ? ", " + escape(one.who) : "") : (one.kind === "event" ? "An event on the chronology" : (one.kind === "note" ? "The office's note on a line of " + escape(one.camera_id) : "The memo"))) + "</div></span>" +
         (one.kind === "words" ? "<button type='button' class='tiny ghost' data-find-event='" + n + "' title='An event at this moment, with the line filled'>E</button>" : "") +
         "</div>";
     });
@@ -1917,7 +1917,7 @@
     findCurrent = n;
     Array.prototype.forEach.call(findHits.querySelectorAll(".inc-find-hit"), function (row) { row.classList.toggle("on", parseInt(row.dataset.n, 10) === n); });
     if (one.at !== null && one.at !== undefined) { seek(one.at); }
-    if (one.kind === "words" && one.camera && cameraById(one.camera)) {
+    if ((one.kind === "words" || one.kind === "note") && one.camera && cameraById(one.camera)) {
       if (layout === "focus") { setFocus(one.camera); }
       else {
         var entry = players[one.camera];

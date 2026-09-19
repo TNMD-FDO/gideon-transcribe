@@ -31,6 +31,7 @@ from core import (
     engine,
     exports,
     live,
+    notes,
     pages,
     retention,
     settings_store,
@@ -232,7 +233,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
 
     chat_here = case_chat.available()
     # The Gideon tab went with Phase 8 chapter 1: the panel is Gideon's place.
-    tabs = ("search", "clips", "speakers") + (("incidents",) if incidents.on() else ())
+    tabs = ("search", "clips", "notes", "speakers") + (
+        ("incidents",) if incidents.on() else ()
+    )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
     if asked and not request.GET.get("tab"):
@@ -270,6 +273,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # The tab says how many on every tab, as Recordings and Speakers do
             # (v1.63.2); the rows themselves are built only on the Clips tab.
             "clips_count": _clips_count(case),
+            # The Notes tab (Phase 8 chapter 2): every note in the case.
+            "notes_count": notes.count(case),
+            "notes": (
+                notes.of_case(case, request.GET.get("kind", ""))
+                if tab == "notes"
+                else None
+            ),
             "is_owner": role == "owner",
             "role": role,
             **_sharing_context(case, role),
@@ -292,6 +302,30 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             **_incidents_context(case),
         },
     )
+
+
+@login_required
+def notes_export(request: HttpRequest, case_id) -> HttpResponse:
+    """Download notes (Phase 8 chapter 2): every note in the case as a Word
+    document, for the office's own reading. One audit row, never a word."""
+    from core import audit, exports
+
+    _on_or_404()
+    case = _their_case(request, case_id)
+    cases.note_activity(case, by=request.user)
+    body = notes.word(case, request.user.shown_name)
+    audit.write(
+        audit.Category.EXPORTS,
+        "notes exported",
+        actor=request.user,
+        request=request,
+        affected_user=case.owner if case.owner_id != request.user.pk else None,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        kind="notes",
+    )
+    return exports.hand_over(body, notes.export_name(case), exports.WORD_TYPE)
 
 
 def _incidents_context(case: Case) -> dict:

@@ -82,6 +82,11 @@
                 <li><a href="{% url 'export' recording.pk 'word' %}">{% icon "word" %} Export to Word</a></li>
                 <li><a href="{% url 'export' recording.pk 'text' %}">{% icon "text" %} Export as text (.txt)</a></li>
                 <li><a href="{% url 'export' recording.pk 'captions' %}">{% icon "captions" %} Captions (.srt)</a></li>
+                {% if has_notes %}
+                  {% comment %}With notes (Phase 8 chapter 2): separate choices, so a plain export never carries a note.{% endcomment %}
+                  <li><a href="{% url 'export' recording.pk 'word' %}?notes=1">{% icon "note" %} Export to Word, with notes</a></li>
+                  <li><a href="{% url 'export' recording.pk 'text' %}?notes=1">{% icon "note" %} Export as text, with notes</a></li>
+                {% endif %}
               </ul>
             </details>
           {% endif %}
@@ -426,6 +431,7 @@
         <div><span>Normal speed</span><kbd>0</kbd></div>
         <div><span>Follow mode</span><kbd>F</kbd></div>
         <div><span>Correct the current segment</span><kbd>E</kbd></div>
+        <div><span>A note on the current segment</span><kbd>N</kbd></div>
         <div><span>Save the correction</span><kbd>Ctrl + Enter</kbd></div>
         <div><span>Cancel, or close what is open</span><kbd>Esc</kbd></div>
         <div><span>Search</span><kbd>/</kbd></div>
