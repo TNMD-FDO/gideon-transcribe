@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 7 specification
 
-The case as one place. Chapters 1 and 2 are written for the build; chapters 3 to 5 are outlined and take their shape here so that the built chapters leave room for them.
+The case as one place. Chapters 1 to 3 are written for the build; chapters 4 and 5 are outlined and take their shape here so that the built chapters leave room for them.
 
 ## About this document
 
@@ -14,7 +14,7 @@ Read it with the same companions as Phase 6: `CONTEXT.md` (the glossary, with th
 
 - **The chronology as a document, and the clip across cameras** (chapter 1, for the build): each Event takes a Note in a person's own words and a To check mark; the Chronology takes an About paragraph; all of it prints in the exports and is told to the memo as the office's own words. Clip this event cuts one file from the event's cameras and span, the focus camera large or a grid, with the incident clock and the camera ids burned in, and it is a Clip like any other on the Clips page.
 - **Events the office would want: the assistant's judgement, and the watch phrases under it** (chapter 2, for the build): the proposer asked to reason as an investigator and to say why each moment matters, reading a camera in windows with a second look at each so nothing is skimmed or cut short, sharpened by the office's context in a setting and a Look for box on one run; the memo re-shipped in a seasoned investigator's voice; and under the judgement one plain search for the words the office can never afford to miss, its finds shown apart. From the maintainer's finding of 2026-09-19 that a line saying "I got gun" went unproposed, and the word that the events are dynamic and the engine's reasoning is the finder.
-- **The case dashboard line, and search across a case** (chapter 3, outlined): one strip under the case's name with a pill for everything that has a state, each a link; and one search box over every transcript, event, note, memo and summary of the case, hits grouped by recording and every hit a time that plays.
+- **The case dashboard line, search across a case, and Find on the incident page** (chapter 3, for the build): one line under the case's name with a pill for everything that has a state, each a link; a Search tab over every transcript, event, note, why, memo, summary and clip title of the case, hits grouped by where they live and every hit a time that plays or a place that opens; and Find on the incident page, where pressing a hit seeks every camera to that moment and brings the camera it was heard on to the front. From the maintainer's list of 2026-09-19.
 - **People across cameras** (chapter 4, outlined): the cameras of an incident play in step, so a voice heard saying the same words at the same seconds on two cameras is one person; the app proposes the matches on the case's Speakers tab, a person confirms and names them once, and the name flows to every camera and to the case's People.
 - **Questions answered from the incident record** (chapter 5, outlined): Ask about this incident on the Memo tab, a chat grounded in the incident record, the Chronology and its notes, every time in an answer a citation that plays every camera, and an answer's line one press from becoming an Event.
 
@@ -22,7 +22,7 @@ Read it with the same companions as Phase 6: `CONTEXT.md` (the glossary, with th
 
 1. The chronology as a document, and the clip across cameras
 2. Events the office would want: the assistant's judgement, and the watch phrases under it
-3. The case dashboard line, and search across a case (outlined)
+3. The case dashboard line, search across a case, and Find on the incident page
 4. People across cameras (outlined)
 5. Questions answered from the incident record (outlined)
 6. Deferred and ruled out
@@ -188,13 +188,107 @@ On the Incidents page, under The assistant: **About this office and case** (empt
 - Where the why line prints in the Chronology's Word export (under the line, in the assistant's words), within the rule that it is never mixed into the Event's own line.
 - Whether the Look for box sits beside the button or opens from it on a narrow window.
 
-## 3. The case dashboard line, and search across a case (outlined)
+## 3. The case dashboard line, search across a case, and Find on the incident page
 
-Not yet written for the build; the shape decided on 2026-09-17, with the search drawn as a mock-up the same day.
+Written 2026-09-19, after v1.64.0, from the shape decided on 2026-09-17 and three items of the maintainer's list of 2026-09-19: "search feature may need its own tab, seems like it is out of place on top of the recordings section in a case"; "add search ability in incidents that will dynamically position videos to the selected search finding"; and the dashboard line as the outline had it. Phase 2's Cases chapter built one search box over a case's transcripts and speaker names; Phase 6 built the incident page and its strip; this chapter gives the case one line that says where everything stands, one tab that searches all of it, and the incident page a way to find a moment and have every camera go there.
 
-- **The dashboard line.** One strip under the case's name, above the tabs, with a pill for everything in the case that has a state, each a link to the tab or page where it is dealt with: recordings transcribing or in the queue (with the waiting words of `waiting.py`), videos waiting for vision tonight and the window's words, incidents with their sync state, events to check, people to confirm (chapter 4), memos written and memos with newer events, clips rendering, and whom the case is shared with. A pill shows only when its count is not zero; a case with nothing pending shows one line, "Everything is ready." It is drawn on the server from the counters the pages already have (`vision.line`, `vision.pending`, `_rows_for`, `incidents.strip_rows`, `incident_assistant.memo_line`, the Clips groups) and costs no new query of size.
-- **Search across a case.** One box in the case page's head, taking the place of the Recordings tab's search field (Phase 2's `?q=` over the segments, which it extends). It searches the words of every transcript in the case, the events of every incident with their notes and About, the memos, and the summaries, whole words, and shows the hits grouped by recording and by incident, with the counts by kind as filters (Words, Events, Memos and summaries, Notes). A hit on a recording is its time as a citation that opens the viewer at that line, with the all cameras link when the recording is a synced camera; a hit on an event is its time of day, opening the incident page there; a hit in a memo or a summary opens it at the paragraph. The first two hundred hits, then "more". The search term is never audited, as Phase 2 has it. The build measures the case-wide `icontains` on the office's largest case and adds a PostgreSQL text index on the segments' words if it is needed, recorded in a research note.
-- **What changes**: Phase 2's Cases chapter (the head, the search); Phase 4's Vision (the tonight pill); Phase 6 (the incident pills). No setting; no audit row.
+### Principles
+
+1. **One line says where the case stands.** Everything in a case that has a state (a video transcribing, a video waiting for tonight's vision, an incident not synced, an event to check, a memo with newer events, a clip rendering, a share, a retention clock about to run out) shows as one pill on one line under the case's name, and each pill is a link to where it is dealt with. Nothing pending shows nothing, not a pill saying so.
+2. **One search over everything in the case.** A tab of its own, because a search box above the recordings list looked like part of that list. It reads the words of every transcript, the events of every incident with their notes, their whys and their About, every memo, every summary and every clip's title, and shows the hits by where they live, every hit a time that plays or a place that opens.
+3. **A hit on the incident page moves the cameras.** Find, on the incident page, is search with the cameras as its answer: type a few words, and each hit is a moment on the incident clock; press it and every camera seeks there, the camera it was heard on comes to the front with the sound. A person finds "gun" and watches every camera at the second it was said.
+4. **Nothing is logged, nothing is stored.** A search term and a Find are never written to the audit log, as Phase 2 has it, and nothing of a search is kept past the page.
+5. **Built from what the pages already count.** The line is drawn from the counters the pages already compute; the search extends Phase 2's query to more tables; Find reads the lines the incident page already serves. No new setting; no new audit row.
+
+### Words
+
+**Dashboard line**, as `CONTEXT.md` defines it from this chapter: the line of pills under a case's name. **Search**, the case page's tab and its box; a **hit**, one match, and where it lives (a recording's line, an event, a memo, a summary, a clip). **Find**, the box on the incident page, and its hits as moments. The pages never say dashboard (the line has no heading), status bar, alerts, results, or query.
+
+### The dashboard line
+
+- **Where.** Under the case's name and above the tabs, on every tab of the case page, one line of pills that wraps on a narrow window. Absent when nothing has a state.
+- **The pills**, in this order, each shown only when its count is not zero, each a link, each with the count and plain words:
+  - **Transcribing**: recordings whose Job is running or in line ("2 transcribing", "1 in line, about 20 minutes", the waiting words of `waiting.py`); links to the Recordings tab, which already refreshes its rows.
+  - **Preparing**: recordings being prepared for summaries and chat, or enriched with vision now ("1 preparing"); links to the Recordings tab.
+  - **Tonight**: videos marked for tonight's vision ("3 enriched tonight from 20:00"), from `vision.line`'s figures; links to the Recordings tab.
+  - **Not synced**: incidents with a camera not yet synced ("1 incident not synced"); links to the Incidents tab.
+  - **To check**: events marked To check across the case's incidents ("4 events to check"); links to the Incidents tab, whose lines already carry each incident's count, and from there to the incident's Chronology.
+  - **Proposals**: proposals waiting to be accepted or dismissed ("6 proposed events waiting"); links to the Incidents tab.
+  - **Memo**: memos with newer events ("1 memo has newer events") and memos being written ("1 memo writing"); links to the Incidents tab.
+  - **Clips**: clips rendering ("2 clips rendering") and clips that failed ("1 clip failed"); links to the Clips tab.
+  - **Shared**: whom the case is shared with ("shared with 2"); links to the pane's Sharing.
+  - **Deletes**: the retention warning ("deletes in 12 days"), in the warning tone the pane's line already uses; links to the pane's Keep.
+- **Tones.** A pill is plain, working (transcribing, preparing, rendering, writing), or warning (not synced, to check, failed, deletes), with the app's pill classes; no new colours.
+- **Refresh.** Drawn on the server with the page. On the Recordings tab, where the page already asks for its rows while a video is prepared (v1.53.2), the line is asked for with them and redrawn; on the other tabs it is as fresh as the page.
+- **The Cases page.** Unchanged: the case row keeps its own words. The line is the case page's.
+
+### Search across a case
+
+- **The tab.** **Search** is the second tab of the case page (Recordings, Search, Clips, Speakers, Chat, Incidents), offered to whoever can open the case. The Recordings tab loses the search box; a `?q=` on the case URL opens the Search tab with the term, so Phase 2's links keep working.
+- **The box.** One box, "Search this case", with the term kept in the URL as `?tab=search&q=` so a search can be shared as a link within the office. Words all present, any case, any order ("gun backpack" finds a line with both); a phrase in quotes exactly ("I got gun"). A term shorter than two characters searches nothing. **Clear** empties it.
+- **What it reads**, each kind counted and offered as a filter above the hits (Words, Events, Notes, Memos, Summaries, Clips), a filter showing only when its count is not zero:
+  - **Words**: every Segment of every transcript in the case, its text and its speaker name, as Phase 2 had it.
+  - **Events**: every Event of every incident in the case (not proposals): its line, its why, and the office's About of each Chronology.
+  - **Notes**: the notes on events, with the writer's name.
+  - **Memos**: every Incident memo, paragraph by paragraph.
+  - **Summaries**: every recording's Summary, paragraph by paragraph.
+  - **Clips**: every clip's title in the case, incident clips included.
+- **The hits**, grouped by where they live (a recording, an incident), the groups in the case's order, the hits in time order within a group, the matched words marked:
+  - A **Words** hit: the recording's title (once, as the group's head), the time as a citation that opens the viewer at that line, the speaker, the line. When the recording is a synced camera of an incident, an **all cameras** link beside the time opens the incident page at that moment, as Phase 6 chapter 1's link does.
+  - An **Events** hit: the incident's name as the group's head, the event's time of day opening the incident page at that moment, the line, the why under it, the source pill. An About hit shows as the incident's About.
+  - A **Notes** hit: under its event, in italics, with the writer.
+  - A **Memos** hit: the incident's name, "Memo", the paragraph with the words marked, opening the Memo tab with that paragraph lit.
+  - A **Summaries** hit: the recording's title, "Summary", the paragraph, opening the recording's Summary tab with the paragraph lit.
+  - A **Clips** hit: the clip's title, its recording or its incident, opening the Clips tab at that clip.
+- **How many.** The first two hundred hits of each kind, then "and N more; narrow the words". Never logged; never stored.
+- **Speed.** The build measures the case-wide `icontains` over segments, events, memos and summaries on the office's largest case and, if a search takes more than a second there, adds a PostgreSQL trigram index on the segments' text (`pg_trgm`, in the database image already) and records the figures in `docs/research/case-search.md`. The search never leaves the office's database.
+
+### Find on the incident page
+
+- **Where.** A box in the incident page's work panel head, **Find**, beside the tab bar, on every layout; on a narrow window it is a magnifier that opens the box.
+- **What it reads.** The lines of every synced camera (the transcript lines the page already serves per camera, at their times on the incident clock), the Chronology's events with their notes and whys, and the memo's paragraphs. A camera not yet synced is not read, and the box says "1 camera not synced is not searched" when one is skipped.
+- **The hits**, under the box in a list that scrolls, in time order on the incident clock: the time of day, the camera's dot and id (or "Event", "Memo"), the line with the words marked; the count above ("7 moments for "gun"").
+- **A hit moves the cameras.** Pressing a hit seeks every camera to that moment (Phase 6 chapter 1's seek), brings the camera it was heard on to the front in Focus (or scrolls it into view in a grid) and gives it the sound, and marks the hit as the one being watched; the page's playhead and the strip follow as they do for any seek. Playing is not started or stopped by a Find. Enter in the box goes to the next hit, Shift+Enter to the one before, Escape clears. An Event hit seeks there and shows the event on the Chronology tab; a Memo hit seeks there and lights the paragraph.
+- **From a hit to an event.** Each Words hit has **E** (the page's key for an event at the moment being watched) as a small button, which opens the event box at that moment with the line filled and the camera ticked, as adding from a line under a camera does. Nothing is added until the person saves it.
+- **Never logged, never stored.** The term stays in the box until cleared or the page is left.
+
+### In and out
+
+- **In**: the dashboard line with its ten pills and its refresh on the Recordings tab; the Search tab with its six kinds, its filters, its grouping and its links; Find on the incident page with its hits, its seek, its keys and its E; the `?q=` compatibility; the speed measurement.
+- **Out**: search across all cases (Phase 2's rule stands), ranking by relevance, search inside documents (PDFs are a later phase), saved searches, a search of the audit log (it has its filters), and a Find across incidents.
+
+### What changes from earlier phases
+
+- **Phase 2, the Cases chapter, Search inside one Case**: the box moves from the Recordings tab to a Search tab and reads six kinds, not two; the rule that the term is never logged stands; `?q=` on the case URL opens the Search tab.
+- **Phase 2, the case page's head**: the dashboard line under the name; the Recordings tab's rows request carries the line.
+- **Phase 4, the Summary**: a Summary tab opened with a paragraph to light, from a hit; the Memo tab the same.
+- **Phase 6 chapter 1, the Incident page**: Find in the work panel's head; a seek that brings a camera to the front with the sound (the Focus layout's press on a tile, done by the page).
+- **Phase 6 chapter 2 and Phase 7 chapter 1**: an event's line, note, why and the About are read by the search; the incident page's `?at=` opens at a moment and, with `&event=`, on that event.
+- **Phase 7 chapter 1, Incident clips**: a clip's title is read by the search; the Clips tab opens at a clip.
+
+### Audit rows
+
+None. A search and a Find are never logged; the counters the line reads are the pages' own.
+
+### Settings
+
+None. The line, the tab and Find are part of the case and the incident page, on whenever Cases (and, for the incident parts, Incidents) are.
+
+### Not in this chapter
+
+- **Ranking and full text.** Hits are in time order within their group; there is no score. The trigram index is a speed measure, not a ranking.
+- **Search across cases**, **saved searches**, and **a search of the app's own guides**.
+- **Documents in a case** (PDFs with page citations): a phase of its own, on the maintainer's list.
+- **People to confirm** on the line: chapter 4's, added with it.
+
+### Left to the build
+
+- The pills' exact words and the order of two pills of the same tone, within the list above.
+- The hit ceiling per kind (two hundred) and how "more" narrows.
+- The phrase rule's edges (quotes inside a term, a lone quote).
+- Whether Find's hit list sits under the box or as a fold of the panel, and its length before it scrolls.
+- How a lit paragraph is found in a Summary or a memo (the paragraph's index in the text as stored).
+- The trigram index, only if the measurement calls for it.
 
 ## 4. People across cameras (outlined)
 
@@ -254,6 +348,7 @@ The maintainer's choice of ideas and decisions of 2026-09-17, and the two mock-u
 
 ## Amendments applied
 
+- **2026-09-19.** Chapter 3 written for the build (the dashboard line, the Search tab, Find on the incident page), from the shape of 2026-09-17 and the maintainer's list of 2026-09-19 (search as its own tab; a finding that positions the cameras).
 - **2026-09-19, v1.64.0.** Chapter 2 built the same day, with these decisions left to the build: the AI assistant call audit row is one per run (as chapter 3 of Phase 6 had it), carrying the windows, the second looks, whether a Look for was given and the answers cut short, rather than one row per call; the state line reads "Proposed 14 events at 14:02, 3 from the watch phrases; 1 answer cut short, raise Proposed events answer cap", and a watch-only run the same shape; the why prints in the Chronology's Word export under the line in italics as "Why it matters: ..." and in the spreadsheet as a last column; the Look for box sits beside the button; a watch hit's why reads "The office watches for \"gun\"."; the whole-word rule allows the plural (gun, guns) and folds curly apostrophes; a phrase heard again on the same camera within thirty seconds joins its first hit as "(said 2 times)"; the second look is skipped when a window already holds twelve; the measurement is `docs/research/event-spotting.md`.
 - **2026-09-19.** Chapter 2 written for the build, from the maintainer's finding that "I got, I got gun" went unproposed on the server; the outlined chapters move to 3, 4 and 5. Amended the same day at the maintainer's word that the events are dynamic and the engine's reasoning is the finder: the judgement first (the why line, the windows, the second look, the office's context), the watch phrases as the floor under it, and the prompt measured on the server before the build is called done.
 - **2026-09-17, v1.63.0 (chapter 1 built).** Decisions the build made within the chapter's rules, and two points where it read the chapter narrowly:

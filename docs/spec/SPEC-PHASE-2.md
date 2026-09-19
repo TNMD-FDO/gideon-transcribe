@@ -196,7 +196,7 @@ Four tabs, one search box, and the Case's own controls. From 1280 pixels the pag
 
 ### Search inside one Case
 
-One box on the Case page searches Transcript text and Speaker names across that Case's Recordings. Every hit is a Segment that opens the viewer at that time. Whoever can open the Case can search it: the owner, its Collaborators, and Admins. There is no search across all Cases. Search terms are never logged.
+One box on the Case page searches Transcript text and Speaker names across that Case's Recordings. Every hit is a Segment that opens the viewer at that time. Whoever can open the Case can search it: the owner, its Collaborators, and Admins. There is no search across all Cases. Search terms are never logged. (Phase 7 chapter 3, `docs/spec/SPEC-PHASE-7.md`, moves the box to a Search tab of its own and has it read events, notes, memos, summaries and clip titles as well; the rules here stand.)
 
 ### Room: the per-user quota
 

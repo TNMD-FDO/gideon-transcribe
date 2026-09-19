@@ -288,6 +288,14 @@ _Avoid_: notes, comment, summary (that is the LLM's)
 An optional label for a Recording (Body camera, Jail call, Interview, and the like), picked at upload from a list an Admin keeps and changeable later.
 _Avoid_: source type, category
 
+**Dashboard line**:
+The line of pills under a case's name on the case page, one for everything in the case that has a state (transcribing, preparing, tonight's vision, an incident not synced, events to check, proposals waiting, a memo with newer events, clips rendering or failed, whom it is shared with, the retention warning), each a link to where it is dealt with; absent when nothing is pending. Phase 7 chapter 3.
+_Avoid_: dashboard (the line has no heading), status bar, alerts
+
+**Find**:
+The box on the incident page's work panel that searches the synced cameras' words, the Chronology's events and the memo, and whose hits are moments: pressing one seeks every camera there and brings the camera it was heard on to the front with the sound. Never logged. Phase 7 chapter 3. The case page's own box is Search.
+_Avoid_: search (on the incident page), query, results
+
 **Incident**:
 A named group of a Case's videos that ran at the same time, laid on one clock so they play in step on the Incident page. Offered by the app when the videos' clocks overlap, or made by hand with New incident; a video is in at most one. Lives inside one Case and nowhere else, counts as its activity, and goes with it. Phase 6.
 _Avoid_: event (that is one entry on a Chronology), scene, sync set, group, session
