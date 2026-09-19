@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out, notes, and a way to report a problem. Chapters 1 to 3 are written for the build; chapter 4 is outlined and takes its shape here so that the built chapters leave room for it.
+The pages laid out, notes, a way to report a problem, and the police report beside the cameras. All four chapters are written for the build; chapter 4 is built in three parts.
 
 ## About this document
 
@@ -13,14 +13,14 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **The pages laid out** (chapter 1, for the build): one rule for the incident page's work panel (tabs, and layers over them, with a Back that returns exactly), the Chronology tab unbunched, the proposals and Find's hits as layers, Gideon as one floating panel with the same shape on the three pages that have it (the case page, the recording page, the incident page) and nowhere else; the case page's tabs as a bar of sections with icons and counts, the same look on every page that has tabs; the recording page's case list under the video; the Start page's door saying Cases; and columns that follow the width up to the 49-inch screen.
 - **Notes** (chapter 2, for the build): a note on a line of a transcript under the rules an Event's note already has, exports that carry notes only when chosen, a Notes tab on the case page that lists every note in the case with the moment each points at, and Gideon told the notes as the office's own words.
 - **Report a problem** (chapter 3, for the build): one link on every page that opens a small box for a problem or an idea, in the person's own words, with where they were added only with their tick; a Report kept on the Panel's Reports page with New, Seen and Done marks, counted on the rail and the Status page, and mailed to the Operator address when mail is configured. Nothing leaves the building.
-- **Documents in a case** (chapter 4, outlined): PDFs uploaded to a case, read page by page, searched with everything else, and cited by page in Gideon's answers.
+- **Documents beside the cameras** (chapter 4, for the build, in three parts): the police report added to an incident or a camera as a PDF, read page by page (OCR for a scan), its paragraphs cited by Gideon and found by Search with the real page shown; and the comparison, the report against the record with every finding cited on both sides and marked agrees, differs, not on camera or not in the report, each one press from becoming an event.
 
 ## Contents
 
 1. The pages laid out
 2. Notes
 3. Report a problem
-4. Documents in a case (outlined)
+4. Documents beside the cameras
 5. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
@@ -306,13 +306,101 @@ Category System: **Report made** (who, the kind, the page's path, the release; n
 - The Reports page's paging past two hundred.
 - The sweeper's hour, with the other daily sweeps.
 
-## 4. Documents in a case (outlined)
+## 4. Documents beside the cameras
 
-Not yet written for the build; the shape from the maintainer's list of 2026-09-19, marked as a bigger project.
+Written 2026-09-19 from the maintainer's list of the same day ("PDFs in a case") and the discussion of the same day that fixed its purpose: the police report that corresponds to the body-worn cameras, put beside what the cameras recorded, so that a reader sees where the report and the record agree, where they differ, and where the report says something no camera shows. Reading a PDF is the plumbing under that; the comparison is the feature. Three parts, built in order as three releases: the documents and their pages (part 1), the Report tab and Gideon's citations (part 2), the comparison (part 3).
 
-- **PDFs in a case**: uploaded to a case as Documents (a police report, a complaint, a lab report), their text read page by page with free tools, listed on a Documents tab with their pages.
-- **Cited by page**: Search reads them (a Documents kind, each hit a page that opens); Gideon on the case page reads them beside the transcripts and cites "<document>, page 4" as it cites a recording's time, the citation opening the page; the incident memo does not read them (the record is the cameras').
-- **What changes**: Phase 2's case page; Phase 7 chapters 3 and 5; the exports' covers list the documents read. Settings: Documents (On), a size ceiling; audit rows Document added and Document removed.
+### Principles
+
+1. **A document is read whole, as a transcript is.** The app hands the engine numbered paragraphs, checks every citation against what it handed over, and reads in windows and in parts when the whole will not fit. No retrieval store, no embeddings, nothing outside the building; the one rule for paperwork that outgrows the reading (below) uses the database's own text search and says so under the answer.
+2. **A document belongs to what it is about.** A PDF is added from the incident page or the recording page as the report for that incident or that camera, never loose in a case. One report linked to an incident is read once against every camera. The case's Documents tab lists them; it is not where they arrive.
+3. **The page is the truth; the words are a reading.** Every page is drawn to a picture at upload and shown beside the words the app read from it. A scan is read by OCR and marked so; a page the OCR read poorly says so; a citation always opens the real page with the paragraph lit.
+4. **Both sides of every finding are cited.** A comparison's row carries the report's paragraph and the record's moment, each a citation that opens; a finding with a side missing is refused by the app. The camera's description is a description, the officer's sentence is the officer's, and the app never states one as the other or draws a legal conclusion. A person marks each finding; the app proposes.
+5. **Limits are settings and are said aloud.** The page ceiling, the documents per incident, the reading ceiling and OCR are on the Panel with On and Off; the upload page says what fits before a file is chosen; the answer says what was left out.
+6. **Nothing new to install.** The PDF reader, the page renderer and the OCR engine are packages in the app image, pinned, running on the media queue's worker on the CPU. No container, port, service, token, GPU or language pack beyond English. An office that never uploads a PDF sees a tab and nothing more.
+
+### Words
+
+**Document**: a PDF added to an Incident or a Recording as the report about it, kept in the Case, read page by page. **Page**: one page of a Document, drawn as a picture and read as words. **Paragraph**: one numbered block of a Page's words ("page 4, paragraph 2"), the unit the assistant cites and Search hits. **Read by OCR**: the words of a Page that had none of its own, read from the picture. **The Report tab**: the tab on the incident page's work panel and the recording page's work area that shows the Documents linked there. **Comparison**: the assistant's reading of a Document against the incident record and the Chronology (or one Recording's Transcript and Digest), one **Finding** per row, each marked **Agrees**, **Differs**, **Not on camera** or **Not in the report**. The pages never say attachment, exhibit, file (that is a Recording's), chunk, embedding, index or RAG.
+
+### Part 1. The documents and their pages
+
+- **Where they arrive.** **Add the report** on the incident page's Details tab and on the recording page's Details tab, and nowhere else. It opens the app's upload page for documents, headed for that incident or that camera, which says before a file is chosen:
+  - PDFs only; a Word file is saved as a PDF first.
+  - The report for this incident (or this camera), nothing else: a document is read beside the cameras, so a document about something else only slows the reading and clouds the answers.
+  - Up to N pages (the Admin's figure); a larger file is refused, and a production should be cut down to the report that matters.
+  - A scan is read by OCR, and its words may carry mistakes; the page itself is always shown beside them.
+  - Nothing leaves the building; the document is read by the office's own engine and kept with the case.
+  Then the file, a title (the file's name, editable), and **Add**. The document goes on the media queue as a video does, and its row on the tab says "Reading 42 pages" until it is done.
+- **What the app does at upload**, on the media queue's worker: reads each page's words with their positions (a text PDF); when a page has fewer than a few words of its own, reads its picture by OCR (Tesseract, English) and marks the page **read by OCR**; a page whose OCR yields too little says **poorly read**; splits each page into Paragraphs by the gaps on the page, numbered from 1 on each page; draws each page to a picture at reading size. All of it is kept with the Document under the Case's folder and goes with the Case. A PDF over the page ceiling, not a PDF, or unreadable is refused with the reason, the way an oversized video is.
+- **The Documents tab** on the case page, drawn as every tab (chapter 1), with the count: every Document in the case, newest first, each with its title, its pages ("42 pages, read by OCR, 3 poorly read"), what it is linked to (the incident's name or the recording's title, a link), who added it and when, and **Open**, **Re-link** (to another incident or recording of the case) and **Remove** (asks first). Nothing is added here.
+- **The document page.** A Document opens on a page of its own inside the case: the page pictures down the middle at reading size, the words read from the open page beside them paragraph by paragraph with their numbers, a page number box, Find within the document, and **Download** of the PDF as it was. A page read by OCR says so above its words; a poorly read page says so in the warning tone. A citation arriving with `?page=4&para=2` opens that page with the paragraph lit on the picture (from the words' positions) and in the words.
+- **Search** (Phase 7 chapter 3) gains the kind **Documents**: one hit per Paragraph, the document's title as the group's head, "page 4, paragraph 2" as the citation that opens the page with the paragraph lit, the words marked.
+- **Deletion and retention.** A Document is part of its Case: recycled and restored with it, deleted with it, counted in the case's size; removing it removes its pages and words. Never in a Clip, never in an export of a transcript.
+
+### Part 2. The Report tab and Gideon
+
+- **The Report tab** appears on the incident page's work panel (after Cameras) and on the recording page's work area (after Clips) only when a Document is linked there, drawn as every tab, with the count of documents. It lists the linked documents with their state and opens each in the panel: the page pictures with the words beside them, at the panel's width, the same page as the document page shows; Add the report and Re-link stay on Details.
+- **Gideon reads linked documents.** The incident's Gideon reads the documents linked to the incident after the chronology and before the question, as "The report(s) for this incident:", each document as numbered paragraphs "[Report, page 4, paragraph 2] the words". The recording page's Gideon reads the documents linked to that recording after the transcript in the same way. The case page's Gideon reads every document in the case, each under the recording or incident it is linked to. The rules gain: the report is the officer's account and the cameras are the record; say which says what; a description of the picture stays a description; where they differ say so plainly and cite both; never a legal conclusion.
+- **Citations.** "[Report, page 4, paragraph 2]" (the document's short title when there are several), checked against the paragraphs given, as a time is checked against a transcript. Under the answer the preview shows the paragraph's words with the paragraph before and after in the muted colour, the document's title and page, "read by OCR" when it was; **Open** goes to the document page with the paragraph lit. The same look as the moment preview.
+- **The reading ceiling.** A question reads at most N paragraphs of documents (a setting). When the linked documents fit, they are read whole. When they do not, the app reads only the paragraphs whose words match the question, found by the database's own text search over the Paragraphs, and says under the answer "Read 40 of 310 paragraphs of the report, those matching the question." Never silent. The memo and Propose events do not read documents; the memo reads the paragraph an event rests on (part 3).
+- **The exports.** A case chat's Word export lists the documents read on its cover as it lists the recordings; a citation prints as the title and page.
+
+### Part 3. The comparison
+
+- **Compare with the report**, a button on the Report tab, on the incident page (the report against the incident record and the Chronology) and on the recording page (the report against that recording's Transcript and Digest). It says what it will read and about how long, as Propose events does, and runs on the llm queue.
+- **How it reads.** One document at a time, in windows of pages (about eight pages a window) against the whole record, so no call is large and no answer is cut short; the findings are gathered across the windows and the documents. Each window is asked for findings in a fixed shape: the paragraph, the claim in a few words, the moment or moments on the record it rests on, and the mark. A finding with no paragraph or, for Agrees and Differs, no moment is dropped by the app.
+- **The four marks.** **Agrees**: the record shows what the paragraph says, at the cited moment. **Differs**: the record shows otherwise, at the cited moment. **Not on camera**: the paragraph describes something no camera shows or says (a claim, an observation, an act off camera). **Not in the report**: an Event of the Chronology, or a moment the record makes plain, that the report does not mention. The rules: cite both sides; a description of the picture is a description; say what was said and what was seen, never what it means in law; where the OCR's words are doubtful, say so.
+- **The Comparison layer.** The findings land as a layer over the Report tab, one shape with every layer (chapter 1): the head "Comparison, <document>", the state line ("42 pages against 6 cameras; 31 findings: 12 agree, 6 differ, 9 not on camera, 4 not in the report"), a filter of the four marks as pills, then one row per finding: the mark as a pill, the paragraph's words (page and paragraph as a citation that opens the document page), the claim, the moment as a citation that plays every camera (or the recording), and the assistant's one line of why. On each row **Make it an event** (the incident page; below), **Note** (a note on the finding, the office's own), and **Dismiss**; **Accept all agreed** is not offered; a person reads the rows. The comparison is kept on the incident (or the recording), one per document, replaced by Compare again, marked stale when the Chronology or the cameras change, as the memo is.
+- **Findings become events.** **Make it an event** adds an Event at the moment with the claim as its line, source **report**, resting on the paragraph (shown under the event as a line rests on a camera), the mark carried as the event's why; a Not on camera finding asks for the moment, since the report has no clock. The memo then reads that paragraph as part of the chronology it is written from, and its rules gain the sentence that the report is the officer's account. Propose events is unchanged.
+- **The exports.** **Comparison to Word**: the cover with the document, the cameras and the counts, then one table with the mark, the paragraph (page, number, words), the claim, the moment and the why, and the office's notes; the Chronology's exports show a report paragraph under an event that rests on one, and the spreadsheet gains a Rests on column. The comparison is never in a transcript's export or a Clip.
+
+### The settings
+
+On a Documents page of the Panel, with Reset to default on every figure:
+
+| Setting | Default | What it does | When changed |
+|---|---|---|---|
+| Documents | On | People may add a PDF to an incident or a recording. | Off hides the Documents tab, Add the report and the Report tab; documents already there stay and are read by nothing. At once. |
+| Largest document | 60 pages | A PDF over it is refused at upload with the reason. | The next upload. |
+| Documents per incident or recording | 3 | Add the report is greyed with the reason at the count. | The next upload. |
+| Read scans with OCR | On | A page without words of its own is read from its picture. Greyed "OCR not installed" when the image lacks it. | The next upload; Off keeps and shows a scan and says its words were not read. |
+| Reading ceiling | 400 paragraphs | The most paragraphs of documents a question reads whole; past it, the paragraphs matching the question. | The next question. |
+| Compare with the report | On | The comparison button. Needs the assistant. | Off hides the button; comparisons already made stay. |
+| Comparison answer cap; Comparison time limit | 3,000 tokens; 600 seconds | The call's figures, as the memo's are. | The next comparison. |
+
+### In and out
+
+- **In**: PDFs added from an incident or a recording; pages read, OCR'd, split and drawn; the Documents tab and the document page; the Documents kind in Search; the Report tab; Gideon reading linked documents with paragraph citations and the preview; the reading ceiling and the matching rule; the comparison with its four marks, its layer, Make it an event, its export; the settings; the audit rows.
+- **Out**: any format but PDF; a document loose in a case; embeddings, a vector store, a retrieval service; OCR in any language but English; the memo or Propose events reading a document whole; a comparison accepted in bulk; a document in a Clip or a transcript export; anything leaving the building.
+
+### What changes from earlier phases
+
+- **Phase 2, the case page**: the Documents tab; the case's size counts documents; recycle, restore and delete carry them.
+- **Phase 4, the assistant**: a new feature, comparison, with its template on the Templates page and its budgets.
+- **Phase 6, the incident page**: the Report tab; Details gains Add the report; an Event's source gains report and Rests on a paragraph; the memo reads a rested-on paragraph. **The recording page** (Phase 1): the Report tab; Details gains Add the report.
+- **Phase 7 chapter 3**: the Documents kind. **Chapter 5**: Gideon's reading and the paragraph preview.
+- **The upload rules** (Phase 1): a second upload page, for documents, with its own statements and ceilings.
+
+### Audit rows
+
+Category Cases: **Document added** (the title, pages, read by OCR, poorly read, linked to), **Document re-linked**, **Document removed**; **Comparison run** (the document, the windows, the findings by mark, never the words); **Event added** with source report. Category LLM: **AI assistant call** with feature comparison, as every call. No row holds a paragraph's words.
+
+### Not in this chapter
+
+- **Other formats** (Word, images, e-mail): saved as PDF first.
+- **A document for the whole case** with no incident or recording: ruled out; the reading stays small and the purpose plain.
+- **Embeddings and a vector store**: not needed at this scale; the matching rule is the step before them, and they would need a model inside the building.
+- **OCR in other languages**: later, if asked.
+- **The comparison in the memo**: the memo reads only the paragraphs events rest on.
+
+### Left to the build
+
+- The PDF and OCR packages and their pins, recorded in `docs/research/documents.md` with what was measured on a real text report and a real scan; the paragraph splitter's rule and the "poorly read" threshold.
+- The page picture's size and the panel's page view.
+- The window of pages for the comparison (about eight) and the finding's JSON shape.
+- How the matching rule ranks paragraphs (PostgreSQL full-text search, the question's words, the top N).
+- The short title for a document in a citation when several are linked.
 
 ## 5. Deferred and ruled out
 
@@ -331,7 +419,7 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 | Edits | Note added; Note changed; Note removed; Note carried | 2 |
 | Exports | Exported gains notes; Download notes | 2 |
 | System | Report made; Report seen; Report done; Reports swept | 3 |
-| Cases | Document added; Document removed | 4 (outlined) |
+| Cases | Document added; Document re-linked; Document removed; Comparison run; Event added with source report | 4 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -340,7 +428,7 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 | (none) | | | 1 |
 | (none) | | | 2 |
 | Reports | Features | On | 3 |
-| Documents; Largest document | Cases | On; to be fixed | 4 (outlined) |
+| Documents; Largest document; Documents per incident or recording; Read scans with OCR; Reading ceiling; Compare with the report; Comparison answer cap; Comparison time limit | Documents | On; 60 pages; 3; On; 400 paragraphs; On; 3,000; 600 s | 4 |
 
 ## Sources
 
@@ -348,6 +436,7 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-19.** Chapter 4 written for the build from the outline and the discussion of the same day: the purpose fixed as the police report beside the cameras; a document is added from an incident or a recording, never loose; read whole with a reading ceiling and a matching rule past it, no embeddings; OCR for scans, English only, marked; the comparison with four marks, both sides cited, findings made events by a person; three parts as three releases; the settings on a Documents page; the upload page's statements.
 - **2026-09-19, v1.70.0.** Chapter 3 built the same day, with these decisions left to the build: the box is the app's dialog with the kinds as two radio choices, the expected box hidden for an idea, and Close without sending asked only once the person has typed; the browser's name is read from the User-Agent header for Edge, Opera, Firefox, Chrome and Safari (else "a browser"), with the system after "on"; the rail's badge counts New alone; the Reports page has no paging (every report, in one table, the words folded); the sweep runs with the daily sweeper at half past three and is counted in its row as well as in Reports swept; the Status line is drawn with the page, not with its five-second lines; the Operator mail names the Reports page by its full address when sent from a request. **Not built:** nothing of the chapter.
 - **2026-09-19.** Chapter 3 (Report a problem) written for the build from the outline: two kinds (a problem, an idea); the where line added only with the person's tick and shown before sending, the page's path without its query; the Panel is the record and the Operator mail the second copy; a Done report swept after ninety days; no screenshot, no reply in the app.
 - **2026-09-19, v1.69.0.** Chapter 2 built the same day, with these decisions left to the build: the note's key is N and Escape closes the box; the box replaces the note's line under the words and Save with the box empty asks "Remove this note?"; the mark on the timeline is a small tick at the foot of the strip, with no hover; a note whose moment no new line spans takes the line with the nearest start, and two notes landing on one line are joined with a line break ("Note carried" rows say the old times); the date beside the writer is "19 Sep 2026"; the with-notes exports are two entries in the Export menu, and the Word one adds "with notes" to its kind line and running head and a count to the processing record; the Notes tab's rows carry the line's words shortened to 140 characters and a note opened from the tab or a Notes hit is lit under its line (?note=1); Download notes is one table (when, rests on, writer, note); the incident's Gideon lists the cameras' notes after the chronology and before the question. **Not built:** nothing of the chapter.

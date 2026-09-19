@@ -604,6 +604,18 @@ _Avoid_: admin email, alert address, IT address
 A person's own account, sent from any page with Report a problem, of a problem they hit or an idea that would help, kept for the Admins with where they were (the page's path, the Release, the browser, the window's size, their name) when they ticked to include it. Listed on the Panel's Reports page with the marks New, Seen and Done, counted on the rail and the Status page, and mailed to the Operator address when mail is configured. Never a transcript's words, never a screenshot, never anything that leaves the building. Phase 8 chapter 3.
 _Avoid_: bug, ticket, issue (GitHub's word for other offices' reports), feedback, complaint
 
+**Document**:
+A PDF added to an Incident or a Recording as the police report about it, kept in the Case, read page by page at upload (a scan read by OCR and marked so), split into numbered Paragraphs and drawn as page pictures. Listed on the Case's Documents tab and the Report tab of the Incident or Recording it is linked to; cited by Gideon by page and paragraph; hit by Search; read against the record by the Comparison. Never loose in a Case, never in a Clip or a transcript export. Phase 8 chapter 4.
+_Avoid_: attachment, exhibit, file (that is a Recording's), upload (that is the act)
+
+**Paragraph**:
+One numbered block of a Document's Page ("page 4, paragraph 2"), split by the gaps on the page: the unit the assistant cites, Search hits, and an Event rests on. Phase 8 chapter 4.
+_Avoid_: chunk, passage, snippet
+
+**Comparison**:
+The assistant's reading of a Document against the incident record and the Chronology (or one Recording's Transcript and Digest), one Finding per row, each citing the Paragraph and the moment and marked Agrees, Differs, Not on camera or Not in the report; kept on the Incident or Recording, one per Document, replaced by Compare again, stale when the cameras or the Chronology change; a person makes a Finding an Event. Phase 8 chapter 4.
+_Avoid_: analysis, audit, reconciliation, contradiction report
+
 **Release**:
 A tagged version of the app published on GitHub with its notes, the only thing an installer ever installs or upgrades to. The notes always say whether the models or the database change.
 _Avoid_: version (that is the number), build, deploy
