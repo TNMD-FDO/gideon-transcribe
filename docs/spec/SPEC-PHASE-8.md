@@ -10,7 +10,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 
 ## What Phase 8 adds
 
-- **The pages laid out** (chapter 1, for the build): one rule for the incident page's work panel (tabs, and layers over them, with a Back that returns exactly), the Chronology tab unbunched, the proposals and Find's hits as layers, Gideon as a tab on the incident page and a floating panel elsewhere; the case page's tabs as a bar of sections with icons and counts, the same look on every page that has tabs; the recording page's case list under the video; the Start page's door saying Cases; and columns that follow the width up to the 49-inch screen.
+- **The pages laid out** (chapter 1, for the build): one rule for the incident page's work panel (tabs, and layers over them, with a Back that returns exactly), the Chronology tab unbunched, the proposals and Find's hits as layers, Gideon as one floating panel with the same shape on every page; the case page's tabs as a bar of sections with icons and counts, the same look on every page that has tabs; the recording page's case list under the video; the Start page's door saying Cases; and columns that follow the width up to the 49-inch screen.
 - **Notes** (chapter 2, outlined): a note on a line of a transcript, and a Notes section on the case page that lists every note in the case with the moment each points at.
 - **The bug report button** (chapter 3, outlined): a way for a person to report a problem or ask for a feature from any page, landing in the app for Admins and by mail to the Operator address, since nothing leaves the building.
 - **Documents in a case** (chapter 4, outlined): PDFs uploaded to a case, read page by page, searched with everything else, and cited by page in Gideon's answers.
@@ -27,7 +27,7 @@ Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
 ## 1. The pages laid out
 
-Written 2026-09-19 from the maintainer's list of the same day and the picks made from the two mock-up pages: the Start page's door says Cases (1A); the case page's tabs become a bar of sections (2A); the recording page's case list goes under the video (3A); columns follow the width (4A); the work panel is tabs and layers (the rule); the Chronology tab holds the events with air (1A of the second page); the proposals are a layer (2A); Find's hits are a layer (3A); Gideon is a tab on the incident page and a floating panel elsewhere (4A).
+Written 2026-09-19 from the maintainer's list of the same day and the picks made from the two mock-up pages: the Start page's door says Cases (1A); the case page's tabs become a bar of sections (2A); the recording page's case list goes under the video (3A); columns follow the width (4A); the work panel is tabs and layers (the rule); the Chronology tab holds the events with air (1A of the second page); the proposals are a layer (2A); Find's hits are a layer (3A); Gideon is one floating panel on every page (4A, amended the same day at the maintainer's word that Gideon's design language be the same throughout: the incident page gets the panel too, not a tab).
 
 ### Principles
 
@@ -35,13 +35,13 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 2. **Tabs, and layers over them.** The work panel has tabs for what is always there and layers for a job in hand. A layer opens over the tab, has one shape, and closes to exactly where the person was: the tab, its scroll, the row that was marked, the moment being watched. One way in, one way out, for every piece.
 3. **One shape for the tabs everywhere.** The case page, the recording page and the incident page's work panel draw their tabs the same way: a bar of sections, an icon and a count each, the open one drawn as a card joined to its content. What a person learns on one page holds on the next.
 4. **Room to read.** A row on the Chronology says what happened on one line and everything about it on a muted line under it; the controls sit behind a row menu and on the row's own layer. Fewer things on the screen at once, each with air.
-5. **Gideon does not shove.** On the incident page Gideon is a tab, because its citations already drive the wall. On the case and recording pages it floats over the page's edge and the page does not reflow.
+5. **Gideon does not shove, and is the same everywhere.** On every page that grounds a chat (the case page, the recording page, the incident page) the same button opens the same panel, floating over the page's right edge with the same head and the same ways in and out; the page under it does not reflow. There is no other Gideon: not a tab, not a drawer.
 6. **Width is used, not capped.** Columns follow the window's width from a laptop to a 49-inch screen, and a window dragged from half the screen to the whole re-lays itself. Nothing is remembered per screen.
 7. **Words stay.** Cases stay Cases; nothing in the glossary changes for a page's look.
 
 ### Words
 
-**Work panel**, the incident page's panel of tabs and layers (chapter 1 of Phase 6 called it the panel); **Layer**, one job opened over a tab, with a Back; **Back**, the layer's way out, the tab's name after the arrow ("&lsaquo; Chronology"); **the row menu**, the "&middot;&middot;&middot;" on a Chronology row. The floating Gideon is **the panel** on the case and recording pages; the pages never say drawer, modal, dialog (for a layer), popup or pop-out.
+**Work panel**, the incident page's panel of tabs and layers (chapter 1 of Phase 6 called it the panel); **Layer**, one job opened over a tab, with a Back; **Back**, the layer's way out, the tab's name after the arrow ("&lsaquo; Chronology"); **the row menu**, the "&middot;&middot;&middot;" on a Chronology row. The floating Gideon is **the panel**, on every page; the pages never say drawer, modal, dialog (for a layer), popup or pop-out.
 
 ### The Start page
 
@@ -50,9 +50,9 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 ### The tabs, everywhere
 
 - **The shape.** A bar of sections under the page's head: each section a word and an icon, with the count beside the word where a count means something (Recordings 5, Clips 3, Speakers 6, Incidents 1; Search and Gideon carry none); the open section is drawn as a card joined to the content under it, the others as plain words that light on hover. Larger type than today's underlined words; the bar wraps on a narrow window.
-- **The case page**: Recordings, Search, Clips, Speakers, Gideon, Incidents, in today's order, under the dashboard line.
-- **The recording page**: the work area's tabs (Transcript, Summary, Gideon, Clips, Details, and Open in a window at the end) take the same shape.
-- **The incident page's work panel**: Chronology, Memo, Cameras, Gideon, Details, with Find's magnifier at the right of the bar.
+- **The case page**: Recordings, Search, Clips, Speakers, Incidents, in today's order, under the dashboard line. The Gideon tab goes: the panel is Gideon's one place, and it holds the same conversations.
+- **The recording page**: the work area's tabs (Transcript, Summary, Clips, Details, and Open in a window at the end) take the same shape; the Gideon tab goes, for the same reason.
+- **The incident page's work panel**: Chronology, Memo, Cameras, Details, with Find's magnifier at the right of the bar.
 - **Icons**: one set, drawn as the app's other icons are (`icons.html`), one per section; the build chooses them within the rule that an icon never stands alone without its word.
 
 ### The recording page
@@ -65,12 +65,12 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 
 - **The rule.** No page caps its width. Columns follow the window: the incident page's wall shows 2 across to 1919 pixels, 3 to 2559, 4 to 3839, 6 from 3840 (Grid layouts a person chose still win; Focus keeps one camera large and lets the filmstrip grow to two rows). The work panel is 380 pixels wide to 2559 and 760 from 2560; from 3840 it can show two tabs side by side (Chronology beside Memo, a second tab bar), a choice the person makes with **Two panels** at the right of the bar, remembered in the browser. The strip runs the whole width at every width.
 - **The case page** is two panes to 2559 and three from 2560: the list, the open recording's details (or the Search tab's hits, or the Chronology of an incident opened from the Incidents tab in place), and the About pane.
-- **The recording page** is the stage over the case card with the transcript beside them to 2559; from 2560 the transcript, the stage and the case card, and the work area's other tab (Summary, Gideon) can sit side by side in three columns, with the same **Two panels** choice.
+- **The recording page** is the stage over the case card with the transcript beside them to 2559; from 2560 the transcript, the stage and the case card, and the work area's other tab (Summary, Clips, Details) can sit side by side in three columns, with the same **Two panels** choice.
 - **Re-laid on resize.** The pages read their width when drawn and when the window changes, so a window dragged from half of a 49-inch screen to the whole of it re-lays without a reload. Nothing is remembered per screen; only the Two panels choice and the layouts a person already chooses are remembered, per person, in the browser.
 
 ### The work panel: tabs and layers
 
-- **Tabs**: Chronology, Memo, Cameras, Gideon, Details. What is always there.
+- **Tabs**: Chronology, Memo, Cameras, Details. What is always there.
 - **Layers**, one at a time, each opened over the tab the person is on: **Proposed events** (from the Chronology tab's button), **Sync** (from the transport, a tile or the Cameras tab), **an event** (add, edit, note, clip this event: from Add event here, the E key, a row's menu, a line under a camera, a citation), **a clip** (from an event's layer or a span dragged on the strip), **Find** (from the magnifier). The sheets of Phase 6 chapter 4 and chapter 5 (the event box, the clip box, the Sync sheet) become layers; nothing opens above the wall any more.
 - **The head**, the same on every layer: **&lsaquo; <the tab's name>** on the left, the layer's name, and the layer's one main button on the right (Accept all, Sync all, Save, Make the clip, none for Find). Escape is Back. A second Back on a layer opened from another layer (a clip from an event) returns to the event's layer, then the tab.
 - **Back returns exactly.** Opening a layer remembers the tab, its scroll, the row marked as current and the moment being watched; Back restores the tab and its scroll and marks the row; the moment is not moved back (the person may have seeked while on the layer, and the cameras are where they left them). Saving on a layer returns the same way, with the saved row marked and lit for a moment.
@@ -99,13 +99,14 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 
 ### Gideon's place
 
-- **On the incident page**, Gideon is a tab of the work panel: the conversations, the question box at the bottom of the panel, the citations that seek every camera, + event beside a cited line; the drawer and the Ask button leave the incident page. Two panels from 3840 lets Gideon sit beside the Chronology.
-- **On the case page and the recording page**, Ask Gideon opens a panel that floats over the page's right edge: 420 pixels wide, the window's height less a margin, a shadow, the page under it unchanged and scrollable. Its head carries the name, the grounding, a pop-out arrow (a window of its own that follows the page, as the Speakers window does) and Close; the Ask button, while the panel is open, is its Close. Escape closes. On a narrow window the panel is the whole window, as today. Open or closed is remembered per person per kind of page, as today.
-- **The preview** plays inside the panel; on the recording page the panel's citations seek the page's player.
+- **One panel, everywhere.** On the case page, the recording page and the incident page, **Ask Gideon** (the same round button, the same place at the bottom right) opens the same panel: floating over the page's right edge, 420 pixels wide, the window's height less a margin, a shadow, the page under it unchanged and scrollable; the same head (the name, the grounding, a pop-out arrow, Close); the Ask button, while the panel is open, is its Close; Escape closes; open or closed remembered per person per kind of page. On a narrow window the panel is the whole window. The pop-out arrow puts the conversation in a window of its own that follows the page, as the Speakers window does.
+- **What it holds** is the page's grounding, as Phase 7 chapter 5 has it: the case's conversations on the case page, the recording's on the recording page, the incident's on the incident page. Nothing else shows Gideon: the Gideon tabs on the case page and the recording page go, and the incident page never had one. The drawer that pushed the page aside goes.
+- **On the incident page** the panel floats over the right of the page, so the wall stays in view beside it on any window of 1280 pixels or more; a citation seeks every camera and brings the camera it was heard on to the front, and + event opens the event's layer at that moment with the line filled. From 2560, where the work panel is 760 wide, the panel floats over the work panel's right half and the Chronology stays readable beside it.
+- **The preview** plays inside the panel on the case page; on the recording page the panel's citations seek the page's player; on the incident page the cameras are the preview.
 
 ### In and out
 
-- **In**: the Start page's tile; the tab bar's shape on three pages; the case card under the video and the removal of the section below the transcript; the width rule with Two panels; the work panel's layers with the head and the Back; the Chronology tab's rows and menu; the Proposed events layer; the Find layer; Gideon as a tab on the incident page and a floating panel elsewhere.
+- **In**: the Start page's tile; the tab bar's shape on three pages; the case card under the video and the removal of the section below the transcript; the width rule with Two panels; the work panel's layers with the head and the Back; the Chronology tab's rows and menu; the Proposed events layer; the Find layer; Gideon as one floating panel on every page, the Gideon tabs gone.
 - **Out**: the word Workspace, a rail of sections, a density switch, dialogs for proposals, a filter of the chronology in place, and any change to what the pages hold or to the words the glossary fixes.
 
 ### What changes from earlier phases
@@ -113,7 +114,7 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 - **Phase 1, the Start page and the recording page**: the tile's words; the case card under the video; the work area's tabs.
 - **Phase 2, the case page**: the tabs' shape; three panes from 2560.
 - **Phase 6 chapters 1, 4 and 5**: the sheets become layers; the wall's columns follow the width; the Sync sheet is a layer; the work panel's tabs gain Gideon.
-- **Phase 7 chapter 1**: the event box and the clip box are layers; the clip from the strip opens its layer. **Chapter 2**: the proposals and the Look for box move to their layer. **Chapter 3**: Find's hits are a layer. **Chapter 5**: Gideon's drawer becomes a tab on the incident page and a floating panel on the other two.
+- **Phase 7 chapter 1**: the event box and the clip box are layers; the clip from the strip opens its layer. **Chapter 2**: the proposals and the Look for box move to their layer. **Chapter 3**: Find's hits are a layer. **Chapter 5**: Gideon's drawer becomes the floating panel on every page; the Gideon tabs of the case and recording pages go, the panel holding their conversations.
 - The exports, the audit rows, the settings and every word in the glossary are unchanged.
 
 ### Audit rows
@@ -170,7 +171,7 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 - **A rail of sections and a density switch**: not chosen.
 - **Dialogs for proposals and a page for them**: ruled out; the layer keeps the cameras in view.
 - **Filtering the chronology in place as Find**: ruled out; the words said on a camera are not events.
-- **Gideon as a window always**: not chosen; the pop-out arrow gives it when wanted.
+- **Gideon as a window always**: not chosen; the pop-out arrow gives it when wanted. **Gideon as a tab on the incident page** (the mock-up's 4A as drawn): amended out the same day; one design language throughout.
 - **Layouts remembered per screen**: deferred; the width is read.
 
 ## Appendix A. Audit rows added in Phase 8
@@ -196,4 +197,4 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
-- **2026-09-19.** Chapter 1 written for the build from the picks; chapters 2 to 4 outlined.
+- **2026-09-19.** Chapter 1 written for the build from the picks; chapters 2 to 4 outlined. Amended the same day at the maintainer's word ("I want Gideon's design language to be the same throughout"): Gideon is one floating panel on every page, the incident page included, and the Gideon tabs go.

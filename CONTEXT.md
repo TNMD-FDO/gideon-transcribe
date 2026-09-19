@@ -297,7 +297,7 @@ The box on the incident page's work panel that searches the synced cameras' word
 _Avoid_: search (on the incident page), query, results
 
 **Work panel**:
-The incident page's panel beside the wall: its tabs (Chronology, Memo, Cameras, Gideon, Details), always there, and the layers that open over a tab for a job in hand. Phase 8 chapter 1.
+The incident page's panel beside the wall: its tabs (Chronology, Memo, Cameras, Details), always there, and the layers that open over a tab for a job in hand. Phase 8 chapter 1.
 _Avoid_: sidebar, pane (that is the case page's)
 
 **Layer**:
