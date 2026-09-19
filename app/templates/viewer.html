@@ -268,6 +268,7 @@
           <button type="button" class="tab on" data-panel="transcript">{% icon "text" %} Transcript</button>
           {% if clips_available %}
             <button type="button" class="tab" data-panel="clips">{% icon "clip" %} Clips</button>
+          {% if documents %}<button type="button" class="tab" data-panel="report">{% icon "document" %} Report <span class="count">{{ documents|length }}</span></button>{% endif %}
           {% endif %}
           {% if assistant.summary and transcript %}
             <button type="button" class="tab" data-panel="summary">{% icon "summary" %} Summary</button>
@@ -464,6 +465,7 @@
   </script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'again.js' %}"></script>
+  <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
   {% if assistant.assistant and transcript %}

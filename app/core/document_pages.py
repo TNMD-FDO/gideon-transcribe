@@ -40,30 +40,44 @@ def add(request: HttpRequest, case_id) -> HttpResponse:
     _documents_on_or_404()
     case = _their_case(request, case_id)
     source = request.POST if request.method == "POST" else request.GET
+    # The home may be given (from a Details tab) or picked here (from the
+    # Documents tab): an incident, a recording, or both.
+    home: dict = {}
+    refused = ""
     try:
         home = _home_from(request, case, source)
     except documents.Refused as why:
-        messages.error(request, str(why))
-        return redirect(f"/case/{case.pk}?tab=documents")
-    about = home.get("incident") or home.get("recording")
+        if request.method == "POST":
+            refused = str(why)
+    back = f"/case/{case.pk}?tab=documents"
+    if "incident" in home:
+        back = home["incident"].url()
+    elif "recording" in home:
+        back = f"/recording/{home['recording'].pk}?panel=details"
     context = {
         "page": "cases",
         "case": case,
-        "home_kind": "incident" if "incident" in home else "recording",
-        "home_name": about.name if "incident" in home else about.title,
-        "home_url": about.url()
-        if "incident" in home
-        else f"/recording/{about.pk}?panel=details",
-        "home_id": str(about.pk),
+        "home_kind": documents.home_words(home) if home else "",
+        "home_name": " and ".join(
+            one.name if kind == "incident" else one.title for kind, one in home.items()
+        ),
+        "home_url": back,
+        "picked_incident": str(home["incident"].pk) if "incident" in home else "",
+        "picked_recording": str(home["recording"].pk) if "recording" in home else "",
+        "given": bool(source.get("incident") or source.get("recording"))
+        and request.method != "POST",
+        "homes": documents.homes_of(case),
         "most_pages": documents.most_pages(),
         "per_home": documents.per_home(),
-        "here": documents.count_at(home),
+        "here": documents.count_at(home) if home else 0,
         "ocr": documents.ocr_on() and documents.ocr_installed(),
         "ocr_missing": documents.ocr_on() and not documents.ocr_installed(),
-        "refused": "",
+        "refused": refused,
     }
     if request.method == "POST":
         upload = request.FILES.get("file")
+        if refused:
+            return render(request, "document-add.html", context)
         if upload is None:
             context["refused"] = "Choose a PDF first."
             return render(request, "document-add.html", context)
@@ -82,12 +96,20 @@ def add(request: HttpRequest, case_id) -> HttpResponse:
             return render(request, "document-add.html", context)
         messages.success(
             request,
-            f"{document.title} was added and is being read; it appears on the "
-            f"{'incident' if 'incident' in home else 'recording'}'s Details and on "
-            "the case's Documents tab.",
+            f"{document.title} was added and is being read; it appears on "
+            f"{documents.home_words(home)}'s Details and on the case's Documents tab.",
         )
-        return redirect(context["home_url"])
+        return redirect(back)
     return render(request, "document-add.html", context)
+
+
+@login_required
+def state(request: HttpRequest, case_id, document_id) -> HttpResponse:
+    """The document for the Report tab: every page's picture and words."""
+    from django.http import JsonResponse
+
+    document = _their_document(request, case_id, document_id)
+    return JsonResponse(documents.state_json(document))
 
 
 def _their_document(request: HttpRequest, case_id, document_id) -> Document:
@@ -138,6 +160,9 @@ def page(request: HttpRequest, case_id, document_id) -> HttpResponse:
             "open_page": open_page,
             "lit": lit,
             "asked": request.GET.get("q", "").strip(),
+            # The ways back (part 2): the case, and the incident or recording.
+            "back_incident": document.incident,
+            "back_recording": document.recording,
         },
     )
 

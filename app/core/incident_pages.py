@@ -256,6 +256,7 @@ def state_json(incident: Incident, user) -> dict:
             "clip_most": media.WALL_MOST,
             # The report for this incident (Phase 8 chapter 4, part 1), on Details.
             "documents_on": documents.on(),
+            "case_id": str(incident.case_id),
             "documents": (
                 [documents.as_json(one) for one in documents.for_incident(incident)]
                 if documents.on()

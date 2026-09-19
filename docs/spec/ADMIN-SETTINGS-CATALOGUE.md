@@ -219,8 +219,9 @@ The Documents page of the Settings group, built in v1.71.0 (part 1). Every row b
 | Largest document | pages, 1 to 500 | 60 | 8 | A PDF over it is refused at upload with the reason. | The next upload. |
 | Documents per incident or recording | documents, 1 to 20 | 3 | 8 | Add the report is refused with the reason at the count. | The next upload. |
 | Read scans with OCR | On or Off | On | 8 | A page without words of its own is read from its picture (Tesseract, English) and marked read by OCR. | The next upload; Off keeps and shows a scan and says its words were not read. |
+| Reading ceiling | paragraphs, 5 to 5,000 | 400 | 8 | The most paragraphs of documents a question reads whole; past it, only the paragraphs matching the question are read, and the answer says so. | The next question. |
 
-Parts 2 and 3 of the chapter add the Reading ceiling and the comparison's switch and budgets to this page.
+Part 3 of the chapter adds the comparison's switch and budgets to this page.
 
 ## Phase 3: Live recording
 

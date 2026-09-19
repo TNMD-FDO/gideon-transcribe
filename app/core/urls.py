@@ -226,6 +226,11 @@ urlpatterns = [
         name="document-picture",
     ),
     path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/state",
+        document_pages.state,
+        name="document-state",
+    ),
+    path(
         "case/<uuid:case_id>/document/<uuid:document_id>/download",
         document_pages.download,
         name="document-download",

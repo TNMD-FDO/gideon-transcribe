@@ -284,6 +284,23 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="documents_reading_most",
+            page=DOCUMENTS,
+            name="Reading ceiling",
+            kind=NUMBER,
+            default=400,
+            least=5,
+            most=5000,
+            unit="paragraphs",
+            needs="documents",
+            what_it_does=(
+                "The most paragraphs of documents a question reads whole; past "
+                "it, only the paragraphs matching the question are read, and "
+                "the answer says so."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
             key="reports",
             page=FEATURES,
             name="Reports",

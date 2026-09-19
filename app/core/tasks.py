@@ -291,6 +291,13 @@ def keep_the_queue_moving(timestamp: int) -> None:
         log.warning("vision for %s had no task; queued again", transcript.pk)
         prepare_video.defer(transcript_id=str(transcript.pk))
 
+    # A document read by an older splitter is read again (Phase 8 chapter 4).
+    from core import documents
+
+    again = documents.read_again_the_old()
+    if again:
+        log.info("%d document(s) read again after a splitter change", again)
+
     # A speaker check left queued with no task behind it (v1.56.1).
     from core import speaker_check
 

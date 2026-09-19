@@ -1033,10 +1033,19 @@ def answer_turn(turn_id) -> None:
             if digest
             else []
         )
+        # The report for this recording (Phase 8 chapter 4, part 2).
+        from core import documents
+
+        papers, papers_note, named = documents.reading_block(
+            documents.for_recording(recording) if recording.case_id else [],
+            turn.question,
+            heading="The report for this recording:",
+        )
         system = prompts.system_message(
             ground.text,
             template.text,
-            prompts.with_camera_rules(prompts.CHAT_FORMAT, seen),
+            prompts.with_camera_rules(prompts.CHAT_FORMAT, seen)
+            + ("\n\n" + documents.RULE if papers else ""),
         )
         earlier = [
             (one.question, one.answer)
@@ -1057,6 +1066,7 @@ def answer_turn(turn_id) -> None:
                 clock_line(transcript),
                 rendered,
                 picture,
+                papers,
                 turn.question,
             ]
             if part
@@ -1075,8 +1085,11 @@ def answer_turn(turn_id) -> None:
             **SAMPLING,
         )
         usage = answer
-        turn.answer = answer["text"].strip()
-        turn.citations = prompts.citations(turn.answer, lines, seen)
+        turn.answer = documents.with_note(answer["text"].strip(), papers_note)
+        turn.citations = {
+            **prompts.citations(turn.answer, lines, seen),
+            **documents.citations_in(turn.answer, named),
+        }
         if thought_it_away(answer):
             raise ThoughtItAway()
         turn.cut_short = answer["finish_reason"] == "length"

@@ -43,6 +43,10 @@ def _citations_json(incident, citations: dict) -> dict:
     the incident page at that moment."""
     out = {}
     for whole, at in (citations or {}).items():
+        if isinstance(at, dict):
+            # A report's paragraph (Phase 8 chapter 4): kept resolved.
+            out[whole] = at
+            continue
         out[whole] = {
             "clock": incidents.time_of_day(incident, float(at)),
             "seconds": float(at),
@@ -164,6 +168,14 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         from core import notes
 
         noted = notes.incident_block(incident)
+        # The report for this incident (Phase 8 chapter 4, part 2).
+        from core import documents
+
+        papers, papers_note, named = documents.reading_block(
+            documents.for_incident(incident),
+            turn.question,
+            heading="The report for this incident:",
+        )
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -172,7 +184,8 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             + prompts.NARRATIVE_RULES
             + "\n\n"
             + prompts.INCIDENT_RULES
-            + ("\n\n" + notes.RULE if noted else ""),
+            + ("\n\n" + notes.RULE if noted else "")
+            + ("\n\n" + documents.RULE if papers else ""),
         )
         wanted = settings_store.incident_chat_answer_cap()
         dropped: set[str] = set()
@@ -190,6 +203,7 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
                     about=incident.about,
                 )
                 + ("\n\n" + noted if noted else "")
+                + ("\n\n" + papers if papers else "")
                 + "\n\nThe question: "
                 + turn.question
             )
@@ -224,8 +238,11 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
                 f"({', '.join(sorted(dropped))} could not be read for this answer.)\n\n"
                 + text
             )
-        turn.answer = text
-        turn.citations = memo_citations(incident, turn.answer)
+        turn.answer = documents.with_note(text, papers_note)
+        turn.citations = {
+            **memo_citations(incident, turn.answer),
+            **documents.citations_in(turn.answer, named),
+        }
         turn.cut_short = answer.get("finish_reason") == "length"
         turn.model = answer.get("model", "")
         turn.state = DONE

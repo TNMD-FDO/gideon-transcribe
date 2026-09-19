@@ -134,8 +134,27 @@
 
     // A citation the app matched becomes a play pill: the recording's name
     // when there are several, the time, and the line it points to on hover.
-    function citer(citations) {
+    // A report's paragraph (Phase 8 chapter 4, part 2): the same pattern in
+    // every chat, drawn as a document pill whose preview is the paragraph.
+    var DOC_CITE = /\[[^\]\n]{1,120}?, page \d+, paragraph \d+\]/g;
+    function docCiter(citations) {
       return function (html) {
+        return html.replace(DOC_CITE, function (whole) {
+          var where = citations && citations[whole];
+          if (!where || where.kind !== "document") { return whole; }
+          return "<a href='" + escape(where.href || "#") + "' class='cite doc' data-doc='1'" +
+            " data-title='" + escape(where.title) + "' data-page='" + where.page + "' data-para='" + where.para + "'" +
+            " data-text='" + escape(where.text || "") + "' data-before='" + escape(where.before || "") + "' data-after='" + escape(where.after || "") + "'" +
+            (where.ocr ? " data-ocr='1'" : "") + " title='" + escape((where.text || "").slice(0, 200)) + "'>" +
+            "<svg class='i' aria-hidden='true'><use href='#i-document'></use></svg> " + escape(where.title) + ", page " + where.page + ", para " + where.para + "</a>";
+        });
+      };
+    }
+
+    function citer(citations) {
+      var docs = docCiter(citations);
+      return function (html) {
+        html = docs(html);
         return html.replace(options.citationPattern, function (whole) {
           var where = options.citation(whole, citations || {});
           if (!where) { return whole; }
@@ -353,6 +372,12 @@
         options.onPlus(parseFloat(plus.dataset.seconds), plus.dataset.line || "");
         return;
       }
+      var doc = target.closest(".cite.doc");
+      if (doc) {
+        event.preventDefault();
+        showDocPreview(doc);
+        return;
+      }
       var play = target.closest(".cite.play");
       if (play && options.onCite && play.dataset.seconds !== undefined) {
         event.preventDefault();
@@ -366,6 +391,29 @@
         showPreview(play);
       }
     });
+
+    // The paragraph under the answer, with the one before and after in the
+    // muted colour, the document's title and page, and Open for the page.
+    function showDocPreview(doc) {
+      var card = doc.closest(".card, .turn, .answer") || doc.parentNode;
+      var old = root.querySelector(".chat-preview");
+      if (old) { old.remove(); }
+      var box = document.createElement("div");
+      box.className = "chat-preview chat-preview-doc";
+      box.innerHTML =
+        (doc.dataset.before ? "<p class='muted small'>" + escape(doc.dataset.before) + "</p>" : "") +
+        "<p class='doc-cited'>" + escape(doc.dataset.text) + "</p>" +
+        (doc.dataset.after ? "<p class='muted small'>" + escape(doc.dataset.after) + "</p>" : "") +
+        "<div class='row small' style='gap: 8px; align-items: baseline; flex-wrap: wrap'>" +
+        "<b>" + escape(doc.dataset.title) + "</b><span class='muted grow'>page " + escape(doc.dataset.page) + ", paragraph " + escape(doc.dataset.para) +
+        (doc.dataset.ocr ? "; read by OCR, so check the page" : "") + "</span>" +
+        "<a class='btn small' href='" + escape(doc.getAttribute("href")) + "'>Open</a>" +
+        "<button type='button' class='small ghost chat-preview-close'>Close</button></div>";
+      card.appendChild(box);
+      box.querySelector(".chat-preview-close").addEventListener("click", function () { box.remove(); });
+      if (options.onPreview) { options.onPreview(); }
+      box.scrollIntoView({ block: "nearest" });
+    }
 
     function showPreview(play) {
       var card = play.closest(".card, .turn, .answer") || play.parentNode;

@@ -12,7 +12,7 @@
       <span class="crumb muted small"><a href="{% url 'case' case.pk %}">{{ case.name }}</a> &rsaquo; <a href="{{ home_url }}">{{ home_name }}</a></span>
       <h1>Add the report</h1>
       <p class="lead">
-        The police report for this {{ home_kind }}, <b>{{ home_name }}</b>, as a PDF. It is read page by page and kept with the case, beside the cameras.
+        {% if home_name %}The police report for {{ home_kind }}, <b>{{ home_name }}</b>, as a PDF.{% else %}The police report for an incident or a camera of this case, as a PDF.{% endif %} It is read page by page and kept with the case, beside the cameras.
       </p>
     </header>
 
@@ -20,9 +20,9 @@
       <h2 class="small" style="margin: 0 0 6px">What fits</h2>
       <ul class="plain document-rules">
         <li><b>PDFs only.</b> A Word file is saved as a PDF first.</li>
-        <li><b>The report for this {{ home_kind }}, nothing else.</b> A document is read beside the cameras, so a document about something else only slows the reading and clouds the answers.</li>
+        <li><b>The report for {% if home_kind %}{{ home_kind }}{% else %}the incident or the camera it is about{% endif %}, nothing else.</b> A document is read beside the cameras, so a document about something else only slows the reading and clouds the answers.</li>
         <li><b>Up to {{ most_pages }} pages.</b> A larger file is refused; cut a production down to the report that matters.</li>
-        <li><b>{{ per_home }} documents per {{ home_kind }}</b>{% if here %}; this one has {{ here }}{% endif %}.</li>
+        <li><b>{{ per_home }} documents per incident or recording</b>{% if here %}; {{ home_kind }} has {{ here }}{% endif %}.</li>
         {% if ocr %}<li><b>A scan is read by OCR</b>, and its words may carry mistakes; the page itself is always shown beside them.</li>{% elif ocr_missing %}<li><b>A scan is kept and shown</b>, but its words are not read: the OCR engine is not in this build.</li>{% else %}<li><b>A scan is kept and shown</b>, but its words are not read: OCR is off.</li>{% endif %}
         <li><b>Nothing leaves the building.</b> The document is read by the office's own engine and kept with the case.</li>
       </ul>
@@ -32,7 +32,25 @@
 
     <form method="post" enctype="multipart/form-data" class="card" id="document-form">
       {% csrf_token %}
-      <input type="hidden" name="{{ home_kind }}" value="{{ home_id }}">
+      {% comment %}What the report is about (part 2): given by the Details tab it came from, or picked here; an incident, a recording, or both.{% endcomment %}
+      <div class="field" id="document-home">
+        <span>What is it the report for?</span>
+        <div class="row" style="gap: 12px; flex-wrap: wrap">
+          <label class="row small" style="gap: 6px">Incident
+            <select name="incident" id="pick-incident">
+              <option value="">none</option>
+              {% for home in homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}"{% if home.id == picked_incident %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}
+            </select>
+          </label>
+          <label class="row small" style="gap: 6px">Camera
+            <select name="recording" id="pick-recording">
+              <option value="">none</option>
+              {% for home in homes %}{% if home.kind == "recording" %}<option value="{{ home.id }}"{% if home.id == picked_recording %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}
+            </select>
+          </label>
+        </div>
+        <p class="muted small" style="margin: 4px 0 0">One at least; both when the report is about the incident and one of its cameras in particular.</p>
+      </div>
       <label class="field">
         <span>The PDF</span>
         <input type="file" name="file" accept="application/pdf,.pdf" required>

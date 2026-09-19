@@ -30,7 +30,8 @@ def test_the_stage_wraps_the_picture_the_transport_and_the_line_being_spoken():
     assert page.index('id="caption"') < page.index('class="tabbar"')
     tabs = re.findall(r'class="tab(?: on)?" data-panel="([a-z]+)"', page)
     # The Gideon tab went with Phase 8 chapter 1; the floating panel holds the chat.
-    assert tabs == ["transcript", "clips", "summary", "details"]
+    # Report (Phase 8 chapter 4) sits after Clips, only while a document is linked.
+    assert tabs == ["transcript", "clips", "report", "summary", "details"]
     assert 'class="tab on" data-panel="transcript"' in page
     assert (
         page.index('class="tabbar"')

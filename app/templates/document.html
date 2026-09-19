@@ -16,8 +16,13 @@
        data-picture="{% url 'document-picture' case.pk document.pk 0 %}">
     <header class="welcome row" style="align-items: flex-start; gap: 12px">
       <div class="grow">
-        <span class="crumb muted small"><a href="{% url 'case' case.pk %}?tab=documents">{{ case.name }}</a> &rsaquo; Documents</span>
-        <h1 style="margin: 0">{{ document.title }}</h1>
+        {% comment %}The ways back (part 2): the case's Documents tab, and the incident or recording it is the report for.{% endcomment %}
+        <div class="row small" style="gap: 10px; align-items: center; flex-wrap: wrap">
+          <a class="back" href="{% url 'case' case.pk %}?tab=documents" title="Back to the case's Documents tab">&lsaquo; {{ case.name }}</a>
+          {% if back_incident %}<a class="btn small ghost" href="{{ back_incident.url }}">{% icon "camera" %} Back to the incident</a>{% endif %}
+          {% if back_recording %}<a class="btn small ghost" href="{% url 'viewer' back_recording.pk %}?panel=details">{% icon "play" %} Back to the recording</a>{% endif %}
+        </div>
+        <h1 style="margin: 4px 0 0">{{ document.title }}</h1>
         <p class="muted small" style="margin: 4px 0 0">
           {{ document.pages_line }}{% if document.home_name %} &middot; the report for <a href="{{ document.home_url }}">{{ document.home_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}
         </p>

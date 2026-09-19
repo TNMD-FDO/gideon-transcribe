@@ -178,6 +178,7 @@
     drawMemo();
     drawCameras();
     drawDetails();
+    showReportTab();
     if (soundCamera && !cameraById(soundCamera)) { soundCamera = null; soundPinned = false; }
     if (!soundCamera && wallCameras().length) { soundCamera = (layout === "focus" && focusCamera) ? focusCamera : wallCameras()[0].id; }
     drawSoundChoice();
@@ -1690,13 +1691,37 @@
     box.innerHTML = html;
   }
 
+  // The Report tab (Phase 8 chapter 4, part 2): shown while a document is
+  // linked, drawn from the documents' state by the shared panel script.
+  function drawReport() {
+    var box = document.getElementById("panel-report");
+    var I = S.incident;
+    if (!box || !I) { return; }
+    var listed = (I.documents || []).map(function (one) {
+      return { id: one.id, title: one.title, state: "/case/" + I.case_id + "/document/" + one.id + "/state" };
+    });
+    var wanted = JSON.stringify(listed);
+    if (box.dataset.documents !== wanted) { box.dataset.documents = wanted; box.dataset.drawn = ""; }
+    if (window.REPORT_PANEL) { window.REPORT_PANEL.draw(box); }
+  }
+  function showReportTab() {
+    var tab = document.getElementById("tab-report");
+    var count = document.getElementById("report-count");
+    var I = S.incident;
+    if (!tab || !I) { return; }
+    var n = (I.documents || []).length;
+    tab.hidden = !(I.documents_on && n);
+    if (count) { count.textContent = n; }
+  }
+
   // Tabs ------------------------------------------------------------------------------------
 
   var twoPanels = false;
   function showTab(name) {
     if (layerStack.length) { closeLayers(); }
     Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) { tab.classList.toggle("on", tab.dataset.panel === name); });
-    ["chronology", "memo", "cameras", "details"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
+    ["chronology", "memo", "cameras", "report", "details"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
+    if (name === "report") { drawReport(); }
     if (name === "chronology") { currentEventId = null; markCurrentEvent(now()); }
   }
   Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) {

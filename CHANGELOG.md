@@ -21,6 +21,49 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.72.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0055, one column on documents)
+```
+
+Phase 8 chapter 4, part 2 of 3: the Report tab and Gideon's citations, with
+three cleanups from the first day's use of part 1. Part 3, the comparison,
+follows.
+
+- **Gideon reads the report.** The incident's Gideon reads the report linked
+  to the incident after the chronology; the recording page's Gideon reads
+  the report linked to that recording after the transcript; the case page's
+  Gideon reads every report in the case. Each is given as numbered
+  paragraphs, and an answer cites "[Report, page 4, paragraph 2]". Press the
+  citation and the paragraph shows under the answer with the one before and
+  after in the muted colour, the document's title and page, and **Open**,
+  which goes to the page with the paragraph lit. A citation that names no
+  real paragraph stays plain text. The rules say the report is the officer's
+  account and the cameras are the record, to say which says what, and to
+  cite both where they differ.
+- **The reading ceiling.** A new setting on the Documents page (400
+  paragraphs). Under it the linked reports are read whole with every
+  question; past it, only the paragraphs whose words match the question are
+  read, and the answer ends "(Read 40 of 310 paragraphs of the report, those
+  matching the question.)". Nothing is silent.
+- **The Report tab**, on the incident page's work panel and the recording
+  page's work area, only while a report is linked there: the document's
+  pages at the panel's width with the words under each, a paragraph lit from
+  either side, Open and Download.
+- **Adding from the Documents tab.** Add the report is on the tab as well as
+  on the two Details tabs; the page asks what the report is for, an incident,
+  a camera, or both, and arrives with the choice made when it came from a
+  Details tab. A report is never loose.
+- **Re-link is a row**, two plain choices and a button on the document's
+  row, instead of a menu that a scrolling table clipped.
+- **Ways back** from the document page: the case's name at the top left,
+  and Back to the incident or Back to the recording beside it.
+- **Read again.** A document read before the paragraph rule was tightened
+  (a bullet's second line is no longer split off) is read again by itself
+  within a minute of the upgrade; nothing to do.
+
 ## v1.71.0, 2026-09-19
 
 ```

@@ -266,13 +266,15 @@ def test_what_does_not_fit_is_refused_with_the_reason(person, a_case, client):
     assert add_report(client, a_case, recording=recording).status_code == 302
     page = add_report(client, a_case, recording=recording).content.decode()
     assert "already has 1 documents" in page and Document.objects.count() == 1
-    # Never loose, and never to another case's recording.
-    told = client.post(f"/case/{a_case.pk}/documents/add", {"title": "x"})
-    assert told.status_code == 302 and told.url.endswith("?tab=documents")
+    # Never loose, and never to another case's recording: the page says why.
+    page = client.post(
+        f"/case/{a_case.pk}/documents/add", {"title": "x"}
+    ).content.decode()
+    assert "Say which incident or recording" in page
     fields = {"recording": str(elsewhere.pk), "file": io.BytesIO(make_pdf(REPORT))}
     fields["file"].name = "r.pdf"
-    told = client.post(f"/case/{a_case.pk}/documents/add", fields)
-    assert told.status_code == 302 and Document.objects.count() == 1
+    page = client.post(f"/case/{a_case.pk}/documents/add", fields).content.decode()
+    assert "Say which incident or recording" in page and Document.objects.count() == 1
     # Off: the tab, the link and the page are gone; the document stays.
     settings_store.set_to("documents", False)
     page = client.get(f"/case/{a_case.pk}").content.decode()

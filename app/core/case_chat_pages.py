@@ -63,6 +63,10 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
     """One turn as the tab draws it, its Citations resolved to links or not."""
     cited = {}
     for text, where in (turn.citations or {}).items():
+        if where.get("kind") == "document":
+            # A report's paragraph (Phase 8 chapter 4): kept resolved.
+            cited[text] = where
+            continue
         recording = still_here.get(where["recording"])
         if recording is None:
             cited[text] = {"removed": True}

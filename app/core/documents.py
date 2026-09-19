@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import shutil
 import statistics
 import uuid
@@ -24,7 +25,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from core import audit, settings_store
+from core import audit, incidents, settings_store
 
 log = logging.getLogger("transcribe.documents")
 
@@ -42,6 +43,9 @@ POOR_CONFIDENCE = 55.0
 # The page picture's resolution, at reading size.
 PICTURE_DPI = 110
 OCR_DPI = 220
+# Bumped when the splitter's rules change; every document read with an
+# older version is read again by the minute task after the upgrade.
+READ_VERSION = 2
 
 
 class Document(models.Model):
@@ -82,6 +86,8 @@ class Document(models.Model):
     )
     created = models.DateTimeField(default=timezone.now)
     read_at = models.DateTimeField(null=True, blank=True)
+    # Which reading split it (READ_VERSION); an older one is read again.
+    read_version = models.IntegerField(default=0)
 
     class Meta:
         ordering = ["-created"]
@@ -104,11 +110,12 @@ class Document(models.Model):
         return reverse("document", args=[self.case_id, self.pk])
 
     def home_name(self) -> str:
+        names = []
         if self.incident_id:
-            return self.incident.name
+            names.append(self.incident.name)
         if self.recording_id:
-            return self.recording.title
-        return ""
+            names.append(self.recording.title)
+        return " and ".join(names)
 
     def home_url(self) -> str:
         if self.incident_id:
@@ -118,11 +125,12 @@ class Document(models.Model):
         return ""
 
     def home_kind(self) -> str:
-        return (
-            "incident"
-            if self.incident_id
-            else ("recording" if self.recording_id else "")
-        )
+        kinds = []
+        if self.incident_id:
+            kinds.append("incident")
+        if self.recording_id:
+            kinds.append("recording")
+        return " and ".join(kinds)
 
     def pages_line(self) -> str:
         """ "42 pages, read by OCR, 3 poorly read" as the tab says it."""
@@ -192,17 +200,31 @@ class Refused(Exception):
     """Why a file was not added, in words for the page."""
 
 
-def home_of(case, *, incident=None, recording=None):
-    """The incident or recording a document is added to, checked to be the case's."""
+def home_of(case, *, incident=None, recording=None) -> dict:
+    """What a document is the report about: an incident, a recording, or
+    both, each checked to be the case's; never neither."""
+    home = {}
     if incident is not None and incident.case_id == case.pk:
-        return {"incident": incident}
+        home["incident"] = incident
     if recording is not None and recording.case_id == case.pk:
-        return {"recording": recording}
-    raise Refused("A document is added to an incident or a recording of the case.")
+        home["recording"] = recording
+    if not home:
+        raise Refused("Say which incident or recording the report is about.")
+    return home
 
 
 def count_at(home: dict) -> int:
-    return Document.objects.filter(**{k: v for k, v in home.items()}).count()
+    """The most documents any one of the homes already has."""
+    return max(
+        (Document.objects.filter(**{kind: one}).count() for kind, one in home.items()),
+        default=0,
+    )
+
+
+def home_words(home: dict) -> str:
+    return " and ".join(
+        f"this {kind}" if kind == "incident" else "this recording" for kind in home
+    )
 
 
 def page_count(data: bytes) -> int:
@@ -223,8 +245,8 @@ def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request
         raise Refused("Only a PDF can be added; save the file as a PDF first.")
     if count_at(home) >= per_home():
         raise Refused(
-            f"This {'incident' if 'incident' in home else 'recording'} already has "
-            f"{per_home()} documents, the most the Admin allows."
+            f"{home_words(home).capitalize()} already has {per_home()} documents, "
+            "the most the Admin allows."
         )
     try:
         pages = page_count(data)
@@ -247,7 +269,8 @@ def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request
         size_bytes=len(data),
         pages=pages,
         added_by=by,
-        **home,
+        incident=home.get("incident"),
+        recording=home.get("recording"),
     )
     document.folder.mkdir(parents=True, exist_ok=True)
     document.original_path.write_bytes(data)
@@ -445,9 +468,35 @@ def _read(document: Document) -> None:
     document.state = READY
     document.error = ""
     document.read_at = timezone.now()
+    document.read_version = READ_VERSION
     document.save(
-        update_fields=["pages", "ocr_pages", "poor_pages", "state", "error", "read_at"]
+        update_fields=[
+            "pages",
+            "ocr_pages",
+            "poor_pages",
+            "state",
+            "error",
+            "read_at",
+            "read_version",
+        ]
     )
+
+
+def read_again_the_old() -> int:
+    """The minute task's step: a document read by an older splitter is put
+    back in the line, marked reading so it is queued once."""
+    from core import tasks
+
+    old = list(
+        Document.objects.filter(state=READY, read_version__lt=READ_VERSION).values_list(
+            "pk", flat=True
+        )
+    )
+    if old:
+        Document.objects.filter(pk__in=old).update(state=READING)
+        for pk in old:
+            tasks.read_document.defer(document_id=str(pk))
+    return len(old)
 
 
 # The case's documents -----------------------------------------------------------------
@@ -485,10 +534,15 @@ def as_json(document: Document) -> dict:
 
 
 def relink(document: Document, home: dict, *, by, request=None) -> None:
-    if count_at(home) >= per_home():
+    others = {
+        kind: one
+        for kind, one in home.items()
+        if one.pk
+        != (document.incident_id if kind == "incident" else document.recording_id)
+    }
+    if others and count_at(others) >= per_home():
         raise Refused(
-            f"That {'incident' if 'incident' in home else 'recording'} already has "
-            f"{per_home()} documents."
+            f"{home_words(others).capitalize()} already has {per_home()} documents."
         )
     document.incident = home.get("incident")
     document.recording = home.get("recording")
@@ -538,6 +592,202 @@ def add_url(case, *, incident=None, recording=None) -> str:
     if recording is not None:
         return f"{base}?recording={recording.pk}"
     return base
+
+
+def homes_of(case) -> list[dict]:
+    """The case's incidents and recordings, for the pickers."""
+    homes = []
+    if incidents.on():
+        for incident in case.incidents.order_by("created"):
+            homes.append(
+                {"kind": "incident", "id": str(incident.pk), "name": incident.name}
+            )
+    for recording in case.recordings.order_by("created"):
+        homes.append(
+            {"kind": "recording", "id": str(recording.pk), "name": recording.title}
+        )
+    return homes
+
+
+# The Report tab (part 2) --------------------------------------------------------------
+
+
+def state_json(document: Document) -> dict:
+    """The document as the Report tab draws it: every page's picture and words."""
+    return {
+        **as_json(document),
+        "home": document.home_name(),
+        "download": reverse("document-download", args=[document.case_id, document.pk]),
+        "pages_rows": [
+            {
+                "number": row.number,
+                "picture": reverse(
+                    "document-picture", args=[document.case_id, document.pk, row.number]
+                ),
+                "width": row.width,
+                "height": row.height,
+                "ocr": row.ocr,
+                "poor": row.poor,
+                "paragraphs": row.paragraphs,
+            }
+            for row in document.page_rows.order_by("number")
+        ],
+    }
+
+
+# Told to Gideon (part 2) -------------------------------------------------------------
+
+RULE = (
+    "A report is the officer's account and the cameras are the record: say "
+    "which says what, and where they differ say so plainly and cite both. A "
+    "description of the picture stays a description. Cite a report as "
+    "[<its name>, page N, paragraph M], copied from the line it appears on. "
+    "Never state a legal conclusion."
+)
+CITED = re.compile(r"\[([^\]\n]{1,120}?), page (\d+), paragraph (\d+)\]")
+
+
+def reading_most() -> int:
+    return int(settings_store.get("documents_reading_most"))
+
+
+def short_names(documents: list[Document]) -> dict[str, Document]:
+    """One name per document for its citations: "Report" alone, else the
+    titles, made unique."""
+    ready = [one for one in documents if one.state == READY]
+    if len(ready) == 1:
+        return {"Report": ready[0]}
+    named: dict[str, Document] = {}
+    for one in ready:
+        name = " ".join(one.title.split()).replace("[", "(").replace("]", ")")[:80]
+        base, n = name, 2
+        while name in named:
+            name = f"{base} ({n})"
+            n += 1
+        named[name] = one
+    return named
+
+
+def _paragraph_rows(named: dict[str, Document]) -> list[dict]:
+    rows = []
+    for name, document in named.items():
+        for page in document.page_rows.order_by("number"):
+            for one in page.paragraphs:
+                rows.append(
+                    {
+                        "name": name,
+                        "document": document,
+                        "page": page.number,
+                        "n": one["n"],
+                        "text": one["text"],
+                        "ocr": page.ocr,
+                    }
+                )
+    return rows
+
+
+def _matching(rows: list[dict], question: str, most: int) -> list[dict]:
+    """The paragraphs whose words match the question, the fullest matches
+    first, then in document order."""
+    # The question's words of three letters or more, punctuation dropped.
+    words = sorted(
+        {w for w in re.findall(r"[a-z0-9']+", question.lower()) if len(w) >= 3}
+    )
+    if not words:
+        return rows[:most]
+    scored = []
+    for index, row in enumerate(rows):
+        low = row["text"].lower()
+        score = sum(1 for w in words if w in low)
+        if score:
+            scored.append((-score, index, row))
+    scored.sort()
+    kept = sorted(index for _, index, _ in scored[:most])
+    return [rows[i] for i in kept]
+
+
+def reading_block(
+    documents: list[Document], question: str, *, heading: str
+) -> tuple[str, str, dict[str, Document]]:
+    """The documents as the assistant reads them: whole when they fit the
+    reading ceiling, else the paragraphs matching the question, with the
+    line that says so. Returns (text, note, names)."""
+    named = short_names(documents)
+    if not named:
+        return "", "", {}
+    rows = _paragraph_rows(named)
+    most = reading_most()
+    note = ""
+    if len(rows) > most:
+        total = len(rows)
+        rows = _matching(rows, question, most)
+        note = (
+            f"Read {len(rows)} of {total} paragraphs of the "
+            f"{'report' if len(named) == 1 else 'reports'}, those matching the "
+            "question."
+        )
+    lines = [heading]
+    for name, document in named.items():
+        lines.append(
+            f"{name}: {document.title}, {document.pages} pages"
+            + (", read by OCR" if document.ocr_pages else "")
+            + "."
+        )
+        for row in rows:
+            if row["document"].pk != document.pk:
+                continue
+            lines.append(
+                f"[{name}, page {row['page']}, paragraph {row['n']}] {row['text']}"
+            )
+    return "\n".join(lines), note, named
+
+
+def citation_json(document: Document, page: int, para: int) -> dict | None:
+    """A citation as the chat draws it: the paragraph with its neighbours,
+    the page, and where it opens. None when the paragraph does not exist."""
+    row = document.page_rows.filter(number=page).first()
+    if row is None:
+        return None
+    texts = {one["n"]: one["text"] for one in row.paragraphs}
+    if para not in texts:
+        return None
+    return {
+        "kind": "document",
+        "document": str(document.pk),
+        "title": document.title,
+        "page": page,
+        "para": para,
+        "href": f"{document.url()}?page={page}&para={para}",
+        "text": texts[para],
+        "before": texts.get(para - 1, ""),
+        "after": texts.get(para + 1, ""),
+        "ocr": row.ocr,
+    }
+
+
+def citations_in(text: str, named: dict[str, Document]) -> dict:
+    """The [name, page N, paragraph M] references that name a real
+    paragraph of a document that was read; the rest stay plain text."""
+    found: dict = {}
+    for match in CITED.finditer(text or ""):
+        name, page, para = (
+            match.group(1).strip(),
+            int(match.group(2)),
+            int(match.group(3)),
+        )
+        document = named.get(name)
+        if document is None and len(named) == 1:
+            document = next(iter(named.values()))
+        if document is None:
+            continue
+        cited = citation_json(document, page, para)
+        if cited is not None:
+            found[match.group(0)] = cited
+    return found
+
+
+def with_note(answer: str, note: str) -> str:
+    return answer + (f"\n\n({note})" if note else "")
 
 
 # Search -------------------------------------------------------------------------------

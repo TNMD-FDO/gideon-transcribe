@@ -1529,6 +1529,7 @@
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
+    if (which === "report" && window.REPORT_PANEL) { window.REPORT_PANEL.draw(document.getElementById("report-panel")); }
     if (openWindowButton) { openWindowButton.hidden = which === "transcript"; }
     // `keep` is for restoring what was already chosen, which is not itself a
     // choice and must not overwrite one.

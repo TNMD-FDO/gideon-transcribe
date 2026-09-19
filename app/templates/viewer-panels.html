@@ -164,6 +164,10 @@
           </div>
         </div>
 
+        {% if documents %}
+          {% comment %}The Report tab (Phase 8 chapter 4, part 2): the linked documents, drawn by report-panel.js from their state.{% endcomment %}
+          <div class="panel read" data-panel="report" hidden id="report-panel" data-documents='[{% for one in documents %}{"id": "{{ one.pk }}", "title": "{{ one.title|escapejs }}", "state": "{% url 'document-state' one.case_id one.pk %}"}{% if not forloop.last %},{% endif %}{% endfor %}]'></div>
+        {% endif %}
         <div class="panel" data-panel="details" hidden>
           <h2>Where the files live</h2>
           <p class="muted small">

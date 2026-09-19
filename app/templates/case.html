@@ -142,10 +142,13 @@
             who added it; Open, Re-link and Remove. Nothing is added here: a
             document is added from the incident or the recording it is about.
           {% endcomment %}
-          <p class="lead" style="margin: 14px 0 8px">
-            {% if documents %}{{ documents|length }} document{{ documents|length|pluralize }} in this case, each the report for an incident or a camera.{% else %}None yet.{% endif %}
-            A report is added from the incident's or the recording's <b>Details</b> tab (<b>Add the report</b>), so it is read beside the cameras it is about.
-          </p>
+          <div class="row" style="align-items: center; margin: 14px 0 8px; gap: 8px">
+            <p class="lead grow" style="margin: 0">
+              {% if documents %}{{ documents|length }} document{{ documents|length|pluralize }} in this case, each the report for an incident or a camera.{% else %}None yet.{% endif %}
+              A report is added here or from the incident's or the recording's <b>Details</b> tab, and is read beside the cameras it is about.
+            </p>
+            <a class="btn small primary" id="add-document" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
+          </div>
           {% if documents %}
             <div class="card" style="overflow-x: auto">
               <table class="tbl" id="documents">
@@ -159,15 +162,13 @@
                       <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
                       <td class="nowrap">
                         <a class="btn small" href="{{ one.url }}">Open</a>
-                        <details class="menu" style="display: inline-block">
-                          <summary class="btn small">Re-link</summary>
-                          <ul>
-                            {% for home in document_homes %}
-                              <li><form method="post" action="{% url 'document-act' case.pk one.pk %}">{% csrf_token %}<input type="hidden" name="action" value="relink"><input type="hidden" name="{{ home.kind }}" value="{{ home.id }}"><button type="submit">{{ home.name }} <span class="muted small">({{ home.kind }})</span></button></form></li>
-                            {% endfor %}
-                          </ul>
-                        </details>
                         <form method="post" action="{% url 'document-act' case.pk one.pk %}" style="display: inline" data-confirm="Remove {{ one.title }} and its pages from the case?" data-confirm-title="Remove this document?" data-confirm-ok="Remove">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="btn small danger">Remove</button></form>
+                        {% comment %}Re-link (part 2): a plain choice on the row, no pop-up.{% endcomment %}
+                        <form method="post" action="{% url 'document-act' case.pk one.pk %}" class="row relink" style="gap: 4px; margin-top: 6px; flex-wrap: wrap">{% csrf_token %}<input type="hidden" name="action" value="relink">
+                          <select name="incident" class="small" aria-label="The incident this is the report for"><option value="">no incident</option>{% for home in document_homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}"{% if one.incident_id|stringformat:"s" == home.id %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}</select>
+                          <select name="recording" class="small" aria-label="The camera this is the report for"><option value="">no camera</option>{% for home in document_homes %}{% if home.kind == "recording" %}<option value="{{ home.id }}"{% if one.recording_id|stringformat:"s" == home.id %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}</select>
+                          <button type="submit" class="btn small">Re-link</button>
+                        </form>
                       </td>
                     </tr>
                   {% endfor %}

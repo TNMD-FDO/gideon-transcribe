@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import models
 from django.utils import timezone
 
-from core import audit, engine, notes, prompts, settings_store
+from core import audit, documents, engine, notes, prompts, settings_store
 from core.assistant import (
     DONE,
     FAILED,
@@ -445,7 +445,8 @@ def answer_case_turn(turn_id) -> None:
             ground.text,
             template.text,
             prompts.with_camera_rules(prompts.CASE_CHAT_FORMAT, any(digests.values()))
-            + ("\n\n" + notes.RULE if notes.any_on(read) else ""),
+            + ("\n\n" + notes.RULE if notes.any_on(read) else "")
+            + ("\n\n" + documents.RULE if documents.of_case(case) else ""),
         )
         people = people_line(case)
         # The Incidents' placements (Phase 6 chapter 3): each synced camera's
@@ -500,9 +501,20 @@ def answer_case_turn(turn_id) -> None:
         turn.parts = len(groups) if len(groups) > 1 else 0
         turn.save(update_fields=["skipped", "readings", "parts"])
 
+        # The reports in the case (Phase 8 chapter 4, part 2), read with every
+        # part, whole under the ceiling and by matching paragraphs past it.
+        papers, papers_note, named = documents.reading_block(
+            documents.of_case(case), turn.question, heading="The reports in this case:"
+        )
+
         def ask_reading(group: list[int], answer_cap: int) -> str:
             user = "\n\n".join(
-                [people, *(by_number[number] for number in group), turn.question]
+                [
+                    people,
+                    *(by_number[number] for number in group),
+                    *([papers] if papers else []),
+                    turn.question,
+                ]
             )
             answer = one_call(_messages(system, user, history), answer_cap)
             calls["readings"] += 1
@@ -546,7 +558,11 @@ def answer_case_turn(turn_id) -> None:
         )
         turn.answer = f"{opening}\n\n{text}".strip() if opening else text
         # The combined answer's Citations are checked again before display.
-        turn.citations = citations(turn.answer, starts_by_number)
+        turn.answer = documents.with_note(turn.answer, papers_note)
+        turn.citations = {
+            **citations(turn.answer, starts_by_number),
+            **documents.citations_in(turn.answer, named),
+        }
         turn.model = calls["model"]
         turn.state = DONE
         turn.reason_class = ""

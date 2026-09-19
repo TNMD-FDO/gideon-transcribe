@@ -1850,6 +1850,16 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .doc-para.lit { outline: 2px solid var(--accent); outline-offset: 1px; }
 .doc-para.hit { background: color-mix(in srgb, var(--warn) 18%, transparent); }
 .doc-n { display: inline-block; min-width: 1.6em; }
+/* The Report tab and the document citations (Phase 8 chapter 4, part 2). */
+.report-doc { margin: 0 0 18px; }
+.report-sheet { position: relative; margin: 8px 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.report-sheet img { display: block; width: 100%; height: auto; }
+.report-sheet figcaption { position: absolute; left: 8px; bottom: 6px; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
+.report-words { padding: 6px 2px 0; }
+.cite.doc { display: inline-flex; align-items: center; gap: 4px; }
+.chat-preview-doc { padding: 10px 12px; }
+.chat-preview-doc .doc-cited { margin: 0 0 6px; padding: 6px 8px; border-left: 3px solid var(--accent); }
+.relink select { max-width: 14rem; }
 @media (max-width: 900px) { .doc-body { grid-template-columns: 1fr; } .doc-words { position: static; max-height: none; } }
 .ui-dialog-title { font-size: var(--t-heading); margin: 0 0 8px; }
 .ui-dialog-body { color: var(--muted); margin: 0 0 16px; }

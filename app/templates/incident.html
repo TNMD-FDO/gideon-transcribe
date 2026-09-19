@@ -90,6 +90,7 @@
         <button type="button" class="tab" data-panel="chronology">{% icon "text" %} Chronology</button>
         {% if state.memo.on %}<button type="button" class="tab" data-panel="memo">{% icon "summary" %} Memo</button>{% endif %}
         <button type="button" class="tab" data-panel="cameras">{% icon "camera" %} Cameras</button>
+        <button type="button" class="tab" data-panel="report" id="tab-report" hidden>{% icon "document" %} Report <span class="count" id="report-count"></span></button>
         <button type="button" class="tab" data-panel="details">{% icon "info" %} Details</button>
         {% if state.memo.on %}<button type="button" class="tiny ghost" id="two-panels" hidden title="The Memo beside the Chronology, on a very wide window">Two panels</button>{% endif %}
         {% comment %}Find (Phase 7 chapter 3): a hit is a moment; pressing it takes every camera there.{% endcomment %}
@@ -169,6 +170,7 @@
         <div class="panel" id="panel-chronology" hidden></div>
         {% if state.memo.on %}<div class="panel" id="panel-memo" hidden></div>{% endif %}
         <div class="panel" id="panel-cameras" hidden></div>
+        <div class="panel" id="panel-report" hidden></div>
         <div class="panel" id="panel-details" hidden></div>
       </div>
     </div>
@@ -228,6 +230,7 @@
     };
   </script>
   {{ event_words|json_script:"event-words" }}
+  <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'incident.js' %}"></script>
   <script src="{% static 'chat-ui.js' %}"></script>
   <script src="{% static 'gideon.js' %}"></script>
