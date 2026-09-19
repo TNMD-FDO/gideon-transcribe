@@ -122,11 +122,12 @@ def test_the_name_is_a_setting_shown_on_the_pages(person, a_case, incident, clie
     assert settings_store.chat_name() == "Gideon"
     signed_in(client, person)
     page = client.get(f"/case/{a_case.pk}").content.decode()
-    assert ">Gideon</a>" in page and "Ask Gideon" in page
+    assert "Ask Gideon" in page and ">Gideon</a>" not in page
     assert 'data-kind="case"' in page and 'id="gideon-open"' in page
     first = a_case.recordings.get(title="first")
     page = client.get(f"/recording/{first.pk}").content.decode()
-    assert 'data-panel="chat">Gideon<' in page and 'data-kind="recording"' in page
+    # The Gideon tab went with Phase 8 chapter 1; the panel is Gideon's place.
+    assert 'data-panel="chat">' not in page and 'data-kind="recording"' in page
     page = client.get(f"/case/{a_case.pk}/incident/{incident.pk}").content.decode()
     assert 'data-kind="incident"' in page and "Ask Gideon" in page
     # The engine is off in tests, so the button is greyed with the reason.
@@ -135,10 +136,10 @@ def test_the_name_is_a_setting_shown_on_the_pages(person, a_case, incident, clie
     settings_store.set_to("chat_name", "  ")
     assert settings_store.chat_name() == "Chat"
     page = client.get(f"/case/{a_case.pk}").content.decode()
-    assert ">Chat</a>" in page and "Ask Chat" in page
+    assert "Ask Chat" in page
     settings_store.set_to("chat_name", "Second Chair")
     page = client.get(f"/case/{a_case.pk}").content.decode()
-    assert ">Second Chair</a>" in page
+    assert "Ask Second Chair" in page
     # The word in the setting's own row stays Chat.
     definition = settings_store.definition("chat_name")
     assert definition.page == "appearance" and definition.needs == "chat_available"

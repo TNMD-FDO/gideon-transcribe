@@ -88,8 +88,32 @@ def start(request: HttpRequest) -> HttpResponse:
             "greeting": greeting(),
             "can_record": dictation.on(),
             "service_is_up": whisperx.is_alive(),
+            # The Cases tile's counts (Phase 8 chapter 1).
+            "cases_line": _cases_line(request.user),
         },
     )
+
+
+def _cases_line(user) -> str:
+    """One of "12 cases, 2 shared with you", "3 cases shared with you", "None yet"."""
+    from core import cases
+
+    if not settings_store.get("folder_management"):
+        return ""
+    reachable = cases.cases_for(user)
+    own = reachable.filter(owner=user).count()
+    shared = reachable.exclude(owner=user).count()
+
+    def count(n: int) -> str:
+        return f"{n} case{'' if n == 1 else 's'}"
+
+    if own and shared:
+        return f"{count(own)}, {shared} shared with you"
+    if own:
+        return count(own)
+    if shared:
+        return f"{count(shared)} shared with you"
+    return "None yet"
 
 
 def _with_their_state(recordings):

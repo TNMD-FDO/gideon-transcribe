@@ -21,6 +21,55 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.68.0, 2026-09-19
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 8 chapter 1: the pages laid out. From the maintainer's list of
+2026-09-19 and the picks made from the mock-ups the same day.
+
+- **The incident page's work panel is tabs and layers.** The tabs
+  (Chronology, Memo, Cameras, Details) are what is always there; a job in
+  hand (Proposed events, Sync, an event, a clip, Find) opens as a layer
+  over the tab, with the same head on every one: Back with the tab's
+  name, the layer's name, its main button. Back or Escape returns exactly
+  to the tab, its scroll and the row you had marked; a clip opened from
+  an event goes back to the event first. The wall and the strip never
+  move: the sheets that opened above the wall are gone.
+- **The Chronology tab holds the events, with air.** One line for what
+  happened, one muted line under it for the source, the cameras, the
+  note, the why and the clip mark; Edit, a note, Clip this event and
+  Remove behind the row's menu. Propose events is a button with the
+  count waiting; About is one line.
+- **Proposed events** is a layer: Propose again, the Look for box, the
+  state line, Accept and Dismiss on each row, Accept all in the head.
+  **Find's hits** are a layer that names what each hit is and marks the
+  words.
+- **Gideon is one panel, the same on the three pages that have it.** It
+  floats over the page's right edge, 420 pixels, the page unchanged
+  beneath it; the Ask button reads Close while it is open; an arrow in
+  its head opens it in a window of its own that follows the page. The
+  Gideon tabs on the case page and the recording page are gone; the
+  panel holds the same conversations.
+- **The tabs everywhere are a bar of sections**, an icon and a count
+  each, the open one drawn as a card joined to its content: the case
+  page, the recording page's work area and the incident page's panel.
+- **The recording page** shows the case's recordings and Download all
+  transcripts in a card under the video, eight at a time with "and N
+  more"; the column below the transcript that held the same list, and
+  its hide button, are gone.
+- **The Start page's tile** reads Cases, with the counts under it.
+- **Widths.** The incident page's wall shows 3 cameras across from 1900
+  pixels, 4 from 2560 and 6 from 3840 in the Side by side layout; the
+  work panel grows to 760 from 2560; from 3840 a Two panels button puts
+  the Memo beside the Chronology; the case page's About pane widens from
+  2560. Nothing is remembered per screen. The three-column case and
+  recording pages the chapter names for 2560 and above are not in this
+  release; see the chapter's notes.
+
 ## v1.67.0, 2026-09-19
 
 ```

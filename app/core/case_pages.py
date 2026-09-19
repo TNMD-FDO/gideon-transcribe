@@ -231,11 +231,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     from core import case_chat, incidents
 
     chat_here = case_chat.available()
-    tabs = (
-        ("search", "clips", "speakers")
-        + (("chat",) if chat_here else ())
-        + (("incidents",) if incidents.on() else ())
-    )
+    # The Gideon tab went with Phase 8 chapter 1: the panel is Gideon's place.
+    tabs = ("search", "clips", "speakers") + (("incidents",) if incidents.on() else ())
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
     if asked and not request.GET.get("tab"):

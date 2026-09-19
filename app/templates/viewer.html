@@ -68,7 +68,7 @@
                title="Every camera of {{ all_cameras.name }} at this moment">{% icon "camera" %} All cameras</a>
           {% endif %}
           {% if in_case %}
-            <button type="button" class="tiny" id="show-case"
+            <button type="button" class="tiny" id="show-case" hidden
                     title="Show or hide the rest of the case">{% icon "menu" %} Case</button>
           {% endif %}
           {% if clips_available and media_url %}
@@ -182,6 +182,50 @@
         <b id="now-who" class="who"></b>
         <span id="now-text" class="grow"></span>
       </div>
+      {% comment %}Phase 8 chapter 1: the case's recordings under the video.{% endcomment %}
+      {% if in_case %}
+        <aside class="caserail" id="caserail" aria-label="This case">
+          <div class="panel">
+            <div class="row">
+              <a href="{% url 'case' recording.case_id %}" class="grow"
+                 title="Back to the case">This case: {{ recording.case.name }}</a>
+            </div>
+            <p class="muted small" style="margin: 2px 0 0">
+              {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case
+            </p>
+            <a href="{% url 'case-download' recording.case_id %}"
+               class="btn small" style="margin-top: 6px; display: block; text-align: center">
+              Download all transcripts
+            </a>
+          </div>
+          <ul class="caselist">
+            {% for one in in_case %}
+              {% if forloop.counter <= 8 %}
+              <li{% if one.here %} class="here"{% endif %}>
+                {% if one.ready %}
+                  <a href="{% url 'viewer' one.recording.pk %}">
+                    <b>{{ one.recording.title }}</b>
+                    <span class="muted small">
+                      {% if one.recording.recording_type %}{{ one.recording.recording_type }} &middot; {% endif %}{{ one.length }}
+                    </span>
+                  </a>
+                {% else %}
+                  <span class="notyet">
+                    <b>{{ one.recording.title }}</b>
+                    <span class="muted small">
+                      {% if one.failed %}no transcript{% elif one.in_the_queue %}in the queue{% else %}not ready{% endif %}
+                    </span>
+                  </span>
+                {% endif %}
+              </li>
+              {% endif %}
+            {% endfor %}
+            {% if in_case|length > 8 %}
+              <li><a href="{% url 'case' recording.case_id %}" class="muted small">and {{ in_case|length|add:"-8" }} more</a></li>
+            {% endif %}
+          </ul>
+        </aside>
+      {% endif %}
       {% if is_video %}
         <div id="stage-grip" class="stagegrip" title="Drag to resize the stage. Double-click to reset."
              role="separator" aria-label="Resize the stage" tabindex="0"></div>
@@ -212,59 +256,18 @@
 
     {# The work area: the tabs, one at a time at full width; beside it, in a case, the rest of the case. #}
     <div class="body{% if in_case %} with-case{% endif %}">
-      {% if in_case %}
-        <aside class="caserail" id="caserail">
-          <div class="panel">
-            <div class="row">
-              <a href="{% url 'case' recording.case_id %}" class="grow"
-                 title="Back to the case">{{ recording.case.name }}</a>
-              <button type="button" class="ghost tiny" id="hide-case"
-                      title="Hide this panel">hide</button>
-            </div>
-            <p class="muted small" style="margin: 2px 0 0">
-              {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case
-            </p>
-            <a href="{% url 'case-download' recording.case_id %}"
-               class="btn small" style="margin-top: 6px; display: block; text-align: center">
-              Download all transcripts
-            </a>
-          </div>
-          <ul class="caselist">
-            {% for one in in_case %}
-              <li{% if one.here %} class="here"{% endif %}>
-                {% if one.ready %}
-                  <a href="{% url 'viewer' one.recording.pk %}">
-                    <b>{{ one.recording.title }}</b>
-                    <span class="muted small">
-                      {% if one.recording.recording_type %}{{ one.recording.recording_type }} &middot; {% endif %}{{ one.length }}
-                    </span>
-                  </a>
-                {% else %}
-                  <span class="notyet">
-                    <b>{{ one.recording.title }}</b>
-                    <span class="muted small">
-                      {% if one.failed %}no transcript{% elif one.in_the_queue %}in the queue{% else %}not ready{% endif %}
-                    </span>
-                  </span>
-                {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        </aside>
-      {% endif %}
+
       <div class="work">
         <div class="tabbar" role="tablist">
-          <button type="button" class="tab on" data-panel="transcript">Transcript</button>
+          {% comment %}Phase 8 chapter 1: the tabs as a bar of sections; the Gideon tab went, the panel is Gideon's place.{% endcomment %}
+          <button type="button" class="tab on" data-panel="transcript">{% icon "text" %} Transcript</button>
           {% if clips_available %}
-            <button type="button" class="tab" data-panel="clips">Clips</button>
+            <button type="button" class="tab" data-panel="clips">{% icon "clip" %} Clips</button>
           {% endif %}
           {% if assistant.summary and transcript %}
-            <button type="button" class="tab" data-panel="summary">Summary</button>
+            <button type="button" class="tab" data-panel="summary">{% icon "summary" %} Summary</button>
           {% endif %}
-          {% if assistant.chat and transcript %}
-            <button type="button" class="tab" data-panel="chat">{{ chat_name }}</button>
-          {% endif %}
-          <button type="button" class="tab" data-panel="details">Details</button>
+          <button type="button" class="tab" data-panel="details">{% icon "info" %} Details</button>
           <span class="grow"></span>
           <button type="button" class="ghost small" id="open-window" hidden
                   title="Open this tab in a window of its own, which follows the recording">{% icon "expand" %} Open in a window</button>

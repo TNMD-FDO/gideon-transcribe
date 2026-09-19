@@ -326,7 +326,8 @@ def test_the_tab_and_its_endpoints_follow_the_switches(owner, a_case, client):
     a_recording(owner, a_case, "A call")
     signed_in(client, owner)
     page = client.get(f"/case/{a_case.pk}?tab=chat").content.decode()
-    assert 'id="case-chat"' in page and "?tab=chat" in page
+    # Since v1.68.0 Gideon is the floating panel, not a tab (Phase 8 chapter 1).
+    assert 'id="gideon-open"' in page and "?tab=chat" not in page
     assert page.index("chat-ui.js") < page.index("case-chat.js")
     # The viewer of a recording in the case offers the case's Chat tab.
     recording = Recording.objects.get(title="A call")
@@ -341,7 +342,7 @@ def test_the_tab_and_its_endpoints_follow_the_switches(owner, a_case, client):
 
     settings_store.set_to("chat_across_cases", False)
     page = client.get(f"/case/{a_case.pk}?tab=chat").content.decode()
-    assert 'id="case-chat"' not in page and "?tab=chat" not in page
+    assert 'id="gideon-open"' not in page and "?tab=chat" not in page
     assert client.get(f"/case/{a_case.pk}/chat").status_code == 404
     assert client.post(f"/case/{a_case.pk}/chats").status_code == 404
 

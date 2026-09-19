@@ -274,9 +274,10 @@ def test_the_search_reads_six_kinds_and_groups_by_where_they_live(
     signed_in(client, person)
     page = client.get(f"/case/{a_case.pk}?tab=search&q=gun").content.decode()
     assert "7 hits for" in page and "Words (1)" in page and "<mark>gun</mark>" in page
-    assert 'class="tab on">Search</a>' in page
+    assert "Search</a>" in page.split('class="tab on">', 1)[1][:300]
     page = client.get(f"/case/{a_case.pk}?q=gun").content.decode()
-    assert 'class="tab on">Search</a>' in page and "7 hits for" in page
+    assert "Search</a>" in page.split('class="tab on">', 1)[1][:300]
+    assert "7 hits for" in page
     page = client.get(f"/case/{a_case.pk}").content.decode()
     assert "Search this case" not in page and 'name="q"' not in page
     for row in Row.objects.all():

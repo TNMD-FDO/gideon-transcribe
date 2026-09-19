@@ -67,23 +67,20 @@
           filled with a guess.
         {% endcomment %}
         <div class="tabs" style="margin-top: 6px">
+          {% comment %}Phase 8 chapter 1: a bar of sections, an icon and a count each, the open one a card joined to its content.{% endcomment %}
           <a href="{% url 'case' case.pk %}"
-             class="tab{% if tab == 'recordings' %} on{% endif %}">Recordings ({{ recordings|length }})</a>
+             class="tab{% if tab == 'recordings' %} on{% endif %}">{% icon "play" %} Recordings <span class="count">{{ recordings|length }}</span></a>
           <a href="{% url 'case' case.pk %}?tab=search"
-             class="tab{% if tab == 'search' %} on{% endif %}">Search</a>
+             class="tab{% if tab == 'search' %} on{% endif %}">{% icon "search" %} Search</a>
           {% if clips_available %}
             <a href="{% url 'case' case.pk %}?tab=clips"
-               class="tab{% if tab == 'clips' %} on{% endif %}">Clips ({{ clips_count }})</a>
+               class="tab{% if tab == 'clips' %} on{% endif %}">{% icon "clip" %} Clips <span class="count">{{ clips_count }}</span></a>
           {% endif %}
           <a href="{% url 'case' case.pk %}?tab=speakers"
-             class="tab{% if tab == 'speakers' %} on{% endif %}">Speakers ({{ people_count }})</a>
-          {% if case_chat_available %}
-            <a href="{% url 'case' case.pk %}?tab=chat"
-               class="tab{% if tab == 'chat' %} on{% endif %}">{{ chat_name }}</a>
-          {% endif %}
+             class="tab{% if tab == 'speakers' %} on{% endif %}">{% icon "people" %} Speakers <span class="count">{{ people_count }}</span></a>
           {% if incidents_on %}
             <a href="{% url 'case' case.pk %}?tab=incidents"
-               class="tab{% if tab == 'incidents' %} on{% endif %}">Incidents ({{ incident_rows|length }})</a>
+               class="tab{% if tab == 'incidents' %} on{% endif %}">{% icon "camera" %} Incidents <span class="count">{{ incident_rows|length }}</span></a>
           {% endif %}
         </div>
 
@@ -131,14 +128,7 @@
           <p class="muted small">Search terms are never written to the audit log.</p>
         {% endif %}
 
-        {% if tab == "chat" %}
-          {% comment %}
-            The Case Chat: a question answered from every transcript in the
-            case, read whole. Drawn by case-chat.js from one state answer,
-            the way the viewer's Chat panel is.
-          {% endcomment %}
-          <div class="panel chat case-chat" id="case-chat" data-case="{{ case.pk }}" style="margin-top: 10px"></div>
-
+        {% if False %}
         {% elif tab == "incidents" %}
           {% comment %}
             The Incidents tab (Phase 6 chapter 1, as amended in v1.59.1): the

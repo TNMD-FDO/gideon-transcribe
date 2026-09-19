@@ -243,9 +243,10 @@ def test_the_clips_tab_counts_on_every_tab(person, a_case, client):
     signed_in(client, person)
     settings_store.set_to("folder_management", True)
     settings_store.set_to("clips_available", True)
-    assert "Clips (1)" in client.get(f"/case/{a_case.pk}").content.decode()
-    assert "Clips (1)" in client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
-    assert "Clips (1)" in client.get(f"/case/{a_case.pk}?tab=clips").content.decode()
+    counted = 'Clips <span class="count">1</span>'
+    assert counted in client.get(f"/case/{a_case.pk}").content.decode()
+    assert counted in client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
+    assert counted in client.get(f"/case/{a_case.pk}?tab=clips").content.decode()
 
 
 def test_the_clips_page_groups_clips_under_where_they_live(person, a_case, client):

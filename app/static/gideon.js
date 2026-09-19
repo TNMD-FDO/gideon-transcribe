@@ -89,7 +89,8 @@
     } else if (kind === "recording") {
       var panel = document.getElementById("chat-root");
       if (panel) {
-        moved = { panel: panel, parent: panel.parentNode, next: panel.nextSibling };
+        moved = { panel: panel, parent: panel.parentNode, next: panel.nextSibling, wasHidden: panel.hidden };
+        panel.hidden = false;
         var note = document.createElement("p");
         note.className = "muted small";
         note.id = "gideon-moved-note";
@@ -106,32 +107,49 @@
     if (!moved) { return; }
     var note = document.getElementById("gideon-moved-note");
     moved.parent.insertBefore(moved.panel, moved.next);
+    moved.panel.hidden = moved.wasHidden;
     if (note) { note.remove(); }
     moved = null;
     mounted = false;
   }
 
+  var label = button.querySelector(".gideon-label");
+  var asWindow = (function () { try { return new URLSearchParams(window.location.search).get("gideon") === "window"; } catch (ignored) { return false; } }());
   function open() {
     drawer.hidden = false;
     document.body.classList.add("gideon-open");
     button.setAttribute("aria-expanded", "true");
+    if (label) { label.textContent = "Close"; }
     mount();
-    remember(true);
+    if (!asWindow) { remember(true); }
   }
   function close() {
+    if (asWindow) { window.close(); return; }
     drawer.hidden = true;
     document.body.classList.remove("gideon-open");
     button.setAttribute("aria-expanded", "false");
+    if (label) { label.textContent = "Ask " + shell.dataset.name; }
     var playing = drawer.querySelector(".chat-preview video");
     if (playing) { playing.pause(); }
     giveBack();
     remember(false);
   }
+  // A window of its own (Phase 8 chapter 1): the same page with only the
+  // panel showing, which follows this case, recording or incident.
+  var popOut = document.getElementById("gideon-popout");
+  if (popOut) {
+    popOut.addEventListener("click", function () {
+      var url = window.location.pathname + "?gideon=window";
+      window.open(url, "gideon-" + kind + "-" + (shell.dataset.incident || shell.dataset.case || ""), "width=520,height=860");
+      close();
+    });
+  }
+  if (asWindow) { document.body.classList.add("gideon-window"); }
 
   button.addEventListener("click", function () { if (drawer.hidden) { open(); } else { close(); } });
   closeButton.addEventListener("click", close);
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && !drawer.hidden && !event.target.closest("textarea, input")) { close(); }
   });
-  if (!button.disabled && remembered()) { open(); }
+  if (!button.disabled && (remembered() || asWindow)) { open(); }
 }());

@@ -213,11 +213,12 @@ def test_the_start_page_greets_and_asks_one_question(client):
 
     assert "Good morning" in page or "Good afternoon" in page or "Good evening" in page
     assert "What do you want to do?" in page
-    assert "Upload files" in page and "Open a case" in page
+    # The Cases tile with its count line (Phase 8 chapter 1).
+    assert "Upload files" in page and "None yet" in page
     # Record now waits on the Record now setting; Open a case on Cases.
     assert "Record now" not in page
     settings_store.set_to("folder_management", False)
-    assert "Open a case" not in client.get(reverse("start")).content.decode()
+    assert "None yet" not in client.get(reverse("start")).content.decode()
     # The bar: Start, My recordings, and never Upload or Record on their own.
     assert ">Start</a>" in page and ">My recordings</a>" in page
     assert ">Upload</a>" not in page and ">Recordings</a>" not in page

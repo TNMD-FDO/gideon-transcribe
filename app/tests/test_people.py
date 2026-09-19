@@ -242,13 +242,14 @@ def test_the_tab_renders_the_people_and_the_unnamed(owner, a_case, client):
     page = client.get(f"/case/{a_case.pk}?tab=speakers")
     assert page.status_code == 200
     text = page.content.decode()
-    assert "Speakers (1)" in text
+    assert 'Speakers <span class="count">1</span>' in text
     assert "1 person, 1 recording with unnamed speakers" in text
     assert "Detective Ruiz" in text and "Agent" in text and "Lead." in text
     assert f"/recording/{recording.pk}?t=0.0" in text
     assert "1 unnamed" in text
     # The other tabs count the people too, for the tab's label.
-    assert "Speakers (1)" in client.get(f"/case/{a_case.pk}").content.decode()
+    front = client.get(f"/case/{a_case.pk}").content.decode()
+    assert 'Speakers <span class="count">1</span>' in front
 
 
 @pytest.mark.django_db

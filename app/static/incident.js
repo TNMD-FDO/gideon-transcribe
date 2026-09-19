@@ -41,7 +41,12 @@
   var trouble = document.getElementById("player-trouble");
   var eventBox = document.getElementById("event-box");
   var clipBox = document.getElementById("clip-box");      // Clip this event (Phase 7 chapter 1)
-  var sheets = document.getElementById("sheets");         // holds the two boxes over the wall
+  // The layers (Phase 8 chapter 1): one job opened over the tab in the work
+  // panel; the wall and the strip never move. A stack, because a clip can
+  // open from an event; Back pops one and returns exactly.
+  var LAYERS = ["event", "clip", "sync", "proposals", "find"];
+  var layerStack = [];
+  var layerReturn = null;
 
   // The clock ------------------------------------------------------------------------
 
@@ -183,7 +188,8 @@
     // page asks again until it lands, so the row's words change by themselves.
     var rendering = S.events.some(function (one) { return one.clips_rendering; });
     var matching = S.cameras.some(function (cam) { return cam.match && (cam.match.state === "queued" || cam.match.state === "running"); });
-    if (!syncBox.hidden) { drawSync(); }
+    if (layerOf("sync") && !layerOf("sync").hidden) { drawSync(); }
+    drawProposals();
     if (S.proposals.busy || S.memo.busy || rendering || matching) {
       window.clearTimeout(pollTimer);
       pollTimer = window.setTimeout(refresh, 3000);
@@ -590,8 +596,7 @@
 
   document.addEventListener("keydown", function (event) {
     if (event.altKey || event.ctrlKey || event.metaKey) { return; }
-    if (event.key === "Escape" && !clipBox.hidden) { closeClipBox(); return; }
-    if (event.key === "Escape" && !eventBox.hidden) { closeEventBox(); return; }
+    if (event.key === "Escape" && layerStack.length) { closeLayer(); return; }
     if (event.target.closest("input, textarea, select")) { return; }
     if (event.key === " ") { event.preventDefault(); if (playing) { pause(); } else { play(); } }
     else if (event.key === "ArrowLeft") { event.preventDefault(); seek(now() - 5); }
@@ -815,7 +820,9 @@
     if (M.state === "done" && kept.length) { lead += " The memo was written on " + M.events_count + " of them."; }
     var html = "<div class='row' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
       "<p class='lead grow' style='margin: 0'>" + escape(lead) + "</p>" +
-      "<button type='button' class='small primary' id='add-event-here'>Add event here</button></div>";
+      "<button type='button' class='small primary' id='add-event-here'>+ Event here</button>" +
+      (P.on ? "<button type='button' class='small' id='open-proposals' title='The assistant reads each synced camera in stretches and proposes the moments that matter; nothing joins the chronology until you accept it'>Propose events" +
+        (proposed.length ? " <span class='pill warn small'>" + proposed.length + " waiting</span>" : "") + "</button>" : "") + "</div>";
     // About this chronology (Phase 7 chapter 1): the office's paragraph
     // before the events, edited in place.
     var about = S.incident.about || "";
@@ -825,32 +832,60 @@
       "<form class='inc-about-box' id='about-box' hidden><textarea name='about' rows='4' maxlength='2000' aria-label='About this chronology'>" + escape(about) + "</textarea>" +
       "<div class='row' style='gap: 6px; margin-top: 6px'><button type='submit' class='small primary'>Save</button><button type='button' class='small ghost' id='about-cancel'>Cancel</button>" +
       "<span class='muted small'>Printed on the export's cover and told to the memo as the office's own words.</span></div></form>";
-    if (P.on) {
-      html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
-        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera in stretches, proposes the moments that matter and says why; the watch phrases are searched first. Nothing joins the chronology until you accept it'>Propose events</button>" +
-        "<input type='text' id='look-for' class='small' maxlength='300' placeholder='Look for, this run only' aria-label='Look for, this run only' title='Something to look for on this run alone: anything about the gun and the ring camera'" + (P.possible && !P.busy ? "" : " disabled") + ">" +
-        "<span class='small muted' id='propose-said'>" + escape(P.words || (P.possible ? "" : "Sync a camera that has a transcript first.")) + "</span></div>";
-    }
     if (kept.length) {
       html += "<table class='inc-events'><tbody>";
       kept.forEach(function (one) {
+        // One line for what happened, one muted line for everything about it
+        // (Phase 8 chapter 1); the controls behind the row's menu.
+        var meta = [];
+        meta.push(escape(one.source_words));
+        if (one.seen_on) { meta.push("seen on " + escape(one.seen_on)); }
+        if (one.note) { meta.push("<i>note: " + escape(one.note) + "</i>" + (one.note_by ? " (" + escape(one.note_by) + ")" : "")); }
+        if (one.why) { meta.push("<i>" + escape(one.why) + "</i>"); }
+        if (one.clips) { meta.push("<a class='clipmark' href='" + S.incident.clips_url + "' title='Open the case&#39;s Clips tab, where the clip is'>" + escape(one.clips_words) + "</a>"); }
         html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td>" + escape(one.text) + (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") + (one.seen_on ? "<div class='muted small'>Seen on " + escape(one.seen_on) + "</div>" : "") +
-          (one.note ? "<div class='small note'><i>Note: " + escape(one.note) + "</i>" + (one.note_by ? " <span class='muted'>" + escape(one.note_by) + "</span>" : "") + "</div>" : "") + "</td>" +
-          "<td><span class='pill small" + (one.source === "person" ? " person" : (one.source === "watch" ? " watch" : "")) + "'>" + escape(one.source_words) + "</span>" +
-          (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</td>" +
-          "<td class='acts nowrap'>" +
-          (one.clips ? "<a class='pill small clipmark' href='" + S.incident.clips_url + "' title='Open the case&#39;s Clips tab, where the clip is'>" + escape(one.clips_words) + "</a>" : "") +
-          (mayClip(one) ? "<button type='button' class='tiny ghost' data-clip='" + one.id + "' title='Cut one file from this event&#39;s cameras over its span'>Clip</button> " :
-            (S.incident.clips && one.id ? "<button type='button' class='tiny ghost' disabled title='Sync a camera first: the clip needs a synced camera with a playback copy'>Clip</button> " : "")) +
-          "<button type='button' class='tiny ghost' data-edit='" + one.id + "'>Edit</button></td></tr>";
+          "<td><div class='what'>" + escape(one.text) +
+          (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</div>" +
+          "<div class='meta muted small'>" + meta.join(" &middot; ") + "</div></td>" +
+          "<td class='acts nowrap'><details class='row-menu'><summary class='tiny ghost' title='Edit, note, clip, remove'>&middot;&middot;&middot;</summary><div class='menu'>" +
+          "<button type='button' data-edit='" + one.id + "'>Edit</button>" +
+          "<button type='button' data-note='" + one.id + "'>" + (one.note ? "Edit the note" : "Add a note") + "</button>" +
+          (mayClip(one) ? "<button type='button' data-clip='" + one.id + "'>Clip this event</button>" : (S.incident.clips ? "<button type='button' disabled title='Sync a camera first'>Clip this event</button>" : "")) +
+          "<button type='button' class='danger' data-remove='" + one.id + "'>Remove</button></div></details></td></tr>";
       });
       html += "</tbody></table>";
     }
+    html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there. E adds an event at the moment being watched.</p>";
+    box.innerHTML = html;
+    currentEventId = null;
+    markCurrentEvent(now());
+  }
+
+
+  // The Proposed events layer (Phase 8 chapter 1): Propose again, the Look
+  // for box, the state line, and the proposals with Accept and Dismiss.
+  function drawProposals() {
+    var box = document.getElementById("proposals-box");
+    var acts = document.getElementById("proposals-head-acts");
+    if (!box) { return; }
+    var proposed = S.events.filter(function (one) { return one.proposed; });
+    var P = S.proposals || {};
+    var title = document.getElementById("proposals-title");
+    if (title) { title.textContent = "Proposed events" + (proposed.length ? " (" + proposed.length + ")" : ""); }
+    var html = "";
+    if (P.on) {
+      html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
+        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera in stretches, proposes the moments that matter and says why; the watch phrases are searched first. Nothing joins the chronology until you accept it'>Propose again</button>" +
+        "<input type='text' id='look-for' class='small' maxlength='300' placeholder='Look for, this run only' aria-label='Look for, this run only' title='Something to look for on this run alone: anything about the gun and the ring camera'" + (P.possible && !P.busy ? "" : " disabled") + ">" +
+        "<span class='small muted' id='propose-said'>" + escape(P.words || (P.possible ? "" : "Sync a camera that has a transcript first.")) + "</span></div>";
+    }
+
+    if (!proposed.length) {
+      html += "<p class='muted'>Nothing waiting. Propose events reads each synced camera and proposes what it finds; nothing joins the chronology until you accept it.</p>";
+    }
     if (proposed.length) {
-      html += "<div class='row' style='align-items: baseline; gap: 8px; margin: 18px 0 6px'><h3 class='grow' style='font-size: var(--t-heading); margin: 0'>Proposed by the assistant (" + proposed.length + ") <span class='muted small' style='font-weight: 400'>nothing joins the chronology until you accept it</span></h3>" +
-        (proposed.length > 1 ? "<button type='button' class='tiny' id='accept-all'" + (P.busy ? " disabled title='" + STILL_PROPOSING + "'" : "") + ">Accept all</button>" : "") + "</div>";
+      html += "<p class='muted small'>Nothing joins the chronology until you accept it. A time plays every camera from there.</p>";
       html += "<table class='inc-events'><tbody>";
       // While the run is going the proposals are still arriving, and one
       // accepted now is proposed again by the cameras read after it (v1.63.2).
@@ -866,10 +901,11 @@
       });
       html += "</tbody></table>";
     }
-    html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there. E adds an event at the moment being watched.</p>";
+
     box.innerHTML = html;
-    currentEventId = null;
-    markCurrentEvent(now());
+    if (acts) {
+      acts.innerHTML = proposed.length > 1 ? "<button type='button' class='small primary' id='accept-all'" + (P.busy ? " disabled title='" + STILL_PROPOSING + "'" : "") + ">Accept all</button>" : "";
+    }
   }
 
   // The Memo tab (chapter 3): the memo with its times as citations and its
@@ -953,7 +989,32 @@
     });
   }
 
-  document.getElementById("panel-chronology").addEventListener("click", function (event) {
+  function chronologyClick(event) {
+    if (event.target.closest("#open-proposals")) { openLayer("proposals"); return; }
+    var note = event.target.closest("[data-note]");
+    if (note) {
+      var noted = eventById(note.dataset.note);
+      if (noted) {
+        openEventBox(noted);
+        var opener = document.getElementById("event-note-open");
+        if (opener && eventBox.elements.note.hidden) { opener.click(); }
+        eventBox.elements.note.focus();
+      }
+      return;
+    }
+    var remove = event.target.closest("[data-remove]");
+    if (remove) {
+      var gone = eventById(remove.dataset.remove);
+      if (!gone) { return; }
+      window.UI.confirm({ title: "Remove this event?", body: "Its note and its clips' marks go with it; a clip already made stays on the Clips tab.", ok: "Remove", danger: true })
+        .then(function (yes) { if (yes) { post({ action: "event_remove", event: gone.id }); } });
+      return;
+    }
+    chronologyActions(event);
+  }
+  document.getElementById("panel-chronology").addEventListener("click", chronologyClick);
+  document.getElementById("layer-proposals").addEventListener("click", chronologyClick);
+  function chronologyActions(event) {
     var cite = event.target.closest(".cite");
     if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.at)); return; }
     var edit = event.target.closest("[data-edit]");
@@ -983,7 +1044,7 @@
       var lookFor = document.getElementById("look-for");
       post({ action: "propose", look_for: lookFor ? lookFor.value : "" });
     }
-  });
+  }
 
   document.getElementById("panel-chronology").addEventListener("submit", function (event) {
     var form = event.target.closest("#about-box");
@@ -997,8 +1058,7 @@
   // The event box: one form for a new Event and for Edit.
   function openEventBox(given) {
     var at = given.at !== undefined ? given.at : now();
-    eventBox.hidden = false;
-    syncSheets();
+    openLayer("event");
     eventBox.elements.event.value = given.id || "";
     // Clip this event, on Edit, while clips are on and a camera can be cut.
     document.getElementById("event-clip").hidden = !mayClip(given);
@@ -1025,14 +1085,62 @@
   }
 
   function closeEventBox() {
-    eventBox.hidden = true;
-    eventBox.reset();
-    syncSheets();
+    if (layerStack.indexOf("event") !== -1) { while (layerStack.length && layerStack[layerStack.length - 1] !== "event") { closeLayer(); } closeLayer(); }
   }
 
-  // The sheets over the wall show while either box does.
   var syncBox = document.getElementById("sync-box");
-  function syncSheets() { sheets.hidden = eventBox.hidden && clipBox.hidden && syncBox.hidden; }
+  var panelsBox = document.querySelector(".inc-work .panels");
+  function layerOf(name) { return document.getElementById("layer-" + name); }
+  function currentTab() {
+    var on = document.querySelector(".inc-work .tab.on");
+    return on ? on.dataset.panel : "chronology";
+  }
+  function tabName(name) {
+    var tab = document.querySelector(".inc-work .tab[data-panel='" + name + "']");
+    return tab ? tab.textContent.trim() : "Chronology";
+  }
+  function openLayer(name) {
+    var layer = layerOf(name);
+    if (!layer) { return; }
+    if (!layerStack.length) {
+      layerReturn = { tab: currentTab(), scroll: panelsBox ? panelsBox.scrollTop : 0, row: currentEventId };
+    }
+    layerStack = layerStack.filter(function (one) { return one !== name; });
+    layerStack.push(name);
+    LAYERS.forEach(function (one) { var other = layerOf(one); if (other) { other.hidden = one !== name; } });
+    var back = layer.querySelector(".back-tab");
+    if (back) { back.textContent = layerStack.length > 1 ? layerName(layerStack[layerStack.length - 2]) : tabName(layerReturn.tab); }
+    if (panelsBox) { panelsBox.hidden = true; }
+    layer.scrollTop = 0;
+  }
+  function layerName(name) {
+    return { event: "Event", clip: "Clip", sync: "Sync", proposals: "Proposed events", find: "Find" }[name] || name;
+  }
+  function closeLayer() {
+    var name = layerStack.pop();
+    var layer = name ? layerOf(name) : null;
+    if (layer) { layer.hidden = true; }
+    if (name === "event") { eventBox.reset(); }
+    if (name === "clip") { clipBox.reset(); hideBand(); }
+    if (name === "find" && findBox) { findBox.value = ""; findList = []; }
+    if (layerStack.length) {
+      var below = layerOf(layerStack[layerStack.length - 1]);
+      if (below) { below.hidden = false; }
+      return;
+    }
+    if (panelsBox) { panelsBox.hidden = false; }
+    if (layerReturn) {
+      showTab(layerReturn.tab);
+      if (panelsBox) { panelsBox.scrollTop = layerReturn.scroll; }
+      if (layerReturn.row) { flashRow(layerReturn.row); }
+      layerReturn = null;
+    }
+  }
+  function closeLayers() { while (layerStack.length) { closeLayer(); } }
+  window.INCIDENT_LAYERS = { open: openLayer, close: closeLayer, stack: function () { return layerStack.slice(); } };
+  document.querySelector(".inc-work").addEventListener("click", function (event) {
+    if (event.target.closest("[data-back]")) { closeLayer(); }
+  });
 
   eventBox.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -1121,8 +1229,8 @@
     var from = strip ? ev.at : Math.floor(ev.at) - 10;
     var until = strip ? ev.until : Math.ceil(ev.until || ev.at) + 10;
     if (!S.incident.has_clock && from < 0) { from = 0; }
-    clipBox.hidden = false;
-    syncSheets();
+    openLayer("clip");
+    document.getElementById("clip-eyebrow-head").textContent = strip ? "Clip from the strip" : "Clip this event";
     clipBox.elements.event.value = ev.id || "";
     document.getElementById("clip-eyebrow").textContent = strip ? "Clip from the strip" : "Clip this event";
     document.getElementById("clip-event-text").textContent = strip ? timeOfDay(from) + " to " + timeOfDay(until) : timeOfDay(ev.at) + "  " + ev.text;
@@ -1158,10 +1266,7 @@
   }
 
   function closeClipBox() {
-    clipBox.hidden = true;
-    clipBox.reset();
-    hideBand();
-    syncSheets();
+    if (layerStack[layerStack.length - 1] === "clip") { closeLayer(); }
   }
 
   function refreshClipBox() {
@@ -1575,9 +1680,11 @@
 
   // Tabs ------------------------------------------------------------------------------------
 
+  var twoPanels = false;
   function showTab(name) {
+    if (layerStack.length) { closeLayers(); }
     Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) { tab.classList.toggle("on", tab.dataset.panel === name); });
-    ["chronology", "memo", "cameras", "details"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name; } });
+    ["chronology", "memo", "cameras", "details"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
     if (name === "chronology") { currentEventId = null; markCurrentEvent(now()); }
   }
   Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) {
@@ -1593,8 +1700,30 @@
 
   // Go ---------------------------------------------------------------------------------------
 
+  // Two panels (Phase 8 chapter 1): from a very wide window, the Memo beside
+  // the Chronology; the choice is the browser's, per person.
+  var twoButton = document.getElementById("two-panels");
+  var veryWide = window.matchMedia ? window.matchMedia("(min-width: 3840px)") : null;
+  function drawTwo() {
+    if (!twoButton) { return; }
+    var wide = !!(veryWide && veryWide.matches);
+    twoButton.hidden = !wide;
+    twoPanels = wide && (function () { try { return window.localStorage.getItem("inc-two") === "yes"; } catch (ignored) { return false; } }());
+    document.querySelector(".inc-work").classList.toggle("two", twoPanels);
+    twoButton.classList.toggle("on", twoPanels);
+    showTab(currentTab());
+  }
+  if (twoButton) {
+    twoButton.addEventListener("click", function () {
+      try { window.localStorage.setItem("inc-two", twoPanels ? "no" : "yes"); } catch (ignored) { /* forgotten */ }
+      drawTwo();
+    });
+    if (veryWide && veryWide.addEventListener) { veryWide.addEventListener("change", drawTwo); }
+  }
+
   take(S);
   showTab(C.openTab || (placedCameras().length ? "chronology" : "cameras"));
+  drawTwo();
   seek(moment);
   if (eventWords) { openEventBox({ at: moment, text: eventWords, source: "words" }); }
   // A search hit opens the memo at a paragraph (Phase 7 chapter 3).
@@ -1610,16 +1739,15 @@
   var syncSaid = "";
   function openSync(cameraId) {
     syncOpenRow = cameraId || null;
-    syncBox.hidden = false;
     syncSaid = "";
     drawSync();
-    syncSheets();
+    openLayer("sync");
     if (cameraId) {
       var row = syncBox.querySelector("[data-sync-row='" + cameraId + "']");
       if (row) { row.scrollIntoView({ block: "nearest" }); }
     }
   }
-  function closeSync() { syncBox.hidden = true; syncSheets(); }
+  function closeSync() { if (layerStack[layerStack.length - 1] === "sync") { closeLayer(); } }
   function tickedSync() {
     return Array.prototype.map.call(syncBox.querySelectorAll("input[name='sync-tick']:checked"), function (box) { return box.value; });
   }
@@ -1764,7 +1892,7 @@
   function drawFind(got) {
     findList = got.hits || [];
     findCurrent = -1;
-    if (!findBox.value.trim()) { findHits.hidden = true; findHits.innerHTML = ""; return; }
+    if (!findBox.value.trim()) { findHits.innerHTML = ""; if (layerStack[layerStack.length - 1] === "find") { closeLayer(); } return; }
     var head = findList.length + " moment" + (findList.length === 1 ? "" : "s") + " for \u201c" + escape(findBox.value.trim()) + "\u201d" +
       (got.skipped ? " <span class='muted'>(" + got.skipped + " camera" + (got.skipped === 1 ? "" : "s") + " not synced " + (got.skipped === 1 ? "is" : "are") + " not searched)</span>" : "");
     var html = "<p class='small muted find-head'>" + head + "</p>";
@@ -1774,12 +1902,14 @@
       html += "<div class='inc-find-hit' data-n='" + n + "'>" +
         "<span class='t mono'>" + (one.at === null ? "" : timeOfDay(one.at)) + "</span>" +
         "<span class='who small'>" + who + (one.kind === "words" && one.who ? " <span class='muted'>" + escape(one.who) + "</span>" : "") + "</span>" +
-        "<span class='grow'>" + one.html + "</span>" +
+        "<span class='grow'>" + one.html + "<div class='muted small'>" + (one.kind === "words" ? "Said on " + escape(one.camera_id) + (one.who ? ", " + escape(one.who) : "") : (one.kind === "event" ? "An event on the chronology" : "The memo")) + "</div></span>" +
         (one.kind === "words" ? "<button type='button' class='tiny ghost' data-find-event='" + n + "' title='An event at this moment, with the line filled'>E</button>" : "") +
         "</div>";
     });
     findHits.innerHTML = html;
-    findHits.hidden = false;
+    var title = document.getElementById("find-title");
+    if (title) { title.textContent = findList.length + " moment" + (findList.length === 1 ? "" : "s") + " for \u201c" + findBox.value.trim() + "\u201d"; }
+    if (layerStack[layerStack.length - 1] !== "find") { openLayer("find"); }
   }
   function goToHit(n) {
     var one = findList[n];
@@ -1806,7 +1936,7 @@
     findBox.addEventListener("input", function () {
       window.clearTimeout(findTimer);
       var asked = findBox.value.trim();
-      if (asked.length < 2) { findHits.hidden = true; findHits.innerHTML = ""; findList = []; return; }
+      if (asked.length < 2) { findHits.innerHTML = ""; findList = []; if (layerStack[layerStack.length - 1] === "find") { closeLayer(); } return; }
       findTimer = window.setTimeout(function () {
         fetch(C.find + "?q=" + encodeURIComponent(asked), { credentials: "same-origin" })
           .then(function (answer) { return answer.ok ? answer.json() : { hits: [] }; })
@@ -1815,7 +1945,7 @@
       }, 300);
     });
     findBox.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") { findBox.value = ""; findHits.hidden = true; findHits.innerHTML = ""; findList = []; findBox.blur(); return; }
+      if (event.key === "Escape") { findBox.blur(); if (layerStack[layerStack.length - 1] === "find") { closeLayer(); } else { findBox.value = ""; findHits.innerHTML = ""; findList = []; } return; }
       if (event.key === "Enter") {
         event.preventDefault();
         if (!findList.length) { return; }

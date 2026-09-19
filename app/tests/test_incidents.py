@@ -239,7 +239,7 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     first = video(person, a_case, "first", stamp=stamp("21:56:19"))
     second = video(person, a_case, "second", stamp=stamp("22:01:00", camera="BWC2-2"))
     page = client.get(f"/case/{a_case.pk}").content.decode()
-    assert 'tab=incidents"' in page and "Incidents (0)" in page
+    assert 'tab=incidents"' in page and 'Incidents <span class="count">0</span>' in page
     assert "Make them an incident?" not in page and "Clock in the picture" not in page
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Make them an incident?" in page and "New incident" in page
@@ -258,7 +258,8 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert incident.name == "06/07/2025" and incident.how == "offer"
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Open the incident" in page and "2 of 2 synced" in page
-    assert "Make them an incident?" not in page and "Incidents (1)" in page
+    assert "Make them an incident?" not in page
+    assert 'Incidents <span class="count">1</span>' in page
 
     # Not these, for a further offer.
     third = video(person, a_case, "third", stamp=stamp("22:03:00", camera="BWC2-3"))

@@ -1,3 +1,4 @@
+{% load static icons %}
 {% comment %}
   Gideon (Phase 7 chapter 5): the Ask button and the drawer. The page that
   includes this passes gideon_kind (case, recording, incident), the ids, and
@@ -6,11 +7,12 @@
 <div id="gideon" data-kind="{{ gideon_kind }}" data-name="{{ chat_name }}"{% if case %} data-case="{{ case.pk }}"{% endif %}{% if incident %} data-incident="{{ incident.pk }}"{% endif %}>
   <button type="button" class="gideon-button" id="gideon-open" aria-expanded="false" aria-controls="gideon-drawer"
           {% if not gideon_on %}disabled title="{{ gideon_why }}"{% else %}title="Ask {{ chat_name }} about {% if gideon_kind == 'case' %}this case{% elif gideon_kind == 'incident' %}this incident{% else %}this recording{% endif %}"{% endif %}>
-    <svg class="i" aria-hidden="true"><use href="#i-chat"></use></svg> Ask {{ chat_name }}
+    <svg class="i" aria-hidden="true"><use href="#i-chat"></use></svg> <span class="gideon-label">Ask {{ chat_name }}</span>
   </button>
   <aside class="gideon-drawer" id="gideon-drawer" hidden aria-label="{{ chat_name }}">
     <div class="gideon-head">
       <div class="grow"><b>{{ chat_name }}</b><div class="muted small">{% if gideon_kind == 'case' %}This case{% elif gideon_kind == 'incident' %}This incident{% else %}This recording{% endif %}</div></div>
+      <button type="button" class="small ghost" id="gideon-popout" title="In a window of its own, which follows this page">{% icon "expand" %}</button>
       <button type="button" class="small ghost" id="gideon-close">Close</button>
     </div>
     <div class="gideon-body panel chat" id="gideon-body"></div>

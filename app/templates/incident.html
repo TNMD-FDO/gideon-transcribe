@@ -51,60 +51,6 @@
     The sheets over the wall: the event box, and under it the clip box
     (Phase 7 chapter 1), which cuts one file from the event's cameras.
   {% endcomment %}
-  <div class="inc-sheets" id="sheets" hidden>
-  <form class="inc-event-box" id="event-box" hidden autocomplete="off">
-    <input type="hidden" name="event">
-    <input type="hidden" name="source" value="person">
-    <input type="hidden" name="camera">
-    <span class="eyebrow" id="event-title">New event</span>
-    <label>At <input type="text" name="when" class="mono" size="9" aria-label="When it happened"></label>
-    <label>until <input type="text" name="until_when" class="mono" size="9" placeholder="optional" aria-label="When it ended"></label>
-    <input type="text" name="text" class="grow" maxlength="500" placeholder="What happened" aria-label="What happened">
-    <span class="inc-event-cams" id="event-cams" title="The cameras that show it"></span>
-    <button type="button" class="tiny ghost" id="event-note-open" title="A note in your own words">Note</button>
-    <label class="small" title="Mark that this event needs looking at"><input type="checkbox" name="to_check"> To check</label>
-    <textarea name="note" class="inc-event-note" rows="2" maxlength="2000" placeholder="A note in your own words: what it means for the case, a page cite, a thing to do. The assistant reads it and never writes it." aria-label="Note" hidden></textarea>
-    <button type="submit" class="small primary" id="event-save">Add</button>
-    <button type="button" class="small ghost" id="event-cancel">Cancel</button>
-    <button type="button" class="small ghost danger" id="event-remove" hidden>Remove</button>
-    <button type="button" class="small ghost" id="event-clip" title="Cut one file from this event's cameras over its span" hidden>Clip this event</button>
-    <span class="small muted" id="event-said"></span>
-  </form>
-  <div class="inc-sync-box" id="sync-box" hidden></div>
-  <form class="inc-clip-box" id="clip-box" hidden autocomplete="off">
-    <input type="hidden" name="event">
-    <div class="row" style="gap: 8px; align-items: baseline; flex-wrap: wrap">
-      <span class="eyebrow" id="clip-eyebrow">Clip this event</span>
-      <span class="small grow" id="clip-event-text"></span>
-    </div>
-    <p class="small problem" id="clip-unsynced" hidden>A camera not synced is cut at its guessed place, so its tile may not play in step. Sync it first for a clip that does.</p>
-    <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
-      <label>From <input type="text" name="from" class="mono" size="9" aria-label="From"></label>
-      <label>to <input type="text" name="until" class="mono" size="9" aria-label="To"></label>
-      <span class="small muted" id="clip-length"></span>
-    </div>
-    <div class="inc-clip-cams" id="clip-cams" title="The cameras in the clip, in the picture's order. Drag one to move it; the first is the large tile in Focus."></div>
-    <div class="row" style="gap: 12px; flex-wrap: wrap; align-items: center">
-      <label>Layout
-        <select name="layout" aria-label="Layout">
-          <option value="focus">Focus</option>
-          <option value="grid">Grid</option>
-        </select>
-      </label>
-      <label>Sound <select name="sound" aria-label="The camera the sound comes from"></select></label>
-      <span class="small muted" id="clip-sound-said"></span>
-      <label class="small" id="clip-clock-label"><input type="checkbox" name="burn_clock" checked> Burn the clock</label>
-      <label class="small"><input type="checkbox" name="burn_ids" checked> Burn the camera ids</label>
-    </div>
-    <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
-      <label class="grow" style="display: flex; gap: 6px; align-items: center">Title <input type="text" name="title" maxlength="120" class="grow" aria-label="The clip's title"></label>
-      <button type="submit" class="small primary" id="clip-make">Make the clip</button>
-      <button type="button" class="small ghost" id="clip-cancel">Cancel</button>
-    </div>
-    <span class="small muted" id="clip-said">One file, 1280 wide, each camera cut from its own moment; it renders on the media worker and lands on the case's Clips tab.</span>
-  </form>
-  </div>
-
   <div class="inc-desk">
     <div class="inc-stage">
       <div class="inc-wall" id="wall"></div>
@@ -140,14 +86,83 @@
     </div>
     <div class="work inc-work">
       <div class="tabbar" role="tablist">
-        <button type="button" class="tab" data-panel="chronology">Chronology</button>
-        {% if state.memo.on %}<button type="button" class="tab" data-panel="memo">Memo</button>{% endif %}
-        <button type="button" class="tab" data-panel="cameras">Cameras</button>
-        <button type="button" class="tab" data-panel="details">Details</button>
+        <button type="button" class="tab" data-panel="chronology">{% icon "text" %} Chronology</button>
+        {% if state.memo.on %}<button type="button" class="tab" data-panel="memo">{% icon "summary" %} Memo</button>{% endif %}
+        <button type="button" class="tab" data-panel="cameras">{% icon "camera" %} Cameras</button>
+        <button type="button" class="tab" data-panel="details">{% icon "info" %} Details</button>
+        {% if state.memo.on %}<button type="button" class="tiny ghost" id="two-panels" hidden title="The Memo beside the Chronology, on a very wide window">Two panels</button>{% endif %}
         {% comment %}Find (Phase 7 chapter 3): a hit is a moment; pressing it takes every camera there.{% endcomment %}
         <input type="search" id="find" class="small inc-find" maxlength="200" placeholder="Find" aria-label="Find a moment on the cameras" title="Words said on any synced camera, an event or the memo; press a hit and every camera goes there. Enter for the next hit, Shift+Enter for the one before, Escape to clear.">
       </div>
-      <div class="inc-find-hits" id="find-hits" hidden></div>
+      {% comment %}
+        Phase 8 chapter 1: the layers. One job opened over the tab, with the same
+        head on every one: Back with the tab's name, the layer's name, its main
+        button. The wall and the strip never move.
+      {% endcomment %}
+      <div class="inc-layer" id="layer-event" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="event-title">New event</b><span class="grow"></span><button type="submit" form="event-box" class="small primary" id="event-save">Add</button><button type="button" class="small ghost" id="event-cancel">Cancel</button></div>
+        <form class="inc-event-box" id="event-box" autocomplete="off">
+          <input type="hidden" name="event">
+          <input type="hidden" name="source" value="person">
+          <input type="hidden" name="camera">
+          <span class="eyebrow" id="event-title">New event</span>
+          <label>At <input type="text" name="when" class="mono" size="9" aria-label="When it happened"></label>
+          <label>until <input type="text" name="until_when" class="mono" size="9" placeholder="optional" aria-label="When it ended"></label>
+          <input type="text" name="text" class="grow" maxlength="500" placeholder="What happened" aria-label="What happened">
+          <span class="inc-event-cams" id="event-cams" title="The cameras that show it"></span>
+          <button type="button" class="tiny ghost" id="event-note-open" title="A note in your own words">Note</button>
+          <label class="small" title="Mark that this event needs looking at"><input type="checkbox" name="to_check"> To check</label>
+          <textarea name="note" class="inc-event-note" rows="2" maxlength="2000" placeholder="A note in your own words: what it means for the case, a page cite, a thing to do. The assistant reads it and never writes it." aria-label="Note" hidden></textarea>
+          <button type="button" class="small ghost danger" id="event-remove" hidden>Remove</button>
+          <button type="button" class="small ghost" id="event-clip" title="Cut one file from this event's cameras over its span" hidden>Clip this event</button>
+          <span class="small muted" id="event-said"></span>
+        </form>
+      </div>
+      <div class="inc-layer" id="layer-sync" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b>Sync</b><span class="grow"></span></div>
+        <div class="inc-sync-box" id="sync-box"></div>
+      </div>
+      <div class="inc-layer" id="layer-clip" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="clip-eyebrow-head">Clip</b><span class="grow"></span><button type="submit" form="clip-box" class="small primary" id="clip-make">Make the clip</button><button type="button" class="small ghost" id="clip-cancel">Cancel</button></div>
+        <form class="inc-clip-box" id="clip-box" autocomplete="off">
+          <input type="hidden" name="event">
+          <div class="row" style="gap: 8px; align-items: baseline; flex-wrap: wrap">
+            <span class="eyebrow" id="clip-eyebrow">Clip this event</span>
+            <span class="small grow" id="clip-event-text"></span>
+          </div>
+          <p class="small problem" id="clip-unsynced" hidden>A camera not synced is cut at its guessed place, so its tile may not play in step. Sync it first for a clip that does.</p>
+          <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
+            <label>From <input type="text" name="from" class="mono" size="9" aria-label="From"></label>
+            <label>to <input type="text" name="until" class="mono" size="9" aria-label="To"></label>
+            <span class="small muted" id="clip-length"></span>
+          </div>
+          <div class="inc-clip-cams" id="clip-cams" title="The cameras in the clip, in the picture's order. Drag one to move it; the first is the large tile in Focus."></div>
+          <div class="row" style="gap: 12px; flex-wrap: wrap; align-items: center">
+            <label>Layout
+              <select name="layout" aria-label="Layout">
+                <option value="focus">Focus</option>
+                <option value="grid">Grid</option>
+              </select>
+            </label>
+            <label>Sound <select name="sound" aria-label="The camera the sound comes from"></select></label>
+            <span class="small muted" id="clip-sound-said"></span>
+            <label class="small" id="clip-clock-label"><input type="checkbox" name="burn_clock" checked> Burn the clock</label>
+            <label class="small"><input type="checkbox" name="burn_ids" checked> Burn the camera ids</label>
+          </div>
+          <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
+            <label class="grow" style="display: flex; gap: 6px; align-items: center">Title <input type="text" name="title" maxlength="120" class="grow" aria-label="The clip's title"></label>
+          </div>
+          <span class="small muted" id="clip-said">One file, 1280 wide, each camera cut from its own moment; it renders on the media worker and lands on the case's Clips tab.</span>
+        </form>
+      </div>
+      <div class="inc-layer" id="layer-proposals" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="proposals-title">Proposed events</b><span class="grow"></span><span id="proposals-head-acts"></span></div>
+        <div class="inc-proposals" id="proposals-box"></div>
+      </div>
+      <div class="inc-layer" id="layer-find" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="find-title">Find</b><span class="grow"></span><span class="muted small">Enter: next, Shift+Enter: back</span></div>
+        <div class="inc-find-hits" id="find-hits"></div>
+      </div>
       <div class="panels">
         <div class="panel" id="panel-chronology" hidden></div>
         {% if state.memo.on %}<div class="panel" id="panel-memo" hidden></div>{% endif %}

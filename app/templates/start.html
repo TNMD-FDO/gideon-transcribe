@@ -30,8 +30,8 @@
       {% if folder_management %}
         <a class="start-card card" href="{% url 'cases' %}">
           {% icon "case" %}
-          <b>Open a case</b>
-          <span class="muted small">A matter's recordings, kept together and shared with colleagues.</span>
+          <b>Cases</b>
+          <span class="muted small">{{ cases_line }}</span>
         </a>
       {% endif %}
     </div>
