@@ -620,10 +620,63 @@
       line.appendChild(again);
     }
 
+    // Once a file is up, its card takes the batch's own words for it
+    // (Checking the file, Preparing the audio, In line, Transcribing...), asked
+    // for every few seconds, so nothing sits at "Uploaded" while the app is
+    // at work on it. When the last file is up the page says it is going to
+    // the batch, and goes (v1.63.2).
+    var byId = {};
+    files.forEach(function (one) { byId[byName[one.file.name]] = one; });
+    var up = {};
+    var asking = null;
+    var STATES = {
+      uploading: "Uploaded",
+      checking: "Checking the file",
+      preparing: "Preparing the audio",
+      ready: "In line",
+      rejected: "Refused",
+      failed: "Failed"
+    };
+
+    function batchWords(row) {
+      if (row.state === "rejected") { return "Refused: " + (row.message || "the app would not take this file"); }
+      if (row.state === "failed") { return "Failed: " + (row.message || ""); }
+      var job = row.job;
+      if (!job) { return STATES[row.state] || row.state; }
+      if (job.state === "done") { return "Done"; }
+      if (job.state === "failed") { return "Failed: " + (job.message || ""); }
+      if (job.state === "cancelled") { return "Cancelled"; }
+      return job.step || job.line || "In line";
+    }
+
+    function askTheBatch() {
+      fetch("/batch/" + batch + "/state", { credentials: "same-origin" })
+        .then(function (answer) { return answer.ok ? answer.json() : null; })
+        .then(function (state) {
+          if (!state || !state.recordings) { return; }
+          state.recordings.forEach(function (row) {
+            var one = byId[row.id];
+            if (!one || !up[one.file.name]) { return; }
+            var words = batchWords(row);
+            say(one, words, words.indexOf("Refused") === 0 || words.indexOf("Failed") === 0);
+          });
+        })
+        .catch(function () { /* the next ask may reach it */ });
+    }
+
+    function watchTheBatch() {
+      if (asking) { return; }
+      asking = window.setInterval(askTheBatch, 4000);
+    }
+
     function finishedIfDone() {
       if (waiting.length || running) { return; }
       if (done === files.length) {
-        window.location = "/batch/" + batch;
+        var note = document.getElementById("to-batch");
+        note.textContent = "Every file is up. Opening the batch, where each one says how far along it is...";
+        note.hidden = false;
+        window.clearInterval(asking);
+        window.setTimeout(function () { window.location = "/batch/" + batch; }, 1200);
         return;
       }
       document.getElementById("to-batch-link").setAttribute(
@@ -659,7 +712,9 @@
         onSuccess: function () {
           running -= 1;
           done += 1;
+          up[one.file.name] = true;
           say(one, "Uploaded");
+          watchTheBatch();
           next();
         }
       });

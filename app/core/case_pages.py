@@ -263,6 +263,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "case_chat_available": chat_here,
             "add_recordings_url": reverse("add-recordings", args=[case.pk]),
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
+            # The tab says how many on every tab, as Recordings and Speakers do
+            # (v1.63.2); the rows themselves are built only on the Clips tab.
+            "clips_count": _clips_count(case),
             "is_owner": role == "owner",
             "role": role,
             **_sharing_context(case, role),
@@ -329,6 +332,14 @@ def _sharing_context(case: Case, role: str) -> dict:
         "share_words": sharing.WORDS,
         "transfer_words": sharing.TRANSFER_WORDS,
     }
+
+
+def _clips_count(case: Case) -> int:
+    from core.clips import Clip
+
+    if not settings_store.get("clips_available"):
+        return 0
+    return Clip.objects.filter(recording__case=case).count()
 
 
 def _clips_in(case: Case, asker) -> list:

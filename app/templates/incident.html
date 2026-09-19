@@ -154,12 +154,14 @@
     <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
     <div id="lanes"></div>
     <div class="foot small muted">
-      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event.</span>
+      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event. Zoomed in, the wheel over the lanes moves along the strip.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>
         <button type="button" class="tiny" data-zoom="600">10 min</button>
         <button type="button" class="tiny" data-zoom="120">2 min</button>
+        <button type="button" class="tiny" data-pan="-1" disabled title="Earlier (or wheel over the lanes)">&lsaquo;</button>
+        <button type="button" class="tiny" data-pan="1" disabled title="Later (or wheel over the lanes)">&rsaquo;</button>
       </span>
     </div>
   </div>

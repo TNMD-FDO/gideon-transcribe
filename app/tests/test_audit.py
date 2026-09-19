@@ -48,6 +48,61 @@ def test_an_untouched_chain_is_unbroken(db):
     assert result["rows"] == 5
 
 
+def _rewrite(row, **fields):
+    """A row changed underneath the app, its hash recomputed as a writer's would be."""
+    for name, value in fields.items():
+        setattr(row, name, value)
+    row.row_hash = row.compute_hash()
+    audit.Row.objects.filter(pk=row.pk).update(**fields, row_hash=row.row_hash)
+
+
+def test_two_rows_written_in_the_same_instant_are_named_not_a_break(db):
+    # Before v1.63.2 nothing serialised the write, so two workers could read
+    # the same newest row and both link to it. That pair is named and the
+    # walk carries on; the row after links to the later twin as it did.
+    first = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    second = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    third = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    _rewrite(
+        third, previous_hash=first.row_hash, at=second.at + timedelta(milliseconds=3)
+    )
+    fourth = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    assert fourth.previous_hash == audit.Row.objects.get(pk=third.pk).row_hash
+
+    result = audit.check_integrity()
+    assert result["unbroken"] is True
+    assert result["rows"] == 4
+    assert result["twins"] == [(second.pk, third.pk)]
+    assert (
+        f"Rows {second.pk} and {third.pk} were written in the same instant"
+        in result["message"]
+    )
+    assert "every row verifies" in result["message"]
+
+
+def test_a_row_relinked_to_an_older_row_is_still_a_break(db):
+    # The same shape written minutes apart is not the race: it is a break.
+    first = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    second = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    third = audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    _rewrite(third, previous_hash=first.row_hash, at=second.at + timedelta(minutes=5))
+
+    result = audit.check_integrity()
+    assert result["unbroken"] is False
+    assert result["first_break_id"] == third.pk
+    assert "the link to the row before it" in result["message"]
+
+
+def test_writes_take_the_chain_lock(db, django_assert_num_queries):
+    # Every write takes the advisory lock before it reads the newest row.
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    with CaptureQueriesContext(connection) as caught:
+        audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    assert any("pg_advisory_xact_lock" in one["sql"] for one in caught.captured_queries)
+
+
 def test_an_empty_log_is_not_a_break(db):
     result = audit.check_integrity()
     assert result["unbroken"] is True

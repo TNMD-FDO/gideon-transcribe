@@ -1731,7 +1731,10 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 /* The upload page ------------------------------------------------------------ */
 
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.steps > li { margin: 0; }
+.steps > li { margin: 0; min-width: 0; }
+/* Check and start: a long file name breaks rather than pushing the table
+   past the card's edge (v1.63.2). */
+#review td { overflow-wrap: anywhere; }
 .steps h2 { margin-bottom: 8px; }
 
 .drop {
@@ -2051,6 +2054,13 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-strip .lane .track i.thin { opacity: 0.35; }
 .inc-strip .lane .track i.ghost { background: transparent; border: 1px dashed var(--muted); opacity: 0.7; }
 .inc-strip .lane .track i { cursor: grab; }
+/* Zoomed in, a bar is drawn only for the part inside the window and nothing
+   runs past the track's edge; the playhead is hidden while the window has
+   been moved away from it (v1.63.2). */
+.inc-strip .lane .track { overflow: hidden; }
+.inc-strip .lane .track .playhead { top: 0; bottom: 0; }
+.inc-strip #lanes.away .playhead { display: none; }
+.inc-strip .zoom [data-pan] { padding: 0 6px; }
 .inc-strip .lane.events .track { background: transparent; border-top: 1px dashed var(--line); border-radius: 0; height: 12px; }
 .cite.all { margin-left: 2px; font-size: 0.85em; }
 @media (max-width: 1279px) {

@@ -3681,7 +3681,7 @@ Nothing else. A row never depends on the item, the user, or the Login session st
 - A table in the app's own Postgres database.
 - Two database roles: the app writes through an insert-only role that cannot change or delete rows; only the retention sweep's separate role removes rows.
 - Each row carries a hash chained to the previous row.
-- The **Integrity check** is a button on the admin status page, which also shows the last result, and a command for IT. It reports "unbroken since the first row" or names the first break, and writes its result as a row.
+- The **Integrity check** is a button on the admin status page, which also shows the last result, and a command for IT. It reports "unbroken since the first row" or names the first break, and writes its result as a row. The write takes an advisory lock on the chain (v1.63.2); two rows written in the same instant before that, both linking to the row before them and both verifying, are named by the check as that pair and are not a break.
 - This is tamper-evident, not tamper-proof: root on the box can rewrite the chain.
 - No file mirror and no off-box forwarding in Phase 1. Forwarding rows to an office log collector or SIEM as they are written is not planned.
 - The table rides in the database backup, and every restore ends by running the Integrity check, which writes its usual row (see the Backup and restore chapter).

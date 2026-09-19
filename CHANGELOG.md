@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.63.2, 2026-09-19
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Seven fixes from the maintainer's list of 2026-09-19.
+
+- The case page's Clips tab says how many clips on every tab, not only
+  while it is open.
+- Check and start on the Upload page: a long file name breaks inside the
+  table instead of running past the card's edge.
+- While a batch uploads, each file's card takes the batch's own words once
+  the file is up (Checking the file, Preparing the audio, In line,
+  transcribing, Done), asked for every few seconds, and the page says it
+  is opening the batch before it goes.
+- While the assistant is still proposing events, Accept, Dismiss and
+  Accept all show greyed ("The assistant is still proposing"), and the
+  server refuses them; a proposal accepted mid-run was proposed again by
+  the cameras read after it.
+- The incident strip zoomed in: a camera's bar is drawn only for the part
+  inside the window, so the events and the playhead are no longer left
+  behind past the track's edge; the wheel over the lanes, or the arrows
+  beside the zoom buttons, move along the strip, and the window follows
+  the playhead again once it plays out of view.
+- The audit log's write is serialised (an advisory lock on the chain), so
+  two workers writing in the same instant no longer both link to the same
+  row. The Integrity check knows that shape from before (two rows written
+  within seconds that both link to the row before them, both verifying),
+  names the pair, and carries on rather than calling the chain broken.
+- The transcript's Follow: after a line is clicked, scrolling away no
+  longer fights the reader. The follow resumes only once the line being
+  spoken has left the screen and been scrolled back into view; Resume on
+  the pill remains the way back at any time.
+
 ## v1.63.1, 2026-09-17
 
 ```

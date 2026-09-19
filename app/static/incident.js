@@ -53,6 +53,7 @@
   var players = {};            // camera id -> { cam, video, tile }
   var lines = {};              // camera id -> { segments, moments }
   var zoom = 0;                // seconds shown; 0 is all
+  var panFrom = null;          // a zoomed window's left edge once the person has moved it; null follows the playhead
   var dragging = null;
   var pollTimer = null;
   var currentEventId = null;
@@ -185,6 +186,8 @@
       pollTimer = window.setTimeout(refresh, 3000);
     }
   }
+
+  var STILL_PROPOSING = "The assistant is still proposing; accept or dismiss once it has finished";
 
   function keptEvents() { return S.events.filter(function (one) { return !one.proposed; }); }
 
@@ -642,9 +645,18 @@
   function view() {
     var range = span();
     if (!zoom || zoom >= range[1] - range[0]) { return range; }
-    var m = now();
-    var from = Math.max(range[0], Math.min(m - zoom / 2, range[1] - zoom));
+    var from = panFrom !== null ? panFrom : now() - zoom / 2;
+    from = Math.max(range[0], Math.min(from, range[1] - zoom));
     return [from, from + zoom];
+  }
+
+  // Along a zoomed strip: the wheel over the lanes or the arrows by the zoom
+  // buttons move the window; a seek inside it keeps it, and the playhead
+  // leaving it while playing lets the window follow the playhead again.
+  function pan(direction) {
+    if (!zoom) { return; }
+    panFrom = view()[0] + direction * zoom * 0.25;
+    drawStrip();
   }
 
   function percent(at, shown) {
@@ -689,29 +701,46 @@
     S.cameras.forEach(function (cam) {
       var placed = cam.starts_at !== null && cam.placed;
       var start = placed ? cam.starts_at : (S.incident.span_low || 0);
-      var width = ((cam.length) / (shown[1] - shown[0])) * 100;
+      // Only the part of the bar inside the window is drawn (v1.63.2): a bar
+      // wider than the track ran past its edge when zoomed in, and the marks
+      // and playhead were left behind.
+      var barFrom = Math.max(start, shown[0]);
+      var barTo = Math.min(start + cam.length, shown[1]);
+      var width = barTo > barFrom ? ((barTo - barFrom) / (shown[1] - shown[0])) * 100 : 0;
       html += "<div class='lane" + (placed ? "" : " unplaced") + "' data-camera='" + cam.id + "' style='--speaker: " + cam.colour + "'>" +
         "<div class='head' title='" + quoted(cam.title + ", " + cam.placed_words) + "'><span class='dot'></span><span class='name'>" + escape(cam.camera_id) + "</span>" +
         (placed && !cam.on_wall ? "<button type='button' class='tiny swap' data-swap='" + cam.id + "' title='Onto the wall, and to the front'>Swap in</button>" : "") + "</div>" +
-        "<div class='track'><i class='" + (cam.on_wall ? "" : "thin") + (placed ? "" : " ghost") + "' draggable='false' style='left: " + percent(start, shown) + "; width: " + Math.max(0.3, width) + "%' title='" + timeOfDay(start) + " to " + timeOfDay(start + cam.length) + "'></i>" +
+        "<div class='track'><i class='" + (cam.on_wall ? "" : "thin") + (placed ? "" : " ghost") + "' draggable='false' style='left: " + percent(barFrom, shown) + "; width: " + (width ? Math.max(0.3, width) : 0) + "%" + (width ? "" : "; display: none") + "' title='" + timeOfDay(start) + " to " + timeOfDay(start + cam.length) + "'></i>" +
         "<span class='playhead'></span></div></div>";
     });
     html += "<div class='lane events'><div class='head'><span class='name muted'>Events</span></div><div class='track'>" + eventMarks(shown) + "<span class='playhead'></span></div></div>";
     lanesBox.innerHTML = html;
+    Array.prototype.forEach.call(strip.querySelectorAll("[data-pan]"), function (one) { one.disabled = !zoom || zoom >= span()[1] - span()[0]; });
     movePlayheads(now());
   }
 
   function movePlayheads(m) {
     var shown = view();
-    if (zoom && (m < shown[0] || m > shown[1])) { drawStrip(); return; }
+    if (zoom && (m < shown[0] || m > shown[1])) {
+      // The window was moved away and the cameras stand still: the playhead
+      // is off the strip, not drawn at its edge. Playing, the window follows.
+      if (panFrom !== null && !playing) { lanesBox.classList.add("away"); return; }
+      panFrom = null;
+      drawStrip();
+      return;
+    }
+    lanesBox.classList.remove("away");
     var left = percent(m, shown);
     Array.prototype.forEach.call(lanesBox.querySelectorAll(".playhead"), function (head) { head.style.left = left; });
   }
 
   strip.addEventListener("click", function (event) {
     var zoomButton = event.target.closest("[data-zoom]");
+    var panButton = event.target.closest("[data-pan]");
+    if (panButton) { pan(parseInt(panButton.dataset.pan, 10) || 0); return; }
     if (zoomButton) {
       zoom = parseInt(zoomButton.dataset.zoom, 10) || 0;
+      panFrom = null;
       Array.prototype.forEach.call(strip.querySelectorAll("[data-zoom]"), function (one) { one.classList.toggle("on", one === zoomButton); });
       drawStrip();
       return;
@@ -739,6 +768,14 @@
   });
 
   // Drag a bar to place the camera by hand.
+  lanesBox.addEventListener("wheel", function (event) {
+    if (!zoom) { return; }
+    var delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!delta) { return; }
+    event.preventDefault();
+    pan(delta > 0 ? 1 : -1);
+  }, { passive: false });
+
   lanesBox.addEventListener("mousedown", function (event) {
     var bar = event.target.closest(".track i");
     if (!bar) { return; }
@@ -850,14 +887,17 @@
     }
     if (proposed.length) {
       html += "<div class='row' style='align-items: baseline; gap: 8px; margin: 18px 0 6px'><h3 class='grow' style='font-size: var(--t-heading); margin: 0'>Proposed by the assistant (" + proposed.length + ") <span class='muted small' style='font-weight: 400'>nothing joins the chronology until you accept it</span></h3>" +
-        (proposed.length > 1 ? "<button type='button' class='tiny' id='accept-all'>Accept all</button>" : "") + "</div>";
+        (proposed.length > 1 ? "<button type='button' class='tiny' id='accept-all'" + (P.busy ? " disabled title='" + STILL_PROPOSING + "'" : "") + ">Accept all</button>" : "") + "</div>";
       html += "<table class='inc-events'><tbody>";
+      // While the run is going the proposals are still arriving, and one
+      // accepted now is proposed again by the cameras read after it (v1.63.2).
+      var held = P.busy ? " disabled title='" + STILL_PROPOSING + "'" : "";
       proposed.forEach(function (one) {
         html += "<tr data-event='" + one.id + "' class='proposed'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
           "<td title='" + quoted(one.rests_on ? "Rests on: " + one.rests_on : "") + "'>" + escape(one.text) + (one.rests_on ? "<div class='muted small rests'>Rests on: " + escape(one.rests_on) + "</div>" : "") + "</td>" +
           "<td><span class='pill warn small'>" + escape(one.source_words) + "</span></td>" +
-          "<td class='acts nowrap'><button type='button' class='tiny primary' data-accept='" + one.id + "'>Accept</button> <button type='button' class='tiny ghost' data-dismiss='" + one.id + "'>Dismiss</button></td></tr>";
+          "<td class='acts nowrap'><button type='button' class='tiny primary' data-accept='" + one.id + "'" + held + ">Accept</button> <button type='button' class='tiny ghost' data-dismiss='" + one.id + "'" + held + ">Dismiss</button></td></tr>";
       });
       html += "</tbody></table>";
     }

@@ -32,6 +32,16 @@ SWEEPER_ROLE = "transcribe_audit_sweep"
 # Sixty-four zeros: what the first row of a chain points back at.
 FIRST_LINK = "0" * 64
 
+# The one key every write of the chain takes before it reads the newest row
+# (an advisory lock inside the write's transaction), so two workers writing
+# in the same instant link one after the other rather than both to the same
+# row. Before v1.63.2 nothing serialised the write; see check_integrity.
+WRITE_LOCK = 20260919
+
+# Two rows written within this of each other that both link to the row
+# before them are the old race, not a change to the log.
+TWIN_WINDOW_SECONDS = 2
+
 # Which fields go into the hash, and in what order. Adding a field means a new
 # version, kept on the row, so that an old row is always checked the way it was
 # written (ADR 0008).
@@ -288,6 +298,10 @@ def write(
         row.client_address = address_of(request)
         row.client_browser = browser_family(request.META.get("HTTP_USER_AGENT", ""))
 
+    # One writer at a time from here to the commit: the newest row is read
+    # and linked to under the lock, so the row after this one links to it.
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_advisory_xact_lock(%s)", [WRITE_LOCK])
     row.previous_hash, _ = _previous()
     row.row_hash = row.compute_hash()
 
@@ -318,28 +332,59 @@ def check_integrity() -> dict[str, Any]:
     cuts, so the walk starts at the oldest row that is still here and says so.
     That is not a break; a row whose hash does not match its content, or whose
     link does not match the row before it, is.
+
+    Before v1.63.2 nothing serialised the write, so two workers writing in the
+    same instant could both read the same newest row and both link to it. The
+    walk knows that shape (twins: the row before this one links to the same
+    row, both were written within seconds, both verify) and carries on, naming
+    the pair rather than calling the log changed; the row after may link to
+    either twin.
     """
     rows = Row.objects.order_by("id").iterator(chunk_size=500)
 
     checked = 0
-    expected: str | None = None
+    expected: set[str] | None = None
+    before: Row | None = None
+    twins: list[tuple[int, int]] = []
     for row in rows:
-        if expected is not None and row.previous_hash != expected:
-            return _result(False, checked, row, "the link to the row before it")
+        if expected is not None and row.previous_hash not in expected:
+            if _twin_of(row, before):
+                twins.append((before.pk, row.pk))
+                expected.add(row.row_hash)
+            else:
+                return _result(False, checked, row, "the link to the row before it")
+        else:
+            expected = set()
         if row.compute_hash() != row.row_hash:
             return _result(False, checked, row, "its own contents")
-        expected = row.row_hash
+        expected.add(row.row_hash)
+        before = row
         checked += 1
 
-    return {
-        "unbroken": True,
-        "rows": checked,
-        "message": (
-            "Unbroken since the first row kept."
-            if checked
-            else "There is nothing in the log yet."
-        ),
-    }
+    message = (
+        "Unbroken since the first row kept."
+        if checked
+        else "There is nothing in the log yet."
+    )
+    if twins:
+        message += " " + _twins_line(twins)
+    return {"unbroken": True, "rows": checked, "twins": twins, "message": message}
+
+
+def _twin_of(row: Row, before: Row | None) -> bool:
+    """Whether this row and the one before it are the old race's pair."""
+    if before is None or row.previous_hash != before.previous_hash:
+        return False
+    return abs((row.at - before.at).total_seconds()) <= TWIN_WINDOW_SECONDS
+
+
+def _twins_line(twins: list[tuple[int, int]]) -> str:
+    pairs = ", ".join(f"{a} and {b}" for a, b in twins)
+    return (
+        f"Rows {pairs} were written in the same instant and both link to the "
+        "row before them (a race the write has been locked against since "
+        "v1.63.2); every row verifies, and the chain carries on from there."
+    )
 
 
 def _result(unbroken: bool, checked: int, row: Row, what: str) -> dict[str, Any]:

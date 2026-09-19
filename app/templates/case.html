@@ -70,7 +70,7 @@
              class="tab{% if tab == 'recordings' %} on{% endif %}">Recordings ({{ recordings|length }})</a>
           {% if clips_available %}
             <a href="{% url 'case' case.pk %}?tab=clips"
-               class="tab{% if tab == 'clips' %} on{% endif %}">Clips{% if tab == 'clips' %} ({{ clips_here|length }}){% endif %}</a>
+               class="tab{% if tab == 'clips' %} on{% endif %}">Clips ({{ clips_count }})</a>
           {% endif %}
           <a href="{% url 'case' case.pk %}?tab=speakers"
              class="tab{% if tab == 'speakers' %} on{% endif %}">Speakers ({{ people_count }})</a>

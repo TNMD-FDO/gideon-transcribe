@@ -386,15 +386,20 @@
     // screen first, because while it is still following it would have put the
     // line straight back, and the reader would never get anywhere.
     //
-    // The way back is scrolling to the line being spoken: bring it into view
-    // and the follow picks up again. That is also what undoes a nudge of the
-    // wheel nobody meant, without the app having to guess which nudges were
-    // meant.
+    // The way back is scrolling to the line being spoken: once it has gone
+    // off the screen, bringing it back into view picks the follow up again.
+    // Not before it has gone: a line just clicked sits in the middle of the
+    // column, and resuming while it was still in view pulled every scroll
+    // straight back to it, the pill flickering with each turn of the wheel
+    // (v1.63.2). Resume, on the pill, is the way back at any time.
+    var lineWentAway = false;
     window.addEventListener("wheel", function (event) {
       if (!event.target.closest || !event.target.closest(".read")) { return; }
-      if (!paused) { pauseFollowing(); return; }
+      if (!paused) { pauseFollowing(); lineWentAway = false; return; }
       window.setTimeout(function () {
-        if (paused && lineIsInView()) { resumeFollowing(); }
+        if (!paused) { return; }
+        if (!lineIsInView()) { lineWentAway = true; return; }
+        if (lineWentAway) { resumeFollowing(); }
       }, 120);
     }, { passive: true });
   }

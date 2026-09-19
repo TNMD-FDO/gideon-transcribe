@@ -47,6 +47,9 @@ FEATURE_MEMO = "incident_memo"
 NEAR_SECONDS = 5.0
 # The most proposals kept from one camera in one run.
 PROPOSALS_MOST = 30
+
+# The run's states while it is going: nothing is accepted or dismissed then.
+PROPOSING = (QUEUED, RUNNING)
 # How much of the line a proposal rests on must be found in what the camera
 # was given, after whitespace and case are folded.
 RESTS_CHECK = 40

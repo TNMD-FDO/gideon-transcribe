@@ -95,7 +95,7 @@ The Audit log page shows the rows newest first and filters them by date, person,
 
 **Retention.** Rows older than the **Audit log retention** setting are removed by a nightly sweep. Three months is the default. The record of an Admin opening somebody's recordings is a row like any other, so the retention period is also how long that record lasts: an office that wants a longer memory of Admin access sets a longer retention.
 
-**Integrity.** Every row carries a hash of itself and of the row before it, so a row that is changed or removed afterwards breaks the chain. **Integrity check** on the Status page walks the chain and says whether it holds. Rows are written through a database role that can only insert, and removed only by the sweep's own role; the app's ordinary role can do neither.
+**Integrity.** Every row carries a hash of itself and of the row before it, so a row that is changed or removed afterwards breaks the chain. **Integrity check** on the Status page walks the chain and says whether it holds. Two rows written in the same instant that both link to the row before them are the write's old race (closed in v1.63.2), not a change to the log: the check names the pair and carries on. Rows are written through a database role that can only insert, and removed only by the sweep's own role; the app's ordinary role can do neither.
 
 ## Live recording
 

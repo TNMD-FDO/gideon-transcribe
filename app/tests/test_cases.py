@@ -234,6 +234,20 @@ def test_the_sign_out_download_leaves_a_case_alone(person, a_case, client):
     assert in_a_case is not None
 
 
+def test_the_clips_tab_counts_on_every_tab(person, a_case, client):
+    # The tab said how many only while it was open (v1.63.2).
+    from core.clips import Clip
+
+    in_a_case = a_recording(person, case=a_case)
+    Clip.objects.create(recording=in_a_case, user=person, title="One", start=0, end=5)
+    signed_in(client, person)
+    settings_store.set_to("folder_management", True)
+    settings_store.set_to("clips_available", True)
+    assert "Clips (1)" in client.get(f"/case/{a_case.pk}").content.decode()
+    assert "Clips (1)" in client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
+    assert "Clips (1)" in client.get(f"/case/{a_case.pk}?tab=clips").content.decode()
+
+
 def test_the_clips_page_groups_clips_under_where_they_live(person, a_case, client):
     from core.clips import Clip
 

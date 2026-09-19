@@ -599,6 +599,22 @@ def test_the_page_and_the_act_endpoint_carry_chapter_3(incident, person, client)
             rests_on="a line",
         )
     one, two, three = Event.objects.filter(proposed=True).order_by("added")
+    # While the run is going nothing is accepted or dismissed: the proposals
+    # are still arriving, and one accepted now would be proposed again by
+    # the cameras read after it (v1.63.2). The buttons show greyed.
+    type(incident).objects.filter(pk=incident.pk).update(proposals_state="running")
+    for held in (
+        {"action": "event_accept", "event": str(one.pk)},
+        {"action": "event_dismiss", "event": str(one.pk)},
+        {"action": "event_accept_all"},
+    ):
+        answer = client.post(url + "/act", held)
+        assert answer.status_code == 409
+        assert answer.json()["error"] == (
+            "The assistant is still proposing. Wait for it to finish."
+        )
+    assert Event.objects.filter(proposed=True).count() == 3
+    type(incident).objects.filter(pk=incident.pk).update(proposals_state="done")
     got = client.post(
         url + "/act", {"action": "event_accept", "event": str(one.pk)}
     ).json()

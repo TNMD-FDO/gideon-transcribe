@@ -375,6 +375,16 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                 status=400,
             )
         said = "Reading the cameras; a minute or two."
+    elif action in ("event_accept", "event_dismiss", "event_accept_all") and (
+        incident.proposals_state in incident_assistant.PROPOSING
+    ):
+        # The run replaces the pending proposals as it goes, camera by camera:
+        # a proposal accepted while it runs is left out of what the later
+        # cameras are told, so they propose it again (v1.63.2).
+        return JsonResponse(
+            {"error": "The assistant is still proposing. Wait for it to finish."},
+            status=409,
+        )
     elif action in ("event_accept", "event_dismiss"):
         event = get_object_or_404(
             chronology.Event,
