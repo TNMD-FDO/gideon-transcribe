@@ -231,6 +231,26 @@ urlpatterns = [
         name="document-state",
     ),
     path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/compare",
+        document_pages.compare,
+        name="document-compare",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/comparison",
+        document_pages.comparison_state,
+        name="document-comparison",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/comparison/act",
+        document_pages.comparison_act,
+        name="document-comparison-act",
+    ),
+    path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/comparison/export",
+        document_pages.comparison_export,
+        name="document-comparison-export",
+    ),
+    path(
         "case/<uuid:case_id>/document/<uuid:document_id>/download",
         document_pages.download,
         name="document-download",

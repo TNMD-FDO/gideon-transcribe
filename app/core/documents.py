@@ -618,6 +618,13 @@ def state_json(document: Document) -> dict:
         **as_json(document),
         "home": document.home_name(),
         "download": reverse("document-download", args=[document.case_id, document.pk]),
+        # The comparison (part 3): where the layer asks and runs.
+        "comparison": reverse(
+            "document-comparison", args=[document.case_id, document.pk]
+        ),
+        "compare": reverse("document-compare", args=[document.case_id, document.pk]),
+        "incident": str(document.incident_id) if document.incident_id else "",
+        "recording": str(document.recording_id) if document.recording_id else "",
         "pages_rows": [
             {
                 "number": row.number,

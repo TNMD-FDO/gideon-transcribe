@@ -1860,6 +1860,20 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .chat-preview-doc { padding: 10px 12px; }
 .chat-preview-doc .doc-cited { margin: 0 0 6px; padding: 6px 8px; border-left: 3px solid var(--accent); }
 .relink select { max-width: 14rem; }
+/* The comparison (Phase 8 chapter 4, part 3): the marks and the rows. */
+.compare-box { margin: 8px 0 12px; }
+.compare-rows .claim { font-weight: 600; margin: 0 0 3px; }
+.compare-rows td.t { white-space: normal; width: 6.5rem; }
+.compare-rows td.t .pill { margin-bottom: 4px; }
+.compare-rows .rests { margin: 2px 0; line-height: 1.4; }
+.compare-rows .acts { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.compare-rows tr.dismissed { opacity: 0.55; }
+.compare-rows tr.dismissed .claim { text-decoration: line-through; }
+.pill.mark.agrees { background: color-mix(in srgb, var(--ok) 22%, transparent); }
+.pill.mark.differs { background: color-mix(in srgb, var(--warn) 28%, transparent); }
+.pill.mark.not_on_camera { background: var(--surface-2); }
+.pill.mark.not_in_report { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.search-kinds .pill.differs.on { outline: 2px solid var(--warn); }
 @media (max-width: 900px) { .doc-body { grid-template-columns: 1fr; } .doc-words { position: static; max-height: none; } }
 .ui-dialog-title { font-size: var(--t-heading); margin: 0 0 8px; }
 .ui-dialog-body { color: var(--muted); margin: 0 0 16px; }

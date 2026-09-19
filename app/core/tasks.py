@@ -149,6 +149,14 @@ def propose_incident_events(incident_id: str, attempt: int = 1) -> None:
     incident_assistant.propose(incident_id, attempt)
 
 
+@app.task(queue="llm", name="compare_report")
+def compare_report(comparison_id: str, attempt: int = 1) -> None:
+    """Compare with the report (Phase 8 chapter 4, part 3)."""
+    from core import comparison
+
+    comparison.compare(comparison_id, attempt=attempt)
+
+
 @app.task(queue="llm", name="write_incident_memo")
 def write_incident_memo(memo_id: str, attempt: int = 1) -> None:
     """The Incident memo (Phase 6 chapter 3)."""

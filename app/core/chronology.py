@@ -27,7 +27,9 @@ CAMERA = "camera"
 ASSISTANT = "assistant"
 # Phase 7 chapter 2: found by the app's own search for a Watch phrase.
 WATCH = "watch"
-SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH)
+# Phase 8 chapter 4: made from a comparison's finding, resting on a paragraph.
+REPORT = "report"
+SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH, REPORT)
 
 # The line under a proposal saying why it matters (Phase 7 chapter 2).
 WHY_MOST = 300
@@ -123,7 +125,7 @@ def _cleaned(incident, fields: dict) -> dict:
     # Only Accept makes an Event the assistant's (chapter 3); a request that
     # says so is a person's.
     source = fields.get("source", PERSON)
-    if source not in (PERSON, WORDS, CAMERA):
+    if source not in (PERSON, WORDS, CAMERA, REPORT):
         source = PERSON
     # One line per line typed, the spacing tidied, blank lines dropped.
     note = "\n".join(
@@ -146,7 +148,7 @@ def _cleaned(incident, fields: dict) -> dict:
     camera = None
     if fields.get("camera") in known:
         camera = incidents.IncidentCamera.objects.get(pk=fields["camera"])
-    return {
+    cleaned = {
         "at": at,
         "until": until,
         "text": text,
@@ -156,6 +158,14 @@ def _cleaned(incident, fields: dict) -> dict:
         "note": note,
         "to_check": to_check,
     }
+    if source == REPORT:
+        # Made from a comparison's finding: the paragraph it rests on and the
+        # mark as its why come with it (Phase 8 chapter 4, part 3).
+        cleaned["rests_on"] = " ".join(str(fields.get("rests_on", "")).split())[
+            :TEXT_MOST
+        ]
+        cleaned["why"] = " ".join(str(fields.get("why", "")).split())[:WHY_MOST]
+    return cleaned
 
 
 def add(incident, fields: dict, *, by, request=None) -> Event:
@@ -185,8 +195,10 @@ def change(event: Event, fields: dict, *, by, request=None) -> Event:
     cleaned = _cleaned(event.incident, fields)
     # An Event keeps where it came from: Edit changes the words and the
     # cameras, never the source (an accepted proposal stays the assistant's).
-    if event.source in (ASSISTANT, WATCH):
+    if event.source in (ASSISTANT, WATCH, REPORT):
         cleaned["source"] = event.source
+        cleaned.pop("rests_on", None)
+        cleaned.pop("why", None)
     if cleaned["note"] != event.note:
         # The note's writer is whoever last wrote it, not whoever last
         # touched the event; a cleared note has no writer.
@@ -242,6 +254,8 @@ def source_words(event: Event, names: dict) -> str:
         return f"Proposed from {camera}" if event.proposed else f"Assistant, {camera}"
     if event.source == WATCH:
         return f"Watch phrase, {camera}"
+    if event.source == REPORT:
+        return "From the report"
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
 
 
@@ -328,7 +342,9 @@ def events_json(incident) -> list[dict]:
                     names[one] for one in event.cameras if one in names
                 ),
                 "proposed": event.proposed,
-                "rests_on": event.rests_on if event.proposed else "",
+                "rests_on": (
+                    event.rests_on if event.proposed or event.source == REPORT else ""
+                ),
                 "why": event.why,
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 # Phase 7 chapter 1.

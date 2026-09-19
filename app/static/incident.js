@@ -44,7 +44,7 @@
   // The layers (Phase 8 chapter 1): one job opened over the tab in the work
   // panel; the wall and the strip never move. A stack, because a clip can
   // open from an event; Back pops one and returns exactly.
-  var LAYERS = ["event", "clip", "sync", "proposals", "find"];
+  var LAYERS = ["event", "clip", "sync", "proposals", "find", "compare"];
   var layerStack = [];
   var layerReturn = null;
 
@@ -1115,7 +1115,7 @@
     layer.scrollTop = 0;
   }
   function layerName(name) {
-    return { event: "Event", clip: "Clip", sync: "Sync", proposals: "Proposed events", find: "Find" }[name] || name;
+    return { event: "Event", clip: "Clip", sync: "Sync", proposals: "Proposed events", find: "Find", compare: "Comparison" }[name] || name;
   }
   function closeLayer() {
     var name = layerStack.pop();
@@ -1732,7 +1732,14 @@
   // camera; + event opens the event box at the moment with the line filled.
   window.INCIDENT_PAGE = {
     seek: function (at) { seek(at); if (!playing) { play(); } },
-    addEvent: function (at, line) { openEventBox({ at: at, text: line || "", source: "person" }); }
+    addEvent: function (at, line, note) { openEventBox({ at: at, text: line || "", note: note || "", source: "person" }); },
+    refresh: function () { refresh(); },
+    // The comparison (Phase 8 chapter 4, part 3) opens as a layer over the Report tab.
+    openComparison: function (draw) {
+      openLayer("compare");
+      var title = document.getElementById("compare-title");
+      draw(document.getElementById("compare-box"), function (words) { if (title) { title.textContent = words; } });
+    }
   };
 
   // Go ---------------------------------------------------------------------------------------

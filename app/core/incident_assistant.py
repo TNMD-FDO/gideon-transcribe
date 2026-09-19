@@ -353,6 +353,8 @@ def _chronology_lines(incident) -> tuple[list[str], dict]:
             origin = f"from what {camera} showed"
         elif event.source == chronology.ASSISTANT:
             origin = f"proposed from {camera} and accepted by a person"
+        elif event.source == chronology.REPORT:
+            origin = "from the report, which says: " + (event.rests_on or "")
         else:
             origin = "added by a person"
         when = _clock(incident, event.at) + (

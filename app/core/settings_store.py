@@ -301,6 +301,55 @@ def _rows() -> list[Definition]:
             when_changed="The next question.",
         ),
         Definition(
+            key="documents_compare",
+            page=DOCUMENTS,
+            name="Compare with the report",
+            kind=TOGGLE,
+            default=True,
+            needs="documents",
+            what_it_does=(
+                "The comparison: the report read in windows of pages against the "
+                "incident record and the chronology (or a recording's transcript), "
+                "every finding cited on both sides and marked agrees, differs, not "
+                "on camera or not in the report. Needs the assistant."
+            ),
+            when_changed=(
+                "Off hides Compare with the report; comparisons already made stay."
+            ),
+        ),
+        Definition(
+            key="documents_compare_answer_tokens",
+            page=DOCUMENTS,
+            name="Comparison answer cap",
+            kind=NUMBER,
+            default=3000,
+            least=500,
+            most=16000,
+            unit="tokens",
+            needs="documents_compare",
+            what_it_does=(
+                "The most one window's findings may run to; a cap hit is counted "
+                "on the comparison's state line."
+            ),
+            when_changed="The next comparison.",
+        ),
+        Definition(
+            key="documents_compare_time_seconds",
+            page=DOCUMENTS,
+            name="Comparison time limit",
+            kind=NUMBER,
+            default=600,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="documents_compare",
+            what_it_does=(
+                "How long one window's call may take. Doubled while Let the model "
+                "think is On."
+            ),
+            when_changed="The next comparison.",
+        ),
+        Definition(
             key="reports",
             page=FEATURES,
             name="Reports",
@@ -2797,6 +2846,7 @@ def time_limit_seconds(feature: str) -> int:
         "incident_events": "incidents_events_time_seconds",
         "incident_memo": "incidents_memo_time_seconds",
         "incident_chat": "incidents_chat_time_seconds",
+        "compare_report": "documents_compare_time_seconds",
     }[feature]
     return get(key)
 

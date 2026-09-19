@@ -613,7 +613,7 @@ One numbered block of a Document's Page ("page 4, paragraph 2"), split by the ga
 _Avoid_: chunk, passage, snippet
 
 **Comparison**:
-The assistant's reading of a Document against the incident record and the Chronology (or one Recording's Transcript and Digest), one Finding per row, each citing the Paragraph and the moment and marked Agrees, Differs, Not on camera or Not in the report; kept on the Incident or Recording, one per Document, replaced by Compare again, stale when the cameras or the Chronology change; a person makes a Finding an Event. Phase 8 chapter 4.
+The assistant's reading of a Document against the incident record and the Chronology (or one Recording's Transcript and Digest), one Finding per row, each citing the Paragraph and the moment and marked Agrees, Differs, Not on camera or Not in the report; kept on the Incident or Recording, one per Document, replaced by Compare again, stale when the cameras or the Chronology change; a person dismisses or notes a Finding and makes one an Event with the source "From the report", resting on the Paragraph. Phase 8 chapter 4, built in v1.73.0.
 _Avoid_: analysis, audit, reconciliation, contradiction report
 
 **Release**:

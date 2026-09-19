@@ -21,6 +21,49 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.73.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0056, a table for comparisons)
+```
+
+Phase 8 chapter 4, part 3 of 3: the comparison. The police report set
+beside what the cameras recorded, every finding cited on both sides.
+
+- **Compare with the report**, on the Report tab of the incident page and
+  of a recording's page. The assistant reads the report in windows of
+  pages against the incident record and the chronology (or the recording's
+  transcript and digest) and gathers findings: one row each, the report's
+  paragraph and the record's moment both cited, marked **Agrees**,
+  **Differs**, **Not on camera** or **Not in the report**, with one line of
+  why. A finding that names no real paragraph, or no real moment where one
+  is needed, is dropped by the app. What the report leaves out is asked once
+  against the whole report, so an event mentioned anywhere is not a finding;
+  when the report is too long for that check the state line says so.
+- **The comparison as a layer** over the incident page's Report tab, and as
+  a block under the document on a recording's page: the state line ("2
+  pages against 1 camera; 4 findings: 1 agree, 1 differ, 1 not on camera, 1
+  not in the report"), the four marks as pills that filter, and on each row
+  the paragraph as a citation that opens the page, the moment as a citation
+  that plays every camera, the why, **Note**, **Dismiss** (and Undo). There
+  is no Accept all: a person reads the rows.
+- **Make it an event** puts a finding on the chronology at its moment with
+  the claim as its line, source "From the report", resting on the paragraph
+  (shown under the event), the mark as its why and the note carried; a Not
+  on camera finding opens the event box so a person picks the moment. The
+  memo reads the paragraph an event rests on.
+- **Comparison to Word**: the cover with the document, the cameras and the
+  counts, then one table of the findings with their notes.
+- **Kept and stale.** One comparison per report and home, replaced by
+  Compare again, and marked stale when the chronology or the cameras change,
+  as the memo is. A new Comparison template is on the Templates page.
+- **Settings**, on the Documents page: Compare with the report (On, needs
+  the assistant), Comparison answer cap (3,000 tokens), Comparison time
+  limit (600 seconds). Audit rows: one AI assistant call for the run
+  counting its calls, Comparison run with the counts, comparison exported; never a word of the
+  report or the record.
+
 ## v1.72.0, 2026-09-19
 
 ```

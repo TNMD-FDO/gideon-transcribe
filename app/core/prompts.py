@@ -505,6 +505,33 @@ INCIDENT_CHAT = (
     "on. When the record does not hold the answer, say so plainly and say "
     "what it does hold. Plain words, short sentences, no preamble."
 )
+# The comparison (Phase 8 chapter 4, part 3): a report's pages against the
+# record, one finding per row, both sides cited.
+COMPARISON = (
+    "You compare a police report with the record of what the cameras "
+    "recorded, for the office that defends the accused. The report is the "
+    "officer's account; the record is the cameras' words and pictures on one "
+    "clock, with the chronology the office wrote. Go through the report's "
+    "paragraphs given and, for each claim of fact that the record can speak "
+    "to, say whether the record agrees with it, differs from it, or shows "
+    "nothing about it. Cite the paragraph the claim is in by its page and "
+    "paragraph number, and the moment on the record by its time. A "
+    "description of the picture is a description, not a fact; say what was "
+    "said and what was seen, and never what it means in law. Where the "
+    "report's words may be misread (a scan), say so in the why. Prefer few "
+    "findings that matter to many that do not; skip headings, form fields "
+    "and boilerplate. Plain words, one short sentence each."
+)
+COMPARISON_FORMAT = (
+    'Answer with JSON only: {"findings": [{"page": 4, "paragraph": 2, '
+    '"claim": "the report says what, in a few words", "at": "hh:mm:ss", '
+    '"mark": "agrees" or "differs" or "not_on_camera" or "not_in_report", '
+    '"why": "one sentence"}]}. The page and paragraph copied from the line '
+    "the claim appears on; the time copied from the record or the "
+    "chronology, left empty only for not_on_camera. For not_in_report the "
+    "claim is the event or moment the report leaves out, with its time, and "
+    "page and paragraph empty. No other text."
+)
 INCIDENT_CHAT_FORMAT = (
     "Answer in plain text. Give every time as [hh:mm:ss] copied from the "
     "record or the chronology. Keep to the question."
@@ -944,6 +971,41 @@ def incident_events_input(
         parts.append(f"For this run the office asks you to look for: {look_for}")
     parts.append(f"What follows is one stretch of {nature}:")
     return "\n\n".join(parts)
+
+
+def comparison_input(
+    head: str, events: list[str], record: str, paragraphs: str, *, first: int, last: int
+) -> str:
+    """One window of the report against the whole record."""
+    listed = "\n".join(events) if events else "none."
+    return "\n\n".join(
+        [
+            head,
+            "The chronology, as the office wrote it:\n" + listed,
+            "The record (every time is by that clock, and each line names the "
+            "camera it comes from):\n" + record,
+            f"The report, pages {first} to {last} (each paragraph on its own line, "
+            "with its page and paragraph number in front):\n" + paragraphs,
+            "Compare these pages of the report with the record: for each claim of "
+            "fact, agrees, differs or not_on_camera, with the paragraph and the "
+            "moment. Do not report what the report leaves out here.",
+        ]
+    )
+
+
+def comparison_left_out_input(head: str, events: list[str], paragraphs: str) -> str:
+    """The chronology against the whole report: what the report leaves out."""
+    return "\n\n".join(
+        [
+            head,
+            "The chronology, as the office wrote it:\n" + "\n".join(events),
+            "The whole report (each paragraph on its own line):\n" + paragraphs,
+            "Which events of the chronology does the report not mention at all? "
+            "Give each as not_in_report with the event's time as at and its line "
+            "as the claim, page and paragraph empty. An event the report mentions "
+            "anywhere, in any words, is not a finding. No other marks.",
+        ]
+    )
 
 
 def incident_memo_input(

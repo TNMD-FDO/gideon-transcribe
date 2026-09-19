@@ -162,6 +162,11 @@
         <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="proposals-title">Proposed events</b><span class="grow"></span><span id="proposals-head-acts"></span></div>
         <div class="inc-proposals" id="proposals-box"></div>
       </div>
+      {% comment %}The comparison (Phase 8 chapter 4, part 3): the report against the record, one finding per row, both sides cited.{% endcomment %}
+      <div class="inc-layer" id="layer-compare" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Report</span></button><b id="compare-title">Comparison</b><span class="grow"></span><span id="compare-head-acts"></span></div>
+        <div class="inc-compare compare-box" id="compare-box"></div>
+      </div>
       <div class="inc-layer" id="layer-find" hidden>
         <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="find-title">Find</b><span class="grow"></span><span class="muted small">Enter: next, Shift+Enter: back</span></div>
         <div class="inc-find-hits" id="find-hits"></div>
@@ -170,7 +175,7 @@
         <div class="panel" id="panel-chronology" hidden></div>
         {% if state.memo.on %}<div class="panel" id="panel-memo" hidden></div>{% endif %}
         <div class="panel" id="panel-cameras" hidden></div>
-        <div class="panel" id="panel-report" hidden></div>
+        <div class="panel" id="panel-report" hidden data-home="incident" data-home-id="{{ incident.pk }}"></div>
         <div class="panel" id="panel-details" hidden></div>
       </div>
     </div>

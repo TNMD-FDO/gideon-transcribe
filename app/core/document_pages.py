@@ -103,6 +103,129 @@ def add(request: HttpRequest, case_id) -> HttpResponse:
     return render(request, "document-add.html", context)
 
 
+def _compare_home(request: HttpRequest, document: Document, source):
+    """The incident or recording a comparison is against: one the document
+    is linked to, named in the request."""
+    if source.get("incident") and str(document.incident_id) == str(
+        source.get("incident")
+    ):
+        return document.incident
+    if source.get("recording") and str(document.recording_id) == str(
+        source.get("recording")
+    ):
+        return document.recording
+    raise Http404(
+        "the comparison is against the incident or recording the report is for"
+    )
+
+
+@login_required
+def comparison_state(request: HttpRequest, case_id, document_id) -> HttpResponse:
+    """The comparison for the layer: its state and its findings."""
+    from django.http import JsonResponse
+
+    from core import comparison
+
+    document = _their_document(request, case_id, document_id)
+    home = _compare_home(request, document, request.GET)
+    return JsonResponse(
+        comparison.as_json(comparison.of(document, home), document, home)
+    )
+
+
+@login_required
+@require_POST
+def compare(request: HttpRequest, case_id, document_id) -> HttpResponse:
+    """Compare with the report: one run, on the llm queue."""
+    from django.http import JsonResponse
+
+    from core import comparison
+
+    document = _their_document(request, case_id, document_id)
+    home = _compare_home(request, document, request.POST)
+    made = comparison.ask_for(document, home, by=request.user)
+    if made is None:
+        _, why = comparison.possible(document, home)
+        return JsonResponse({"error": why or "The comparison cannot run."}, status=400)
+    return JsonResponse(comparison.as_json(made, document, home))
+
+
+@login_required
+@require_POST
+def comparison_act(request: HttpRequest, case_id, document_id) -> HttpResponse:
+    """Dismiss, undo, a note, Make it an event, on one finding."""
+    from django.http import JsonResponse
+
+    from core import comparison
+
+    document = _their_document(request, case_id, document_id)
+    home = _compare_home(request, document, request.POST)
+    made = comparison.of(document, home)
+    if made is None:
+        raise Http404("no comparison yet")
+    action = request.POST.get("action", "")
+    finding = request.POST.get("finding", "")
+    ok = True
+    if action == "dismiss":
+        ok = comparison.set_dismissed(made, finding, True)
+    elif action == "undismiss":
+        ok = comparison.set_dismissed(made, finding, False)
+    elif action == "note":
+        ok = comparison.set_note(made, finding, request.POST.get("note", ""))
+    elif action == "make_event":
+        at = request.POST.get("at", "")
+        try:
+            comparison.make_event(
+                made,
+                finding,
+                at=float(at) if at not in ("", None) else None,
+                by=request.user,
+                request=request,
+            )
+        except ValueError as why:
+            return JsonResponse({"error": str(why)}, status=400)
+    else:
+        raise Http404("no such action")
+    if not ok:
+        raise Http404("no such finding")
+    return JsonResponse(comparison.as_json(made, document, home))
+
+
+@login_required
+def comparison_export(request: HttpRequest, case_id, document_id) -> HttpResponse:
+    """Comparison to Word."""
+    from urllib.parse import quote
+
+    from core import audit, comparison
+
+    document = _their_document(request, case_id, document_id)
+    home = _compare_home(request, document, request.GET)
+    made = comparison.of(document, home)
+    if made is None or made.state != "done":
+        raise Http404("no comparison yet")
+    body = comparison.word(made, request.user.shown_name)
+    audit.write(
+        audit.Category.EXPORTS,
+        "comparison exported",
+        actor=request.user,
+        request=request,
+        affected_user=document.case.owner
+        if document.case.owner_id != request.user.pk
+        else None,
+        object_type="document",
+        object_id=document.pk,
+        object_label=document.title,
+        kind="comparison",
+    )
+    from core import exports
+
+    answer = HttpResponse(body, content_type=exports.WORD_TYPE)
+    answer["Content-Disposition"] = (
+        f"attachment; filename*=UTF-8''{quote(comparison.export_name(made))}"
+    )
+    return answer
+
+
 @login_required
 def state(request: HttpRequest, case_id, document_id) -> HttpResponse:
     """The document for the Report tab: every page's picture and words."""

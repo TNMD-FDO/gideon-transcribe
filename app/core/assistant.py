@@ -71,6 +71,7 @@ class PromptTemplate(models.Model):
     INCIDENT_EVENTS = "incident_events"
     INCIDENT_MEMO = "incident_memo"
     INCIDENT_CHAT = "incident_chat"
+    COMPARISON = "comparison"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
@@ -82,6 +83,7 @@ class PromptTemplate(models.Model):
         INCIDENT_EVENTS: ("Proposed events", prompts.INCIDENT_EVENTS),
         INCIDENT_MEMO: ("Incident memo", prompts.INCIDENT_MEMO),
         INCIDENT_CHAT: ("Incident chat", prompts.INCIDENT_CHAT),
+        COMPARISON: ("Comparison", prompts.COMPARISON),
     }
 
     key = models.CharField(max_length=30, unique=True)
