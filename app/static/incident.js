@@ -1604,7 +1604,105 @@
   // Go ---------------------------------------------------------------------------------------
 
   take(S);
-  showTab(placedCameras().length ? "chronology" : "cameras");
+  showTab(C.openTab || (placedCameras().length ? "chronology" : "cameras"));
   seek(moment);
   if (eventWords) { openEventBox({ at: moment, text: eventWords, source: "words" }); }
+  // A search hit opens the memo at a paragraph (Phase 7 chapter 3).
+  if (C.openTab === "memo" && C.para !== "") { lightParagraph(document.getElementById("panel-memo"), parseInt(C.para, 10)); }
+
+  // Find (Phase 7 chapter 3) ------------------------------------------------------------------
+  //
+  // The box in the panel's head: the synced cameras' words, the events and
+  // the memo, asked for as the person types; every hit a moment, and a press
+  // seeks every camera there and brings the camera it was heard on to the
+  // front with the sound. Never logged, never stored.
+  var findBox = document.getElementById("find");
+  var findHits = document.getElementById("find-hits");
+  var findTimer = null;
+  var findList = [];
+  var findCurrent = -1;
+  function lightParagraph(panel, index) {
+    if (!panel || isNaN(index)) { return; }
+    var blocks = panel.querySelectorAll("p, h3");
+    var block = blocks[index];
+    if (!block) { return; }
+    block.classList.add("lit");
+    block.scrollIntoView({ block: "center" });
+    window.setTimeout(function () { block.classList.remove("lit"); }, 3000);
+  }
+  function drawFind(got) {
+    findList = got.hits || [];
+    findCurrent = -1;
+    if (!findBox.value.trim()) { findHits.hidden = true; findHits.innerHTML = ""; return; }
+    var head = findList.length + " moment" + (findList.length === 1 ? "" : "s") + " for \u201c" + escape(findBox.value.trim()) + "\u201d" +
+      (got.skipped ? " <span class='muted'>(" + got.skipped + " camera" + (got.skipped === 1 ? "" : "s") + " not synced " + (got.skipped === 1 ? "is" : "are") + " not searched)</span>" : "");
+    var html = "<p class='small muted find-head'>" + head + "</p>";
+    findList.forEach(function (one, n) {
+      var cam = one.camera ? cameraById(one.camera) : null;
+      var who = one.kind === "words" ? "<span class='dot' style='--speaker: " + (cam ? cam.colour : "var(--muted)") + "'></span>" + escape(one.camera_id) : escape(one.who);
+      html += "<div class='inc-find-hit' data-n='" + n + "'>" +
+        "<span class='t mono'>" + (one.at === null ? "" : timeOfDay(one.at)) + "</span>" +
+        "<span class='who small'>" + who + (one.kind === "words" && one.who ? " <span class='muted'>" + escape(one.who) + "</span>" : "") + "</span>" +
+        "<span class='grow'>" + one.html + "</span>" +
+        (one.kind === "words" ? "<button type='button' class='tiny ghost' data-find-event='" + n + "' title='An event at this moment, with the line filled'>E</button>" : "") +
+        "</div>";
+    });
+    findHits.innerHTML = html;
+    findHits.hidden = false;
+  }
+  function goToHit(n) {
+    var one = findList[n];
+    if (!one) { return; }
+    findCurrent = n;
+    Array.prototype.forEach.call(findHits.querySelectorAll(".inc-find-hit"), function (row) { row.classList.toggle("on", parseInt(row.dataset.n, 10) === n); });
+    if (one.at !== null && one.at !== undefined) { seek(one.at); }
+    if (one.kind === "words" && one.camera && cameraById(one.camera)) {
+      if (layout === "focus") { setFocus(one.camera); }
+      else {
+        var entry = players[one.camera];
+        if (entry && entry.tile && entry.tile.scrollIntoView) { entry.tile.scrollIntoView({ block: "nearest" }); }
+        setSound(one.camera);
+      }
+    } else if (one.kind === "event") {
+      showTab("chronology");
+      if (one.event) { flashRow(one.event); }
+    } else if (one.kind === "memo") {
+      showTab("memo");
+      lightParagraph(document.getElementById("panel-memo"), one.para);
+    }
+  }
+  if (findBox && findHits) {
+    findBox.addEventListener("input", function () {
+      window.clearTimeout(findTimer);
+      var asked = findBox.value.trim();
+      if (asked.length < 2) { findHits.hidden = true; findHits.innerHTML = ""; findList = []; return; }
+      findTimer = window.setTimeout(function () {
+        fetch(C.find + "?q=" + encodeURIComponent(asked), { credentials: "same-origin" })
+          .then(function (answer) { return answer.ok ? answer.json() : { hits: [] }; })
+          .then(drawFind)
+          .catch(function () { /* the next keystroke asks again */ });
+      }, 300);
+    });
+    findBox.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") { findBox.value = ""; findHits.hidden = true; findHits.innerHTML = ""; findList = []; findBox.blur(); return; }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (!findList.length) { return; }
+        var next = event.shiftKey ? (findCurrent <= 0 ? findList.length - 1 : findCurrent - 1) : (findCurrent + 1) % findList.length;
+        goToHit(next);
+        var row = findHits.querySelector(".inc-find-hit.on");
+        if (row) { row.scrollIntoView({ block: "nearest" }); }
+      }
+    });
+    findHits.addEventListener("click", function (event) {
+      var add = event.target.closest("[data-find-event]");
+      if (add) {
+        var one = findList[parseInt(add.dataset.findEvent, 10)];
+        if (one) { seek(one.at); openEventBox({ at: one.at, text: one.text, source: "words", camera: one.camera }); }
+        return;
+      }
+      var row = event.target.closest(".inc-find-hit");
+      if (row) { goToHit(parseInt(row.dataset.n, 10)); }
+    });
+  }
 })();

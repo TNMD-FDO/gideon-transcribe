@@ -216,6 +216,26 @@
       return "<div class='card summary'>" + head + body + tools + "</div>";
     }).join("");
     Array.prototype.forEach.call(summaryList.querySelectorAll(".regenerate"), unavailable);
+    lightAskedParagraph();
+  }
+
+  // A search hit opens a summary at a paragraph (Phase 7 chapter 3): the
+  // page's ?summary=&para= light that block once, the first time it is drawn.
+  var litOnce = false;
+  function lightAskedParagraph() {
+    if (litOnce) { return; }
+    var asked = new URLSearchParams(window.location.search);
+    var which = asked.get("summary");
+    var index = parseInt(asked.get("para"), 10);
+    if (!which || isNaN(index)) { return; }
+    var card = summaryList.querySelector("[data-summary='" + which + "']");
+    var answer = card ? card.closest(".summary") : null;
+    var block = answer ? answer.querySelectorAll(".answer p")[index] : null;
+    if (!block) { return; }
+    litOnce = true;
+    block.classList.add("lit");
+    block.scrollIntoView({ block: "center" });
+    window.setTimeout(function () { block.classList.remove("lit"); }, 3000);
   }
 
   if (newSummary && summaryDialog) {

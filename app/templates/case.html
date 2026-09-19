@@ -22,6 +22,7 @@
       {% if live_recording and role != "admin" %}<a href="{% url 'record-new' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
     </div>
+    {% include "dashboard-line.html" %}
 
     {% if incidents_on %}
       {% comment %}New incident: the case's videos, ticked; the same dialog the offer's Choose myself opens with its videos ticked.{% endcomment %}
@@ -68,6 +69,8 @@
         <div class="tabs" style="margin-top: 6px">
           <a href="{% url 'case' case.pk %}"
              class="tab{% if tab == 'recordings' %} on{% endif %}">Recordings ({{ recordings|length }})</a>
+          <a href="{% url 'case' case.pk %}?tab=search"
+             class="tab{% if tab == 'search' %} on{% endif %}">Search</a>
           {% if clips_available %}
             <a href="{% url 'case' case.pk %}?tab=clips"
                class="tab{% if tab == 'clips' %} on{% endif %}">Clips ({{ clips_count }})</a>
@@ -84,41 +87,48 @@
           {% endif %}
         </div>
 
-        {% if tab == "recordings" %}
-        <form method="get" class="row" style="gap: 6px; margin: 14px 0">
-          <input type="search" name="q" value="{{ asked }}" class="grow"
-                 style="max-width: 26rem"
-                 placeholder="Search this case's transcripts and speaker names">
-          <button type="submit" class="btn">Search</button>
-          {% if asked %}
-            <a href="{% url 'case' case.pk %}" class="btn ghost">Clear</a>
-          {% endif %}
-        </form>
-        {% endif %}
-
-        {% if hits is not None %}
-          <h2>{{ hits|length }} hit{{ hits|length|pluralize }} for &ldquo;{{ asked }}&rdquo;</h2>
-          {% if hits %}
-            <table class="tbl">
-              <thead>
-                <tr><th>Recording</th><th>At</th><th>Speaker</th><th>What was said</th></tr>
-              </thead>
-              <tbody>
-                {% for hit in hits %}
-                  <tr>
-                    <td><a href="{% url 'viewer' hit.recording.pk %}?t={{ hit.start|floatformat:1 }}">{{ hit.recording.title }}</a></td>
-                    <td class="mono muted">{{ hit.at }}</td>
-                    <td class="muted">{{ hit.speaker }}</td>
-                    <td>{{ hit.text }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+        {% if tab == "search" %}
+          {% comment %}Search across the case (Phase 7 chapter 3): one box, six kinds, hits by where they live.{% endcomment %}
+          <form method="get" class="row" style="gap: 6px; margin: 14px 0" id="case-search">
+            <input type="hidden" name="tab" value="search">
+            <input type="search" name="q" value="{{ asked }}" class="grow" style="max-width: 30rem"
+                   placeholder="Search this case" aria-label="Search this case" autofocus>
+            <button type="submit" class="btn">Search</button>
+            {% if asked %}<a href="{% url 'case' case.pk %}?tab=search" class="btn ghost">Clear</a>{% endif %}
+          </form>
+          {% if search %}
+            {% if search.short %}
+              <p class="lead">Type at least two characters.</p>
+            {% else %}
+              <p class="lead">{{ search.total }} hit{{ search.total|pluralize }} for &ldquo;{{ asked }}&rdquo;</p>
+              {% if search.kinds %}
+                <div class="row search-kinds">
+                  <a class="pill small{% if not search.kind %} on{% endif %}" href="?tab=search&q={{ asked|urlencode }}">All ({{ search.total }})</a>
+                  {% for k in search.kinds %}
+                    <a class="pill small{% if search.kind == k.key %} on{% endif %}" href="?tab=search&q={{ asked|urlencode }}&kind={{ k.key }}">{{ k.name }} ({{ k.count }})</a>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% for group in search.groups %}
+                <h2 class="search-head"><a href="{{ group.url }}">{{ group.head }}</a></h2>
+                <table class="tbl search-hits"><tbody>
+                  {% for hit in group.hits %}
+                    <tr>
+                      <td class="mono muted nowrap">{% if hit.url %}<a href="{{ hit.url }}">{{ hit.when }}</a>{% else %}{{ hit.when }}{% endif %}{% if hit.all_cameras %} <a class="cite all" href="{{ hit.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}</td>
+                      <td class="muted">{{ hit.who }}</td>
+                      <td>{{ hit.text }}{% if hit.under %}<div class="small"><i>{{ hit.under }}</i></div>{% endif %}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody></table>
+              {% empty %}
+                <p class="lead">Nothing in this case says that.</p>
+              {% endfor %}
+              {% if search.more %}<p class="muted small">Only the first {{ search.most }} hits of a kind are shown; narrow the words.</p>{% endif %}
+            {% endif %}
           {% else %}
-            <p class="lead">Nothing in this case says that.</p>
+            <p class="muted">Words in every transcript, event, note, memo, summary and clip title of this case. Words in any order; a phrase in quotes for an exact match.</p>
           {% endif %}
           <p class="muted small">Search terms are never written to the audit log.</p>
-          <h2 style="margin-top: 26px">Recordings</h2>
         {% endif %}
 
         {% if tab == "chat" %}
@@ -346,7 +356,7 @@
                 </thead>
                 <tbody>
                   {% for clip in clips_here %}
-                    <tr>
+                    <tr id="clip-{{ clip.id }}">
                       <td><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}</td>
                       <td class="muted">{{ clip.recording_title }}</td>
                       <td class="muted">{{ clip.cameras }}</td>

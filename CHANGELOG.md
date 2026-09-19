@@ -21,6 +21,45 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.65.0, 2026-09-19
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 7 chapter 3: the case dashboard line, search across a case, and
+Find on the incident page. From the maintainer's list of 2026-09-19.
+
+- **The dashboard line.** Under the case's name, one line of pills for
+  everything in the case that has a state: transcribing, in line,
+  preparing, enriched tonight, an incident not synced, events to check,
+  proposed events waiting, a memo writing or with newer events, clips
+  rendering or failed, shared with, deletes in N days. Each pill is a link
+  to where it is dealt with. Nothing pending shows nothing. On the
+  Recordings tab it refreshes with the rows.
+- **Search is a tab of its own**, second after Recordings, and the box
+  leaves the recordings list. It reads six kinds, offered as filters when
+  they have hits: the words of every transcript and its speaker names,
+  every incident's events with their why and About, the notes on events,
+  every memo and every summary paragraph by paragraph, and every clip's
+  title. Hits are grouped by the recording or the incident they live in,
+  in time order, the words marked. A words hit plays in the viewer, with
+  "all cameras" when the recording is a synced camera; an event hit opens
+  the incident page at that moment; a memo or summary hit opens the tab
+  with the paragraph lit; a clip hit lands on its row. Words in any order,
+  a phrase in quotes for an exact match, the first two hundred of a kind.
+  Phase 2's `?q=` on a case's address opens the tab. The term is never
+  logged. Measured on the office's largest case, a search takes
+  milliseconds; no index was needed (`docs/research/case-search.md`).
+- **Find on the incident page.** A box in the work panel's head. It reads
+  the synced cameras' words, the chronology's events and the memo, and
+  every hit is a moment: pressing one seeks every camera there, brings the
+  camera it was heard on to the front and gives it the sound. Enter goes
+  to the next hit, Shift+Enter to the one before, Escape clears. A small E
+  on a words hit opens the event box at that moment with the line filled.
+  A camera not synced is not searched, and the box says so.
+
 ## v1.64.0, 2026-09-19
 
 ```

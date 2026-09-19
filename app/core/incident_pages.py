@@ -66,8 +66,30 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "others": _others(case, incident),
             # A citation's words, for the event box to open with (chapter 2).
             "event_words": request.GET.get("event", "")[: chronology.TEXT_MOST],
+            # A search hit opens on a tab, at a paragraph (Phase 7 chapter 3).
+            "open_tab": request.GET.get("tab", "")
+            if request.GET.get("tab") in ("chronology", "memo", "cameras", "details")
+            else "",
+            "para": _number(request.GET.get("para", "")),
         },
     )
+
+
+def _number(text: str) -> str:
+    try:
+        return str(max(0, int(text)))
+    except (TypeError, ValueError):
+        return ""
+
+
+@login_required
+def find(request: HttpRequest, case_id, incident_id) -> JsonResponse:
+    """Find on the incident page (Phase 7 chapter 3): the hits as moments.
+    The term is never logged."""
+    from core import case_search
+
+    _, incident = _incident(request, case_id, incident_id)
+    return JsonResponse(case_search.find(incident, request.GET.get("q", "")[:200]))
 
 
 def _asked_moment(request, incident: Incident, state: dict) -> float:

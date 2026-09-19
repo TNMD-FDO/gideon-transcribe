@@ -641,6 +641,10 @@
       if (line && !newLine) { line.remove(); }
       else if (line && newLine) { line.innerHTML = newLine.innerHTML; }
       else if (!line && newLine) { recordings.parentNode.parentNode.insertBefore(newLine, recordings.parentNode); }
+      // The dashboard line (Phase 7 chapter 3) moves with the rows.
+      var dash = document.getElementById("dashboard-line");
+      var newDash = fresh.getElementById("dashboard-line");
+      if (dash && newDash) { dash.innerHTML = newDash.innerHTML; dash.hidden = newDash.hidden; }
     }
     function tick() {
       if (!preparing()) { return; }

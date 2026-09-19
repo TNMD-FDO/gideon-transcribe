@@ -2090,6 +2090,25 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 /* Phase 7 chapter 2: why a proposal matters, in the assistant's words, and
    the pill of an event a watch phrase found. */
 .inc-events .why { font-style: italic; color: var(--text); opacity: 0.85; }
+/* The dashboard line, the Search tab and Find (Phase 7 chapter 3). */
+.dashboard-line { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.dashboard-line .pill { text-decoration: none; }
+.dashboard-line .pill:hover { text-decoration: underline; }
+.search-kinds { gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
+.search-kinds .pill { text-decoration: none; }
+.search-kinds .pill.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.search-head { font-size: var(--t-heading); margin: 18px 0 6px; }
+.search-hits td mark, .inc-find-hit mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+.inc-work .tabbar .inc-find { margin-left: auto; align-self: center; max-width: 14rem; min-width: 8rem; }
+.inc-find-hits { max-height: 32vh; overflow: auto; border-bottom: 1px solid var(--line); background: var(--surface-2); font-size: var(--t-small); }
+.inc-find-hits .find-head { margin: 6px 12px 2px; }
+.inc-find-hit { display: flex; gap: 8px; align-items: baseline; padding: 4px 12px; cursor: pointer; border-top: 1px solid var(--line); }
+.inc-find-hit:hover { background: var(--surface); }
+.inc-find-hit.on { background: var(--now); color: var(--now-ink); }
+.inc-find-hit .t { flex: none; width: 5.2rem; }
+.inc-find-hit .who { flex: none; width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inc-find-hit .who .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--speaker, var(--muted)); margin-right: 4px; }
+.panel .lit, .answer .lit { background: color-mix(in srgb, var(--accent) 18%, transparent); transition: background 1.5s; }
 .pill.watch { color: var(--accent); border: 1px solid var(--accent); background: transparent; }
 .inc-propose #look-for { flex: 1 1 14rem; min-width: 10rem; max-width: 26rem; }
 .inc-events tr.here td { background: var(--now); color: var(--now-ink); }

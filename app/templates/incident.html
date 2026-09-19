@@ -140,7 +140,10 @@
         {% if state.memo.on %}<button type="button" class="tab" data-panel="memo">Memo</button>{% endif %}
         <button type="button" class="tab" data-panel="cameras">Cameras</button>
         <button type="button" class="tab" data-panel="details">Details</button>
+        {% comment %}Find (Phase 7 chapter 3): a hit is a moment; pressing it takes every camera there.{% endcomment %}
+        <input type="search" id="find" class="small inc-find" maxlength="200" placeholder="Find" aria-label="Find a moment on the cameras" title="Words said on any synced camera, an event or the memo; press a hit and every camera goes there. Enter for the next hit, Shift+Enter for the one before, Escape to clear.">
       </div>
+      <div class="inc-find-hits" id="find-hits" hidden></div>
       <div class="panels">
         <div class="panel" id="panel-chronology" hidden></div>
         {% if state.memo.on %}<div class="panel" id="panel-memo" hidden></div>{% endif %}
@@ -194,7 +197,10 @@
       lines: "/incident-camera/",
       eventClip: "{% url 'incident' case.pk incident.pk %}/event/",
       at: {{ at|floatformat:2 }},
-      role: "{{ role }}"
+      role: "{{ role }}",
+      find: "{% url 'incident-find' case.pk incident.pk %}",
+      openTab: "{{ open_tab }}",
+      para: "{{ para }}"
     };
   </script>
   {{ event_words|json_script:"event-words" }}

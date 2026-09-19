@@ -12,7 +12,6 @@ import io
 import zipfile
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
 from django.http import (
     Http404,
     HttpRequest,
@@ -26,7 +25,9 @@ from django.views.decorators.http import require_POST
 
 from core import (
     audit,
+    case_search,
     cases,
+    dashboard,
     exports,
     live,
     pages,
@@ -39,10 +40,6 @@ from core import (
 from core.cases import Case
 from core.jobs import Segment
 from core.recordings import Recording
-
-# How many hits one search shows. A person looking for a phrase wants the
-# first few; a thousand rows would be a worse answer, not a fuller one.
-MOST_HITS = 200
 
 
 def _on_or_404() -> None:
@@ -234,11 +231,14 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
 
     chat_here = case_chat.available()
     tabs = (
-        ("clips", "speakers")
+        ("search", "clips", "speakers")
         + (("chat",) if chat_here else ())
         + (("incidents",) if incidents.on() else ())
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
+    # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
+    if asked and not request.GET.get("tab"):
+        tab = "search"
 
     # The pane about the case says where its clock stands, as its row on the
     # Cases page does.
@@ -274,7 +274,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "vision_pending": vision.pending(case),
             "vision_offers": vision.offers(case, user=request.user),
             "asked": asked,
-            "hits": _search(case, asked) if asked else None,
+            "search": (
+                case_search.search(case, asked, request.GET.get("kind", ""))
+                if tab == "search" and asked
+                else None
+            ),
+            # The dashboard line (Phase 7 chapter 3).
+            "pills": dashboard.pills(case, role),
             "types": cases.recording_types(),
             "size": uploads.as_gb(case.disk_bytes()),
             # Incidents (Phase 6 chapter 1): the strip under the case name,
@@ -460,32 +466,6 @@ def _speakers_in_words(recording: Recording) -> str:
     if unnamed:
         parts.append(f"{unnamed} unnamed")
     return ", ".join(parts)
-
-
-def _search(case: Case, asked: str) -> list:
-    """Transcript text and Speaker names across one Case.
-
-    Every hit is a Segment, and opening it opens the viewer at that time. The
-    term is never written to the audit log, here or anywhere.
-    """
-    found = (
-        Segment.objects.filter(transcript__recording__case=case)
-        .filter(Q(text__icontains=asked) | Q(speaker__icontains=asked))
-        .select_related("transcript__recording")
-        .order_by("transcript__recording__created", "start")[:MOST_HITS]
-    )
-    return [
-        {
-            "recording": one.transcript.recording,
-            "start": one.start,
-            # A timestamp, because that is what a person reading a hit wants
-            # and it is the same shape a Citation is written in.
-            "at": exports.clock(one.start),
-            "speaker": one.speaker,
-            "text": one.text,
-        }
-        for one in found
-    ]
 
 
 # Making, renaming, and deleting -----------------------------------------------

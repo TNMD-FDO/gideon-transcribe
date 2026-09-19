@@ -232,6 +232,12 @@ urlpatterns = [
         incident_pages.lines,
         name="incident-camera-lines",
     ),
+    # Find on the incident page (Phase 7 chapter 3).
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/find",
+        incident_pages.find,
+        name="incident-find",
+    ),
     # Clip this event (Phase 7 chapter 1).
     path(
         "case/<uuid:case_id>/incident/<uuid:incident_id>/event/<uuid:event_id>/clip",

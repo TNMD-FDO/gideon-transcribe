@@ -1,0 +1,8 @@
+{% comment %}
+  The dashboard line (Phase 7 chapter 3): one pill for everything in the
+  case that has a state, each a link to where it is dealt with; nothing
+  when nothing is pending. Swapped by cases.js with the rows' refresh.
+{% endcomment %}
+<div class="dashboard-line" id="dashboard-line"{% if not pills %} hidden{% endif %}>
+  {% for pill in pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
+</div>
