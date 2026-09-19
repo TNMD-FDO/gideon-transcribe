@@ -25,6 +25,7 @@
   var wallBox = document.getElementById("wall");
   var lanesBox = document.getElementById("lanes");
   var ticksBox = document.getElementById("ticks");
+  var band = document.getElementById("clip-band");   // the dragged span on the ruler (Phase 6 chapter 5)
   var strip = document.getElementById("strip");
   var clockBig = document.getElementById("inc-clock");
   var dateBox = document.getElementById("inc-date");
@@ -181,7 +182,9 @@
     // The assistant at work (chapter 3), or a clip rendering (v1.63.1): the
     // page asks again until it lands, so the row's words change by themselves.
     var rendering = S.events.some(function (one) { return one.clips_rendering; });
-    if (S.proposals.busy || S.memo.busy || rendering) {
+    var matching = S.cameras.some(function (cam) { return cam.match && (cam.match.state === "queued" || cam.match.state === "running"); });
+    if (!syncBox.hidden) { drawSync(); }
+    if (S.proposals.busy || S.memo.busy || rendering || matching) {
       window.clearTimeout(pollTimer);
       pollTimer = window.setTimeout(refresh, 3000);
     }
@@ -227,7 +230,7 @@
       var button = event.target.closest("[data-tile]");
       if (!button) { return; }
       tile.querySelector(".tile-menu").removeAttribute("open");
-      if (button.dataset.tile === "sync") { toggleSync(tile, cam); }
+      if (button.dataset.tile === "sync") { openSync(cam.id); }
       else if (button.dataset.tile === "sound") { pickSound(cam.id); }
       else if (button.dataset.tile === "swap") { swapOut(cam.id); }
       else if (button.dataset.tile === "remove") {
@@ -394,49 +397,6 @@
     }
     window.addEventListener("resize", function () { layWall(wallCameras().length); });
   })();
-
-  // Sync, on the tile: the nudges, the clock, the file, the sound, a typed time.
-  function toggleSync(tile, cam) {
-    var box = tile.querySelector(".inc-sync");
-    if (!box.hidden) { box.hidden = true; return; }
-    box.innerHTML = "<span class='small'><b>Sync</b> " + escape(cam.placed_words) + (cam.synced ? "" : ": nudge it until it plays in step with the others") + "</span>" +
-      "<span class='inc-nudge'>" +
-      "<button type='button' class='tiny' data-sync='nudge' data-by='-1'>− s</button>" +
-      "<button type='button' class='tiny' data-sync='nudge' data-by='-0.1'>\u22120.1</button>" +
-      "<span class='mono small' title='When this camera starts, on the incident clock'>" + timeOfDay(cam.starts_at) + "</span>" +
-      "<button type='button' class='tiny' data-sync='nudge' data-by='0.1'>+0.1</button>" +
-      "<button type='button' class='tiny' data-sync='nudge' data-by='1'>+1 s</button></span> " +
-      (cam.has_clock ? "<button type='button' class='tiny' data-sync='clock'>From its clock</button> " : "") +
-      (cam.file_time && S.incident.has_clock ? "<button type='button' class='tiny' data-sync='file' title='The file says " + quoted(cam.file_time) + "'>From its file</button> " : "") +
-      "<button type='button' class='tiny' data-sync='type'>Type a time</button> " +
-      (S.incident.sound_match && placedCameras().some(function (one) { return one.id !== cam.id && one.synced; }) ? "<button type='button' class='tiny' data-sync='match'>Match the sound</button> " : "") +
-      "<button type='button' class='tiny ghost' data-sync='close'>Done</button>";
-    box.hidden = false;
-    box.onclick = function (event) {
-      var button = event.target.closest("[data-sync]");
-      if (!button) { return; }
-      var how = button.dataset.sync;
-      if (how === "close") { box.hidden = true; }
-      else if (how === "nudge") { post({ action: "place", camera: cam.id, how: "hand", starts_at: (cam.starts_at + parseFloat(button.dataset.by)).toFixed(2) }).then(function () { var fresh = cameraById(cam.id); if (fresh && players[cam.id]) { toggleSync(players[cam.id].tile, fresh); toggleSync(players[cam.id].tile, fresh); } }); }
-      else if (how === "clock" || how === "file") { post({ action: "place", camera: cam.id, how: how }); }
-      else if (how === "type") {
-        window.UI.prompt({ title: "When does " + cam.camera_id + " start?", body: S.incident.has_clock ? "A time of day, hh:mm:ss, by the cameras' clocks." : "Minutes and seconds from the first camera, m:ss.", ok: "Sync" }).then(function (text) {
-          if (!text) { return; }
-          var at = parseWhen(text);
-          if (at === null) { window.UI.toast("That is not a time.", { problem: true }); return; }
-          post({ action: "place", camera: cam.id, how: "hand", starts_at: at.toFixed(2) });
-        });
-      } else if (how === "match") {
-        var others = placedCameras().filter(function (one) { return one.id !== cam.id && one.synced; });
-        var against = others.length === 1 ? others[0] : null;
-        if (!against) {
-          // More than one to choose from: the Cameras tab has the list.
-          showTab("cameras"); flashRow(cam.id); return;
-        }
-        post({ action: "match", camera: cam.id, against: against.id });
-      }
-    };
-  }
 
   function swapOut(id) {
     var order = wallCameras().map(function (one) { return one.id; }).filter(function (one) { return one !== id; });
@@ -697,6 +657,8 @@
       ticks += "<span>" + timeOfDay(shown[0] + ((shown[1] - shown[0]) * i) / count) + "</span>";
     }
     ticksBox.innerHTML = ticks;
+    // The band lives in the ticks and must outlive their redraw.
+    if (band) { ticksBox.appendChild(band); }
     var html = "";
     S.cameras.forEach(function (cam) {
       var placed = cam.starts_at !== null && cam.placed;
@@ -1069,7 +1031,8 @@
   }
 
   // The sheets over the wall show while either box does.
-  function syncSheets() { sheets.hidden = eventBox.hidden && clipBox.hidden; }
+  var syncBox = document.getElementById("sync-box");
+  function syncSheets() { sheets.hidden = eventBox.hidden && clipBox.hidden && syncBox.hidden; }
 
   eventBox.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -1151,15 +1114,21 @@
   }
 
   function openClipBox(ev) {
-    var from = Math.floor(ev.at) - 10, until = Math.ceil(ev.until || ev.at) + 10;
+    // From an event: ten seconds either side of it. From the strip (Phase 6
+    // chapter 5): the dragged span as it is, no event, every camera that
+    // runs inside it, synced or not.
+    var strip = !ev.id;
+    var from = strip ? ev.at : Math.floor(ev.at) - 10;
+    var until = strip ? ev.until : Math.ceil(ev.until || ev.at) + 10;
     if (!S.incident.has_clock && from < 0) { from = 0; }
     clipBox.hidden = false;
     syncSheets();
-    clipBox.elements.event.value = ev.id;
-    document.getElementById("clip-event-text").textContent = timeOfDay(ev.at) + "  " + ev.text;
+    clipBox.elements.event.value = ev.id || "";
+    document.getElementById("clip-eyebrow").textContent = strip ? "Clip from the strip" : "Clip this event";
+    document.getElementById("clip-event-text").textContent = strip ? timeOfDay(from) + " to " + timeOfDay(until) : timeOfDay(ev.at) + "  " + ev.text;
     clipBox.elements.from.value = timeOfDay(from);
     clipBox.elements.until.value = timeOfDay(until);
-    clipBox.elements.title.value = (ev.text || "").slice(0, 120);
+    clipBox.elements.title.value = strip ? timeOfDay(from) + " to " + timeOfDay(until) : (ev.text || "").slice(0, 120);
     clipBox.elements.layout.value = layout === "focus" ? "focus" : "grid";
     clipBox.elements.burn_ids.checked = true;
     // The clock is burned only from an Incident clock: elapsed time would
@@ -1169,14 +1138,15 @@
     clipBox.elements.burn_clock.disabled = !S.incident.has_clock;
     clockLabel.title = S.incident.has_clock ? "The time of day on the incident clock, top right, running" : "No camera clock on this incident";
     clockLabel.classList.toggle("muted", !S.incident.has_clock);
-    // The Wall's order, then the parked cameras; ticked from Seen on.
-    var order = wallCameras().concat(parkedCameras()).filter(function (cam) { return cam.synced && cam.media_url; });
-    var ticked = ev.cameras || [];
+    // The Wall's order, then the parked cameras; ticked from Seen on, or,
+    // from the strip, every camera running inside the span.
+    var order = wallCameras().concat(parkedCameras()).filter(function (cam) { return cam.media_url && (strip || cam.synced); });
+    var ticked = strip ? order.filter(function (cam) { return isRunning(cam, [from, until]); }).map(function (cam) { return cam.id; }) : (ev.cameras || []);
     var cams = document.getElementById("clip-cams");
     cams.innerHTML = order.map(function (cam) {
-      return "<label class='clip-cam' draggable='true' data-camera='" + cam.id + "' style='--speaker: " + cam.colour + "'>" +
+      return "<label class='clip-cam" + (cam.synced ? "" : " unsynced") + "' draggable='true' data-camera='" + cam.id + "' style='--speaker: " + cam.colour + "'>" +
         "<input type='checkbox' name='cameras' value='" + cam.id + "'" + (ticked.indexOf(cam.id) !== -1 ? " checked" : "") + "> " +
-        "<span class='name'>" + escape(cam.camera_id) + "</span><span class='muted small why' hidden> not running then</span>" +
+        "<span class='name'>" + escape(cam.camera_id) + "</span>" + (cam.synced ? "" : "<span class='pill warn small'>Not synced yet</span>") + "<span class='muted small why' hidden> not running then</span>" +
         "<button type='button' class='tiny ghost large' title='Make this the large tile'>Large</button></label>";
     }).join("");
     // The sound: the camera the page hears, when it is in the clip. The
@@ -1190,12 +1160,22 @@
   function closeClipBox() {
     clipBox.hidden = true;
     clipBox.reset();
+    hideBand();
     syncSheets();
   }
 
   function refreshClipBox() {
     var span = clipSpan();
     var lengthBox = document.getElementById("clip-length");
+    // The warning (Phase 6 chapter 5): a ticked camera not synced is cut at
+    // its guessed place.
+    var warn = document.getElementById("clip-unsynced");
+    if (warn) {
+      warn.hidden = !clipTiles().some(function (tile) {
+        var box = tile.querySelector("input");
+        return box.checked && tile.classList.contains("unsynced");
+      });
+    }
     var make = document.getElementById("clip-make");
     var wrong = "";
     if (span === null) {
@@ -1312,7 +1292,7 @@
     };
     var make = document.getElementById("clip-make");
     make.disabled = true;
-    fetch(C.eventClip + clipBox.elements.event.value + "/clip", {
+    fetch(clipBox.elements.event.value ? C.eventClip + clipBox.elements.event.value + "/clip" : C.spanClip, {
       method: "POST",
       headers: { "X-CSRFToken": cookie("csrftoken"), "Content-Type": "application/json" },
       body: JSON.stringify(body)
@@ -1321,6 +1301,7 @@
         make.disabled = false;
         if (!got.ok) { window.UI.toast(got.said.error || "That did not work.", { problem: true }); return; }
         closeClipBox();
+        hideBand();
         if (got.said.said) { window.UI.toast(got.said.said); }
         if (got.said.state) { take(got.said.state); }
         showTab("chronology");
@@ -1484,7 +1465,7 @@
         "<td class='mono'>" + (placed ? timeOfDay(cam.starts_at) : "") + "</td>" +
         "<td><span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" +
         (cam.placed_by && cam.synced ? "<div class='muted small'>by " + escape(cam.placed_by) + "</div>" : "") + matchLine(cam) + "</td>" +
-        "<td class='acts'><details class='inc-place'><summary class='small'>Sync</summary><div class='inc-place-box'>" + placeControls(cam) + "</div></details>" +
+        "<td class='acts'><button type='button' class='tiny' data-act='sync-open' data-camera='" + cam.id + "' title='This camera on the Sync sheet'>Sync</button> " +
         (placed && !cam.on_wall ? "<button type='button' class='tiny' data-swap='" + cam.id + "'>Swap in</button> " : "") +
         "<a class='tiny btn ghost' href='" + escape(cam.viewer_url) + "'>Open</a> " +
         "<button type='button' class='tiny ghost danger' data-act='remove' data-camera='" + cam.id + "'>Remove</button></td></tr>";
@@ -1515,7 +1496,9 @@
     if (button) {
       var cam = cameraById(button.dataset.camera);
       var act = button.dataset.act;
-      if (act === "place") { post({ action: "place", camera: cam.id, how: button.dataset.how }); }
+      if (act === "sync-open") { openSync(cam.id); }
+      else if (act === "place") { post({ action: "place", camera: cam.id, how: button.dataset.how }); }
+      else if (act === "listen") { listen(cam); }
       else if (act === "nudge") {
         var from = cam.starts_at !== null && cam.placed ? cam.starts_at : (S.incident.span_low || 0);
         post({ action: "place", camera: cam.id, how: "hand", starts_at: (from + parseFloat(button.dataset.by)).toFixed(2) });
@@ -1609,6 +1592,147 @@
   if (eventWords) { openEventBox({ at: moment, text: eventWords, source: "words" }); }
   // A search hit opens the memo at a paragraph (Phase 7 chapter 3).
   if (C.openTab === "memo" && C.para !== "") { lightParagraph(document.getElementById("panel-memo"), parseInt(C.para, 10)); }
+
+  // Sync, one control (Phase 6 chapter 5) --------------------------------------------------
+  //
+  // One sheet with every camera: its clock as read from the picture, its
+  // place, who synced it, a tick and its controls. Sync all has the app do
+  // the rounds on every camera not yet synced; Sync ticked on the ticked
+  // ones. A camera the app could not sync says why and shows what to do.
+  var syncOpenRow = null;
+  var syncSaid = "";
+  function openSync(cameraId) {
+    syncOpenRow = cameraId || null;
+    syncBox.hidden = false;
+    syncSaid = "";
+    drawSync();
+    syncSheets();
+    if (cameraId) {
+      var row = syncBox.querySelector("[data-sync-row='" + cameraId + "']");
+      if (row) { row.scrollIntoView({ block: "nearest" }); }
+    }
+  }
+  function closeSync() { syncBox.hidden = true; syncSheets(); }
+  function tickedSync() {
+    return Array.prototype.map.call(syncBox.querySelectorAll("input[name='sync-tick']:checked"), function (box) { return box.value; });
+  }
+  function drawSync() {
+    if (!syncBox) { return; }
+    var ticked = tickedSync();
+    var cams = wallCameras().concat(parkedCameras());
+    var synced = cams.filter(function (cam) { return cam.synced; }).length;
+    var html = "<div class='row' style='gap: 8px; align-items: center; flex-wrap: wrap'>" +
+      "<span class='eyebrow'>Sync</span>" +
+      "<span class='small grow'>" + synced + " of " + cams.length + " synced. " + escape(syncSaid) + "</span>" +
+      "<button type='button' class='small primary' id='sync-all' title='The app tries each camera not yet synced: its clock, then the sound against a camera in step, then asks for a hand'>Sync all</button>" +
+      "<button type='button' class='small' id='sync-ticked' title='The rounds on the ticked cameras, synced or not'" + (ticked.length ? "" : " disabled") + ">Sync ticked</button>" +
+      "<button type='button' class='small ghost' id='sync-close'>Done</button></div>";
+    html += "<table class='inc-sync'><tbody>";
+    cams.forEach(function (cam) {
+      var open = !cam.synced || cam.id === syncOpenRow;
+      html += "<tr data-sync-row='" + cam.id + "'" + (cam.synced ? "" : " class='unsynced'") + ">" +
+        "<td><input type='checkbox' name='sync-tick' value='" + cam.id + "'" + (ticked.indexOf(cam.id) !== -1 ? " checked" : "") + " aria-label='Tick " + quoted(cam.camera_id) + "'></td>" +
+        "<td><b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><div class='muted small'>" + escape(cam.title) + "</div></td>" +
+        "<td>" + (cam.clock ? "<span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span>" : "<span class='muted small'>" + (cam.has_clock ? "" : "no clock in the picture") + "</span>") + "</td>" +
+        "<td><span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" +
+        (cam.placed_by && cam.synced ? "<div class='muted small'>by " + escape(cam.placed_by) + "</div>" : "") +
+        (cam.needs_hand ? "<div class='small problem'>Needs a hand: " + escape(cam.needs_hand) + ".</div>" : "") +
+        (cam.placed === "clock_unchecked" ? "<div class='small'>Read once: listen to a moment two cameras hear. <button type='button' class='tiny' data-act='listen' data-camera='" + cam.id + "'>Listen</button></div>" : "") +
+        matchLine(cam) + "</td>" +
+        "<td class='acts'>" + (open ? "<div class='inc-place-box'>" + placeControls(cam) + "</div>" : "<button type='button' class='tiny ghost' data-act='sync-open' data-camera='" + cam.id + "'>More</button>") + "</td></tr>";
+    });
+    html += "</tbody></table>";
+    syncBox.innerHTML = html;
+  }
+  // Listen: the first moment this camera and a synced camera run together,
+  // played with the sound from the other one.
+  function listen(cam) {
+    var partner = null;
+    placedCameras().forEach(function (one) {
+      if (one.id === cam.id || !one.synced) { return; }
+      if (one.starts_at < cam.starts_at + cam.length && one.ends_at > cam.starts_at && (!partner || one.starts_at < partner.starts_at)) { partner = one; }
+    });
+    if (!partner) { window.UI.toast("No synced camera runs at the same time.", { problem: true }); return; }
+    if (!cam.on_wall) { swapIn(cam.id, false); }
+    seek(Math.max(cam.starts_at, partner.starts_at));
+    setSound(partner.id);
+    play();
+  }
+  document.getElementById("sync-open").addEventListener("click", function () { if (syncBox.hidden) { openSync(null); } else { closeSync(); } });
+  syncBox.addEventListener("click", function (event) {
+    if (event.target.closest("#sync-close")) { closeSync(); return; }
+    if (event.target.closest("#sync-all") || event.target.closest("#sync-ticked")) {
+      var fields = { action: "sync_all" };
+      if (event.target.closest("#sync-ticked")) { fields.cameras = tickedSync(); }
+      syncSaid = "Syncing...";
+      drawSync();
+      post(fields).then(function (got) { if (got.ok) { syncSaid = got.said.said || ""; drawSync(); } });
+      return;
+    }
+    if (event.target.closest("input[name='sync-tick']")) { drawSync(); return; }
+    var button = event.target.closest("[data-act]");
+    if (!button) { return; }
+    var cam = cameraById(button.dataset.camera);
+    if (!cam) { return; }
+    var act = button.dataset.act;
+    if (act === "sync-open") { syncOpenRow = cam.id; drawSync(); }
+    else if (act === "place") { post({ action: "place", camera: cam.id, how: button.dataset.how }); }
+    else if (act === "listen") { listen(cam); }
+    else if (act === "nudge") {
+      var from = cam.starts_at !== null && cam.placed ? cam.starts_at : (S.incident.span_low || 0);
+      post({ action: "place", camera: cam.id, how: "hand", starts_at: (from + parseFloat(button.dataset.by)).toFixed(2) });
+    } else if (act === "type") {
+      window.UI.prompt({ title: "When does " + cam.camera_id + " start?", body: S.incident.has_clock ? "A time of day, hh:mm:ss, by the cameras' clocks." : "Minutes and seconds from the first camera, m:ss.", ok: "Sync" }).then(function (text) {
+        if (!text) { return; }
+        var at = parseWhen(text);
+        if (at === null) { window.UI.toast("That is not a time.", { problem: true }); return; }
+        post({ action: "place", camera: cam.id, how: "hand", starts_at: at.toFixed(2) });
+      });
+    } else if (act === "match") {
+      var pick = syncBox.querySelector("select[data-against='" + cam.id + "']");
+      post({ action: "match", camera: cam.id, against: pick ? pick.value : "" });
+    }
+  });
+
+  // The clip from the strip (Phase 6 chapter 5): drag across the ruler and
+  // the clip box opens with that span.
+  var banding = null;
+  function hideBand() { if (band) { band.hidden = true; } }
+  function showBand(a, b) {
+    var shown = view();
+    var low = Math.min(a, b), high = Math.max(a, b);
+    band.style.left = percent(low, shown);
+    band.style.width = (Math.max(0, Math.min(100, ((high - shown[0]) / (shown[1] - shown[0])) * 100)) - parseFloat(band.style.left)) + "%";
+    band.hidden = false;
+  }
+  if (ticksBox && band) {
+    ticksBox.addEventListener("mousedown", function (event) {
+      if (event.button !== 0 || !S.incident.clips) { return; }
+      var box = ticksBox.getBoundingClientRect();
+      var shown = view();
+      banding = { startX: event.clientX, box: box, shown: shown, from: shown[0] + ((event.clientX - box.left) / box.width) * (shown[1] - shown[0]), to: null };
+      event.preventDefault();
+    });
+    document.addEventListener("mousemove", function (event) {
+      if (!banding) { return; }
+      var shown = banding.shown;
+      banding.to = shown[0] + ((event.clientX - banding.box.left) / banding.box.width) * (shown[1] - shown[0]);
+      if (Math.abs(event.clientX - banding.startX) > 3) { showBand(banding.from, banding.to); }
+    });
+    document.addEventListener("mouseup", function () {
+      if (!banding) { return; }
+      var done = banding;
+      banding = null;
+      if (done.to === null || Math.abs(done.to - done.from) < 1) { hideBand(); return; }
+      var range = span();
+      var low = Math.max(range[0], Math.min(done.from, done.to)), high = Math.min(range[1], Math.max(done.from, done.to));
+      showBand(low, high);
+      openClipBox({ id: "", at: low, until: high, text: "" });
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && banding) { banding = null; hideBand(); }
+    });
+  }
 
   // Find (Phase 7 chapter 3) ------------------------------------------------------------------
   //

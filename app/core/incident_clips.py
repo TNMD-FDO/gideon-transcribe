@@ -110,19 +110,34 @@ def keeps_in_case(recording) -> str:
     )
 
 
+def _span_words(incident: Incident, from_at: float, until_at: float) -> str:
+    """A strip clip's title before a person types one: "21:57:02 to 21:57:40"."""
+    low = incidents.time_of_day(incident, from_at)
+    high = incidents.time_of_day(incident, until_at)
+    return f"{low} to {high}"
+
+
 @login_required
 @require_POST
-def make_clip(request: HttpRequest, case_id, incident_id, event_id) -> JsonResponse:
+def make_clip(
+    request: HttpRequest, case_id, incident_id, event_id=None
+) -> JsonResponse:
     """Make the clip: the checks in the chapter's order, then a Clip row and
     its render. The answer carries the row and the page's state, so the
-    event's clip mark redraws."""
+    event's clip mark redraws. With no event it is the clip from the strip
+    (Phase 6 chapter 5): a span dragged on the ruler, the cameras cut at
+    their places as they stand, synced or not."""
     from core.incident_pages import _incident, state_json
 
     case, incident = _incident(request, case_id, incident_id)
     if not on():
         return JsonResponse({"error": "Incident clips are switched off."}, status=403)
-    event = get_object_or_404(
-        Event, pk=event_id, incident=incident, proposed=False, dismissed=False
+    event = (
+        get_object_or_404(
+            Event, pk=event_id, incident=incident, proposed=False, dismissed=False
+        )
+        if event_id is not None
+        else None
     )
     try:
         wanted = json.loads(request.body or b"{}")
@@ -168,10 +183,16 @@ def make_clip(request: HttpRequest, case_id, incident_id, event_id) -> JsonRespo
                 {"error": "That camera is not on this incident."}, status=400
             )
         playback = camera.recording.playback_path()
-        if not camera.is_synced() or playback is None or not playback.exists():
+        if playback is None or not playback.exists():
             return JsonResponse(
-                {"error": f"{camera.camera_id()} is not synced with a playback copy."},
+                {"error": f"{camera.camera_id()} has no playback copy."},
                 status=400,
+            )
+        if event is not None and not camera.is_synced():
+            # An event's clip keeps chapter 1's rule; the strip's clip cuts a
+            # camera at its guessed place, the box having said so.
+            return JsonResponse(
+                {"error": f"{camera.camera_id()} is not synced yet."}, status=400
             )
         if not (camera.starts_at < until_at and camera.ends_at() > from_at):
             return JsonResponse(
@@ -208,10 +229,21 @@ def make_clip(request: HttpRequest, case_id, incident_id, event_id) -> JsonRespo
         burn_clock=wanted.get("burn_clock", True),
         burn_ids=wanted.get("burn_ids", True),
     )
+    if event is None:
+        # The picture says the clip came from the strip, so a clip whose
+        # event was removed later is still told apart from it.
+        picture["from_strip"] = True
     clip = Clip.objects.create(
         recording=sound.recording,
         user=request.user,
-        title=(str(wanted.get("title") or "").strip() or event.text)[:120],
+        title=(
+            str(wanted.get("title") or "").strip()
+            or (
+                event.text
+                if event is not None
+                else _span_words(incident, from_at, until_at)
+            )
+        )[:120],
         # The span on the sound camera's own clock, unclamped: negative when
         # that camera starts inside the span, so the excerpt and the caption
         # file stay in step with the picture.
@@ -233,10 +265,12 @@ def make_clip(request: HttpRequest, case_id, incident_id, event_id) -> JsonRespo
         {
             "ok": True,
             "clip": clip_pages._row(clip, asker=request.user),
-            "event_clips": Clip.objects.filter(event=event).count(),
+            "event_clips": Clip.objects.filter(event=event).count() if event else 0,
             "said": (
                 "Rendering. The clip lands on the case's Clips tab; the event's "
                 "row says when it is ready."
+                if event is not None
+                else "Rendering. The clip lands on the case's Clips tab."
             ),
             "state": state_json(incident, request.user),
         }

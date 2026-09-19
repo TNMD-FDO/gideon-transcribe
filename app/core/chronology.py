@@ -299,11 +299,12 @@ def clips_line(incident, numbers: dict) -> str:
         .order_by("created")
     ):
         number = numbers.get(str(clip.event_id)) if clip.event_id else None
-        where = f"#{number} " if number else ""
+        strip = bool((clip.picture or {}).get("from_strip"))
+        where = f"#{number} " if number else ("from the strip: " if strip else "")
         parts.append(f"{where}{clip.title} ({clip.length})")
     if not parts:
         return ""
-    return "Clips made from events: " + "; ".join(parts) + "."
+    return "Clips made from events and the strip: " + "; ".join(parts) + "."
 
 
 def events_json(incident) -> list[dict]:

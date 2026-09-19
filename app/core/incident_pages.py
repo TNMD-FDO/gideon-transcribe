@@ -155,6 +155,9 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
         "file_time": file_words,
         "has_clock": incidents.clock_zero_of(recording) is not None,
         "synced": camera.is_synced(),
+        "ends_at": camera.ends_at(),
+        # Why the app could not sync it by itself (Phase 6 chapter 5).
+        "needs_hand": incidents.needs_hand_reason(camera),
         "has_transcript": hasattr(recording, "transcript"),
         "viewer_url": reverse("viewer", args=[recording.pk]),
         "match": {
@@ -340,6 +343,19 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                 return JsonResponse({"error": "No finished match to take."}, status=400)
         else:
             return JsonResponse({"error": "How?"}, status=400)
+    elif action == "sync_all":
+        # Sync all, or Sync ticked (Phase 6 chapter 5): the rounds on every
+        # camera not yet synced, or on the ticked ones whether synced or not.
+        wanted = [one for one in request.POST.getlist("cameras") if one]
+        cameras = list(
+            incident.cameras.select_related("recording").order_by("starts_at")
+        )
+        if wanted:
+            cameras = [one for one in cameras if str(one.pk) in wanted]
+        got = incidents.sync_rounds(
+            incident, cameras, by=user, request=request, force=bool(wanted)
+        )
+        said = incidents.rounds_line(got)
     elif action == "match":
         camera = _camera_of(incident, request.POST.get("camera"))
         against = _camera_of(incident, request.POST.get("against"))

@@ -70,12 +70,14 @@
     <button type="button" class="small ghost" id="event-clip" title="Cut one file from this event's cameras over its span" hidden>Clip this event</button>
     <span class="small muted" id="event-said"></span>
   </form>
+  <div class="inc-sync-box" id="sync-box" hidden></div>
   <form class="inc-clip-box" id="clip-box" hidden autocomplete="off">
     <input type="hidden" name="event">
     <div class="row" style="gap: 8px; align-items: baseline; flex-wrap: wrap">
-      <span class="eyebrow">Clip this event</span>
+      <span class="eyebrow" id="clip-eyebrow">Clip this event</span>
       <span class="small grow" id="clip-event-text"></span>
     </div>
+    <p class="small problem" id="clip-unsynced" hidden>A camera not synced is cut at its guessed place, so its tile may not play in step. Sync it first for a clip that does.</p>
     <div class="row" style="gap: 8px; flex-wrap: wrap; align-items: center">
       <label>From <input type="text" name="from" class="mono" size="9" aria-label="From"></label>
       <label>to <input type="text" name="until" class="mono" size="9" aria-label="To"></label>
@@ -121,6 +123,8 @@
           </select>
         </label>
         <span class="small muted" id="sound-said" title="The camera you hear; press the speaker on a tile to change it"></span>
+        {% comment %}Sync, one control (Phase 6 chapter 5): the sheet with every camera.{% endcomment %}
+        <button type="button" class="small" id="sync-open" title="Every camera's place on one sheet: Sync all has the app try each camera's clock, then the sound, before asking for a hand">Sync</button>
         <label title="How the cameras are laid out">Layout
           <select id="layout">
             <option value="focus">Focus</option>
@@ -154,10 +158,11 @@
   </div>
 
   <div class="sp-lanes inc-strip" id="strip">
-    <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
+    {% comment %}Drag on the ruler for a clip from the strip (Phase 6 chapter 5).{% endcomment %}
+    <div class="ruler" title="Drag across the ruler to clip that span"><span class="head"></span><div class="ticks" id="ticks"><span class="band" id="clip-band" hidden></span></div></div>
     <div id="lanes"></div>
     <div class="foot small muted">
-      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event. Zoomed in, the wheel over the lanes moves along the strip.</span>
+      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event. Drag across the ruler to clip that span. Zoomed in, the wheel over the lanes moves along the strip.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>
@@ -196,6 +201,7 @@
       exportMemo: "{% url 'incident-export' case.pk incident.pk 'memo' %}",
       lines: "/incident-camera/",
       eventClip: "{% url 'incident' case.pk incident.pk %}/event/",
+      spanClip: "{% url 'incident-span-clip' case.pk incident.pk %}",
       at: {{ at|floatformat:2 }},
       role: "{{ role }}",
       find: "{% url 'incident-find' case.pk incident.pk %}",

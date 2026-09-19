@@ -609,7 +609,7 @@ def test_the_refusals(incident, event, person, client, no_render):
     )
     refused("Those times could not be read.", **{"from": "soon"})
     (cams["BWC2-2"].recording.folder / "playback.mp4").unlink()
-    refused("BWC2-2 is not synced with a playback copy.")
+    refused("BWC2-2 has no playback copy.")
     assert Clip.objects.count() == 0 and not no_render
 
 
@@ -774,13 +774,14 @@ def test_where_the_clip_shows_and_where_it_does_not(
     assert answer.status_code == 200 and Clip.objects.get(pk=clip.pk).title == "Renamed"
     # The Word export lists the clips made from events under the table.
     text = docx_text(chronology.word(incident, None, "asker"))
-    assert "Clips made from events: #1 Renamed (20 s)." in text
+    assert "Clips made from events and the strip: #1 Renamed (20 s)." in text
     # The event removed: the clip stays and says so.
     chronology.remove(event, by=person)
     clip.refresh_from_db()
     assert clip.event_id is None and clip.from_event == "from an event since removed"
     assert (
-        chronology.clips_line(incident, {}) == "Clips made from events: Renamed (20 s)."
+        chronology.clips_line(incident, {})
+        == "Clips made from events and the strip: Renamed (20 s)."
     )
     # Render again keeps the lock; delete takes the file and the row.
     no_render.clear()

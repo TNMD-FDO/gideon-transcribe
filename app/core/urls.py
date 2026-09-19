@@ -244,6 +244,12 @@ urlpatterns = [
         incident_clips.make_clip,
         name="incident-clip",
     ),
+    # The clip from the strip (Phase 6 chapter 5): a span, no event.
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/clip",
+        incident_clips.make_clip,
+        name="incident-span-clip",
+    ),
     path(
         "case/<uuid:case_id>/incidents/new",
         incident_pages.new_incident,

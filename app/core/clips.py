@@ -180,6 +180,9 @@ class Clip(models.Model):
             return ""
         if self.event_id and self.event is not None:
             return f"from the event {self.event.text}"
+        if self.picture.get("from_strip"):
+            # A span dragged on the strip (Phase 6 chapter 5).
+            return f"from the strip, {self.span}"
         return "from an event since removed"
 
     @property

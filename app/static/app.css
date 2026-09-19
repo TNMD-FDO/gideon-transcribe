@@ -2090,6 +2090,16 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 /* Phase 7 chapter 2: why a proposal matters, in the assistant's words, and
    the pill of an event a watch phrase found. */
 .inc-events .why { font-style: italic; color: var(--text); opacity: 0.85; }
+/* Sync, one control, and the clip from the strip (Phase 6 chapter 5). */
+.inc-sync-box { padding: 8px 16px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.inc-sync { width: 100%; border-collapse: collapse; font-size: var(--t-small); margin-top: 6px; }
+.inc-sync td { padding: 5px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.inc-sync tr.unsynced td { background: color-mix(in srgb, var(--warn) 6%, transparent); }
+.inc-sync .acts { white-space: normal; }
+.inc-strip .ruler { position: relative; }
+.inc-strip .ruler .ticks { position: relative; cursor: col-resize; }
+.inc-strip .ruler .band { position: absolute; top: -2px; bottom: -2px; background: color-mix(in srgb, var(--accent) 30%, transparent); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none; }
+.inc-clip-cams .clip-cam.unsynced { border-style: dashed; }
 /* The dashboard line, the Search tab and Find (Phase 7 chapter 3). */
 .dashboard-line { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
 .dashboard-line .pill { text-decoration: none; }

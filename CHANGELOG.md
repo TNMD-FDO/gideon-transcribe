@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.66.0, 2026-09-19
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 6 chapter 5: Sync as one control, and the clip from the strip. From
+the maintainer's list of 2026-09-19.
+
+- **Sync, one button.** Sync in the transport, beside Layout, opens a
+  sheet with one row per camera: its clock as read from the picture, its
+  place, who synced it, a tick and its controls. The tile's Sync and the
+  Cameras tab's Sync open the same sheet on that camera's row; the inline
+  box on the tile and the Cameras tab's own match controls are gone.
+- **Sync all** has the app do the rounds on every camera not yet synced,
+  in the order that works: from its clock when the read was checked, then
+  from its clock read once, then matched by sound against the synced
+  camera it overlaps most, and only then "needs a hand". **Sync ticked**
+  redoes the ticked cameras, synced or not. The sheet says "Syncing 6
+  cameras: 3 from their clocks, 1 matching the sound, 2 need a hand" and
+  keeps asking while a match runs.
+- **Every failure has a next step** on the row: no clock in the picture,
+  the clock not read yet, the clock read once (with Listen, which plays
+  the camera with a synced one from the first moment they run together),
+  no match with the reason, no camera in step to match against, Match by
+  sound off. The nudges, Type a time, From its file and Match the sound
+  sit on the row.
+- **A clip from the strip.** Drag across the strip's ruler and the clip
+  box opens with that span, no event needed; every camera running inside
+  it is ticked. A camera not synced is offered too, with the warning that
+  it is cut at its guessed place, so its tile may not play in step. The
+  clip's line reads "from the strip, 21:57:02 to 21:57:40" on the Clips
+  tab and page and in the Chronology's Word export. An event's clip keeps
+  its rule that the camera must be synced.
+
 ## v1.65.0, 2026-09-19
 
 ```

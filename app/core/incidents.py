@@ -535,6 +535,125 @@ def guess(camera: IncidentCamera) -> None:
     camera.save(update_fields=["starts_at", "placed"])
 
 
+# The rounds (Phase 6 chapter 5): what the app tries on a camera, in the
+# order that works, before it asks for a hand.
+ROUND_CLOCK = "clock"
+ROUND_UNCHECKED = "unchecked"
+ROUND_MATCHING = "matching"
+ROUND_HAND = "hand"
+ROUND_SYNCED = "synced"
+
+
+def needs_hand_reason(camera: IncidentCamera) -> str:
+    """Why the app could not sync this camera by itself, in one line, or ""
+    while it is synced or the app still has a round to try."""
+    if camera.is_synced():
+        return ""
+    recording = camera.recording
+    if clock_zero_of(recording) is not None:
+        # The clock is there: From its clock is one press away.
+        return ""
+    if camera.match_state in (MATCH_QUEUED, MATCH_RUNNING):
+        return ""
+    if camera.match_state == MATCH_FAILED:
+        return f"no match: {camera.match_reason or 'the sounds did not line up'}"
+    if camera.match_state == MATCH_DONE and camera.match_lag is not None:
+        return "a weak match; listen, then use it or nudge it"
+    if recording.stamp is None:
+        return "the clock has not been read yet"
+    if not (recording.stamp or {}).get("time"):
+        if not sound_match_on():
+            return "no clock in the picture, and Match by sound is off"
+        if not any(
+            one.is_synced() for one in camera.incident.cameras.exclude(pk=camera.pk)
+        ):
+            return "no clock in the picture, and no camera in step to match against"
+        return "no clock in the picture"
+    return "no clock in the picture"
+
+
+def _match_partner(camera: IncidentCamera) -> IncidentCamera | None:
+    """The synced camera that overlaps this one the most; the earlier one on a tie."""
+    best = None
+    best_overlap = -1.0
+    low = camera.starts_at if camera.starts_at is not None else 0.0
+    high = low + camera.length()
+    for other in camera.incident.cameras.select_related("recording").order_by(
+        "starts_at"
+    ):
+        if other.pk == camera.pk or not other.is_synced() or other.starts_at is None:
+            continue
+        overlap = min(high, other.ends_at()) - max(low, other.starts_at)
+        if overlap > best_overlap:
+            best, best_overlap = other, overlap
+    return best
+
+
+def sync_rounds(incident: Incident, cameras, *, by, request=None, force=False) -> dict:
+    """Sync all, or Sync ticked: each camera tried in the order that works
+    (its clock checked, its clock unchecked, the sound against the camera it
+    overlaps most, then a hand). Returns what each round got, by camera id."""
+    got: dict[str, str] = {}
+    for camera in cameras:
+        if camera.is_synced() and not force:
+            got[str(camera.pk)] = ROUND_SYNCED
+            continue
+        if clock_zero_of(camera.recording) is not None:
+            place_from_clock(camera, by=by, request=request)
+            camera.refresh_from_db()
+            got[str(camera.pk)] = (
+                ROUND_CLOCK if camera.placed == CLOCK else ROUND_UNCHECKED
+            )
+            continue
+        partner = _match_partner(camera) if sound_match_on() else None
+        if partner is not None and ask_for_match(camera, partner, by=by):
+            got[str(camera.pk)] = ROUND_MATCHING
+            continue
+        got[str(camera.pk)] = ROUND_HAND
+    return got
+
+
+def rounds_line(got: dict) -> str:
+    """The state line: "Syncing 6 cameras: 3 from their clocks, 1 matching
+    the sound, 2 need a hand"."""
+    counts = {
+        key: 0
+        for key in (
+            ROUND_CLOCK,
+            ROUND_UNCHECKED,
+            ROUND_MATCHING,
+            ROUND_HAND,
+            ROUND_SYNCED,
+        )
+    }
+    for value in got.values():
+        counts[value] = counts.get(value, 0) + 1
+    tried = len(got) - counts[ROUND_SYNCED]
+    if not tried:
+        return "Every camera is synced already."
+    parts = []
+    clocks = counts[ROUND_CLOCK] + counts[ROUND_UNCHECKED]
+    if clocks:
+        parts.append(
+            f"{clocks} from "
+            + ("its clock" if clocks == 1 else "their clocks")
+            + (
+                f" ({counts[ROUND_UNCHECKED]} read once)"
+                if counts[ROUND_UNCHECKED]
+                else ""
+            )
+        )
+    if counts[ROUND_MATCHING]:
+        parts.append(f"{counts[ROUND_MATCHING]} matching the sound")
+    if counts[ROUND_HAND]:
+        parts.append(
+            f"{counts[ROUND_HAND]} need{'s' if counts[ROUND_HAND] == 1 else ''} a hand"
+        )
+    return (
+        f"Syncing {tried} camera{'' if tried == 1 else 's'}: " + ", ".join(parts) + "."
+    )
+
+
 def guess_the_unplaced(incident: Incident) -> None:
     """Cameras added before v1.60.0 with no place yet get the guess when the
     page next draws them."""
