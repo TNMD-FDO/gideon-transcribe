@@ -313,8 +313,12 @@ An Incident's list of Events, in time order, drawn as the last lane of the Incid
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
 
 **Event**:
-One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; or proposed by the assistant from a camera's Digest (source assistant, chapter 3), which stays Proposed under the Chronology and joins it only when a person accepts it. Phase 6 chapter 2.
+One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; or proposed by the assistant from a camera's Digest (source assistant, chapter 3), or found by the app's own search for a Watch phrase (source watch phrase, Phase 7 chapter 2); a proposal stays Proposed under the Chronology and joins it only when a person accepts it. Phase 6 chapter 2.
 _Avoid_: mark (that is a live recording's), moment (that is a description), bookmark, flag
+
+**Watch phrase**:
+A word or phrase the office always wants an Event for, listed one per line in the Watch phrases setting. On every Propose events run the app itself searches each synced camera's transcript, and its Digest's picture lines, for every watch phrase, whole words and any case, before the engine is asked, and proposes an Event at every line that carries one, with the source **watch phrase** and the line it rests on. A promise the engine's judgement cannot break. Phase 7 chapter 2.
+_Avoid_: keyword, trigger, alert, hotword, rule
 
 **Incident memo**:
 The memo the AI assistant writes across every synced camera of an Incident, on the Incident page's Memo tab: written from the incident record (the cameras' Digests merged onto the Incident clock, made by the app for the call and never stored) and on the Chronology's Events, each sentence that rests on an Event carrying its number, every time the time of day and a citation that plays every camera. One per Incident, replaced by Regenerate, marked stale when the Events or the cameras change, exported to Word with the Chronology as its last pages. Its instructions are the Incident memo template. Phase 6 chapter 3.
