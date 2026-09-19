@@ -431,6 +431,10 @@ A conversation with the AI assistant grounded in one Transcript or, as a Case Ch
 **Citation**:
 A time in a Summary or a Chat answer that the app has matched to a Segment, shown as a link that seeks the player. In a Case Chat it names the Recording as well and opens that Recording in the viewer at that moment.
 
+**Gideon**:
+What the chat is called on the pages, as shipped: the value of the Appearance setting What the chat is called, which an office may change. The tab, the Ask button, the drawer's head and a conversation's export title carry it; code, settings, file names and audit rows keep the word Chat. Not the engine: GIDEON, the office's other project, is what the app talks to. Phase 7 chapter 5.
+_Avoid_: bot, assistant (as a name), AI (as a name), the engine's name
+
 **Case Chat**:
 A Chat grounded in every Transcript in a Case, as the Case stands when each question is asked. It belongs to the Case, is open to whoever can open the Case, and leaves with it; the "Chat across cases" setting turns it on and off.
 _Avoid_: cross-Case Chat (would mean several Cases), Case-wide Chat

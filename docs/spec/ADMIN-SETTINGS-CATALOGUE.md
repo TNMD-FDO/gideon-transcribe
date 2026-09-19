@@ -131,6 +131,9 @@ An Incidents page in the Settings group between Vision and Speakers, specified i
 | Incident memo | On or Off; greyed while Incidents or the AI assistant is Off | On | 6 (chapter 3, v1.61.0) | The Memo tab on the Incident page: a memo written across every synced camera on the Chronology's events, exported to Word with the Chronology. | The next Incident page drawn. Off hides the tab and keeps every memo. |
 | Incident memo answer cap | 500 to 16,000 tokens; greyed while Incident memo is Off | 4,000 | 6 (chapter 3, v1.61.0) | The most a memo may run to; a cap hit shows "The memo was cut short." | The next memo. |
 | Incident memo time limit | 30 to 3,600 seconds; greyed while Incident memo is Off | 600 | 6 (chapter 3, v1.61.0) | How long the memo's call may take. Doubled while Let the model think is On. | The next memo. |
+| Incident chat | On or Off; greyed while Incidents or the AI assistant is Off | On | 7 (chapter 5) | Ask Gideon on the incident page: a chat grounded in the incident record and the Chronology, every time a citation that plays every camera, a cited line one press from an Event. | The next incident page drawn. Off hides the button and keeps every conversation. |
+| Incident chat answer cap | 500 to 16,000 tokens; greyed while Incident chat is Off | 2,000 | 7 (chapter 5) | The most one answer may run to. | The next question. |
+| Incident chat time limit | 30 to 3,600 seconds; greyed while Incident chat is Off | 300 | 7 (chapter 5) | How long one answer's call may take. Doubled while Let the model think is On. | The next question. |
 
 ## Notices
 
@@ -176,6 +179,7 @@ The Appearance page of the rail, added in v1.16.0 at the maintainer's ask. It al
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
+| What the chat is called | text up to 30 characters; greyed while Chat is Off | Gideon | 7 (chapter 5) | The chat's name on every page: the tab, the Ask button, the drawer's head and a conversation's export title. Empty falls back to "Chat". The word in code, settings and the audit log stays Chat. | The next page drawn. |
 | Office name | text, one line | empty | 1 | The office's name, under the logo on the sign-in page and on the cover of every Word export. Empty shows the app's name alone. | The next page or export. |
 | Logo on Word exports | On or Off | Off | 1 | Puts the uploaded logo at the head of every Word export's cover: transcripts, summaries, chats and case chats, 1.5 inches wide, centred, above the title. | The next export; nothing already exported changes. |
 

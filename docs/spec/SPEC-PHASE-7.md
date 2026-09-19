@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 7 specification
 
-The case as one place. Chapters 1 to 3 are written for the build; chapters 4 and 5 are outlined and take their shape here so that the built chapters leave room for them.
+The case as one place. Chapters 1 to 3 and 5 are written for the build; chapter 4 is outlined and takes its shape here so that the built chapters leave room for it.
 
 ## About this document
 
@@ -16,7 +16,7 @@ Read it with the same companions as Phase 6: `CONTEXT.md` (the glossary, with th
 - **Events the office would want: the assistant's judgement, and the watch phrases under it** (chapter 2, for the build): the proposer asked to reason as an investigator and to say why each moment matters, reading a camera in windows with a second look at each so nothing is skimmed or cut short, sharpened by the office's context in a setting and a Look for box on one run; the memo re-shipped in a seasoned investigator's voice; and under the judgement one plain search for the words the office can never afford to miss, its finds shown apart. From the maintainer's finding of 2026-09-19 that a line saying "I got gun" went unproposed, and the word that the events are dynamic and the engine's reasoning is the finder.
 - **The case dashboard line, search across a case, and Find on the incident page** (chapter 3, for the build): one line under the case's name with a pill for everything that has a state, each a link; a Search tab over every transcript, event, note, why, memo, summary and clip title of the case, hits grouped by where they live and every hit a time that plays or a place that opens; and Find on the incident page, where pressing a hit seeks every camera to that moment and brings the camera it was heard on to the front. From the maintainer's list of 2026-09-19.
 - **People across cameras** (chapter 4, outlined): the cameras of an incident play in step, so a voice heard saying the same words at the same seconds on two cameras is one person; the app proposes the matches on the case's Speakers tab, a person confirms and names them once, and the name flows to every camera and to the case's People.
-- **Questions answered from the incident record** (chapter 5, outlined): Ask about this incident on the Memo tab, a chat grounded in the incident record, the Chronology and its notes, every time in an answer a citation that plays every camera, and an answer's line one press from becoming an Event.
+- **Gideon: the chat with a name, a place of its own, and the incident's chat** (chapter 5, for the build): the chat called Gideon on every page (a setting, so an office names its own), Ask Gideon opening a drawer beside the case, recording and incident pages, a cited moment playing in a preview under the answer, and the incident's chat grounded in the incident record with citations that play every camera and a cited line one press from an Event. From the maintainer's list of 2026-09-19 and the name chosen the same day.
 
 ## Contents
 
@@ -24,7 +24,7 @@ Read it with the same companions as Phase 6: `CONTEXT.md` (the glossary, with th
 2. Events the office would want: the assistant's judgement, and the watch phrases under it
 3. The case dashboard line, search across a case, and Find on the incident page
 4. People across cameras (outlined)
-5. Questions answered from the incident record (outlined)
+5. Gideon: the chat with a name, a place of its own, and the incident's chat
 6. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 7. B. Settings added in Phase 7.
@@ -300,13 +300,85 @@ Not yet written for the build; the shape decided on 2026-09-17, with the mock-up
 - **The probe first.** As with the sound match, the build runs the match on one of the office's real incidents by a management command and records the counts in `docs/research/people-across-cameras.md` before the thresholds are fixed. Voice prints (Phase 5 chapter 2) stay deferred; the wearer of a camera by loudness is left to a later chapter.
 - **Rows and settings**: category Cases, **People matched** (count, cameras), **Person confirmed across cameras** (as Speaker changed on each recording, with how: cameras), **Person match dismissed**; setting **People across cameras** (On) on the Incidents page, group The assistant, though it makes no engine call.
 
-## 5. Questions answered from the incident record (outlined)
+## 5. Gideon: the chat with a name, a place of its own, and the incident's chat
 
-Not yet written for the build; the shape decided on 2026-09-17.
+Written 2026-09-19, after v1.66.0, from three items of the maintainer's list of the same day: "let's find a way to make chat something more special. I think we should give the Chat a cool name as it relates to the office. Still need to respect boundaries as they are, no chatting across cases, etc. Just need chat to stand out from the basic tab it sits in now"; "when a video or anything else is cited, when the user selects the source, maybe it could play that in a preview, that way it doesn't have to load into another page"; and the name chosen the same day: **Gideon**. The chapter also takes in the outlined incident chat (questions answered from the incident record), so one chapter covers the chat wherever it is asked. Phase 1 built the chat on a transcript, Phase 2 the Case Chat, Phase 4 the chat's shape (`chat-ui.js`); Phase 6 chapter 3 told the Case Chat the placements.
 
-- **Ask about this incident**, under the memo on the Memo tab: a chat in the Case Chat's shape (`chat-ui.js`, the same box, the same history) grounded in the incident record (Phase 6 chapter 3's merge of the cameras' Digests onto the Incident clock), the Chronology with its notes and About, and the confirmed people; nothing else. Every time in an answer is `[hh:mm:ss]` on the Incident clock and a citation that plays every camera; beside it, **+ event** makes an Event from the answer's line with its time, as a chat citation does today. The answer says which cameras it drew on when the record left one out.
-- **The template** Incident chat on the Templates page; the feature `incident_chat` on the AI assistant call row; settings **Incident chat** (On), its answer cap and time limit, on the Incidents page, group The assistant; the incident rules of Phase 6 chapter 3 in force, including the rule for speaker labels.
-- Last in the order because it should read notes (chapter 1) and confirmed people (chapter 4).
+### Principles
+
+1. **One name, and the name is a setting.** The chat is called Gideon on every page: the tab, the button, the drawer's head, the export's title. The name ships as an Appearance setting, **What the chat is called**, with Gideon as its default, so an office that pulls the app calls its chat what it likes; the glossary's word stays Chat, in code, in settings and in the audit log. Gideon the chat is the app's; GIDEON the engine is the office's other project, and the guide says so once.
+2. **A place of its own.** Gideon is not a tab among tabs. A button, **Ask Gideon**, sits at the bottom right of the case page, the recording page and the incident page, and opens a drawer beside the page, so a person asks while reading and the answer sits next to the transcript, the events or the cameras it cites. The Chat tabs stay, showing the same conversations, so nothing built is lost and a wide window can keep both.
+3. **A cited moment plays where you are.** Pressing a citation in an answer plays that moment in a small player under the answer, with the line being spoken, and offers Open for the full page. On the incident page the cameras are the preview: a citation seeks every camera there.
+4. **The boundaries stand.** Gideon on the case page reads that case and nothing else; on the recording page that recording; on the incident page the incident's record. No chat across cases, no chat outside the words the app holds, the same refusals, the same AI notice on every export, the same audit rows.
+5. **The incident's Gideon reads the record.** Asked from the incident page, Gideon answers from the incident record (the cameras' Digests merged onto the Incident clock), the Chronology with its notes and About, and, when chapter 4 lands, the confirmed people; every time in an answer is a citation that plays every camera, and a cited line is one press from becoming an Event.
+
+### Words
+
+**Gideon**, the chat's name as shipped (the setting's default), used on the pages wherever they said Chat: **Ask Gideon** (the button), **Gideon** (the tab, the drawer's head), "Gideon says" nowhere (answers carry no speaker label, as today). **The drawer**, the panel Ask Gideon opens; **the preview**, the small player under an answer. In code, settings, exports' file names and audit rows the word stays Chat, Case Chat, Incident chat. The pages never say bot, assistant as a name, AI as a name, or the engine's name.
+
+### The name
+
+- **What the chat is called**, on the Appearance page: text up to 30 characters, shipped "Gideon", greyed while Chat is Off. Empty falls back to "Chat".
+- **Where it shows.** The Chat tab on the case page and on the recording page reads the name; the Ask button reads "Ask <name>"; the drawer's head reads the name with the page's grounding under it ("this case", "this recording", "this incident"); the Word export of a conversation is titled "<name>: <the first question>" and its file named as today; the AI notice keeps its wording ("AI assistant"), because it says what the thing is, not what it is called.
+- **Nothing else changes** with the name: the settings' names, the audit rows, the guides' headings (which say "the chat, called Gideon in the app" once).
+
+### The drawer
+
+- **Ask Gideon**, a round button at the bottom right of the case page (every tab), the recording page and the incident page, while the chat that page grounds is On (Chat for a recording, Chat across cases for a case, Incident chat for an incident) and the engine is reachable; greyed with the reason otherwise, as every withheld control is.
+- **Opens a drawer** on the right, a third of the window and at least 380 pixels, the page's content narrowing beside it; under 900 pixels the drawer takes the whole window with a Back. Inside: the head (the name, the grounding, Close), the conversations of this page's grounding as `chat-ui.js` lists them (folded to the current one, with New conversation and the list), the answers above and the question box at the bottom, the starters when the conversation is empty, Export to Word on the conversation, everything the Chat tab has.
+- **Stays with the reader.** The drawer keeps its state across the page's tabs and across a reload of the same page; open or closed is remembered per person per page kind (browser storage). Escape closes it; the button opens it again where it was.
+- **The tabs stay.** The case page's Chat tab and the recording page's Chat tab show the same conversations in the tab's own width; a conversation begun in one continues in the other. The Memo tab of the incident page gains no chat section: the drawer is the incident's chat.
+
+### The preview
+
+- **A citation pressed** in an answer, in the drawer or on a Chat tab, plays the moment in a preview under that answer: a small player of the recording's playback copy from ten seconds before the citation, the line being spoken under it as the viewer's stage shows it, the recording's title, and **Open** (the viewer at that moment; on a synced camera also **All cameras**, the incident page at that moment). One preview at a time; pressing another citation moves it. The page's own player, on the recording page, pauses while the preview plays.
+- **On the incident page** a citation seeks every camera to the moment and brings the camera it was heard on to the front with the sound, as Find does; no preview player, the wall is the preview.
+- **A memo or summary citation** (a paragraph, not a moment) opens the tab with the paragraph lit, as the Search tab's hits do.
+- **The preview is the same playback copy** the viewer plays, reached by the same media route; nothing is cut or copied.
+
+### The incident's Gideon
+
+- **Grounding.** Asked from the incident page, Gideon reads the incident record as the memo does (Phase 6 chapter 3: every synced camera's Digest with times rewritten to the Incident clock, a camera with no Digest read from its transcript while it fits, the longest dropped to a line first and the answer saying so), the Chronology as the office wrote it with its notes and About, and nothing else. A camera not synced is named as left out.
+- **The template** Incident chat on the Templates page, shipped in the investigator's voice of chapter 2: answer from the record and the chronology, cite every time as `[hh:mm:ss]` on the Incident clock, name a camera by its id, never narrate the footage, never a legal conclusion, decline what the record does not hold. The incident rules of Phase 6 chapter 3 in force, the speaker-label rule included.
+- **Citations** are `[hh:mm:ss]` on the Incident clock; each plays every camera from there. Beside a cited line, **+ event** opens the event box at that moment with the line filled and the camera it names ticked; nothing is added until saved.
+- **Conversations** belong to the Incident (deleted with it, into the Recycle bin with the case and back), listed in the drawer as the case's are, exported to Word with the Chronology's cover line, under the audit row Chat exported.
+- **The call**: the engine's lane, feature `incident_chat`, thinking as the switch says, capped at **Incident chat answer cap** (2,000 tokens), within **Incident chat time limit** (300 seconds, doubled while the model may think). The audit row is the AI assistant call with the cameras drawn on and whether it was cut; never a word.
+- **Settings**: **Incident chat** (On; greyed while Incidents or the AI assistant is Off), **Incident chat answer cap**, **Incident chat time limit**, on the Incidents page under The assistant.
+
+### In and out
+
+- **In**: the name setting and the name on the pages; the Ask button and the drawer on three pages; the preview under an answer; the incident's Gideon with its template, its citations, + event, its conversations and its settings.
+- **Out**: chat across cases (Phase 2's rule), a drawer on the Start page or the Clips page, the chat by voice, a preview that cuts a clip, and an answer that changes the Chronology by itself.
+
+### What changes from earlier phases
+
+- **Phase 1, the chat; Phase 2, the Case Chat; Phase 4 chapter 4, the chat's shape**: the name on the tabs and the export's title; the drawer beside the page; the preview under an answer. The conversations, the grounding, the refusals, the starters, the exports and the audit rows are unchanged.
+- **Phase 4 chapter 7, The templates**: the Incident chat template joins the Templates page.
+- **Phase 4 chapter 8**: the AI assistant call gains the feature `incident_chat`; the never-logged list gains its questions and answers.
+- **Phase 6 chapter 1, the Incident page**: the Ask button and the drawer; a citation seeks every camera. **Chapter 3, the Memo tab**: unchanged; the drawer is the incident's chat.
+- **Phase 7 chapter 3, Find**: the seek that brings a camera to the front is shared with the citations.
+- **`docs/spec/ADMIN-SETTINGS-CATALOGUE.md`**: the four rows.
+
+### Audit rows
+
+Category LLM: **AI assistant call** with feature `incident_chat` (the cameras drawn on, whether cut). Category Cases: the Chat rows as they are (Chat created, Chat exported, Chat deleted) with the Incident as the object for the incident's conversations. Nothing holds a question, an answer or the name.
+
+### Settings
+
+**What the chat is called** (Appearance; "Gideon"). **Incident chat** (On), **Incident chat answer cap** (2,000 tokens), **Incident chat time limit** (300 seconds), on the Incidents page under The assistant. The rows join the catalogue and Appendix B.
+
+### Not in this chapter
+
+- **Confirmed people in the incident's grounding**: chapter 4's, added with it.
+- **A chat that runs by itself** (a digest of the day, a question asked overnight).
+- **The drawer on the Cases list and the Start page**: there is nothing to ground it in.
+
+### Left to the build
+
+- The drawer's exact width and the breakpoint, the button's place on a narrow window, and how the remembered state is keyed.
+- The preview player's size and whether it shows the picture or the sound alone for an audio recording.
+- The Incident chat template's exact wording within the substance above.
+- Whether the incident's conversations show on the case page's Chat tab under the incident's name (the build may list them there, read-only, or leave them to the incident page).
 
 ## 6. Deferred and ruled out
 
@@ -324,7 +396,7 @@ Not yet written for the build; the shape decided on 2026-09-17.
 | Cases | Event changed (a note or a mark); Incident changed (about) | 1 |
 | Clips | Clip saved with cameras and layout (an Incident clip) | 1 |
 | Cases | People matched; Person confirmed across cameras; Person match dismissed | 4 (outlined) |
-| LLM | AI assistant call, feature `incident_chat` | 5 (outlined) |
+| LLM | AI assistant call, feature `incident_chat`; Cases: the Chat rows with the Incident as the object | 5 |
 | Cases | Events proposed gains watch_hits, windows and second_looks; Event added with source watch phrase | 2 |
 | LLM | AI assistant call, feature `incident_events`, gains window, pass, look_for and cut_short | 2 |
 
@@ -334,7 +406,8 @@ Not yet written for the build; the shape decided on 2026-09-17.
 |---|---|---|---|
 | Incident clips | Incidents | On | 1 |
 | People across cameras | Incidents | On | 4 (outlined) |
-| Incident chat; Incident chat answer cap; Incident chat time limit | Incidents | On; to be fixed; to be fixed | 5 (outlined) |
+| What the chat is called | Appearance | Gideon | 5 |
+| Incident chat; Incident chat answer cap; Incident chat time limit | Incidents | On; 2,000 tokens; 300 seconds | 5 |
 | About this office and case | Incidents | empty | 2 |
 | Proposed events window | Incidents | 600 seconds | 2 |
 | Second look | Incidents | On | 2 |
@@ -348,6 +421,7 @@ The maintainer's choice of ideas and decisions of 2026-09-17, and the two mock-u
 
 ## Amendments applied
 
+- **2026-09-19.** Chapter 5 written for the build (Gideon: the name as a setting, the drawer, the preview, the incident's chat), from the maintainer's list of 2026-09-19 and the name chosen the same day; it takes in the outlined incident chat.
 - **2026-09-19, v1.65.0.** Chapter 3 built the same day, with these decisions left to the build: the pills read "2 transcribing", "1 in line", "1 preparing", "3 videos enriched tonight from 20:00", "1 incident not synced", "4 events to check", "6 proposed events waiting", "1 memo writing", "1 memo has newer events", "2 clips rendering", "1 clip failed", "shared with 2", "deletes in 12 days", the warning tone on not synced, to check, newer events, failed and deletes; the hit ceiling is two hundred a kind and "more" says to narrow the words; a phrase is straight or curly quotes around the whole term; Find's hits sit under the box in a list that scrolls to a third of the window, up to four hundred; a lit paragraph is the nth block of the memo or the summary as drawn; a memo hit's moment is its first citation; the search on the largest case took milliseconds and no index was added (`docs/research/case-search.md`).
 - **2026-09-19.** Chapter 3 written for the build (the dashboard line, the Search tab, Find on the incident page), from the shape of 2026-09-17 and the maintainer's list of 2026-09-19 (search as its own tab; a finding that positions the cameras).
 - **2026-09-19, v1.64.0.** Chapter 2 built the same day, with these decisions left to the build: the AI assistant call audit row is one per run (as chapter 3 of Phase 6 had it), carrying the windows, the second looks, whether a Look for was given and the answers cut short, rather than one row per call; the state line reads "Proposed 14 events at 14:02, 3 from the watch phrases; 1 answer cut short, raise Proposed events answer cap", and a watch-only run the same shape; the why prints in the Chronology's Word export under the line in italics as "Why it matters: ..." and in the spreadsheet as a last column; the Look for box sits beside the button; a watch hit's why reads "The office watches for \"gun\"."; the whole-word rule allows the plural (gun, guns) and folds curly apostrophes; a phrase heard again on the same camera within thirty seconds joins its first hit as "(said 2 times)"; the second look is skipped when a window already holds twelve; the measurement is `docs/research/event-spotting.md`.
