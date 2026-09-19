@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, settings_store
+from core import assistant, audit, cases, engine, settings_store
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -232,6 +232,20 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # Which of the AI assistant's three features the page offers;
         # the panels' contents come from the assistant's own endpoint.
         "assistant": assistant.features(),
+        # Ask Gideon (Phase 7 chapter 5): the drawer takes the page's Chat panel in.
+        "gideon_kind": (
+            "recording"
+            if assistant.features()["chat"] and transcript is not None
+            else ""
+        ),
+        "gideon_on": bool(
+            assistant.features()["chat"]
+            and transcript is not None
+            and engine.is_reachable()
+        ),
+        "gideon_why": ""
+        if engine.is_reachable()
+        else engine.WHAT_TO_SAY[engine.UNREACHABLE],
         # The Case's People, for the rename box to offer; none in a Workspace.
         "people": _people_of(recording),
         "speaker_roles": _roles_if_in_a_case(recording),

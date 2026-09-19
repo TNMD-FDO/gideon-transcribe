@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.67.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0051: a conversation may belong to an incident)
+```
+
+Phase 7 chapter 5: Gideon, the chat with a name, a place of its own, and
+the incident's chat. From the maintainer's list of 2026-09-19 and the
+name chosen the same day.
+
+- **The chat is called Gideon** on every page: the tab on the case page
+  and the recording page, the Ask button, the drawer's head, and a
+  conversation's export title ("Gideon: <the first question>"). The name
+  is an Appearance setting, **What the chat is called**, so an office
+  names its own; empty falls back to Chat. Code, settings, file names and
+  the audit log keep the word Chat. Gideon the chat is not GIDEON the
+  engine.
+- **Ask Gideon**, a round button at the bottom right of the case page,
+  the recording page and the incident page, opens a drawer beside the
+  page (a third of the window, the whole window on a narrow one) so a
+  person asks while reading. On the case page it holds the case's
+  conversations; on the recording page it takes the page's own chat
+  panel in and gives it back on Close; on the incident page it holds the
+  incident's. Escape closes it; open or closed is remembered per person.
+  Greyed with the reason while the engine is off.
+- **A cited moment plays where you are.** Pressing a citation in a case
+  chat answer plays the recording in a small player under the answer,
+  from ten seconds before, with the line and the recording's title, and
+  Open for the viewer or All cameras for a synced camera. On the
+  recording page a citation seeks the page's own player, as before.
+- **The incident's Gideon.** Asked from the incident page, it reads the
+  incident record (the cameras' Digests merged onto the incident clock)
+  and the chronology with its notes and About, and nothing else, in the
+  investigator's voice of the Incident chat template. Every time in an
+  answer is a citation on the incident clock; pressing one seeks every
+  camera there. Its conversations belong to the incident and go with it.
+  Settings **Incident chat** (On), its answer cap (2,000 tokens) and time
+  limit (300 seconds) on the Incidents page; the Incident chat template
+  on the Templates page.
+
 ## v1.66.0, 2026-09-19
 
 ```

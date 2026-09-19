@@ -17,6 +17,8 @@ def workspace(request) -> dict:
         return {}
     return {
         "idle_timeout_seconds": int(settings_store.idle_timeout().total_seconds()),
+        # What the chat is called on the pages (Phase 7 chapter 5).
+        "chat_name": settings_store.chat_name(),
         # Off hides the Clips page and every way to reach it.
         "clips_available": settings_store.get("clips_available"),
         # Off hides every Case from everyone, Admins included, and keeps them:

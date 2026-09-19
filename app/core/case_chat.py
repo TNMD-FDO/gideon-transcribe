@@ -64,6 +64,15 @@ class CaseChat(models.Model):
     case = models.ForeignKey(
         "core.Case", on_delete=models.CASCADE, related_name="chats"
     )
+    # Phase 7 chapter 5: a conversation asked from the incident page, grounded
+    # in the incident record rather than the case's transcripts.
+    incident = models.ForeignKey(
+        "core.Incident",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="chats",
+    )
     asked_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True
     )

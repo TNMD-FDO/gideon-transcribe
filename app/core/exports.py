@@ -1321,7 +1321,12 @@ def case_chat_word(chat, exported_by: str) -> bytes:
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     heading.runs[0].bold = True
     heading.runs[0].font.size = Pt(20)
-    said = document.add_paragraph("Case chat")
+    from core import settings_store
+
+    said = document.add_paragraph(
+        f"{settings_store.chat_name()}: {chat.name}"
+        + (f" ({chat.incident.name})" if chat.incident_id else "")
+    )
     said.alignment = WD_ALIGN_PARAGRAPH.CENTER
     said.runs[0].font.size = Pt(13)
     document.add_paragraph()
@@ -1396,8 +1401,12 @@ def case_chat_word(chat, exported_by: str) -> bytes:
                 if where is None:
                     line.add_run(piece)
                     continue
-                title = titles.get(where["recording"], "recording removed")
-                run = line.add_run(f"{title} [{clock(where['seconds'])}]")
+                if isinstance(where, dict) and where.get("recording"):
+                    title = titles.get(where["recording"], "recording removed")
+                    run = line.add_run(f"{title} [{clock(where['seconds'])}]")
+                else:
+                    # An incident citation: the time on the incident clock.
+                    run = line.add_run(piece)
                 run.font.color.rgb = RGBColor(0x77, 0x77, 0x77)
         if turn.cut_short:
             note = document.add_paragraph("The answer was cut short.")

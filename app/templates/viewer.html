@@ -262,7 +262,7 @@
             <button type="button" class="tab" data-panel="summary">Summary</button>
           {% endif %}
           {% if assistant.chat and transcript %}
-            <button type="button" class="tab" data-panel="chat">Chat</button>
+            <button type="button" class="tab" data-panel="chat">{{ chat_name }}</button>
           {% endif %}
           <button type="button" class="tab" data-panel="details">Details</button>
           <span class="grow"></span>
@@ -460,6 +460,7 @@
   {% if assistant.assistant and transcript %}
     <script src="{% static 'chat-ui.js' %}"></script>
     <script src="{% static 'assistant.js' %}"></script>
+    {% if gideon_kind %}{% include "gideon-drawer.html" %}<script src="{% static 'gideon.js' %}"></script>{% endif %}
   {% endif %}
   {% if folder_management %}<script src="{% static 'cases.js' %}"></script>{% endif %}
 {% endblock %}

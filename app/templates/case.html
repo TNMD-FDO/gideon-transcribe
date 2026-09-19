@@ -79,7 +79,7 @@
              class="tab{% if tab == 'speakers' %} on{% endif %}">Speakers ({{ people_count }})</a>
           {% if case_chat_available %}
             <a href="{% url 'case' case.pk %}?tab=chat"
-               class="tab{% if tab == 'chat' %} on{% endif %}">Chat</a>
+               class="tab{% if tab == 'chat' %} on{% endif %}">{{ chat_name }}</a>
           {% endif %}
           {% if incidents_on %}
             <a href="{% url 'case' case.pk %}?tab=incidents"
@@ -627,12 +627,14 @@
     </div>
   </div>
 
+  {% if case_chat_available %}{% include "gideon-drawer.html" with gideon_kind="case" gideon_on=gideon_on gideon_why=gideon_why %}{% endif %}
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
-  {% if tab == "chat" %}
+  {% if case_chat_available %}
     <script src="{% static 'chat-ui.js' %}"></script>
     <script src="{% static 'case-chat.js' %}"></script>
+    <script src="{% static 'gideon.js' %}"></script>
   {% endif %}
 {% endblock %}

@@ -28,6 +28,7 @@ from core import (
     case_search,
     cases,
     dashboard,
+    engine,
     exports,
     live,
     pages,
@@ -261,6 +262,12 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             ),
             "people_said": request.session.pop("people_said", ""),
             "case_chat_available": chat_here,
+            # Ask Gideon (Phase 7 chapter 5): on while the case chat is and the
+            # engine answers; greyed with the reason otherwise.
+            "gideon_on": bool(chat_here and engine.is_reachable()),
+            "gideon_why": ""
+            if engine.is_reachable()
+            else engine.WHAT_TO_SAY[engine.UNREACHABLE],
             "add_recordings_url": reverse("add-recordings", args=[case.pk]),
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             # The tab says how many on every tab, as Recordings and Speakers do

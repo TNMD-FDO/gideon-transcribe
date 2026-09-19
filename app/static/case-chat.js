@@ -6,15 +6,19 @@
 (function () {
   "use strict";
 
-  var root = document.getElementById("case-chat");
-  if (!root || !window.ChatUI) { return; }
-  var caseId = root.dataset.case;
+  if (!window.ChatUI) { return; }
+
+  // One conversation list per root: the Chat tab, and the drawer (Phase 7
+  // chapter 5) mount the same thing.
+  window.CaseChatMount = function (root, caseId, extra) {
   var EVERY = 2000;
   var post = window.ChatUI.post;
   var state = null;
   var timer = null;
+  extra = extra || {};
 
   var chat = window.ChatUI.mount(root, {
+    onPreview: extra.onPreview,
     citationPattern: /\[Recording \d{1,3}, \d{1,2}:\d{2}:\d{2}\]/g,
     citation: function (whole, citations) {
       if (!Object.prototype.hasOwnProperty.call(citations, whole)) { return null; }
@@ -61,5 +65,10 @@
       });
   }
 
-  refresh().then(function () { chat.focus(); });
+  refresh().then(function () { if (extra.focus !== false) { chat.focus(); } });
+  return chat;
+  };
+
+  var root = document.getElementById("case-chat");
+  if (root) { window.CaseChatMount(root, root.dataset.case); }
 })();

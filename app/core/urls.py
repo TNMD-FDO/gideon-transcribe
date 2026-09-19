@@ -232,6 +232,17 @@ urlpatterns = [
         incident_pages.lines,
         name="incident-camera-lines",
     ),
+    # Gideon on the incident page (Phase 7 chapter 5).
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/chat",
+        incident_pages.chat_state,
+        name="incident-chat-state",
+    ),
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/chats",
+        incident_pages.new_chat,
+        name="incident-new-chat",
+    ),
     # Find on the incident page (Phase 7 chapter 3).
     path(
         "case/<uuid:case_id>/incident/<uuid:incident_id>/find",

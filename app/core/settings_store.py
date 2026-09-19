@@ -380,6 +380,23 @@ def _rows() -> list[Definition]:
             ),
         ),
         # Appearance -----------------------------------------------------------
+        # Phase 7 chapter 5 (v1.67.0): what the chat is called on the pages.
+        Definition(
+            key="chat_name",
+            page=APPEARANCE,
+            name="What the chat is called",
+            kind=TEXT,
+            default="Gideon",
+            lines=1,
+            needs="chat_available",
+            what_it_does=(
+                "The chat's name on every page: the tab, the Ask button, the "
+                "drawer's head and a conversation's export title. Empty falls "
+                "back to Chat. The word in code, settings and the audit log "
+                "stays Chat."
+            ),
+            when_changed="The next page drawn.",
+        ),
         Definition(
             key="office_name",
             page=APPEARANCE,
@@ -1628,6 +1645,56 @@ def _rows() -> list[Definition]:
             ),
             when_changed="The next run.",
         ),
+        # Phase 7 chapter 5 (v1.67.0): Gideon on the incident page.
+        Definition(
+            key="incidents_chat",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Incident chat",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "Ask Gideon on the incident page: a chat grounded in the "
+                "incident record and the Chronology, every time a citation "
+                "that plays every camera, a cited line one press from an event."
+            ),
+            when_changed=(
+                "The next incident page drawn. Off hides the button and keeps "
+                "every conversation."
+            ),
+        ),
+        Definition(
+            key="incidents_chat_answer_tokens",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Incident chat answer cap",
+            kind=NUMBER,
+            default=2000,
+            least=500,
+            most=16000,
+            unit="tokens",
+            needs="incidents_chat",
+            what_it_does="The most one answer may run to.",
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="incidents_chat_time_seconds",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Incident chat time limit",
+            kind=NUMBER,
+            default=300,
+            least=30,
+            most=3600,
+            unit="seconds",
+            needs="incidents_chat",
+            what_it_does=(
+                "How long one answer's call may take. Doubled while Let the "
+                "model think is On."
+            ),
+            when_changed="The next question.",
+        ),
         Definition(
             key="incidents_memo",
             page=INCIDENTS,
@@ -2640,6 +2707,7 @@ def time_limit_seconds(feature: str) -> int:
         "speaker_check": "speaker_check_time_seconds",
         "incident_events": "incidents_events_time_seconds",
         "incident_memo": "incidents_memo_time_seconds",
+        "incident_chat": "incidents_chat_time_seconds",
     }[feature]
     return get(key)
 
@@ -2782,6 +2850,15 @@ def watch_phrases() -> list[str]:
         seen.add(phrase.lower())
         phrases.append(phrase)
     return phrases[:WATCH_PHRASES_MOST]
+
+
+def chat_name() -> str:
+    """What the chat is called on the pages; Chat when the office left it empty."""
+    return " ".join(str(get("chat_name") or "").split())[:30] or "Chat"
+
+
+def incident_chat_answer_cap() -> int:
+    return int(get("incidents_chat_answer_tokens"))
 
 
 def incident_memo_answer_cap() -> int:

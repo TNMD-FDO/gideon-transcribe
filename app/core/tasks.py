@@ -361,6 +361,14 @@ def answer_case_turn(turn_id: str) -> None:
     case_chat.answer_case_turn(turn_id)
 
 
+@app.task(queue="llm", name="answer_incident_turn")
+def answer_incident_turn(turn_id: str, attempt: int = 1) -> None:
+    """One question to Gideon on the incident page (Phase 7 chapter 5)."""
+    from core import incident_chat
+
+    incident_chat.answer_incident_turn(turn_id, attempt=attempt)
+
+
 @app.task(queue="llm", name="write_summary")
 def write_summary(summary_id: str) -> None:
     from core import assistant

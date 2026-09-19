@@ -191,6 +191,7 @@
     </div>
   </div>
 
+  {% include "gideon-drawer.html" with gideon_kind="incident" %}
   {{ state|json_script:"incident-state" }}
   <script>
     window.INCIDENT = {
@@ -211,4 +212,6 @@
   </script>
   {{ event_words|json_script:"event-words" }}
   <script src="{% static 'incident.js' %}"></script>
+  <script src="{% static 'chat-ui.js' %}"></script>
+  <script src="{% static 'gideon.js' %}"></script>
 {% endblock %}

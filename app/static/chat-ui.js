@@ -145,7 +145,12 @@
           var title = where.line ? " title='" + escape(where.line) + "'" : "";
           var label = (where.name ? escape(where.name) + ", " : "") + shortClock(where.clock);
           return "<a href='" + escape(where.href || "#") + "' class='cite play" + (where.camera ? " camera" : "") + "'" +
-            (where.seconds !== undefined ? " data-seconds='" + where.seconds + "'" : "") + title + ">" +
+            (where.seconds !== undefined ? " data-seconds='" + where.seconds + "'" : "") +
+            // The preview under the answer (Phase 7 chapter 5): what it plays and where it opens.
+            (where.media ? " data-media='" + escape(where.media) + "'" : "") +
+            (where.name ? " data-title='" + escape(where.name) + "'" : "") +
+            (where.line ? " data-line='" + escape(where.line) + "'" : "") +
+            (where.all ? " data-all='" + escape(where.all) + "'" : "") + title + ">" +
             "<svg class='i' aria-hidden='true'><use href='#i-" + (where.camera ? "camera" : "play") + "'></use></svg> " + label + "</a>" +
             // All cameras (Phase 6 chapter 1): the incident page at that moment.
             (where.all ? " <a href='" + escape(where.all + (where.line ? "&event=" + encodeURIComponent(where.line.slice(0, 500)) : "")) + "' class='cite all' title='Every camera of the incident at this moment, with this line ready as an event'>all cameras</a>" : "");
@@ -342,12 +347,49 @@
           });
         return;
       }
+      var plus = target.closest(".cite-plus");
+      if (plus && options.onPlus) {
+        event.preventDefault();
+        options.onPlus(parseFloat(plus.dataset.seconds), plus.dataset.line || "");
+        return;
+      }
       var play = target.closest(".cite.play");
       if (play && options.onCite && play.dataset.seconds !== undefined) {
         event.preventDefault();
-        options.onCite(parseFloat(play.dataset.seconds));
+        options.onCite(parseFloat(play.dataset.seconds), play.dataset);
+        return;
+      }
+      // The preview (Phase 7 chapter 5): the moment plays under the answer,
+      // with the line, the title, and Open for the full page.
+      if (play && play.dataset.media && play.dataset.seconds !== undefined) {
+        event.preventDefault();
+        showPreview(play);
       }
     });
+
+    function showPreview(play) {
+      var card = play.closest(".card, .turn, .answer") || play.parentNode;
+      var old = root.querySelector(".chat-preview");
+      if (old) { old.remove(); }
+      var seconds = Math.max(0, parseFloat(play.dataset.seconds) - 10);
+      var box = document.createElement("div");
+      box.className = "chat-preview";
+      box.innerHTML =
+        "<video controls autoplay playsinline preload='metadata'></video>" +
+        "<div class='row small' style='gap: 8px; align-items: baseline; flex-wrap: wrap'>" +
+        "<b>" + escape(play.dataset.title || "") + "</b>" +
+        "<span class='muted grow'>" + escape(play.dataset.line || "") + "</span>" +
+        "<a class='btn small' href='" + escape(play.getAttribute("href")) + "'>Open</a>" +
+        (play.dataset.all ? "<a class='btn small ghost' href='" + escape(play.dataset.all) + "'>All cameras</a>" : "") +
+        "<button type='button' class='small ghost chat-preview-close'>Close</button></div>";
+      card.appendChild(box);
+      var video = box.querySelector("video");
+      video.src = play.dataset.media + "#t=" + seconds;
+      video.addEventListener("loadedmetadata", function () { try { video.currentTime = seconds; } catch (ignored) { /* the fragment then */ } }, { once: true });
+      box.querySelector(".chat-preview-close").addEventListener("click", function () { video.pause(); box.remove(); });
+      if (options.onPreview) { options.onPreview(); }
+      box.scrollIntoView({ block: "nearest" });
+    }
 
     askButton.addEventListener("click", function () { ask(); });
     askBox.addEventListener("input", grow);

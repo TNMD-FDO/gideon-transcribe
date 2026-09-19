@@ -1584,6 +1584,13 @@
     tab.addEventListener("click", function () { showTab(tab.dataset.panel); });
   });
 
+  // What Gideon's drawer calls (Phase 7 chapter 5): a citation seeks every
+  // camera; + event opens the event box at the moment with the line filled.
+  window.INCIDENT_PAGE = {
+    seek: function (at) { seek(at); if (!playing) { play(); } },
+    addEvent: function (at, line) { openEventBox({ at: at, text: line || "", source: "person" }); }
+  };
+
   // Go ---------------------------------------------------------------------------------------
 
   take(S);

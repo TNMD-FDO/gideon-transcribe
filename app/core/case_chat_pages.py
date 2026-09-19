@@ -71,6 +71,10 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
             "title": exports.title_of(recording),
             "clock": exports.clock(where["seconds"]),
             "href": f"{reverse('viewer', args=[recording.pk])}?t={where['seconds']}",
+            # The preview under an answer (Phase 7 chapter 5): the playback
+            # copy at that moment, the same route the viewer plays.
+            "seconds": where["seconds"],
+            "media": _media_of(recording),
             # The line it points to, for the pill's hover; never logged.
             "line": _line_at(recording, where["seconds"]),
             # All cameras (Phase 6 chapter 1): the incident page at that
@@ -103,6 +107,13 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
         "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
         "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
     }
+
+
+def _media_of(recording) -> str:
+    from core.media_access import media_root
+
+    playback = recording.playback_path() if recording.playback_ready else None
+    return f"{media_root(recording)}/{playback.name}" if playback else ""
 
 
 def _line_at(recording, seconds: float) -> str:
@@ -165,7 +176,10 @@ def _chat_json(chat: CaseChat, still_here: dict) -> dict:
 def state(request: HttpRequest, case_id) -> JsonResponse:
     case = _the_case(request, case_id)
     still_here = {str(one.pk): one for one in Recording.objects.filter(case=case)}
-    chats = [_chat_json(one, still_here) for one in case.chats.all()]
+    # The incident's conversations live on the incident page (Phase 7 chapter 5).
+    chats = [
+        _chat_json(one, still_here) for one in case.chats.filter(incident__isnull=True)
+    ]
     read, skipped = case_chat.readable(case)
     return JsonResponse(
         {
@@ -201,11 +215,24 @@ def ask(request: HttpRequest, chat_id) -> JsonResponse:
         return JsonResponse(
             {"error": "the last question is still being answered"}, status=409
         )
-    read, _ = case_chat.readable(case)
-    if not read:
-        return JsonResponse(
-            {"error": "no recording in this case has a transcript yet"}, status=409
-        )
+    if chat.incident_id:
+        # Gideon on the incident page (Phase 7 chapter 5): the record, not
+        # the case's transcripts.
+        from core import incident_chat
+
+        if not incident_chat.on():
+            return JsonResponse({"error": "the incident chat is off"}, status=409)
+        if not incident_chat.readable(chat.incident):
+            return JsonResponse(
+                {"error": "no synced camera of this incident has a transcript yet"},
+                status=409,
+            )
+    else:
+        read, _ = case_chat.readable(case)
+        if not read:
+            return JsonResponse(
+                {"error": "no recording in this case has a transcript yet"}, status=409
+            )
     cases.note_activity(case, by=request.user)
     if not chat.name:
         chat.name = Chat.name_from(question)
@@ -213,7 +240,10 @@ def ask(request: HttpRequest, chat_id) -> JsonResponse:
     turn = CaseChatTurn.objects.create(
         chat=chat, number=chat.turns.count() + 1, question=question[:4000]
     )
-    tasks.answer_case_turn.defer(turn_id=str(turn.pk))
+    if chat.incident_id:
+        tasks.answer_incident_turn.defer(turn_id=str(turn.pk))
+    else:
+        tasks.answer_case_turn.defer(turn_id=str(turn.pk))
     return JsonResponse({"id": str(turn.pk)})
 
 

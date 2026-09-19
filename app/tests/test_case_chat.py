@@ -452,7 +452,8 @@ def test_process_again_is_said_and_the_export_lists_what_was_read(
     document = Document(BytesIO(exported.content))
     text = "\n".join(p.text for p in document.paragraphs)
     cells = [c.text for t in document.tables for r in t.rows for c in r.cells]
-    assert "Case chat" in text and "Question 1." in text
+    # The export is titled with the chat's name and the first question (v1.67.0).
+    assert "Gideon: Colour?" in text and "Question 1." in text
     assert "Interview [00:12:45]" in text
     assert "Interview" in cells and "Jail call" in cells
     row = Row.objects.get(category="exports", event="export made")

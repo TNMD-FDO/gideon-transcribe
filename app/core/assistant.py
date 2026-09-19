@@ -70,6 +70,7 @@ class PromptTemplate(models.Model):
     SPEAKER_CHECK = "speaker_check"
     INCIDENT_EVENTS = "incident_events"
     INCIDENT_MEMO = "incident_memo"
+    INCIDENT_CHAT = "incident_chat"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
@@ -80,6 +81,7 @@ class PromptTemplate(models.Model):
         SPEAKER_CHECK: ("Speaker check", prompts.SPEAKER_CHECK),
         INCIDENT_EVENTS: ("Proposed events", prompts.INCIDENT_EVENTS),
         INCIDENT_MEMO: ("Incident memo", prompts.INCIDENT_MEMO),
+        INCIDENT_CHAT: ("Incident chat", prompts.INCIDENT_CHAT),
     }
 
     key = models.CharField(max_length=30, unique=True)

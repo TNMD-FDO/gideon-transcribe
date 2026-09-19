@@ -18,7 +18,9 @@ from django.views.decorators.http import require_POST
 from core import (
     cases,
     chronology,
+    engine,
     incident_assistant,
+    incident_chat,
     incident_clips,
     incidents,
     media,
@@ -62,6 +64,17 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "incident": incident,
             "role": role,
             "state": state,
+            # Ask Gideon (Phase 7 chapter 5).
+            "gideon_on": bool(incident_chat.on() and engine.is_reachable()),
+            "gideon_why": (
+                "The incident chat is off."
+                if not incident_chat.on()
+                else (
+                    ""
+                    if engine.is_reachable()
+                    else engine.WHAT_TO_SAY[engine.UNREACHABLE]
+                )
+            ),
             "at": _asked_moment(request, incident, state),
             "others": _others(case, incident),
             # A citation's words, for the event box to open with (chapter 2).
@@ -73,6 +86,28 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "para": _number(request.GET.get("para", "")),
         },
     )
+
+
+@login_required
+def chat_state(request: HttpRequest, case_id, incident_id) -> JsonResponse:
+    """Gideon on the incident page (Phase 7 chapter 5): the conversations."""
+    from core import incident_chat
+
+    _, incident = _incident(request, case_id, incident_id)
+    return JsonResponse(incident_chat.state_json(incident))
+
+
+@login_required
+@require_POST
+def new_chat(request: HttpRequest, case_id, incident_id) -> JsonResponse:
+    from core import incident_chat
+
+    case, incident = _incident(request, case_id, incident_id)
+    if not incident_chat.on():
+        return JsonResponse({"error": "the incident chat is off"}, status=403)
+    chat = incident_chat.new_chat(incident, by=request.user)
+    cases.note_activity(case, by=request.user)
+    return JsonResponse({"id": str(chat.pk)})
 
 
 def _number(text: str) -> str:
