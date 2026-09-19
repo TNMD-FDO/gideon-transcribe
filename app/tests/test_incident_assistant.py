@@ -23,6 +23,7 @@ import pytest
 from core import (
     assistant,
     chronology,
+    engine,
     incident_assistant,
     incidents,
     prompts,
@@ -243,6 +244,10 @@ def test_proposals_are_checked_kept_replaced_and_never_offered_again_once_dismis
     incident, person, monkeypatch
 ):
     settings_store.set_to("incidents_propose", True)
+    # One look per camera and no watch phrases here; the windows, the second
+    # look and the search have tests of their own (Phase 7 chapter 2).
+    settings_store.set_to("incidents_second_look", False)
+    settings_store.set_to("incidents_watch_phrases", "")
     cams = cameras_of(incident)
     # An Event already stands at the first camera's 00:00:10.
     chronology.add(
@@ -285,6 +290,7 @@ def test_proposals_are_checked_kept_replaced_and_never_offered_again_once_dismis
         "time",
         "end",
         "text",
+        "why",
         "rests_on",
     ]
     assert asked[0]["thinking"] is False
@@ -360,13 +366,204 @@ def test_proposals_need_the_switch_and_a_synced_camera_with_words(
     incident, person, a_case
 ):
     settings_store.set_to("incidents_propose", False)
+    # With the assistant off, the watch phrases alone keep the button (Phase
+    # 7 chapter 2); with none listed, nothing offers it.
+    assert incident_assistant.proposals_possible(incident)
+    assert incident_assistant.proposer_offered()
+    settings_store.set_to("incidents_watch_phrases", "")
     assert not incident_assistant.proposals_possible(incident)
+    assert not incident_assistant.proposer_offered()
     assert not incident_assistant.ask_for_proposals(incident, by=person)
     settings_store.set_to("incidents_propose", True)
     silent = video(person, a_case, "silent", stamp=stamp("21:30:00", "BWC2-9"))
     alone = incidents.make(a_case, "Silent", [silent], by=person)
     assert not incident_assistant.proposals_possible(alone)
     assert incident_assistant.proposals_json(alone)["possible"] is False
+
+
+def test_the_watch_phrases_are_searched_by_the_app_itself(person, a_case):
+    # The floor (Phase 7 chapter 2): with the assistant off, the run is the
+    # search alone; whole words, any case, the plural, a phrase heard again
+    # within the join window joining its first hit, and "begun" never "gun".
+    settings_store.set_to("incidents_propose", False)
+    settings_store.set_to(
+        "incidents_watch_phrases", "gun\n\nGun\nstep out of the vehicle\n"
+    )
+    assert settings_store.watch_phrases() == ["gun", "step out of the vehicle"]
+    assert incident_assistant.phrase_pattern("gun").search("two guns down")
+    assert not incident_assistant.phrase_pattern("gun").search("we had begun")
+    # The run folds the line first: case, curly apostrophes, spacing.
+    assert incident_assistant.phrase_pattern("I can't breathe").search(
+        incident_assistant._plain("He said I can\u2019t  BREATHE")
+    )
+    cam = video(
+        person,
+        a_case,
+        "one",
+        lines=(
+            (10.0, "Speaker 1", "Step out of the vehicle, please."),
+            (270.0, "Speaker 4", "I got, I got gun, I got gun."),
+            (285.0, "Speaker 4", "Guns down."),
+            (400.0, "Speaker 1", "We had begun the search."),
+        ),
+    )
+    made = incidents.make(a_case, "Search", [cam], by=person)
+    camera = made.cameras.get()
+    incidents.place_by_hand(camera, 0.0, by=person)
+    assert incident_assistant.proposals_possible(made)
+    assert incident_assistant.ask_for_proposals(made, by=person)
+    incident_assistant.propose(made.pk)
+    made.refresh_from_db()
+    assert made.proposals_state == "done"
+    pending = list(made.events.filter(proposed=True).order_by("at"))
+    assert [(one.at, one.source) for one in pending] == [
+        (10.0, "watch"),
+        (270.0, "watch"),
+    ]
+    assert (
+        pending[0].text
+        == 'Watch phrase "step out of the vehicle": Step out of the vehicle, please.'
+    )
+    assert (
+        pending[1].text
+        == 'Watch phrase "gun": I got, I got gun, I got gun. (said 2 times)'
+    )
+    assert pending[1].why == 'The office watches for "gun".'
+    assert pending[1].rests_on == "I got, I got gun, I got gun."
+    assert made.proposals_watch == 2 and made.proposals_found == 2
+    words = incident_assistant.proposals_json(made)
+    assert words["on"] and "2 from the watch phrases" in words["words"]
+    names = {str(camera.pk): camera.camera_id()}
+    assert (
+        chronology.source_words(pending[1], names)
+        == f"Watch phrase, {camera.camera_id()}"
+    )
+    # No engine call, so no AI assistant call row; the run's own row counts the hits.
+    assert not Row.objects.filter(event="AI assistant call").exists()
+    proposed = Row.objects.filter(event="events proposed").order_by("-at").first()
+    assert (
+        proposed.details.get("watch_hits") == 2 and proposed.details.get("windows") == 0
+    )
+    for row in Row.objects.all():
+        assert "gun" not in json.dumps(row.details)
+    # Accepted, the Event keeps its source and its why, and Edit keeps the source.
+    incident_assistant.accept(pending[1], by=person)
+    pending[1].refresh_from_db()
+    chronology.change(pending[1], {"at": "270", "text": "Gun found"}, by=person)
+    pending[1].refresh_from_db()
+    assert pending[1].source == "watch" and pending[1].why.startswith("The office")
+    rows = chronology._rows(made)
+    assert rows[0]["why"] == 'The office watches for "gun".'
+    assert "Why it matters" in chronology.spreadsheet(made).decode("utf-8-sig")
+
+
+def test_the_run_reads_in_windows_with_a_second_look_and_says_why(
+    person, a_case, monkeypatch
+):
+    settings_store.set_to("incidents_propose", True)
+    settings_store.set_to("incidents_watch_phrases", "")
+    settings_store.set_to("incidents_events_context", "A public defender's office.")
+    cam = video(
+        person,
+        a_case,
+        "long",
+        seconds=1500.0,
+        lines=(
+            (10.0, "Speaker 1", "Step out of the vehicle, please."),
+            (700.0, "Speaker 4", "I got, I got gun, I got gun."),
+            (1300.0, "Speaker 1", "We had begun the search."),
+        ),
+    )
+    made = incidents.make(a_case, "Long", [cam], by=person)
+    camera = made.cameras.get()
+    incidents.place_by_hand(camera, 0.0, by=person)
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    asked = []
+
+    def complete(messages, **options):
+        asked.append(messages[-1]["content"])
+        user = messages[-1]["content"]
+        # The second window's first look finds the gun; its second look adds
+        # a why-bearing item; one answer is cut short.
+        if "I got gun" in user and "You proposed" not in user:
+            text = json.dumps(
+                {
+                    "events": [
+                        {
+                            "time": "00:11:40",
+                            "end": "",
+                            "text": "An officer said he had found a gun.",
+                            "why": "A weapon changes the stop.",
+                            "rests_on": "I got, I got gun",
+                        }
+                    ]
+                }
+            )
+            return {
+                "text": text,
+                "finish_reason": "length",
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "model": "m",
+            }
+        return {
+            "text": json.dumps({"events": []}),
+            "finish_reason": "stop",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "model": "m",
+        }
+
+    monkeypatch.setattr(engine, "complete", complete)
+    assert incident_assistant.ask_for_proposals(
+        made, by=person, look_for="anything about the gun"
+    )
+    made.refresh_from_db()
+    assert made.proposals_look_for == "anything about the gun"
+    incident_assistant.propose(made.pk)
+    made.refresh_from_db()
+    # Three windows of ten minutes, two looks each.
+    assert len(asked) == 6
+    assert sum("You proposed" in one for one in asked) == 3
+    assert all(
+        "About the office and its cases: A public defender's office." in one
+        for one in asked
+    )
+    assert all("look for: anything about the gun" in one for one in asked)
+    assert "one stretch of" in asked[0]
+    # The second look is told what the first proposed.
+    second = [one for one in asked if "You proposed" in one and "I got gun" in one][0]
+    assert "00:11:40 An officer said he had found a gun." in second
+    assert made.proposals_look_for == "" and made.proposals_cut == 1
+    pending = list(made.events.filter(proposed=True))
+    assert len(pending) == 1 and pending[0].why == "A weapon changes the stop."
+    assert pending[0].at == 700.0 and pending[0].source == "assistant"
+    words = incident_assistant.proposals_json(made)["words"]
+    assert words.startswith("Proposed 1 event at ") and "1 answer cut short" in words
+    row = chronology.events_json(made)[0]
+    assert row["why"] == "A weapon changes the stop." and row["proposed"]
+    call = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert call.details.get("windows") == 3 and call.details.get("second_looks") == 3
+    assert call.details.get("look_for") is True and call.details.get("cut_short") == 1
+    assert "anything about the gun" not in json.dumps(call.details)
+    # With the second look off, one look a window.
+    settings_store.set_to("incidents_second_look", False)
+    asked.clear()
+    made.proposals_state = ""
+    made.save()
+    assert incident_assistant.ask_for_proposals(made, by=person)
+    incident_assistant.propose(made.pk)
+    assert len(asked) == 3 and not any("You proposed" in one for one in asked)
+
+
+def test_the_windows_split_a_record_by_its_times():
+    lines = ["[00:00:05] a", "[00:09:59] b", "no time", "[00:10:00] c", "[00:31:00] d"]
+    assert incident_assistant._windows(lines, 600) == [
+        ["[00:00:05] a", "[00:09:59] b", "no time"],
+        ["[00:10:00] c"],
+        ["[00:31:00] d"],
+    ]
 
 
 # The Incident memo ------------------------------------------------------------------
@@ -640,6 +837,8 @@ def test_the_page_and_the_act_endpoint_carry_chapter_3(incident, person, client)
     # With the memo off the tab is gone; with proposals off, the button.
     settings_store.set_to("incidents_memo", False)
     settings_store.set_to("incidents_propose", False)
+    # The watch phrases alone would keep the button (Phase 7 chapter 2).
+    settings_store.set_to("incidents_watch_phrases", "")
     page = client.get(url).content.decode()
     assert 'data-panel="memo"' not in page
     state = client.get(url + "/state").json()

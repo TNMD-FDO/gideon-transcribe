@@ -865,7 +865,8 @@
       "<span class='muted small'>Printed on the export's cover and told to the memo as the office's own words.</span></div></form>";
     if (P.on) {
       html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
-        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera and proposes events; nothing joins the chronology until you accept it'>Propose events</button>" +
+        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera in stretches, proposes the moments that matter and says why; the watch phrases are searched first. Nothing joins the chronology until you accept it'>Propose events</button>" +
+        "<input type='text' id='look-for' class='small' maxlength='300' placeholder='Look for, this run only' aria-label='Look for, this run only' title='Something to look for on this run alone: anything about the gun and the ring camera'" + (P.possible && !P.busy ? "" : " disabled") + ">" +
         "<span class='small muted' id='propose-said'>" + escape(P.words || (P.possible ? "" : "Sync a camera that has a transcript first.")) + "</span></div>";
     }
     if (kept.length) {
@@ -873,9 +874,9 @@
       kept.forEach(function (one) {
         html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td>" + escape(one.text) + (one.seen_on ? "<div class='muted small'>Seen on " + escape(one.seen_on) + "</div>" : "") +
+          "<td>" + escape(one.text) + (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") + (one.seen_on ? "<div class='muted small'>Seen on " + escape(one.seen_on) + "</div>" : "") +
           (one.note ? "<div class='small note'><i>Note: " + escape(one.note) + "</i>" + (one.note_by ? " <span class='muted'>" + escape(one.note_by) + "</span>" : "") + "</div>" : "") + "</td>" +
-          "<td><span class='pill small" + (one.source === "person" ? " person" : "") + "'>" + escape(one.source_words) + "</span>" +
+          "<td><span class='pill small" + (one.source === "person" ? " person" : (one.source === "watch" ? " watch" : "")) + "'>" + escape(one.source_words) + "</span>" +
           (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</td>" +
           "<td class='acts nowrap'>" +
           (one.clips ? "<a class='pill small clipmark' href='" + S.incident.clips_url + "' title='Open the case&#39;s Clips tab, where the clip is'>" + escape(one.clips_words) + "</a>" : "") +
@@ -895,8 +896,10 @@
       proposed.forEach(function (one) {
         html += "<tr data-event='" + one.id + "' class='proposed'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td title='" + quoted(one.rests_on ? "Rests on: " + one.rests_on : "") + "'>" + escape(one.text) + (one.rests_on ? "<div class='muted small rests'>Rests on: " + escape(one.rests_on) + "</div>" : "") + "</td>" +
-          "<td><span class='pill warn small'>" + escape(one.source_words) + "</span></td>" +
+          "<td title='" + quoted(one.rests_on ? "Rests on: " + one.rests_on : "") + "'>" + escape(one.text) +
+          (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
+          (one.rests_on ? "<div class='muted small rests'>Rests on: " + escape(one.rests_on) + "</div>" : "") + "</td>" +
+          "<td><span class='pill small " + (one.source === "watch" ? "watch" : "warn") + "'>" + escape(one.source_words) + "</span></td>" +
           "<td class='acts nowrap'><button type='button' class='tiny primary' data-accept='" + one.id + "'" + held + ">Accept</button> <button type='button' class='tiny ghost' data-dismiss='" + one.id + "'" + held + ">Dismiss</button></td></tr>";
       });
       html += "</tbody></table>";
@@ -1015,7 +1018,8 @@
       var button = event.target.closest("#propose-events");
       button.disabled = true;
       document.getElementById("propose-said").textContent = "Reading the cameras...";
-      post({ action: "propose" });
+      var lookFor = document.getElementById("look-for");
+      post({ action: "propose", look_for: lookFor ? lookFor.value : "" });
     }
   });
 

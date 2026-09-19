@@ -92,8 +92,10 @@ SHIPPED_HISTORY = {
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
     "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
-    "prompt:incident_events": ("6414affa68b3ecb0",),
-    "prompt:incident_memo": ("bd737802d03d8bd6",),
+    # Re-shipped in v1.64.0 (Phase 7 chapter 2): the investigator's ask with
+    # the why line, and the memo in an investigator's voice.
+    "prompt:incident_events": ("6414affa68b3ecb0", "548dcd1608ba79ea"),
+    "prompt:incident_memo": ("bd737802d03d8bd6", "49543deef4508ef9"),
 }
 
 
@@ -396,57 +398,92 @@ SUGGESTIONS_FORMAT = (
 # The assistant on the Incident (Phase 6 chapter 3). Proposed events: one
 # camera at a time, its record or its transcript, and the events that stand.
 INCIDENT_EVENTS = (
-    "You are reading one camera of an incident: the record of what happened "
-    "on it (a condensation of its words and its picture) or its transcript, "
-    "with the camera's start by the incident's clock. Propose the events a "
-    "member of staff would want on the incident's chronology: a person or a "
-    "vehicle arriving or leaving; a command, a warning or an advisement of "
-    "rights; a statement that carries weight; a search, a restraint, a use of "
-    "force or an arrest as the words or the camera describe it, never as a "
-    "conclusion (say handcuffs were put on, not that someone was arrested); a "
-    "thing handed over, found or taken; a move to another place; the camera "
-    "starting or stopping. One line each, plain words, third person, past "
-    "tense, saying what happened and not what it means, up to 200 characters. "
-    "A speaker's numbered label (Speaker 1, Speaker 4) is this camera's alone "
-    "and means nothing on another camera: name a person only by a name the "
-    "words give; otherwise say what was said, and who said it only as the "
-    "words make plain. Do not propose anything already on the list of events "
-    "given; propose only what this camera adds. Every proposal rests on a line "
-    "you were given: copy that line's words after it."
+    "You are an investigator reading one camera of an incident for the office "
+    "that defends the accused. You are given the record of what happened on "
+    "this camera (a condensation of its words and its picture) or its "
+    "transcript, one stretch at a time, with the camera's start by the "
+    "incident's clock. Propose the moments in this stretch that could matter "
+    "to the case: a thing that happened that a member of staff would put on "
+    "the incident's chronology and could point to in the record. Judge "
+    'significance yourself: a fragment can matter ("I got, I got gun"), an '
+    "answer can matter more than the question, a thing seen once can matter; "
+    "and most lines of a record do not matter, so leave them out. To help the "
+    "judgement and not to bound it, moments that usually matter include a "
+    "person or a vehicle arriving, leaving or being stopped; a command, a "
+    "warning or an advisement of rights; a question about consent or a search "
+    "and its answer; a search, a restraint, a use of force, a weapon drawn, "
+    "shown or mentioned, an injury, an arrest as the words or the picture "
+    "describe it and never as a conclusion (say handcuffs were put on, not "
+    "that someone was arrested); a statement that carries weight, an "
+    "admission, a denial, a threat; a thing handed over, found, seized or "
+    "taken; a move to another place; a person or a vehicle identified; the "
+    "camera starting, stopping or being muted. Not an event: the picture "
+    "changing, the camera moving, a vehicle driving with nothing happening, "
+    "weather, scenery, a description of clothing or surroundings on its own, "
+    "small talk, radio chatter that changes nothing. At most twelve in a "
+    "stretch, the ones that matter most first. For each: the line, one "
+    "sentence in your own plain words saying what happened, third person, "
+    "past tense, up to 120 characters, never a copy of the record's line and "
+    'never beginning "the camera" or "the view" ("An officer said he had '
+    'found a gun", not "Speaker 4 said, \'I got gun\'"); why it matters, one '
+    "line, up to 160 characters; and the first six to ten words of the "
+    "record's line it rests on, copied exactly. A speaker's numbered label "
+    "(Speaker 1, Speaker 4) is this camera's alone and means nothing on "
+    "another camera: name a person only by a name the words give; otherwise "
+    "say what was said, and who said it only as the words make plain (an "
+    "officer, the man on the ground). Do not propose anything already on the "
+    "list of events given; propose only what this stretch adds."
 )
 INCIDENT_EVENTS_FORMAT = (
     "Answer with the JSON asked for: a list under events, each item the time "
     "in this recording as hh:mm:ss copied from the line it rests on, an end as "
-    "hh:mm:ss when the thing ran a while or an empty string, the line of text, "
-    "and rests_on, the words of the line it rests on copied as given. An empty "
-    "list when this camera adds nothing."
+    "hh:mm:ss when the thing ran a while or an empty string, text (the line in "
+    "your own words), why (why it matters), and rests_on (the first six to ten "
+    "words of the record's line, copied exactly). An empty list when this "
+    "stretch adds nothing."
+)
+# The second look at a stretch (Phase 7 chapter 2): the same lines again,
+# against what the first look proposed.
+INCIDENT_EVENTS_SECOND_LOOK = (
+    "Read the same stretch again against the events you proposed, listed "
+    "below. What did you leave out that an investigator for the defence would "
+    "want on the chronology, and why? Propose only what is missing and "
+    "matters; the same shape of answer; an empty list when nothing is missing."
 )
 # The Incident memo: a memo across cameras, written on the chronology.
 INCIDENT_MEMO = (
-    "Write a memo a member of staff hands to an attorney about one incident "
-    "seen across several cameras, from the incident record and the chronology "
-    "given. Third person, past tense, plain words, grouped by subject and never "
-    "minute by minute. The parts, in this order, each heading on its own line "
-    "followed by a colon. Summary: one paragraph a reader in a hurry could "
-    "stop at, with the date and the times of day the incident ran. The "
-    "cameras: one line each, what the camera is, when it starts and ends by "
-    "the clock, and whose it is only as the words say. People: each person who "
-    "speaks, is spoken of, or is in view, with how the record identifies them "
-    "and where, and which cameras show them; a name only as the words give "
-    "it, a role only as the words give it, a person seen only in the picture "
-    "by clothing, position or what they did, never named. What happened: the "
-    "substance in a few paragraphs, each on one subject, the chronology's "
-    "events in their order, and what each camera adds where it adds "
-    "something. Commands, warnings, and rights: every command, warning and "
-    "advisement of rights spoken, quoted exactly, with the speaker as the "
-    "words name them, the time of day and the camera it was heard on. "
-    "Statements that matter: exact quotes that carry weight, with who said "
-    "them as the words make plain, the time and the camera, and whether it "
-    "answered a question or was said unprompted. Names, places, and dates. "
-    "Unclear parts: a stretch no camera showed, a thing the cameras or the "
-    "words disagree on, and an event the record does not bear out, said "
-    "plainly. No closing section of points for the attorney: the memo ends at "
-    "the facts."
+    "Write the memo a seasoned investigator hands to the attorney on the case "
+    "about one incident seen across several cameras, from the incident record "
+    "and the chronology given. Say what happened, who did what and what was "
+    "said, in the order it happened, grouped by subject and never minute by "
+    "minute, and point at the evidence for each fact: the time of day, the "
+    "camera it comes from and the event's number. Third person, past tense, "
+    "plain words, short sentences. Never narrate the footage: do not write "
+    "that the camera view shifted, that the footage shows or that the video "
+    "captures; describe what a camera showed only where the picture is the "
+    "evidence for a fact (a handgun lay on the passenger seat, BWC2-098702 at "
+    "the time). The chronology's events are the spine and the office's notes "
+    "are the office's reading of them; contradict neither. The parts, in this "
+    "order, each heading on its own line followed by a colon. Summary: one "
+    "paragraph a reader in a hurry could stop at, with the date and the times "
+    "of day the incident ran. The cameras: one line each, what the camera is, "
+    "when it starts and ends by the clock, and whose it is only as the words "
+    "say. People: each person who speaks, is spoken of, or is in view, with "
+    "how the record identifies them and where, and which cameras show them; a "
+    "name only as the words give it, a role only as the words give it, a "
+    "person seen only in the picture by clothing, position or what they did, "
+    "never named. What happened: the substance in a few paragraphs, each on "
+    "one subject, the chronology's events in their order, and what each "
+    "camera adds where it adds something. Commands, warnings, and rights: "
+    "every command, warning and advisement of rights spoken, quoted exactly, "
+    "with the speaker as the words name them, the time of day and the camera "
+    "it was heard on. Statements that matter: exact quotes that carry weight, "
+    "with who said them as the words make plain, the time and the camera, and "
+    "whether it answered a question or was said unprompted. Names, places, "
+    "and dates. Unclear parts: a stretch no camera showed, a thing the cameras "
+    "or the words disagree on, and an event the record does not bear out, "
+    "said plainly. No closing section of points for the attorney: the memo "
+    "ends at the facts."
 )
 INCIDENT_MEMO_FORMAT = (
     "Write the memo as plain text with each part's heading on its own line, "
@@ -838,16 +875,17 @@ def incident_events_schema() -> dict:
         "properties": {
             "events": {
                 "type": "array",
-                "maxItems": 60,
+                "maxItems": 12,
                 "items": {
                     "type": "object",
                     "properties": {
                         "time": {"type": "string"},
                         "end": {"type": "string"},
                         "text": {"type": "string"},
+                        "why": {"type": "string"},
                         "rests_on": {"type": "string"},
                     },
-                    "required": ["time", "end", "text", "rests_on"],
+                    "required": ["time", "end", "text", "why", "rests_on"],
                     "additionalProperties": False,
                 },
             }
@@ -858,17 +896,30 @@ def incident_events_schema() -> dict:
 
 
 def incident_events_input(
-    camera: str, starts: str, ends: str, nature: str, known: list[str]
+    camera: str,
+    starts: str,
+    ends: str,
+    nature: str,
+    known: list[str],
+    context: str = "",
+    look_for: str = "",
 ) -> str:
     """One camera as the proposals read it: its place on the clock, the
-    events that stand, and what follows is its record or its transcript."""
+    events that stand, the office's context and what this run looks for
+    (Phase 7 chapter 2), and what follows is one stretch of its record or
+    its transcript."""
     listed = "\n".join(known) if known else "none yet"
-    return (
+    parts = [
         f"Camera {camera} starts {starts} and ends {ends}. Times in the lines "
-        "below are this recording's own, from its start.\n\n"
-        f"Events already on the chronology, by the incident's clock:\n{listed}\n\n"
-        f"What follows is {nature}:"
-    )
+        "below are this recording's own, from its start.",
+        f"Events already on the chronology, by the incident's clock:\n{listed}",
+    ]
+    if context:
+        parts.append(f"About the office and its cases: {context}")
+    if look_for:
+        parts.append(f"For this run the office asks you to look for: {look_for}")
+    parts.append(f"What follows is one stretch of {nature}:")
+    return "\n\n".join(parts)
 
 
 def incident_memo_input(

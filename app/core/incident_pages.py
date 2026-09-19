@@ -369,7 +369,10 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
         chronology.remove(event, by=user, request=request)
     # The assistant on the Incident (chapter 3).
     elif action == "propose":
-        if not incident_assistant.ask_for_proposals(incident, by=user):
+        look_for = " ".join(request.POST.get("look_for", "").split())[:300]
+        if not incident_assistant.ask_for_proposals(
+            incident, by=user, look_for=look_for
+        ):
             return JsonResponse(
                 {"error": "Nothing to read yet: sync a camera that has a transcript."},
                 status=400,

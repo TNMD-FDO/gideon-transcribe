@@ -25,7 +25,12 @@ PERSON = "person"
 WORDS = "words"
 CAMERA = "camera"
 ASSISTANT = "assistant"
-SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT)
+# Phase 7 chapter 2: found by the app's own search for a Watch phrase.
+WATCH = "watch"
+SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH)
+
+# The line under a proposal saying why it matters (Phase 7 chapter 2).
+WHY_MOST = 300
 
 TEXT_MOST = 500
 # A person's note under an Event, and the Chronology's About (Phase 7).
@@ -60,6 +65,10 @@ class Event(models.Model):
     proposed = models.BooleanField(default=False)
     rests_on = models.CharField(max_length=TEXT_MOST, blank=True, default="")
     dismissed = models.BooleanField(default=False)
+    # Phase 7 chapter 2: the assistant's reason a proposal matters, or the
+    # watch phrase that found it; blank on a person's Event. Shown under the
+    # proposal and printed in the exports, never mixed into the line.
+    why = models.CharField(max_length=WHY_MOST, blank=True, default="")
     # Phase 7 chapter 1: a person's own line under the event, with who wrote
     # it and when it last changed, and the mark that it needs looking at.
     # The assistant reads them and never writes them.
@@ -176,8 +185,8 @@ def change(event: Event, fields: dict, *, by, request=None) -> Event:
     cleaned = _cleaned(event.incident, fields)
     # An Event keeps where it came from: Edit changes the words and the
     # cameras, never the source (an accepted proposal stays the assistant's).
-    if event.source == ASSISTANT:
-        cleaned["source"] = ASSISTANT
+    if event.source in (ASSISTANT, WATCH):
+        cleaned["source"] = event.source
     if cleaned["note"] != event.note:
         # The note's writer is whoever last wrote it, not whoever last
         # touched the event; a cleared note has no writer.
@@ -231,6 +240,8 @@ def source_words(event: Event, names: dict) -> str:
         return f"Camera, {camera}"
     if event.source == ASSISTANT:
         return f"Proposed from {camera}" if event.proposed else f"Assistant, {camera}"
+    if event.source == WATCH:
+        return f"Watch phrase, {camera}"
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
 
 
@@ -317,6 +328,7 @@ def events_json(incident) -> list[dict]:
                 ),
                 "proposed": event.proposed,
                 "rests_on": event.rests_on if event.proposed else "",
+                "why": event.why,
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 # Phase 7 chapter 1.
                 "note": event.note,
@@ -362,6 +374,7 @@ def _rows(incident) -> list[dict]:
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 "added": event.added,
                 "assistant": event.source == ASSISTANT,
+                "why": event.why,
                 "note": event.note,
                 "to_check": event.to_check,
             }
@@ -387,6 +400,7 @@ def spreadsheet(incident) -> bytes:
             "Added on",
             "Note",
             "To check",
+            "Why it matters",
         ]
     )
     for row in _rows(incident):
@@ -404,6 +418,7 @@ def spreadsheet(incident) -> bytes:
                 f"{timezone.localtime(row['added']):%Y-%m-%d %H:%M}",
                 row["note"],
                 "yes" if row["to_check"] else "",
+                row["why"],
             ]
         )
     return holder.getvalue().encode("utf-8-sig")
@@ -516,6 +531,12 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
         cells[0].text = str(row["number"]) + (" (to check)" if row["to_check"] else "")
         cells[1].text = row["time"] + (f" to {row['end']}" if row["end"] else "")
         cells[2].text = row["text"]
+        if row["why"]:
+            # The assistant's reason, or the watch phrase, under the line and
+            # apart from it (Phase 7 chapter 2).
+            why = cells[2].add_paragraph()
+            run = why.add_run("Why it matters: " + row["why"])
+            run.italic = True
         if row["note"]:
             # The office's note under the event, in italics (Phase 7).
             note = cells[2].add_paragraph()

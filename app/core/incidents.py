@@ -150,6 +150,12 @@ class Incident(models.Model):
     )
     proposals_found = models.IntegerField(default=0)
     proposals_cameras = models.IntegerField(default=0)
+    # Phase 7 chapter 2: how many answers the cap cut, how many proposals the
+    # watch phrases found, and what the person asked this run to look for
+    # (given to the run alone and cleared when it ends).
+    proposals_cut = models.IntegerField(default=0)
+    proposals_watch = models.IntegerField(default=0)
+    proposals_look_for = models.CharField(max_length=300, blank=True, default="")
     # About this chronology (Phase 7 chapter 1): the office's paragraph
     # before the events, printed on the export's cover and told to the memo.
     about = models.TextField(max_length=2000, blank=True, default="")

@@ -45,6 +45,72 @@ TEMPLATES = "templates"
 
 # The Recording types the app ships with, one per line. A type an office
 # removes stays on the Recordings that already hold it.
+# The watch phrases shipped (Phase 7 chapter 2): words the office always
+# wants an event for, one per line; an office edits the list to its practice.
+SHIPPED_WATCH_PHRASES = "\n".join(
+    [
+        "gun",
+        "firearm",
+        "pistol",
+        "rifle",
+        "shotgun",
+        "knife",
+        "weapon",
+        "armed",
+        "shoot",
+        "shot",
+        "shots fired",
+        "taser",
+        "tase",
+        "pepper spray",
+        "mace",
+        "stop resisting",
+        "get on the ground",
+        "hands behind your back",
+        "I can't breathe",
+        "not breathing",
+        "ambulance",
+        "bleeding",
+        "medic",
+        "use of force",
+        "you're under arrest",
+        "you are under arrest",
+        "right to remain silent",
+        "Miranda",
+        "understand your rights",
+        "lawyer",
+        "attorney",
+        "I want a lawyer",
+        "I don't want to talk",
+        "can I search",
+        "mind if I search",
+        "consent",
+        "search warrant",
+        "warrant",
+        "probable cause",
+        "step out of the vehicle",
+        "open the trunk",
+        "I did it",
+        "it was me",
+        "going to kill",
+        "I'll kill",
+        "threatened",
+        "drugs",
+        "narcotics",
+        "fentanyl",
+        "meth",
+        "cocaine",
+        "marijuana",
+        "weed",
+        "stolen",
+        "identification",
+        "licence",
+        "license",
+        "registration",
+    ]
+)
+WATCH_PHRASES_MOST = 200
+
 SHIPPED_RECORDING_TYPES = "\n".join(
     [
         "Body camera",
@@ -1488,6 +1554,80 @@ def _rows() -> list[Definition]:
             what_it_does="How long one camera's call may take.",
             when_changed="The next run.",
         ),
+        # Phase 7 chapter 2 (v1.64.0): the judgement sharpened, the room to
+        # think, and the watch phrases under it.
+        Definition(
+            key="incidents_events_context",
+            page=INCIDENTS,
+            group="The assistant",
+            name="About this office and case",
+            kind=TEXT,
+            default="",
+            lines=5,
+            needs="incidents_propose",
+            what_it_does=(
+                "What the office tells the proposer about itself and its "
+                "cases, given after the Proposed events template on every run "
+                "so the engine's judgement is sharpened without editing the "
+                "template. Context, not rules: whom the office defends, what "
+                "tends to matter."
+            ),
+            when_changed="The next run.",
+        ),
+        Definition(
+            key="incidents_events_window",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Proposed events window",
+            kind=NUMBER,
+            default=600,
+            least=120,
+            most=1800,
+            unit="seconds",
+            needs="incidents_propose",
+            what_it_does=(
+                "How much of a camera's record one engine call reads. A camera "
+                "is read in windows of this length, one call each, so an "
+                "answer has room to finish; up to twelve proposals are kept a "
+                "window."
+            ),
+            when_changed="The next run.",
+        ),
+        Definition(
+            key="incidents_second_look",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Second look",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents_propose",
+            what_it_does=(
+                "After each window's answer, one more call reads the window "
+                "again against what was proposed and adds what was left out. "
+                "Doubles the calls of a run."
+            ),
+            when_changed="The next run.",
+        ),
+        Definition(
+            key="incidents_watch_phrases",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Watch phrases",
+            kind=TEXT,
+            default=SHIPPED_WATCH_PHRASES,
+            lines=10,
+            needs="incidents",
+            what_it_does=(
+                "Words and phrases the office always wants an event for, one "
+                "per line. On every Propose events run the app itself searches "
+                "each synced camera's transcript, and its record's picture "
+                "lines, for them, whole words and any case, and proposes an "
+                "event at every line that carries one, before and whether or "
+                "not the engine is asked. The floor under the assistant's "
+                "judgement; an empty list loses nothing of the finder."
+            ),
+            when_changed="The next run.",
+        ),
         Definition(
             key="incidents_memo",
             page=INCIDENTS,
@@ -2616,6 +2756,32 @@ def speaker_check_answer_cap() -> int:
 
 def incident_events_answer_cap() -> int:
     return get("incidents_events_answer_tokens")
+
+
+def incident_events_window() -> int:
+    return int(get("incidents_events_window"))
+
+
+def incident_events_context() -> str:
+    return " ".join(str(get("incidents_events_context") or "").split())[:2000]
+
+
+def second_look() -> bool:
+    return bool(get("incidents_second_look"))
+
+
+def watch_phrases() -> list[str]:
+    """The office's list, one phrase per line, tidied: spacing folded, empty
+    and repeated lines dropped, case kept for showing, at most the ceiling."""
+    seen: set[str] = set()
+    phrases: list[str] = []
+    for line in str(get("incidents_watch_phrases") or "").splitlines():
+        phrase = " ".join(line.split())
+        if not phrase or phrase.lower() in seen:
+            continue
+        seen.add(phrase.lower())
+        phrases.append(phrase)
+    return phrases[:WATCH_PHRASES_MOST]
 
 
 def incident_memo_answer_cap() -> int:

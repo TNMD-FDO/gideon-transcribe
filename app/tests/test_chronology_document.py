@@ -241,9 +241,10 @@ def test_the_exports_print_about_the_notes_and_the_marks(incident, person):
     assert "1 event marked to check" in text
     sheet = chronology.spreadsheet(incident).decode("utf-8-sig")
     head, first, second = sheet.strip().splitlines()[:3]
-    assert head.endswith("Added on,Note,To check")
-    assert first.endswith("Cite page 4,yes")
-    assert second.endswith(",,")
+    assert head.endswith("Added on,Note,To check,Why it matters")
+    # A person's event has no why (v1.64.0), so the last column is empty.
+    assert first.endswith("Cite page 4,yes,")
+    assert second.endswith(",,,")
 
 
 # The memo and the proposals are told --------------------------------------------

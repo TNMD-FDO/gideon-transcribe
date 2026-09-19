@@ -47,6 +47,11 @@ FEATURE_MEMO = "incident_memo"
 NEAR_SECONDS = 5.0
 # The most proposals kept from one camera in one run.
 PROPOSALS_MOST = 30
+# Phase 7 chapter 2: proposals kept a window (the first and the second look
+# together), and how long a watch phrase heard again joins its first hit.
+WINDOW_MOST = 12
+WATCH_JOIN_SECONDS = 30.0
+STAMP = re.compile(r"\[(\d{1,2}):(\d\d):(\d\d)\]")
 
 # The run's states while it is going: nothing is accepted or dismissed then.
 PROPOSING = (QUEUED, RUNNING)
@@ -405,15 +410,23 @@ def _record_audit(
 # Proposed Events ----------------------------------------------------------------
 
 
+def proposer_offered() -> bool:
+    """Whether Propose events is on the page: the assistant's judgement, or
+    the watch phrases alone when the assistant is off (Phase 7 chapter 2)."""
+    return incidents.on() and (proposals_on() or bool(settings_store.watch_phrases()))
+
+
 def proposals_possible(incident) -> bool:
-    """Propose events is offered while some synced camera has a transcript."""
-    return proposals_on() and any(
+    """Propose events is offered while some synced camera has a transcript,
+    and the assistant or the watch phrases are there to read it."""
+    return proposer_offered() and any(
         hasattr(one.recording, "transcript") for one in synced_cameras(incident)
     )
 
 
-def ask_for_proposals(incident, *, by) -> bool:
-    """Propose events pressed: one run at a time per Incident."""
+def ask_for_proposals(incident, *, by, look_for: str = "") -> bool:
+    """Propose events pressed: one run at a time per Incident. The Look for
+    is this run's alone, cleared when it ends."""
     if not proposals_possible(incident):
         return False
     if incident.proposals_state in (QUEUED, RUNNING):
@@ -421,7 +434,15 @@ def ask_for_proposals(incident, *, by) -> bool:
     incident.proposals_state = QUEUED
     incident.proposals_reason = ""
     incident.proposals_by = by
-    incident.save(update_fields=["proposals_state", "proposals_reason", "proposals_by"])
+    incident.proposals_look_for = " ".join(str(look_for or "").split())[:300]
+    incident.save(
+        update_fields=[
+            "proposals_state",
+            "proposals_reason",
+            "proposals_by",
+            "proposals_look_for",
+        ]
+    )
     from core import tasks
 
     tasks.propose_incident_events.defer(incident_id=str(incident.pk))
@@ -473,6 +494,7 @@ def _keep_proposal(item: dict, camera, given: str, taken: list[float]) -> dict |
         end = None
     text = " ".join(str(item.get("text", "")).split())[: chronology.TEXT_MOST]
     rests_on = " ".join(str(item.get("rests_on", "")).split())[: chronology.TEXT_MOST]
+    why = " ".join(str(item.get("why", "") or "").split())[: chronology.WHY_MOST]
     if not text or not rests_on:
         return None
     if _folded(rests_on)[:RESTS_CHECK] not in given:
@@ -485,12 +507,141 @@ def _keep_proposal(item: dict, camera, given: str, taken: list[float]) -> dict |
         "until": None if end is None else camera.starts_at + end,
         "text": text,
         "rests_on": rests_on,
+        "why": why,
     }
 
 
+def _windows(lines: list[str], seconds: int) -> list[list[str]]:
+    """A camera's lines in stretches of the window's length by the time each
+    line carries; a line with no time stays with the stretch before it."""
+    groups: list[list[str]] = []
+    current: list[str] = []
+    index: int | None = None
+    for line in lines:
+        found = STAMP.search(line)
+        here = index
+        if found is not None:
+            at = (
+                int(found.group(1)) * 3600
+                + int(found.group(2)) * 60
+                + int(found.group(3))
+            )
+            here = at // max(seconds, 1)
+        if current and here != index:
+            groups.append(current)
+            current = []
+        index = here
+        current.append(line)
+    if current:
+        groups.append(current)
+    return groups
+
+
+# The watch phrases, the floor under the judgement (Phase 7 chapter 2) --------------
+
+
+def _plain(text: str) -> str:
+    return " ".join(text.replace("\u2019", "'").replace("\u2018", "'").lower().split())
+
+
+def phrase_pattern(phrase: str) -> re.Pattern:
+    """Whole words, any case, the plural allowed: "gun" finds "gun" and
+    "guns" and never "begun"; a phrase's words may be split by any spacing."""
+    words = [re.escape(word) for word in _plain(phrase).split()]
+    return re.compile(r"(?<![a-z0-9])" + r"\s+".join(words) + r"(?:e?s)?(?![a-z0-9])")
+
+
+def _watch_lines(camera) -> list[tuple[float, str, bool]]:
+    """What the search reads on a camera: the transcript's lines at their
+    times, and the record's picture lines where the camera has one."""
+    transcript = camera.recording.transcript
+    lines = [
+        (segment.start, " ".join(segment.text.split()), False)
+        for segment in transcript.segments.order_by("start")
+        if segment.text.strip()
+    ]
+    if assistant.digests_on():
+        for line in assistant.digest_text(transcript).splitlines():
+            if "(seen)" not in line:
+                continue
+            found = STAMP.search(line)
+            if found is None:
+                continue
+            at = (
+                int(found.group(1)) * 3600
+                + int(found.group(2)) * 60
+                + int(found.group(3))
+            )
+            seen = " ".join(line.split("(seen)", 1)[1].split())
+            if seen:
+                lines.append((float(at), seen, True))
+    lines.sort(key=lambda one: one[0])
+    return lines
+
+
+def watch_hits(camera, phrases: list[str]) -> list[dict]:
+    """Every line on the camera that carries a watch phrase, as the fields of
+    a proposal: a phrase heard again within the join window joins its first
+    hit rather than making another."""
+    if not phrases:
+        return []
+    patterns = [(phrase, phrase_pattern(phrase)) for phrase in phrases]
+    hits: list[dict] = []
+    latest: dict[str, dict] = {}
+    for start, text, seen in _watch_lines(camera):
+        plain = _plain(text)
+        for phrase, pattern in patterns:
+            if not pattern.search(plain):
+                continue
+            last = latest.get(phrase.lower())
+            if last is not None and start - last["_start"] <= WATCH_JOIN_SECONDS:
+                last["_count"] += 1
+                last["_start"] = start
+                continue
+            hit = {
+                "at": camera.starts_at + start,
+                "until": None,
+                "text": "",
+                "why": f'The office watches for "{phrase}".',
+                "rests_on": text[: chronology.TEXT_MOST],
+                "_phrase": phrase,
+                "_seen": seen,
+                "_start": start,
+                "_count": 1,
+            }
+            hits.append(hit)
+            latest[phrase.lower()] = hit
+    for hit in hits:
+        said = f" (said {hit['_count']} times)" if hit["_count"] > 1 else ""
+        how = ", seen" if hit["_seen"] else ""
+        line = hit["rests_on"]
+        room = chronology.TEXT_MOST - len(said) - len(how) - len(hit["_phrase"]) - 18
+        hit["text"] = (
+            f'Watch phrase "{hit["_phrase"]}"{how}: {line[: max(room, 20)]}{said}'
+        )
+        for key in ("_phrase", "_seen", "_start", "_count"):
+            del hit[key]
+    hits.sort(key=lambda one: one["at"])
+    return hits
+
+
+def _taken(camera, *groups) -> list[float]:
+    return [one.at for group in groups for one in group if one.camera_id == camera.pk]
+
+
+def _known(incident, standing: list, made: list) -> list[str]:
+    return [
+        f"{_clock(incident, one.at)} {one.text}"
+        + (f" (the office's note: {one.note})" if one.note else "")
+        for one in sorted([*standing, *made], key=lambda one: one.at)
+    ]
+
+
 def propose(incident_id, attempt: int = 1) -> None:
-    """The run: one call per synced camera over its Digest or its transcript,
-    the answers checked, the pending proposals replaced with this run's."""
+    """The run (Phase 7 chapter 2): first the watch phrases, searched by the
+    app itself on every synced camera; then the engine's judgement, each
+    camera read in windows with a second look at each; the answers checked;
+    the pending proposals replaced with this run's."""
     incident = (
         incidents.Incident.objects.filter(pk=incident_id)
         .select_related("case", "proposals_by")
@@ -508,18 +659,50 @@ def propose(incident_id, attempt: int = 1) -> None:
     )
     incident.proposals_state = RUNNING
     incident.save(update_fields=["proposals_state"])
+    look_for = incident.proposals_look_for
     usage = {"input_tokens": 0, "output_tokens": 0}
     model = ""
     calls = 0
     cut = 0
+    windows = 0
+    second_looks = 0
+    watch_found = 0
     made: list = []
     cameras_read = 0
+    phrases = settings_store.watch_phrases()
+
+    def finish(state: str, reason: str = "") -> None:
+        incident.proposals_state = state
+        incident.proposals_reason = reason
+        incident.proposals_at = timezone.now()
+        incident.proposals_found = len(made)
+        incident.proposals_cameras = cameras_read
+        incident.proposals_cut = cut
+        incident.proposals_watch = watch_found
+        incident.proposals_look_for = ""
+        incident.save()
+        if calls:
+            _record_audit(
+                incident,
+                FEATURE_EVENTS,
+                actor=incident.proposals_by,
+                templates=templates_line,
+                model=model,
+                usage=usage,
+                started=started,
+                outcome="ok" if state == DONE else reason,
+                reason="" if state == DONE else reason,
+                calls=calls,
+                cameras=cameras_read,
+                found=len(made),
+                cut_short=cut,
+                windows=windows,
+                second_looks=second_looks,
+                watch_hits=watch_found,
+                look_for=bool(look_for),
+            )
+
     try:
-        problem = assistant._unreachable()
-        if problem:
-            raise problem
-        if not proposals_on():
-            raise engine.Problem(engine.ERROR, "proposals are off")
         cameras = [
             one
             for one in synced_cameras(incident)
@@ -527,15 +710,51 @@ def propose(incident_id, attempt: int = 1) -> None:
         ]
         if not cameras:
             raise engine.Problem(engine.ERROR, "no synced camera has a transcript")
+        if not proposals_on() and not phrases:
+            raise engine.Problem(engine.ERROR, "proposals are off")
         # This run's proposals replace the pending ones; a dismissed one stays
         # dismissed so it is not offered again.
         incident.events.filter(proposed=True, dismissed=False).delete()
         standing = list(incident.events.filter(proposed=False))
         dismissed = list(incident.events.filter(proposed=True, dismissed=True))
+
+        # The floor: the watch phrases, found by the app itself and saved as
+        # they are found, so the page shows them before the engine answers.
+        for camera in cameras:
+            taken = _taken(camera, standing, dismissed, made)
+            for fields in watch_hits(camera, phrases):
+                if any(abs(fields["at"] - other) < NEAR_SECONDS for other in taken):
+                    continue
+                event = chronology.Event.objects.create(
+                    incident=incident,
+                    source=chronology.WATCH,
+                    camera=camera,
+                    cameras=chronology.running_cameras(incident, fields["at"]),
+                    proposed=True,
+                    added_by=incident.proposals_by,
+                    **fields,
+                )
+                made.append(event)
+                taken.append(fields["at"])
+                watch_found += 1
+
+        if not proposals_on():
+            cameras_read = len(cameras)
+            finish(DONE)
+            _events_proposed_row(incident, made, cameras_read, watch_found, windows)
+            return
+
+        # The judgement: each camera in windows, a second look at each.
+        problem = assistant._unreachable()
+        if problem:
+            raise problem
         system = prompts.system_message(
             ground.text, template.text, prompts.INCIDENT_EVENTS_FORMAT
         )
+        context = settings_store.incident_events_context()
         answer_cap = settings_store.incident_events_answer_cap()
+        window_seconds = settings_store.incident_events_window()
+        second = settings_store.second_look()
         schema = prompts.incident_events_schema()
         for camera in cameras:
             transcript = camera.recording.transcript
@@ -551,131 +770,111 @@ def propose(incident_id, attempt: int = 1) -> None:
                 nature = "the transcript of this camera"
             if not body_lines:
                 continue
-            taken = [
-                one.at
-                for one in [*standing, *dismissed, *made]
-                if one.camera_id == camera.pk
-            ]
-            known = [
-                f"{_clock(incident, one.at)} {one.text}"
-                + (f" (the office's note: {one.note})" if one.note else "")
-                for one in sorted([*standing, *made], key=lambda one: one.at)
-            ]
-            head = prompts.incident_events_input(
-                camera.camera_id(),
-                _clock_words(incident, camera.starts_at),
-                _clock_words(incident, camera.ends_at()),
-                nature,
-                known,
-            )
             cameras_read += 1
-            kept_here = 0
-            for chunk in _chunks(system, head, body_lines, answer_cap):
-                if kept_here >= PROPOSALS_MOST:
-                    break
-                given = _folded("\n".join(chunk))
-                user = head + "\n\n" + "\n".join(chunk)
-                answer = engine.complete(
-                    assistant._messages(system, user),
-                    max_completion_tokens=assistant.cap(answer_cap),
-                    thinking=False,
-                    timeout=assistant.time_limit(FEATURE_EVENTS),
-                    schema=schema,
-                    **assistant.SUGGESTION_SAMPLING,
-                )
-                calls += 1
-                if answer.get("finish_reason") == "length":
-                    cut += 1
-                model = answer.get("model", "") or model
-                usage["input_tokens"] += answer.get("input_tokens", 0) or 0
-                usage["output_tokens"] += answer.get("output_tokens", 0) or 0
-                try:
-                    try:
-                        parsed = json.loads(answer["text"])
-                    except ValueError:
-                        parsed = json.loads(prompts.salvage_json(answer["text"]))
-                    raw = parsed.get("events", [])
-                    if not isinstance(raw, list):
-                        raise ValueError("not a list")
-                except (ValueError, AttributeError):
-                    # One unreadable answer is a lost chunk, not a lost run.
-                    log.warning(
-                        "proposed events for %s: an answer was unreadable",
-                        incident.pk,
-                    )
-                    continue
-                for item in raw:
-                    if kept_here >= PROPOSALS_MOST:
+            for window in _windows(body_lines, window_seconds):
+                windows += 1
+                kept_here = 0
+                mine: list[str] = []
+                for look in ("first", "second"):
+                    if kept_here >= WINDOW_MOST:
                         break
-                    fields = _keep_proposal(item, camera, given, taken)
-                    if fields is None:
-                        continue
-                    event = chronology.Event.objects.create(
-                        incident=incident,
-                        source=chronology.ASSISTANT,
-                        camera=camera,
-                        cameras=chronology.running_cameras(incident, fields["at"]),
-                        proposed=True,
-                        added_by=incident.proposals_by,
-                        **fields,
+                    if look == "second" and not second:
+                        break
+                    taken = _taken(camera, standing, dismissed, made)
+                    head = prompts.incident_events_input(
+                        camera.camera_id(),
+                        _clock_words(incident, camera.starts_at),
+                        _clock_words(incident, camera.ends_at()),
+                        nature,
+                        _known(incident, standing, made),
+                        context=context,
+                        look_for=look_for,
                     )
-                    made.append(event)
-                    taken.append(fields["at"])
-                    kept_here += 1
-        incident.proposals_state = DONE
-        incident.proposals_reason = ""
-        incident.proposals_at = timezone.now()
-        incident.proposals_found = len(made)
-        incident.proposals_cameras = cameras_read
-        incident.save()
-        _record_audit(
-            incident,
-            FEATURE_EVENTS,
-            actor=incident.proposals_by,
-            templates=templates_line,
-            model=model,
-            usage=usage,
-            started=started,
-            outcome="ok",
-            calls=calls,
-            cameras=cameras_read,
-            found=len(made),
-            cut_short=cut,
-        )
-        audit.write(
-            incidents.CATEGORY,
-            "events proposed",
-            actor=incident.proposals_by,
-            affected_user=incident.case.owner,
-            object_type="incident",
-            object_id=incident.pk,
-            object_label=incident.name,
-            found=len(made),
-            cameras=cameras_read,
-        )
+                    for chunk in _chunks(system, head, window, answer_cap):
+                        given = _folded("\n".join(chunk))
+                        user = head + "\n\n" + "\n".join(chunk)
+                        if look == "second":
+                            second_looks += 1
+                            user += (
+                                "\n\n"
+                                + prompts.INCIDENT_EVENTS_SECOND_LOOK
+                                + "\n\nYou proposed:\n"
+                                + ("\n".join(mine) or "none")
+                            )
+                        answer = engine.complete(
+                            assistant._messages(system, user),
+                            max_completion_tokens=assistant.cap(answer_cap),
+                            thinking=False,
+                            timeout=assistant.time_limit(FEATURE_EVENTS),
+                            schema=schema,
+                            **assistant.SUGGESTION_SAMPLING,
+                        )
+                        calls += 1
+                        if answer.get("finish_reason") == "length":
+                            cut += 1
+                        model = answer.get("model", "") or model
+                        usage["input_tokens"] += answer.get("input_tokens", 0) or 0
+                        usage["output_tokens"] += answer.get("output_tokens", 0) or 0
+                        try:
+                            try:
+                                parsed = json.loads(answer["text"])
+                            except ValueError:
+                                parsed = json.loads(
+                                    prompts.salvage_json(answer["text"])
+                                )
+                            raw = parsed.get("events", [])
+                            if not isinstance(raw, list):
+                                raise ValueError("not a list")
+                        except (ValueError, AttributeError):
+                            # One unreadable answer is a lost look, not a lost run.
+                            log.warning(
+                                "proposed events for %s: an answer was unreadable",
+                                incident.pk,
+                            )
+                            continue
+                        for item in raw:
+                            if kept_here >= WINDOW_MOST:
+                                break
+                            fields = _keep_proposal(item, camera, given, taken)
+                            if fields is None:
+                                continue
+                            event = chronology.Event.objects.create(
+                                incident=incident,
+                                source=chronology.ASSISTANT,
+                                camera=camera,
+                                cameras=chronology.running_cameras(
+                                    incident, fields["at"]
+                                ),
+                                proposed=True,
+                                added_by=incident.proposals_by,
+                                **fields,
+                            )
+                            made.append(event)
+                            taken.append(fields["at"])
+                            kept_here += 1
+                            mine.append(f"{item.get('time', '')} {fields['text']}")
+        finish(DONE)
+        _events_proposed_row(incident, made, cameras_read, watch_found, windows)
     except engine.Problem as problem:
-        # What the earlier cameras proposed is kept: every one passed the checks.
-        incident.proposals_state = FAILED
-        incident.proposals_reason = problem.reason
-        incident.proposals_at = timezone.now()
-        incident.proposals_found = len(made)
-        incident.proposals_cameras = cameras_read
-        incident.save()
-        _record_audit(
-            incident,
-            FEATURE_EVENTS,
-            actor=incident.proposals_by,
-            templates=templates_line,
-            model=model,
-            usage=usage,
-            started=started,
-            outcome=problem.reason,
-            reason=problem.reason,
-            calls=calls,
-            cameras=cameras_read,
-            found=len(made),
-            cut_short=cut,
-        )
+        # What the search and the earlier cameras proposed is kept: every one
+        # passed the checks.
+        finish(FAILED, problem.reason)
+
+
+def _events_proposed_row(incident, made, cameras_read, watch_found, windows) -> None:
+    audit.write(
+        incidents.CATEGORY,
+        "events proposed",
+        actor=incident.proposals_by,
+        affected_user=incident.case.owner,
+        object_type="incident",
+        object_id=incident.pk,
+        object_label=incident.name,
+        found=len(made),
+        cameras=cameras_read,
+        watch_hits=watch_found,
+        windows=windows,
+    )
 
 
 def proposals_json(incident) -> dict:
@@ -698,12 +897,20 @@ def proposals_json(incident) -> dict:
             if found
             else f"Nothing to propose ({when})"
         )
+        if incident.proposals_watch:
+            words += f", {incident.proposals_watch} from the watch phrases"
+        if incident.proposals_cut:
+            cut = incident.proposals_cut
+            words += (
+                f"; {cut} answer{'' if cut == 1 else 's'} cut short, "
+                "raise Proposed events answer cap"
+            )
     elif state == FAILED:
         words = assistant.what_to_say(incident.proposals_reason)
     else:
         words = ""
     return {
-        "on": proposals_on(),
+        "on": proposer_offered(),
         "possible": proposals_possible(incident),
         "state": state,
         "words": words,

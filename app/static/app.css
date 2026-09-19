@@ -2087,6 +2087,11 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-strip .lane.events .track .lbl.proposed { color: var(--muted); }
 .inc-events { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
 .inc-events td { padding: 6px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+/* Phase 7 chapter 2: why a proposal matters, in the assistant's words, and
+   the pill of an event a watch phrase found. */
+.inc-events .why { font-style: italic; color: var(--text); opacity: 0.85; }
+.pill.watch { color: var(--accent); border: 1px solid var(--accent); background: transparent; }
+.inc-propose #look-for { flex: 1 1 14rem; min-width: 10rem; max-width: 26rem; }
 .inc-events tr.here td { background: var(--now); color: var(--now-ink); }
 .inc-events tr.here .muted { color: inherit; opacity: 0.8; }
 .inc-events td.t { font-family: var(--mono); white-space: nowrap; }

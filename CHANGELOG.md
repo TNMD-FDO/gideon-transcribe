@@ -21,6 +21,55 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.64.0, 2026-09-19
+
+```
+Models: unchanged
+Database: migrates (0050: the why line on an event; what the last run cut,
+what the watch phrases found and the Look for on an incident)
+```
+
+Phase 7 chapter 2: the assistant's judgement, and the watch phrases under
+it. From the maintainer's finding that a line saying "I got, I got gun"
+went unproposed: the run had proposed 87 events across six cameras with
+five answers cut off at the cap, most of them descriptions of the picture.
+
+- **Propose events asks for judgement.** The shipped Proposed events
+  template now asks the engine to read one camera as an investigator for
+  the office that defends the accused, to propose the moments that could
+  matter to the case in one plain sentence each, in its own words, and to
+  say **why it matters**. The why shows under each proposal, on the lane's
+  hover, and prints in the exports under an accepted event. Measured on
+  the camera that missed the line: 31 proposals for 47 minutes, none
+  cut short, none narrating the picture, the gun line among them with its
+  reason (`docs/research/event-spotting.md`).
+- **Room to think.** A camera is read in windows (**Proposed events
+  window**, ten minutes), one call each, up to twelve proposals a window,
+  and each window gets a **Second look** (a switch, On): the engine reads
+  it again against what it proposed and adds what it left out. Where an
+  answer is still cut short the state line says so.
+- **The office sharpens the judgement.** **About this office and case**,
+  a setting under The assistant, is given to every run as context; a
+  **Look for** box beside Propose events is given to one run alone and
+  never kept.
+- **Watch phrases, the floor.** A list in the panel of words the office
+  always wants an event for, shipped with a default list (weapons, force
+  and injury, commands and rights, consent and search, admissions and
+  threats, drugs, identification). On every run the app itself searches
+  each synced camera's transcript, and its record's picture lines, for
+  them before the engine is asked, whole words and any case, and proposes
+  an event at every line that carries one with the source **Watch
+  phrase**, so the office can see which finds came from the judgement and
+  which from the search. With the assistant Off, the run is the search
+  alone. An empty list loses nothing of the finder.
+- **Accept while the run is going** is refused, as v1.63.2 has it, and the
+  buttons show greyed.
+- **The memo re-shipped** in a seasoned investigator's voice: what
+  happened, who did what, pointing at the time, the camera and the event
+  number, never narrating the footage. Same sections. An office that
+  edited either template keeps its edit; an unedited one follows the new
+  wording.
+
 ## v1.63.2, 2026-09-19
 
 ```
