@@ -341,8 +341,12 @@ The memo the AI assistant writes across every synced camera of an Incident, on t
 _Avoid_: report, narrative, incident summary (a Summary is one recording's), timeline
 
 **Note**:
-A person's own line under an Event, up to 2,000 characters: what it means for the case, a page cite, a thing to do. Written and changed with the Event, printed in the Chronology's exports, told to the assistant as the office's own words and never written or rewritten by it. Phase 7 chapter 1.
-_Avoid_: comment, annotation, remark
+A person's own line under an Event, or under a line of a Transcript, up to 2,000 characters: what it means for the case, a page cite, a thing to do. Kept with who wrote it and when it last changed; written and changed where it sits (the event box, or the box under the line); printed in the Chronology's exports and in the transcript exports that say "with notes", never in a plain export, a caption or a Clip; told to Gideon as the office's own words and never written or rewritten by it; listed together on the Notes tab. Phase 7 chapter 1 for an Event, Phase 8 chapter 2 for a line.
+_Avoid_: comment, annotation, remark, bookmark, flag
+
+**Notes tab**:
+The tab on the Case page that lists every Note in the Case, on lines and on events, newest first, each opening where it was written; with Download notes, a Word document of them all for the office's own reading. Phase 8 chapter 2.
+_Avoid_: comments, annotations, notebook
 
 **To check**:
 A person's mark on an Event that something needs looking at, shown as a pill on the Chronology tab, counted in its head line, printed in the exports, and told to the memo, which says where a point is unsettled. Cleared only by a person. Phase 7 chapter 1.

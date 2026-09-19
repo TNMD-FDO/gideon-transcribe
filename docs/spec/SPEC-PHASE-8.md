@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out. Chapter 1 is written for the build; chapters 2 to 4 are outlined and take their shape here so that chapter 1 leaves room for them.
+The pages laid out, and notes. Chapters 1 and 2 are written for the build; chapters 3 and 4 are outlined and take their shape here so that the built chapters leave room for them.
 
 ## About this document
 
@@ -11,14 +11,14 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 ## What Phase 8 adds
 
 - **The pages laid out** (chapter 1, for the build): one rule for the incident page's work panel (tabs, and layers over them, with a Back that returns exactly), the Chronology tab unbunched, the proposals and Find's hits as layers, Gideon as one floating panel with the same shape on the three pages that have it (the case page, the recording page, the incident page) and nowhere else; the case page's tabs as a bar of sections with icons and counts, the same look on every page that has tabs; the recording page's case list under the video; the Start page's door saying Cases; and columns that follow the width up to the 49-inch screen.
-- **Notes** (chapter 2, outlined): a note on a line of a transcript, and a Notes section on the case page that lists every note in the case with the moment each points at.
+- **Notes** (chapter 2, for the build): a note on a line of a transcript under the rules an Event's note already has, exports that carry notes only when chosen, a Notes tab on the case page that lists every note in the case with the moment each points at, and Gideon told the notes as the office's own words.
 - **The bug report button** (chapter 3, outlined): a way for a person to report a problem or ask for a feature from any page, landing in the app for Admins and by mail to the Operator address, since nothing leaves the building.
 - **Documents in a case** (chapter 4, outlined): PDFs uploaded to a case, read page by page, searched with everything else, and cited by page in Gideon's answers.
 
 ## Contents
 
 1. The pages laid out
-2. Notes (outlined)
+2. Notes
 3. The bug report button (outlined)
 4. Documents in a case (outlined)
 5. Deferred and ruled out
@@ -50,7 +50,7 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 ### The tabs, everywhere
 
 - **The shape.** A bar of sections under the page's head: each section a word and an icon, with the count beside the word where a count means something (Recordings 5, Clips 3, Speakers 6, Incidents 1; Search and Gideon carry none); the open section is drawn as a card joined to the content under it, the others as plain words that light on hover. Larger type than today's underlined words; the bar wraps on a narrow window.
-- **The case page**: Recordings, Search, Clips, Speakers, Incidents, in today's order, under the dashboard line. The Gideon tab goes: the panel is Gideon's one place, and it holds the same conversations.
+- **The case page**: Recordings, Search, Clips, Speakers, Incidents, in today's order, under the dashboard line (chapter 2 adds Notes after Clips). The Gideon tab goes: the panel is Gideon's one place, and it holds the same conversations.
 - **The recording page**: the work area's tabs (Transcript, Summary, Clips, Details, and Open in a window at the end) take the same shape; the Gideon tab goes, for the same reason.
 - **The incident page's work panel**: Chronology, Memo, Cameras, Details, with Find's magnifier at the right of the bar.
 - **Icons**: one set, drawn as the app's other icons are (`icons.html`), one per section; the build chooses them within the rule that an icon never stands alone without its word.
@@ -141,13 +141,97 @@ None. Two panels and the panel's open state are the browser's, per person.
 - Where the floating panel remembers its pop-out and whether the popped-out window follows the page's case or recording when the person moves on.
 - How the case card under the video lists a case of one recording (the card shows it alone with Download all transcripts).
 
-## 2. Notes (outlined)
+## 2. Notes
 
-Not yet written for the build; the shape from the maintainer's list of 2026-09-19.
+Written 2026-09-19 from the maintainer's list of the same day ("notes in transcript") and the shape outlined beside chapter 1. Phase 7 chapter 1 gave an Event a Note: a person's own line under it, told to the assistant as the office's words and never written by it. This chapter gives a line of a Transcript the same, under the same rules, and gives the case page one place where every note in the case is read together.
 
-- **A note on a line.** On a transcript, a person adds a note to a line (as an Event takes a Note): their own words, with who wrote it and when, shown under the line in italics and in the exports. The assistant reads notes and never writes one.
-- **A Notes section on the case page.** A tab, Notes, listing every note in the case with the recording, the moment it points at (a citation that plays), the writer and the words, newest first; the incident events' notes listed with them, each with its event. Search reads them (Phase 7 chapter 3 already reads the events' notes).
-- **What changes**: Phase 1's transcript and its exports; Phase 2's case page (the tab); Phase 7 chapter 3 (the Notes kind). An audit row Note added; no setting.
+### Principles
+
+1. **A note is the office's own words.** Written by a person, changed by a person, removed by a person. The assistant is told them as the office's own, respects them, never rewrites them, and never writes one. Phase 7 chapter 1's rule, unchanged and widened.
+2. **One rule for a note wherever it sits.** A note on a line of a transcript and a note on an event have the same length, the same writer and date, the same look (a muted line in italics under the thing it rests on), the same audit row, the same place in Search, and the same list on the case page. What a person learned on the Chronology holds on the transcript.
+3. **A note stays inside the office unless a person chooses otherwise.** The exports a person makes today are unchanged; the exports that carry notes are separate choices, plainly named; a Clip never carries a note. A note is work product, and the app never lets it out by default.
+4. **Written where it belongs, found from one place.** A note is written and changed on the line or the event it rests on, where its context is; the Notes tab lists every note in the case and opens each where it was written; Search finds them.
+5. **Nothing is lost by processing again.** A note follows the words it was written under when a transcript is made again.
+
+### Words
+
+**Note** (the glossary's entry widened): a person's own line under an Event or under a line of a Transcript, up to 2,000 characters, with who wrote it and when it last changed. The line or event it rests on is **its line** or **its event**; the moment it points at is that line's start or that event's time. **The Notes tab**: the case page's list of every note in the case. **On lines** and **on events** name the two places a note sits. The Clip's own note (Phase 1) and a Recording's note (Phase 2, its description) are other things and keep their names; a page never calls a Note a comment, an annotation, a remark, a flag or a bookmark.
+
+### A note on a line
+
+- **Where.** On the recording page, every line of the transcript gains **note** beside **edit** and **clip start** in the row's controls, shown as those are. Pressing it opens a small box under the line's words, "A note on this line", plain text up to 2,000 characters, with **Save** and **Cancel**; with a row lit, **N** opens it as **E** opens Correct. Escape cancels. The box is the page's, under the line; a layer is the incident page's shape and is not needed here.
+- **How it shows.** A line with a note shows it under its words, whole and wrapping: the muted colour, italics, and before the words the writer's shown name and the date ("Note, D. Meehan, 19 Sep 2026: check the body-worn footage at this point"). Pressing the note opens the box with the words in it. Saving with the box emptied removes the note, after asking. The lines' Follow, the lit line, and everything else the transcript does are unchanged; a note only makes its row taller.
+- **Who.** Whoever may correct the transcript may write, change or remove a note on it: the recording's owner, and everyone a Case is shared with, since nothing inside a shared Case is private to one person. The writer is whoever last wrote the note, and the date is when it last changed, as an Event's note has it; a note cleared has no writer.
+- **One per line**, on the shown line. The second Side's copy of a line (the copy the transcript hides) is never noted. A corrected line keeps its note; a note is about the moment, not the words as first heard. A recording moved into a case, or out of it, keeps its notes.
+- **On the timeline**, a small mark at each noted line's time, in the muted colour, under whatever the timeline already draws there; pressing it goes to the line.
+- **In the transcript's window** (Open in a window) the notes show as they do on the page; they are written on the page.
+- **Processing again.** When a recording is processed again and its Transcript replaced, each note is carried to the new line that spans its moment (the line whose start is at or before the moment and whose end is after it; failing that, the line with the nearest start), with its writer and date, and the audit says so. A note is never dropped by processing again.
+- **Where it goes.** With the Segment, as everything about a line does: deleted with the recording, restored with it from the Recycle bin, never copied into a Clip.
+- **The incident page's wall** is unchanged: the line under a camera shows the words, not the note. A note that should sit on the Chronology is put on an event, added from that line as Phase 6 chapter 2 has it.
+
+### Where the notes print
+
+- **Two more entries in the recording page's Export menu**, shown only while the transcript has at least one note: **Export to Word, with notes** and **Export as text, with notes**. The three entries of today (Export to Word, Export as text, Captions) are unchanged, so a transcript a person makes for anyone outside the office never carries a note unless they chose the entry that says so. Captions never carry notes.
+- **In Word, with notes:** each note under its line, in italics, "Note (D. Meehan, 19 Sep 2026): ..."; on the cover, under the facts, "With the office's notes: 4"; the running head gains "with notes"; the processing record counts the notes. **In text, with notes:** the note on the line after its line, indented four spaces, "Note (D. Meehan, 19 Sep 2026): ...", and the head's notice says the file carries the office's notes.
+- **A Clip's excerpt, its caption file and its burned captions never carry a note.** Download all transcripts and the case's Everything export are as today, without notes.
+- **Download notes**, on the Notes tab: a Word document for the office's own reading, the case's name, the count and the date on its cover, then one table of every note in the case, newest first: when (the recording's title and the time, or the incident's name and the time of day), the words it rests on (the line, or the event's line), the writer and the date, and the note.
+
+### The Notes tab
+
+- **Where.** On the case page, between Clips and Speakers (Recordings, Search, Clips, Notes, Speakers, Incidents), with the count of every note in the case, on lines and on events, drawn as chapter 1 draws every tab. It is always there; with no notes it reads "None yet" and one line says where a note is written (a line of a transcript, an event on a chronology).
+- **The rows**, newest first by when the note last changed, each the note's words whole, with a muted line under them: for a note on a line, the recording's title and the time as a citation that opens the viewer at that line with the note lit, the line's words shortened, and, when the recording is a synced camera of an incident, **all cameras** as Phase 6 chapter 1's link; for a note on an event, the incident's name and the time of day as a citation that opens the incident page at that moment, and "on the event: <its line>"; then the writer and the date. A press on the words opens the note where it was written, with the box ready; nothing is edited on the tab.
+- **Two pills** at the head when both kinds exist, **On lines** and **On events**, each with its count, filtering the list; **Search notes** opens the Search tab with the Notes kind chosen; **Download notes** as above.
+- **How many.** Every note, no paging; a case with more than two hundred notes shows two hundred and "and N more; Download notes has them all".
+
+### Told to Gideon
+
+- **The case page's Gideon** reads them. After each recording's lines, a block "The office's notes on this recording:" with one line per note, "[hh:mm:ss] <writer>: <note>", in time order; a recording read from its Digest alone (Phase 7 chapter 5's ceiling) has the block after the Digest. The case chat's rules gain the sentence the incident rules have: the office's notes are its own words, to be respected and never contradicted or rewritten, and the assistant never writes one. A note's moment is cited as a line's is, and the citation plays it.
+- **The incident's Gideon** reads the notes on the synced cameras' lines, placed on the incident clock, listed after the chronology's events as "The office's notes on the cameras' lines:", each "[hh:mm:ss] <camera> <writer>: <note>", under the same rule. The events' notes are read as Phase 7 chapter 5 has them.
+- **Not read.** The Summary and the Digest are the words as spoken and seen, made when the video is prepared, and do not read notes; the Incident memo's spine is the Chronology, and it reads the events' notes as today and not the lines'; Propose events, the Speaker check and every other call are unchanged and read no note.
+
+### Search and Find
+
+- **The Notes kind** (Phase 7 chapter 3) reads the notes on lines as it reads the notes on events, and its count counts both. A hit on a line's note sits under the recording's group: the time as a citation that opens the viewer at that line, "Note, <writer>", the line's words, and the note under them in italics with the words marked; **all cameras** beside the time when the recording is a synced camera.
+- **Find** on the incident page reads the notes on the synced cameras' lines with the cameras' words: a hit says "Note, <writer>" as the Notes hit does, and opens the moment.
+- **The dashboard line** gains nothing; a note has no state.
+
+### In and out
+
+- **In**: the note on a line, its box, its look and its controls; the mark on the timeline; the carry on processing again; the two with-notes exports and Download notes; the Notes tab with its rows, pills and count; Gideon's reading on the case page and the incident page; the Notes kind and Find reading lines' notes; the audit rows.
+- **Out**: any change to the Chronology's notes beyond the shared rule; notes in the plain exports, in captions or in Clips; a note the assistant writes; replies, threads, mentions and notifications; a note as a proposed event; a setting.
+
+### What changes from earlier phases
+
+- **Phase 1, the recording page and the exports**: the row's controls gain note; the box under the line; the mark on the timeline; the Export menu's two with-notes entries; the Word and text exports with notes; Process again carries notes.
+- **Phase 2, the case page**: the Notes tab.
+- **Phase 7 chapter 1**: the glossary's Note is widened to a line of a transcript; the rules for an event's note are unchanged. **Chapter 3**: the Notes kind and Find read lines' notes. **Chapter 5**: Gideon on the case page and on the incident page reads them.
+- **Phase 8 chapter 1**: the case page's bar of sections gains Notes, with the same shape and a count.
+- The Summary, the Digest, the memo, the proposals, the Chronology's exports and every setting are unchanged.
+
+### Audit rows
+
+Category Edits, as **Segment corrected** is written: **Note added**, **Note changed**, **Note removed**, with the segment's times as the label and never a word of the note; **Note carried** when Process again moves a note to a new line, with the old and the new times. Category Exports: **Exported** gains `notes` when a with-notes entry is used, and Download notes is an export of the case with `kind` notes. An event's note stays under **Event changed** (Phase 7 chapter 1). No row anywhere holds a word of a note.
+
+### Settings
+
+None. A note needs nothing switched on beyond the recording page; the Notes tab needs Folder management, as the case page does.
+
+### Not in this chapter
+
+- **A Clip's own note**, a Recording's note and a Person's notes: other fields, unchanged.
+- **A note as a proposed event**: a person adds the event from the line, as today.
+- **Notes on a Document**: chapter 4.
+- **Replies, threads, mentions and notifications**: ruled out; a note is one line, and the office reads them together on the Notes tab.
+- **A note visible to one person only**: ruled out; nothing inside a shared Case is private to one person.
+
+### Left to the build
+
+- The mark on the timeline and whether hovering it shows the note's first words.
+- The key for the box (N) and where the focus lands when it closes.
+- How the Notes tab shortens a long line, and how a note of many lines is shown in its row.
+- The carry rule's edge: a note whose moment no new line spans takes the nearest start; the build says so in its notes.
+- The date's form beside the writer, within the app's date rules.
+- Whether the with-notes entries stand in the Export menu or under one "with notes" tick; two entries are the picture here.
 
 ## 3. The bug report button (outlined)
 
@@ -179,7 +263,8 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 | Category | Row | Chapter |
 |---|---|---|
 | (none) | | 1 |
-| Cases | Note added; Note changed; Note removed | 2 (outlined) |
+| Edits | Note added; Note changed; Note removed; Note carried | 2 |
+| Exports | Exported gains notes; Download notes | 2 |
 | System | Report made; Report seen; Report done | 3 (outlined) |
 | Cases | Document added; Document removed | 4 (outlined) |
 
@@ -188,6 +273,7 @@ Not yet written for the build; the shape from the maintainer's list of 2026-09-1
 | Setting | Page | Default | Chapter |
 |---|---|---|---|
 | (none) | | | 1 |
+| (none) | | | 2 |
 | Reports | Features | On | 3 (outlined) |
 | Documents; Largest document | Cases | On; to be fixed | 4 (outlined) |
 
@@ -197,5 +283,6 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-19.** Chapter 2 (Notes) written for the build from the outline: the audit rows move from Cases to Edits, beside Segment corrected, since a note on a line is a change to a transcript's record and a recording need not be in a case; a note is carried on Process again; the exports that carry notes are separate entries.
 - **2026-09-19, v1.68.0.** Chapter 1 built the same day, with these decisions left to the build: the layers are a stack, so a clip opened from an event returns to the event, then the tab; the moment is not moved back on Back; the work panel is 460 pixels to 1899, 560 to 2559 and 760 from 2560; the wall's columns follow the width in the Side by side layout only (a Grid a person chose wins, Focus wraps its filmstrip from 2560); Two panels shows from 3840 and puts the Memo beside the Chronology, remembered in the browser; the row menu is Edit, Add a note (Edit the note), Clip this event, Remove, with Remove asking first; the case card under the video shows eight recordings and "and N more"; the tabs' icons are play, search, clip, people, camera on the case page and text, clip, summary, info on the recording page and text, summary, camera, info on the work panel; Gideon's window of its own is the same page with only the panel showing (?gideon=window), which follows that case, recording or incident. **Not built in v1.68.0:** the case page's third pane and the recording page's three columns from 2560 (the pages lift their caps and the About pane widens; the third column waits for a build with the page's fold in hand), and the icons' being one drawn set (the app's existing icons serve).
 - **2026-09-19.** Chapter 1 written for the build from the picks; chapters 2 to 4 outlined. Amended the same day at the maintainer's word ("I want Gideon's design language to be the same throughout"): Gideon is one floating panel on every page, the incident page included, and the Gideon tabs go.
