@@ -740,13 +740,13 @@
     });
   }
 
-  // Where the work panel sits: beside the cameras, or under the strip in a Grid.
+  // Where the work panel sits: beside the cameras in every layout (v1.74.1;
+  // a Grid used to put it under the strip, and the handle now gives the
+  // cameras their width instead).
   function placeWork() {
     deskBox.dataset.layout = layout;
-    var below = layout.indexOf("grid") === 0;
-    workBox.classList.toggle("below", below);
-    if (below) { if (strip.nextElementSibling !== workBox) { strip.after(workBox); } }
-    else if (workBox.parentNode !== deskBox) { deskBox.appendChild(workBox); }
+    workBox.classList.remove("below");
+    if (workBox.parentNode !== deskBox) { deskBox.appendChild(workBox); }
   }
 
   // The Layout menu: the person's choice, kept in the browser; the office's
@@ -1207,8 +1207,8 @@
     var toCheck = kept.filter(function (one) { return one.to_check; }).length;
     var lead = kept.length ? kept.length + " event" + (kept.length === 1 ? "" : "s") + " on the chronology" + (toCheck ? ", " + toCheck + " to check" : "") + "." : "No events yet. Add one at the moment you are watching, or from a line under a camera.";
     if (M.state === "done" && kept.length) { lead += " The memo was written on " + M.events_count + " of them."; }
-    var html = "<div class='row' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
-      "<p class='lead grow' style='margin: 0'>" + escape(lead) + "</p>" +
+    var html = "<div class='row' style='gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap'>" +
+      "<p class='lead grow' style='margin: 0; min-width: 16rem'>" + escape(lead) + "</p>" +
       "<button type='button' class='small primary' id='add-event-here'>+ Event here</button>" +
       (P.on ? "<button type='button' class='small' id='open-proposals' title='The assistant reads each synced camera in stretches and proposes the moments that matter; nothing joins the chronology until you accept it'>Propose events" +
         (proposed.length ? " <span class='pill warn small'>" + proposed.length + " waiting</span>" : "") + "</button>" : "") + "</div>";

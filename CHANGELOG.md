@@ -21,6 +21,16 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.74.1, 2026-09-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The panel stays in a Grid.** Grid, 2, 3 or 4 across no longer moves the work panel under the strip; the cameras take that many columns beside the panel, and the handle gives them more room when wanted. From the maintainer's first use of v1.74.0.
+- **The Chronology tab's first line** ("4 events on the chronology") keeps its width and lets the buttons wrap under it, instead of being squeezed beside them on a narrow panel.
+
 ## v1.74.0, 2026-09-22
 
 ```

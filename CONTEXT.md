@@ -345,7 +345,7 @@ The Incident page's grid of cameras playing in step, up to the number the office
 _Avoid_: multiview, grid (as a name for the whole), mosaic, split screen
 
 **Layout**:
-The Incident page's arrangement, chosen from the Layout menu in the transport and remembered in the person's browser: **Focus** (one camera large, the focus camera, with the others in a filmstrip under it, any of them one press from the front), **Side by side** (the cameras in a grid beside the work panel, the strip at the bottom), or **Grid** at 2, 3 or 4 across (the cameras alone across the width). The office's Incident layout setting is what a new person starts with. Phase 6 chapter 4.
+The Incident page's arrangement, chosen from the Layout menu in the transport and remembered in the person's browser: **Focus** (one camera large, the focus camera, with the others in a filmstrip under it, any of them one press from the front), **Side by side** (the cameras in a grid beside the work panel, the strip at the bottom), or **Grid** at 2, 3 or 4 across (the cameras in that many columns beside the work panel; until v1.74.1 a Grid put the panel under the strip). The office's Incident layout setting is what a new person starts with. Phase 6 chapter 4, amended by Phase 8 chapter 5.
 _Avoid_: view mode, multiview, mosaic, split screen
 
 **Chronology**:

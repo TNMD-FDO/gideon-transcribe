@@ -2310,8 +2310,6 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-tile.film.parked { cursor: pointer; border-style: dashed; }
 .inc-tile.film.parked .inc-well { cursor: pointer; }
 .inc-desk[data-layout="focus"] .inc-wall .inc-lines { font-size: var(--t-body); padding: 8px 12px 10px; }
-.inc-desk[data-layout^="grid"] { grid-template-columns: minmax(0, 1fr); }
-.inc-work.below { margin: 0 16px 16px; max-height: none; }
 .inc-tile-head .snd { flex: none; padding: 0 4px; color: var(--muted); }
 .inc-tile.sound .inc-tile-head .snd { color: var(--accent); }
 .inc-tile-head .pill { max-width: 6rem; }
@@ -2397,7 +2395,5 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .workgrip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .inc-desk.resizing { cursor: ew-resize; user-select: none; }
 .inc-desk.resizing .workgrip::before { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
-.inc-desk[data-layout^="grid"] .workgrip { display: none; }
-.inc-desk[data-layout^="grid"] { grid-template-columns: minmax(0, 1fr); }
 .inc-work.narrow .tabbar .tab .w { display: none; }
 .inc-work.narrow .tabbar .tab { padding-left: 8px; padding-right: 8px; }
