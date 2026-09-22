@@ -941,4 +941,3 @@ def test_the_page_carries_the_desks_new_parts(incident, person, client):
     # The lane's rows stay off the state when incident clips are off.
     settings_store.set_to("incidents_clips", False)
     assert client.get(f"{incident.url()}/state").json()["clips"] == []
-
