@@ -21,6 +21,15 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.74.3, unreleased
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Report tab says where the comparison is.** Once a comparison exists, the button on the incident page's Report tab reads "Open the comparison, 5 findings" instead of "Compare with the report", which read as a second run. From the maintainer's first real comparison.
+
 ## v1.74.2, 2026-09-22
 
 ```

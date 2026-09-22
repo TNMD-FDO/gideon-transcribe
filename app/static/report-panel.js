@@ -236,6 +236,15 @@
           fetch(urls.comparison + "?" + urls.home + "=" + urls.homeId).then(function (answer) { return answer.ok ? answer.json() : null; }).then(function (state) {
             var said = one.querySelector(".compare-said");
             if (said && state) { said.textContent = state.words || (state.possible ? "" : state.why || ""); }
+            // The button says what pressing it does (v1.74.3): a comparison
+            // that exists is opened, not run again.
+            var opener = one.querySelector("[data-open-comparison]");
+            if (opener && state) {
+              var total = Object.keys(state.counts || {}).reduce(function (n, k) { return n + (state.counts[k] || 0); }, 0);
+              if (state.state === "done") { opener.textContent = "Open the comparison, " + (total ? total + " finding" + (total === 1 ? "" : "s") : "no findings"); }
+              else if (state.busy) { opener.textContent = "Comparison running, open it"; }
+              else if (state.state) { opener.textContent = "Open the comparison"; }
+            }
           });
         } else {
           drawComparison(one, urls, null);
