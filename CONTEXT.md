@@ -321,8 +321,12 @@ The strip's lane of the Clips already made from this Incident, one block over ea
 _Avoid_: clip markers, bookmarks
 
 **Handle**:
-The grip between the wall and the Work panel on the incident page that a person drags to size the panel, remembered in that person's browser; a double-press puts the usual width back. Phase 8 chapter 5.
+The grip between the wall and the Work panel on the incident page, and on the left edge of Gideon's panel, that a person drags to size the panel, remembered in that person's browser; a double-press puts the usual width back. Phase 8 chapters 5 and 6.
 _Avoid_: splitter, gutter, divider, sash, resizer
+
+**Paragraph card**:
+The card that opens in place from any citation to a Paragraph (a Gideon answer, a Comparison row, an Event that rests on a Paragraph, the memo, a Search hit, a Note), showing the Page's picture with the Paragraph lit, the words before and after, and Open the document one press further; one at a time, Escape closes it, and the page under it never moves. Phase 8 chapter 6.
+_Avoid_: popup, popover, modal, tooltip, lightbox, preview (the chat's word for its moment player)
 
 **Layer**:
 One job opened over a tab of the work panel (Proposed events, Sync, an event, a clip, Find), with the same head on every one: Back with the tab's name, the layer's name, its one main button. Back or Escape returns exactly to the tab, its scroll and the row marked. The wall and the strip never move for a layer. Phase 8 chapter 1.

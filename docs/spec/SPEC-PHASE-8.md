@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out, notes, a way to report a problem, the police report beside the cameras, and the incident page's desk kept and made plainer to use. All five chapters are written for the build; chapter 4 is built in three parts.
+The pages laid out, notes, a way to report a problem, the police report beside the cameras, the incident page's desk kept and made plainer to use, and the report brought to the reader in a card. All six chapters are written for the build; chapter 4 is built in three parts.
 
 ## About this document
 
@@ -15,6 +15,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **Report a problem** (chapter 3, for the build): one link on every page that opens a small box for a problem or an idea, in the person's own words, with where they were added only with their tick; a Report kept on the Panel's Reports page with New, Seen and Done marks, counted on the rail and the Status page, and mailed to the Operator address when mail is configured. Nothing leaves the building.
 - **Documents beside the cameras** (chapter 4, for the build, in three parts): the police report added to an incident or a camera as a PDF, read page by page (OCR for a scan), its paragraphs cited by Gideon and found by Search with the real page shown; and the comparison, the report against the record with every finding cited on both sides and marked agrees, differs, not on camera or not in the report, each one press from becoming an event.
 - **The desk, kept** (chapter 5, for the build): the incident page as it stands, with the focus camera behaving like a video (a player bar on the picture, the picture at its own proportions), the focus camera's words following the clock in the space under the filmstrip, Clip as a button on the transport and a track on the strip that says what it is for, a lane of the clips made, and a handle that sizes the work panel.
+- **The report in place** (chapter 6, for the build): one paragraph card, opened in place from every citation to a paragraph (Gideon's answers, the comparison's rows, a chronology row or event that rests on a paragraph, the memo, Search's hits, the Notes tab), showing the page's picture with the paragraph lit and the words around it, with Open the document one press further; the comparison's Word export in the Export menu; a handle on Gideon's panel.
 
 ## Contents
 
@@ -23,7 +24,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 3. Report a problem
 4. Documents beside the cameras
 5. The desk, kept
-6. Deferred and ruled out
+6. The report in place
+7. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -477,7 +479,55 @@ Added to `CONTEXT.md` with this chapter. **Player bar**: the controls drawn on t
 - **The panel's width on the server**: ruled out; a person's browser remembers it, as the recording page's stage.
 - **Dragging the strip's height**: not asked for; deferred.
 
-## 6. Deferred and ruled out
+## 6. The report in place
+
+Written 2026-09-22 from the maintainer's first real comparison and the asks that came with it: a citation to the report takes the reader to the document's page and away from the cameras, the chronology or the comparison they were reading; the comparison's Word export was not found where it was looked for; and Gideon's panel cannot be made wider. The one design under all three: a person reading the record never leaves it to look at the report. The report comes to them, in a card, and the same card everywhere.
+
+### Principles
+
+1. **The report comes to the reader.** A citation to a paragraph, wherever it is, opens a card in place that shows the paragraph on its page, lit, with the words around it. The page under the reader does not change and nothing they were looking at moves. Opening the document's own page is one press further, for reading it whole.
+2. **One card everywhere.** Gideon's answers, the comparison's rows, a chronology row that rests on a paragraph, the memo's citations, Search's hits and the Notes tab all open the same card with the same head, the same picture and the same way out. What a person learns once holds everywhere a paragraph is named.
+3. **The page is the truth.** The card shows the real page picture with the paragraph's box drawn on it, as the document page does, never the words alone. A page read by OCR says so on the card.
+4. **Exports are where exports are.** The comparison's Word export sits with the page's other exports as well as on the comparison itself, so a person who looks in the Export menu finds it.
+5. **The panel is the person's to size.** Gideon's panel takes a handle as the incident page's work panel does, with the same limits, the same memory and the same keys.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Paragraph card**: the card that opens in place from a citation to a Paragraph, showing the Page's picture with the Paragraph lit, the words before and after, and the way to the document's page. The pages never say popup, popover, modal, tooltip, lightbox or preview (the chat's word for the moment player stays the chat's). The Gideon panel's grip is a **Handle**, as the work panel's is.
+
+### The paragraph card
+
+- **What opens it.** Every place a Paragraph is cited: a `[Name, page N, paragraph M]` pill in a Gideon answer (which today opens a preview of the words alone; that preview becomes the card); the "page N, para M" citation on a comparison row; the "From the report, page N, para M" line on a chronology row and on the event layer for an event that rests on a paragraph; a citation in the memo; a document hit on the case page's Search tab; and, on the Notes tab, a note whose line rests on a paragraph. A press opens the card; the page under it stays where it is.
+- **What it shows.** A card of the work panel's width (or the chat panel's, or the tab's, wherever it opens), anchored under the citation: a head with the document's title and "page N, paragraph M", "read by OCR, so check the page" when the page was; the page's picture scrolled so the paragraph is in view with its box drawn on it in the accent, as the document page draws it; under the picture, the paragraph's words in the reading size with the paragraph before and after in muted type; and a row with **Open the document** (the document page at that page and paragraph, in the same tab), **Copy the citation** ("Incident report, page 4, paragraph 2") and **Close**. On the incident page a citation that also names a moment (a comparison row's other side) keeps its moment citation as it is; the card is for the paragraph.
+- **How it behaves.** One card at a time: opening another closes the first. Escape closes it, as does a press outside it or on the citation again. It never covers the cameras or the strip on the incident page: it opens inside the work panel or the layer the citation is in, and scrolls with it. In Gideon's panel it opens under the answer, as the moment player does. It is drawn from the document's state endpoint and page pictures the app already serves, so it costs no new request beyond the picture.
+- **The document page stays.** It is the place to read the report whole, and Open the document goes there with the paragraph lit, as today.
+
+### The comparison's export
+
+- **Where it is.** The comparison's Word export stays on the comparison (the "Comparison to Word" link beside Compare again) and is added to the incident page's **Export** menu as **Comparison to Word** while a comparison exists and is done, greyed with "Compare with the report first" until then; on a recording's page, to the page's Export menu the same way. The case page's Documents tab row for a report with a comparison carries the same link.
+- **What it holds** is unchanged from chapter 4: the cover with the document, the cameras and the counts, then the table of findings with their marks, both citations, the why and the notes, dismissed rows left out.
+
+### The Gideon panel's handle
+
+- A handle on the panel's left edge, the full height, with a grip at its middle, drawn as the work panel's handle is. Drag it and the panel grows or shrinks between 360 pixels and six tenths of the window; the page under it does not reflow, as chapter 1 has it. The width is kept in the person's browser, for every page the panel opens on; a double-press puts the usual 420 back; with the handle focused the arrow keys move it twenty pixels, Home and End to the limits. In the panel's own window (the pop-out arrow) there is no handle.
+
+### Settings and audit
+
+- No setting is added. No audit row is added; opening a card is reading, and the export rows are chapter 4's.
+
+### Left to the build
+
+- The card's exact size and where the picture is cropped, within the rule that the paragraph is in view and its box drawn.
+- Whether the card is one drawing shared by the pages (it should be: one script, as the report panel is).
+- The handle's snap points, if any, and how the chat's width and the work panel's width are kept apart in the browser.
+
+### Not in this chapter, and ruled out
+
+- **Camera lines in clip captions** ("Camera:" cues from a described moment, under the Vision page's Exports switch): left alone at the maintainer's word on 2026-09-22; a split switch for captions alone is noted for later.
+- **The card as a window of its own**: not chosen; the document page is the whole-report view.
+- **Editing a document's words from the card**: ruled out; the page is the truth.
+
+## 7. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -496,6 +546,7 @@ Added to `CONTEXT.md` with this chapter. **Player bar**: the controls drawn on t
 | System | Report made; Report seen; Report done; Reports swept | 3 |
 | Cases | Document added; Document re-linked; Document removed; Comparison run; Event added with source report | 4 |
 | (none; Clip created gains its way in) | | 5 |
+| (none) | | 6 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -506,13 +557,15 @@ Added to `CONTEXT.md` with this chapter. **Player bar**: the controls drawn on t
 | Reports | Features | On | 3 |
 | Documents; Largest document; Documents per incident or recording; Read scans with OCR; Reading ceiling; Compare with the report; Comparison answer cap; Comparison time limit | Documents | On; 60 pages; 3; On; 400 paragraphs; On; 3,000; 600 s | 4 |
 | (none) | | | 5 |
+| (none) | | | 6 |
 
 ## Sources
 
-The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`.
+The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison.
 
 ## Amendments applied
 
+- **2026-09-22.** Chapter 6 (The report in place) written for the build from the maintainer's asks after the first real comparison: a paragraph card in place of the jump to the document page, the same card everywhere a paragraph is cited; the comparison's Word export in the Export menu; a handle on Gideon's panel. Camera lines in clip captions left alone at the maintainer's word.
 - **2026-09-22, v1.74.2.** The first real comparison (a five-page report against six cameras) came back empty: the engine wrapped its JSON in a Markdown code fence and the app read nothing. Chapter 4's parser now takes a fence and any words before the first brace off before reading; a comparison keeps how many answers could not be read and what it dropped by reason (migration 0057), says them on its state line, and puts the two counts on the Comparison run row. The record's size (1,004 lines, about 59,000 tokens in one call) was read fine by the incident chat the same afternoon, so the reading is unchanged.
 - **2026-09-22, v1.74.1.** The maintainer's first use of the desk: a Grid layout no longer moves the work panel under the strip; the panel stays beside the cameras in every layout, and the handle gives the cameras their width. Phase 6 chapter 4's "a Grid puts the panel under the strip" is amended by this line; the glossary's Layout entry says so.
 - **2026-09-22, v1.74.0.** Chapter 5 built the same day, with these decisions left to the build: the player bar fades two seconds after the pointer stops moving while playing and stays while paused; the focus well's proportion comes from the picture's own width and height once known, capped at the window's height less 500 pixels and never under 220; the said band draws two lines before the lit one and one after, redraws only when the lit line changes, and freezes while Follow is off (it snaps back on Play); the focus tile's line under the picture is hidden in Focus, since the band carries the words and no camera line was drawn there; the clip track is 24 pixels tall, hatched in the warn colour, with a tag that follows the pointer at rest (the time under it) and while dragging (the span and its length); the Clips lane's block opens the case's Clips tab; a clip being marked survives a change of focus; the handle snaps within twelve pixels of 460 and of half the desk, and the panel's tabs show icons alone under 400 pixels; the clip box opens only once the end is set, so its Make the clip is never greyed for a marking in progress; the ruler keeps a press to seek and the track owns the drag. **Not built:** nothing of the chapter.
