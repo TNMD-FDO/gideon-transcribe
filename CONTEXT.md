@@ -300,6 +300,30 @@ _Avoid_: search (on the incident page), query, results
 The incident page's panel beside the wall: its tabs (Chronology, Memo, Cameras, Details), always there, and the layers that open over a tab for a job in hand. Phase 8 chapter 1.
 _Avoid_: sidebar, pane (that is the case page's)
 
+**Player bar**:
+The controls drawn on the focus camera's picture when the pointer is over it: a scrub bar over the Incident's span, play, back and forward, the time, which camera is heard, the speed, and Fill the window. Each does what the transport's control of the same name does. Phase 8 chapter 5.
+_Avoid_: scrubber, seek bar, overlay controls, HUD
+
+**Said band**:
+The block under the filmstrip in the Focus layout that shows the focus camera's Transcript following the clock, the line being said lit, with + event and Clip from here on the lit line. Phase 8 chapter 5.
+_Avoid_: live captions, subtitles, ticker, transcript panel (that is the recording page's)
+
+**Clip button**:
+The Clip on the transport of the incident page that marks a Clip's start at this moment and, as End the clip here, its end on the second press; the clip box then opens filled in. Phase 8 chapter 5.
+_Avoid_: in point, out point, record, mark in, mark out
+
+**Clip track**:
+The hatched band under the strip's ruler on the incident page that says in words it takes a drag to make a Clip, and draws the span as it is dragged. Phase 8 chapter 5.
+_Avoid_: drop zone, selection bar, range selector
+
+**Clips lane**:
+The strip's lane of the Clips already made from this Incident, one block over each span, there only when the Incident has a Clip. Phase 8 chapter 5.
+_Avoid_: clip markers, bookmarks
+
+**Handle**:
+The grip between the wall and the Work panel on the incident page that a person drags to size the panel, remembered in that person's browser; a double-press puts the usual width back. Phase 8 chapter 5.
+_Avoid_: splitter, gutter, divider, sash, resizer
+
 **Layer**:
 One job opened over a tab of the work panel (Proposed events, Sync, an event, a clip, Find), with the same head on every one: Back with the tab's name, the layer's name, its one main button. Back or Escape returns exactly to the tab, its scroll and the row marked. The wall and the strip never move for a layer. Phase 8 chapter 1.
 _Avoid_: modal, dialog (a layer is not one), popup, pop-out, sheet (Phase 6's word for what a layer replaced)

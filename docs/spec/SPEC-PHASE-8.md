@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out, notes, a way to report a problem, and the police report beside the cameras. All four chapters are written for the build; chapter 4 is built in three parts.
+The pages laid out, notes, a way to report a problem, the police report beside the cameras, and the incident page's desk kept and made plainer to use. All five chapters are written for the build; chapter 4 is built in three parts.
 
 ## About this document
 
@@ -14,6 +14,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **Notes** (chapter 2, for the build): a note on a line of a transcript under the rules an Event's note already has, exports that carry notes only when chosen, a Notes tab on the case page that lists every note in the case with the moment each points at, and Gideon told the notes as the office's own words.
 - **Report a problem** (chapter 3, for the build): one link on every page that opens a small box for a problem or an idea, in the person's own words, with where they were added only with their tick; a Report kept on the Panel's Reports page with New, Seen and Done marks, counted on the rail and the Status page, and mailed to the Operator address when mail is configured. Nothing leaves the building.
 - **Documents beside the cameras** (chapter 4, for the build, in three parts): the police report added to an incident or a camera as a PDF, read page by page (OCR for a scan), its paragraphs cited by Gideon and found by Search with the real page shown; and the comparison, the report against the record with every finding cited on both sides and marked agrees, differs, not on camera or not in the report, each one press from becoming an event.
+- **The desk, kept** (chapter 5, for the build): the incident page as it stands, with the focus camera behaving like a video (a player bar on the picture, the picture at its own proportions), the focus camera's words following the clock in the space under the filmstrip, Clip as a button on the transport and a track on the strip that says what it is for, a lane of the clips made, and a handle that sizes the work panel.
 
 ## Contents
 
@@ -21,7 +22,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 2. Notes
 3. Report a problem
 4. Documents beside the cameras
-5. Deferred and ruled out
+5. The desk, kept
+6. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -402,7 +404,80 @@ Category Cases: **Document added** (the title, pages, read by OCR, poorly read, 
 - How the matching rule ranks paragraphs (PostgreSQL full-text search, the question's words, the top N).
 - The short title for a document in a citation when several are linked.
 
-## 5. Deferred and ruled out
+## 5. The desk, kept
+
+Written 2026-09-22 from the maintainer's word on the incident page after v1.73.0: the page as it stands is the right page, and three mock-ups that moved its parts were set aside. Four things are to change on it, and one more was added the same day. The video should feel like a video; making a clip should be obvious; the dead space under the pictures, when one camera is the focus, should show what is being said; the work panel should be draggable wider and narrower; and the place on the strip that takes a drag should say so. The drawings are `docs/spec/mockups/phase-8-incident-desk.html` (the desk with the four changes, making a clip, the clip track close up, the panel dragged wider), picked the same day.
+
+### Principles
+
+1. **Nothing moves.** The head, the wall, the transport, the strip and the work panel stay where Phase 6 chapter 4 and Phase 8 chapter 1 put them. This chapter adds to the page and changes how three of its parts behave; it takes nothing away that a person has learnt.
+2. **The focus camera is a video.** When one camera is the focus it behaves the way every video on every screen behaves: the picture at its own proportions, and the controls a person expects on the picture when the pointer is over it. The transport row under the wall stays for the people who use it.
+3. **The words follow the picture.** The space under the filmstrip shows the focus camera's transcript following the clock, the line being said lit. Change the focus and the words change with it. A person reads and watches in one place.
+4. **Clip is a thing you can see.** A button on the transport, a track on the strip that says what it is for in words, a lane that shows the clips already made, and a line under the picture that offers to start one. Every way in ends in the same clip box, filled in.
+5. **The panel is the person's to size.** A handle between the wall and the panel; the width is remembered for that person; the wall gives way and is never squeezed to nothing.
+6. **Withheld is greyed and says why.** Where the office's Clips setting is off, the button, the track and the lane stay on the page greyed, with the reason, as chapter 1's rule for a withheld control has it.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Player bar**: the controls drawn on the focus camera's picture when the pointer is over it (a scrub bar, play, back and forward, the time, which camera is heard, the speed, fill the window). **Said band**: the block under the filmstrip that shows the focus camera's words following the clock. **Clip button**: the Clip on the transport that starts a clip at this moment and ends it on the second press. **Clip track**: the hatched band under the strip's ruler that takes a drag to make a clip. **Clips lane**: the strip's lane of the clips already made from this incident. **Handle**: the grip between the wall and the work panel that a person drags to size the panel. The pages never say scrubber, seek bar, live captions, subtitles, in point, out point, marker, splitter or gutter.
+
+### The focus camera as a player
+
+- **The picture at its own proportions.** In the Focus layout the focus camera's well takes the picture's own proportion once the browser knows it (a body-worn camera held upright is upright; a dash camera is wide), instead of a 16:9 well with bars. The well's height is capped so the filmstrip, the said band and the transport stay in view on a 1080-pixel-tall window; past the cap the picture is fitted inside with bars. Filmstrip tiles, Side by side and Grid keep the 16:9 well, since a row of tiles has to be a row.
+- **The player bar.** When the pointer is over the focus picture, and while the focus camera is paused, a bar sits on the picture's lower edge over a soft dark fade: a scrub bar across the width; play or pause; back five seconds and forward five; the elapsed time and the incident's length ("1:45 / 41:26"); the speaker, lit when this is the camera heard, a press hearing it (or, when it is heard, pinning it, as the tile's speaker does today); the speed, a small menu of the transport's speeds; and **Fill the window**, which shows the focus picture and the bar alone until Escape or the same button. The bar fades out two seconds after the pointer leaves or stops moving while playing. Nothing on the bar is new: each control does what the transport's control of the same name does, and the keys (space, the arrows, B, E) are unchanged.
+- **The scrub bar** is the incident's span, as the strip is, not the focus camera's file: the played part is drawn to the clock, the focus camera's own stretch is a lighter band inside it, and a press or a drag on it seeks every camera, as a press on a strip lane does. The events are ticks on it; hovering a tick says the event's line. While a clip is being marked (below), the span so far is drawn on it in the clip's colour.
+- **The tile head** (the dot, the id, the pill, the speaker, Sync, the menu) stays as it is on the focus tile and on every tile. The line under the focus tile that today carries the words and the camera line keeps the camera line only; the words move to the said band.
+- **Not the focus.** A filmstrip tile, and every tile in Side by side and Grid, has no player bar; a press on its picture makes it the focus (filmstrip) or plays and pauses (the other layouts), as today.
+
+### The said band
+
+- **Where.** In the Focus layout only, under the filmstrip and above the transport, across the stage's width, in the space that was empty: a block headed "Said on DC-12, following the clock" with, at its right, "Press a line to go there" and **Open the transcript** (the recording page's Transcript tab, at this moment).
+- **What it shows.** The focus camera's transcript lines around the clock: the line being said lit as the recording page lights its line, two lines before it and one after, each with its start on the incident clock, the speaker's name (a numbered label shows as no name, as the line under a tile does today) in the speaker's colour, and the words. The band scrolls as the clock runs so the lit line stays in place. When nothing is being said, the last line stays with its light off. When the focus camera has no transcript, the band says "DC-12 has no transcript yet" and, when a person may, "Transcribe it" as the Cameras tab offers. When the focus camera has not started or has ended at the moment, the band says so in the tile's words ("Starts in 0:41"; "Ended at 22:31:07").
+- **What it does.** A press on a line seeks every camera to that line's start, exactly as a press on the strip. When the pointer is over the lit line, two things appear at its right: **+ event**, which is the line under a tile's + event (the words as the event's text, the moment, this camera as its source), and **Clip from here**, which starts a clip at the line's start as the Clip button does (below). The band never opens a layer of its own.
+- **Follow.** The band follows the clock while Follow is ticked, as the strip does; with Follow off a person may scroll the band by hand, and it snaps back to the clock on the next press of Play.
+- **Which cameras.** The focus camera only. Every camera's words interleaved was considered and set aside: two officers' cameras hear the same words, and one band that says each line twice with a camera's name on it is harder to read than one camera's words with the camera's name in the head. Find, across every synced camera, is the way to look for words the focus camera did not hear.
+- **How the words arrive.** From the camera's lines endpoint the tile already reads, once per camera, so the band costs no new request; the band is drawn from what the tile has.
+
+### Clip, four ways in and one box
+
+- **The Clip button.** On the transport, after the time and before the speed, "Clip" with the scissors, drawn in the accent, with "starts a clip at this moment" in small type beside it. A press marks the start at the clock and the button becomes **End the clip here**, drawn in the clip's colour, with "Clip from 21:57:27, 0:14 so far · Esc cancels" beside it; the span so far is drawn on the scrub bar, on the strip's clip track and as a ghost on the Clips lane, growing with the clock. The video keeps playing the whole time. The second press sets the end and opens the clip box (below). Escape while marking cancels and clears the drawing; so does leaving the page, with nothing kept. Seeking while marking is allowed and moves the end, not the start; seeking before the start swaps them.
+- **The clip track.** On the strip, under the ruler and above the lanes, a band of the strip's width (the lane heads' width left clear) that says what it is: hatched in the clip's colour with a dashed edge, the scissors and "Drag across here to make a clip" at its left, and "or press Clip on the transport, or Clip this event on a row" in muted type at its right. The pointer over it is a crosshair, the edge turns solid with a soft glow, and a faint line follows the pointer down through the lanes so the time under it is plain. Dragging across it draws the span so far in the clip's colour on the track and as a ghost on the Clips lane, with a tag that follows the pointer ("22:04:10 to 22:07:48 · 3:38"), and the track's words change to "Dragging: release to set the end". Release opens the clip box with that span. A drag of under a second is a press and seeks there. Escape while dragging cancels. The ruler above it keeps a press to seek and loses its drag, which the track now owns; the strip's foot line of instructions goes, since the track and the "?" say it.
+- **The Clips lane.** A lane under Events, headed Clips, that draws every clip made from this incident (the incident's clips, whatever way they were made) as a block over its span in the clip's colour, with the clip's title on hover and a press opening the clip on the case's Clips tab. The lane is there only when the incident has a clip or one is being marked, so a strip with no clips is as tall as today.
+- **Clip from here** on the said band's lit line, and **Clip this event** on a chronology row and on the event layer, stay and start the same marking: Clip from here marks the start at the line's start and turns the transport's button into End the clip here; Clip this event opens the box at once with ten seconds either side, as today.
+- **The clip box** is the layer of Phase 7 chapter 1 and Phase 6 chapter 5, unchanged in what it holds, filled in by whichever way opened it: From and To; the cameras ticked from those running inside the span (an event's own cameras when opened from an event); the layout and the sound as today; the title from the event's line, or from the one event whose moment falls inside the span, or the two times. The head says which way in ("Clip from here", "Clip from the strip", "Clip this event", "Clip"), and the one main button is **Make the clip**, greyed with "set the end first" while a clip is still being marked and the box was opened early. Making it does what it does today: one file, rendered on the media worker, landing on the case's Clips tab, and now on the Clips lane too.
+- **Withheld.** Where the office's Clips setting is off, the Clip button is greyed with "Clips are off for this office" on hover, the clip track is drawn without its hatching and says "Clips are off for this office" in muted type, the Clips lane is not drawn, and Clip from here does not appear; Clip this event stays greyed as today.
+
+### The handle
+
+- **Where.** Between the stage and the work panel, the full height of the two, a narrow strip with a short grip drawn at its middle; the pointer over it is the column-resize pointer and the grip lights. It is there whenever the panel is beside the wall (Focus and Side by side at 1280 pixels and wider); in a Grid layout and under 1280 pixels, where the panel sits under the strip, there is no handle.
+- **Dragging.** The panel's width follows the pointer between 360 pixels and six tenths of the desk; the wall, the filmstrip, the said band, the transport and the strip give way in the stage's width as they do when the window is resized, and the focus picture keeps its proportions. The drag stops at the point where the stage would fall under 420 pixels, so the video is never a postage stamp. While dragging, a faint line shows where the split will land, and the width snaps gently at the usual 460 pixels and at half the desk. Releasing keeps it.
+- **Remembered.** The width is kept in the person's browser as the recording page keeps its stage's width, for every incident that person opens; a double-press on the handle puts the usual 460 back. Nothing is kept on the server and nothing is per incident.
+- **The keyboard.** The handle takes focus with Tab and moves twenty pixels a press on the left and right arrows, Home and End going to the two limits, as the recording page's handle does.
+- **A narrow panel.** Under 400 pixels the tabbar shows each tab's icon alone with its name on hover, keeping the Report count and Find's box; the panel's rows and layers are already fluid. **Two panels** on a very wide window (chapter 1) keeps working: the handle then sizes the pair.
+
+### Settings and audit
+
+- No setting is added. The Clips setting on the Features page already governs clips; the player, the band, the track and the handle are the page's own.
+- No audit row is added. Clip created stays the row for a clip across cameras, and gains its way in ("from the button", "from the strip", "from a line", "from an event") beside its cameras and layout.
+
+### Left to the build
+
+- The player bar's exact controls' drawing and fade timing, within the rule that it is what a person expects of a video and adds no control the transport lacks.
+- The focus well's proportion cap, within the rule that the filmstrip, the band and the transport stay in view at 1080 pixels.
+- The said band's height (about four lines) and how it snaps back after a hand scroll.
+- The clip track's height, hatching and colours, within the rule that it reads as a place to drag before a hand is on it; and the Clips lane's block drawing.
+- The handle's snap distances and how the tabbar decides to show icons alone.
+- Whether a clip being marked survives a change of focus (it should; the span is the incident's, not a camera's).
+
+### Not in this chapter, and ruled out
+
+- **Moving the parts**: the three mock-ups of 2026-09-22 that slimmed the head, hid the once-only controls behind a Set up sheet, put the strip first, or added a Watch or Read switch were set aside by the maintainer; the page as it stands is kept.
+- **Every camera's words in one band**: set aside for the focus camera's words alone (above); may come back as a tick on the band if staff ask.
+- **A player bar on every tile**: ruled out; one video is a video, six are a wall.
+- **The panel's width on the server**: ruled out; a person's browser remembers it, as the recording page's stage.
+- **Dragging the strip's height**: not asked for; deferred.
+
+## 6. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -420,6 +495,7 @@ Category Cases: **Document added** (the title, pages, read by OCR, poorly read, 
 | Exports | Exported gains notes; Download notes | 2 |
 | System | Report made; Report seen; Report done; Reports swept | 3 |
 | Cases | Document added; Document re-linked; Document removed; Comparison run; Event added with source report | 4 |
+| (none; Clip created gains its way in) | | 5 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -429,13 +505,15 @@ Category Cases: **Document added** (the title, pages, read by OCR, poorly read, 
 | (none) | | | 2 |
 | Reports | Features | On | 3 |
 | Documents; Largest document; Documents per incident or recording; Read scans with OCR; Reading ceiling; Compare with the report; Comparison answer cap; Comparison time limit | Documents | On; 60 pages; 3; On; 400 paragraphs; On; 3,000; 600 s | 4 |
+| (none) | | | 5 |
 
 ## Sources
 
-The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold.
+The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`.
 
 ## Amendments applied
 
+- **2026-09-22.** Chapter 5 (The desk, kept) written for the build from the maintainer's asks of the same day and the drawings picked: the page kept as it stands; the focus camera a player; the said band under the filmstrip, the focus camera alone; Clip as a button, a track that says what it is for, a lane and a line; the handle for the work panel. Three earlier mock-ups that moved the page's parts were set aside.
 - **2026-09-19, v1.73.0.** Chapter 4 part 3 built the same day, with these decisions left to the build: a window is eight pages and its findings' JSON shape is page, paragraph, claim, at, mark, why; the window calls ask for agrees, differs and not on camera only, and one further call asks for what the report leaves out against the whole report with the chronology (skipped and said on the state line when the whole does not fit); a finding is dropped without a real paragraph (except not in the report) or without a real moment on the home's clock (except not on camera), and twins are dropped; at most twenty-five findings a window and two hundred a comparison; the comparison's home is the incident or the recording the report is linked to, one comparison per pair, the recording's without Make it an event; a Not on camera finding made an event opens the event box with the claim and the paragraph as its note, since the report has no clock; the layer on the incident page and a block under the document on the recording page are one drawing; the Comparison template joins the Templates page; the memo reads a rested-on paragraph as "from the report, which says". **Not built:** nothing of the chapter; the scan and the agency report are still to be measured.
 - **2026-09-19, v1.72.0.** Chapter 4 part 2 built the same day, with these decisions left to the build and three cleanups from the first day's use: a document may be linked to an incident and to a recording at once (the tables held both), so Add the report on the Documents tab asks for either or both and a report is never loose; Re-link is two choices and a button on the row; the document page carries the case's name as its back arrow and Back to the incident or recording; the Report tab draws the document's pages from a state endpoint (`/document/<id>/state`) with the words under each page; a report read alone is named "Report" in citations and several are named by their titles made unique; a citation to a name the reading did not carry is dropped, except that any name resolves when one report was read; the matching rule counts the question's words of three letters or more in each paragraph and keeps the fullest matches, in document order; the ceiling's line is appended to the answer in parentheses; the recording page's chat reads that recording's report too (the chapter's third option, taken); a document keeps the splitter version it was read with, and the minute task reads an older one again. **Not built in part 2:** the comparison (part 3); the case chat's export cover naming the documents read.
 - **2026-09-19, v1.71.0.** Chapter 4 part 1 built the same day, with these decisions left to the build: pdfplumber (over pdfminer.six) reads a text page's words with their positions and pypdfium2 draws the pages, at 110 dots an inch for the picture and 220 for OCR; a page with fewer than eight words of its own is read by OCR, and an OCR'd page with fewer than twenty words or a mean confidence under 55 is poorly read; a paragraph breaks at a gap of more than nine tenths of a line or at an indented line that follows a full one, numbered from 1 on each page, its box the words' bounds in page points and drawn on the picture as percentages; the page count is read at upload before the file is kept; the pictures are served by the app to whoever may open the case, not by Caddy, since they are small; the document page's words follow the page in view; Re-link and Remove are the Documents tab's, Add the report the two Details tabs'; the two tables are Document and DocumentPage (migration 0054); the settings page is Documents. **Not built in part 1:** the Report tab, Gideon's reading, the reading ceiling and the comparison (parts 2 and 3); the research note's server measurements wait for a real report and a real scan.
