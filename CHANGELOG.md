@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.74.2, 2026-09-22
+
+```
+Models: unchanged
+Database: migrates (0057, two columns on the comparison)
+```
+
+- **The comparison reads the engine's answer.** The first real comparison
+  came back with nothing: the engine wrote its findings inside a Markdown
+  code fence (```json ... ```), and the app threw every answer away as
+  unreadable. The app now takes the fence off, and anything before the
+  first brace, before it reads.
+- **An empty comparison says why.** The state line counts the answers the
+  app could not read and the findings it dropped, by reason ("3 findings
+  dropped: paragraph not found 2, no time on the clock 1"), and the
+  Comparison run audit row carries the two counts. The worker's log says
+  the shape of an unreadable answer, never its words.
+
 ## v1.74.1, 2026-09-22
 
 ```

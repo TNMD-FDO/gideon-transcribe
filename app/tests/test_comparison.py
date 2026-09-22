@@ -505,4 +505,42 @@ def test_a_failed_call_says_so_and_a_cut_answer_is_counted(stop, person, monkeyp
     comparison.compare(again.pk)
     again.refresh_from_db()
     assert again.state == "done" and again.findings == []
-    assert "0 findings" in comparison.as_json(again, report, incident)["words"]
+    said = comparison.as_json(again, report, incident)["words"]
+    assert "0 findings" in said and "1 answer could not be read" in said
+    assert again.unreadable == 1
+    # A fenced answer, as the engine wraps JSON when asked for JSON only
+    # (v1.74.2, from the first real report), is read like a bare one; the
+    # findings it names that the app cannot place are counted by reason.
+    fenced = comparison.ask_for(report, incident, by=person)
+    kept = {
+        "page": 1,
+        "paragraph": 2,
+        "claim": "The driver was asked out of the car",
+        "at": "21:56:17",
+        "mark": "agrees",
+        "why": "Said on the first camera.",
+    }
+    on_no_page = dict(kept, page=99, claim="On no page")
+    timeless = dict(kept, claim="Timeless", at="", mark="differs")
+    marked_oddly = dict(kept, claim="Marked oddly", mark="maybe")
+    good = findings_json(kept, on_no_page, timeless, marked_oddly)
+    engine_answering(
+        monkeypatch,
+        [
+            "Here you are:\n```json\n" + good + "\n```\n",
+            "```json\n" + findings_json() + "\n```",
+        ],
+    )
+    comparison.compare(fenced.pk)
+    fenced.refresh_from_db()
+    assert fenced.state == "done" and fenced.unreadable == 0
+    assert [one["claim"] for one in fenced.findings] == [kept["claim"]]
+    assert fenced.dropped == {
+        "paragraph not found": 1,
+        "no time on the clock": 1,
+        "mark unknown": 1,
+    }
+    said = comparison.as_json(fenced, report, incident)["words"]
+    assert "3 findings dropped: mark unknown 1, no time on the clock 1" in said
+    row = Row.objects.filter(event="Comparison run").order_by("-at").first()
+    assert row.details["dropped"] == 3 and row.details["unreadable"] == 0

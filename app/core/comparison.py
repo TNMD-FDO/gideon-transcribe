@@ -91,6 +91,10 @@ class Comparison(models.Model):
     windows = models.IntegerField(default=0)
     cut_short = models.IntegerField(default=0)
     left_out_check = models.BooleanField(default=False)
+    # v1.74.2: answers the app could not read, and the findings it dropped
+    # by reason, so an empty comparison says why.
+    unreadable = models.IntegerField(default=0)
+    dropped = models.JSONField(default=dict, blank=True)
     model = models.CharField(max_length=120, blank=True, default="")
     template_version = models.IntegerField(default=1)
     ground_rules_version = models.IntegerField(default=1)
@@ -275,34 +279,50 @@ def _seconds_of(comparison: Comparison, stamp: str) -> float | None:
     return round(min(float(whole), length), 2)
 
 
+# Why a finding was dropped, as the state line says it.
+NOT_A_FINDING = "not a finding"
+MARK_UNKNOWN = "mark unknown"
+PARAGRAPH_NOT_FOUND = "paragraph not found"
+NO_TIME = "no time on the clock"
+NO_CLAIM = "no claim"
+TWIN = "said twice"
+
+
 def _keep(comparison: Comparison, item: dict, known: dict, taken: set) -> dict | None:
     """One finding from an answer, or None: the mark must be one of the
     four, the paragraph real (except for not in the report), the moment real
-    (except for not on camera)."""
+    (except for not on camera). `_why_dropped` says the reason."""
+    one, _ = _keep_or_why(comparison, item, known, taken)
+    return one
+
+
+def _keep_or_why(
+    comparison: Comparison, item: dict, known: dict, taken: set
+) -> tuple[dict | None, str]:
     if not isinstance(item, dict):
-        return None
+        return None, NOT_A_FINDING
     mark = str(item.get("mark", "")).strip().lower().replace(" ", "_")
     if mark not in MARKS:
-        return None
+        return None, MARK_UNKNOWN
     page = item.get("page")
     n = item.get("paragraph")
     try:
         page = int(page) if page not in (None, "") else 0
         n = int(n) if n not in (None, "") else 0
     except (TypeError, ValueError):
-        return None
+        return None, PARAGRAPH_NOT_FOUND
     paragraph = known.get((page, n), "")
     if mark != NOT_IN_REPORT and not paragraph:
-        return None
+        return None, PARAGRAPH_NOT_FOUND
     at = _seconds_of(comparison, str(item.get("at", "")))
     if mark in (AGREES, DIFFERS, NOT_IN_REPORT) and at is None:
-        return None
+        return None, NO_TIME
     claim = " ".join(str(item.get("claim", "")).split())[:CLAIM_MOST]
     if not claim:
-        return None
+        return None, NO_CLAIM
     key = (mark, page, n, claim.lower()[:60])
     if key in taken:
-        return None
+        return None, TWIN
     taken.add(key)
     return {
         "id": uuid.uuid4().hex[:12],
@@ -316,10 +336,23 @@ def _keep(comparison: Comparison, item: dict, known: dict, taken: set) -> dict |
         "dismissed": False,
         "note": "",
         "event": "",
-    }
+    }, ""
+
+
+FENCE = re.compile(r"^\s*```[a-zA-Z]*\s*\n|\n\s*```\s*$", re.MULTILINE)
+
+
+def _unfenced(text: str) -> str:
+    """The answer without a Markdown code fence around it, and without any
+    words before its first brace: the engine wraps JSON in ```json ... ```
+    when asked for JSON only (v1.74.2, from the first real report)."""
+    text = FENCE.sub("", text or "")
+    starts = [at for at in (text.find("{"), text.find("[")) if at >= 0]
+    return text[min(starts) :].strip() if starts else text.strip()
 
 
 def _parse(text: str) -> list:
+    text = _unfenced(text)
     try:
         parsed = json.loads(text)
     except ValueError:
@@ -390,6 +423,12 @@ def compare(comparison_id, attempt: int = 1) -> None:
         taken: set = set()
         cut = 0
         model = ""
+        unreadable = 0
+        dropped: dict = {}
+
+        def drop(why: str) -> None:
+            dropped[why] = dropped.get(why, 0) + 1
+
         for number, window in enumerate(windows, start=1):
             comparison.stage = f"Reading pages, window {number} of {len(windows)}"
             comparison.save(update_fields=["stage"])
@@ -423,14 +462,23 @@ def compare(comparison_id, attempt: int = 1) -> None:
             try:
                 raw = _parse(answer["text"])
             except (ValueError, AttributeError):
-                log.warning("comparison %s: an answer was unreadable", comparison.pk)
+                log.warning(
+                    "comparison %s: an answer was unreadable (%d chars, starts %r)",
+                    comparison.pk,
+                    len(answer.get("text") or ""),
+                    (answer.get("text") or "")[:12],
+                )
+                unreadable += 1
                 continue
             kept_here = 0
             for item in raw:
                 if kept_here >= WINDOW_MOST or len(findings) >= FINDINGS_MOST:
                     break
-                one = _keep(comparison, item, known, taken)
-                if one is None or one["mark"] == NOT_IN_REPORT:
+                one, why = _keep_or_why(comparison, item, known, taken)
+                if one is None:
+                    drop(why)
+                    continue
+                if one["mark"] == NOT_IN_REPORT:
                     continue
                 findings.append(one)
                 kept_here += 1
@@ -463,14 +511,17 @@ def compare(comparison_id, attempt: int = 1) -> None:
                     for item in _parse(answer["text"]):
                         if len(findings) >= FINDINGS_MOST:
                             break
-                        one = _keep(comparison, item, known, taken)
-                        if one is not None and one["mark"] == NOT_IN_REPORT:
+                        one, why = _keep_or_why(comparison, item, known, taken)
+                        if one is None:
+                            drop(why)
+                        elif one["mark"] == NOT_IN_REPORT:
                             findings.append(one)
                 except (ValueError, AttributeError):
                     log.warning(
                         "comparison %s: the left-out answer was unreadable",
                         comparison.pk,
                     )
+                    unreadable += 1
             else:
                 left_out_check = True
         findings.sort(
@@ -481,6 +532,8 @@ def compare(comparison_id, attempt: int = 1) -> None:
         comparison.findings = findings
         comparison.windows = len(windows)
         comparison.cut_short = cut
+        comparison.unreadable = unreadable
+        comparison.dropped = dropped
         comparison.left_out_check = left_out_check
         comparison.model = model
         comparison.cameras_used = against["cameras"]
@@ -512,6 +565,8 @@ def compare(comparison_id, attempt: int = 1) -> None:
             object_label=document.title,
             windows=len(windows),
             findings=len(findings),
+            unreadable=unreadable,
+            dropped=sum(dropped.values()),
             **{mark: counts[mark] for mark in MARKS},
         )
     except engine.Problem as problem:
@@ -576,6 +631,24 @@ def counts_words(counts: dict) -> str:
         f"{counts[DIFFERS]} differ, {counts[NOT_ON_CAMERA]} not on camera, "
         f"{counts[NOT_IN_REPORT]} not in the report"
     )
+
+
+def dropped_words(comparison: Comparison) -> str:
+    """ "; 1 answer could not be read; 5 findings dropped: paragraph not
+    found 3, no time on the clock 2", or nothing."""
+    words = ""
+    unread = int(comparison.unreadable or 0)
+    if unread:
+        words += f"; {unread} answer{'' if unread == 1 else 's'} could not be read"
+    dropped = comparison.dropped or {}
+    total = sum(dropped.values())
+    if total:
+        by_reason = ", ".join(
+            f"{why} {count}"
+            for why, count in sorted(dropped.items(), key=lambda one: (-one[1], one[0]))
+        )
+        words += f"; {total} finding{'' if total == 1 else 's'} dropped: {by_reason}"
+    return words
 
 
 def stale_words(comparison: Comparison) -> str:
@@ -658,6 +731,7 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
                 if comparison.left_out_check
                 else ""
             )
+            + dropped_words(comparison)
         )
     return {
         **base,
