@@ -10,6 +10,8 @@
     <svg class="i" aria-hidden="true"><use href="#i-chat"></use></svg> <span class="gideon-label">Ask {{ chat_name }}</span>
   </button>
   <aside class="gideon-drawer" id="gideon-drawer" hidden aria-label="{{ chat_name }}">
+    {% comment %}The handle (Phase 8 chapter 6): drag the panel's left edge to size it; double-press for the usual width.{% endcomment %}
+    <div id="gideon-grip" class="gideon-grip" role="separator" aria-label="Resize the panel" tabindex="0" title="Drag to make the panel wider or narrower. Double-press for the usual width."></div>
     <div class="gideon-head">
       <div class="grow"><b>{{ chat_name }}</b><div class="muted small">{% if gideon_kind == 'case' %}This case{% elif gideon_kind == 'incident' %}This incident{% else %}This recording{% endif %}</div></div>
       <button type="button" class="small ghost" id="gideon-popout" title="In a window of its own, which follows this page">{% icon "expand" %}</button>

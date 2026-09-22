@@ -286,7 +286,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # Documents beside the cameras (Phase 8 chapter 4, part 1).
             "documents_on": documents.on(),
             "documents_count": documents.count(case) if documents.on() else 0,
-            "documents": documents.of_case(case) if tab == "documents" else [],
+            "documents": _documents_with_exports(case) if tab == "documents" else [],
             "document_homes": documents.homes_of(case) if tab == "documents" else [],
             "add_document_url": documents.add_url(case),
             "is_owner": role == "owner",
@@ -980,3 +980,26 @@ def add_recordings(request: HttpRequest, case_id) -> HttpResponse:
     _on_or_404()
     case = _their_case(request, case_id)
     return redirect(f"/upload?case={case.pk}")
+
+
+def _documents_with_exports(case) -> list:
+    """The case's documents, each carrying the address of its comparison's
+    Word export when one is done (Phase 8 chapter 6)."""
+    from core import comparison
+
+    rows = documents.of_case(case)
+    for document in rows:
+        document.comparison_export = ""
+        home = document.incident or document.recording
+        if home is None:
+            continue
+        made = comparison.of(document, home)
+        if made is not None and made.state == comparison.DONE:
+            kind = "incident" if document.incident_id else "recording"
+            document.comparison_export = (
+                reverse(
+                    "document-comparison-export", args=[document.case_id, document.pk]
+                )
+                + f"?{kind}={home.pk}"
+            )
+    return rows

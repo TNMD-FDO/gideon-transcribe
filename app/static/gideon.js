@@ -146,6 +146,63 @@
   }
   if (asWindow) { document.body.classList.add("gideon-window"); }
 
+  // The handle (Phase 8 chapter 6): the panel's width between 360 pixels
+  // and six tenths of the window, remembered for every page the panel
+  // opens on; a double-press puts the usual 420 back; the arrows move it.
+  (function () {
+    var grip = document.getElementById("gideon-grip");
+    if (!grip || asWindow) { return; }
+    var USUAL = 420, NARROWEST = 360;
+    function widest() { return Math.max(NARROWEST, Math.floor(window.innerWidth * 0.6)); }
+    function setWidth(pixels) {
+      var wanted = Math.round(Math.min(widest(), Math.max(NARROWEST, pixels)));
+      document.documentElement.style.setProperty("--gideon", wanted + "px");
+      return wanted;
+    }
+    function keep(pixels) { try { window.localStorage.setItem("gideon-width", String(pixels)); } catch (ignored) { /* this page only */ } }
+    var kept = 0;
+    try { kept = parseInt(window.localStorage.getItem("gideon-width") || "0", 10); } catch (ignored) { /* the usual then */ }
+    if (kept) { setWidth(kept); }
+    var sizing = false, fromX = 0, was = 0;
+    grip.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) { return; }
+      sizing = true; fromX = event.clientX; was = drawer.getBoundingClientRect().width;
+      grip.setPointerCapture(event.pointerId);
+      document.body.classList.add("gideon-resizing");
+      event.preventDefault();
+    });
+    grip.addEventListener("pointermove", function (event) {
+      if (!sizing) { return; }
+      // The grip is on the panel's left edge: dragging left makes it wider.
+      setWidth(was - (event.clientX - fromX));
+    });
+    function letGo() {
+      if (!sizing) { return; }
+      sizing = false;
+      document.body.classList.remove("gideon-resizing");
+      keep(Math.round(drawer.getBoundingClientRect().width));
+    }
+    grip.addEventListener("pointerup", letGo);
+    grip.addEventListener("pointercancel", letGo);
+    grip.addEventListener("lostpointercapture", letGo);
+    window.addEventListener("blur", letGo);
+    grip.addEventListener("dblclick", function () { keep(setWidth(USUAL)); });
+    grip.addEventListener("keydown", function (event) {
+      var step = event.shiftKey ? 60 : 20, width = drawer.getBoundingClientRect().width;
+      if (event.key === "ArrowLeft") { width += step; }
+      else if (event.key === "ArrowRight") { width -= step; }
+      else if (event.key === "Home") { width = NARROWEST; }
+      else if (event.key === "End") { width = widest(); }
+      else { return; }
+      event.preventDefault();
+      keep(setWidth(width));
+    });
+    window.addEventListener("resize", function () {
+      var width = drawer.getBoundingClientRect().width;
+      if (width > widest()) { setWidth(widest()); }
+    });
+  }());
+
   button.addEventListener("click", function () { if (drawer.hidden) { open(); } else { close(); } });
   closeButton.addEventListener("click", close);
   document.addEventListener("keydown", function (event) {

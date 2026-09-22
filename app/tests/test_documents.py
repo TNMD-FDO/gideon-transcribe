@@ -468,6 +468,14 @@ def test_search_hits_a_paragraph_and_a_document_goes_with_its_case(
     assert counts["documents"] == 2
     page = client.get(f"/case/{a_case.pk}?tab=search&q=tow+truck").content.decode()
     assert "Documents (1)" in page and "page 2, paragraph 3" in page
+    # The hit carries the paragraph card's address (Phase 8 chapter 6).
+    assert 'data-para-card="1"' in page and 'data-para="3"' in page
+    assert hit["paragraph"] == {
+        "url": document.url(),
+        "page": 2,
+        "n": 3,
+        "title": "Incident report",
+    }
     # Gone with the case: the document and its pages hang off it.
     from django.db.models import CASCADE
 

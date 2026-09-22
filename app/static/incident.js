@@ -1198,6 +1198,18 @@
     });
   }
 
+  // An event that rests on a paragraph (Phase 8 chapter 4) says so with a
+  // citation that opens the paragraph card (chapter 6): "[Report, page 4,
+  // paragraph 2] the words" becomes a link on the incident's report.
+  var RESTS = /^\[([^\]]+?), page (\d+), paragraph (\d+)\]\s*(.*)$/;
+  function restsOnHtml(rests) {
+    var found = RESTS.exec(rests || "");
+    var docs = (S.incident.documents || []);
+    if (!found || !docs.length) { return "rests on: " + escape(rests); }
+    var doc = docs.filter(function (one) { return one.title === found[1]; })[0] || docs[0];
+    return "rests on <a class='cite doc' href='" + escape(doc.url + "?page=" + found[2] + "&para=" + found[3]) + "' data-para-card='1' data-doc-url='" + escape(doc.url) + "' data-page='" + found[2] + "' data-para='" + found[3] + "' data-title='" + escape(doc.title) + "' data-text='" + quoted(found[4]) + "'>page " + found[2] + ", para " + found[3] + "</a>";
+  }
+
   function drawChronology() {
     var box = document.getElementById("panel-chronology");
     var kept = keptEvents();
@@ -1228,6 +1240,7 @@
         // (Phase 8 chapter 1); the controls behind the row's menu.
         var meta = [];
         meta.push(escape(one.source_words));
+        if (one.rests_on) { meta.push(restsOnHtml(one.rests_on)); }
         if (one.seen_on) { meta.push("seen on " + escape(one.seen_on)); }
         if (one.note) { meta.push("<i>note: " + escape(one.note) + "</i>" + (one.note_by ? " (" + escape(one.note_by) + ")" : "")); }
         if (one.why) { meta.push("<i>" + escape(one.why) + "</i>"); }

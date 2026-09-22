@@ -87,6 +87,9 @@
                   <li><a href="{% url 'export' recording.pk 'word' %}?notes=1">{% icon "note" %} Export to Word, with notes</a></li>
                   <li><a href="{% url 'export' recording.pk 'text' %}?notes=1">{% icon "note" %} Export as text, with notes</a></li>
                 {% endif %}
+                {% comment %}The comparison's export (Phase 8 chapter 6): a link once this camera's report is compared.{% endcomment %}
+                <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
+                <li><span class="muted" id="export-comparison-off" title="Compare with the report first" hidden>{% icon "word" %} Comparison to Word: compare with the report first</span></li>
               </ul>
             </details>
           {% endif %}
@@ -465,6 +468,7 @@
   </script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'again.js' %}"></script>
+  <script src="{% static 'paragraph-card.js' %}"></script>
   <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}

@@ -142,7 +142,7 @@
         return html.replace(DOC_CITE, function (whole) {
           var where = citations && citations[whole];
           if (!where || where.kind !== "document") { return whole; }
-          return "<a href='" + escape(where.href || "#") + "' class='cite doc' data-doc='1'" +
+          return "<a href='" + escape(where.href || "#") + "' class='cite doc' data-doc='1' data-para-card='1' data-doc-url='" + escape(String(where.href || "").split("?")[0]) + "'" +
             " data-title='" + escape(where.title) + "' data-page='" + where.page + "' data-para='" + where.para + "'" +
             " data-text='" + escape(where.text || "") + "' data-before='" + escape(where.before || "") + "' data-after='" + escape(where.after || "") + "'" +
             (where.ocr ? " data-ocr='1'" : "") + " title='" + escape((where.text || "").slice(0, 200)) + "'>" +
@@ -374,6 +374,9 @@
       }
       var doc = target.closest(".cite.doc");
       if (doc) {
+        // The paragraph card (Phase 8 chapter 6) where its script is on the
+        // page; the words-only preview where it is not.
+        if (window.PARAGRAPH_CARD) { return; }
         event.preventDefault();
         showDocPreview(doc);
         return;

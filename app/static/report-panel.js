@@ -81,6 +81,18 @@
 
   var comparisons = {};
 
+  // The Export menu's Comparison to Word (Phase 8 chapter 6): a link while a
+  // comparison is done, greyed with the reason until then.
+  function setExportLink(C) {
+    var link = document.getElementById("export-comparison");
+    var off = document.getElementById("export-comparison-off");
+    if (!link || !off) { return; }
+    var ready = !!(C && C.state === "done" && C.export_url);
+    link.hidden = !ready;
+    off.hidden = ready;
+    if (ready) { link.href = C.export_url; }
+  }
+
   function drawComparison(box, urls, setTitle) {
     if (!box) { return; }
     var key = urls.comparison + "?" + urls.home + "=" + urls.homeId;
@@ -102,6 +114,7 @@
     function render() {
       var C = kept.state;
       var counts = C.counts || {};
+      setExportLink(C);
       var html = "<div class='row' style='gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px'>" +
         "<button type='button' class='small' data-run" + (C.possible && !C.busy ? "" : " disabled") + " title='" + escape(C.why || "The assistant reads the report in windows of pages against the record; every finding cites the paragraph and the moment, and you mark them") + "'>" +
         (C.state === "done" ? "Compare again" : "Compare with the report") + "</button>" +
@@ -125,7 +138,7 @@
               "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'>" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
               (one.event ? "<div class='muted small'>on the chronology</div>" : "") + "</td>" +
               "<td><div class='claim'>" + escape(one.claim) + "</div>" +
-              (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted'>" + escape(one.paragraph) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
+              (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted'>" + escape(one.paragraph) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
               (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
               (one.note ? "<div class='small note'><b>Note:</b> " + escape(one.note) + "</div>" : "") +
               "<div class='acts'>" +
@@ -236,6 +249,7 @@
           fetch(urls.comparison + "?" + urls.home + "=" + urls.homeId).then(function (answer) { return answer.ok ? answer.json() : null; }).then(function (state) {
             var said = one.querySelector(".compare-said");
             if (said && state) { said.textContent = state.words || (state.possible ? "" : state.why || ""); }
+            if (state) { setExportLink(state); }
             // The button says what pressing it does (v1.74.3): a comparison
             // that exists is opened, not run again.
             var opener = one.querySelector("[data-open-comparison]");

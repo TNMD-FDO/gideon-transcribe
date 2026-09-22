@@ -544,3 +544,39 @@ def test_a_failed_call_says_so_and_a_cut_answer_is_counted(stop, person, monkeyp
     assert "3 findings dropped: mark unknown 1, no time on the clock 1" in said
     row = Row.objects.filter(event="Comparison run").order_by("-at").first()
     assert row.details["dropped"] == 3 and row.details["unreadable"] == 0
+
+
+# The report in place (Phase 8 chapter 6) ----------------------------------------
+
+
+def test_the_pages_carry_the_card_and_the_export_links(
+    stop, person, client, monkeypatch
+):
+    """The incident page and the case page load the paragraph card's script;
+    the incident page's Export menu holds Comparison to Word, greyed until a
+    comparison is done; the Documents tab row gains the link once one is;
+    Gideon's panel has its handle."""
+    incident, report, first = stop
+    signed_in(client, person)
+    page = client.get(incident.url()).content.decode()
+    assert "paragraph-card.js" in page and 'id="gideon-grip"' in page
+    assert 'id="export-comparison"' in page and 'id="export-comparison-off"' in page
+    documents_tab = client.get(
+        f"/case/{incident.case_id}?tab=documents"
+    ).content.decode()
+    assert "Comparison to Word" not in documents_tab
+    made = comparison.ask_for(report, incident, by=person)
+    engine_answering(monkeypatch, [findings_json(), findings_json()])
+    comparison.compare(made.pk)
+    made.refresh_from_db()
+    assert made.state == "done"
+    documents_tab = client.get(
+        f"/case/{incident.case_id}?tab=documents"
+    ).content.decode()
+    assert "Comparison to Word" in documents_tab
+    assert (
+        f"/document/{report.pk}/comparison/export?incident={incident.pk}"
+        in documents_tab
+    )
+    case_page = client.get(f"/case/{incident.case_id}").content.decode()
+    assert "paragraph-card.js" in case_page

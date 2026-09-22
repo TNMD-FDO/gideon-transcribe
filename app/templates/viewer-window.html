@@ -47,6 +47,7 @@
   <script src="{% static 'viewer-window.js' %}"></script>
   {% if panel == "clips" %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
   {% if assistant.assistant and transcript and panel != "clips" %}
+    <script src="{% static 'paragraph-card.js' %}"></script>
     <script src="{% static 'chat-ui.js' %}"></script>
     <script src="{% static 'assistant.js' %}"></script>
   {% endif %}

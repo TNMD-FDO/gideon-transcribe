@@ -96,10 +96,13 @@ def _hit(
     under=None,
     all_cameras: str = "",
     at: float = 0.0,
+    paragraph: dict | None = None,
 ) -> dict:
     return {
         "when": when,
         "url": url,
+        # A document hit (Phase 8 chapter 6): the card's address, page and paragraph.
+        "paragraph": paragraph,
         "who": who,
         "text": text,
         "under": under,
@@ -183,6 +186,12 @@ def search(case, asked: str, kind: str = "") -> dict:
                         url=f"{document.url()}?page={one['page']}&para={one['n']}",
                         who="Document" + (", read by OCR" if one["ocr"] else ""),
                         at=float(one["page"] * 1000 + one["n"]),
+                        paragraph={
+                            "url": document.url(),
+                            "page": one["page"],
+                            "n": one["n"],
+                            "title": document.title,
+                        },
                     )
                 )
 

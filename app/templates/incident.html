@@ -39,6 +39,9 @@
         <li><a href="{% url 'incident-export' case.pk incident.pk 'csv' %}">{% icon "text" %} Chronology as a spreadsheet (.csv)</a></li>
         <li><button type="button" id="export-picture">{% icon "camera" %} The strip as a picture (.png)</button></li>
         {% if state.memo.on %}<li><button type="button" id="export-memo" hidden>{% icon "word" %} Memo to Word</button></li>{% endif %}
+        {% comment %}The comparison's export (Phase 8 chapter 6): a link once a comparison is done, greyed until then.{% endcomment %}
+        <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
+        <li><span class="muted" id="export-comparison-off" title="Compare with the report first" hidden>{% icon "word" %} Comparison to Word: compare with the report first</span></li>
       </ul>
     </details>
     <a class="button small" id="done" href="{% url 'case' case.pk %}">Done</a>
@@ -256,6 +259,7 @@
     };
   </script>
   {{ event_words|json_script:"event-words" }}
+  <script src="{% static 'paragraph-card.js' %}"></script>
   <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'incident.js' %}"></script>
   <script src="{% static 'chat-ui.js' %}"></script>

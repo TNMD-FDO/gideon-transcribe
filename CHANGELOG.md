@@ -21,14 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
-## v1.74.3, unreleased
+## v1.75.0, 2026-09-22
 
 ```
 Models: unchanged
 Database: unchanged
 ```
 
-- **The Report tab says where the comparison is.** Once a comparison exists, the button on the incident page's Report tab reads "Open the comparison, 5 findings" instead of "Compare with the report", which read as a second run. From the maintainer's first real comparison.
+Phase 8 chapter 6: the report in place. From the maintainer's first real
+comparison: a citation to the report took the reader to the document's
+page and away from what they were reading.
+
+- **The paragraph card.** A press on any citation to a paragraph opens a
+  card in place, under the citation: the document's title and "page N,
+  paragraph M" (and "read by OCR" when the page was), the real page picture
+  scrolled so the paragraph is in view with its box lit, the paragraph's
+  words with the paragraph before and after in muted type, then **Open the
+  document**, **Copy the citation** and **Close**. One card at a time;
+  Escape, a press outside it or on the citation again closes it; the page
+  under it never moves. The same card opens from Gideon's answers (in place
+  of the words-only preview), the comparison's rows, a chronology row that
+  rests on a paragraph ("rests on page 4, para 2"), and a document hit on
+  the case page's Search tab.
+- **The comparison's export where exports are.** Comparison to Word is in
+  the incident page's and the recording page's Export menus, greyed with
+  "compare with the report first" until a comparison is done, and on the
+  case's Documents tab row of a report that has one. The link beside
+  Compare again stays.
+- **The Report tab says where the comparison is.** Once one exists, the
+  button reads "Open the comparison, 5 findings" instead of "Compare with
+  the report", which read as a second run.
+- **A handle on Gideon's panel.** Drag its left edge from 360 pixels to six
+  tenths of the window; remembered in your browser for every page the
+  panel opens on; a double-press puts the usual width back; the arrows move
+  it from the keyboard.
 
 ## v1.74.2, 2026-09-22
 

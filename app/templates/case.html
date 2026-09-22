@@ -117,7 +117,7 @@
                 <table class="tbl search-hits"><tbody>
                   {% for hit in group.hits %}
                     <tr>
-                      <td class="mono muted nowrap">{% if hit.url %}<a href="{{ hit.url }}">{{ hit.when }}</a>{% else %}{{ hit.when }}{% endif %}{% if hit.all_cameras %} <a class="cite all" href="{{ hit.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}</td>
+                      <td class="mono muted nowrap">{% if hit.paragraph %}<a href="{{ hit.url }}" data-para-card="1" data-doc-url="{{ hit.paragraph.url }}" data-page="{{ hit.paragraph.page }}" data-para="{{ hit.paragraph.n }}" data-title="{{ hit.paragraph.title }}">{{ hit.when }}</a>{% elif hit.url %}<a href="{{ hit.url }}">{{ hit.when }}</a>{% else %}{{ hit.when }}{% endif %}{% if hit.all_cameras %} <a class="cite all" href="{{ hit.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}</td>
                       <td class="muted">{{ hit.who }}</td>
                       <td>{{ hit.text }}{% if hit.under %}<div class="small"><i>{{ hit.under }}</i></div>{% endif %}</td>
                     </tr>
@@ -162,6 +162,7 @@
                       <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
                       <td class="nowrap">
                         <a class="btn small" href="{{ one.url }}">Open</a>
+                        {% if one.comparison_export %}<a class="btn small ghost" href="{{ one.comparison_export }}">{% icon "word" %} Comparison to Word</a>{% endif %}
                         <form method="post" action="{% url 'document-act' case.pk one.pk %}" style="display: inline" data-confirm="Remove {{ one.title }} and its pages from the case?" data-confirm-title="Remove this document?" data-confirm-ok="Remove">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="btn small danger">Remove</button></form>
                         {% comment %}Re-link (part 2): a plain choice on the row, no pop-up.{% endcomment %}
                         <form method="post" action="{% url 'document-act' case.pk one.pk %}" class="row relink" style="gap: 4px; margin-top: 6px; flex-wrap: wrap">{% csrf_token %}<input type="hidden" name="action" value="relink">
@@ -708,6 +709,7 @@
   <script src="{% static 'cases.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
   {% if case_chat_available %}
+    <script src="{% static 'paragraph-card.js' %}"></script>
     <script src="{% static 'chat-ui.js' %}"></script>
     <script src="{% static 'case-chat.js' %}"></script>
     <script src="{% static 'gideon.js' %}"></script>
