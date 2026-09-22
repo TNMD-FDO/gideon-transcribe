@@ -26,6 +26,14 @@ from core.incidents import DAY, Incident, IncidentCamera
 # The span the box offers: ten seconds either side of the event.
 AROUND_SECONDS = 10
 
+# The ways into the clip box (Phase 8 chapter 5), as the audit row says them.
+WAYS = {
+    "button": "from the button",
+    "strip": "from the strip",
+    "line": "from a line",
+    "event": "from an event",
+}
+
 
 def on() -> bool:
     """Clip this event is offered while Incidents, Clips and Incident clips
@@ -108,6 +116,30 @@ def keeps_in_case(recording) -> str:
         f"This recording carries {count} clip{'' if count == 1 else 's'} cut from "
         "an incident in this case. Delete them first, or leave the recording here."
     )
+
+
+def lane_json(incident: Incident) -> list[dict]:
+    """The Clips lane (Phase 8 chapter 5): every clip made from this incident,
+    its span on the incident clock, for the strip and the scrub bar."""
+    rows = []
+    for clip in (
+        Clip.objects.filter(incident=incident)
+        .select_related("recording")
+        .order_by("created")
+    ):
+        span = (clip.picture or {}).get("span") if clip.picture else None
+        if not span:
+            continue
+        rows.append(
+            {
+                "id": str(clip.pk),
+                "title": clip.title,
+                "from": float(span[0]),
+                "until": float(span[1]),
+                "state": clip.shown_state,
+            }
+        )
+    return rows
 
 
 def _span_words(incident: Incident, from_at: float, until_at: float) -> str:
@@ -255,8 +287,14 @@ def make_clip(
         event=event,
         picture=picture,
     )
+    way = str(wanted.get("way") or ("event" if event is not None else "strip"))
     clip_pages._record(
-        request, clip, "Clip created", cameras=len(chosen), layout=layout
+        request,
+        clip,
+        "Clip created",
+        cameras=len(chosen),
+        layout=layout,
+        way=WAYS.get(way, WAYS["strip"]),
     )
     clip_pages._start_render(clip)
     # Making a Clip is use of the Case, as saving one on a recording is.

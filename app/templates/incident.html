@@ -56,12 +56,20 @@
     <div class="inc-stage">
       <div class="inc-wall" id="wall"></div>
       <div class="inc-film" id="film" hidden></div>
+      {% comment %}The said band (Phase 8 chapter 5): the focus camera's words following the clock.{% endcomment %}
+      <div class="inc-said" id="said-band" hidden>
+        <div class="inc-said-head small muted"><span id="said-title"></span><span class="grow"></span><span>Press a line to go there</span><a href="#" id="said-open">Open the transcript</a></div>
+        <div class="inc-said-lines" id="said-lines"></div>
+      </div>
       <div class="transport inc-transport">
         <button type="button" id="play" class="big">{% icon "play" %} Play</button>
         <button type="button" data-seek="-3" title="Back three seconds and keep playing (B)">{% icon "rewind" %} 3s</button>
         <button type="button" data-seek="-5" title="Back five seconds (Left)">&minus;5s</button>
         <button type="button" data-seek="5" title="Forward five seconds (Right)">+5s</button>
         <span id="clock" class="time">0:00 / 0:00</span>
+        {% comment %}The Clip button (Phase 8 chapter 5): the start at this moment, the end on the second press.{% endcomment %}
+        <button type="button" class="small clip-mark" id="clip-mark" title="Start a clip at this moment; press again to end it">{% icon "clip" %} Clip</button>
+        <span class="small muted" id="clip-mark-said">starts a clip at this moment</span>
         <label>Speed
           <select id="speed">
             <option>0.5</option><option>0.75</option>
@@ -85,13 +93,15 @@
         <p id="player-trouble" class="problem" hidden></p>
       </div>
     </div>
+    {% comment %}The handle (Phase 8 chapter 5): drag to size the work panel; double-press for the usual width.{% endcomment %}
+    <div id="work-grip" class="workgrip" title="Drag to make the panel wider or narrower. Double-press for the usual width." role="separator" aria-label="Resize the panel" tabindex="0"></div>
     <div class="work inc-work">
       <div class="tabbar" role="tablist">
-        <button type="button" class="tab" data-panel="chronology">{% icon "text" %} Chronology</button>
-        {% if state.memo.on %}<button type="button" class="tab" data-panel="memo">{% icon "summary" %} Memo</button>{% endif %}
-        <button type="button" class="tab" data-panel="cameras">{% icon "camera" %} Cameras</button>
-        <button type="button" class="tab" data-panel="report" id="tab-report" hidden>{% icon "document" %} Report <span class="count" id="report-count"></span></button>
-        <button type="button" class="tab" data-panel="details">{% icon "info" %} Details</button>
+        <button type="button" class="tab" data-panel="chronology" title="Chronology">{% icon "text" %} <span class="w">Chronology</span></button>
+        {% if state.memo.on %}<button type="button" class="tab" data-panel="memo" title="Memo">{% icon "summary" %} <span class="w">Memo</span></button>{% endif %}
+        <button type="button" class="tab" data-panel="cameras" title="Cameras">{% icon "camera" %} <span class="w">Cameras</span></button>
+        <button type="button" class="tab" data-panel="report" id="tab-report" title="Report" hidden>{% icon "document" %} <span class="w">Report</span> <span class="count" id="report-count"></span></button>
+        <button type="button" class="tab" data-panel="details" title="Details">{% icon "info" %} <span class="w">Details</span></button>
         {% if state.memo.on %}<button type="button" class="tiny ghost" id="two-panels" hidden title="The Memo beside the Chronology, on a very wide window">Two panels</button>{% endif %}
         {% comment %}Find (Phase 7 chapter 3): a hit is a moment; pressing it takes every camera there.{% endcomment %}
         <input type="search" id="find" class="small inc-find" maxlength="200" placeholder="Find" aria-label="Find a moment on the cameras" title="Words said on any synced camera, an event or the memo; press a hit and every camera goes there. Enter for the next hit, Shift+Enter for the one before, Escape to clear.">
@@ -182,11 +192,22 @@
   </div>
 
   <div class="sp-lanes inc-strip" id="strip">
-    {% comment %}Drag on the ruler for a clip from the strip (Phase 6 chapter 5).{% endcomment %}
-    <div class="ruler" title="Drag across the ruler to clip that span"><span class="head"></span><div class="ticks" id="ticks"><span class="band" id="clip-band" hidden></span></div></div>
+    <div class="ruler"><span class="head"></span><div class="ticks" id="ticks"></div></div>
+    {% comment %}The clip track (Phase 8 chapter 5): drag across it for a clip; it says so.{% endcomment %}
+    <div class="clip-track-row"><span class="head"></span>
+      <div class="clip-track" id="clip-track">
+        <span class="words"><svg class="i" aria-hidden="true"><use href="#i-clip"></use></svg> <span id="clip-track-words">Drag across here to make a clip</span></span>
+        <span class="grow"></span>
+        <span class="other small muted" id="clip-track-other">or press Clip on the transport, or Clip this event on a row</span>
+        <span class="band" id="clip-band" hidden></span>
+        <span class="tag mono" id="clip-tag" hidden></span>
+      </div>
+    </div>
+    <span class="guide" id="strip-guide" hidden></span>
     <div id="lanes"></div>
     <div class="foot small muted">
-      <span>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event. Drag across the ruler to clip that span. Zoomed in, the wheel over the lanes moves along the strip.</span>
+      <button type="button" class="tiny ghost" id="strip-help" title="How the strip works" aria-label="How the strip works">?</button>
+      <span id="strip-help-words" hidden>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event. Drag across the clip track to make a clip of that span; a clip already made is on the Clips lane. Zoomed in, the wheel over the lanes moves along the strip.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>

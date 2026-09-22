@@ -41,6 +41,21 @@
   var trouble = document.getElementById("player-trouble");
   var eventBox = document.getElementById("event-box");
   var clipBox = document.getElementById("clip-box");      // Clip this event (Phase 7 chapter 1)
+  // The desk, kept (Phase 8 chapter 5): the said band, the Clip button, the
+  // clip track, the strip's guide and the handle.
+  var saidBand = document.getElementById("said-band");
+  var saidLines = document.getElementById("said-lines");
+  var saidTitle = document.getElementById("said-title");
+  var saidOpen = document.getElementById("said-open");
+  var clipMark = document.getElementById("clip-mark");
+  var clipMarkSaid = document.getElementById("clip-mark-said");
+  var clipTrack = document.getElementById("clip-track");
+  var clipTrackWords = document.getElementById("clip-track-words");
+  var clipTag = document.getElementById("clip-tag");
+  var stripGuide = document.getElementById("strip-guide");
+  var workGrip = document.getElementById("work-grip");
+  var marking = null;          // a clip being marked: { from, way }
+  var saidKey = "";           // what the said band last drew, so it redraws only on a change
   // The layers (Phase 8 chapter 1): one job opened over the tab in the work
   // panel; the wall and the strip never move. A stack, because a clip can
   // open from an event; Back pops one and returns exactly.
@@ -171,6 +186,7 @@
     S.events = S.events || [];
     S.proposals = S.proposals || {};
     S.memo = S.memo || {};
+    S.clips = S.clips || [];
     drawHead();
     drawWall();
     drawStrip();
@@ -230,7 +246,7 @@
       "<li class='sep'></li><li><button type='button' class='danger' data-tile='remove'>Remove from incident</button></li></ul></details></div>" +
       "<div class='inc-sync' hidden></div>" +
       "<div class='inc-well'>" + (cam.media_url ? "<video preload='metadata' playsinline muted></video>" : "<p class='preparing small'>Playback is being prepared.</p>") +
-      "<div class='state' hidden></div></div>" +
+      "<div class='state' hidden></div>" + playerBarHtml() + "</div>" +
       "<div class='inc-lines'>" +
       "<div class='said'><span class='who'></span> <span class='txt muted'>…</span> <button type='button' class='tiny ghost add-line' data-kind='words' title='Add this line as an event' hidden>+ event</button></div></div>";
     tile.querySelector(".inc-tile-head").addEventListener("click", function (event) {
@@ -271,10 +287,15 @@
       // the video must not start a drag of its own.
       video.setAttribute("draggable", "false");
       video.src = cam.media_url;
+      // The picture at its own proportions (Phase 8 chapter 5), for the focus well.
+      video.addEventListener("loadedmetadata", function () {
+        if (video.videoWidth && video.videoHeight) { tile.style.setProperty("--picture", video.videoWidth + " / " + video.videoHeight); }
+      });
       video.addEventListener("error", function () { trouble.textContent = "One of the cameras could not be played: " + cam.camera_id + "."; trouble.hidden = false; });
     }
+    bindPlayerBar(tile, cam);
     tile.querySelector(".inc-well").addEventListener("click", function (event) {
-      if (event.target.closest("label")) { return; }
+      if (event.target.closest("label, .player-bar")) { return; }
       // A filmstrip tile's picture brings that camera to the front (chapter 4).
       if (tile.classList.contains("film")) { setFocus(cam.id); return; }
       if (playing) { pause(); } else { play(); }
@@ -298,6 +319,345 @@
     });
     return tile;
   }
+
+  // The player bar (Phase 8 chapter 5): the controls a person expects of a
+  // video, on the focus camera's picture when the pointer is over it. Each
+  // does what the transport's control of the same name does.
+  function playerBarHtml() {
+    return "<div class='player-bar'>" +
+      "<div class='scrub' title='The incident, start to end; press or drag to go there'><span class='own'></span><span class='played'></span><span class='marks'></span><span class='clipping' hidden></span><span class='knob'></span></div>" +
+      "<div class='row'>" +
+      "<button type='button' data-bar='play' title='Play or pause (space)'><svg class='i' aria-hidden='true'><use href='#i-play'></use></svg></button>" +
+      "<button type='button' data-bar='back' title='Back five seconds (Left)'>&minus;5s</button>" +
+      "<button type='button' data-bar='forward' title='Forward five seconds (Right)'>+5s</button>" +
+      "<span class='time'>0:00 / 0:00</span><span class='grow'></span>" +
+      "<button type='button' data-bar='sound' title='Hear this camera'><svg class='i' aria-hidden='true'><use href='#i-muted'></use></svg></button>" +
+      "<select data-bar='speed' aria-label='Speed' title='Speed'><option>0.5</option><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select>" +
+      "<button type='button' data-bar='fill' title='Fill the window (Escape brings the page back)'><svg class='i' aria-hidden='true'><use href='#i-expand'></use></svg></button>" +
+      "</div></div>";
+  }
+
+  function bindPlayerBar(tile, cam) {
+    var well = tile.querySelector(".inc-well");
+    var bar = well.querySelector(".player-bar");
+    if (!bar) { return; }
+    var idleTimer = null;
+    well.classList.add("paused");
+    well.addEventListener("pointermove", function () {
+      well.classList.remove("idle");
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(function () { well.classList.add("idle"); }, 2000);
+    });
+    well.addEventListener("pointerleave", function () { window.clearTimeout(idleTimer); well.classList.remove("idle"); });
+    bar.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-bar]");
+      if (!button || button.tagName === "SELECT") { return; }
+      event.stopPropagation();
+      var what = button.dataset.bar;
+      if (what === "play") { if (playing) { pause(); } else { play(); } }
+      else if (what === "back") { seek(now() - 5); }
+      else if (what === "forward") { seek(now() + 5); }
+      else if (what === "sound") { pickSound(cam.id); }
+      else if (what === "fill") {
+        if (document.fullscreenElement) { document.exitFullscreen(); }
+        else if (well.requestFullscreen) { well.requestFullscreen(); }
+      }
+    });
+    var speedPick = bar.querySelector("[data-bar='speed']");
+    speedPick.addEventListener("change", function () {
+      speedBox.value = speedPick.value;
+      speedBox.dispatchEvent(new Event("change"));
+    });
+    speedPick.addEventListener("click", function (event) { event.stopPropagation(); });
+    // The scrub bar: a press goes there, a drag follows the pointer.
+    var scrub = bar.querySelector(".scrub");
+    var scrubbing = false;
+    function scrubTo(event) {
+      var box = scrub.getBoundingClientRect();
+      var range = span();
+      seek(range[0] + Math.max(0, Math.min(1, (event.clientX - box.left) / box.width)) * (range[1] - range[0]));
+    }
+    scrub.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) { return; }
+      scrubbing = true;
+      scrub.setPointerCapture(event.pointerId);
+      scrubTo(event);
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    scrub.addEventListener("pointermove", function (event) { if (scrubbing) { scrubTo(event); } });
+    function letGoScrub() { scrubbing = false; }
+    scrub.addEventListener("pointerup", letGoScrub);
+    scrub.addEventListener("pointercancel", letGoScrub);
+    scrub.addEventListener("lostpointercapture", letGoScrub);
+  }
+
+  // Everything on the focus camera's bar that moves with the clock or the
+  // state: the played part, the camera's own stretch, the events' ticks,
+  // the clip being marked, the time, the play and sound buttons.
+  function drawPlayerBar(m) {
+    if (layout !== "focus" || !focusCamera || !players[focusCamera]) { return; }
+    var entry = players[focusCamera];
+    var bar = entry.tile.querySelector(".player-bar");
+    if (!bar) { return; }
+    var range = span(), width = range[1] - range[0];
+    var cam = entry.cam;
+    bar.querySelector(".played").style.width = percent(m, range);
+    bar.querySelector(".knob").style.left = percent(m, range);
+    var own = bar.querySelector(".own");
+    var ownFrom = Math.max(range[0], cam.starts_at), ownTo = Math.min(range[1], cam.starts_at + cam.length);
+    own.style.left = percent(ownFrom, range);
+    own.style.width = (ownTo > ownFrom ? ((ownTo - ownFrom) / width) * 100 : 0) + "%";
+    var marks = bar.querySelector(".marks");
+    var key = keptEvents().map(function (one) { return one.id + "@" + one.at; }).join(",");
+    if (marks.dataset.key !== key) {
+      marks.dataset.key = key;
+      marks.innerHTML = keptEvents().map(function (one) {
+        return "<span class='ev' style='left: " + percent(one.at, range) + "' title='" + quoted(timeOfDay(one.at) + " " + one.text) + "'></span>";
+      }).join("");
+    }
+    var clipping = bar.querySelector(".clipping");
+    if (marking) {
+      var low = Math.min(marking.from, m), high = Math.max(marking.from, m);
+      clipping.hidden = false;
+      clipping.style.left = percent(low, range);
+      clipping.style.width = (((high - low) / width) * 100) + "%";
+    } else { clipping.hidden = true; }
+    bar.querySelector(".time").textContent = clockSmall.textContent;
+    bar.querySelector("[data-bar='play'] use").setAttribute("href", playing ? "#i-pause" : "#i-play");
+    var sound = bar.querySelector("[data-bar='sound']");
+    sound.classList.toggle("on", soundCamera === cam.id);
+    sound.querySelector("use").setAttribute("href", soundCamera === cam.id ? "#i-sound" : "#i-muted");
+    var speedPick = bar.querySelector("[data-bar='speed']");
+    if (speedPick.value !== speedBox.value) { speedPick.value = speedBox.value; }
+  }
+
+  function markPaused() {
+    Array.prototype.forEach.call(document.querySelectorAll(".inc-well"), function (well) { well.classList.toggle("paused", !playing); });
+  }
+
+  // The said band (Phase 8 chapter 5): the focus camera's words following
+  // the clock, the line being said lit, two before it and one after. A press
+  // on a line seeks every camera there; the lit line offers + event and
+  // Clip from here. The focus camera alone, as the chapter decided.
+  function drawSaid(m, force) {
+    if (!saidBand) { return; }
+    var inFocus = layout === "focus" && focusCamera && players[focusCamera];
+    saidBand.hidden = !inFocus;
+    if (!inFocus) { saidKey = ""; return; }
+    if (!followBox.checked && !force) { return; }
+    var cam = players[focusCamera].cam;
+    var got = lines[cam.id];
+    var local = m - cam.starts_at;
+    saidTitle.innerHTML = "Said on <b>" + escape(cam.camera_id) + "</b>, following the clock";
+    saidOpen.href = cam.viewer_url + "?t=" + Math.max(0, Math.floor(local));
+    var quiet = "";
+    if (!got) { quiet = "Reading " + cam.camera_id + "'s transcript."; }
+    else if (!got.segments.length) { quiet = cam.camera_id + " has no transcript yet; the Cameras tab can transcribe it."; }
+    else if (local < 0) { quiet = cam.camera_id + " starts in " + elapsed(-local) + "."; }
+    else if (local > cam.length) { quiet = cam.camera_id + " ended at " + timeOfDay(cam.starts_at + cam.length) + "."; }
+    if (quiet) {
+      if (saidKey !== "quiet:" + quiet) { saidKey = "quiet:" + quiet; saidLines.innerHTML = "<div class='quiet'>" + escape(quiet) + "</div>"; }
+      return;
+    }
+    var segments = got.segments;
+    var index = -1, before = -1;
+    for (var i = 0; i < segments.length; i += 1) {
+      if (segments[i].start <= local && local < segments[i].end) { index = i; break; }
+      if (segments[i].end <= local) { before = i; }
+    }
+    var lit = index !== -1;
+    var centre = lit ? index : Math.max(0, before);
+    var key = cam.id + ":" + centre + ":" + (lit ? "lit" : "off");
+    if (key === saidKey && !force) { return; }
+    saidKey = key;
+    var from = Math.max(0, centre - 2), to = Math.min(segments.length - 1, centre + 1);
+    var html = "";
+    for (var n = from; n <= to; n += 1) {
+      var one = segments[n];
+      var isLit = lit && n === index;
+      html += "<div class='inc-said-line" + (isLit ? " lit" : "") + "' data-line='" + n + "' style='--speaker: " + escape(one.colour || "") + "'>" +
+        "<span class='t'>" + escape(timeOfDay(cam.starts_at + one.start)) + "</span>" +
+        "<span class='who'>" + escape(one.speaker || "") + "</span>" +
+        "<span class='txt'>" + escape(one.text) + "</span>" +
+        "<span class='acts'>" + (isLit ? "<button type='button' class='tiny ghost' data-said='event' title='Add this line as an event'>+ event</button>" +
+          (S.incident.clips ? "<button type='button' class='tiny ghost' data-said='clip' title='Start a clip at this line'>Clip from here</button>" : "") : "") + "</span></div>";
+    }
+    saidLines.innerHTML = html;
+  }
+
+  if (saidLines) {
+    saidLines.addEventListener("click", function (event) {
+      var line = event.target.closest(".inc-said-line");
+      if (!line || !focusCamera || !players[focusCamera]) { return; }
+      var cam = players[focusCamera].cam;
+      var got = lines[cam.id];
+      var one = got && got.segments[parseInt(line.dataset.line, 10)];
+      if (!one) { return; }
+      var at = cam.starts_at + one.start;
+      var act = event.target.closest("[data-said]");
+      if (act && act.dataset.said === "event") {
+        openEventBox({ at: at, text: one.text, source: "words", camera: cam.id, cameras: [cam.id] });
+        return;
+      }
+      if (act && act.dataset.said === "clip") { startMarking(at, "line"); return; }
+      seek(at);
+    });
+  }
+
+  // The Clip button (Phase 8 chapter 5): the start at this moment, the end
+  // on the second press; the span so far drawn on the scrub bar, the clip
+  // track and the Clips lane as it grows. Escape cancels. Seeking moves the
+  // end, and seeking before the start swaps the two.
+  function startMarking(at, way) {
+    if (!S.incident.clips) { return; }
+    marking = { from: at, way: way || "button" };
+    if (clipTrack) { clipTrack.classList.add("marking"); }
+    drawMarking(now());
+    drawStrip();
+  }
+
+  function cancelMarking() {
+    marking = null;
+    if (clipTrack) { clipTrack.classList.remove("marking"); }
+    hideBand();
+    if (clipTag) { clipTag.hidden = true; }
+    if (clipTrackWords) { clipTrackWords.textContent = "Drag across here to make a clip"; }
+    drawMarking(now());
+    drawStrip();
+  }
+
+  function endMarking() {
+    if (!marking) { return; }
+    var m = now();
+    var low = Math.min(marking.from, m), high = Math.max(marking.from, m);
+    var way = marking.way;
+    var done = marking;
+    marking = null;
+    if (clipTrack) { clipTrack.classList.remove("marking"); }
+    if (high - low < 1) {
+      window.UI.toast("A clip is at least one second long; keep playing, then press End the clip here.", { problem: true });
+      marking = done;
+      if (clipTrack) { clipTrack.classList.add("marking"); }
+      return;
+    }
+    if (clipTrackWords) { clipTrackWords.textContent = "Drag across here to make a clip"; }
+    drawMarking(m);
+    openClipBox({ id: "", at: low, until: high, text: "", way: way });
+  }
+
+  function drawMarking(m) {
+    if (!clipMark) { return; }
+    if (!S.incident.clips) {
+      clipMark.disabled = true;
+      clipMark.title = "Clips are off for this office";
+      clipMarkSaid.textContent = "Clips are off for this office";
+      return;
+    }
+    clipMark.disabled = false;
+    if (!marking) {
+      clipMark.classList.remove("marking");
+      clipMarkSaid.classList.remove("marking");
+      clipMark.innerHTML = "<svg class='i' aria-hidden='true'><use href='#i-clip'></use></svg> Clip";
+      clipMark.title = "Start a clip at this moment; press again to end it";
+      clipMarkSaid.textContent = "starts a clip at this moment";
+      return;
+    }
+    var low = Math.min(marking.from, m), high = Math.max(marking.from, m);
+    clipMark.classList.add("marking");
+    clipMarkSaid.classList.add("marking");
+    clipMark.textContent = "End the clip here";
+    clipMark.title = "The clip ends at this moment (Escape cancels)";
+    clipMarkSaid.textContent = "Clip from " + timeOfDay(low) + ", " + elapsed(high - low) + " so far · Esc cancels";
+    showBand(low, high);
+    if (clipTrackWords) { clipTrackWords.textContent = "Marking: press End the clip here to set the end"; }
+    var ghost = lanesBox.querySelector(".mk-clip.ghost");
+    if (ghost) {
+      var shown = view();
+      ghost.style.left = percent(low, shown);
+      ghost.style.width = (Math.max(0, Math.min(100, ((Math.min(high, shown[1]) - shown[0]) / (shown[1] - shown[0])) * 100)) - parseFloat(ghost.style.left)) + "%";
+    }
+  }
+
+  if (clipMark) {
+    clipMark.addEventListener("click", function () {
+      if (marking) { endMarking(); } else { startMarking(now(), "button"); }
+    });
+  }
+
+  // The handle (Phase 8 chapter 5): drag to size the work panel between 360
+  // pixels and six tenths of the desk, the wall never under 420; remembered
+  // in the browser; a double-press puts the usual width back; the arrows
+  // move it from the keyboard.
+  var USUAL_WORK = 460;
+  var NARROWEST_WORK = 360;
+  function deskWidth() { return deskBox.clientWidth - 32; }
+  function widestWork() { return Math.max(NARROWEST_WORK, Math.min(Math.floor(deskWidth() * 0.6), deskWidth() - 420 - 12)); }
+  function setWork(pixels, snapping) {
+    var wanted = Math.round(Math.min(widestWork(), Math.max(NARROWEST_WORK, pixels)));
+    if (snapping) {
+      var half = Math.round(deskWidth() / 2);
+      if (Math.abs(wanted - USUAL_WORK) < 12) { wanted = USUAL_WORK; }
+      else if (Math.abs(wanted - half) < 12 && half <= widestWork()) { wanted = half; }
+    }
+    document.documentElement.style.setProperty("--work", wanted + "px");
+    workBox.classList.toggle("narrow", wanted < 400);
+    return wanted;
+  }
+  function rememberWork(pixels) {
+    try { window.localStorage.setItem("incident-work-width", String(pixels)); } catch (ignored) { /* this page only */ }
+  }
+  (function () {
+    if (!workGrip) { return; }
+    var kept = 0;
+    try { kept = parseInt(window.localStorage.getItem("incident-work-width") || "0", 10); } catch (ignored) { /* the usual width then */ }
+    if (kept) { setWork(kept); }
+    var sizing = false, fromX = 0, was = 0;
+    workGrip.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) { return; }
+      sizing = true;
+      fromX = event.clientX;
+      was = workBox.getBoundingClientRect().width;
+      workGrip.setPointerCapture(event.pointerId);
+      deskBox.classList.add("resizing");
+      event.preventDefault();
+    });
+    workGrip.addEventListener("pointermove", function (event) {
+      if (!sizing) { return; }
+      // The grip is on the panel's left edge: dragging left makes it wider.
+      setWork(was - (event.clientX - fromX), true);
+      layWall(wallCameras().length);
+    });
+    function letGo() {
+      if (!sizing) { return; }
+      sizing = false;
+      deskBox.classList.remove("resizing");
+      rememberWork(Math.round(workBox.getBoundingClientRect().width));
+      drawStrip();
+    }
+    workGrip.addEventListener("pointerup", letGo);
+    workGrip.addEventListener("pointercancel", letGo);
+    workGrip.addEventListener("lostpointercapture", letGo);
+    window.addEventListener("blur", letGo);
+    workGrip.addEventListener("dblclick", function () { rememberWork(setWork(USUAL_WORK)); drawStrip(); });
+    workGrip.addEventListener("keydown", function (event) {
+      var step = event.shiftKey ? 60 : 20, width = workBox.getBoundingClientRect().width;
+      if (event.key === "ArrowLeft") { width += step; }
+      else if (event.key === "ArrowRight") { width -= step; }
+      else if (event.key === "Home") { width = NARROWEST_WORK; }
+      else if (event.key === "End") { width = widestWork(); }
+      else { return; }
+      event.preventDefault();
+      rememberWork(setWork(width));
+      drawStrip();
+    });
+    // A window that shrinks takes the panel with it; the choice stays for a
+    // wider window.
+    window.addEventListener("resize", function () {
+      var width = workBox.getBoundingClientRect().width;
+      if (width > widestWork()) { setWork(widestWork()); }
+    });
+  })();
 
   function drawWall() {
     var wanted = wallCameras();
@@ -343,6 +703,10 @@
     }
     drawFilmParked(focusId !== null);
     placeWork();
+    markPaused();
+    saidKey = "";
+    drawSaid(now(), true);
+    drawPlayerBar(now());
   }
 
   // The wall's columns by the layout: one in Focus, by the count Side by
@@ -518,6 +882,9 @@
     });
     movePlayheads(m);
     markCurrentEvent(m);
+    drawSaid(m);
+    drawPlayerBar(m);
+    if (marking) { drawMarking(m); }
   }
 
   window.setInterval(tick, 200);
@@ -527,6 +894,8 @@
     anchorNow = performance.now();
     playing = true;
     playButton.innerHTML = "<svg class='i' aria-hidden='true'><use href='#i-pause'></use></svg> Pause";
+    markPaused();
+    drawSaid(now(), true);
     tick();
   }
 
@@ -535,6 +904,7 @@
     playing = false;
     playButton.innerHTML = "<svg class='i' aria-hidden='true'><use href='#i-play'></use></svg> Play";
     Object.keys(players).forEach(function (id) { if (players[id].video && !players[id].video.paused) { players[id].video.pause(); } });
+    markPaused();
   }
 
   function seek(at) {
@@ -554,6 +924,7 @@
       if (speaker) { speaker.setAttribute("href", one === id ? "#i-sound" : "#i-muted"); }
     });
     sayWhoIsHeard();
+    drawPlayerBar(now());
   }
 
   // The speaker on a tile (chapter 4): takes the sound and pins it there; on
@@ -597,6 +968,7 @@
 
   document.addEventListener("keydown", function (event) {
     if (event.altKey || event.ctrlKey || event.metaKey) { return; }
+    if (event.key === "Escape" && marking) { cancelMarking(); return; }
     if (event.key === "Escape" && layerStack.length) { closeLayer(); return; }
     if (event.target.closest("input, textarea, select")) { return; }
     if (event.key === " ") { event.preventDefault(); if (playing) { pause(); } else { play(); } }
@@ -663,8 +1035,6 @@
       ticks += "<span>" + timeOfDay(shown[0] + ((shown[1] - shown[0]) * i) / count) + "</span>";
     }
     ticksBox.innerHTML = ticks;
-    // The band lives in the ticks and must outlive their redraw.
-    if (band) { ticksBox.appendChild(band); }
     var html = "";
     S.cameras.forEach(function (cam) {
       var placed = cam.starts_at !== null && cam.placed;
@@ -682,7 +1052,17 @@
         "<span class='playhead'></span></div></div>";
     });
     html += "<div class='lane events'><div class='head'><span class='name muted'>Events</span></div><div class='track'>" + eventMarks(shown) + "<span class='playhead'></span></div></div>";
+    // The Clips lane (Phase 8 chapter 5): there when the incident has a clip
+    // or one is being marked.
+    if ((S.clips && S.clips.length) || marking) {
+      html += "<div class='lane clips'><div class='head'><span class='name muted'>Clips</span></div><div class='track'>" + (S.clips || []).map(function (one) {
+        var from = Math.max(one.from, shown[0]), until = Math.min(one.until, shown[1]);
+        if (until <= from) { return ""; }
+        return "<a class='mk-clip' href='" + escape(S.incident.clips_url) + "' style='left: " + percent(from, shown) + "; width: " + Math.max(0.3, ((until - from) / (shown[1] - shown[0])) * 100) + "%' title='" + quoted(one.title + " (" + timeOfDay(one.from) + " to " + timeOfDay(one.until) + ", " + one.state + ")") + "'></a>";
+      }).join("") + (marking ? "<span class='mk-clip ghost'></span>" : "") + "<span class='playhead'></span></div></div>";
+    }
     lanesBox.innerHTML = html;
+    if (marking) { drawMarking(now()); }
     Array.prototype.forEach.call(strip.querySelectorAll("[data-pan]"), function (one) { one.disabled = !zoom || zoom >= span()[1] - span()[0]; });
     movePlayheads(now());
   }
@@ -703,6 +1083,14 @@
   }
 
   strip.addEventListener("click", function (event) {
+    var help = event.target.closest("#strip-help");
+    if (help) { window.UI.alert({ title: "The strip", body: document.getElementById("strip-help-words").textContent }); return; }
+    if (event.target.closest("#ticks") && !event.target.closest(".band")) {
+      var tickBox = ticksBox.getBoundingClientRect(), tickShown = view();
+      seek(tickShown[0] + ((event.clientX - tickBox.left) / tickBox.width) * (tickShown[1] - tickShown[0]));
+      return;
+    }
+    if (event.target.closest(".mk-clip")) { return; }
     var zoomButton = event.target.closest("[data-zoom]");
     var panButton = event.target.closest("[data-pan]");
     if (panButton) { pan(parseInt(panButton.dataset.pan, 10) || 0); return; }
@@ -1227,17 +1615,22 @@
     // chapter 5): the dragged span as it is, no event, every camera that
     // runs inside it, synced or not.
     var strip = !ev.id;
+    var way = ev.way || (strip ? "strip" : "event");
     var from = strip ? ev.at : Math.floor(ev.at) - 10;
     var until = strip ? ev.until : Math.ceil(ev.until || ev.at) + 10;
     if (!S.incident.has_clock && from < 0) { from = 0; }
     openLayer("clip");
-    document.getElementById("clip-eyebrow-head").textContent = strip ? "Clip from the strip" : "Clip this event";
+    var wayWords = { button: "Clip", strip: "Clip from the strip", line: "Clip from here", event: "Clip this event" }[way] || "Clip";
+    document.getElementById("clip-eyebrow-head").textContent = wayWords;
     clipBox.elements.event.value = ev.id || "";
-    document.getElementById("clip-eyebrow").textContent = strip ? "Clip from the strip" : "Clip this event";
+    clipBox.dataset.way = way;
+    document.getElementById("clip-eyebrow").textContent = wayWords;
     document.getElementById("clip-event-text").textContent = strip ? timeOfDay(from) + " to " + timeOfDay(until) : timeOfDay(ev.at) + "  " + ev.text;
     clipBox.elements.from.value = timeOfDay(from);
     clipBox.elements.until.value = timeOfDay(until);
-    clipBox.elements.title.value = strip ? timeOfDay(from) + " to " + timeOfDay(until) : (ev.text || "").slice(0, 120);
+    // The title: the event's line; else the one event inside the span; else the times.
+    var inside = strip ? keptEvents().filter(function (one) { return one.at >= from && one.at <= until; }) : [];
+    clipBox.elements.title.value = strip ? (inside.length === 1 ? inside[0].text.slice(0, 120) : timeOfDay(from) + " to " + timeOfDay(until)) : (ev.text || "").slice(0, 120);
     clipBox.elements.layout.value = layout === "focus" ? "focus" : "grid";
     clipBox.elements.burn_ids.checked = true;
     // The clock is burned only from an Incident clock: elapsed time would
@@ -1394,7 +1787,8 @@
       layout: clipBox.elements.layout.value,
       burn_clock: clipBox.elements.burn_clock.checked,
       burn_ids: clipBox.elements.burn_ids.checked,
-      title: clipBox.elements.title.value
+      title: clipBox.elements.title.value,
+      way: clipBox.dataset.way || (clipBox.elements.event.value ? "event" : "strip")
     };
     var make = document.getElementById("clip-make");
     make.disabled = true;
@@ -1873,43 +2267,91 @@
     }
   });
 
-  // The clip from the strip (Phase 6 chapter 5): drag across the ruler and
-  // the clip box opens with that span.
+  // The clip track (Phase 8 chapter 5, after Phase 6 chapter 5's ruler drag):
+  // drag across it and the clip box opens with that span; a press seeks; a
+  // hand over it shows a guide line down the lanes. Escape cancels a drag.
   var banding = null;
   function hideBand() { if (band) { band.hidden = true; } }
   function showBand(a, b) {
+    if (!band) { return; }
     var shown = view();
     var low = Math.min(a, b), high = Math.max(a, b);
     band.style.left = percent(low, shown);
     band.style.width = (Math.max(0, Math.min(100, ((high - shown[0]) / (shown[1] - shown[0])) * 100)) - parseFloat(band.style.left)) + "%";
     band.hidden = false;
   }
-  if (ticksBox && band) {
-    ticksBox.addEventListener("mousedown", function (event) {
-      if (event.button !== 0 || !S.incident.clips) { return; }
-      var box = ticksBox.getBoundingClientRect();
-      var shown = view();
-      banding = { startX: event.clientX, box: box, shown: shown, from: shown[0] + ((event.clientX - box.left) / box.width) * (shown[1] - shown[0]), to: null };
+  function trackAt(clientX) {
+    var box = clipTrack.getBoundingClientRect();
+    var shown = view();
+    return shown[0] + Math.max(0, Math.min(1, (clientX - box.left) / box.width)) * (shown[1] - shown[0]);
+  }
+  function moveGuide(clientX) {
+    if (!stripGuide) { return; }
+    var box = strip.getBoundingClientRect();
+    stripGuide.style.left = (clientX - box.left) + "px";
+    stripGuide.hidden = false;
+  }
+  if (clipTrack) {
+    if (!S.incident.clips) {
+      clipTrack.classList.add("off");
+      clipTrackWords.textContent = "Clips are off for this office";
+      document.getElementById("clip-track-other").hidden = true;
+    }
+    clipTrack.addEventListener("mousedown", function (event) {
+      if (event.button !== 0 || !S.incident.clips || marking) { return; }
+      banding = { startX: event.clientX, from: trackAt(event.clientX), to: null };
+      clipTrack.classList.add("dragging");
       event.preventDefault();
+    });
+    clipTrack.addEventListener("mousemove", function (event) {
+      moveGuide(event.clientX);
+      if (banding || marking || !S.incident.clips) { return; }
+      var at = trackAt(event.clientX);
+      clipTag.textContent = timeOfDay(at);
+      var box = clipTrack.getBoundingClientRect();
+      clipTag.style.left = (event.clientX - box.left) + "px";
+      clipTag.hidden = false;
+    });
+    clipTrack.addEventListener("mouseleave", function () {
+      if (stripGuide) { stripGuide.hidden = true; }
+      if (!banding && !marking) { clipTag.hidden = true; }
     });
     document.addEventListener("mousemove", function (event) {
       if (!banding) { return; }
-      var shown = banding.shown;
-      banding.to = shown[0] + ((event.clientX - banding.box.left) / banding.box.width) * (shown[1] - shown[0]);
-      if (Math.abs(event.clientX - banding.startX) > 3) { showBand(banding.from, banding.to); }
+      banding.to = trackAt(event.clientX);
+      if (Math.abs(event.clientX - banding.startX) > 3) {
+        var low = Math.min(banding.from, banding.to), high = Math.max(banding.from, banding.to);
+        showBand(low, high);
+        moveGuide(event.clientX);
+        clipTrackWords.textContent = "Dragging: release to set the end";
+        clipTag.textContent = timeOfDay(low) + " to " + timeOfDay(high) + " · " + elapsed(high - low);
+        var box = clipTrack.getBoundingClientRect();
+        clipTag.style.left = Math.max(0, Math.min(box.width - 150, event.clientX - box.left)) + "px";
+        clipTag.hidden = false;
+      }
     });
     document.addEventListener("mouseup", function () {
       if (!banding) { return; }
       var done = banding;
       banding = null;
-      if (done.to === null || Math.abs(done.to - done.from) < 1) { hideBand(); return; }
+      clipTrack.classList.remove("dragging");
+      clipTrackWords.textContent = "Drag across here to make a clip";
+      clipTag.hidden = true;
+      if (stripGuide) { stripGuide.hidden = true; }
+      if (done.to === null || Math.abs(done.to - done.from) < 1) { hideBand(); seek(done.from); return; }
       var range = span();
       var low = Math.max(range[0], Math.min(done.from, done.to)), high = Math.min(range[1], Math.max(done.from, done.to));
       showBand(low, high);
-      openClipBox({ id: "", at: low, until: high, text: "" });
+      openClipBox({ id: "", at: low, until: high, text: "", way: "strip" });
     });
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && banding) { banding = null; hideBand(); }
+      if (event.key === "Escape" && banding) {
+        banding = null;
+        clipTrack.classList.remove("dragging");
+        clipTrackWords.textContent = "Drag across here to make a clip";
+        clipTag.hidden = true;
+        hideBand();
+      }
     });
   }
 

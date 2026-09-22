@@ -288,6 +288,8 @@ def state_json(incident: Incident, user) -> dict:
         ],
         # The Chronology (chapter 2).
         "events": chronology.events_json(incident),
+        # The Clips lane (Phase 8 chapter 5).
+        "clips": incident_clips.lane_json(incident) if incident_clips.on() else [],
         # The assistant on the Incident (chapter 3).
         "proposals": incident_assistant.proposals_json(incident),
         "memo": incident_assistant.memo_json(incident),

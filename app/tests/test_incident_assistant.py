@@ -769,7 +769,8 @@ def test_the_page_and_the_act_endpoint_carry_chapter_3(incident, person, client)
     signed_in(client, person)
     url = f"/case/{incident.case_id}/incident/{incident.pk}"
     page = client.get(url).content.decode()
-    assert 'data-panel="memo">' in page and " Memo</button>" in page
+    assert 'data-panel="memo"' in page
+    assert '<span class="w">Memo</span></button>' in page
     assert 'id="export-memo"' in page
     assert "exportMemo:" in page
     state = client.get(url + "/state").json()

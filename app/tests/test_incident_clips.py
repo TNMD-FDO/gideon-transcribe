@@ -871,3 +871,74 @@ def test_the_words_are_in_the_documents():
     assert "xstack" in note and "gmtime" in note
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v1.63.0" in changelog
+
+
+# The desk, kept (Phase 8 chapter 5) ---------------------------------------------
+
+
+def test_the_way_in_is_on_the_row_and_the_lane_carries_the_clip(
+    incident, event, person, client, no_render
+):
+    """A clip's row says which way it came in; the state's Clips lane lists
+    the clip with its span on the incident clock; a way the page does not
+    know falls back to the strip."""
+    signed_in(client, person)
+    got = press(client, incident, event, way="line").json()
+    assert got["ok"]
+    row = Row.objects.filter(event="Clip created").order_by("-at").first()
+    assert row.details["way"] == "from a line"
+    state = client.get(f"{incident.url()}/state").json()
+    assert len(state["clips"]) == 1
+    lane = state["clips"][0]
+    assert lane["from"] == 290.0 and lane["until"] == 310.0
+    assert lane["title"] and lane["id"] == got["clip"]["id"]
+    # From the strip's endpoint with the button's way, and with nonsense.
+    cams = cameras_of(incident)
+    body = {
+        "from": 300,
+        "until": 320,
+        "cameras": [str(cams["BWC2-1"].pk)],
+        "sound": str(cams["BWC2-1"].pk),
+        "layout": "grid",
+        "way": "button",
+    }
+    strip_url = f"/case/{incident.case_id}/incident/{incident.pk}/clip"
+
+    def from_strip(**changes):
+        sent = dict(body, **changes)
+        for gone in [key for key, value in sent.items() if value is None]:
+            sent.pop(gone)
+        answer = client.post(
+            strip_url, json.dumps(sent), content_type="application/json"
+        )
+        assert answer.json()["ok"], answer.content
+        return Row.objects.filter(event="Clip created").order_by("-at").first()
+
+    assert from_strip().details["way"] == "from the button"
+    assert from_strip(way="teleport").details["way"] == "from the strip"
+    assert len(client.get(f"{incident.url()}/state").json()["clips"]) == 3
+    # Without an event the default is the strip; with one, the event.
+    assert from_strip(way=None).details["way"] == "from the strip"
+    assert press(client, incident, event).json()["ok"]
+    latest = Row.objects.filter(event="Clip created").order_by("-at").first()
+    assert latest.details["way"] == "from an event"
+
+
+def test_the_page_carries_the_desks_new_parts(incident, person, client):
+    """The Clip button, the clip track with its words, the said band, the
+    handle and the tabs' wrapped words are on the page; the ruler's old
+    instruction paragraph is behind the question mark."""
+    signed_in(client, person)
+    page = client.get(incident.url()).content.decode()
+    assert 'id="clip-mark"' in page and "starts a clip at this moment" in page
+    assert 'id="clip-track"' in page and "Drag across here to make a clip" in page
+    assert "or press Clip on the transport, or Clip this event on a row" in page
+    assert 'id="said-band"' in page and 'id="said-lines"' in page
+    assert 'id="work-grip"' in page and 'role="separator"' in page
+    assert '<span class="w">Chronology</span>' in page
+    assert 'id="strip-help"' in page and 'id="strip-help-words"' in page
+    assert 'class="foot small muted">\n      <span>Click a lane' not in page
+    # The lane's rows stay off the state when incident clips are off.
+    settings_store.set_to("incidents_clips", False)
+    assert client.get(f"{incident.url()}/state").json()["clips"] == []
+

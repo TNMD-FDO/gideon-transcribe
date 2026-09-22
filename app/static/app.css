@@ -2110,7 +2110,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-check:first-child { border-top: 0; }
 .incident-page main.wide { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
 .inc-head .inc-clock { font-family: var(--mono); font-size: var(--t-display); font-variant-numeric: tabular-nums; line-height: 1; }
-.inc-desk { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 14px; padding: 12px 16px 0; align-items: start; }
+.inc-desk { display: grid; grid-template-columns: minmax(0, 1fr) 12px var(--work, 460px); gap: 0 6px; padding: 12px 16px 0; align-items: start; }
 .inc-stage { display: flex; flex-direction: column; min-width: 0; }
 .inc-wall { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .inc-wall.count-1 { grid-template-columns: minmax(0, 1fr); }
@@ -2157,6 +2157,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .cite.all { margin-left: 2px; font-size: 0.85em; }
 @media (max-width: 1279px) {
   .inc-desk { grid-template-columns: minmax(0, 1fr); }
+  .inc-desk .workgrip { display: none; }
   .inc-wall, .inc-wall.count-7, .inc-wall.count-8, .inc-wall.count-9 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inc-work { max-height: none; }
 }
@@ -2232,8 +2233,7 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-sync tr.unsynced td { background: color-mix(in srgb, var(--warn) 6%, transparent); }
 .inc-sync .acts { white-space: normal; }
 .inc-strip .ruler { position: relative; }
-.inc-strip .ruler .ticks { position: relative; cursor: col-resize; }
-.inc-strip .ruler .band { position: absolute; top: -2px; bottom: -2px; background: color-mix(in srgb, var(--accent) 30%, transparent); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none; }
+.inc-strip .ruler .ticks { position: relative; }
 .inc-clip-cams .clip-cam.unsynced { border-style: dashed; }
 /* The dashboard line, the Search tab and Find (Phase 7 chapter 3). */
 .dashboard-line { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
@@ -2288,7 +2288,7 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 }
 /* Phase 8 chapter 1: columns follow the width up to the 49-inch screen. */
 @media (min-width: 2560px) {
-  .inc-desk { grid-template-columns: minmax(0, 1fr) 760px; }
+  .inc-desk { grid-template-columns: minmax(0, 1fr) 12px var(--work, 760px); }
   .inc-desk[data-layout="side"] .inc-wall { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .inc-film { flex-wrap: wrap; }
   .panes { grid-template-columns: minmax(0, 1.5fr) 420px; }
@@ -2334,3 +2334,70 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .clip-cam.over { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .clip-cam .large { padding: 0 5px; }
 .inc-events .clipmark { background: var(--clip-soft); color: var(--clip); margin-right: 4px; }
+
+/* The desk, kept (Phase 8 chapter 5): the player bar on the focus camera,
+   the said band under the filmstrip, the Clip button, the clip track and
+   the Clips lane on the strip, and the handle that sizes the work panel. */
+.inc-desk[data-layout="focus"] .inc-wall .inc-tile:not(.film) .inc-well { aspect-ratio: var(--picture, 16 / 9); max-height: calc(100vh - 500px); min-height: 220px; }
+.inc-desk[data-layout="focus"] .inc-wall .inc-tile:not(.film) .inc-lines { display: none; }
+.player-bar { display: none; position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px 6px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.72)); color: var(--knob); flex-direction: column; gap: 6px; opacity: 0; transition: opacity 0.25s; cursor: default; }
+.inc-desk[data-layout="focus"] .inc-wall .inc-tile:not(.film) .player-bar { display: flex; }
+.inc-well:hover .player-bar, .inc-well.paused .player-bar, .player-bar:focus-within { opacity: 1; }
+.inc-well.idle:not(.paused) .player-bar { opacity: 0; }
+.player-bar .scrub { position: relative; height: 12px; cursor: pointer; }
+.player-bar .scrub::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.28); }
+.player-bar .scrub .own { position: absolute; top: 4px; height: 4px; background: rgba(255, 255, 255, 0.35); border-radius: 2px; }
+.player-bar .scrub .played { position: absolute; left: 0; top: 4px; height: 4px; background: var(--accent); border-radius: 2px; }
+.player-bar .scrub .knob { position: absolute; top: 0; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--accent); }
+.player-bar .scrub .ev { position: absolute; top: 2px; width: 2px; height: 8px; background: rgba(255, 255, 255, 0.9); margin-left: -1px; }
+.player-bar .scrub .clipping { position: absolute; top: 3px; height: 6px; background: color-mix(in srgb, var(--warn) 80%, var(--knob)); border-radius: 2px; }
+.player-bar .row { display: flex; align-items: center; gap: 8px; font-size: var(--t-small); }
+.player-bar .row button { background: transparent; border: 0; color: var(--knob); padding: 2px 6px; border-radius: 4px; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.player-bar .row button:hover, .player-bar .row button:focus-visible { background: rgba(255, 255, 255, 0.18); outline: none; }
+.player-bar .row button.on { color: var(--accent); }
+.player-bar .row .time { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.player-bar .row select { background: rgba(0, 0, 0, 0.4); color: var(--knob); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; font: inherit; font-size: var(--t-small); padding: 1px 4px; }
+.inc-well:fullscreen { background: var(--well); }
+.inc-well:fullscreen video { object-fit: contain; }
+.inc-said { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 6px 8px; }
+.inc-said-head { display: flex; align-items: center; gap: 10px; padding: 0 6px 4px; }
+.inc-said-lines { display: grid; gap: 1px; max-height: 7.2em; overflow-y: auto; }
+.inc-said-line { display: grid; grid-template-columns: 62px auto minmax(0, 1fr) auto; gap: 8px; padding: 3px 6px; border-radius: 4px; align-items: baseline; color: var(--muted); cursor: pointer; font-size: var(--t-body); }
+.inc-said-line .t { font-family: var(--mono); font-size: var(--t-small); }
+.inc-said-line .who { font-weight: 600; font-size: var(--t-small); color: var(--speaker, inherit); }
+.inc-said-line.lit { background: var(--now); color: var(--now-ink); }
+.inc-said-line.lit .who { color: inherit; }
+.inc-said-line .acts { visibility: hidden; display: inline-flex; gap: 4px; }
+.inc-said-line.lit:hover .acts { visibility: visible; }
+.inc-said-line .acts button { padding: 0 6px; }
+.inc-said .quiet { color: var(--muted); padding: 4px 6px; }
+.transport .clip-mark { border-color: var(--accent); color: var(--accent); }
+.transport .clip-mark.marking { background: var(--warn); border-color: var(--warn); color: var(--bg); font-weight: 600; }
+.transport #clip-mark-said.marking { color: var(--warn); }
+@media (max-width: 1599px) { .transport #clip-mark-said:not(.marking) { display: none; } }
+.clip-track-row { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; align-items: center; margin: 2px 0 4px; }
+.clip-track { position: relative; height: 24px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 1px dashed color-mix(in srgb, var(--warn) 70%, transparent); border-radius: 5px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--warn) 12%, transparent) 0 6px, transparent 6px 12px); cursor: crosshair; user-select: none; font-size: var(--t-small); }
+.clip-track .words { display: inline-flex; align-items: center; gap: 5px; color: var(--warn); font-weight: 500; white-space: nowrap; }
+.clip-track .words .i { width: 13px; height: 13px; }
+.clip-track .other { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clip-track:hover, .clip-track.dragging { border-style: solid; border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 18%, transparent); }
+.clip-track .band { position: absolute; top: 2px; bottom: 2px; background: color-mix(in srgb, var(--warn) 35%, transparent); border-left: 2px solid var(--warn); border-right: 2px dashed var(--warn); border-radius: 3px; pointer-events: none; }
+.clip-track .tag { position: absolute; top: -22px; padding: 1px 6px; border-radius: 4px; background: var(--warn); color: var(--bg); font-size: 11px; white-space: nowrap; pointer-events: none; z-index: 2; }
+.clip-track.off { border-style: dashed; border-color: var(--line); background: transparent; cursor: default; box-shadow: none; }
+.clip-track.off .words { color: var(--muted); font-weight: 400; }
+.inc-strip { position: relative; }
+.inc-strip .guide { position: absolute; top: 34px; bottom: 34px; width: 1px; background: color-mix(in srgb, var(--warn) 70%, transparent); pointer-events: none; z-index: 1; }
+.inc-strip .lane.clips .track { background: transparent; border-top: 1px dashed var(--line); border-radius: 0; height: 14px; }
+.inc-strip .lane.clips .track .mk-clip { position: absolute; top: 3px; height: 8px; border-radius: 3px; background: var(--warn); opacity: 0.85; cursor: pointer; }
+.inc-strip .lane.clips .track .mk-clip.ghost { opacity: 0.45; border-right: 2px dashed var(--warn); cursor: default; }
+.inc-strip .foot #strip-help { width: 20px; height: 20px; border-radius: 50%; padding: 0; }
+.workgrip { position: relative; align-self: stretch; cursor: ew-resize; touch-action: none; }
+.workgrip::after { content: ""; position: absolute; top: 50%; left: 4px; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: var(--line); }
+.workgrip:hover::after, .workgrip:focus-visible::after, .inc-desk.resizing .workgrip::after { background: var(--accent); }
+.workgrip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.inc-desk.resizing { cursor: ew-resize; user-select: none; }
+.inc-desk.resizing .workgrip::before { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.inc-desk[data-layout^="grid"] .workgrip { display: none; }
+.inc-desk[data-layout^="grid"] { grid-template-columns: minmax(0, 1fr); }
+.inc-work.narrow .tabbar .tab .w { display: none; }
+.inc-work.narrow .tabbar .tab { padding-left: 8px; padding-right: 8px; }

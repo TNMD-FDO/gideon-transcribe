@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.74.0, 2026-09-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 8 chapter 5: the desk, kept. The incident page as it stands, with
+four things added to it and nothing taken away.
+
+- **The focus camera is a video.** In Focus the large picture sits at its
+  own proportions, and a player bar appears on it when the pointer is over
+  it or the cameras are paused: a scrub bar across the whole incident with
+  the events as ticks and this camera's own stretch shown, play, back and
+  forward five seconds, the time, the speaker, the speed, and Fill the
+  window. Each does what the transport's control of the same name does,
+  and the keys are unchanged.
+- **What is being said.** Under the filmstrip, the focus camera's words
+  following the clock: the line being said lit, two before it and one
+  after. Press a line and every camera goes there; on the lit line,
+  **+ event** and **Clip from here**. Change the focus and the words follow.
+  **Open the transcript** opens the recording at this moment.
+- **Clip is a button.** **Clip** on the transport marks the start at this
+  moment and becomes **End the clip here**, with the span so far drawn on
+  the scrub bar, the strip and the Clips lane as it grows; the second press
+  opens the clip box filled in (the title from the one event inside the
+  span, when there is one). Escape cancels. Under the strip's ruler a
+  **clip track** says in words what it is for: drag across it and the box
+  opens with that span, with a tag that follows the pointer; a press on it
+  seeks. A **Clips lane** under Events shows every clip made from the
+  incident, a press opening the case's Clips tab. Every way in ends in the
+  same box, and the audit row says which way ("from the button", "from the
+  strip", "from a line", "from an event"). With incident clips off, the
+  button and the track stay, greyed, and say so.
+- **A handle sizes the work panel.** Drag the grip between the cameras and
+  the panel from 360 pixels to six tenths of the desk (the cameras never
+  under 420); it is remembered in your browser, a double-press puts the
+  usual width back, and the arrows move it from the keyboard. Under 400
+  pixels the tabs show their icons alone, with the names on hover.
+- The strip's paragraph of instructions is behind a **?** at its foot.
+
 ## v1.73.0, 2026-09-19
 
 ```
