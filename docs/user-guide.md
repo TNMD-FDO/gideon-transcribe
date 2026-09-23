@@ -313,6 +313,8 @@ Everything that is not in a case belongs to your login session and goes when it 
 
 You are also signed out after a period without activity, eight hours unless your Admin has set it differently. The app warns you before that happens and offers to keep you signed in. A batch that is still running is allowed to finish before anything is removed.
 
+If your session ends while a page is open (after the long wait, because you signed in from another place, or because an Admin ended it), the page says so at the top, stops, and offers **Sign in again**, which brings you back to the same page. If your office uses cases, your cases, clips and documents are kept; otherwise the line says that your recordings and transcripts have been removed, as above.
+
 Your recordings count against a quota, fifty gigabytes unless your Admin has set it differently. The Upload page tells you when you are near it. **Done with these** and **Clear my recordings** are how you make room without signing out.
 
 ## The guide beside the page
@@ -326,6 +328,9 @@ On a wide monitor, the **?** at the top of every page opens this guide in a colu
 - **The transcript is wrong.** Correct the segments, or **Process again** with different settings: a speaker count, a vocabulary, the right language.
 - **The page says transcription is not available.** The transcription service is down or the server is low on space. Your recordings are safe; try again later, or tell IT.
 - **You cannot sign in.** Your account may not be in the sign-in group, or your password may have changed. Ask IT.
+- **There is no page at this address.** The link is older than what it pointed at, the thing was removed, or the address was mistyped. The page offers the way back: the case by name when you may see it, **Cases**, **My recordings**, or **Start**.
+- **The form was open too long.** The page was open for a long while, or you signed in again in another tab. Go back and send the form again.
+- **Something went wrong on the server.** It has been logged. Try again in a moment, and if it keeps happening, report it.
 - **Anything else, or an idea.** **Report a problem**, at the foot of every page (on the incident page, in the work panel's head beside Find), opens a small box: say whether it is a problem or an idea, what happened or what would help, and what you expected, in your own words. Leave **Include where I was** ticked and the app adds the line it shows you: the page you were on (without any search words), the app's version, your browser, the window's size and your name; untick it and it adds your name and the version only. Describe the problem; do not paste a transcript's words. It goes to your Admins and stays inside the office; nobody outside sees it.
 
 ## What the app records about you

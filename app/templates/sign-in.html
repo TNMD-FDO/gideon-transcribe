@@ -12,6 +12,7 @@
   <div class="gate">
     <form method="post" action="{% url 'sign-in' %}" autocomplete="off" class="card door{% if has_logo %} with-logo{% endif %}">
       {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
       <div class="face">
         {% if has_logo %}
           <img src="{% url 'logo' %}" alt="" class="office-logo">

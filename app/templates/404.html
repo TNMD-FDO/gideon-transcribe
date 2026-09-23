@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}No page here{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The gone page (Phase 8 chapter 7): one page, in the app's frame, for an
+    address with nothing behind it. It says why that might be and offers
+    the way back; the case's name appears only when the address names a
+    case this person may see, so the page never says whether a case is
+    there.
+  {% endcomment %}
+  <div class="gone">
+    <h1>There is no page at this address.</h1>
+    <p class="muted">It may be that:</p>
+    <ul class="muted">
+      <li>the thing it pointed at was removed,</li>
+      <li>the link is older than what it pointed at,</li>
+      <li>or the address was mistyped.</li>
+    </ul>
+    <div class="row actions">
+      {% if case %}<a href="{% url 'case' case.pk %}" class="btn primary">Back to the case {{ case.name }}</a>{% endif %}
+      {% for way in ways %}<a href="{{ way.href }}" class="btn">{{ way.name }}</a>{% endfor %}
+    </div>
+  </div>
+{% endblock %}

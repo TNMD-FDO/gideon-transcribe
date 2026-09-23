@@ -4,18 +4,12 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  {% if someone_elses %}
-    <p class="banner">
-      Viewing <b>{{ someone_elses.shown_name }}</b>'s Workspace as an Admin.
-      This access is recorded in the audit log.
-    </p>
-  {% endif %}
-
   <div class="page list workbench">
     <div class="row">
       <h1 class="grow">
         {% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}My recordings{% endif %}
       </h1>
+      {% if someone_elses %}{% include "admin-pill.html" with owner=someone_elses what="Workspace" %}{% endif %}
     </div>
 
     {% if recorded_here %}

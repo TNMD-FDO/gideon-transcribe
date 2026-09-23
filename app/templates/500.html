@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The server's own failure (Phase 8 chapter 7): the same frame as the
+    gone page, with what to do. Report a problem is at the foot of the page
+    as on every other, and the box pre-fills where the person was.
+  {% endcomment %}
+  <div class="gone">
+    <h1>Something went wrong on the server.</h1>
+    <p class="muted">It has been logged. Try again in a moment, and if it keeps happening, report it with the link at the foot of this page.</p>
+    <div class="row actions">
+      <button type="button" class="btn primary" data-go-back>Back</button>
+      <a href="{% url 'start' %}" class="btn">Start</a>
+    </div>
+  </div>
+{% endblock %}

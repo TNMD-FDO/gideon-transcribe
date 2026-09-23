@@ -239,5 +239,17 @@
     showHints();
   }
 
+  // The Admin pill's Close, and Back on the pages that fail well (Phase 8
+  // chapter 7): two controls the pages share, so the rule lives here.
+  document.addEventListener("click", function (event) {
+    var close = event.target.closest("[data-close-pill]");
+    if (close) {
+      var pill = close.closest("details");
+      if (pill) { pill.open = false; }
+      return;
+    }
+    if (event.target.closest("[data-go-back]")) { window.history.back(); }
+  });
+
   window.UI = { confirm: confirm, prompt: prompt, alert: alert, toast: showToast, icon: icon, showHints: showHints };
 })();

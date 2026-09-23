@@ -21,6 +21,50 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.76.0, 2026-09-23
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 8 chapter 7, the pages that fail well: four things the end-user walk
+of 2026-09-22 met that needed a design rather than a line.
+
+- **A session that ends under an open page is said on that page.** When
+  the app answers a page's script that the session has ended (a small
+  reply and the status 401, never the sign-in page), the page stops every
+  poll, pauses its videos, greys its controls and shows one line where
+  the idle warning sits: why it ended (a long wait, a sign-in from another
+  place, an Admin) and what stays (cases, clips and documents; or, with
+  Folder management off, that the recordings and transcripts have been
+  removed). Nothing is asked of the server again, so a page left open
+  overnight shows the line in the morning with no errors under it.
+- **Sign in again returns you to where you were.** The line's button goes
+  to Sign in with the page's address, tab and moment, and the sign-in page
+  brings the same person back there; somebody else signing in lands on
+  Start, and an address outside the app is ignored.
+- **The idle warning asks before it claims.** At nought the page asks the
+  server once whether the session is still open, with a question that
+  does not move the clock, so a second tab that kept the clock moving no
+  longer makes the first say you were signed out.
+- **The gone page.** An address with nothing behind it is answered in the
+  app's frame: why it might be gone, and the way back (the case by name
+  when it is one you may see, Cases, My recordings, the Panel, Start). It
+  never says whether a case exists that you may not see. The server's own
+  failure and a form left open too long (or sent after a sign-in in
+  another tab) get the app's pages too, in place of the framework's.
+- **The Admin's warning is a pill beside the title.** On another person's
+  case, incident, recording, Speakers page or recordings list the band
+  across the page becomes **As an Admin** beside the title: hover shows
+  the whole sentence, a press opens it in a small card. Every word stays.
+- **The case page's list takes the width.** The cap on the page goes and
+  About this case takes a measure of 24rem at the right, so a file name
+  stays on one line.
+- **Fixed**: v1.75.1 wrote the page's Admin mark with stray backslashes,
+  so the Speakers page's cut-short advice showed Admins the non-Admin
+  line.
+
 ## v1.75.1, 2026-09-23
 
 ```

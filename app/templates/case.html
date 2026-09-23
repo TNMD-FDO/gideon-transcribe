@@ -1,17 +1,10 @@
 {% extends "base.html" %}
 {% load static icons %}
 {% block title %}{{ case.name }}{% endblock %}
+{% block body_class %}case-page{% endblock %}
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  {% if role == "admin" %}
-    <p class="banner">
-      Viewing <b>{{ case.owner.shown_name }}</b>'s case as an Admin. This access
-      is recorded in the audit log, and it does not count as the owner having
-      used the case.
-    </p>
-  {% endif %}
-
   <div class="page roomy workbench" data-case="{{ case.pk }}">
     <p class="muted small" style="margin: 0 0 4px">
       <a href="{% url 'cases' %}">Cases</a>
@@ -19,6 +12,7 @@
 
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
+      {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
       {% if live_recording and role != "admin" %}<a href="{% url 'record-new' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
     </div>

@@ -5,13 +5,6 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  {% if is_someone_elses %}
-    <p class="banner">
-      Viewing <b>{{ recording.user.shown_name }}</b>'s {% if recording.case_id %}case{% else %}Workspace{% endif %} as an Admin.
-      This access is recorded in the audit log.
-    </p>
-  {% endif %}
-
   {% if being_replaced %}
     <p class="banner">
       A new transcription is in progress; this transcript will be replaced.
@@ -37,6 +30,7 @@
             <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
           {% endif %}
           <h1 id="recording-title">{{ recording.title }}</h1>
+          {% if is_someone_elses %}{% if recording.case_id %}{% include "admin-pill.html" with owner=recording.user what="case" %}{% else %}{% include "admin-pill.html" with owner=recording.user what="Workspace" %}{% endif %}{% endif %}
           {% if not is_someone_elses %}
             <button type="button" class="btn ghost icon" id="rename-title" title="Rename this recording" aria-label="Rename this recording">{% icon "correct" %}</button>
           {% endif %}

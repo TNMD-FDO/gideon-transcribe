@@ -172,6 +172,8 @@ def context(request: HttpRequest, recording: Recording, *, in_window: bool) -> d
     return {
         "page": "viewer",
         "in_window": in_window,
+        # The Admin pill (Phase 8 chapter 7), as on the recording's page.
+        "is_someone_elses": cases.standing(recording, request.user) == "admin",
         "cards": made,
         "named": named,
         "total": len(made),

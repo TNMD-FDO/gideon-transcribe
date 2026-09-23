@@ -5,6 +5,12 @@
 // starts at the whole timeout on every page load. Fifteen minutes before the
 // end the banner appears, and Stay signed in is a request like any other,
 // which is what moves the clock.
+//
+// At nought the page does not guess (Phase 8 chapter 7): it asks the server
+// once whether the session is still open, with a question that does not move
+// the clock. A second tab that kept the clock moving makes the server say
+// so, and the countdown starts again from the time left; a session that has
+// ended is answered with the 401 that session.js turns into the ended line.
 
 (function () {
   "use strict";
@@ -18,24 +24,31 @@
 
   var left = window.IDLE_SECONDS;
 
+  function warn() {
+    var minutes = Math.ceil(left / 60);
+    words.textContent =
+      "You will be signed out in " + minutes +
+      (minutes === 1 ? " minute" : " minutes") +
+      " and your recordings and transcripts removed.";
+    banner.hidden = false;
+  }
+
+  function ask() {
+    fetch("/session", { cache: "no-store" })
+      .then(function (answer) { return answer.ok ? answer.json() : null; })
+      .then(function (body) {
+        if (!body || !body.signed_in) { return; }
+        left = Math.max(30, body.left || 0);
+        if (left > WARN_AT) { banner.hidden = true; } else { warn(); }
+        window.setTimeout(tick, 30000);
+      })
+      .catch(function () { /* session.js has said what there is to say */ });
+  }
+
   function tick() {
     left -= 30;
-    if (left <= 0) {
-      // The next request will be turned away by the app itself; saying so
-      // here is kinder than letting somebody type into a page that is gone.
-      words.textContent =
-        "You have been signed out and your recordings and transcripts removed.";
-      banner.hidden = false;
-      return;
-    }
-    if (left <= WARN_AT) {
-      var minutes = Math.ceil(left / 60);
-      words.textContent =
-        "You will be signed out in " + minutes +
-        (minutes === 1 ? " minute" : " minutes") +
-        " and your recordings and transcripts removed.";
-      banner.hidden = false;
-    }
+    if (left <= 0) { ask(); return; }
+    if (left <= WARN_AT) { warn(); }
     window.setTimeout(tick, 30000);
   }
 
@@ -46,7 +59,8 @@
       .then(function () {
         left = window.IDLE_SECONDS;
         banner.hidden = true;
-      });
+      })
+      .catch(function () { /* the ended line has taken the banner */ });
   });
 
   window.setTimeout(tick, 30000);

@@ -17,6 +17,7 @@
   <div class="sp-head">
     <span class="lbl">Speakers of</span>
     <b class="grow" id="sp-title">{{ recording.title }}</b>
+    {% if is_someone_elses %}{% if recording.case_id %}{% include "admin-pill.html" with owner=recording.user what="case" %}{% else %}{% include "admin-pill.html" with owner=recording.user what="Workspace" %}{% endif %}{% endif %}
     {% if cards %}
       <span class="sp-progress" id="sp-progress">
         <span class="bar"><i id="sp-progress-bar" style="width: {% widthratio named total 100 %}%"></i></span>

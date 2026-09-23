@@ -483,6 +483,43 @@ table.tbl tbody tr:hover { background: color-mix(in srgb, var(--surface-2) 55%, 
   background: var(--warn-soft);
   border-bottom: 1px solid var(--warn);
 }
+/* The idle warning and the session line (Phase 8 chapter 7): the words,
+   then Stay signed in or Sign in again at the right. */
+#idle-warning:not([hidden]) { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#idle-warning #sign-in-again { margin-left: auto; }
+/* A page whose session has ended: readable, paused, and inert. */
+body.session-ended main,
+body.session-ended .help-pane,
+body.session-ended #gideon { pointer-events: none; opacity: 0.45; }
+
+/* The Admin pill (Phase 8 chapter 7): the mark beside the title, the
+   sentence in a small card under it on a press. */
+.admin-pill { position: relative; display: inline-block; }
+.admin-pill > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; }
+.admin-pill > summary::-webkit-details-marker { display: none; }
+.admin-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 34ch;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 10px 12px;
+  font-size: var(--t-small);
+  font-weight: 400;
+  text-align: left;
+}
+.admin-card p { margin: 0 0 8px; }
+
+/* The gone page and the server's failure (Phase 8 chapter 7). */
+.gone { max-width: 52ch; margin: 40px auto; }
+.gone h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.gone ul { margin: 8px 0 16px 18px; padding: 0; }
 
 .notice {
   border: 1px solid var(--line);
@@ -1577,6 +1614,12 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .guide .contents a.on { color: var(--accent); font-weight: 600; }
 @media (min-width: 1280px) {
   .page.workbench { max-width: 100rem; }
+  /* The case page (Phase 8 chapter 7): the list takes the width and About
+     this case a measure, so a file name stays on one line. */
+  .case-page .page.workbench { max-width: none; }
+  .case-page .panes { grid-template-columns: minmax(0, 1fr) 24rem; }
+  .case-page #recordings th, .case-page #recordings td { white-space: nowrap; }
+  .case-page #recordings td:first-child { white-space: normal; }
   .panes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
   .pane-detail {
     position: sticky;

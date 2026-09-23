@@ -17,18 +17,12 @@
     everything below the head from the state, keeps the players in step,
     and posts every change to the one act endpoint.
   {% endcomment %}
-  {% if role == "admin" %}
-    <p class="banner">
-      Viewing <b>{{ case.owner.shown_name }}</b>'s case as an Admin. This access
-      is recorded in the audit log, and it does not count as the owner having
-      used the case.
-    </p>
-  {% endif %}
   <div class="sp-head inc-head">
     <span class="lbl">Incident</span>
     <b class="grow" id="inc-title">{{ incident.name }}
       <span class="muted small" style="font-weight: 400">in the case <a href="{% url 'case' case.pk %}">{{ case.name }}</a> &middot; <span id="inc-facts"></span></span>
     </b>
+    {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
     <span class="inc-clock" id="inc-clock" title="The incident clock: the time of day the cameras' clocks give">00:00:00</span>
     <span class="muted small" id="inc-date"></span>
     <button type="button" class="small primary" id="add-event" title="An event at this moment (E)">{% icon "plus" %} Add event here</button>

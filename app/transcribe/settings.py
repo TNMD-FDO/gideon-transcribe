@@ -63,6 +63,8 @@ CSRF_TRUSTED_ORIGINS = [f"https://{APP_HOSTNAME}", f"https://{APP_HOSTNAME}:8443
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# A form whose token no longer holds gets the app's own page (Phase 8 chapter 7).
+CSRF_FAILURE_VIEW = "core.views.form_refused"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 X_FRAME_OPTIONS = "DENY"

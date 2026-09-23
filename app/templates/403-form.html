@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}The form was open too long{% endblock %}
+
+{% block content %}
+  {% comment %}
+    A form refused for its token (Phase 8 chapter 7): sent after the
+    session ended, or after a sign-in in another tab changed the token.
+    The browser keeps what was typed on Back; the page promises no more.
+  {% endcomment %}
+  <div class="gone">
+    <h1>The form was open too long, or you signed in again in another tab.</h1>
+    <p class="muted">Go back and send it again.</p>
+    <div class="row actions">
+      <button type="button" class="btn primary" data-go-back>Back</button>
+    </div>
+  </div>
+{% endblock %}

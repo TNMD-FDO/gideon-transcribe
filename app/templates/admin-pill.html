@@ -1,0 +1,15 @@
+{% comment %}
+  The Admin pill (Phase 8 chapter 7): the mark beside a page's title that
+  says an Admin is viewing another person's case, Workspace or recording.
+  Hover or focus shows the whole sentence; a press opens it in a small card
+  under the pill. Every word the band across the page carried is here; only
+  its place changed. Given "owner" (the person) and "what" (case or
+  Workspace).
+{% endcomment %}
+<details class="admin-pill">
+  <summary class="pill warn" title="You are viewing {{ owner.shown_name }}'s {{ what }} as an Admin. This access is recorded in the audit log{% if what == "case" %}, and it does not count as the owner having used the case{% endif %}.">As an Admin</summary>
+  <div class="admin-card">
+    <p>You are viewing <b>{{ owner.shown_name }}</b>'s {{ what }} as an Admin. This access is recorded in the audit log{% if what == "case" %}, and it does not count as the owner having used the case{% endif %}.</p>
+    <button type="button" class="tiny ghost" data-close-pill>Close</button>
+  </div>
+</details>

@@ -546,6 +546,7 @@ urlpatterns = [
         name="panel-vision-request",
     ),
     path("panel/cancel", panel.cancel_all, name="panel-cancel"),
+    path("session", views.session_state, name="session-state"),
     path("sign-in", views.sign_in, name="sign-in"),
     path("sign-out", views.sign_out, name="sign-out"),
 ]
