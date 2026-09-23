@@ -198,3 +198,81 @@ def test_the_status_page_says_where_the_window_came_from(client, person, monkeyp
     # The Engine window row greys with the engine's figure.
     page = client.get(reverse("panel-settings", args=["assistant"]))
     assert b"Read from the engine: 262,144 tokens" in page.content
+
+
+# The sitting on the case page (Phase 8 chapter 10) -------------------------------
+
+
+@pytest.mark.django_db
+def test_the_shares_are_kept_on_the_cameras_and_refreshed_when_the_digest_is_newer(
+    incident,
+):
+    from django.utils import timezone
+
+    cameras = cameras_of(incident)
+    assert all(one.record_made_at is None for one in cameras.values())
+    told = sitting.json_for(incident)
+    first = cameras_of(incident)["BWC2-1"]
+    second = cameras_of(incident)["BWC2-2"]
+    assert first.record_made_at is not None and first.record_tokens > 0
+    assert first.record_tokens != first.words_tokens, "a Digest counts differently"
+    assert second.record_tokens == second.words_tokens, "no Digest: the words"
+    assert told["cameras"][0]["tokens"] == first.record_tokens
+    # A newer Digest makes the share stale, and the next draw counts again.
+    was = first.record_tokens
+    DigestPart.objects.create(
+        transcript=first.recording.transcript,
+        number=2,
+        text="3. [00:00:40]-[00:00:44] (both) A long extra part about the roadside.",
+        made_at=timezone.now(),
+    )
+    sitting.json_for(incident)
+    first.refresh_from_db()
+    assert first.record_tokens > was
+
+
+@pytest.mark.django_db
+def test_the_offer_and_the_case_page_carry_the_bar(client, incident, person, a_case):
+    settings_store.set_to("incidents_proposed", True)
+    signed_in(client, person)
+    # A third video with a checked clock that overlaps the incident: offered
+    # to it, with the bar as the incident would read with it in.
+    third = video(
+        person,
+        a_case,
+        "third",
+        seconds=900.0,
+        stamp=stamp("21:58:00", "BWC2-3"),
+        lines=((5.0, "Speaker 2", "Nothing to see here."),),
+    )
+    offered = incidents.offers(a_case)
+    assert offered and offered[0]["kind"] == "add"
+    told = offered[0]["sitting"]
+    assert told["on"] and told["count"] == 3
+    assert told["adding"][0]["name"] == "BWC2-3"
+    assert told["short"].startswith("Room for about")
+    # Two loose videos that overlap each other: offered as a new incident,
+    # with the bar before the incident exists.
+    for camera in incident.cameras.all():
+        incidents.remove_camera(camera, by=person)
+    fresh = incidents.offers(a_case)
+    new = [one for one in fresh if one["kind"] == "new"]
+    assert new and new[0]["sitting"]["on"]
+    assert new[0]["sitting"]["count"] == len(new[0]["recordings"])
+    assert new[0]["sitting"]["zone"] == "room"
+    # The tab's rows carry the column and the offer carries the bar.
+    incidents.make(a_case, "Again", [cameras_of_case(a_case)["first"]], by=person)
+    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
+    body = page.content.decode()
+    assert "The assistant holds" in body
+    assert "sitting-mini" in body and "hours&#x27; worth" in body
+    assert third.pk  # the offer still stands, its bar drawn
+    # Off when the assistant is off.
+    settings_store.set_to("assistant_available", False)
+    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
+    assert "The assistant holds" not in page.content.decode()
+    settings_store.set_to("assistant_available", True)
+
+
+def cameras_of_case(case) -> dict:
+    return {one.title: one for one in case.recordings.all()}

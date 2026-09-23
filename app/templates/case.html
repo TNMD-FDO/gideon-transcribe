@@ -229,6 +229,14 @@
               <span class="pill small offer">Offer</span>
               <span class="small"><b>{{ offer.line }}</b>
                 {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
+                {% comment %}One sitting on the case page (Phase 8 chapter 10): the bar as the incident would read.{% endcomment %}
+                {% with T=offer.sitting %}{% if T.on %}
+                  <span class="sitting-mini {{ T.zone }}" title="{{ T.sentence }}">
+                    <span class="figure">{{ T.figure }}</span>
+                    <span class="bar"><span class="blocks">{% for cam in T.cameras %}<i class="{% if cam.read == 'words' %}words{% endif %}" style="width: {{ cam.percent }}%" title="{{ cam.name }}"></i>{% endfor %}</span></span>
+                    <span class="word {{ T.tone }}">{{ T.short }}</span>
+                  </span>
+                {% endif %}{% endwith %}
               </span>
               <span class="nowrap">
                 {% if offer.kind == "new" %}
@@ -258,7 +266,7 @@
           {% if incident_rows %}
             <div class="tbl-wrap">
               <table class="tbl" id="incidents">
-                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th><th>Events</th><th>Made</th><th></th></tr></thead>
+                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th>{% if sitting_on %}<th>The assistant holds</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
                 <tbody>
                   {% for row in incident_rows %}
                     <tr class="goes" tabindex="0" data-open="{{ row.url }}">
@@ -266,6 +274,16 @@
                       <td>{{ row.cameras }}</td>
                       <td class="mono">{{ row.span }}</td>
                       <td><span class="pill {{ row.tone }} small">{{ row.placed }}</span></td>
+                      {% if sitting_on %}
+                        {% comment %}One sitting on the case page (Phase 8 chapter 10): the bar in small, from the kept shares.{% endcomment %}
+                        <td>{% with T=row.sitting %}{% if T.on %}
+                          <span class="sitting-mini {{ T.zone }}" title="{{ T.sentence }}">
+                            <span class="figure">{{ T.figure }}</span>
+                            <span class="bar"><span class="blocks">{% for cam in T.cameras %}<i class="{% if cam.read == 'words' %}words{% endif %}" style="width: {{ cam.percent }}%" title="{{ cam.name }}"></i>{% endfor %}</span></span>
+                            <span class="word {{ T.tone }}">{{ T.word }}</span>
+                          </span>
+                        {% endif %}{% endwith %}</td>
+                      {% endif %}
                       <td>{{ row.events }}{% if row.memo %}<div class="muted small nowrap">{{ row.memo }}</div>{% endif %}</td>
                       <td class="muted nowrap">{{ row.incident.created|date:"d M Y" }}{% if row.incident.created_by %} by {{ row.incident.created_by.shown_name }}{% endif %}</td>
                       <td class="acts"><a href="{{ row.url }}" class="btn primary small">Open the incident</a></td>

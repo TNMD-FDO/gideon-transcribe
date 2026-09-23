@@ -203,6 +203,13 @@ class IncidentCamera(models.Model):
     # Pinned: kept in the Sitting with what it showed whatever else is added
     # (Phase 8 chapter 9). The incident's, and it survives a re-sync.
     pinned = models.BooleanField(default=False)
+    # The camera's share of the Sitting, kept so the case page draws the bar
+    # without reading a Digest (Phase 8 chapter 10): its record as chapter 9
+    # counts it (the Digest, or the transcript), its transcript alone, and
+    # when the two were counted. Refreshed when the Digest is newer.
+    record_tokens = models.IntegerField(default=0)
+    words_tokens = models.IntegerField(default=0)
+    record_made_at = models.DateTimeField(null=True, blank=True)
     added = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -387,6 +394,8 @@ def _add_key(incident: Incident, recording) -> str:
 
 def offers(case) -> list[dict]:
     """What the case page offers: groups to make, and videos to add to an Incident."""
+    from core import sitting
+
     if not proposed_on():
         return []
     declined = set(case.declined_offers or [])
@@ -427,6 +436,9 @@ def offers(case) -> list[dict]:
                         "incident": incident,
                         "recording": recording,
                         "line": (f"1 more video ran during {incident.name}. Add it?"),
+                        # The sitting as it would read with the video in
+                        # (Phase 8 chapter 10).
+                        "sitting": sitting.json_for(incident, [recording]),
                     }
                 )
     rest = [one for one in spans if one[0].pk not in taken]
@@ -452,6 +464,8 @@ def offers(case) -> list[dict]:
                 "recordings": recordings,
                 "date": date,
                 "line": line + " Make them an incident?",
+                # The sitting as the incident would read (Phase 8 chapter 10).
+                "sitting": sitting.json_for_recordings(recordings),
             }
         )
     return offered
@@ -975,7 +989,7 @@ def placed_words(incident: Incident) -> tuple[str, str]:
 
 def strip_rows(case) -> list[dict]:
     """The case page's Incidents strip, one line per Incident."""
-    from core import incident_assistant
+    from core import incident_assistant, sitting
 
     rows = []
     for incident in case.incidents.all():
@@ -990,6 +1004,8 @@ def strip_rows(case) -> list[dict]:
                 "events": incident.events.filter(proposed=False).count(),
                 "memo": incident_assistant.memo_line(incident),
                 "url": incident.url(),
+                # The sitting in small (Phase 8 chapter 10), from the kept shares.
+                "sitting": sitting.json_for(incident),
             }
         )
     return rows

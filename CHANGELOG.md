@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.79.0, 2026-09-23
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Phase 8 chapter 10, the sitting on the case page.
+
+- **The Incidents tab's row carries the bar in small.** A column, "The
+  assistant holds", after Cameras: the figure ("5½ of 7½ hours' worth"), a
+  thin bar with one block per camera, and a word on the right: "all 12
+  whole", or "3 cameras by words alone" in amber, or "does not fit". The
+  row's hover carries the incident page's sentence. The column is absent
+  while the assistant or Incidents is off.
+- **The offer shows the bar before the incident exists.** "12 videos ran
+  at the same time" gains the bar as the incident would read with those
+  videos in, and the offer to add one later video to an incident shows the
+  bar with the video in. Nothing is withheld for size.
+- **Each camera's share is kept on the camera** (`record_tokens`,
+  `words_tokens`, `record_made_at`, migration 0059) and counted again when
+  its Digest is newer, so a case page draws the bar without reading a
+  Digest, and the incident page's bar is drawn from the same figures.
+- The incident page's bar now comes from the kept shares by the same
+  longest-first arithmetic the real reading follows, rather than fitting
+  the record itself on every draw.
+
 ## v1.78.0, 2026-09-23
 
 ```

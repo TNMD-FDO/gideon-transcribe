@@ -37,6 +37,7 @@ from core import (
     retention,
     settings_store,
     sharing,
+    sitting,
     uploads,
     vision,
 )
@@ -365,6 +366,8 @@ def _incidents_context(case: Case) -> dict:
         "incident_rows": incidents.strip_rows(case),
         "incident_offers": incidents.offers(case),
         "incident_videos": videos,
+        # The sitting's column and the offer's bar (Phase 8 chapter 10).
+        "sitting_on": sitting.available(),
         "incident_most": incidents.most_cameras(),
         "incident_wall": incidents.wall_size(),
     }

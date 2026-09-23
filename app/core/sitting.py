@@ -1,4 +1,4 @@
-"""One sitting (Phase 8 chapter 9).
+"""One sitting (Phase 8 chapter 9), and its bar on the case page (chapter 10).
 
 The AI assistant reads an Incident at one sitting before it writes the memo,
 checks the report or answers a question: every synced camera's record in one
@@ -11,11 +11,18 @@ longest cameras are read by their words alone (their transcript in place of
 their Digest), longest first, skipping Pinned cameras, until it fits. Only
 when every unpinned camera is by words alone and the whole still does not fit
 does the call fail, and the page says so.
+
+Chapter 10: each camera's share of the Sitting is kept on the camera
+(`record_tokens`, `words_tokens`, `record_made_at`) and refreshed when its
+Digest is newer, so the bar is drawn from the shares and a case page reads
+no Digest to draw a row. The real calls still fit the record itself (`fit`).
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+
+from django.utils import timezone
 
 from core import assistant, engine, prompts, settings_store
 
@@ -30,6 +37,13 @@ class TooLong(engine.Problem):
     def __init__(self, pinned: list[str]) -> None:
         super().__init__(engine.TOO_LONG, "the words alone are too long")
         self.pinned = pinned
+
+
+def available() -> bool:
+    """Whether the bar is drawn at all: the assistant on, and Incidents on."""
+    from core import incidents
+
+    return bool(incidents.on() and settings_store.get("assistant_available"))
 
 
 def pinned_names(incident) -> set[str]:
@@ -79,6 +93,103 @@ def fit(
         words_alone.append(max(movable, key=lambda name: seconds.get(name, 0.0)))
 
 
+# The shares (chapter 10) ------------------------------------------------------
+
+
+def _record_tokens_by_camera(incident, words_alone=frozenset()) -> dict[str, int]:
+    from core.incident_assistant import record_of
+
+    record = record_of(incident, words_alone=words_alone)
+    by_camera: dict[str, int] = {}
+    for _, name, line in record["rows"]:
+        by_camera[name] = by_camera.get(name, 0) + prompts.tokens(name + ": " + line)
+    return by_camera
+
+
+def _stale(camera) -> bool:
+    """A share is stale when it was never counted or its Digest is newer."""
+    if camera.record_made_at is None:
+        return True
+    transcript = getattr(camera.recording, "transcript", None)
+    if transcript is None:
+        return False
+    made = assistant.digest_made_at(transcript)
+    return bool(made and made > camera.record_made_at)
+
+
+def refresh_shares(incident, cameras=None) -> None:
+    """Count every synced camera's record and words, and keep them. One
+    reading of the record for the whole incident, never one per camera."""
+    from core.incident_assistant import synced_cameras
+
+    if cameras is None:
+        cameras = [
+            one
+            for one in synced_cameras(incident)
+            if hasattr(one.recording, "transcript")
+        ]
+    if not cameras:
+        return
+    whole = _record_tokens_by_camera(incident)
+    words = _record_tokens_by_camera(
+        incident, words_alone=frozenset(one.camera_id() for one in cameras)
+    )
+    now = timezone.now()
+    for camera in cameras:
+        name = camera.camera_id()
+        camera.record_tokens = whole.get(name, 0)
+        camera.words_tokens = words.get(name, 0)
+        camera.record_made_at = now
+        camera.save(update_fields=["record_tokens", "words_tokens", "record_made_at"])
+
+
+def _shares_of(incident) -> list[dict]:
+    """Every synced camera's share, refreshed where stale."""
+    from core.incident_assistant import synced_cameras
+
+    cameras = [
+        one for one in synced_cameras(incident) if hasattr(one.recording, "transcript")
+    ]
+    if any(_stale(one) for one in cameras):
+        refresh_shares(incident, cameras)
+    return [
+        {
+            "id": str(one.pk),
+            "name": one.camera_id(),
+            "seconds": one.length(),
+            "record": one.record_tokens,
+            "words": one.words_tokens,
+            "pinned": one.pinned,
+            "has_digest": one.record_tokens != one.words_tokens,
+            "adding": False,
+        }
+        for one in cameras
+    ]
+
+
+def _share_of_recording(recording) -> dict | None:
+    """A video not yet in an incident (the offer, the Add cameras dialog):
+    counted for the draw and not kept."""
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return None
+    name = (recording.stamp or {}).get("camera") or recording.title
+    words_text = prompts.render(prompts.lines_of(transcript))
+    digest = assistant.digest_text(transcript) if assistant.digests_on() else ""
+    words = prompts.tokens(words_text)
+    record = prompts.tokens(digest) if digest else words
+    return {
+        "id": "",
+        "name": name,
+        "seconds": float(recording.duration_seconds or 0.0),
+        "record": record,
+        "words": words,
+        "pinned": False,
+        "has_digest": bool(digest),
+        "adding": True,
+    }
+
+
 # The bar -------------------------------------------------------------------
 
 
@@ -101,12 +212,31 @@ def _memo_shape(incident) -> tuple[str, int]:
     return system, assistant.cap(settings_store.incident_memo_answer_cap())
 
 
+def _overhead(incident) -> int:
+    """What a reading costs before any camera: the templates, the cameras
+    line and the chronology (empty for an incident that does not exist yet)."""
+    from core.incident_assistant import _cameras_line, _chronology_lines
+
+    system, _ = _memo_shape(incident)
+    if incident is None:
+        head, events, about = "", [], ""
+    else:
+        head = _cameras_line(incident)
+        events, _ = _chronology_lines(incident)
+        about = incident.about
+    return prompts.tokens(system) + prompts.tokens(
+        prompts.incident_memo_input(head, events, "", about=about)
+    )
+
+
 def _hours_words(hours: float) -> str:
     """Halves under ten hours, whole above; never "0"."""
     if hours < 10:
         rounded = max(0.5, round(hours * 2) / 2)
         whole = int(rounded)
-        return f"{whole}½" if rounded != whole else str(whole)
+        if rounded == whole:
+            return str(whole)
+        return "½" if whole == 0 else f"{whole}½"
     return str(int(round(hours)))
 
 
@@ -114,113 +244,55 @@ def _count(count: int, word: str) -> str:
     return f"{count} {word}{'' if count == 1 else 's'}"
 
 
-def json_for(incident, extra_recordings=()) -> dict:
-    """The Cameras tab's block and the Add cameras dialog's bar.
-
-    `extra_recordings` are the case's videos ticked on the dialog, not yet in
-    the incident: their record is counted as if added, so the bar says what
-    the Sitting will hold with them in.
-    """
-    from core.incident_assistant import (
-        _cameras_line,
-        _chronology_lines,
-        record_of,
-        synced_cameras,
-    )
-
+def _bar(shares: list[dict], *, overhead: int, answer_cap: int, offer: bool) -> dict:
+    """The bar from the shares: chapter 9's arithmetic on the kept figures.
+    The longest camera with a Digest, not pinned, goes to words alone first
+    when the whole does not fit, the same rule the real fit follows."""
     window = engine.window()
-    cameras = [
-        one for one in synced_cameras(incident) if hasattr(one.recording, "transcript")
-    ]
-    if not cameras and not extra_recordings:
-        return {
-            "on": False,
-            "window": window,
-            "window_source": engine.window_source(),
-        }
-
-    system, answer_cap = _memo_shape(incident)
-    event_lines, _ = _chronology_lines(incident)
-    pins = pinned_names(incident)
-
-    # Each camera's share of the full record: what the assistant reads of it
-    # when everything is read whole.
-    full = record_of(incident)
-    by_camera: dict[str, int] = {}
-    for _, name, line in full["rows"]:
-        by_camera[name] = by_camera.get(name, 0) + prompts.tokens(name + ": " + line)
-    seconds = {one.camera_id(): one.length() for one in cameras}
-    overhead = prompts.tokens(system) + prompts.tokens(
-        prompts.incident_memo_input(
-            _cameras_line(incident), event_lines, "", about=incident.about
-        )
-    )
-
-    # The cameras being added, counted as if in.
-    extra: list[dict] = []
-    for recording in extra_recordings:
-        transcript = getattr(recording, "transcript", None)
-        if transcript is None:
-            continue
-        digest = assistant.digest_text(transcript) if assistant.digests_on() else ""
-        text = digest or prompts.render(prompts.lines_of(transcript))
-        name = (recording.stamp or {}).get("camera") or recording.title
-        extra.append(
-            {
-                "name": name,
-                "tokens": prompts.tokens(text),
-                "seconds": float(recording.duration_seconds or 0.0),
-            }
-        )
-
-    # The fit, as the memo would make it.
+    adding = any(one["adding"] for one in shares)
+    full = overhead + answer_cap + sum(one["record"] for one in shares)
+    need = full
     words_alone: list[str] = []
     over = False
-    try:
-        _, _, words_alone = fit(
-            incident,
-            system=system,
-            wrap=lambda body: prompts.incident_memo_input(
-                _cameras_line(incident), event_lines, body, about=incident.about
-            ),
-            answer_cap=answer_cap,
-            window=window,
-        )
-    except TooLong:
-        over = True
-        words_alone = sorted(name for name in full["used"] if name not in pins)
+    while need > window:
+        movable = [
+            one
+            for one in shares
+            if one["has_digest"]
+            and not one["pinned"]
+            and one["name"] not in words_alone
+        ]
+        if not movable:
+            over = True
+            break
+        longest = max(movable, key=lambda one: one["seconds"])
+        need -= longest["record"] - longest["words"]
+        words_alone.append(longest["name"])
+    pins = sorted(one["name"] for one in shares if one["pinned"])
 
-    added_tokens = sum(e["tokens"] for e in extra)
-    need = overhead + answer_cap + sum(by_camera.values()) + added_tokens
-    total_seconds = sum(seconds.values()) + sum(e["seconds"] for e in extra)
-    record_tokens = sum(by_camera.values()) + added_tokens
-    # Hours of camera: the cameras' own length is what is held, and the
-    # sitting holds that many hours as often as the window holds the need.
-    share = need / window if window else 0.0
+    total_seconds = sum(one["seconds"] for one in shares)
+    share = full / window if window else 0.0
     used_hours = total_seconds / 3600
     capacity_hours = used_hours / share if share else 0.0
-    average = record_tokens / (len(cameras) + len(extra)) if (cameras or extra) else 0
-    room = int((window - need) / average) if average and need < window else 0
-
-    if extra:
-        zone = "over" if share > 1 else ("nearly" if share >= NEARLY else "room")
-        alone_count = len(words_alone)
-    else:
-        zone = (
-            "over"
-            if (over or words_alone)
-            else ("nearly" if share >= NEARLY else "room")
-        )
-        alone_count = len(words_alone)
-    count = len(cameras) + len(extra)
+    record_tokens = sum(one["record"] for one in shares)
+    average = record_tokens / len(shares) if shares else 0
+    room = int((window - full) / average) if average and full < window else 0
+    zone = (
+        "over" if (over or words_alone) else ("nearly" if share >= NEARLY else "room")
+    )
+    count = len(shares)
+    alone_count = len(words_alone)
     shown = count - alone_count
 
     if zone == "room":
         sentence = (
-            "It reads everything in this incident at one sitting before it writes "
-            "the memo, checks the report or answers a question. "
-            f"Room for about {_count(room, 'more camera')} of this length."
-        )
+            "Still one sitting: the memo, the report check and Gideon's "
+            f"answers read what was said and what was shown on all {count} "
+            "cameras. "
+            if adding
+            else "It reads everything in this incident at one sitting before "
+            "it writes the memo, checks the report or answers a question. "
+        ) + f"Room for about {_count(room, 'more camera')} of this length."
     elif zone == "nearly":
         sentence = (
             "Nearly full. One more long camera and the assistant will stop reading "
@@ -250,18 +322,30 @@ def json_for(incident, extra_recordings=()) -> dict:
                 if pins
                 else " Even so it does not fit; leave a camera out."
             )
-    if extra and zone != "over":
-        sentence = (
-            "Still one sitting: the memo, the report check and Gideon's answers "
-            f"read what was said and what was shown on all {count} cameras."
+    # The case page's short word beside the small bar (chapter 10).
+    if over and not words_alone:
+        word, tone = "does not fit", "danger"
+    elif words_alone:
+        word, tone = f"{_count(alone_count, 'camera')} by words alone", "warn"
+    else:
+        word, tone = f"all {count} whole" if count > 1 else "read whole", "muted"
+    if offer:
+        short = (
+            f"More than one sitting: the assistant would read what {shown} of "
+            f"{count} showed."
+            if words_alone
+            else f"Room for about {_count(room, 'more camera')} of this length."
         )
+    else:
+        short = ""
 
     return {
         "on": True,
         "window": window,
         "window_source": engine.window_source(),
-        "need": need,
+        "need": full,
         "share": round(share, 3),
+        "percent": min(100.0, round(share * 100, 1)),
         "zone": zone,
         "figure": (
             f"{_hours_words(used_hours)} of {_hours_words(capacity_hours)} hours' worth"
@@ -275,25 +359,77 @@ def json_for(incident, extra_recordings=()) -> dict:
             else f"{_count(count, 'camera')}"
         ),
         "sentence": sentence,
+        "short": short,
+        "word": word,
+        "tone": tone,
         "cameras": [
             {
-                "id": str(one.pk),
-                "name": one.camera_id(),
-                "seconds": seconds.get(one.camera_id(), 0.0),
-                "tokens": by_camera.get(one.camera_id(), 0),
-                "read": "words" if one.camera_id() in words_alone else "both",
-                "pinned": one.pinned,
-                "has_digest": one.camera_id() in full["used"],
+                "id": one["id"],
+                "name": one["name"],
+                "seconds": one["seconds"],
+                "tokens": one["record"],
+                # Its width on a bar whose whole is the sitting.
+                "percent": round(one["record"] / window * 100, 2) if window else 0,
+                "read": "words" if one["name"] in words_alone else "both",
+                "pinned": one["pinned"],
+                "has_digest": one["has_digest"],
+                "adding": one["adding"],
             }
-            for one in sorted(cameras, key=lambda one: one.starts_at or 0.0)
+            for one in shares
         ],
         "adding": [
-            {"name": e["name"], "seconds": e["seconds"], "tokens": e["tokens"]}
-            for e in extra
+            {"name": one["name"], "seconds": one["seconds"], "tokens": one["record"]}
+            for one in shares
+            if one["adding"]
         ],
         "words_alone": words_alone,
-        "pinned": sorted(pins),
+        "pinned": pins,
     }
+
+
+def json_for(incident, extra_recordings=()) -> dict:
+    """The Cameras tab's block, the Add cameras dialog's bar, the case page's
+    row, and the offer to add a video to an incident.
+
+    `extra_recordings` are videos not yet in the incident: counted as if
+    added, so the bar says what the Sitting will hold with them in.
+    """
+    if not available():
+        return {"on": False}
+    shares = _shares_of(incident)
+    for recording in extra_recordings:
+        one = _share_of_recording(recording)
+        if one is not None:
+            shares.append(one)
+    if not shares:
+        return {
+            "on": False,
+            "window": engine.window(),
+            "window_source": engine.window_source(),
+        }
+    _, answer_cap = _memo_shape(incident)
+    return _bar(
+        shares,
+        overhead=_overhead(incident),
+        answer_cap=answer_cap,
+        offer=bool(extra_recordings),
+    )
+
+
+def json_for_recordings(recordings) -> dict:
+    """The offer's bar (chapter 10): the incident as it would read with these
+    videos in, before it exists; nothing is kept."""
+    if not available():
+        return {"on": False}
+    shares = [
+        one
+        for one in (_share_of_recording(recording) for recording in recordings)
+        if one is not None
+    ]
+    if not shares:
+        return {"on": False}
+    _, answer_cap = _memo_shape(None)
+    return _bar(shares, overhead=_overhead(None), answer_cap=answer_cap, offer=True)
 
 
 def read_words(count: int, shown: int, alone: list[str]) -> str:
