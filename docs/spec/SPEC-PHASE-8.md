@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out, notes, a way to report a problem, the police report beside the cameras, the incident page's desk kept and made plainer to use, the report brought to the reader in a card, and the pages that fail well. All seven chapters are written for the build; chapters 4 and 7 are in parts.
+The pages laid out, notes, a way to report a problem, the police report beside the cameras, the incident page's desk kept and made plainer to use, the report brought to the reader in a card, the pages that fail well, and the event's line with the merge hint's rule. All eight chapters are written for the build; chapters 4, 7 and 8 are in parts.
 
 ## About this document
 
@@ -17,6 +17,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **The desk, kept** (chapter 5, for the build): the incident page as it stands, with the focus camera behaving like a video (a player bar on the picture, the picture at its own proportions), the focus camera's words following the clock in the space under the filmstrip, Clip as a button on the transport and a track on the strip that says what it is for, a lane of the clips made, and a handle that sizes the work panel.
 - **The report in place** (chapter 6, for the build): one paragraph card, opened in place from every citation to a paragraph (Gideon's answers, the comparison's rows, a chronology row or event that rests on a paragraph, the memo, Search's hits, the Notes tab), showing the page's picture with the paragraph lit and the words around it, with Open the document one press further; the comparison's Word export in the Export menu; a handle on Gideon's panel.
 - **The pages that fail well** (chapter 7, for the build, in four parts): a session that ends under an open page is said on that page, once, with Sign in again returning the person to where they were, and the page stops asking the server for anything; one page in the app's frame for an address that is gone and one for the server's own failure; the Admin's warning as a pill beside the title instead of a band; the case page's list given the width.
+- **The event's line, and the merge hint's rule** (chapter 8, for the build, in two parts): an Event's text read as a line and a detail wherever it is drawn, so a row says what happened in one line and puts the rest under it, nothing stored twice and no data changed; and the Speakers page's merge hint offered to a fragment with a neighbour, the Speaker whose turns its few lines sit inside, and to nobody else.
 
 ## Contents
 
@@ -27,7 +28,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 5. The desk, kept
 6. The report in place
 7. The pages that fail well
-8. The proposed event's line (to be written from the same walk)
+8. The event's line, and the merge hint's rule
 9. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
@@ -614,6 +615,66 @@ Added to `CONTEXT.md` with this chapter. **Admin pill**: the small mark beside a
 - The card the pill opens: whether it is the paragraph card's drawing or the confirm box's, so long as it is one of the two.
 - The measure of the About pane if 24rem proves wrong on the office's screens; the rule that the list takes the rest stands.
 
+## 8. The event's line, and the merge hint's rule
+
+Written 2026-09-23 from the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items I4 and V7). Two things on two pages that read wrong for the same reason: the page shows the data as it came, where a reader wants one line and the rest under it, and a hint is offered on a test that is true of too many. The first rows of the walk's chronology were camera descriptions four lines long, accepted as events before Phase 7 chapter 2 asked the proposer for one sentence; and on the Speakers page five different people were each offered a merge into the officer, because each never spoke while the officer did.
+
+### Principles
+
+1. **An event is one line; everything else is under it.** Whatever an Event's text is, the row says what happened in one line and puts the rest on the muted line with the source and the note. Nothing is thrown away: the layer edits the whole, the exports print the whole, and the memo reads the whole. The rule is the page's, so it holds for every Event there is, old and new, and no data changes.
+2. **A hint says what the evidence shows and is offered when the evidence is enough.** The merge hint is Phase 5's: the timing shows it, the listener decides. What changes is when the timing is enough to name a merge: silence beside the busiest speaker is not; a few short lines that sit inside another speaker's turns is.
+3. **Fewer buttons, the same words.** Where the timing shows less, the card says so in plain words and offers no button; same person as... on the card remains the way to merge by ear.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Detail**: the part of an Event's text after its line, shown on the muted line under it. **Neighbour**: the Speaker whose turns a small Speaker's lines sit inside, the one the merge hint names. The pages never say summary, snippet or truncation for the line, nor cluster, similarity or confidence for the hint.
+
+### Part 1. The event's line
+
+- **The line and the detail.** An Event's text is one field, up to 500 characters, as it is. The page reads it in two parts: the **line** is the text up to its first line break when it has one; otherwise its first sentence when the text runs past 120 characters (a sentence ends at a full stop, a question mark, an exclamation mark or a semicolon followed by a space); otherwise the whole. The **detail** is everything after the line. A line that would still run past 160 characters is cut at the last word before 160 with an ellipsis, and the detail is then the whole text. The split is made in one place in the app and given to every drawing; nothing is stored twice.
+- **On the rows.** The Chronology's row and the Proposed events layer's row draw the line where the text was drawn, with the To check pill after it as today, and the detail first on the muted line, before the source, in plain type (the note stays in italics, the why in italics after it). The Events lane's hover and the strip's picture carry the line alone. Find's hits match on the whole text and show the line.
+- **On the layer.** The event's layer edits the whole text in one box, with the words under it: "The first line is the event. Anything after a line break is its detail, shown under it." A person who wants a shorter line presses Enter after it; a person who wants the description gone edits it out. Nothing else on the layer changes.
+- **In the exports and the memo.** The chronology's Word export prints the line in the event's cell and the detail under it in the smaller type, and the spreadsheet gets a Detail column after the event's; the memo is told the whole text as today, since the detail is often the evidence. A clip's caption from an event uses the line.
+- **What is accepted.** Accepting a proposal, a camera line or a comparison's finding stores the text as it comes, as today; the rule above makes the row read right whatever came. The proposer's own ask (one sentence, up to 120 characters, never beginning "the camera") stands from Phase 7 chapter 2, so new proposals seldom have a detail at all.
+- **Rewriting a line** by the engine ("shorten this") is not in this chapter; a person edits.
+
+### Part 2. The merge hint's rule
+
+- **Today's test** names a merge for any Speaker under thirty seconds of talk who never overlaps a Speaker with more lines, and names the busiest such Speaker. On a stop with one officer talking most, every bystander with two lines qualifies, and each is offered a merge into the officer.
+- **The fragment.** A Speaker is a fragment when it has at most eight lines and under thirty seconds of talk and none of its lines overlaps another Speaker's (two lines that touch within half a second are not an overlap, as Phase 5 has it).
+- **The neighbour.** For each of a fragment's lines, the Speaker whose line ends within three seconds before it starts, or begins within three seconds after it ends, is that line's neighbour; where both sides have one, the nearer. The fragment's neighbour is the Speaker who is the neighbour of more than half of its lines. A fragment with no such Speaker has no neighbour.
+- **The hint.** A fragment with a neighbour carries "Never speaks while <neighbour> does, and its N lines sit inside <neighbour>'s turns; see the lanes." with **Merge into <neighbour>**. A fragment without one carries "N short lines, never over anyone else's; see the lanes." and no button. A Speaker that is not a fragment carries no hint. Two fragments never name each other.
+- **Where the rule lives.** In the app, on the Segments as they are, when the Speakers page is drawn; nothing is stored and nothing is asked of the engine. The Speaker check and the voice comparison of the accuracy plan are not changed by this chapter and not depended on.
+
+### In and out
+
+- Nothing is imported or exported differently except the Detail column and the Word export's second paragraph, both under Part 1.
+
+### What changes from earlier phases
+
+- Phase 6 chapter 2's row and Phase 8 chapter 1's "one line and a muted line under it" gain the line-and-detail rule; the exports of Phase 7 chapter 1 gain the detail's place.
+- Phase 5 chapter 1's fragment hint gains the neighbour rule; its words change as above; same person as... and the lanes' drag are unchanged.
+
+### Audit rows
+
+- None added. A merge writes its rows as today.
+
+### Settings
+
+- None added. The measures (120 and 160 characters, eight lines, thirty seconds, three seconds, half a second) are the app's, written down here; an office that finds them wrong asks for a change.
+
+### Not in this chapter
+
+- **The engine shortening a line**: not chosen; a person edits, and the proposer already asks for one sentence.
+- **Storing the line and the detail as two fields**: ruled out; one field, read two ways, keeps every export and the memo as they are and changes no data.
+- **A voice comparison behind the hint**: held with the accuracy plan.
+
+### Left to the build
+
+- The exact sentence-end rule where a full stop sits inside an abbreviation ("Sgt. Hale"): the build may keep a short list of such abbreviations or accept the odd early cut; either is written in the commit.
+- Whether the detail on the muted line is cut to a measure with the whole on the layer, within the rule that nothing is lost.
+- The neighbour's tie-break when two Speakers neighbour the same number of a fragment's lines: the one with more lines.
+
 ## 9. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
@@ -635,6 +696,7 @@ Added to `CONTEXT.md` with this chapter. **Admin pill**: the small mark beside a
 | (none; Clip created gains its way in) | | 5 |
 | (none) | | 6 |
 | (none) | | 7 |
+| (none) | | 8 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -647,10 +709,11 @@ Added to `CONTEXT.md` with this chapter. **Admin pill**: the small mark beside a
 | (none) | | | 5 |
 | (none) | | | 6 |
 | (none) | | | 7 |
+| (none) | | | 8 |
 
 ## Sources
 
-The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison. For chapter 7, the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items V5, D2, V2 and C5) and the drawings `docs/spec/mockups/phase-8-fail-well.html`.
+The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison. For chapter 7, the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items V5, D2, V2 and C5) and the drawings `docs/spec/mockups/phase-8-fail-well.html`. For chapter 8, the same walk (items I4 and V7) and Phase 5 chapter 1's fragment hint.
 
 ## Amendments applied
 
