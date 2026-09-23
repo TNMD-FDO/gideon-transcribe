@@ -1,0 +1,127 @@
+<title>The pages that fail well</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#f4f6f8;--ink:#171b21;--muted:#5b6673;--line:#d3d9e0;--card:#fff;--warn:#b7791f;--warn-soft:#fbf1dc;--accent:#2f7fb8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#12161b;--ink:#e7ebef;--muted:#98a4b1;--line:#343d48;--card:#1a1f26;--warn:#e0b35a;--warn-soft:#3a2e14;--accent:#5fadd8}}
+:root[data-theme="dark"]{--bg:#12161b;--ink:#e7ebef;--muted:#98a4b1;--line:#343d48;--card:#1a1f26;--warn:#e0b35a;--warn-soft:#3a2e14;--accent:#5fadd8}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;padding:24px 16px 48px;font-size:14px;line-height:1.5}
+h1{font-size:22px;margin:0 0 4px}
+.lead{color:var(--muted);margin:0 0 28px;max-width:70ch}
+section{margin:0 0 44px}
+h2{font-size:17px;margin:0 0 10px}
+.frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card);max-width:960px}
+.bar{display:flex;gap:18px;align-items:center;padding:0 16px;height:40px;border-bottom:1px solid var(--line);font-weight:500}
+.bar .who{margin-left:auto;color:var(--muted);font-weight:400}
+.page{padding:14px 16px 20px}
+.crumb{color:var(--muted);font-size:13px;margin:0 0 4px}
+.title{display:flex;align-items:center;gap:12px;margin:0 0 10px}
+.title h3{margin:0;font-size:20px;flex-grow:1}
+.btn{border:1px solid var(--line);border-radius:6px;padding:5px 12px;background:var(--card);color:var(--ink);font:inherit}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--warn);color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:500;position:relative}
+.card{position:absolute;top:calc(100% + 8px);right:0;width:34ch;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--ink);font-weight:400;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:2}
+.card .close{float:right;color:var(--muted)}
+.session{display:flex;align-items:center;gap:14px;padding:8px 16px;background:var(--warn-soft);border-bottom:1px solid var(--warn)}
+.session .btn{margin-left:auto}
+.inert{opacity:.45;pointer-events:none}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px}
+.video{aspect-ratio:16/9;background:#000;border-radius:6px;position:relative}
+.video span{position:absolute;left:10px;bottom:8px;color:#fff;font-size:12px}
+.lines p{margin:0 0 6px;font-size:13px}
+.lines .t{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:8px}
+.gone{max-width:52ch;margin:26px auto 30px}
+.gone h3{margin:0 0 8px;font-size:20px}
+.gone ul{margin:8px 0 14px 18px;padding:0;color:var(--muted)}
+.gone .ways{display:flex;gap:8px;flex-wrap:wrap}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 24rem;gap:20px;align-items:start}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th{color:var(--muted);font-weight:500}
+.about{border-left:1px solid var(--line);padding-left:16px;font-size:13px}
+.about dl{margin:0 0 12px;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px}
+.about dt{color:var(--muted)}
+.about dd{margin:0}
+.note{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 16px;max-width:80ch}
+.note p{margin:10px 0}
+@media (max-width:760px){.stage,.split{grid-template-columns:1fr}.about{border-left:0;padding-left:0}}
+</style>
+<h1>The pages that fail well</h1>
+<p class="lead">Four drawings for Phase 8 chapter 7: a page whose session has ended, the app's own page for an address that is gone, the Admin's warning as a pill beside the title, and the case page with the list given the width. The names are made up.</p>
+
+<section>
+<h2>1. The session ended under an open recording page</h2>
+<div class="frame">
+  <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span>Cases</span><span>My recordings</span><span>Clips</span><span>Help</span><span class="who">reyes · Sign out</span></div>
+  <div class="session"><span>Your session ended after a long wait. Your cases, clips and documents are kept.</span><button class="btn primary">Sign in again</button></div>
+  <div class="page inert">
+    <p class="crumb">Cases › Reyes v. State</p>
+    <div class="title"><h3>BWC1-2041.mp4</h3><button class="btn">Export</button><button class="btn">More</button></div>
+    <div class="stage">
+      <div class="video"><span>▶ 12:41 / 47:02</span></div>
+      <div class="lines">
+        <p><span class="t">12:38</span>Officer 1: Step out of the vehicle for me.</p>
+        <p><span class="t">12:41</span>Speaker 3: I did not do anything.</p>
+        <p><span class="t">12:44</span>Officer 1: Nobody said you did. Step out.</p>
+        <p><span class="t">12:49</span>Officer 2: Hands where I can see them.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note"><p>The line sits where the idle warning sits. The page under it is left as it was, paused and greyed, and asks the server for nothing more. Sign in again goes to the sign-in page and back to this recording at this moment. With Folder management off the second sentence reads "Your recordings and transcripts have been removed."</p></div>
+</section>
+
+<section>
+<h2>2. The gone page</h2>
+<div class="frame">
+  <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span>Cases</span><span>My recordings</span><span>Clips</span><span>Help</span><span class="who">reyes · Sign out</span></div>
+  <div class="page">
+    <div class="gone">
+      <h3>There is no page at this address.</h3>
+      <p>It may be that:</p>
+      <ul><li>the thing it pointed at was removed,</li><li>the link is older than what it pointed at,</li><li>or the address was mistyped.</li></ul>
+      <div class="ways"><button class="btn primary">Back to the case Reyes v. State</button><button class="btn">Cases</button><button class="btn">Start</button></div>
+    </div>
+  </div>
+</div>
+<div class="note"><p>The app's frame, the reasons, the way back. The case's name appears only when the address names a case the person may see; otherwise the page reads the same as for an address that never existed. A server failure uses the same frame with "Something went wrong on the server" and the Report a problem link.</p></div>
+</section>
+
+<section>
+<h2>3. The Admin pill, open</h2>
+<div class="frame">
+  <div class="bar"><b>Gideon Transcribe</b><span>Start</span><span>Cases</span><span>My recordings</span><span>Clips</span><span>Panel</span><span>Help</span><span class="who">alvarez · Admin · Sign out</span></div>
+  <div class="page" style="min-height:150px">
+    <p class="crumb">Cases</p>
+    <div class="title"><h3>Reyes v. State</h3>
+      <span class="pill">As an Admin
+        <span class="card"><span class="close">Close</span>You are viewing Alex Reyes's case as an Admin. This access is recorded in the audit log, and it does not count as the owner having used the case.</span>
+      </span>
+      <button class="btn primary">Add recordings</button></div>
+  </div>
+</div>
+<div class="note"><p>The band across the page goes. The pill sits at the right of the title row on the case page, the incident page, the recording page and its Speakers page, and My recordings when it is someone else's. Hover shows the sentence; a press opens it in this small card.</p></div>
+</section>
+
+<section>
+<h2>4. The case page at 1440 wide</h2>
+<div class="frame">
+  <div class="page">
+    <p class="crumb">Cases</p>
+    <div class="title"><h3>Reyes v. State</h3><button class="btn primary">Add recordings</button></div>
+    <div class="split">
+      <table class="tbl">
+        <tr><th>Recording</th><th>Length</th><th>Speakers</th><th>Added</th><th>State</th></tr>
+        <tr><td>BWC1-2041 Officer Alvarez 2025-11-06 20-24-40.mp4</td><td>47:02</td><td>5 unnamed</td><td>18 Sep 2026</td><td>Done</td></tr>
+        <tr><td>BWC2-098679 Officer Chen 2025-11-06 20-31-12.mp4</td><td>39:48</td><td>8 unnamed</td><td>18 Sep 2026</td><td>Done</td></tr>
+        <tr><td>DC-12 Dash camera unit 12 2025-11-06 20-19-05.mp4</td><td>52:10</td><td>None</td><td>18 Sep 2026</td><td>Done</td></tr>
+      </table>
+      <aside class="about">
+        <b>About this case</b>
+        <dl><dt>Recordings</dt><dd>3, 4.1 GB</dd><dt>Last activity</dt><dd>23 Sep 2026 09:12</dd><dt>Retention</dt><dd>Kept while in use</dd></dl>
+        <button class="btn">Download all transcripts</button>
+      </aside>
+    </div>
+  </div>
+</div>
+<div class="note"><p>The About pane takes 24rem at the right and the list takes the rest; the file names stay on one line. Below 1280 pixels the pane follows the list as today. From 2560 chapter 1's three panes stand.</p></div>
+</section>

@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 8 specification
 
-The pages laid out, notes, a way to report a problem, the police report beside the cameras, the incident page's desk kept and made plainer to use, and the report brought to the reader in a card. All six chapters are written for the build; chapter 4 is built in three parts.
+The pages laid out, notes, a way to report a problem, the police report beside the cameras, the incident page's desk kept and made plainer to use, the report brought to the reader in a card, and the pages that fail well. All seven chapters are written for the build; chapters 4 and 7 are in parts.
 
 ## About this document
 
@@ -16,6 +16,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **Documents beside the cameras** (chapter 4, for the build, in three parts): the police report added to an incident or a camera as a PDF, read page by page (OCR for a scan), its paragraphs cited by Gideon and found by Search with the real page shown; and the comparison, the report against the record with every finding cited on both sides and marked agrees, differs, not on camera or not in the report, each one press from becoming an event.
 - **The desk, kept** (chapter 5, for the build): the incident page as it stands, with the focus camera behaving like a video (a player bar on the picture, the picture at its own proportions), the focus camera's words following the clock in the space under the filmstrip, Clip as a button on the transport and a track on the strip that says what it is for, a lane of the clips made, and a handle that sizes the work panel.
 - **The report in place** (chapter 6, for the build): one paragraph card, opened in place from every citation to a paragraph (Gideon's answers, the comparison's rows, a chronology row or event that rests on a paragraph, the memo, Search's hits, the Notes tab), showing the page's picture with the paragraph lit and the words around it, with Open the document one press further; the comparison's Word export in the Export menu; a handle on Gideon's panel.
+- **The pages that fail well** (chapter 7, for the build, in four parts): a session that ends under an open page is said on that page, once, with Sign in again returning the person to where they were, and the page stops asking the server for anything; one page in the app's frame for an address that is gone and one for the server's own failure; the Admin's warning as a pill beside the title instead of a band; the case page's list given the width.
 
 ## Contents
 
@@ -25,7 +26,9 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 4. Documents beside the cameras
 5. The desk, kept
 6. The report in place
-7. Deferred and ruled out
+7. The pages that fail well
+8. The proposed event's line (to be written from the same walk)
+9. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -527,7 +530,91 @@ Added to `CONTEXT.md` with this chapter. **Paragraph card**: the card that opens
 - **The card as a window of its own**: not chosen; the document page is the whole-report view.
 - **Editing a document's words from the card**: ruled out; the page is the truth.
 
-## 7. Deferred and ruled out
+## 7. The pages that fail well
+
+Written 2026-09-23 from the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items V5, D2, V2 and C5). Four things the walk met that a fix release cannot take, because each needs a design rather than a line: the session ended under an open page and the page went on as if nothing had happened, then dropped the person on Sign in without a word; an address that no longer exists answers the framework's bare "Not Found" with no way back; the Admin's warning band takes a whole stripe of four pages for one sentence; and the case page wraps every file name onto three lines beside a pane of five facts. The one design under all four: a page that fails, or that has something to say beside its work, says it in place, in the app's own words, and leaves the person where they were.
+
+### Principles
+
+1. **The page says what happened, where the person is.** A session that ends under an open page is announced on that page, once, with the way back, and the page stops asking the server for anything. Nobody learns their session ended by landing on Sign in.
+2. **Nothing is lost by the ending that the rules do not already lose.** With Folder management on, the cases, clips and documents stay and the line says so; with it off, the Workspace goes as Phase 1 fixes, and the line says that instead. Signing in again returns the person to the page they were on.
+3. **A gone address is the app's page, not the server's.** Whatever a person typed, followed or kept, a page that does not exist answers in the app's frame with the reasons it might be gone and a way to the place it belonged to. It never reveals whether a thing exists that the person may not see.
+4. **A warning is the size of its words.** The Admin's notice on somebody else's page is a pill beside the title that carries the whole sentence one hover or press away, not a band across the page.
+5. **The list takes the width.** On the case page the recordings take the room and the facts about the case take what facts need. Chapter 1's rule, width is used, not capped, holds here as it holds on the incident page.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Admin pill**: the small mark beside a page's title that says an Admin is viewing another person's case, Workspace or recording, with the audit sentence behind it. The pages never say banner (the band it replaces), badge, tag or chip for it. **The gone page**: the app's one page for an address that has nothing behind it. No other word is added; the session's ending keeps Phase 1's words (Login session, idle timeout, the idle warning).
+
+### Part 1. A session that ends under an open page
+
+- **What happens today.** The idle warning counts down in the browser from the moment the page loaded and, at nought, guesses that the session ended. Meanwhile a page that asks the server for anything (the state of a batch, a playback copy, a match, the incident's state, Gideon's answer, a Stay signed in press) gets the sign-in page back as an answer, because the app redirects a request whose session has ended; the page tries to read it as JSON, fails, logs an error and asks again. The next thing the person presses lands them on Sign in. The cause line the middleware queues ("You were signed out after a long wait.", "You signed in from another place; this session has ended") is printed on the sign-in page, which is right, but the person has already lost their place.
+- **The server answers a script plainly.** A request made by a page's script, rather than by the browser following a link, is answered with a small JSON body and the status 401 when the session has ended, never with the sign-in page. The body says why, in the same causes the audit row records: `idle`, `elsewhere`, `blocked`, `deactivated`, `ended` (an Admin's End sessions), and `gone` when the browser has no session at all. The build marks a script's request the one way, on every request the scripts make (the incident page, the recording page, the case page, the Panel, the upload page, Gideon, Report a problem), so one rule covers them all. A request from a link or a form is redirected to Sign in as today.
+- **The page stops and says so.** The first such answer stops every timer and poll on the page, disables the page's controls (the transport, the forms, the buttons; the words stay readable and the video stays where it was, paused), and shows, where the idle warning shows, one line and one button:
+
+  ```
+  Your session ended after a long wait. Your cases, clips and documents are kept.   [ Sign in again ]
+  You signed in from another place, so this session ended. Your cases, clips and documents are kept.   [ Sign in again ]
+  ```
+
+  With Folder management off the second sentence is Phase 1's: "Your recordings and transcripts have been removed." A blocked or deactivated account gets the middleware's line, "This account cannot sign in. Contact IT.", and no button. Nothing is asked of the server again; a page left open overnight shows the line in the morning, once, with no errors under it.
+- **Sign in again returns the person.** The button goes to Sign in with the page's address as `next`, the tab or moment included when the page's address can carry it (the case page's tab, the incident page's moment and tab, the recording page's moment, a document's page and paragraph). The sign-in page honours `next` when it is a path inside the app (it begins with one slash and names no host; anything else is ignored and the person lands on Start as today), and the cause line is shown above the form as it is now. A person who signs in as somebody else lands on Start, not on the other person's page.
+- **The idle warning stops guessing.** The countdown stays, since the server can only say the time left when a page loads; but at nought the page asks the server once, with the same kind of request, whether the session is still open, and shows the ended line only when it is not. A second tab that kept the clock moving no longer makes the first say it was signed out when it was not. Stay signed in keeps working as it does.
+- **A form left open.** A form sent after the session ended, or after a sign-in in another tab changed the token, is refused today with the framework's plain "Forbidden" page. It becomes the app's page: "The form was open too long, or you signed in again in another tab. Go back and send it again." with Back, and nothing else on it. What was typed is the browser's to keep on Back; the page does not promise it.
+
+### Part 2. The gone page
+
+- **One page for every address that has nothing behind it.** The app's frame (the bar, the theme, the guide link, Report a problem), the words "There is no page at this address." and, under them, why that might be: the thing it pointed at was removed, the link is older than the thing it pointed at, or the address was mistyped. Then the way back: **Cases** for an address under `/case/`, **My recordings** for one under `/recording/`, the Panel's Status page for one under `/panel/` (an Admin only), and **Start** on every one of them. When the address names a case the person may see, the case's name is a link on the page ("Back to the case Smith"); when it names a case they may not see, or no case, the page reads the same as for an address that never existed, so a gone page never says whether a case is there.
+- **Nothing from the server's own page.** The 404 is answered in the app's template with the status kept, for a page request. A script's request that meets a 404 gets the small JSON body it gets today, and the page that asked handles it as it does; the gone page is for people, not scripts.
+- **The server's own failure.** A request the app could not answer (a 500) becomes the same frame with "Something went wrong on the server. It has been logged; try again in a moment, and if it keeps happening, report it." and the Report a problem link, which pre-fills where the person was as chapter 3 has it. The static page the framework shows today goes.
+- **What it is not.** A withheld feature (Folder management off, Documents off) answers as today, a 404 for a page that is not on; it lands on the gone page like any other. A page the person may not see (another person's case, Workspace or recording) answers the gone page too, as today's `Http404` answers, and for the same reason.
+
+### Part 3. The Admin pill
+
+- **Where it is.** On every page an Admin opens that belongs to somebody else (the case page, the incident page, the recording page and its Speakers page, My recordings as someone else's), a pill at the right of the title row reads **As an Admin** in the warning colour, with an icon from `icons.html` the build chooses. The band across the page goes.
+- **What it holds.** Hover or focus shows the whole sentence as the pill's title; a press opens it in a small card under the pill, the same shape as the paragraph card's head, with Close: "You are viewing Alex Reyes's case as an Admin. This access is recorded in the audit log, and it does not count as the owner having used the case." (a recording in a case says "case", a recording in nobody's case says "Workspace", as v1.75.1 has it; the name is the person's shown name). The sentence keeps every word the band carried; only its place changes.
+- **The idle warning and the session line** keep the band's shape, since they are the page's own state and not a note on it, and the messages a page prints on arrival (the cause line, "Kept", "Saved") keep theirs.
+
+### Part 4. The case page's width
+
+- **The rule.** From 1280 pixels the case page's cap of 100rem goes and the About pane takes a measure of 24rem at the right; the list takes everything else. The file name column takes the room a name needs before any other column wraps; the wrap that scrolls the table sideways is for a window narrower than the columns, not for a wide one. Below 1280 the About pane follows the list as today.
+- **From 2560** chapter 1's three panes stand (the list, the open recording's details or the Search tab's hits or an incident's Chronology in place, and the About pane), with the About pane at the same 24rem.
+- **The About pane** keeps its five facts and its buttons; it is not folded into the head. A person who opens a case is reading the list, and the pane is the place the facts are looked for.
+
+### In and out
+
+- Signing in with `next` lands on the page named; an audit row is not added for that, since the sign-in row already records the sign-in.
+- The gone page and the failure page are the app's templates for 404 and 500 and the CSRF failure view for 403; a script's request keeps its JSON answers on every status.
+
+### What changes from earlier phases
+
+- Phase 1's idle warning ("You have been signed out and your recordings and transcripts removed." at nought) becomes the session line above, asked of the server before it is shown.
+- Phase 1's sign-in page gains `next`; nothing else on it changes.
+- The Admin band of Phase 1 (the Workspace) and Phase 2 (the case) becomes the pill. ADR 0004's rule that an Admin's look is recorded and is not the owner's activity is unchanged; only where the sentence sits changes.
+- Chapter 1's case page widths: the cap goes and the About pane takes a measure instead of a share.
+
+### Audit rows
+
+- None added. A session's ending writes the sign-out row it writes today, with its cause; a 404 writes nothing.
+
+### Settings
+
+- None added.
+
+### Not in this chapter
+
+- **Keeping a form's words across a session's end**: not chosen; the browser keeps them on Back, and a page that promises more must store what a person typed, which nothing in the app does yet.
+- **A page that signs itself in again**: ruled out; the password is typed by the person, every time.
+- **The Admin pill on the Panel's pages**: nothing there belongs to another person; no pill.
+
+### Left to the build
+
+- The one way a script's request is marked (a header the scripts always send is the plain choice), and the one place in the scripts that reads the 401 and stops the page.
+- Which of a page's address parts `next` carries, within the rule that the person returns to the same page, tab and moment where the address can say them.
+- The card the pill opens: whether it is the paragraph card's drawing or the confirm box's, so long as it is one of the two.
+- The measure of the About pane if 24rem proves wrong on the office's screens; the rule that the list takes the rest stands.
+
+## 9. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -547,6 +634,7 @@ Added to `CONTEXT.md` with this chapter. **Paragraph card**: the card that opens
 | Cases | Document added; Document re-linked; Document removed; Comparison run; Event added with source report | 4 |
 | (none; Clip created gains its way in) | | 5 |
 | (none) | | 6 |
+| (none) | | 7 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -558,10 +646,11 @@ Added to `CONTEXT.md` with this chapter. **Paragraph card**: the card that opens
 | Documents; Largest document; Documents per incident or recording; Read scans with OCR; Reading ceiling; Compare with the report; Comparison answer cap; Comparison time limit | Documents | On; 60 pages; 3; On; 400 paragraphs; On; 3,000; 600 s | 4 |
 | (none) | | | 5 |
 | (none) | | | 6 |
+| (none) | | | 7 |
 
 ## Sources
 
-The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison.
+The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison. For chapter 7, the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items V5, D2, V2 and C5) and the drawings `docs/spec/mockups/phase-8-fail-well.html`.
 
 ## Amendments applied
 

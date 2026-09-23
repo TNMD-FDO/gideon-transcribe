@@ -328,6 +328,14 @@ _Avoid_: splitter, gutter, divider, sash, resizer
 The card that opens in place from any citation to a Paragraph (a Gideon answer, a Comparison row, an Event that rests on a Paragraph, the memo, a Search hit, a Note), showing the Page's picture with the Paragraph lit, the words before and after, and Open the document one press further; one at a time, Escape closes it, and the page under it never moves. Phase 8 chapter 6.
 _Avoid_: popup, popover, modal, tooltip, lightbox, preview (the chat's word for its moment player)
 
+**Admin pill**:
+The small mark beside a page's title that says an Admin is viewing another person's Case, Workspace or Recording, with the audit sentence one hover or press behind it. It replaces the band across the page. Phase 8 chapter 7.
+_Avoid_: banner (the band it replaces), badge, tag, chip
+
+**Gone page**:
+The app's one page, in its own frame, for an address that has nothing behind it: the reasons it might be gone and the way back. It never says whether a thing exists that the person may not see. Phase 8 chapter 7.
+_Avoid_: 404 page (on a page), error page, not found
+
 **Layer**:
 One job opened over a tab of the work panel (Proposed events, Sync, an event, a clip, Find), with the same head on every one: Back with the tab's name, the layer's name, its one main button. Back or Escape returns exactly to the tab, its scroll and the row marked. The wall and the strip never move for a layer. Phase 8 chapter 1.
 _Avoid_: modal, dialog (a layer is not one), popup, pop-out, sheet (Phase 6's word for what a layer replaced)
