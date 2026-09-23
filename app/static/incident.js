@@ -1989,9 +1989,69 @@
     return "";
   }
 
+  // One sitting (Phase 8 chapter 9): how much of the incident the assistant
+  // can hold at once, one block per camera, and a sentence for the zone.
+  function minutesWords(seconds) {
+    var minutes = Math.round((seconds || 0) / 60);
+    return minutes >= 60 ? Math.floor(minutes / 60) + " h " + (minutes % 60) + " min" : minutes + " min";
+  }
+
+  function sittingHtml(T, adding) {
+    if (!T || !T.on) { return ""; }
+    // The bar is the sitting: a full bar is one sitting, and the blocks are
+    // each camera's share of what is read, drawn to the bar's scale.
+    var fill = Math.min(1, T.share);
+    var blocks = "";
+    function block(tokens, cls, title) {
+      var width = T.need > 0 ? Math.max(0.4, tokens / T.need * 100) : 0;
+      blocks += "<i class='" + cls + "' style='flex: 0 0 " + width.toFixed(2) + "%' title='" + title + "'></i>";
+    }
+    T.cameras.forEach(function (cam) {
+      block(cam.tokens, cam.read === "words" ? "words" : "", escape(cam.name) + ", " + minutesWords(cam.seconds) +
+        (cam.read === "words" ? ", read by words alone" : ", what was said and what it showed") + (cam.pinned ? ", pinned" : ""));
+    });
+    (T.adding || []).forEach(function (one) {
+      block(one.tokens, "adding", escape(one.name) + ", " + minutesWords(one.seconds) + ", being added");
+    });
+    var html = "<div class='sitting " + escape(T.zone) + "' id='" + (adding ? "add-sitting-box" : "sitting-box") + "'>" +
+      "<div class='small' style='font-weight: 600'>How much the assistant can hold at once</div>" +
+      "<div class='row' style='gap: 8px; align-items: baseline; flex-wrap: wrap'><span class='figure'>" + escape(T.figure) + "</span><span class='muted small'>" + escape(T.sources) + "</span></div>" +
+      "<div class='bar'><div class='blocks' style='width: " + (fill * 100).toFixed(2) + "%'>" + blocks + "</div>" +
+      (T.share < 1 ? "<span class='line' style='left: calc(100% - 2px)'></span>" : "") + "</div>" +
+      "<div class='row muted small' style='justify-content: space-between; gap: 8px'><span>Each block is one camera; the longest is the widest.</span><span>" + escape(T.capacity_words) + "</span></div>";
+    if (T.zone === "over") {
+      html += "<div class='legend'><span><i></i> what was said and what it showed</span><span><i class='words'></i> what was said, words alone</span></div>";
+    }
+    html += "<div class='small' style='line-height: 1.45'>" + escape(T.sentence) + "</div>";
+    if (!adding && T.words_alone && T.words_alone.length) {
+      html += "<div class='alone'><div class='muted small' style='text-transform: uppercase; letter-spacing: .04em'>Read by words alone</div>";
+      T.cameras.filter(function (cam) { return cam.read === "words"; }).forEach(function (cam) {
+        html += "<div class='cam'><span><b>" + escape(cam.name) + "</b> <span class='muted small'>" + minutesWords(cam.seconds) + "</span></span>" +
+          "<button type='button' class='tiny' data-pin='" + cam.id + "' title='Keep this camera in the sitting with what it showed; the next longest camera moves to words alone instead'>Always read what it showed</button></div>";
+      });
+      html += "<div class='muted small'>Pinning a camera keeps its picture in the sitting; the next longest camera moves to words alone instead.</div></div>";
+    }
+    if (!adding && T.pinned && T.pinned.length) {
+      html += "<div class='muted small' style='margin-top: 4px'>Pinned: " + T.cameras.filter(function (cam) { return cam.pinned; }).map(function (cam) {
+        return escape(cam.name) + " <button type='button' class='tiny ghost' data-unpin='" + cam.id + "'>Read it like the others</button>";
+      }).join(", ") + "</div>";
+    }
+    return html + "</div>";
+  }
+
+  function sittingLine() {
+    var T = S.sitting;
+    if (!T || !T.on) { return ""; }
+    if (T.words_alone && T.words_alone.length) {
+      return "Answers from everything said on " + T.count + " cameras and what " + T.shown + " of them showed; " + T.words_alone.length + " camera" + (T.words_alone.length === 1 ? "" : "s") + " by words alone.";
+    }
+    return "Answers from everything said on " + T.count + " camera" + (T.count === 1 ? "" : "s") + " and what " + (T.count === 1 ? "it" : "they") + " showed.";
+  }
+
   function drawCameras() {
     var box = document.getElementById("panel-cameras");
     var html = "<p class='lead' style='margin: 0 0 8px'>" + S.incident.count + " camera" + (S.incident.count === 1 ? "" : "s") + ". " + escape(S.incident.placed_words) + ".</p>";
+    html += sittingHtml(S.sitting, false);
     html += "<table class='tbl inc-cameras'><thead><tr><th>Camera</th><th>Starts at</th><th>Placed</th><th></th></tr></thead><tbody>";
     S.cameras.forEach(function (cam) {
       var placed = cam.starts_at !== null && cam.placed;
@@ -2028,6 +2088,10 @@
   document.getElementById("panel-cameras").addEventListener("click", function (event) {
     var swap = event.target.closest("[data-swap]");
     if (swap) { swapIn(swap.dataset.swap); return; }
+    var pin = event.target.closest("[data-pin]");
+    if (pin) { post({ action: "pin", camera: pin.dataset.pin }); return; }
+    var unpin = event.target.closest("[data-unpin]");
+    if (unpin) { post({ action: "unpin", camera: unpin.dataset.unpin }); return; }
     var button = event.target.closest("[data-act]");
     if (button) {
       var cam = cameraById(button.dataset.camera);
@@ -2077,7 +2141,27 @@
     document.getElementById("add-none").hidden = others.length > 0;
     document.getElementById("add-go").disabled = !others.length;
     addBox.hidden = false;
+    previewSitting();
   }
+  // One sitting (Phase 8 chapter 9): the bar as it will read with the ticked cameras in.
+  var previewTimer = null;
+  function previewSitting() {
+    var holder = document.getElementById("add-sitting");
+    if (!holder) { return; }
+    var chosen = Array.prototype.map.call(addBox.querySelectorAll("input:checked"), function (one) { return one.value; });
+    if (!chosen.length) { holder.innerHTML = sittingHtml(S.sitting, true); return; }
+    window.clearTimeout(previewTimer);
+    previewTimer = window.setTimeout(function () {
+      var body = new FormData();
+      body.append("action", "sitting_preview");
+      chosen.forEach(function (id) { body.append("recordings", id); });
+      fetch(C.act, { method: "POST", body: body, headers: { "X-CSRFToken": cookie("csrftoken") } })
+        .then(function (answer) { return answer.json(); })
+        .then(function (got) { if (got.sitting) { holder.innerHTML = sittingHtml(got.sitting, true); } })
+        .catch(function () {});
+    }, 250);
+  }
+  addBox.addEventListener("change", function (event) { if (event.target.name === "recordings") { previewSitting(); } });
   document.getElementById("add-cancel").addEventListener("click", function () { addBox.hidden = true; });
   document.getElementById("add-form").addEventListener("submit", function (event) {
     event.preventDefault();
@@ -2162,6 +2246,8 @@
   // camera; + event opens the event box at the moment with the line filled.
   window.INCIDENT_PAGE = {
     seek: function (at) { seek(at); if (!playing) { play(); } },
+    // One sitting (Phase 8 chapter 9): what Gideon reads, for the drawer's head.
+    sittingLine: sittingLine,
     addEvent: function (at, line, note) { openEventBox({ at: at, text: line || "", note: note || "", source: "person" }); },
     refresh: function () { refresh(); },
     // The comparison (Phase 8 chapter 4, part 3) opens as a layer over the Report tab.

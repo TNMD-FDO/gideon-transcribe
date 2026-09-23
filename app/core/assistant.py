@@ -753,7 +753,9 @@ def cap(answer_tokens: int) -> int:
 
 
 def window() -> int:
-    return settings_store.engine_window_tokens()
+    """What the engine can read at once: read from the engine, else the setting
+    (Phase 8 chapter 9)."""
+    return engine.window()
 
 
 class ThoughtItAway(engine.Problem):
@@ -825,6 +827,7 @@ def _record(
         model=model or engine.model_name(),
         endpoint_host=host,
         templates=templates,
+        window_source=engine.window_source(),
         input_tokens=usage.get("input_tokens", 0),
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),

@@ -311,7 +311,7 @@ def test_the_hours_ceiling_refuses_with_its_figures(owner, a_case, monkeypatch):
 @pytest.mark.django_db
 def test_a_transcript_too_long_even_alone_names_itself(owner, a_case, monkeypatch):
     a_recording(owner, a_case, "Dense call")
-    monkeypatch.setattr(settings_store, "engine_window_tokens", lambda: 100)
+    monkeypatch.setattr(engine, "window", lambda: 100)
     reachable(monkeypatch, ["never"])
     chat = CaseChat.objects.create(case=a_case, asked_by=owner)
     turn = CaseChatTurn.objects.create(chat=chat, number=1, question="Anything?")

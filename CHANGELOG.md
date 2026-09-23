@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.78.0, 2026-09-23
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Phase 8 chapter 9, One sitting, from the walk of a real twelve-camera
+incident on 2026-09-23, where Compare with the report, Ask Gideon and the
+memo each refused the incident as too long.
+
+- **The bar on the Cameras tab.** "How much the assistant can hold at
+  once": one block per camera, the longest the widest, in hours of camera
+  against what the engine can hold at once, with a sentence for each zone
+  that says what changes for the person: room for about N more cameras;
+  nearly full; more than one sitting. The same bar on the Add cameras
+  dialog reads as it will with the ticked cameras in. Adding a camera is
+  never refused for size.
+- **Everything said is always read.** When the whole incident does not fit
+  the engine's window, the longest cameras are read by their words alone
+  (their transcript in place of their Digest), longest first, until it
+  fits; before this release a Digest was never given up and the call
+  failed at once. The memo, the incident chat and the comparison share the
+  one fit, and each says what it read: "everything said on 12 cameras and
+  what 7 of them showed; 5 cameras by words alone", on the memo's head
+  line and its Word export, the comparison's state line, and Gideon's
+  panel. **Always read what it showed** on a camera pins it into the
+  sitting; the next longest moves to words alone instead. The Proposed
+  events layer names cameras no run has read.
+- **The engine's window, read from the engine.** The llm-worker's minute
+  check reads the served model's `max_model_len` and every fit and every
+  bar uses it; the Panel's Engine window setting is the fallback while the
+  engine does not say, and its row greys with the engine's figure. The
+  Status page says which is in force and counts the readings refused as
+  too long. On the office's copy the engine reports 262,144 tokens, twice
+  the setting, so the record refused on 2026-09-23 fits from this release
+  without a camera going to words alone.
+- Audit: Camera pinned and Camera unpinned rows; every AI assistant call
+  row carries `window_source`, and the memo's, the chat's and the
+  comparison's carry `words_alone`. Migration 0058.
+
 ## v1.77.0, 2026-09-23
 
 ```

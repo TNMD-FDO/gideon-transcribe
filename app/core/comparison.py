@@ -99,6 +99,8 @@ class Comparison(models.Model):
     template_version = models.IntegerField(default=1)
     ground_rules_version = models.IntegerField(default=1)
     cameras_used = models.JSONField(default=list, blank=True)
+    # Read by their words alone to fit the Sitting (Phase 8 chapter 9).
+    cameras_words_alone = models.JSONField(default=list, blank=True)
     record_lines = models.IntegerField(default=0)
     events_signature = models.CharField(max_length=32, blank=True, default="")
     cameras_signature = models.CharField(max_length=32, blank=True, default="")
@@ -224,7 +226,7 @@ def _record_for(comparison: Comparison) -> dict:
         )
 
         incident = comparison.incident
-        record = record_of(incident)
+        record = record_of(incident, words_alone=set(comparison.cameras_words_alone))
         event_lines, _ = _chronology_lines(incident)
         return {
             "head": _cameras_line(incident),
@@ -232,6 +234,7 @@ def _record_for(comparison: Comparison) -> dict:
             "record": _record_text(incident, record, set()),
             "lines": len(record["rows"]),
             "cameras": record["used"] + record["transcript_only"],
+            "words_alone": record["words_alone"],
             "clock": incident.has_clock(),
         }
     recording = comparison.recording
@@ -404,12 +407,12 @@ def compare(comparison_id, attempt: int = 1) -> None:
         can, why = possible(document, comparison.home())
         if not can:
             raise engine.Problem(engine.ERROR, why or "the comparison cannot run")
-        against = _record_for(comparison)
-        if not against["record"].strip():
-            raise engine.Problem(engine.ERROR, "nothing to compare against")
         windows = _paragraph_windows(document)
         if not windows:
             raise engine.Problem(engine.ERROR, "the document has no words to compare")
+        against = _record_for(comparison)
+        if not against["record"].strip():
+            raise engine.Problem(engine.ERROR, "nothing to compare against")
         known = {
             (row["page"], row["n"]): row["text"] for window in windows for row in window
         }
@@ -419,6 +422,32 @@ def compare(comparison_id, attempt: int = 1) -> None:
             prompts.COMPARISON_FORMAT + "\n\n" + prompts.INCIDENT_RULES,
         )
         cap = assistant.cap(answer_cap())
+        # One sitting (Phase 8 chapter 9): the record fitted once, against
+        # the largest page window, the longest cameras' pictures going first.
+        if comparison.incident_id:
+            from core import sitting
+
+            largest = max(windows, key=lambda window: len(_paragraph_lines(window)))
+            try:
+                _, _, words_alone = sitting.fit(
+                    comparison.incident,
+                    system=system,
+                    wrap=lambda body: prompts.comparison_input(
+                        against["head"],
+                        against["events"],
+                        body,
+                        _paragraph_lines(largest),
+                        first=largest[0]["page"],
+                        last=largest[-1]["page"],
+                    ),
+                    answer_cap=cap,
+                )
+            except sitting.TooLong:
+                raise engine.Problem(
+                    engine.TOO_LONG, "the words alone are too long"
+                ) from None
+            comparison.cameras_words_alone = list(words_alone)
+            against = _record_for(comparison)
         findings: list[dict] = []
         taken: set = set()
         cut = 0
@@ -548,7 +577,15 @@ def compare(comparison_id, attempt: int = 1) -> None:
         comparison.reason_class = ""
         comparison.written_at = timezone.now()
         comparison.save()
-        _audit(comparison, templates_line, usage, started, "ok", calls=calls)
+        _audit(
+            comparison,
+            templates_line,
+            usage,
+            started,
+            "ok",
+            calls=calls,
+            words_alone=len(comparison.cameras_words_alone),
+        )
         counts = comparison.counts()
         audit.write(
             audit.Category.CASES,
@@ -590,6 +627,16 @@ def compare(comparison_id, attempt: int = 1) -> None:
         )
 
 
+def sitting_read_words(comparison: Comparison) -> str:
+    """ "everything said on 12 cameras and what 7 of them showed" (Phase 8
+    chapter 9), for the state line and the Word export."""
+    from core import sitting
+
+    count = len(comparison.cameras_used)
+    alone = list(comparison.cameras_words_alone)
+    return sitting.read_words(count, count - len(alone), alone)
+
+
 def _audit(
     comparison, templates, usage, started, outcome, *, reason="", **more
 ) -> None:
@@ -613,6 +660,7 @@ def _audit(
         model=comparison.model or engine.model_name(),
         endpoint_host=urlparse(engine.address()).hostname or "",
         templates=templates,
+        window_source=engine.window_source(),
         input_tokens=usage.get("input_tokens", 0),
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),
@@ -716,8 +764,14 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
         )
         cut = comparison.cut_short
         words = (
-            f"{document.pages} pages against {len(comparison.cameras_used)} "
-            f"{'camera' if len(comparison.cameras_used) == 1 else 'cameras'}; "
+            f"{document.pages} pages against "
+            + (
+                sitting_read_words(comparison)
+                if comparison.incident_id
+                else f"{len(comparison.cameras_used)} "
+                f"{'camera' if len(comparison.cameras_used) == 1 else 'cameras'}"
+            )
+            + "; "
             + counts_words(counts)
             + (f"; written at {when}" if when else "")
             + (

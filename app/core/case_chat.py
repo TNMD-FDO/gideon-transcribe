@@ -475,7 +475,7 @@ def answer_case_turn(turn_id) -> None:
                 history_text,
                 turn.question,
                 answer_cap=cap(part_cap),
-                window=settings_store.engine_window_tokens(),
+                window=engine.window(),
             )
 
         # A Transcript that would not fit the window even alone falls back to
@@ -643,6 +643,7 @@ def _record(
         model=model or engine.model_name(),
         endpoint_host=urlparse(engine.address()).hostname or "",
         templates=templates,
+        window_source=engine.window_source(),
         input_tokens=usage.get("input_tokens", 0),
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),

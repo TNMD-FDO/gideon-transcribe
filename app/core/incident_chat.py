@@ -127,7 +127,6 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         _cameras_line,
         _chronology_lines,
         _record_audit,
-        _record_text,
         memo_citations,
         record_of,
     )
@@ -188,38 +187,29 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             + ("\n\n" + documents.RULE if papers else ""),
         )
         wanted = settings_store.incident_chat_answer_cap()
-        dropped: set[str] = set()
         history = [
             (one.question, one.answer)
             for one in chat.turns.filter(state=DONE, number__lt=turn.number)
         ]
 
-        def user_text() -> str:
-            return (
+        # One sitting (Phase 8 chapter 9): everything said is read; the
+        # longest cameras' pictures go first when the whole does not fit.
+        from core import sitting
+
+        record, user, words_alone = sitting.fit(
+            incident,
+            system=system,
+            wrap=lambda body: (
                 prompts.incident_memo_input(
-                    _cameras_line(incident),
-                    event_lines,
-                    _record_text(incident, record, dropped),
-                    about=incident.about,
+                    _cameras_line(incident), event_lines, body, about=incident.about
                 )
                 + ("\n\n" + noted if noted else "")
                 + ("\n\n" + papers if papers else "")
                 + "\n\nThe question: "
                 + turn.question
-            )
-
-        by_size = sorted(
-            record["transcript_only"],
-            key=lambda name: -sum(1 for _, who, _ in record["rows"] if who == name),
+            ),
+            answer_cap=assistant.cap(wanted),
         )
-        user = user_text()
-        while not prompts.fits(
-            system, user, answer_cap=assistant.cap(wanted), window=assistant.window()
-        ):
-            if not by_size:
-                raise engine.Problem(engine.TOO_LONG, "the incident is too long")
-            dropped.add(by_size.pop(0))
-            user = user_text()
         answer = engine.complete(
             case_chat._messages(system, user, history),
             max_completion_tokens=assistant.cap(wanted),
@@ -233,9 +223,12 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         if not CaseChatTurn.objects.filter(pk=turn.pk).exists():
             return
         text = answer["text"].strip()
-        if dropped:
+        if words_alone:
+            count = len(record["used"]) + len(record["transcript_only"])
             text = (
-                f"({', '.join(sorted(dropped))} could not be read for this answer.)\n\n"
+                "(Answered from "
+                + sitting.read_words(count, count - len(words_alone), words_alone)
+                + f": {', '.join(words_alone)}.)\n\n"
                 + text
             )
         turn.answer = documents.with_note(text, papers_note)
@@ -258,7 +251,8 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             usage=usage,
             started=started,
             outcome="ok",
-            cameras=len(record["used"]) + len(record["transcript_only"]) - len(dropped),
+            cameras=len(record["used"]) + len(record["transcript_only"]),
+            words_alone=len(words_alone),
             cut_short=turn.cut_short,
         )
     except engine.Problem as problem:

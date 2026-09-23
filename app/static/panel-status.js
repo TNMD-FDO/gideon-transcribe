@@ -159,6 +159,13 @@
       assistant.textContent = "AI assistant: " + engineTold.says;
       assistant.className = engineTold.state === "unreachable" ? "notice danger"
         : engineTold.state === "reachable" ? "notice" : "muted";
+      // One sitting (Phase 8 chapter 9): the window the engine reports, or
+      // the setting while it does not say; the readings refused today.
+      var windowLine = document.getElementById("assistant-window");
+      if (windowLine) {
+        windowLine.textContent = engineTold.window_says ? "Engine window: " + engineTold.window_says + "." +
+          (engineTold.refused_words ? " " + engineTold.refused_words : "") : "";
+      }
       var testLine = document.getElementById("assistant-test");
       var lastTest = engineTold.test || {};
       if (!lastTest.at) {

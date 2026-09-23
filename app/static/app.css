@@ -2179,6 +2179,23 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-parked .tile .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--speaker, var(--muted)); }
 .inc-work { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: 80vh; }
 .inc-work .panels .panel { padding: 12px 14px; }
+/* One sitting (Phase 8 chapter 9): the bar on the Cameras tab and the Add cameras dialog. */
+.sitting { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; margin: 0 0 12px; display: grid; gap: 6px; }
+.sitting .figure { font-size: var(--t-large, 1.15rem); font-weight: 600; }
+.sitting .bar { position: relative; height: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2, var(--surface)); overflow: hidden; }
+.sitting .bar .blocks { position: absolute; left: 0; top: 0; bottom: 0; display: flex; gap: 2px; }
+.sitting .bar .blocks i { display: block; min-width: 2px; background: var(--ok); }
+.sitting .bar .blocks i:nth-child(even) { filter: brightness(0.85); }
+.sitting.nearly .bar .blocks i { background: var(--warn); }
+.sitting.over .bar .blocks i { background: var(--accent); }
+.sitting .bar .blocks i.words { background: repeating-linear-gradient(135deg, var(--danger) 0 4px, transparent 4px 8px) !important; }
+.sitting .bar .blocks i.adding { opacity: 0.45; }
+.sitting .bar .line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--warn); opacity: 0.8; }
+.sitting .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--t-small); color: var(--muted); }
+.sitting .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; background: var(--accent); }
+.sitting .legend i.words { background: repeating-linear-gradient(135deg, var(--danger) 0 3px, transparent 3px 6px); }
+.sitting .alone { display: grid; gap: 6px; margin-top: 4px; }
+.sitting .alone .cam { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; }
 .inc-cameras td { vertical-align: top; }
 .inc-cameras .acts { white-space: normal; }
 .inc-place summary { cursor: pointer; color: var(--accent); }

@@ -122,6 +122,9 @@ class IncidentMemo(models.Model):
     cameras_transcript_only = models.JSONField(default=list, blank=True)
     cameras_not_read = models.JSONField(default=list, blank=True)
     cameras_left_out = models.JSONField(default=list, blank=True)
+    # The cameras read by their words alone to fit the Sitting (Phase 8
+    # chapter 9): their Digest left out, their transcript read in its place.
+    cameras_words_alone = models.JSONField(default=list, blank=True)
     events_count = models.IntegerField(default=0)
     events_signature = models.CharField(max_length=32, blank=True, default="")
     cameras_signature = models.CharField(max_length=32, blank=True, default="")
@@ -255,7 +258,7 @@ def _on_the_clock(incident, camera, text: str) -> tuple[float | None, str]:
     return (first[0] if first else None), rewritten
 
 
-def record_of(incident) -> dict:
+def record_of(incident, words_alone: set[str] | frozenset[str] = frozenset()) -> dict:
     """The incident record: every synced camera's Digest, or its transcript
     when it has no Digest, with each line's times rewritten to the Incident
     clock and the camera's name in front, merged in time order. Made for the
@@ -263,12 +266,16 @@ def record_of(incident) -> dict:
 
     Returns rows as (seconds, camera name, line), and the names by how each
     camera was read: `used` from its Digest, `transcript_only` from its
-    words, `left_out` with no transcript.
+    words, `left_out` with no transcript. A camera named in `words_alone` is
+    read from its transcript though it has a Digest, to fit the Sitting
+    (Phase 8 chapter 9); it is listed under `transcript_only` and again under
+    `words_alone`.
     """
     rows: list[tuple[float, str, str]] = []
     used: list[str] = []
     transcript_only: list[str] = []
     left_out: list[str] = []
+    read_alone: list[str] = []
     for camera in synced_cameras(incident):
         name = camera.camera_id()
         transcript = getattr(camera.recording, "transcript", None)
@@ -276,6 +283,9 @@ def record_of(incident) -> dict:
             left_out.append(name)
             continue
         digest = assistant.digest_text(transcript) if assistant.digests_on() else ""
+        if digest and name in words_alone:
+            digest = ""
+            read_alone.append(name)
         if digest:
             for raw in digest.splitlines():
                 line = DIGEST_NUMBER.sub("", raw).strip()
@@ -298,6 +308,7 @@ def record_of(incident) -> dict:
         "used": used,
         "transcript_only": transcript_only,
         "left_out": left_out,
+        "words_alone": read_alone,
     }
 
 
@@ -402,6 +413,7 @@ def _record_audit(
         model=model or engine.model_name(),
         endpoint_host=urlparse(engine.address()).hostname or "",
         templates=templates,
+        window_source=engine.window_source(),
         input_tokens=usage.get("input_tokens", 0),
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),
@@ -911,6 +923,23 @@ def proposals_json(incident) -> dict:
         words = assistant.what_to_say(incident.proposals_reason)
     else:
         words = ""
+    # One sitting (Phase 8 chapter 9): the cameras no run has read, so a
+    # person knows to run Propose events again after cameras joined.
+    never_read = [
+        one.camera_id()
+        for one in synced_cameras(incident)
+        if hasattr(one.recording, "transcript")
+        and (
+            incident.proposals_at is None
+            or max(one.added, one.placed_at or one.added) > incident.proposals_at
+        )
+    ]
+    if never_read and state not in (QUEUED, RUNNING):
+        words = (
+            (words + " " if words else "")
+            + f"Not yet read: {', '.join(never_read)}"
+            + (" (joined or synced since the last run)." if state else ".")
+        )
     return {
         "on": proposer_offered(),
         "possible": proposals_possible(incident),
@@ -918,6 +947,7 @@ def proposals_json(incident) -> dict:
         "words": words,
         "pending": pending,
         "busy": state in (QUEUED, RUNNING),
+        "never_read": never_read,
     }
 
 
@@ -1099,30 +1129,18 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             + prompts.INCIDENT_RULES,
         )
         wanted = settings_store.incident_memo_answer_cap()
-        dropped: set[str] = set()
+        # One sitting (Phase 8 chapter 9): everything said is read; the
+        # longest cameras' pictures go first when the whole does not fit.
+        from core import sitting
 
-        def user_text() -> str:
-            return prompts.incident_memo_input(
-                _cameras_line(incident),
-                event_lines,
-                _record_text(incident, record, dropped),
-                about=incident.about,
-            )
-
-        # A transcript-only camera drops to a line when the whole does not
-        # fit, the longest first; a Digest is never dropped.
-        by_size = sorted(
-            record["transcript_only"],
-            key=lambda name: -sum(1 for _, who, _ in record["rows"] if who == name),
+        record, user, words_alone = sitting.fit(
+            incident,
+            system=system,
+            wrap=lambda body: prompts.incident_memo_input(
+                _cameras_line(incident), event_lines, body, about=incident.about
+            ),
+            answer_cap=assistant.cap(wanted),
         )
-        user = user_text()
-        while not prompts.fits(
-            system, user, answer_cap=assistant.cap(wanted), window=assistant.window()
-        ):
-            if not by_size:
-                raise engine.Problem(engine.TOO_LONG, "the incident is too long")
-            dropped.add(by_size.pop(0))
-            user = user_text()
         memo.stage = "Writing the memo"
         memo.save(update_fields=["stage"])
         answer = engine.complete(
@@ -1144,10 +1162,9 @@ def write_memo(memo_id, attempt: int = 1) -> None:
         memo.cut_short = answer.get("finish_reason") == "length"
         memo.model = answer.get("model", "")
         memo.cameras_used = record["used"]
-        memo.cameras_transcript_only = [
-            name for name in record["transcript_only"] if name not in dropped
-        ]
-        memo.cameras_not_read = sorted(dropped)
+        memo.cameras_transcript_only = list(record["transcript_only"])
+        memo.cameras_not_read = []
+        memo.cameras_words_alone = list(words_alone)
         memo.cameras_left_out = record["left_out"] + [
             one.camera_id()
             for one in incident.cameras.select_related("recording")
@@ -1156,7 +1173,7 @@ def write_memo(memo_id, attempt: int = 1) -> None:
         memo.events_count = len(event_lines)
         memo.events_signature = events_signature(incident)
         memo.cameras_signature = cameras_signature(incident)
-        memo.record_lines = sum(1 for _, who, _ in record["rows"] if who not in dropped)
+        memo.record_lines = len(record["rows"])
         memo.stage = ""
         memo.state = DONE
         memo.reason_class = ""
@@ -1172,6 +1189,7 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             started=started,
             outcome="ok",
             cameras=len(memo.cameras_used) + len(memo.cameras_transcript_only),
+            words_alone=len(memo.cameras_words_alone),
             events=memo.events_count,
             cut_short=memo.cut_short,
         )
@@ -1211,7 +1229,12 @@ def written_words(memo: IncidentMemo) -> str:
     when = timezone.localtime(memo.written_at).strftime("%d %b %Y")
     seen = len(memo.cameras_used)
     heard = len(memo.cameras_transcript_only)
-    if seen and heard:
+    if memo.cameras_words_alone:
+        # One sitting (Phase 8 chapter 9): what was read, said plainly.
+        from core import sitting
+
+        source = sitting.read_words(seen + heard, seen, list(memo.cameras_words_alone))
+    elif seen and heard:
         source = (
             f"the transcripts and the vision of {_count_words(seen, 'camera')} and "
             f"the words alone of {heard}"
@@ -1318,6 +1341,7 @@ def memo_json(incident) -> dict:
             "record_lines": memo.record_lines,
             "cameras_used": memo.cameras_used,
             "cameras_transcript_only": memo.cameras_transcript_only,
+            "cameras_words_alone": memo.cameras_words_alone,
             "busy": memo.state in (QUEUED, RUNNING),
         }
     )
@@ -1382,6 +1406,10 @@ def memo_word(memo: IncidentMemo, picture: bytes | None, exported_by: str) -> by
                 ),
             ),
             ("Cameras drawn on", ", ".join(read) or "none"),
+            (
+                "Read by words alone",
+                ", ".join(memo.cameras_words_alone) or "none",
+            ),
             (
                 "Left out",
                 ", ".join(memo.cameras_not_read + memo.cameras_left_out) or "none",

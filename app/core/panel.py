@@ -187,6 +187,21 @@ def logo(request: HttpRequest) -> HttpResponse:
     return redirect(back)
 
 
+def _greyed_because(known) -> str:
+    """Why a row is closed: under a toggle that is off, while mail is not
+    configured, or, for Engine window, while the engine reports its own
+    figure (Phase 8 chapter 9), which is then what every fit reads."""
+    if known.key == "engine_window_tokens":
+        from core import engine
+
+        if engine.window_source() == "engine":
+            return (
+                f"Read from the engine: {engine.window():,} tokens. This value "
+                "is the fallback while the engine does not say."
+            )
+    return settings_store.greyed_because(known)
+
+
 @admins_only
 def settings_page(request: HttpRequest, page: str) -> HttpResponse:
     """One settings page: name and help on the left, the control on the right."""
@@ -223,8 +238,8 @@ def settings_page(request: HttpRequest, page: str) -> HttpResponse:
                 # Greyed under a toggle that is off, or while mail is not
                 # configured: the value is kept and shown, the control is
                 # closed, and the row says why.
-                "greyed": bool(settings_store.greyed_because(known)),
-                "greyed_because": settings_store.greyed_because(known),
+                "greyed": bool(_greyed_because(known)),
+                "greyed_because": _greyed_because(known),
                 # Every number and a Notification's template offer Reset to
                 # default, which puts the default in the field for the tray to
                 # carry; the page offers one for all of them at once.

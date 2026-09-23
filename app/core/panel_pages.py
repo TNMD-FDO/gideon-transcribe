@@ -134,6 +134,27 @@ def admin_guide(request: HttpRequest) -> HttpResponse:
     )
 
 
+def _refused_words() -> str:
+    """The AI assistant calls refused as too long today and this week, from
+    the audit log's rows (Phase 8 chapter 9)."""
+    from datetime import timedelta
+
+    from core import audit
+
+    now = timezone.now()
+    day = timezone.localtime(now).replace(hour=0, minute=0, second=0, microsecond=0)
+    rows = audit.Row.objects.filter(
+        category=audit.Category.LLM, reason_class="llm_too_long"
+    )
+    today = rows.filter(at__gte=day).count()
+    week = rows.filter(at__gte=day - timedelta(days=6)).count()
+    if not week:
+        return ""
+    return (
+        f"Readings refused as too long: {today} today, {week} in the last seven days."
+    )
+
+
 @admins_only
 def status_lines(request: HttpRequest) -> JsonResponse:
     """What the Status page reads. Every line the specification names that
@@ -152,7 +173,11 @@ def status_lines(request: HttpRequest) -> JsonResponse:
             # The AI assistant's line: what llm-worker's last check found,
             # and the last Test connection. Read from the status row; this
             # container is not on the engine's network and never asks it.
-            "assistant": engine.status_for_the_panel(),
+            "assistant": {
+                **engine.status_for_the_panel(),
+                # One sitting (Phase 8 chapter 9): the readings refused.
+                "refused_words": _refused_words(),
+            },
             # The Backup line: the last Snapshot and the last drill, from the
             # row the nightly job's record commands write.
             "backup": backups.status_for_the_panel(),

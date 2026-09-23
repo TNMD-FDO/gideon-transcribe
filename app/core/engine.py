@@ -175,6 +175,10 @@ class EngineStatus(models.Model):
     since = models.DateTimeField(default=timezone.now)
     checked_at = models.DateTimeField(null=True, blank=True)
     served_models = models.JSONField(default=list, blank=True)
+    # What the engine says it can read at once (vLLM's max_model_len on the
+    # served model), read with the minute check; None when it did not say
+    # (Phase 8 chapter 9). Every fit and every bar reads window() below.
+    window_tokens = models.IntegerField(null=True, blank=True)
     reason = models.CharField(max_length=40, blank=True, default="")
     # The panel's Test connection: when, what the engine listed, what it
     # answered, and how long it took. Never a prompt beyond the tiny question.
@@ -188,13 +192,16 @@ class EngineStatus(models.Model):
         row, _ = cls.objects.get_or_create(pk=1)
         return row
 
-    def record(self, reachable: bool, *, served_models=None, reason="") -> None:
+    def record(
+        self, reachable: bool, *, served_models=None, reason="", window_tokens=None
+    ) -> None:
         now = timezone.now()
         if reachable != self.reachable or self.checked_at is None:
             self.since = now
         self.reachable = reachable
         self.checked_at = now
         self.served_models = list(served_models or [])
+        self.window_tokens = window_tokens
         self.reason = reason
         self.save()
 
@@ -204,12 +211,44 @@ def is_reachable() -> bool:
     return EngineStatus.the_one().reachable
 
 
+def window() -> int:
+    """What the engine can read at once: the figure the engine reported at its
+    last check, else the Panel's Engine window setting (Phase 8 chapter 9).
+
+    One place, so the fit checks and the incident page's bar never disagree.
+    """
+    read = EngineStatus.the_one().window_tokens
+    if read:
+        return int(read)
+    return int(settings_store.get("engine_window_tokens"))
+
+
+def window_source() -> str:
+    """'engine' when the figure came from the engine, else 'setting'."""
+    return "engine" if EngineStatus.the_one().window_tokens else "setting"
+
+
 # The check and Test connection -------------------------------------------------
 
 
 def list_models() -> list[str]:
+    return sorted(served_models_and_windows())
+
+
+def served_models_and_windows() -> dict[str, int | None]:
+    """Each served model's id and the window it reports, or None when the
+    listing carries no `max_model_len` (an engine that is not vLLM, or a relay
+    that strips the field)."""
     answer = client(CHECK_TIMEOUT).models.list()
-    return sorted(one.id for one in answer.data)
+    found: dict[str, int | None] = {}
+    for one in answer.data:
+        extra = getattr(one, "model_extra", None) or {}
+        raw = extra.get("max_model_len")
+        try:
+            found[one.id] = int(raw) if raw else None
+        except (TypeError, ValueError):
+            found[one.id] = None
+    return found
 
 
 def check() -> EngineStatus:
@@ -223,16 +262,29 @@ def check() -> EngineStatus:
         status.record(False, reason="")
         return status
     try:
-        served = list_models()
+        windows = served_models_and_windows()
     except Exception as problem:  # noqa: BLE001 - every failure is a reason class
         reason = classify(problem)
         if status.reachable or status.checked_at is None:
             log.warning("the engine is unreachable: %s", reason)
         status.record(False, reason=reason)
         return status
+    served = sorted(windows)
+    # The window of the model the app talks to; the only one, when the
+    # engine names none of ours. A change is worth one log line, since every
+    # bar in the app follows it.
+    read = windows.get(model_name())
+    if read is None and len(windows) == 1:
+        read = next(iter(windows.values()))
     if not status.reachable:
         log.info("the engine answers; it serves %s", ", ".join(served) or "nothing")
-    status.record(True, served_models=served)
+    if read != status.window_tokens:
+        log.info(
+            "the engine's window is %s tokens (was %s)",
+            read if read else "not reported",
+            status.window_tokens or "not reported",
+        )
+    status.record(True, served_models=served, window_tokens=read)
     return status
 
 
@@ -299,6 +351,16 @@ def status_for_the_panel() -> dict:
             ),
             "models": status.served_models,
             "test": status.last_test,
+            "window": window(),
+            "window_source": window_source(),
+            "window_says": (
+                f"{window():,} tokens, read from the engine at "
+                f"{local(status.checked_at):%H:%M}; the Panel's Engine window "
+                f"setting ({int(settings_store.get('engine_window_tokens')):,}) "
+                "is the fallback while the engine does not say"
+                if status.window_tokens
+                else f"{window():,} tokens, from the setting; the engine did not say"
+            ),
         }
     return {
         "state": "unreachable",

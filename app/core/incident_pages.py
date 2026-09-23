@@ -27,6 +27,7 @@ from core import (
     media,
     settings_store,
     sharing,
+    sitting,
 )
 from core.case_pages import _their_case
 from core.incidents import Incident, IncidentCamera
@@ -293,6 +294,9 @@ def state_json(incident: Incident, user) -> dict:
         # The assistant on the Incident (chapter 3).
         "proposals": incident_assistant.proposals_json(incident),
         "memo": incident_assistant.memo_json(incident),
+        # One sitting (Phase 8 chapter 9): the Cameras tab's bar and the
+        # line the memo, the comparison and Gideon carry.
+        "sitting": sitting.json_for(incident),
     }
 
 
@@ -435,6 +439,15 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
     elif action == "remove":
         camera = _camera_of(incident, request.POST.get("camera"))
         incidents.remove_camera(camera, by=user, request=request)
+    # One sitting (Phase 8 chapter 9): the pin, and the dialog's bar as it
+    # will read with the ticked cameras in.
+    elif action in ("pin", "unpin"):
+        camera = _camera_of(incident, request.POST.get("camera"))
+        incidents.pin(camera, action == "pin", by=user, request=request)
+    elif action == "sitting_preview":
+        wanted = request.POST.getlist("recordings")
+        chosen = list(case.recordings.filter(pk__in=wanted))
+        return JsonResponse({"sitting": sitting.json_for(incident, chosen)})
     elif action == "delete":
         incidents.delete(incident, by=user, request=request)
         return JsonResponse({"ok": True, "redirect": reverse("case", args=[case.pk])})

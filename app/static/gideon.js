@@ -51,6 +51,11 @@
       },
       grounding: function (now) {
         if (!now.readable) { return "No synced camera of this incident has a transcript to read yet."; }
+        // One sitting (Phase 8 chapter 9): the page says what the assistant reads.
+        if (window.INCIDENT_PAGE && window.INCIDENT_PAGE.sittingLine) {
+          var line = window.INCIDENT_PAGE.sittingLine();
+          if (line) { return line; }
+        }
         return "Answers come from the incident record of " + now.readable + " synced camera" + (now.readable === 1 ? "" : "s") +
           " and the chronology" + (now.left_out && now.left_out.length ? "; " + now.left_out.join(", ") + " not synced and left out" : "") + ".";
       },

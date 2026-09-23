@@ -691,25 +691,29 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     assert incident_assistant.memo_line(incident) == "no memo yet"
 
 
-def test_the_memo_needs_a_synced_camera_and_drops_a_long_transcript_first(
+def test_the_memo_needs_a_synced_camera_and_reads_a_long_camera_by_words_alone(
     incident, person, monkeypatch
 ):
     settings_store.set_to("incidents_memo", True)
     possible, why = incident_assistant.memo_possible(incident)
     assert possible and why == ""
-    # The second camera has many lines and no Digest: when the whole does not
-    # fit the window it drops to a line and the memo says so; when even that
-    # does not fit, the memo fails as too long.
-    second = cameras_of(incident)["BWC2-2"].recording.transcript
-    for n in range(60):
-        Segment.objects.create(
-            transcript=second,
-            start=20.0 + n * 5,
-            end=24.0 + n * 5,
-            text=f"Line number {n} of the passenger's talk about the evening.",
-            speaker="Speaker 4",
-            speaker_label="SPEAKER_4",
-        )
+    # One sitting (Phase 8 chapter 9): the first camera's Digest is made long.
+    # When the whole does not fit the window, that camera is read by its words
+    # alone (its transcript in place of its Digest) and the memo says so; when
+    # even that does not fit, the memo fails as too long, since a camera
+    # without a Digest has nothing more to give up.
+    first = cameras_of(incident)["BWC2-1"].recording.transcript
+    first.digest_parts.all().delete()
+    DigestPart.objects.create(
+        transcript=first,
+        number=1,
+        text="\n".join(
+            f"{n + 1}. [00:00:{10 + n:02d}]-[00:00:{14 + n:02d}] (both) A long "
+            "description of the roadside and the two officers standing by the car."
+            for n in range(40)
+        ),
+        made_at=None,
+    )
     asked = engine_answering(monkeypatch, [MEMO, MEMO])
     system_cost = prompts.tokens(
         prompts.system_message(
@@ -722,26 +726,42 @@ def test_the_memo_needs_a_synced_camera_and_drops_a_long_transcript_first(
             + prompts.INCIDENT_RULES,
         )
     )
-    record = incident_assistant.record_of(incident)
+    words_alone = incident_assistant.record_of(incident, words_alone={"BWC2-1"})
+    assert words_alone["words_alone"] == ["BWC2-1"] and not words_alone["used"]
     event_lines, _ = incident_assistant._chronology_lines(incident)
-    dropped_cost = prompts.tokens(
+    alone_cost = prompts.tokens(
         prompts.incident_memo_input(
             incident_assistant._cameras_line(incident),
             event_lines,
-            incident_assistant._record_text(incident, record, {"BWC2-2"}),
+            incident_assistant._record_text(incident, words_alone, set()),
         )
     )
     settings_store.set_to("engine_window_tokens", 4096)
     settings_store.set_to(
-        "incidents_memo_answer_tokens", 4096 - system_cost - dropped_cost - 5
+        "incidents_memo_answer_tokens", 4096 - system_cost - alone_cost - 5
     )
     memo = incident_assistant.ask_for_memo(incident, by=person)
     incident_assistant.write_memo(memo.pk)
     memo.refresh_from_db()
     assert memo.state == "done"
-    assert memo.cameras_not_read == ["BWC2-2"]
-    assert "its words were not read" in asked[0]["messages"][-1]["content"]
-    assert "could not be read in full" in incident_assistant.written_words(memo)
+    assert memo.cameras_words_alone == ["BWC2-1"]
+    assert memo.cameras_not_read == []
+    sent = asked[0]["messages"][-1]["content"]
+    assert "Step out of the vehicle" in sent and "grey jacket" not in sent
+    assert "1 camera by words alone" in incident_assistant.written_words(memo)
+    said = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert said.details["words_alone"] == 1
+    assert said.details["window_source"] == "setting"
+    # Pinned, the camera stays in with its Digest, and the whole no longer fits.
+    camera = cameras_of(incident)["BWC2-1"]
+    incidents.pin(camera, True, by=person)
+    memo = incident_assistant.ask_for_memo(incident, by=person)
+    incident_assistant.write_memo(memo.pk)
+    memo.refresh_from_db()
+    assert memo.state == "failed" and memo.reason_class == "llm_too_long"
+    incidents.pin(camera, False, by=person)
+    assert Row.objects.filter(event="Camera pinned").count() == 1
+    assert Row.objects.filter(event="Camera unpinned").count() == 1
     settings_store.set_to("incidents_memo_answer_tokens", 4096 - system_cost - 5)
     memo = incident_assistant.ask_for_memo(incident, by=person)
     incident_assistant.write_memo(memo.pk)

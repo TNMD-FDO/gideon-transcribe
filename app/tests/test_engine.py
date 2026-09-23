@@ -162,7 +162,7 @@ def test_the_check_is_quiet_when_no_engine_is_configured(monkeypatch):
     def never(*_a, **_k):
         raise AssertionError("the network was touched")
 
-    monkeypatch.setattr(engine, "list_models", never)
+    monkeypatch.setattr(engine, "served_models_and_windows", never)
     status = engine.check()
     assert not status.reachable
     assert engine.status_for_the_panel()["state"] == "off"
@@ -171,7 +171,9 @@ def test_the_check_is_quiet_when_no_engine_is_configured(monkeypatch):
 @pytest.mark.django_db
 def test_the_check_records_what_the_engine_serves(monkeypatch):
     monkeypatch.setattr(engine, "token_is_set", lambda: True)
-    monkeypatch.setattr(engine, "list_models", lambda: ["gideon-generator"])
+    monkeypatch.setattr(
+        engine, "served_models_and_windows", lambda: {"gideon-generator": 262144}
+    )
     settings_store.set_to("engine_model", "gideon-generator")
 
     status = engine.check()
@@ -181,6 +183,39 @@ def test_the_check_records_what_the_engine_serves(monkeypatch):
     told = engine.status_for_the_panel()
     assert told["state"] == "reachable"
     assert "gideon-generator" in told["says"]
+    # Phase 8 chapter 9: the window the engine reports is what every fit reads.
+    assert status.window_tokens == 262144
+    assert engine.window() == 262144
+    assert engine.window_source() == "engine"
+    assert told["window"] == 262144 and "read from the engine" in told["window_says"]
+
+
+@pytest.mark.django_db
+def test_the_setting_is_the_fallback_when_the_engine_does_not_say(monkeypatch):
+    monkeypatch.setattr(engine, "token_is_set", lambda: True)
+    monkeypatch.setattr(
+        engine, "served_models_and_windows", lambda: {"gideon-generator": None}
+    )
+    settings_store.set_to("engine_model", "gideon-generator")
+    settings_store.set_to("engine_window_tokens", 100000)
+
+    status = engine.check()
+
+    assert status.window_tokens is None
+    assert engine.window() == 100000
+    assert engine.window_source() == "setting"
+    assert "from the setting" in engine.status_for_the_panel()["window_says"]
+
+
+@pytest.mark.django_db
+def test_a_single_served_model_lends_its_window_whatever_its_name(monkeypatch):
+    monkeypatch.setattr(engine, "token_is_set", lambda: True)
+    monkeypatch.setattr(
+        engine, "served_models_and_windows", lambda: {"other-name": 32768}
+    )
+    settings_store.set_to("engine_model", "gideon-generator")
+
+    assert engine.check().window_tokens == 32768
 
 
 @pytest.mark.django_db
@@ -194,7 +229,7 @@ def test_the_check_names_the_reason_when_the_engine_refuses(monkeypatch):
         response = httpx.Response(401, request=httpx.Request("GET", "http://x"))
         raise AuthenticationError("no", response=response, body=None)
 
-    monkeypatch.setattr(engine, "list_models", refused)
+    monkeypatch.setattr(engine, "served_models_and_windows", refused)
     status = engine.check()
 
     assert not status.reachable

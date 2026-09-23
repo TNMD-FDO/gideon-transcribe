@@ -200,6 +200,9 @@ class IncidentCamera(models.Model):
     match_lag = models.FloatField(null=True, blank=True)
     match_strength = models.FloatField(null=True, blank=True)
     match_reason = models.CharField(max_length=60, blank=True, default="")
+    # Pinned: kept in the Sitting with what it showed whatever else is added
+    # (Phase 8 chapter 9). The incident's, and it survives a re-sync.
+    pinned = models.BooleanField(default=False)
     added = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -698,6 +701,28 @@ def rename(incident: Incident, name: str, *, by, request=None) -> None:
     incident.name = (name or "").strip()[:200] or incident.name
     incident.save(update_fields=["name"])
     _changed(incident, by, request, what="renamed")
+
+
+def pin(camera: IncidentCamera, pinned: bool, *, by, request=None) -> None:
+    """Always read what it showed, or Read it like the others (Phase 8
+    chapter 9): the camera kept in the Sitting with its Digest whatever else
+    is added. One audit row each way."""
+    if camera.pinned == pinned:
+        return
+    camera.pinned = pinned
+    camera.save(update_fields=["pinned"])
+    audit.write(
+        CATEGORY,
+        "Camera pinned" if pinned else "Camera unpinned",
+        actor=by,
+        affected_user=camera.incident.case.owner,
+        object_type="incident",
+        object_id=camera.incident.pk,
+        object_label=camera.incident.name,
+        request=request,
+        case=camera.incident.case.name,
+        camera=camera.camera_id(),
+    )
 
 
 def _changed(incident: Incident, by, request, **details) -> None:
