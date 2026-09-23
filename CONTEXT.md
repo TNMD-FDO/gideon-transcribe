@@ -344,6 +344,14 @@ _Avoid_: summary, snippet, truncation, description (a Digest's word)
 The Speaker whose turns a small Speaker's lines sit inside: the one whose line ends just before, or begins just after, more than half of the small Speaker's lines. The merge hint on the Speakers page names the Neighbour and nobody else. Phase 8 chapter 8.
 _Avoid_: cluster, match, similarity, confidence
 
+**Sitting**:
+Everything the AI assistant reads of an Incident in one call before it writes the memo, checks the report or answers a question: what was said on every synced camera and, as room allows, what each showed. The bar on the incident page's Cameras tab says how full the Sitting is, in hours of camera, against what the engine can hold at once. When it is full, the longest cameras are read by their words alone, and every output written that way says so. Phase 8 chapter 9.
+_Avoid_: context, context window, tokens, prompt, budget (on a page a person reads; the Panel keeps tokens)
+
+**Pinned**:
+A camera the person has asked to keep in the Sitting with what it showed, whatever else is added; the next longest camera is read by words alone instead. Set with Always read what it showed on the Cameras tab. Phase 8 chapter 9.
+_Avoid_: priority, locked, favourite
+
 **Layer**:
 One job opened over a tab of the work panel (Proposed events, Sync, an event, a clip, Find), with the same head on every one: Back with the tab's name, the layer's name, its one main button. Back or Escape returns exactly to the tab, its scroll and the row marked. The wall and the strip never move for a layer. Phase 8 chapter 1.
 _Avoid_: modal, dialog (a layer is not one), popup, pop-out, sheet (Phase 6's word for what a layer replaced)

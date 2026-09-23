@@ -18,6 +18,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **The report in place** (chapter 6, for the build): one paragraph card, opened in place from every citation to a paragraph (Gideon's answers, the comparison's rows, a chronology row or event that rests on a paragraph, the memo, Search's hits, the Notes tab), showing the page's picture with the paragraph lit and the words around it, with Open the document one press further; the comparison's Word export in the Export menu; a handle on Gideon's panel.
 - **The pages that fail well** (chapter 7, for the build, in four parts): a session that ends under an open page is said on that page, once, with Sign in again returning the person to where they were, and the page stops asking the server for anything; one page in the app's frame for an address that is gone and one for the server's own failure; the Admin's warning as a pill beside the title instead of a band; the case page's list given the width.
 - **The event's line, and the merge hint's rule** (chapter 8, for the build, in two parts): an Event's text read as a line and a detail wherever it is drawn, so a row says what happened in one line and puts the rest under it, nothing stored twice and no data changed; and the Speakers page's merge hint offered to a fragment with a neighbour, the Speaker whose turns its few lines sit inside, and to nobody else.
+- **One sitting** (chapter 9, for the build): a bar on the incident page's Cameras tab that says how much of the incident the assistant can hold at once, in hours of camera, with a sentence for each zone that says what changes; everything said always read and the longest cameras' pictures left out first when the sitting is full, with a pin to keep one; the engine's window read from the engine so a larger model changes every bar and no setting; and the memo, the comparison and Gideon saying what they read.
 
 ## Contents
 
@@ -29,7 +30,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 6. The report in place
 7. The pages that fail well
 8. The event's line, and the merge hint's rule
-9. Deferred and ruled out
+9. One sitting
+10. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -675,7 +677,77 @@ Added to `CONTEXT.md` with this chapter. **Detail**: the part of an Event's text
 - Whether the detail on the muted line is cut to a measure with the whole on the layer, within the rule that nothing is lost.
 - The neighbour's tie-break when two Speakers neighbour the same number of a fragment's lines: the one with more lines.
 
-## 9. Deferred and ruled out
+## 9. One sitting
+
+Written 2026-09-23 from the walk of a real twelve-camera incident on the office's copy (the session's walk log; the drawings `docs/spec/mockups/phase-8-sitting.html`). With all twelve cameras synced, Compare with the report, Ask Gideon on the incident page and the memo's Regenerate each stopped at once with "This transcript is too long for the AI assistant" and an `llm_too_long` row with no tokens sent. The cause, measured: the twelve transcripts together are about 28,000 tokens, the twelve Digests about 144,000, and the incident record reads a camera's Digest in place of its transcript and never drops one. So enriching a camera with vision, which the office does for every video, made the incident too heavy for the features that read across cameras, and the page said only that it was too long. The maintainer's asks: a limit the person can see coming, in words that mean something to them; never a refusal to add a camera; a limit that follows the engine when the office moves to a model with a larger window.
+
+### Principles
+
+1. **The assistant reads the incident at one sitting.** Before it writes the memo, checks the report or answers a question, it reads everything in the incident in one call. The sitting is what the engine can hold at once; the page shows how full it is, in the person's own unit, and says what changes on either side of the line. Nothing is called a token on a page a person reads.
+2. **Everything said is always read.** Adding a camera never takes words out of the sitting. When the sitting is full, what the longest cameras *showed* is left out first, and their words stay in; the page says which cameras, and every output written that way says so where it is written.
+3. **The limit is the engine's, read from the engine.** The app asks the engine what it can hold and draws every bar from that figure; the Panel's Engine window setting is the fallback for an engine that does not say. A larger model changes the bars within a minute and changes no setting.
+4. **Adding a camera is never refused for size.** The wall, the chronology, Find and the clips take every camera under the count cap as today; the sitting governs only what the assistant reads whole.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Sitting**: everything the AI assistant reads of an Incident in one call before it writes the memo, checks the report or answers a question; the bar on the Cameras tab is how full the Sitting is. **Pinned**: a camera the person has asked to keep in the Sitting with what it showed, whatever else is added. The pages never say context, window, tokens, prompt or budget; those words stay on the Panel.
+
+### The bar
+
+- **Where.** A block at the head of the incident page's Cameras tab, under the heading "How much the assistant can hold at once". The same bar, without the camera list, on the Add cameras dialog.
+- **The figure.** One line: "6 of 8 hours' worth", then the count and the sources: "12 cameras, what was said and what they showed". The unit is hours of camera: the engine's window converted at this incident's own rate (the record's tokens so far divided by the cameras' total length), so the figure is honest for a picture-heavy incident and for a sound-only one alike, and it is recomputed each time the page is drawn.
+- **The blocks.** The bar is one block per synced camera in strip order, the longest widest, with a 2 pixel gap; hovering a block names the camera, its length and how it is read. A vertical line marks one sitting. Under the bar, small: "Each block is one camera; the longest is the widest." and "8 hours' worth: one sitting".
+- **Three zones, each a sentence that says what changes for the person.** Under 85 percent of the line (green): "It reads everything in this incident at one sitting before it writes the memo, checks the report or answers a question. Room for about N more cameras of this length." (N from the average camera's share.) From 85 percent to the line (amber): "Nearly full. One more long camera and the assistant will stop reading what the longest cameras showed, and read their words alone. Everything said stays in, whatever is added." Past the line (the bar full, the blocks read by words alone hatched): "More than one sitting. The assistant reads everything said on all N cameras, and what M of them showed. The K longest are read by their words alone, so the memo, the report check and Gideon's answers say nothing about what those cameras showed; the chronology keeps every camera's events. Each one says so where it is written." A legend under the bar names the solid and the hatched block.
+- **The list under a full bar.** Each camera read by words alone, with its length and **Always read what it showed**; under the list: "Pinning a camera keeps its picture in the sitting; the next longest camera moves to words alone instead."
+- **On the Add cameras dialog.** The bar as it will read with the ticked cameras in, the cameras being added drawn lighter; under it the zone's sentence for that reading ("Still one sitting: the memo, the report check and Gideon's answers read what was said and what was shown on all 13 cameras."). Add is never greyed for size; the count cap keeps its refusal as today.
+
+### What the assistant reads
+
+- **The fit.** The record read across cameras (the memo, the incident chat, the comparison) is built as today from each synced camera's Digest, or its transcript where it has none, on the incident clock. When the whole does not fit the sitting with the chronology, the question or the report's window and the answer cap, cameras are moved to words alone one at a time, longest first, skipping Pinned cameras, until it fits: a camera read by words alone contributes its transcript's lines in place of its Digest. Only when every unpinned camera is by words alone and the whole still does not fit does the call fail as today, `llm_too_long`, and the page says "The words alone of these cameras are more than the assistant can hold at once; leave a camera out." A Pinned camera is never moved; if the Pinned cameras alone do not fit, the page says which pin to lift.
+- **The same rule everywhere.** The memo, the incident chat and the comparison call one function for the record and the list of cameras read by words alone, so the bar, the fit and the outputs never disagree. Today's memo rule (drop transcript-only cameras to a line, longest first) is replaced by this one: no camera is ever reduced to a line.
+- **Said where it is written.** The memo's head line: "Written <date> from everything said on N cameras and what M of them showed." with "K cameras by words alone." linking to the list; the memo's Word export carries the same line in its processing record. The comparison's state line: "5 pages against everything said on N cameras and what M of them showed" and the same link; the comparison's Word export likewise. Gideon's panel on the incident page: "Answers from everything said on N cameras and what M of them showed." above the question box, and each answer's notice carries it. The Proposed events layer, which reads cameras one at a time and is not bound by the sitting, gains its own line: "Read: N cameras. Never read: <cameras>" when a synced camera has had no run, so a person knows to run Propose events again.
+- **The pin.** Always read what it showed on a camera's row on the Cameras tab (and on the list under a full bar) sets it; the row then carries a small pin and **Read it like the others** to lift it. A pin is the incident's, kept with the camera's placement, and survives a re-sync. Setting or lifting one writes an audit row.
+
+### The engine's window
+
+- **Read from the engine.** The llm-worker's minute check of the engine (Phase 3) also reads the model listing's window (`max_model_len` on the served model, as vLLM reports it) and keeps the figure with the check's result. Every fit check and every bar reads that figure; when the engine gives none, the Panel's Engine window setting is used.
+- **On the Panel.** The Status page's AI assistant block gains "Engine window: 131,072 tokens, read from the engine at 11:20" or "…, from the setting; the engine did not say", "Largest reading today" (the biggest record the app fitted or refused, with its page) and "Readings refused" (the day's and the week's `llm_too_long` count). The AI assistant page's Engine window row greys with "read from the engine" while the engine answers, keeps its value, and says it is the fallback.
+- **When the model changes.** GIDEON announces an engine swap under the box ledger's section 8; the app needs no word of it: the next minute's check reads the new window and every bar follows. The chapter asks nothing of GIDEON beyond what section 8 already gives.
+
+### In and out
+
+- The memo's and the comparison's Word exports carry the sources line under What the assistant reads; nothing else is exported differently. Nothing is imported.
+
+### What changes from earlier phases
+
+- Phase 7 chapter 1's memo fit (transcript-only cameras dropped to a line, a Digest never dropped) is replaced by the words-alone rule above; Phase 7 chapter 3's incident chat and Phase 8 chapter 4's comparison take the same rule in place of their own `llm_too_long` at the first misfit.
+- Phase 3's Engine window setting becomes the fallback; its catalogue row says so.
+- Phase 6 chapter 1's Add cameras dialog gains the bar; its count cap is unchanged.
+
+### Audit rows
+
+- **Cases**: Camera pinned; Camera unpinned (the incident, the camera). The existing AI assistant call row gains `words_alone` (the count of cameras read by words alone) on the memo, incident chat and comparison features, and `window_source` (`engine` or `setting`) on every call.
+
+### Settings
+
+- None added. Engine window's row in the catalogue is amended: the fallback while the engine does not report a window; greyed with the engine's figure while it does. The zone thresholds (85 percent) and the unit's conversion are the app's.
+
+### Not in this chapter
+
+- **A coarser Digest for reading across cameras** (one part per few minutes beside today's 30-second parts), which would make the bar seldom fill: held; this chapter makes the limit visible and survivable first, and the coarse Digest is measured against it afterwards.
+- **Reading the incident in passes** (the memo or the comparison written from windows of time and combined): held for the same reason.
+- **A count cap lowered for size**: ruled out; the count is a workstation's decoding limit, not the assistant's.
+- **Showing tokens on the incident page**: ruled out; tokens stay on the Panel.
+- **Dragging cameras into an order of importance**: not chosen; one pin per camera is the control.
+
+### Left to the build
+
+- The exact conversion to hours' worth when an incident has no Digest yet (the transcripts' rate alone) and the rounding of the figure (halves under ten hours, whole above).
+- Whether the words-alone list on the Cameras tab shows under an amber bar as well (which cameras would go first), or only past the line.
+- Where the minute check keeps the engine's window (the settings store's cache or the check's own row) and how a change is noticed by an open page (the page's five-second line, or the next draw).
+- The name of the audit field for the cameras read by words alone if the count alone proves too little.
+
+## 10. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -697,6 +769,7 @@ Added to `CONTEXT.md` with this chapter. **Detail**: the part of an Event's text
 | (none) | | 6 |
 | (none) | | 7 |
 | (none) | | 8 |
+| Cases | Camera pinned; Camera unpinned; AI assistant call gains words_alone and window_source | 9 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -710,13 +783,15 @@ Added to `CONTEXT.md` with this chapter. **Detail**: the part of an Event's text
 | (none) | | | 6 |
 | (none) | | | 7 |
 | (none) | | | 8 |
+| (none; Engine window becomes the fallback) | AI assistant | | 9 |
 
 ## Sources
 
-The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison. For chapter 7, the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items V5, D2, V2 and C5) and the drawings `docs/spec/mockups/phase-8-fail-well.html`. For chapter 8, the same walk (items I4 and V7) and Phase 5 chapter 1's fragment hint.
+The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `docs/spec/mockups/phase-8-layouts.html` and `docs/spec/mockups/phase-8-incident-panel.html` and the picks made from them (1A, 2A, 3A, 4A; the rule, 1A, 2A, 3A, 4A); Phases 6 and 7 for what the pages hold. For chapter 5, the maintainer's asks of 2026-09-22 and the drawings `docs/spec/mockups/phase-8-incident-desk.html`. For chapter 6, the maintainer's asks of the same evening after the first real comparison. For chapter 7, the end-user walk of 2026-09-22 (the report "Transcribe walk findings", items V5, D2, V2 and C5) and the drawings `docs/spec/mockups/phase-8-fail-well.html`. For chapter 8, the same walk (items I4 and V7) and Phase 5 chapter 1's fragment hint. For chapter 9, the walk of a twelve-camera incident on 2026-09-23 (the record measured at 144,000 tokens of Digest against 28,000 of transcript), the maintainer's asks the same day, and the drawings `docs/spec/mockups/phase-8-sitting.html`.
 
 ## Amendments applied
 
+- **2026-09-23.** Chapter 9 (One sitting) written for the build from the walk of a real twelve-camera incident, where Compare with the report, Ask Gideon and the memo all refused the incident as too long: the bar on the Cameras tab in hours of camera with three zones that say what changes; everything said always read, the longest cameras' pictures left out first, a pin to keep one; the engine's window read from the engine with the setting as the fallback; the outputs saying what they read. The coarse Digest and reading in passes held.
 - **2026-09-23, v1.77.0.** Chapter 8 built as written. Decisions left to the build: a full stop after a short list of abbreviations (Sgt., Ofc., Lt., Mr., No. and the like), after a single initial or after a number does not end the line; the detail on the muted line is shown whole; a line's neighbour on a tie between the speaker before and the speaker after is the one with more lines, and so is the fragment's on a tie of lines; the fragment's measures are the chapter's (eight lines, thirty seconds, three seconds); the event box's text became a box of lines with Ctrl+Enter to save.
 - **2026-09-23, v1.76.0.** Chapter 7 built as written. Decisions left to the build: a script's request is marked with the header `X-Requested-With: transcribe`, set by `session.js` on every same-origin fetch, and the same script reads the 401 and stops the page (timers cleared up to the highest id, videos paused, the main column and the panels inert); `next` carries the page's path and query, and Sign in honours it only for the person whose session ended, remembered in the browser's session for the sign-in that follows; the pill's card is a details element in the paragraph card's shape with Close alone as script; the About pane is 24rem; the gone page's ways are chosen by the address's first part. Chapter 1's three panes from 2560 pixels remain unbuilt, as before. Also fixed: the page's Admin mark, written with stray backslashes in v1.75.1.
 - **2026-09-23, v1.75.1.** The fix release from the maintainer's end-user walk of 2026-09-22, run in Claude's browser on the office's copy as a test Admin (the report is the artifact "Transcribe walk findings"): the transport's Sync button (chapter 1's layer conversion left it testing the box, not the layer); the case script's error on the recording page; the recording page's Report tab out of the Clips switch (chapter 4 part 2); the Gideon button's reason; the words and reading fixes the changelog lists. Chapter 7 (the pages that fail well: a session that ends under an open page, one page for a gone address, the Admin banner as a pill, the case page's width) and chapter 8 (the proposed event's line) are to be written from the same walk.
