@@ -2364,6 +2364,7 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-said-line .t { font-family: var(--mono); font-size: var(--t-small); }
 .inc-said-line .who { font-weight: 600; font-size: var(--t-small); color: var(--speaker, inherit); }
 .inc-said-line.lit { background: var(--now); color: var(--now-ink); }
+.inc-said-line.next .t::before { content: "next "; color: var(--muted); font-family: var(--sans, inherit); }
 .inc-said-line.lit .who { color: inherit; }
 .inc-said-line .acts { visibility: hidden; display: inline-flex; gap: 4px; }
 .inc-said-line.lit:hover .acts { visibility: visible; }

@@ -113,6 +113,13 @@ def _cases_line(user) -> str:
         return count(own)
     if shared:
         return f"{count(shared)} shared with you"
+    if getattr(user, "is_admin", False):
+        # An Admin who owns nothing still has the office's cases (v1.75.1).
+        from core.cases import Case
+
+        office = Case.objects.filter(deleted_on__isnull=True).count()
+        if office:
+            return f"None of yours yet; {count(office)} in the office"
     return "None yet"
 
 

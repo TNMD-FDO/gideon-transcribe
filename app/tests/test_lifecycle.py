@@ -31,8 +31,10 @@ def lines_for(**counts):
         return lifecycle.sign_out_lines(user=None)
 
 
-def test_an_empty_workspace_says_there_is_nothing_to_remove():
-    assert lines_for() == ["There is nothing here to remove."]
+def test_an_empty_workspace_says_what_stays():
+    assert lines_for() == [
+        "Nothing of yours is waiting here; your cases and clips stay."
+    ]
 
 
 def test_one_recording_reads_in_the_singular():

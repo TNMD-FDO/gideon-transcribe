@@ -243,9 +243,16 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
             and transcript is not None
             and engine.is_reachable()
         ),
-        "gideon_why": ""
-        if engine.is_reachable()
-        else engine.WHAT_TO_SAY[engine.UNREACHABLE],
+        # Why the button is greyed, in words, whichever the reason (v1.75.1).
+        "gideon_why": (
+            engine.WHAT_TO_SAY[engine.UNREACHABLE]
+            if not engine.is_reachable()
+            else "The chat is off for this office."
+            if not assistant.features()["chat"]
+            else "There is no transcript yet to ask about."
+            if transcript is None
+            else ""
+        ),
         # The Case's People, for the rename box to offer; none in a Workspace.
         "people": _people_of(recording),
         "speaker_roles": _roles_if_in_a_case(recording),

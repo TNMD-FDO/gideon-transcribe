@@ -193,7 +193,7 @@ def sign_out_lines(user) -> list[str]:
             parts.append(_plural(tally["chats"], "chat"))
         lines.append(f"Signing out removes {_list_of(parts)}.")
     else:
-        lines.append("There is nothing here to remove.")
+        lines.append("Nothing of yours is waiting here; your cases and clips stay.")
 
     if tally["clips_not_downloaded"]:
         one = tally["clips_not_downloaded"] == 1

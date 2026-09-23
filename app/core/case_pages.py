@@ -293,6 +293,10 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "role": role,
             **_sharing_context(case, role),
             "recordings": _rows_for(case),
+            # The Type column only when a row has a type (v1.75.1).
+            "any_type": any(
+                getattr(one, "recording_type", "") for one in _rows_for(case)
+            ),
             "vision_line": vision.line(case),
             "vision_pending": vision.pending(case),
             "vision_offers": vision.offers(case, user=request.user),

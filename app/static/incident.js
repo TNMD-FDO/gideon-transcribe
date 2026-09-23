@@ -467,6 +467,7 @@
       if (segments[i].end <= local) { before = i; }
     }
     var lit = index !== -1;
+    var upcoming = !lit && before === -1;
     var centre = lit ? index : Math.max(0, before);
     var key = cam.id + ":" + centre + ":" + (lit ? "lit" : "off");
     if (key === saidKey && !force) { return; }
@@ -476,7 +477,7 @@
     for (var n = from; n <= to; n += 1) {
       var one = segments[n];
       var isLit = lit && n === index;
-      html += "<div class='inc-said-line" + (isLit ? " lit" : "") + "' data-line='" + n + "' style='--speaker: " + escape(one.colour || "") + "'>" +
+      html += "<div class='inc-said-line" + (isLit ? " lit" : "") + (upcoming && n === from ? " next" : "") + "' data-line='" + n + "' style='--speaker: " + escape(one.colour || "") + "'>" +
         "<span class='t'>" + escape(timeOfDay(cam.starts_at + one.start)) + "</span>" +
         "<span class='who'>" + escape(one.speaker || "") + "</span>" +
         "<span class='txt'>" + escape(one.text) + "</span>" +
@@ -658,6 +659,15 @@
       if (width > widestWork()) { setWork(widestWork()); }
     });
   })();
+
+  // "18 Sep 2026 13:50", the page's one date style (v1.75.1).
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function dateWords(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return escape(iso || ""); }
+    var two = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear() + " " + two(d.getHours()) + ":" + two(d.getMinutes());
+  }
 
   function drawWall() {
     var wanted = wallCameras();
@@ -2070,7 +2080,7 @@
     var I = S.incident;
     var html = "<dl class='kv'>";
     html += "<dt>Incident</dt><dd>" + escape(I.name) + "</dd>";
-    html += "<dt>Made</dt><dd>" + (I.created_by ? "by " + escape(I.created_by) + ", " : "") + new Date(I.created).toLocaleString() + (I.how === "offer" ? ", from the case page's offer" : ", with New incident") + "</dd>";
+    html += "<dt>Made</dt><dd>" + (I.created_by ? "by " + escape(I.created_by) + ", " : "") + dateWords(I.created) + (I.how === "offer" ? ", from the case page's offer" : ", with New incident") + "</dd>";
     html += "<dt>Clock</dt><dd>" + (I.has_clock ? "the time of day on " + escape(I.clock_date) + ", from the first camera placed from a checked clock" : "no camera clock; times count from the first camera") + "</dd>";
     html += "<dt>Span</dt><dd>" + escape(I.span_words) + "</dd>";
     html += "<dt>Cameras</dt><dd>" + I.count + ", " + escape(I.placed_words) + "</dd>";
@@ -2244,7 +2254,9 @@
     setSound(partner.id);
     play();
   }
-  document.getElementById("sync-open").addEventListener("click", function () { if (syncBox.hidden) { openSync(null); } else { closeSync(); } });
+  // The layer's hidden, not the box's: since chapter 1 made Sync a layer the
+  // box itself is never hidden (v1.75.1, from the walk).
+  document.getElementById("sync-open").addEventListener("click", function () { if (!layerOf("sync") || layerOf("sync").hidden) { openSync(null); } else { closeSync(); } });
   syncBox.addEventListener("click", function (event) {
     if (event.target.closest("#sync-close")) { closeSync(); return; }
     if (event.target.closest("#sync-all") || event.target.closest("#sync-ticked")) {

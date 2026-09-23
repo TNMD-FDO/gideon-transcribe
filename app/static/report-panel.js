@@ -93,6 +93,14 @@
     if (ready) { link.href = C.export_url; }
   }
 
+  function shorten(text, most) {
+    text = String(text || "");
+    if (text.length <= most) { return text; }
+    var cut = text.lastIndexOf(" ", most);
+    return text.slice(0, cut > most / 2 ? cut : most) + "...";
+  }
+  function quoted(text) { return escape(text).replace(/'/g, "&#39;"); }
+
   function drawComparison(box, urls, setTitle) {
     if (!box) { return; }
     var key = urls.comparison + "?" + urls.home + "=" + urls.homeId;
@@ -138,7 +146,7 @@
               "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'>" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
               (one.event ? "<div class='muted small'>on the chronology</div>" : "") + "</td>" +
               "<td><div class='claim'>" + escape(one.claim) + "</div>" +
-              (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted'>" + escape(one.paragraph) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
+              (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted' title='" + quoted(one.paragraph) + "'>" + escape(shorten(one.paragraph, 220)) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
               (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
               (one.note ? "<div class='small note'><b>Note:</b> " + escape(one.note) + "</div>" : "") +
               "<div class='acts'>" +

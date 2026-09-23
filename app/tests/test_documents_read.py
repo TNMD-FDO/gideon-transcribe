@@ -256,6 +256,11 @@ def test_the_report_tab_is_there_only_while_a_document_is_linked(
     page = client.get(f"/recording/{first.pk}").content.decode()
     assert 'data-panel="report">' in page and 'id="report-panel"' in page
     assert f"/document/{report.pk}/state" in page and "report-panel.js" in page
+    # The Report tab stands on its own switch (v1.75.1): Clips off keeps it.
+    settings_store.set_to("clips_available", False)
+    page = client.get(f"/recording/{first.pk}").content.decode()
+    assert 'data-panel="report">' in page and 'data-panel="clips"' not in page
+    settings_store.set_to("clips_available", True)
     page = client.get(incident.url()).content.decode()
     assert 'id="tab-report"' in page and 'id="panel-report"' in page
     state = client.get(f"{incident.url()}/state").json()["incident"]

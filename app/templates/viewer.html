@@ -7,7 +7,7 @@
 {% block content %}
   {% if is_someone_elses %}
     <p class="banner">
-      Viewing <b>{{ recording.user.username }}</b>'s Workspace as an Admin.
+      Viewing <b>{{ recording.user.shown_name }}</b>'s {% if recording.case_id %}case{% else %}Workspace{% endif %} as an Admin.
       This access is recorded in the audit log.
     </p>
   {% endif %}
@@ -271,8 +271,9 @@
           <button type="button" class="tab on" data-panel="transcript">{% icon "text" %} Transcript</button>
           {% if clips_available %}
             <button type="button" class="tab" data-panel="clips">{% icon "clip" %} Clips</button>
-          {% if documents %}<button type="button" class="tab" data-panel="report">{% icon "document" %} Report <span class="count">{{ documents|length }}</span></button>{% endif %}
           {% endif %}
+          {% comment %}The Report tab stands on its own switch (v1.75.1): an office with Clips off still has its reports.{% endcomment %}
+          {% if documents %}<button type="button" class="tab" data-panel="report">{% icon "document" %} Report <span class="count">{{ documents|length }}</span></button>{% endif %}
           {% if assistant.summary and transcript %}
             <button type="button" class="tab" data-panel="summary">{% icon "summary" %} Summary</button>
           {% endif %}

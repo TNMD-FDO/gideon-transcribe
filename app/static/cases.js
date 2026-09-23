@@ -679,6 +679,9 @@
   document.querySelectorAll(".choose-myself").forEach(function (button) {
     button.addEventListener("click", function () { openWith(button.dataset.recordings.trim().split(/\s+/)); });
   });
-  document.getElementById("incident-cancel").addEventListener("click", function () { box.hidden = true; });
+  // The recording page loads this script too and has no incident box (v1.75.1).
+  var cancel = document.getElementById("incident-cancel");
+  if (!box || !cancel) { return; }
+  cancel.addEventListener("click", function () { box.hidden = true; });
   box.addEventListener("click", function (event) { if (event.target === box) { box.hidden = true; } });
 })();

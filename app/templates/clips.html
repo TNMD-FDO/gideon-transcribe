@@ -23,7 +23,7 @@
       {% endif %}
     </div>
     <p class="lead">
-      {{ total }} in all. Every clip you have saved, under the case or the
+      {% if total|slice:":3" != "0.0" %}{{ total }} in all. {% endif %}Every clip you have saved, under the case or the
       place it belongs to; a clip is a span of a recording, rendered as a
       file you can play outside the app.
     </p>

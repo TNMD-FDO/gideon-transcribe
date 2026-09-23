@@ -422,7 +422,7 @@ def queue_state(request: HttpRequest) -> JsonResponse:
         rows.append(
             {
                 "id": str(job.pk),
-                "user": job.recording.user.username,
+                "user": job.recording.user.shown_name,
                 "title": job.recording.title,
                 "batch": str(job.batch_id)[:8],
                 "started": job.created.isoformat(),

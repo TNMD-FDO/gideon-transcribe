@@ -799,7 +799,9 @@
       // A window's list ran past the answer cap (v1.56.0): the run did not
       // see everything, and the page says so rather than looking finished.
       said.textContent += " " + run.cut_short + (run.cut_short === 1 ? " window's list was" : " windows' lists were") +
-        " cut short at the answer cap; raise the cap on the Panel's Speakers page or shorten the window, then check again.";
+        (document.body.dataset.admin === "1"
+          ? " cut short at the answer cap; raise the cap on the Panel's Speakers page or shorten the window, then check again."
+          : " cut short at the answer cap; ask your Admin to raise it, then check again.");
     }
     correctionsBox.hidden = !pending.length;
     document.getElementById("corrections-title").textContent =

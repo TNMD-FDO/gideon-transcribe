@@ -4,6 +4,15 @@
 (function () {
   "use strict";
 
+  // A timestamp in the page's own style, "3 Sep 19:49" (v1.75.1).
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function whenWords(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return String(iso || ""); }
+    var two = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + two(d.getHours()) + ":" + two(d.getMinutes());
+  }
+
   var EVERY = 5000;
 
   function escape(text) {
@@ -46,8 +55,9 @@
       var versions = service.versions || {};
       var speeds = Object.keys(service.speed || {}).map(function (name) {
         var one = service.speed[name];
-        return name + ": " + (one.with_diarization || "?") + "x with speakers, " +
-          (one.without_diarization || "?") + "x without";
+        var one_decimal = function (x) { return x === undefined || x === null ? "?" : Number(x).toFixed(1); };
+        return name + ": " + one_decimal(one.with_diarization) + "x with speakers, " +
+          one_decimal(one.without_diarization) + "x without";
       });
 
       facts("service", [
@@ -68,7 +78,7 @@
         ["Uptime", service.uptime_seconds
           ? Math.round(service.uptime_seconds / 3600) + " h" : ""],
         ["Last failure", service.last_failure
-          ? service.last_failure.reason_class + " at " + service.last_failure.time
+          ? service.last_failure.reason_class + " at " + whenWords(service.last_failure.time)
           : "none"],
         ["Consumers", (service.tokens || []).join(", ")]
       ]);

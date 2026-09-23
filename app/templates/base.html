@@ -15,7 +15,7 @@
     } catch (ignored) { /* a browser that forbids storage keeps the system theme */ }
   </script>
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}"{% if user.is_admin %} data-admin=\"1\"{% endif %}>
   {% include "icons.html" %}
   {% comment %}The dialogs, toasts and hints every page script leans on; before them all.{% endcomment %}
   <script src="{% static 'ui.js' %}"></script>

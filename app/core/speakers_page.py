@@ -132,6 +132,10 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
             if not overlaps(mine, lines[candidate]):
                 other = candidate
                 break
+        # Only a small speaker is offered the merge (v1.75.1): a speaker with
+        # minutes of talk who never overlaps the busiest is someone else.
+        if talking >= SMALL_SECONDS:
+            other = ""
         made.append(
             {
                 "name": name,

@@ -21,6 +21,45 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.75.1, 2026-09-23
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The fix release from walking the app as a new user on 2026-09-22 (the
+findings report of that walk lists every item).
+
+- **The incident transport's Sync button opens the Sync sheet again.** It
+  had tested the wrong thing since the layers release and always took the
+  close branch; the Cameras tab's Sync was the only way in.
+- **The recording page loads clean.** The case script, loaded on every
+  page while cases are on, tried to bind the incident box that only the
+  case page has and stopped with an error.
+- **The Report tab on a recording stands on its own switch**, so an office
+  with Clips off still sees its reports.
+- **The Gideon button always says why it is greyed**: the engine
+  unreachable, the chat off for the office, or no transcript yet.
+- **Words**: the Start tile tells an Admin who owns no case how many the
+  office has; the sign-out page says what stays rather than "nothing here
+  to remove"; the case page's Speakers tab reads "0 named" beside rows of
+  unnamed speakers; the Type column is shown only when a recording has a
+  type; the Admin banner names the person and says "case" for a recording
+  in one; the incident's Details and the Status page use the app's one
+  date style, and the Status page's speeds have one decimal; the Queue
+  shows people's names; an empty Clips page drops "0.0 MB in all"; the
+  keeping rule is said once on My recordings; the speaker check's
+  cut-short advice about the Panel is shown to Admins alone; the user
+  guide's Notes and Speakers sections are separated and its Chat tab
+  section now describes Ask Gideon.
+- **Reading**: the said band marks the first line "next" before anything
+  is said; a comparison row shows the first lines of its paragraph and
+  the card the whole; Find's memo hits and Search's document hits show the
+  sentence with the words, not the paragraph; the speaker merge hint is
+  offered to a small speaker alone, not to everyone who never overlaps the
+  busiest.
+
 ## v1.75.0, 2026-09-22
 
 ```

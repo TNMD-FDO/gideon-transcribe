@@ -6,7 +6,7 @@
 {% block content %}
   {% if someone_elses %}
     <p class="banner">
-      Viewing <b>{{ someone_elses.username }}</b>'s Workspace as an Admin.
+      Viewing <b>{{ someone_elses.shown_name }}</b>'s Workspace as an Admin.
       This access is recorded in the audit log.
     </p>
   {% endif %}
@@ -132,7 +132,7 @@
       {% if someone_elses %}
         {% include "empty.html" with icon="upload" title="No recordings" line="This person has nothing in their workspace at the moment." %}
       {% else %}
-        <p class="muted">Nothing uploaded this session. <a href="{% url 'upload' %}">Upload files</a> and they are transcribed here; they stay until you sign out unless you move them to a case.</p>
+        <p class="muted">Nothing uploaded this session. <a href="{% url 'upload' %}">Upload files</a> and they are transcribed here.</p>
       {% endif %}
     {% endif %}
   </div>

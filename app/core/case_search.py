@@ -83,6 +83,19 @@ def mark(text: str, words: list[str]):
     return mark_safe("".join(out))
 
 
+def sentence_with(text: str, words: list[str]) -> str:
+    """The sentences of a text that carry any of the words, joined; the whole
+    text when none does or the text is short (v1.75.1, from the walk: a
+    memo or report hit showed a whole paragraph)."""
+    if not words or len(text) <= 240:
+        return text
+    pieces = re.split(r"(?<=[.!?])\s+", text)
+    kept = [one for one in pieces if any(word.lower() in one.lower() for word in words)]
+    if not kept:
+        return text[:240].rsplit(" ", 1)[0] + "..."
+    return " ".join(kept[:3])
+
+
 def paragraphs(text: str) -> list[str]:
     return [one.strip() for one in re.split(r"\n\s*\n|\n", text or "") if one.strip()]
 
@@ -182,7 +195,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                 here["hits"].append(
                     _hit(
                         f"page {one['page']}, paragraph {one['n']}",
-                        mark(one["text"], words),
+                        mark(sentence_with(one["text"], words), words),
                         url=f"{document.url()}?page={one['page']}&para={one['n']}",
                         who="Document" + (", read by OCR" if one["ocr"] else ""),
                         at=float(one["page"] * 1000 + one["n"]),
@@ -499,8 +512,8 @@ def find(incident, asked: str) -> dict:
                     "camera": "",
                     "camera_id": "",
                     "kind": "memo",
-                    "html": str(mark(paragraph, words)),
-                    "text": paragraph,
+                    "html": str(mark(sentence_with(paragraph, words), words)),
+                    "text": sentence_with(paragraph, words),
                     "who": "Memo",
                     "para": number,
                 }
