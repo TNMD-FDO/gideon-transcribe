@@ -118,7 +118,8 @@
           <span class="eyebrow" id="event-title">New event</span>
           <label>At <input type="text" name="when" class="mono" size="9" aria-label="When it happened"></label>
           <label>until <input type="text" name="until_when" class="mono" size="9" placeholder="optional" aria-label="When it ended"></label>
-          <input type="text" name="text" class="grow" maxlength="500" placeholder="What happened" aria-label="What happened">
+          <textarea name="text" class="grow" rows="2" maxlength="500" placeholder="What happened" aria-label="What happened"></textarea>
+          <span class="small muted inc-event-hint">The first line is the event. Anything after a line break is its detail, shown under it. Ctrl+Enter saves.</span>
           <span class="inc-event-cams" id="event-cams" title="The cameras that show it"></span>
           <button type="button" class="tiny ghost" id="event-note-open" title="A note in your own words">Note</button>
           <label class="small" title="Mark that this event needs looking at"><input type="checkbox" name="to_check"> To check</label>

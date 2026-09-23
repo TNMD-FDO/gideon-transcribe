@@ -35,6 +35,46 @@ SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH, REPORT)
 WHY_MOST = 300
 
 TEXT_MOST = 500
+# The line and the detail (Phase 8 chapter 8): an Event's text is one field,
+# read two ways. The line is the text to its first line break, or its first
+# sentence when the text runs past LINE_MOST; a line still longer than
+# LINE_CUT is cut at a word, and the detail is then the whole.
+LINE_MOST = 120
+LINE_CUT = 160
+# A full stop after one of these does not end a sentence.
+ABBREVIATIONS = frozenset(
+    one.lower()
+    for one in (
+        "Sgt.",
+        "Ofc.",
+        "Off.",
+        "Lt.",
+        "Cpl.",
+        "Capt.",
+        "Det.",
+        "Dep.",
+        "Tpr.",
+        "Ptl.",
+        "Insp.",
+        "Mr.",
+        "Mrs.",
+        "Ms.",
+        "Dr.",
+        "St.",
+        "No.",
+        "Jr.",
+        "Sr.",
+        "Ave.",
+        "Blvd.",
+        "Rd.",
+        "Hwy.",
+        "approx.",
+        "vs.",
+        "etc.",
+        "a.m.",
+        "p.m.",
+    )
+)
 # A person's note under an Event, and the Chronology's About (Phase 7).
 NOTE_MOST = 2000
 
@@ -105,6 +145,42 @@ def running_cameras(incident, at: float) -> list[str]:
     ]
 
 
+def _sentence_end(text: str) -> int:
+    """Where the first sentence ends, as the index after its stop; 0 if never."""
+    import re
+
+    for match in re.finditer(r"[.!?;](?=\s)", text):
+        if match.group() == ".":
+            word = text[: match.end()].rsplit(None, 1)[-1]
+            # "Sgt. Hale", "J. Smith", "No. 12": not an end.
+            if word.lower() in ABBREVIATIONS or len(word) == 2 or word[:-1].isdigit():
+                continue
+        return match.end()
+    return 0
+
+
+def line_and_detail(text: str) -> tuple[str, str]:
+    """An Event's text read two ways: the line, and the detail under it."""
+    text = (text or "").strip()
+    if "\n" in text:
+        line, detail = text.split("\n", 1)
+        line = " ".join(line.split())
+        detail = " ".join(detail.split())
+    elif len(text) > LINE_MOST:
+        end = _sentence_end(text)
+        if end:
+            line, detail = text[:end].strip(), text[end:].strip()
+        else:
+            line, detail = text, ""
+    else:
+        return text, ""
+    if len(line) > LINE_CUT:
+        cut = line.rfind(" ", 0, LINE_CUT)
+        line = line[: cut if cut > 40 else LINE_CUT].rstrip(" ,;:") + "\u2026"
+        detail = " ".join(text.split())
+    return line, detail
+
+
 def _cleaned(incident, fields: dict) -> dict:
     """The fields of an Event from a request, checked."""
     try:
@@ -119,7 +195,13 @@ def _cleaned(incident, fields: dict) -> dict:
             raise ValueError("When did it end?") from None
         if until <= at:
             until = None
-    text = " ".join(str(fields.get("text", "")).split())[:TEXT_MOST]
+    # One line per line typed, the spacing tidied, blank lines dropped: a
+    # line break is where the line ends and the detail begins (chapter 8).
+    text = "\n".join(
+        " ".join(line.split())
+        for line in str(fields.get("text", "")).splitlines()
+        if line.strip()
+    )[:TEXT_MOST]
     if not text:
         raise ValueError("What happened? An event needs a line of text.")
     # Only Accept makes an Event the assistant's (chapter 3); a request that
@@ -328,12 +410,15 @@ def events_json(incident) -> list[dict]:
     for event in incident.events.filter(dismissed=False).select_related(
         "added_by", "changed_by", "note_by"
     ):
+        line, detail = line_and_detail(event.text)
         rows.append(
             {
                 "id": str(event.pk),
                 "at": event.at,
                 "until": event.until,
                 "text": event.text,
+                "line": line,
+                "detail": detail,
                 "source": event.source,
                 "source_words": source_words(event, names),
                 "camera": str(event.camera_id) if event.camera_id else "",
@@ -373,10 +458,13 @@ def _rows(incident) -> list[dict]:
     names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
     rows = []
     for number, event in enumerate(incident.events.filter(proposed=False), 1):
+        line, detail = line_and_detail(event.text)
         rows.append(
             {
                 "id": str(event.pk),
                 "number": number,
+                "line": line,
+                "detail": detail,
                 "time": incidents.time_of_day(incident, event.at),
                 "seconds": event.at,
                 "end": incidents.time_of_day(incident, event.until)
@@ -410,6 +498,7 @@ def spreadsheet(incident) -> bytes:
             "Seconds into the incident",
             "End",
             "Event",
+            "Detail",
             "Source",
             "Camera",
             "Seen on",
@@ -427,7 +516,8 @@ def spreadsheet(incident) -> bytes:
                 row["time"],
                 f"{row['seconds']:.1f}",
                 row["end"],
-                row["text"],
+                row["line"],
+                row["detail"],
                 row["source"],
                 row["camera"],
                 row["seen_on"],
@@ -547,7 +637,11 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
         cells = table.add_row().cells
         cells[0].text = str(row["number"]) + (" (to check)" if row["to_check"] else "")
         cells[1].text = row["time"] + (f" to {row['end']}" if row["end"] else "")
-        cells[2].text = row["text"]
+        cells[2].text = row["line"]
+        if row["detail"]:
+            # The detail under the line, in the smaller type (chapter 8).
+            detail = cells[2].add_paragraph()
+            detail.add_run(row["detail"]).font.size = Pt(9)
         if row["why"]:
             # The assistant's reason, or the watch phrase, under the line and
             # apart from it (Phase 7 chapter 2).

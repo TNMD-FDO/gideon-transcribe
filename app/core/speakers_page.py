@@ -34,6 +34,14 @@ TOUCHING = 0.5
 # one Lane on the page.
 MANY = 6
 SMALL_SECONDS = 60.0
+# The merge hint (Phase 8 chapter 8): a fragment is a Speaker of at most this
+# many lines and under this much talk that never overlaps anyone; its
+# neighbour is the Speaker whose turns more than half of its lines sit
+# inside, a line's neighbour being the Speaker whose line ends within
+# NEIGHBOUR_SECONDS before it or begins within that after it.
+FRAGMENT_LINES = 8
+FRAGMENT_SECONDS = 30.0
+NEIGHBOUR_SECONDS = 3.0
 
 
 @dataclass
@@ -85,6 +93,39 @@ def overlaps(mine: list[Line], theirs: list[Line]) -> bool:
     return False
 
 
+def _gap(line: Line, other: Line) -> float:
+    """How far the other's line sits before or after this one; large if far."""
+    far = NEIGHBOUR_SECONDS + 1
+    before = line.start - other.end
+    after = other.start - line.end
+    return min(
+        before if 0 <= before <= NEIGHBOUR_SECONDS else far,
+        after if 0 <= after <= NEIGHBOUR_SECONDS else far,
+    )
+
+
+def neighbour_of(mine: list[Line], others: dict[str, list[Line]]) -> str:
+    """The Speaker whose turns more than half of these lines sit inside, or ""."""
+    votes: dict[str, int] = {}
+    for line in mine:
+        best = ""
+        best_gap = NEIGHBOUR_SECONDS + 1
+        for name, theirs in others.items():
+            for one in theirs:
+                gap = _gap(line, one)
+                if gap < best_gap or (
+                    gap == best_gap and best and len(theirs) > len(others[best])
+                ):
+                    best, best_gap = name, gap
+        if best:
+            votes[best] = votes.get(best, 0) + 1
+    for name, count in sorted(
+        votes.items(), key=lambda one: (-one[1], -len(others[one[0]]))
+    ):
+        return name if count * 2 > len(mine) else ""
+    return ""
+
+
 def talking_text(seconds: float) -> str:
     whole = int(round(seconds))
     if whole < 60:
@@ -123,19 +164,17 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
     for name in sorted(lines, key=lambda one: lines[one][0].start):
         mine = lines[name]
         talking = sum(one.length for one in mine)
-        # The fragment hint: never talks while another, bigger Speaker does.
-        # Where several qualify, the one with the most lines is named.
-        other = ""
-        for candidate in sorted(lines, key=lambda one: -len(lines[one])):
-            if candidate == name or len(lines[candidate]) <= len(mine):
-                continue
-            if not overlaps(mine, lines[candidate]):
-                other = candidate
-                break
-        # Only a small speaker is offered the merge (v1.75.1): a speaker with
-        # minutes of talk who never overlaps the busiest is someone else.
-        if talking >= SMALL_SECONDS:
-            other = ""
+        # The merge hint (Phase 8 chapter 8): a fragment, a few short lines
+        # that never overlap anyone, is offered a merge into its neighbour,
+        # the Speaker whose turns its lines sit inside; a fragment with no
+        # neighbour is said to be one and offered nothing.
+        others = {one: lines[one] for one in lines if one != name}
+        fragment = (
+            len(mine) <= FRAGMENT_LINES
+            and talking < FRAGMENT_SECONDS
+            and not any(overlaps(mine, theirs) for theirs in others.values())
+        )
+        other = neighbour_of(mine, others) if fragment else ""
         made.append(
             {
                 "name": name,
@@ -158,6 +197,7 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
                     for one in pick_samples(mine)
                 ],
                 "hint_other": other,
+                "fragment": fragment,
             }
         )
     return made

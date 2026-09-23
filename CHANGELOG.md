@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.77.0, 2026-09-23
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 8 chapter 8, the event's line and the merge hint's rule, from the
+end-user walk of 2026-09-22.
+
+- **An event is one line; the rest is under it.** Wherever an event is
+  drawn, its text is read as a line and a detail: the line is the text up
+  to its first line break, or its first sentence when the text runs past
+  120 characters; the detail is everything after, shown on the muted line
+  under the event before its source. The four-line camera descriptions
+  accepted as events before the proposer was asked for one sentence now
+  read as one line each, with the description under them, and no data
+  changed. The event box is a box of lines: Enter starts the detail,
+  Ctrl+Enter saves. The Word export prints the detail under the line in
+  the smaller type, the spreadsheet gains a Detail column after Event, the
+  Events lane's labels and a clip's title from an event use the line, and
+  the memo reads the whole as before.
+- **The merge hint names a neighbour or nobody.** On the Speakers page the
+  merge is offered only to a fragment (at most eight lines, under thirty
+  seconds, never over anyone else) whose lines sit inside one speaker's
+  turns: more than half of them within three seconds of that speaker's
+  line before or after. The hint names that neighbour, not the busiest
+  speaker, and reads "Never speaks while Officer does, and its 2 lines sit
+  inside Officer's turns". A fragment with no neighbour reads "2 short
+  lines, never over anyone else's; see the lanes." and gets no button.
+  Five bystanders are no longer each offered a merge into the officer.
+
 ## v1.76.0, 2026-09-23
 
 ```

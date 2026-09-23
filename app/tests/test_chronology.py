@@ -228,7 +228,7 @@ def test_the_three_exports_come_back_in_their_shapes(person, a_case, incident, c
     assert sheet.status_code == 200 and sheet["Content-Type"].startswith("text/csv")
     text = sheet.content.decode("utf-8-sig")
     assert text.splitlines()[0].startswith("Number,Time,Seconds into the incident")
-    assert "1,21:56:47,30.0,,Vehicle stopped,Added by asker" in text
+    assert "1,21:56:47,30.0,,Vehicle stopped,,Added by asker" in text
     assert "2,22:02:57,400.0,22:03:07,Pat-down" in text
 
     # The Word document takes the picture the page drew.
@@ -273,3 +273,53 @@ def test_the_words_are_in_the_glossary_and_the_guide():
     assert "Phase 6 chapter 2, proposed" not in glossary
     guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
     assert "**The chronology.**" in guide and "Add event here" in guide
+
+
+# The line and the detail (Phase 8 chapter 8) ---------------------------------------
+
+
+def test_an_events_text_keeps_its_line_breaks_and_reads_as_line_and_detail(
+    person, incident
+):
+    event = chronology.add(
+        incident,
+        {
+            "at": "30",
+            "text": (
+                "Vehicle stopped.\n\n  The  driver  was told to wait. \n"
+                "A second unit arrived."
+            ),
+        },
+        by=person,
+    )
+    assert event.text == (
+        "Vehicle stopped.\nThe driver was told to wait.\nA second unit arrived."
+    )
+    row = chronology.events_json(incident)[0]
+    assert row["line"] == "Vehicle stopped."
+    assert row["detail"] == "The driver was told to wait. A second unit arrived."
+    sheet = chronology.spreadsheet(incident).decode("utf-8-sig")
+    head, first = sheet.splitlines()[:2]
+    assert head.split(",")[4:6] == ["Event", "Detail"]
+    assert (
+        "Vehicle stopped.,The driver was told to wait. A second unit arrived.," in first
+    )
+    # A long description accepted as it came reads as a line and the rest.
+    long = chronology.add(
+        incident,
+        {
+            "at": "40",
+            "text": (
+                "The camera view shifts to the interior of a moving vehicle at "
+                "night. A hand rests on the steering wheel and the dashboard "
+                "lights are on while the officer speaks to dispatch."
+            ),
+        },
+        by=person,
+    )
+    assert long.text.count("\n") == 0
+    rows = {one["at"]: one for one in chronology.events_json(incident)}
+    assert rows[40.0]["line"] == (
+        "The camera view shifts to the interior of a moving vehicle at night."
+    )
+    assert rows[40.0]["detail"].startswith("A hand rests on the steering wheel")

@@ -18,7 +18,7 @@ from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 
-from core import cases, clip_pages, incidents, media, settings_store
+from core import cases, chronology, clip_pages, incidents, media, settings_store
 from core.chronology import Event
 from core.clips import SHORTEST_SECONDS, Clip
 from core.incidents import DAY, Incident, IncidentCamera
@@ -271,7 +271,7 @@ def make_clip(
         title=(
             str(wanted.get("title") or "").strip()
             or (
-                event.text
+                chronology.line_and_detail(event.text)[0]
                 if event is not None
                 else _span_words(incident, from_at, until_at)
             )

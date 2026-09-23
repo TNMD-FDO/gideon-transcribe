@@ -413,7 +413,7 @@
     if (marks.dataset.key !== key) {
       marks.dataset.key = key;
       marks.innerHTML = keptEvents().map(function (one) {
-        return "<span class='ev' style='left: " + percent(one.at, range) + "' title='" + quoted(timeOfDay(one.at) + " " + one.text) + "'></span>";
+        return "<span class='ev' style='left: " + percent(one.at, range) + "' title='" + quoted(timeOfDay(one.at) + " " + (one.line || one.text)) + "'></span>";
       }).join("");
     }
     var clipping = bar.querySelector(".clipping");
@@ -1026,11 +1026,11 @@
       var left = ((one.at - shown[0]) / (shown[1] - shown[0])) * width;
       var cls = one.proposed ? " proposed" : "";
       var wide = one.until && one.until > one.at ? ((Math.min(one.until, shown[1]) - one.at) / (shown[1] - shown[0])) * 100 : 0;
-      html += "<span class='mk-ev" + cls + "' data-event='" + one.id + "' style='left: " + percent(one.at, shown) + (wide ? "; width: " + wide + "%" : "") + "' title='" + quoted(timeOfDay(one.at) + " " + one.text) + "'></span>";
-      var label = shortLabel(one.text);
+      html += "<span class='mk-ev" + cls + "' data-event='" + one.id + "' style='left: " + percent(one.at, shown) + (wide ? "; width: " + wide + "%" : "") + "' title='" + quoted(timeOfDay(one.at) + " " + (one.line || one.text)) + "'></span>";
+      var label = shortLabel(one.line || one.text);
       var needs = label.length * 6.5 + 12;
       if (left >= lastRight) {
-        html += "<span class='lbl" + cls + "' data-event='" + one.id + "' style='left: " + percent(one.at, shown) + "' title='" + quoted(timeOfDay(one.at) + " " + one.text) + "'>" + escape(label) + "</span>";
+        html += "<span class='lbl" + cls + "' data-event='" + one.id + "' style='left: " + percent(one.at, shown) + "' title='" + quoted(timeOfDay(one.at) + " " + (one.line || one.text)) + "'>" + escape(label) + "</span>";
         lastRight = left + needs;
       }
     });
@@ -1249,6 +1249,8 @@
         // One line for what happened, one muted line for everything about it
         // (Phase 8 chapter 1); the controls behind the row's menu.
         var meta = [];
+        // The detail first (Phase 8 chapter 8), then the source.
+        if (one.detail) { meta.push("<span class='detail'>" + escape(one.detail) + "</span>"); }
         meta.push(escape(one.source_words));
         if (one.rests_on) { meta.push(restsOnHtml(one.rests_on)); }
         if (one.seen_on) { meta.push("seen on " + escape(one.seen_on)); }
@@ -1257,7 +1259,7 @@
         if (one.clips) { meta.push("<a class='clipmark' href='" + S.incident.clips_url + "' title='Open the case&#39;s Clips tab, where the clip is'>" + escape(one.clips_words) + "</a>"); }
         html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td><div class='what'>" + escape(one.text) +
+          "<td><div class='what'>" + escape(one.line || one.text) +
           (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</div>" +
           "<div class='meta muted small'>" + meta.join(" &middot; ") + "</div></td>" +
           "<td class='acts nowrap'><details class='row-menu'><summary class='tiny ghost' title='Edit, note, clip, remove'>&middot;&middot;&middot;</summary><div class='menu'>" +
@@ -1305,7 +1307,8 @@
       proposed.forEach(function (one) {
         html += "<tr data-event='" + one.id + "' class='proposed'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td title='" + quoted(one.rests_on ? "Rests on: " + one.rests_on : "") + "'>" + escape(one.text) +
+          "<td title='" + quoted(one.rests_on ? "Rests on: " + one.rests_on : "") + "'>" + escape(one.line || one.text) +
+          (one.detail ? "<div class='muted small detail'>" + escape(one.detail) + "</div>" : "") +
           (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
           (one.rests_on ? "<div class='muted small rests'>Rests on: " + escape(one.rests_on) + "</div>" : "") + "</td>" +
           "<td><span class='pill small " + (one.source === "watch" ? "watch" : "warn") + "'>" + escape(one.source_words) + "</span></td>" +
@@ -1479,6 +1482,7 @@
     eventBox.elements.when.value = timeOfDay(at);
     eventBox.elements.until_when.value = given.until ? timeOfDay(given.until) : "";
     eventBox.elements.text.value = given.text || "";
+    eventBox.elements.text.rows = (given.text || "").indexOf("\n") === -1 ? 2 : 4;
     eventBox.elements.note.value = given.note || "";
     eventBox.elements.to_check.checked = !!given.to_check;
     // The note folds closed until pressed, or open when the event has one.
@@ -1552,6 +1556,15 @@
   window.INCIDENT_LAYERS = { open: openLayer, close: closeLayer, stack: function () { return layerStack.slice(); } };
   document.querySelector(".inc-work").addEventListener("click", function (event) {
     if (event.target.closest("[data-back]")) { closeLayer(); }
+  });
+
+  // The text is a box of lines (Phase 8 chapter 8): Enter starts the
+  // detail, Ctrl+Enter saves.
+  eventBox.elements.text.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      eventBox.requestSubmit();
+    }
   });
 
   eventBox.addEventListener("submit", function (event) {
@@ -1648,12 +1661,12 @@
     clipBox.elements.event.value = ev.id || "";
     clipBox.dataset.way = way;
     document.getElementById("clip-eyebrow").textContent = wayWords;
-    document.getElementById("clip-event-text").textContent = strip ? timeOfDay(from) + " to " + timeOfDay(until) : timeOfDay(ev.at) + "  " + ev.text;
+    document.getElementById("clip-event-text").textContent = strip ? timeOfDay(from) + " to " + timeOfDay(until) : timeOfDay(ev.at) + "  " + (ev.line || ev.text);
     clipBox.elements.from.value = timeOfDay(from);
     clipBox.elements.until.value = timeOfDay(until);
     // The title: the event's line; else the one event inside the span; else the times.
     var inside = strip ? keptEvents().filter(function (one) { return one.at >= from && one.at <= until; }) : [];
-    clipBox.elements.title.value = strip ? (inside.length === 1 ? inside[0].text.slice(0, 120) : timeOfDay(from) + " to " + timeOfDay(until)) : (ev.text || "").slice(0, 120);
+    clipBox.elements.title.value = strip ? (inside.length === 1 ? (inside[0].line || inside[0].text).slice(0, 120) : timeOfDay(from) + " to " + timeOfDay(until)) : (ev.line || ev.text || "").slice(0, 120);
     clipBox.elements.layout.value = layout === "focus" ? "focus" : "grid";
     clipBox.elements.burn_ids.checked = true;
     // The clock is burned only from an Incident clock: elapsed time would
@@ -1891,7 +1904,7 @@
       ctx.fillRect(ex - 1, ey, 2, 22);
       if (one.until) { ctx.globalAlpha = 0.25; ctx.fillRect(ex, ey + 4, Math.max(2, x(one.until) - ex), 14); ctx.globalAlpha = 1; }
       ctx.font = "11px 'IBM Plex Sans', system-ui, sans-serif";
-      var label = String(index + 1) + " " + shortLabel(one.text);
+      var label = String(index + 1) + " " + shortLabel(one.line || one.text);
       var needs = ctx.measureText(label).width + 8;
       if (ex >= lastRight) {
         ctx.fillStyle = "#171b21";

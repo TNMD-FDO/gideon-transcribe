@@ -158,15 +158,16 @@ def test_cards_in_the_order_they_first_spoke_with_the_hint(person):
     assert first["named"] is False and first["small"] is True
     # The last third holds a 6 s line and a 3 s one; 3 s is nearer four.
     assert [one["start"] for one in first["samples"]] == [0.0, 10.0, 30.0]
-    # Speaker 3 never talks while Speaker 1 does and has fewer lines: the hint.
+    # Speaker 3 is a fragment whose lines sit inside Speaker 1's turns: the
+    # hint names Speaker 1 (Phase 8 chapter 8).
     third = made[2]
-    assert third["hint_other"] == "Speaker 1"
-    # Speaker 2 never overlaps Speaker 1 either. Speaker 10 talks over
-    # Speaker 1, so the next biggest Speaker it never overlaps is named.
+    assert third["fragment"] is True and third["hint_other"] == "Speaker 1"
+    # Speaker 2's lines sit beside Speaker 1's too. Speaker 10 talks over
+    # Speaker 1, so it is no fragment and gets no hint at all.
     assert made[1]["hint_other"] == "Speaker 1"
-    assert made[3]["hint_other"] == "Speaker 2"
-    # The biggest Speaker has nobody bigger to be a fragment of.
-    assert first["hint_other"] == ""
+    assert made[3]["fragment"] is False and made[3]["hint_other"] == ""
+    # Speaker 1 overlaps Speaker 10: not a fragment either.
+    assert first["fragment"] is False and first["hint_other"] == ""
 
 
 # The page --------------------------------------------------------------------------

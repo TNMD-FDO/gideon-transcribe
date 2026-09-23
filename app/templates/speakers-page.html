@@ -80,10 +80,13 @@
               <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
               <button type="button" class="ghost tiny same-as" title="Merge this speaker into another">same person as...</button>
             </div>
+            {% comment %}The merge hint (Phase 8 chapter 8): a fragment with a neighbour is offered the merge; one without is said to be alone.{% endcomment %}
             {% if card.hint_other %}
-              <div class="hint-line">Never speaks while {{ card.hint_other }} does; see the lanes.
+              <div class="hint-line">Never speaks while {{ card.hint_other }} does, and its {{ card.lines }} line{{ card.lines|pluralize }} sit{{ card.lines|pluralize:"s," }} inside {{ card.hint_other }}'s turns; see the lanes.
                 <button type="button" class="tiny merge-into" data-onto="{{ card.hint_other }}">Merge into {{ card.hint_other }}</button>
               </div>
+            {% elif card.fragment %}
+              <div class="hint-line">{{ card.lines }} short line{{ card.lines|pluralize }}, never over anyone else's; see the lanes.</div>
             {% endif %}
             <div class="suggested" hidden></div>
             <div class="namebox"{% if card.named %} hidden{% endif %}>

@@ -2211,6 +2211,11 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-event-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--accent-soft); flex: none; }
 .inc-event-box label { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-small); }
 .inc-event-box input[name="text"] { flex: 1 1 18rem; min-width: 12rem; }
+/* The event's text as a box of lines (Phase 8 chapter 8): the first line is
+   the event, the rest its detail. */
+.inc-event-box textarea[name="text"] { flex: 1 1 18rem; min-width: 12rem; min-height: 2.6em; font: inherit; resize: vertical; }
+.inc-event-box .inc-event-hint { flex: 1 1 100%; }
+.inc-events .meta .detail { color: var(--text); }
 .inc-event-cams { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .inc-event-cams label { display: inline-flex; align-items: center; gap: 3px; color: var(--speaker, inherit); font-weight: 500; }
 .inc-lines .add-line { visibility: hidden; padding: 0 5px; }
