@@ -372,3 +372,39 @@ def test_the_page_carries_the_event_card_and_the_marks_alone(person, a_case, cli
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-8.md").read_text(encoding="utf-8")
     assert "## 11. A note is an event, and the Event card" in spec
     assert "## 12. Deferred and ruled out" in spec
+
+
+@pytest.mark.django_db(transaction=True)
+def test_the_migration_makes_note_events_over_a_database_with_rows(person, a_case):
+    """v1.81.1: the upgrade to v1.81.0 failed at migration 0060 on the office's
+    server, "cannot CREATE INDEX because it has pending trigger events":
+    PostgreSQL will not build 0060's index while the note events written in
+    the same transaction still have their foreign-key checks pending. The
+    rows are now made in 0061, a migration of its own. This test migrates a
+    database that has a noted line on a synced camera back to 0059 and
+    forward again, which the empty test database never exercised."""
+    from django.db import connection
+    from django.db.migrations.executor import MigrationExecutor
+
+    first = video(person, a_case, "first", stamp=stamp("21:56:19", "BWC2-1"))
+    second = video(person, a_case, "second", stamp=stamp("22:01:00", "BWC2-2"))
+    incident = incidents.make(a_case, "Stop", [first, second], by=person)
+    line = gun_line(first)
+    notes.set_note(line, "Check the footage.", by=person)
+    made = note_event(incident, line)
+    assert made is not None
+    executor = MigrationExecutor(connection)
+    latest = executor.loader.graph.leaf_nodes("core")
+    try:
+        executor.migrate([("core", "0059_camera_shares")])
+        executor = MigrationExecutor(connection)
+        executor.migrate(latest)
+    finally:
+        MigrationExecutor(connection).migrate(latest)
+    event = note_event(incident, line)
+    assert event is not None and event.pk != made.pk
+    assert event.source == "note" and event.text == "Check the footage."
+    assert event.at == 30.0 and event.camera == camera_of(incident, first)
+    assert event.cameras == [str(camera_of(incident, first).pk)]
+    assert event.added_by == person
+    assert Event.objects.filter(incident=incident, source="note").count() == 1

@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.81.1, 2026-09-24
+
+```
+Models: unchanged
+Database: migrates
+```
+
+- **The upgrade to v1.81.0 failed at its migration** on a database with
+  notes already written on synced cameras' lines: PostgreSQL refused to
+  build the new index while the note events written in the same
+  transaction still had their checks pending ("cannot CREATE INDEX because
+  it has pending trigger events"), the migration rolled back whole, and the
+  app did not start. The rows are now made in a migration of their own
+  (0061), after 0060 has added the column and the index. Nothing else
+  changes; an install that never reached v1.81.0 sees no difference.
+- A test now migrates a database that has such a note back and forward,
+  which the empty test database never exercised.
+
 ## v1.81.0, 2026-09-24
 
 ```
