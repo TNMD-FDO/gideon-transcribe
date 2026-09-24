@@ -45,7 +45,13 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
 # not in the image, so this imports the class alone.
 RUN python -c "from nemo.collections.asr.models import SortformerEncLabelModel"
 
-ENV HOME=/tmp MPLCONFIGDIR=/tmp/matplotlib
+# The container runs as the office's own account (Compose's `user:`), which
+# has no entry in the image's passwd file. torch's compile machinery, which
+# NeMo imports at start, asks the account's name and its cache folder and
+# fails on a bare uid ("getpwuid(): uid not found"), so both are given here.
+ENV HOME=/tmp MPLCONFIGDIR=/tmp/matplotlib \
+    USER=diarizer LOGNAME=diarizer \
+    TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
 
 # The same mounted model folder as the WhisperX service: the pull fetches the
 # weights there, and this container reads them offline.

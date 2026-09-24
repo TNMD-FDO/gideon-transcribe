@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.80.1, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The diarizer container failed to start** on a server where the app's
+  account has no name inside the image (only a number): NeMo's start-up
+  asks torch for the account's name and its compile cache, and torch
+  refused with `getpwuid(): uid not found`. The image now names the
+  account and the cache folder itself. Found at the v1.80.0 upgrade; the
+  image is rebuilt by `./transcribe upgrade v1.80.1 --build`, from cache
+  except its last layer.
+
 ## v1.80.0, 2026-09-24
 
 ```
