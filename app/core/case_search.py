@@ -247,8 +247,11 @@ def search(case, asked: str, kind: str = "") -> dict:
 
     if incidents.on():
         # Events: the line, the why, and each chronology's About.
+        # A note event is found once, as the line's note (chapter 11).
         events = list(
-            Event.objects.filter(incident__case=case, proposed=False)
+            Event.objects.filter(
+                incident__case=case, proposed=False, segment__isnull=True
+            )
             .filter(_all(["text", "why"], words))
             .select_related("incident", "incident__case")
             .order_by("incident__created", "at")[: MOST + 1]
@@ -295,7 +298,9 @@ def search(case, asked: str, kind: str = "") -> dict:
 
         # Notes: the office's lines under events.
         notes = list(
-            Event.objects.filter(incident__case=case, proposed=False)
+            Event.objects.filter(
+                incident__case=case, proposed=False, segment__isnull=True
+            )
             .exclude(note="")
             .filter(_all(["note"], words))
             .select_related("incident", "note_by")
@@ -484,7 +489,7 @@ def find(incident, asked: str) -> dict:
                     "line_at": one.start,
                 }
             )
-    for event in incident.events.filter(proposed=False).filter(
+    for event in incident.events.filter(proposed=False, segment__isnull=True).filter(
         _all(["text", "why", "note"], words)
     ):
         hits.append(

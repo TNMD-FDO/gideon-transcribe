@@ -550,6 +550,16 @@ def guess(camera: IncidentCamera) -> None:
     camera.starts_at = float(starts_at)
     camera.placed = GUESS
     camera.save(update_fields=["starts_at", "placed"])
+    _notes_follow(camera)
+
+
+def _notes_follow(camera: IncidentCamera) -> None:
+    """The camera's note events made right after its place changed (Phase 8
+    chapter 11): a note on a synced camera's line is on the Chronology at the
+    line's moment, and moves with the camera."""
+    from core import notes
+
+    notes.reflect_camera(camera)
 
 
 # The rounds (Phase 6 chapter 5): what the app tries on a camera, in the
@@ -695,7 +705,12 @@ def add_cameras(incident: Incident, recordings, *, by, request=None) -> int:
 
 
 def remove_camera(camera: IncidentCamera, *, by, request=None) -> None:
+    from core import notes
+
     incident = camera.incident
+    # Its note events go with it (chapter 11); a person's events stay, without
+    # their camera.
+    notes.drop_note_events(camera.recording, incident)
     camera.delete()
     _changed(incident, by, request, what="camera removed")
 
@@ -775,7 +790,11 @@ def delete(incident: Incident, *, by, request=None) -> None:
 
 
 def left_the_case(recording) -> None:
-    """A recording deleted or moved out leaves its Incident."""
+    """A recording deleted or moved out leaves its Incident, and its note
+    events leave the Chronology (chapter 11); the notes stay on the lines."""
+    from core import notes
+
+    notes.drop_note_events(recording)
     IncidentCamera.objects.filter(recording=recording).delete()
 
 
@@ -790,6 +809,7 @@ def _placed(
     camera.placed_by = by
     camera.placed_at = timezone.now()
     camera.save(update_fields=["starts_at", "placed", "placed_by", "placed_at"])
+    _notes_follow(camera)
     if not quietly:
         audit.write(
             CATEGORY,

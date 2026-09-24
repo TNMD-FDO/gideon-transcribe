@@ -20,6 +20,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **The event's line, and the merge hint's rule** (chapter 8, for the build, in two parts): an Event's text read as a line and a detail wherever it is drawn, so a row says what happened in one line and puts the rest under it, nothing stored twice and no data changed; and the Speakers page's merge hint offered to a fragment with a neighbour, the Speaker whose turns its few lines sit inside, and to nobody else.
 - **The sitting on the case page** (chapter 10, for the build): the Incidents tab's row carries the bar in small, and the offer to make an incident shows the bar as the incident would read; each camera's share is kept on the camera so a case page reads no Digest to draw a row.
 - **One sitting** (chapter 9, for the build): a bar on the incident page's Cameras tab that says how much of the incident the assistant can hold at once, in hours of camera, with a sentence for each zone that says what changes; everything said always read and the longest cameras' pictures left out first when the sitting is full, with a pin to keep one; the engine's window read from the engine so a larger model changes every bar and no setting; and the memo, the comparison and Gideon saying what they read.
+- **A note is an event, and the Event card** (chapter 11, for the build): a note on a line of a synced camera is an event on that incident's chronology at the line's moment, one thing in two places, changed or removed from either; the Events lane draws a mark alone per event, and one Event card, light on hover and whole on a press, carries what the lane's labels and the row's muted line used to spell out, from the strip, the focus camera's scrub bar, the Chronology row and the viewer's timeline.
 
 ## Contents
 
@@ -33,7 +34,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 8. The event's line, and the merge hint's rule
 9. One sitting
 10. The sitting on the case page
-11. Deferred and ruled out
+11. A note is an event, and the Event card
+12. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -92,7 +94,7 @@ Written 2026-09-19 from the maintainer's list of the same day and the picks made
 ### The Chronology tab
 
 - **The head**: **+ Event here** (the primary button), **Propose events** with a warning pill carrying the count waiting ("6 waiting") when some wait, and the count line ("4 events, 1 to check") at the right; the About paragraph as one line with Edit under the head, or "About: none yet" with Write it.
-- **The rows**: the time (a citation that plays every camera), the line with its To check pill, and the row menu; under them one muted line: the source ("Added by alvarez", "Words, BWC2-098679", "Assistant", "Watch phrase"), where it is seen, the note in italics with its writer, the why in italics for an assistant's event, and the clip mark ("1 clip ready", a link). The row being watched is lit as today.
+- **The rows**: the time (a citation that plays every camera), the line with its To check pill, and the row menu; under them one muted line: the source ("Added by alvarez", "Words, BWC2-098679", "Assistant", "Watch phrase"), where it is seen, the note in italics with its writer, the why in italics for an assistant's event, and the clip mark ("1 clip ready", a link). The row being watched is lit as today. (Amended by chapter 11: the muted line moves into the Event card, which the row's line opens; the row keeps the time, the line, the To check pill and gains a source pill.)
 - **The row menu**: Edit (the event's layer), Add a note (the layer with the note field focused), Clip this event (the clip layer), Remove.
 - **What leaves the tab**: the proposals' list, the Look for box, Find's hits, the event box and the clip box (all layers), and the per-row Edit and Clip buttons (the menu).
 
@@ -175,11 +177,11 @@ Written 2026-09-19 from the maintainer's list of the same day ("notes in transcr
 - **How it shows.** A line with a note shows it under its words, whole and wrapping: the muted colour, italics, and before the words the writer's shown name and the date ("Note, D. Meehan, 19 Sep 2026: check the body-worn footage at this point"). Pressing the note opens the box with the words in it. Saving with the box emptied removes the note, after asking. The lines' Follow, the lit line, and everything else the transcript does are unchanged; a note only makes its row taller.
 - **Who.** Whoever may correct the transcript may write, change or remove a note on it: the recording's owner, and everyone a Case is shared with, since nothing inside a shared Case is private to one person. The writer is whoever last wrote the note, and the date is when it last changed, as an Event's note has it; a note cleared has no writer.
 - **One per line**, on the shown line. The second Side's copy of a line (the copy the transcript hides) is never noted. A corrected line keeps its note; a note is about the moment, not the words as first heard. A recording moved into a case, or out of it, keeps its notes.
-- **On the timeline**, a small mark at each noted line's time, in the muted colour, under whatever the timeline already draws there; pressing it goes to the line.
+- **On the timeline**, a small mark at each noted line's time, in the muted colour, under whatever the timeline already draws there; pressing it goes to the line. (Chapter 11: hovering it shows the Event card with the note, and a press opens the card too.)
 - **In the transcript's window** (Open in a window) the notes show as they do on the page; they are written on the page.
 - **Processing again.** When a recording is processed again and its Transcript replaced, each note is carried to the new line that spans its moment (the line whose start is at or before the moment and whose end is after it; failing that, the line with the nearest start), with its writer and date, and the audit says so. A note is never dropped by processing again.
 - **Where it goes.** With the Segment, as everything about a line does: deleted with the recording, restored with it from the Recycle bin, never copied into a Clip.
-- **The incident page's wall** is unchanged: the line under a camera shows the words, not the note. A note that should sit on the Chronology is put on an event, added from that line as Phase 6 chapter 2 has it.
+- **The incident page's wall** is unchanged: the line under a camera shows the words, not the note. A note that should sit on the Chronology is put on an event, added from that line as Phase 6 chapter 2 has it. (Amended by chapter 11: a note on a synced camera's line is on the Chronology by itself, as an event.)
 
 ### Where the notes print
 
@@ -198,7 +200,7 @@ Written 2026-09-19 from the maintainer's list of the same day ("notes in transcr
 ### Told to Gideon
 
 - **The case page's Gideon** reads them. After each recording's lines, a block "The office's notes on this recording:" with one line per note, "[hh:mm:ss] <writer>: <note>", in time order; a recording read from its Digest alone (Phase 7 chapter 5's ceiling) has the block after the Digest. The case chat's rules gain the sentence the incident rules have: the office's notes are its own words, to be respected and never contradicted or rewritten, and the assistant never writes one. A note's moment is cited as a line's is, and the citation plays it.
-- **The incident's Gideon** reads the notes on the synced cameras' lines, placed on the incident clock, listed after the chronology's events as "The office's notes on the cameras' lines:", each "[hh:mm:ss] <camera> <writer>: <note>", under the same rule. The events' notes are read as Phase 7 chapter 5 has them.
+- **The incident's Gideon** reads the notes on the synced cameras' lines, placed on the incident clock, listed after the chronology's events as "The office's notes on the cameras' lines:", each "[hh:mm:ss] <camera> <writer>: <note>", under the same rule. The events' notes are read as Phase 7 chapter 5 has them. (Amended by chapter 11: the lines' notes are events on the Chronology and are read as such; the separate block is gone.)
 - **Not read.** The Summary and the Digest are the words as spoken and seen, made when the video is prepared, and do not read notes; the Incident memo's spine is the Chronology, and it reads the events' notes as today and not the lines'; Propose events, the Speaker check and every other call are unchanged and read no note.
 
 ### Search and Find
@@ -231,14 +233,14 @@ None. A note needs nothing switched on beyond the recording page; the Notes tab 
 ### Not in this chapter
 
 - **A Clip's own note**, a Recording's note and a Person's notes: other fields, unchanged.
-- **A note as a proposed event**: a person adds the event from the line, as today.
+- **A note as a proposed event**: a person adds the event from the line, as today. (Reversed by chapter 11, 2026-09-24: a note on a synced camera's line is an event, not a proposal.)
 - **Notes on a Document**: chapter 4.
 - **Replies, threads, mentions and notifications**: ruled out; a note is one line, and the office reads them together on the Notes tab.
 - **A note visible to one person only**: ruled out; nothing inside a shared Case is private to one person.
 
 ### Left to the build
 
-- The mark on the timeline and whether hovering it shows the note's first words.
+- The mark on the timeline and whether hovering it shows the note's first words. (Settled by chapter 11: the Event card.)
 - The key for the box (N) and where the focus lands when it closes.
 - How the Notes tab shortens a long line, and how a note of many lines is shown in its row.
 - The carry rule's edge: a note whose moment no new line spans takes the nearest start; the build says so in its notes.
@@ -435,7 +437,7 @@ Added to `CONTEXT.md` with this chapter. **Player bar**: the controls drawn on t
 
 - **The picture at its own proportions.** In the Focus layout the focus camera's well takes the picture's own proportion once the browser knows it (a body-worn camera held upright is upright; a dash camera is wide), instead of a 16:9 well with bars. The well's height is capped so the filmstrip, the said band and the transport stay in view on a 1080-pixel-tall window; past the cap the picture is fitted inside with bars. Filmstrip tiles, Side by side and Grid keep the 16:9 well, since a row of tiles has to be a row.
 - **The player bar.** When the pointer is over the focus picture, and while the focus camera is paused, a bar sits on the picture's lower edge over a soft dark fade: a scrub bar across the width; play or pause; back five seconds and forward five; the elapsed time and the incident's length ("1:45 / 41:26"); the speaker, lit when this is the camera heard, a press hearing it (or, when it is heard, pinning it, as the tile's speaker does today); the speed, a small menu of the transport's speeds; and **Fill the window**, which shows the focus picture and the bar alone until Escape or the same button. The bar fades out two seconds after the pointer leaves or stops moving while playing. Nothing on the bar is new: each control does what the transport's control of the same name does, and the keys (space, the arrows, B, E) are unchanged.
-- **The scrub bar** is the incident's span, as the strip is, not the focus camera's file: the played part is drawn to the clock, the focus camera's own stretch is a lighter band inside it, and a press or a drag on it seeks every camera, as a press on a strip lane does. The events are ticks on it; hovering a tick says the event's line. While a clip is being marked (below), the span so far is drawn on it in the clip's colour.
+- **The scrub bar** is the incident's span, as the strip is, not the focus camera's file: the played part is drawn to the clock, the focus camera's own stretch is a lighter band inside it, and a press or a drag on it seeks every camera, as a press on a strip lane does. The events are ticks on it; hovering a tick shows the Event card with the event's line (chapter 11). While a clip is being marked (below), the span so far is drawn on it in the clip's colour.
 - **The tile head** (the dot, the id, the pill, the speaker, Sync, the menu) stays as it is on the focus tile and on every tile. The line under the focus tile that today carries the words and the camera line keeps the camera line only; the words move to the said band.
 - **Not the focus.** A filmstrip tile, and every tile in Side by side and Grid, has no player bar; a press on its picture makes it the focus (filmstrip) or plays and pauses (the other layouts), as today.
 
@@ -636,7 +638,7 @@ Added to `CONTEXT.md` with this chapter. **Detail**: the part of an Event's text
 ### Part 1. The event's line
 
 - **The line and the detail.** An Event's text is one field, up to 500 characters, as it is. The page reads it in two parts: the **line** is the text up to its first line break when it has one; otherwise its first sentence when the text runs past 120 characters (a sentence ends at a full stop, a question mark, an exclamation mark or a semicolon followed by a space); otherwise the whole. The **detail** is everything after the line. A line that would still run past 160 characters is cut at the last word before 160 with an ellipsis, and the detail is then the whole text. The split is made in one place in the app and given to every drawing; nothing is stored twice.
-- **On the rows.** The Chronology's row and the Proposed events layer's row draw the line where the text was drawn, with the To check pill after it as today, and the detail first on the muted line, before the source, in plain type (the note stays in italics, the why in italics after it). The Events lane's hover and the strip's picture carry the line alone. Find's hits match on the whole text and show the line.
+- **On the rows.** The Chronology's row and the Proposed events layer's row draw the line where the text was drawn, with the To check pill after it as today, and the detail first on the muted line, before the source, in plain type (the note stays in italics, the why in italics after it). The Event card's light state (chapter 11, which replaced the lane's hover) and the strip's picture carry the line alone. Find's hits match on the whole text and show the line.
 - **On the layer.** The event's layer edits the whole text in one box, with the words under it: "The first line is the event. Anything after a line break is its detail, shown under it." A person who wants a shorter line presses Enter after it; a person who wants the description gone edits it out. Nothing else on the layer changes.
 - **In the exports and the memo.** The chronology's Word export prints the line in the event's cell and the detail under it in the smaller type, and the spreadsheet gets a Detail column after the event's; the memo is told the whole text as today, since the detail is often the evidence. A clip's caption from an event uses the line.
 - **What is accepted.** Accepting a proposal, a camera line or a comparison's finding stores the text as it comes, as today; the rule above makes the row read right whatever came. The proposer's own ask (one sentence, up to 120 characters, never beginning "the camera") stands from Phase 7 chapter 2, so new proposals seldom have a detail at all.
@@ -806,7 +808,99 @@ No new word. The Sitting and Pinned are chapter 9's; the case page says "The ass
 - The width of the column against the tab's other columns at the case page's narrow widths (under 900 pixels the figure alone, the bar dropped).
 - Where the share's refresh hooks in when a Digest is remade part by part (after the last part, not after each).
 
-## 11. Deferred and ruled out
+## 11. A note is an event, and the Event card
+
+Written 2026-09-24 from the maintainer's ask the same day, the last change before a pause: "notes should become events", because a note written on a recording's lines before the recording joins an incident is nowhere on the chronology; and the incident page's events "show very jumbled", the Events lane's words running into each other and a Chronology row saying everything at once. The maintainer's picks: one thing in two views (a note on a synced camera's line is an event, changed or removed from either place); a mark alone on the lane, with a card on hover or a press; the rows simplified, with the same card from the row; and the card from the focus camera's scrub bar and the viewer's timeline too. Built as `v1.81.0`.
+
+### Principles
+
+1. **A note on a synced camera's line is an event.** It sits on that Incident's Chronology at the line's moment on the Incident clock, with the note's writer, from the moment the camera is synced: a note written before the recording joined the Incident included. The app makes and unmakes the row as the note and the camera come and go, and writes no event row of its own for it; the note's own rows say what happened.
+2. **One set of words, two places.** The event's text is the note. Edit on the Chronology changes the note on the line; Remove on the Chronology removes the note from the line; a note changed or removed under the line follows to every Chronology it is on. Nothing is copied.
+3. **A mark is a mark.** The Events lane draws each event as a mark alone, so nothing on the strip can overlap at any zoom. What the mark stands for is one hover or one press away.
+4. **One card everywhere.** The same Event card opens from the strip, from the focus camera's scrub bar, from a Chronology row and from the viewer's timeline, with the same shape, the same keys and the same way out, as the paragraph card is one card for every citation.
+5. **The row says what happened.** A Chronology row is the time, the line and where it came from; everything about the event is on the card, not on the row. Chapter 1's principle 4 (room to read), taken further.
+6. **Nothing moves for it.** The card floats over the page, beside the mark or the line; the wall, the strip and the rows stay where they were, and Escape puts everything back.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Event card**: the card that opens from a mark of an Event or a row's line; **light** for the state on hover or focus (the time, the line and the source), **open** for the whole card with its actions. **Note event**, in this document and the code and never on a page: the Event a note on a synced camera's line is; its pill reads "Note by <writer>, <camera>". The pages never say tooltip, popup, popover, pop-out, hover card, flyout, modal or dialog for the card, nor pinned for its open state (a camera's word, chapter 9), nor label for the lane's old words, nor shadow, mirror, copy or link for a note event.
+
+### The note on the chronology
+
+- **What it is.** An Event with the source **note**, its text the note's words (up to a note's 2,000 characters; a typed event keeps its 500), its time the line's start on the Incident clock, its camera the one the line is on, the cameras that show it filled with the cameras running at that moment when it is made and the person's to change after, To check the person's, its writer the note's. It has no note of its own, no end, and is never proposed.
+- **Where it comes from.** Every note on a shown line of a recording that is a synced camera of the Incident (a hidden second-Side copy of a line is never noted). A recording in more than one Incident has the note on each Chronology, one note.
+- **Where it moves.** When a camera is placed or re-placed (by its clock, its file, by sound or by hand, or in the app's rounds), its note events are made or moved to the lines' new moments; a camera the app has only guessed has none. When a camera is removed from the Incident, or its recording leaves the case, its note events go and the notes stay on the lines. When the Incident is deleted, or the recording, they go with it. When a recording is processed again, each note event goes to the line its note is carried to, keeping its marks and its clips; two notes joining one line keep the first's row; a note no line takes leaves no row.
+- **Edited from either side.** Under the line, the note's box changes or clears the note as chapter 2 has it, and every Chronology follows. On the Chronology, Edit on a note event opens the event's layer as "Edit note": the words (which are the note's), the cameras and To check; the time is the line's and cannot be moved from here, and the layer says so; there is no note under a note. A change to the words is written as the note's change (Note changed, with where it was done); a change to the cameras or the mark alone is the event's (event changed). Remove on the Chronology asks, saying it removes the note from the line and from every Chronology it is on, and is written as Note removed. Clip this event works as on any event.
+- **Where it prints.** The Chronology's Word export prints the note event as an event, its source "Note by <writer>, <camera>", with a third legend when any row is one: "An event marked Note is the office's own note on a line of that camera's transcript, printed as written and never the assistant's." The spreadsheet's Source column says it and its Note column is blank. The transcript exports print the note as chapter 2 has it.
+- **Told to the assistant.** The memo, the incident chat and Propose events read a note event among the Chronology's events, as "Event n, hh:mm:ss, <the note>; seen on <cameras>; the office's own note, written by <writer> on the line at hh:mm:ss on <camera>.", and are given the notes rule when any event is one or carries a note. The incident chat's separate block of the cameras' notes (chapter 2) is gone: every such note is on the Chronology. The memo counts a note event as an event and is stale after a note is written, changed or removed.
+- **Search, Find and the Notes tab.** A note event is found once, as the line's note: Search's Events kind, Find's event hits and the Notes tab's list of notes on events leave it out.
+
+### The Events lane
+
+- Each event is a mark at its time, or a short bar to its end: a person's and a quoted one in the accent colour, a proposal in the working colour, a note event in the muted colour; the current event's mark lit. No words beside a mark at any zoom.
+- Hovering a mark shows the Event card light: the time (and the end), the line, and the source pill. A press plays every camera from there and opens the card whole. Each mark takes keyboard focus in time order; with focus the light card shows, and Enter or Space opens it.
+- The strip's picture for the exports is unchanged: numbered marks with the first words, as chapter 8 has it.
+
+### The Chronology tab's rows
+
+- A row is the time (a citation that plays every camera), the line as a press that opens the Event card, the To check pill, a small source pill ("Added by alvarez", "Words, BWC2-098679", "Camera, DC-12", "Assistant, BWC2-098702", "Watch phrase, BWC2-098702", "From the report", "Note by alvarez, BWC2-098679"), and the word "note" in the muted colour when the event carries one, with the clip mark's words beside it when it has clips. The row being watched is lit as today.
+- The detail, the cameras it is seen on, what it rests on, the note with its writer, the why and the clip mark's link leave the row for the card.
+- The row menu stays: Edit, Add a note or Edit the note, Clip this event, Remove. A note event's menu has Edit, Clip this event, Open the line (the viewer at that line with the note lit) and Remove, and no Add a note.
+
+### The Event card
+
+- **Light** (hover, or keyboard focus on a mark): the time and the end, the line, the To check pill, the source pill; on a proposal a Proposed pill and the working colour. It goes when the pointer leaves. On a touch screen there is no light state: a press opens the card whole.
+- **Open** (a press, Enter or Space): the light card's head with Close, then the detail, "Seen on" with the cameras, "rests on" as a citation that opens the paragraph card, the note in italics with its writer, the why in italics, the clip mark as a link to the case's Clips tab, and the actions: Edit, Add a note or Edit the note, Clip this event (greyed with "Sync a camera first" as the row menu is), Remove (which asks), and Go to the row when the card did not open from the row. A proposal's actions are Accept, Dismiss (greyed while the assistant is still proposing) and Go to the proposal. A note event's card shows the note as its line, the words of the line it sits on, its writer and date, and offers Edit, Clip this event, Open the line, Remove and Go to the row.
+- **One at a time.** Opening another closes the first. Close, Escape, a press outside, or a press on the same mark closes it; after Close or Escape the focus goes back to the mark. Escape closes the card before anything else on the page: a layer under it stays open, and a paragraph card opened inside the Event card closes on the first Escape, the Event card on the second.
+- **Where it sits.** Beside the mark or the line, on the side with more room, kept inside the window; it follows the mark when the strip is zoomed or moved and closes when the mark leaves the window. It is redrawn from the page's next state, so a note saved or a clip that finishes rendering shows without a press.
+
+### The scrub bar and the viewer's timeline
+
+- The focus camera's scrub bar keeps its ticks; hovering one shows the light card, and a press seeks and opens it. Chapter 5's "hovering a tick says the event's line" is met by the card.
+- The viewer's timeline keeps chapter 2's mark for each noted line; hovering it shows the light card with the time, the note as the line and "Note, <writer>, <date>"; a press goes to the line and opens the card, whose actions are Go to the line and Change the note. This settles chapter 2's open item on the mark's hover.
+
+### In and out
+
+- **In**: the note event and its six sync points; the lane's marks alone with focus; the card in its two states from the strip, the scrub bar, the rows and the viewer's timeline; the row's new shape and the source pill; the keys; the note event's card, menu and layer.
+- **Out**: any change to the event's layer for a person's event, the exports' shape beyond the source words and the legend, the memo's shape, the proposals layer's rows (the layer is where a proposal is read), the row menu's order.
+
+### What changes from earlier phases
+
+- Phase 6 chapter 2, Events: a fifth source, note; Edit on a note event changes its words, cameras and mark and never its time; a note event goes with its line, its camera's place and the note. The Events lane: the words beside a mark and the rule for overlapping labels are gone.
+- Phase 7 chapter 1: a note event has no note of its own; its text is the note.
+- Phase 8 chapter 2: "a note as a proposed event" reversed; the incident page's Gideon reads the lines' notes as events, not as a block; the timeline's mark gains the card and the open item on its hover is closed.
+- Phase 8 chapter 1, The Chronology tab's rows: the muted line under a row moves into the card; the row gains the source pill.
+- Phase 8 chapter 5: the scrub bar's ticks open the card.
+- Phase 8 chapter 8: "the Events lane's hover carries the line alone" becomes the light card's line; the strip's picture is unchanged.
+- `CONTEXT.md`: Event card added; Event, Note and Chronology amended.
+
+### Audit rows
+
+- None added. Note changed and Note removed gain `where` ("chronology") when done from the Chronology. A note event is never Event added or Event removed; event changed is written for its cameras or its mark alone. Opening a card is not an event.
+
+### Settings
+
+- None added.
+
+### Not in this chapter
+
+- **A note on an unsynced camera's line**, or on a recording in no Incident: a line note alone, as chapter 2 has it.
+- **A note event's cameras following a camera synced later**: not chosen; Seen on is filled once and is the person's, as for any event.
+- **An end (`until`) on a note event**: ruled out; a note is a moment.
+- **Editing on the card**: ruled out; the event's layer edits, the card reads.
+- **A card for a camera's bar or a clip's block on the strip**: not chosen; a bar has its hover words and a clip's block opens the Clips tab.
+- **Words beside the marks at a wide zoom**: ruled out; one rule at every zoom.
+- **The comparison and the proposals reading a note event** as an event: they do, and the line names it a note; whether the comparison should leave the office's notes out is for the first real comparison to say.
+
+### Left to the build
+
+- The hover delay and the card's width, within the paragraph card's look.
+- Whether the current event's mark is lit on the lane.
+- Whether the row shows the one-word "note" tell.
+- The words on a note event's layer and on its Remove question.
+- The migration's treatment of notes already written on synced cameras' lines (they become note events at the upgrade).
+
+## 12. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -830,6 +924,7 @@ No new word. The Sitting and Pinned are chapter 9's; the case page says "The ass
 | (none) | | 8 |
 | Cases | Camera pinned; Camera unpinned; AI assistant call gains words_alone and window_source | 9 |
 | (none) | | 10 |
+| Edits | Note changed and Note removed gain where (chronology) | 11 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -845,6 +940,7 @@ No new word. The Sitting and Pinned are chapter 9's; the case page says "The ass
 | (none) | | | 8 |
 | (none; Engine window becomes the fallback) | AI assistant | | 9 |
 | (none) | | | 10 |
+| (none) | | | 11 |
 
 ## Sources
 
@@ -852,6 +948,7 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-24, v1.81.0.** Chapter 11 (A note is an event, and the Event card) written and built the same day from the maintainer's asks and picks (one thing in two views; a mark alone with the card on hover or a press; the rows simplified; the card from the row, the scrub bar and the viewer's timeline). Decisions left to the build: the hover delay is a quarter second and the card 36 characters wide; the current event's mark is lit on the lane; the row shows the "note" tell and the clip mark's words; a note event's layer is titled Edit note with the time greyed and a line saying it is the line's; its Remove question says it removes the note from the line and from every chronology; a press on a strip mark still seeks every camera as before and opens the card from the same press; the migration makes a note event for every note already on a synced camera's line. Chapter 11 in the contents, Deferred and ruled out now 12. In passing: a Chronology row is now lit by Back (the row was looked for by the wrong attribute since chapter 1), and the event layer's duplicate id is gone.
 - **2026-09-23, v1.79.0.** Chapter 10 built the same day, with these decisions left to the build: the offer's bar counts the templates' overhead with an empty chronology (the incident does not exist yet) and says nothing of it; the column keeps the figure, the bar and the word at every width (the table scrolls under 900 pixels as the tab's tables do); a share is refreshed on a draw that finds it never counted or older than the camera's newest Digest part, one reading of the record for the whole incident, so a Digest remade part by part is counted once at the next draw after its last part, and a transcript correction alone does not refresh it (the drift is a few tokens); the incident page's bar is now drawn from the kept shares by the same longest-first arithmetic the real fit follows, so the Cameras tab's bar and the case page's row are one set of figures and the real calls alone fit the record itself; a Digest part with no time (a test's) counts as fresh. Two migrations in two releases (0058, 0059) since chapter 9 shipped first.
 - **2026-09-23.** Chapter 10 (The sitting on the case page) written for the build from the maintainer's ask after v1.78.0: the Incidents tab's column and the offer's bar (A and B of the drawings); the case head's pill set aside; each camera's share kept on the camera.
 - **2026-09-23, v1.78.0.** Chapter 9 built the same day, with these decisions left to the build: the hours' worth figure is the cameras' own length, and the sitting holds that many hours as often as the window holds the reading (a rate-based conversion was tried first and gave absurd figures for a camera with few words); halves under ten hours, whole above; the words-alone list on the Cameras tab shows only past the line, since under an amber bar nothing is read by words alone yet; the engine's window is kept on the engine's status row (`EngineStatus.window_tokens`, migration 0058) with the minute check, and an open page reads it at its next draw; the audit rows carry `words_alone` as a count and `window_source` as `engine` or `setting`; the bar is drawn against the memo's reading, the largest an incident gets, and the Add cameras dialog's bar counts the ticked cameras' records as if in without fitting them; the comparison fits the record once against its largest page window; the memo's old drop-to-a-line rule is gone (`cameras_not_read` stays on the row, always empty from here). Confirmed before the build: GIDEON's engine reports `max_model_len` 262,144, twice the setting, so the record refused on 2026-09-23 fits from this release.

@@ -29,12 +29,20 @@ ASSISTANT = "assistant"
 WATCH = "watch"
 # Phase 8 chapter 4: made from a comparison's finding, resting on a paragraph.
 REPORT = "report"
-SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH, REPORT)
+# Phase 8 chapter 11: the office's note on a line of a synced camera's
+# transcript, which is an Event on that Incident's Chronology (a note event).
+# Made and unmade by the app as the note and the camera come and go; never
+# from a request.
+NOTE = "note"
+SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH, REPORT, NOTE)
 
 # The line under a proposal saying why it matters (Phase 7 chapter 2).
 WHY_MOST = 300
 
 TEXT_MOST = 500
+# A note event's text is the note itself, up to a note's length (chapter 11);
+# the column holds that, and TEXT_MOST stays the cap on a typed event.
+NOTE_TEXT_MOST = 2000
 # The line and the detail (Phase 8 chapter 8): an Event's text is one field,
 # read two ways. The line is the text to its first line break, or its first
 # sentence when the text runs past LINE_MOST; a line still longer than
@@ -89,8 +97,17 @@ class Event(models.Model):
     # Seconds on the Incident clock; `until` when the Event ran a while.
     at = models.FloatField()
     until = models.FloatField(null=True, blank=True)
-    text = models.CharField(max_length=TEXT_MOST)
+    text = models.CharField(max_length=NOTE_TEXT_MOST)
     source = models.CharField(max_length=10, default=PERSON)
+    # Chapter 11: the line whose note this Event is, for a note event; null on
+    # every other Event. One note event per line per Incident.
+    segment = models.ForeignKey(
+        "core.Segment",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="events",
+    )
     # The camera the words or the description came from, when one did.
     camera = models.ForeignKey(
         incidents.IncidentCamera,
@@ -131,9 +148,19 @@ class Event(models.Model):
 
     class Meta:
         ordering = ["at", "added"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["incident", "segment"],
+                condition=models.Q(segment__isnull=False),
+                name="one_note_event_per_line",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.text
+
+    def is_note(self) -> bool:
+        return self.segment_id is not None
 
 
 def running_cameras(incident, at: float) -> list[str]:
@@ -181,7 +208,7 @@ def line_and_detail(text: str) -> tuple[str, str]:
     return line, detail
 
 
-def _cleaned(incident, fields: dict) -> dict:
+def _cleaned(incident, fields: dict, *, most: int = TEXT_MOST) -> dict:
     """The fields of an Event from a request, checked."""
     try:
         at = float(fields.get("at", ""))
@@ -201,7 +228,7 @@ def _cleaned(incident, fields: dict) -> dict:
         " ".join(line.split())
         for line in str(fields.get("text", "")).splitlines()
         if line.strip()
-    )[:TEXT_MOST]
+    )[:most]
     if not text:
         raise ValueError("What happened? An event needs a line of text.")
     # Only Accept makes an Event the assistant's (chapter 3); a request that
@@ -274,6 +301,8 @@ def add(incident, fields: dict, *, by, request=None) -> Event:
 
 
 def change(event: Event, fields: dict, *, by, request=None) -> Event:
+    if event.is_note():
+        return _change_note_event(event, fields, by=by, request=request)
     cleaned = _cleaned(event.incident, fields)
     # An Event keeps where it came from: Edit changes the words and the
     # cameras, never the source (an accepted proposal stays the assistant's).
@@ -307,7 +336,52 @@ def change(event: Event, fields: dict, *, by, request=None) -> Event:
     return event
 
 
+def _change_note_event(event: Event, fields: dict, *, by, request=None) -> Event:
+    """Edit on a note event (chapter 11): the words are the note's, so a change
+    to them goes through the note (one Note changed row, every Incident's row
+    follows); the cameras and To check are the Event's own. The time is the
+    line's and cannot be moved from here."""
+    from core import notes
+
+    cleaned = _cleaned(
+        event.incident, {**fields, "at": event.at, "until": ""}, most=NOTE_TEXT_MOST
+    )
+    words_changed = cleaned["text"] != event.segment.note
+    event.cameras = cleaned["cameras"]
+    event.to_check = cleaned["to_check"]
+    event.changed_by = by
+    event.changed = timezone.now()
+    event.save(update_fields=["cameras", "to_check", "changed_by", "changed"])
+    if words_changed:
+        notes.set_note(
+            event.segment, cleaned["text"], by=by, request=request, where="chronology"
+        )
+        event.refresh_from_db()
+        return event
+    audit.write(
+        incidents.CATEGORY,
+        "event changed",
+        actor=by,
+        affected_user=event.incident.case.owner,
+        object_type="incident",
+        object_id=event.incident_id,
+        object_label=event.incident.name,
+        request=request,
+    )
+    from core import cases
+
+    cases.note_activity(event.incident.case, by=by)
+    return event
+
+
 def remove(event: Event, *, by, request=None) -> None:
+    if event.is_note():
+        # Removing a note event removes the note from its line (chapter 11):
+        # one Note removed row, and every Incident's row goes with it.
+        from core import notes
+
+        notes.set_note(event.segment, "", by=by, request=request, where="chronology")
+        return
     incident = event.incident
     event.delete()
     audit.write(
@@ -338,7 +412,17 @@ def source_words(event: Event, names: dict) -> str:
         return f"Watch phrase, {camera}"
     if event.source == REPORT:
         return "From the report"
+    if event.source == NOTE:
+        return f"Note by {note_writer(event)}, {camera}"
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
+
+
+def note_writer(event: Event) -> str:
+    """A note event's writer: the note's, else whoever the row was made for."""
+    segment = event.segment if event.segment_id else None
+    if segment is not None and segment.note_by is not None:
+        return segment.note_by.shown_name
+    return event.added_by.shown_name if event.added_by else "a person"
 
 
 def clips_per_event(incident) -> dict[str, dict]:
@@ -404,13 +488,25 @@ def clips_line(incident, numbers: dict) -> str:
 
 
 def events_json(incident) -> list[dict]:
+    from django.urls import reverse
+
+    from core import notes
+
     names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
     clips = clips_per_event(incident)
     rows = []
     for event in incident.events.filter(dismissed=False).select_related(
-        "added_by", "changed_by", "note_by"
+        "added_by", "changed_by", "note_by", "segment__note_by", "segment__transcript"
     ):
         line, detail = line_and_detail(event.text)
+        # Chapter 11: a note event's line, for the card and the row's link.
+        segment = event.segment if event.is_note() else None
+        line_url = ""
+        if segment is not None:
+            line_url = (
+                reverse("viewer", args=[segment.transcript.recording_id])
+                + f"?t={segment.start:.1f}&note=1"
+            )
         rows.append(
             {
                 "id": str(event.pk),
@@ -436,11 +532,30 @@ def events_json(incident) -> list[dict]:
                 "note": event.note,
                 "to_check": event.to_check,
                 "note_by": (
-                    event.note_by.shown_name if event.note and event.note_by else ""
+                    note_writer(event)
+                    if segment is not None
+                    else (
+                        event.note_by.shown_name if event.note and event.note_by else ""
+                    )
                 ),
                 "clips": clips.get(str(event.pk), {}).get("count", 0),
                 "clips_rendering": clips.get(str(event.pk), {}).get("rendering", 0),
                 "clips_words": clips_words(clips.get(str(event.pk), {})),
+                # Chapter 11: empty on every Event but a note event.
+                "segment_id": str(segment.pk) if segment is not None else "",
+                "recording_id": (
+                    str(segment.transcript.recording_id) if segment is not None else ""
+                ),
+                "line_start": segment.start if segment is not None else None,
+                "line_url": line_url,
+                "line_words": (
+                    (segment.text[:140] + ("\u2026" if len(segment.text) > 140 else ""))
+                    if segment is not None
+                    else ""
+                ),
+                "note_on": (
+                    notes.date_of(segment.note_changed) if segment is not None else ""
+                ),
             }
         )
     return rows
@@ -479,6 +594,7 @@ def _rows(incident) -> list[dict]:
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 "added": event.added,
                 "assistant": event.source == ASSISTANT,
+                "is_note": event.is_note(),
                 "why": event.why,
                 "note": event.note,
                 "to_check": event.to_check,
@@ -539,6 +655,10 @@ WORDS_LEGEND = (
 QUOTE_LEGEND = (
     "An event quoting a transcript is a copy as the transcript stood when the "
     "event was added; the transcript may have been corrected since."
+)
+NOTE_LEGEND = (
+    "An event marked Note is the office's own note on a line of that camera's "
+    "transcript, printed as written and never the assistant's."
 )
 
 
@@ -668,7 +788,10 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
         # The clips cut from events (Phase 7 chapter 1), by number.
         line = document.add_paragraph(clips)
         line.runs[0].italic = True
-    for legend in (WORDS_LEGEND, QUOTE_LEGEND):
+    legends = [WORDS_LEGEND, QUOTE_LEGEND]
+    if any(row["is_note"] for row in rows):
+        legends.append(NOTE_LEGEND)
+    for legend in legends:
         line = document.add_paragraph(legend)
         line.runs[0].italic = True
     if any(row["assistant"] for row in rows):

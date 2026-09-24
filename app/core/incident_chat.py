@@ -163,10 +163,12 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         if not record["rows"]:
             raise engine.Problem(engine.ERROR, "the cameras gave nothing to read")
         event_lines, _ = _chronology_lines(incident)
-        # The office's notes on the synced cameras' lines (Phase 8 chapter 2).
+        # The office's notes on the synced cameras' lines are on the
+        # Chronology (Phase 8 chapter 11), read as events; the rule goes with
+        # them.
         from core import notes
 
-        noted = notes.incident_block(incident)
+        noted = notes.any_on_chronology(incident)
         # The report for this incident (Phase 8 chapter 4, part 2).
         from core import documents
 
@@ -203,7 +205,6 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
                 prompts.incident_memo_input(
                     _cameras_line(incident), event_lines, body, about=incident.about
                 )
-                + ("\n\n" + noted if noted else "")
                 + ("\n\n" + papers if papers else "")
                 + "\n\nThe question: "
                 + turn.question

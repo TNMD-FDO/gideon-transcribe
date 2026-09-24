@@ -366,6 +366,12 @@ def _chronology_lines(incident) -> tuple[list[str], dict]:
             origin = f"proposed from {camera} and accepted by a person"
         elif event.source == chronology.REPORT:
             origin = "from the report, which says: " + (event.rests_on or "")
+        elif event.source == chronology.NOTE:
+            # Chapter 11: the office's own note on a line, read as an event.
+            origin = (
+                f"the office's own note, written by {chronology.note_writer(event)} "
+                f"on the line at {_clock(incident, event.at)} on {camera}"
+            )
         else:
             origin = "added by a person"
         when = _clock(incident, event.at) + (
@@ -1119,6 +1125,8 @@ def write_memo(memo_id, attempt: int = 1) -> None:
         if not record["rows"]:
             raise engine.Problem(engine.ERROR, "the cameras gave nothing to write from")
         event_lines, numbers = _chronology_lines(incident)
+        from core import notes
+
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -1126,7 +1134,9 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             + "\n\n"
             + prompts.NARRATIVE_RULES
             + "\n\n"
-            + prompts.INCIDENT_RULES,
+            + prompts.INCIDENT_RULES
+            # The office's notes are on the Chronology (chapter 11).
+            + ("\n\n" + notes.RULE if notes.any_on_chronology(incident) else ""),
         )
         wanted = settings_store.incident_memo_answer_cap()
         # One sitting (Phase 8 chapter 9): everything said is read; the

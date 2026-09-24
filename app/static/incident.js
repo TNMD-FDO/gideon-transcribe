@@ -191,6 +191,8 @@
     drawWall();
     drawStrip();
     drawChronology();
+    // An open Event card is redrawn from the fresh state (chapter 11).
+    if (window.EVENT_CARD) { window.EVENT_CARD.refresh(); }
     drawMemo();
     drawCameras();
     drawDetails();
@@ -413,7 +415,7 @@
     if (marks.dataset.key !== key) {
       marks.dataset.key = key;
       marks.innerHTML = keptEvents().map(function (one) {
-        return "<span class='ev' style='left: " + percent(one.at, range) + "' title='" + quoted(timeOfDay(one.at) + " " + (one.line || one.text)) + "'></span>";
+        return "<span class='ev' data-event-card='" + one.id + "' style='left: " + percent(one.at, range) + "'></span>";
       }).join("");
     }
     var clipping = bar.querySelector(".clipping");
@@ -1015,24 +1017,19 @@
     return text.length <= 26 ? text : text.slice(0, 24) + "…";
   }
 
-  // The Events lane's labels: every Event has a mark; a label is drawn only
-  // when it would not run into the one before it at this zoom.
+  // The Events lane (Phase 8 chapter 11): every Event is a mark alone, so
+  // nothing overlaps at any zoom; its words are on the Event card, light on
+  // hover or focus and whole on a press. Each mark takes keyboard focus in
+  // time order. (shortLabel stays for the strip's picture.)
   function eventMarks(shown) {
-    var width = lanesBox.clientWidth ? lanesBox.clientWidth - 108 : 900;
     var html = "";
-    var lastRight = -1;
     S.events.slice().sort(function (a, b) { return a.at - b.at; }).forEach(function (one) {
       if (one.at < shown[0] || one.at > shown[1]) { return; }
-      var left = ((one.at - shown[0]) / (shown[1] - shown[0])) * width;
-      var cls = one.proposed ? " proposed" : "";
+      var cls = (one.proposed ? " proposed" : "") + (one.source === "note" ? " note" : "") + (one.id === currentEventId ? " here" : "");
       var wide = one.until && one.until > one.at ? ((Math.min(one.until, shown[1]) - one.at) / (shown[1] - shown[0])) * 100 : 0;
-      html += "<span class='mk-ev" + cls + "' data-event='" + one.id + "' style='left: " + percent(one.at, shown) + (wide ? "; width: " + wide + "%" : "") + "' title='" + quoted(timeOfDay(one.at) + " " + (one.line || one.text)) + "'></span>";
-      var label = shortLabel(one.line || one.text);
-      var needs = label.length * 6.5 + 12;
-      if (left >= lastRight) {
-        html += "<span class='lbl" + cls + "' data-event='" + one.id + "' style='left: " + percent(one.at, shown) + "' title='" + quoted(timeOfDay(one.at) + " " + (one.line || one.text)) + "'>" + escape(label) + "</span>";
-        lastRight = left + needs;
-      }
+      html += "<span class='mk-ev" + cls + "' data-event='" + one.id + "' data-event-card='" + one.id + "' tabindex='0' role='button'" +
+        " aria-label='" + quoted(timeOfDay(one.at) + ", " + (one.line || one.text) + (one.source_words ? ", " + one.source_words : "")) + "'" +
+        " style='left: " + percent(one.at, shown) + (wide ? "; width: " + wide + "%" : "") + "'></span>";
     });
     return html;
   }
@@ -1075,6 +1072,8 @@
     if (marking) { drawMarking(now()); }
     Array.prototype.forEach.call(strip.querySelectorAll("[data-pan]"), function (one) { one.disabled = !zoom || zoom >= span()[1] - span()[0]; });
     movePlayheads(now());
+    // The Event card follows its mark to where the redraw put it.
+    if (window.EVENT_CARD) { window.EVENT_CARD.place(); }
   }
 
   function movePlayheads(m) {
@@ -1116,6 +1115,8 @@
     if (swap) { swapIn(swap.dataset.swap, true); return; }
     var mark = event.target.closest("[data-event]");
     if (mark) {
+      // One press seeks every camera there; the same press opens the Event
+      // card, which listens on the document (chapter 11).
       var found = eventById(mark.dataset.event);
       if (found) { seek(found.at); }
       return;
@@ -1206,6 +1207,10 @@
       row.classList.toggle("here", on);
       if (on && followBox.checked && !panel.hidden) { row.scrollIntoView({ block: "nearest" }); }
     });
+    // The current event's mark on the Events lane is lit too (chapter 11).
+    Array.prototype.forEach.call(lanesBox.querySelectorAll(".mk-ev[data-event]"), function (mark) {
+      mark.classList.toggle("here", mark.dataset.event === id);
+    });
   }
 
   // An event that rests on a paragraph (Phase 8 chapter 4) says so with a
@@ -1246,34 +1251,52 @@
     if (kept.length) {
       html += "<table class='inc-events'><tbody>";
       kept.forEach(function (one) {
-        // One line for what happened, one muted line for everything about it
-        // (Phase 8 chapter 1); the controls behind the row's menu.
-        var meta = [];
-        // The detail first (Phase 8 chapter 8), then the source.
-        if (one.detail) { meta.push("<span class='detail'>" + escape(one.detail) + "</span>"); }
-        meta.push(escape(one.source_words));
-        if (one.rests_on) { meta.push(restsOnHtml(one.rests_on)); }
-        if (one.seen_on) { meta.push("seen on " + escape(one.seen_on)); }
-        if (one.note) { meta.push("<i>note: " + escape(one.note) + "</i>" + (one.note_by ? " (" + escape(one.note_by) + ")" : "")); }
-        if (one.why) { meta.push("<i>" + escape(one.why) + "</i>"); }
-        if (one.clips) { meta.push("<a class='clipmark' href='" + S.incident.clips_url + "' title='Open the case&#39;s Clips tab, where the clip is'>" + escape(one.clips_words) + "</a>"); }
+        // The row says what happened (Phase 8 chapter 11): the time, the line
+        // as a press that opens the Event card, the To check pill, a small
+        // source pill, and a word when a note sits under it. Everything else
+        // about the event is on the card; the controls behind the row's menu.
+        var isNote = one.source === "note";
         html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td><div class='what'>" + escape(one.line || one.text) +
-          (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") + "</div>" +
-          "<div class='meta muted small'>" + meta.join(" &middot; ") + "</div></td>" +
+          "<td><div class='what'><button type='button' class='line' data-event-card='" + one.id + "' title='Everything about this event'>" + escape(one.line || one.text) + "</button>" +
+          (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") +
+          " <span class='pill src src-" + escape(one.source) + "' title='" + quoted(one.source_words) + "'>" + escape(one.source_words) + "</span>" +
+          (one.note ? "<span class='muted small tell'>note</span>" : "") +
+          (one.clips ? "<span class='muted small tell'>" + escape(one.clips_words) + "</span>" : "") + "</div></td>" +
           "<td class='acts nowrap'><details class='row-menu'><summary class='tiny ghost' title='Edit, note, clip, remove'>&middot;&middot;&middot;</summary><div class='menu'>" +
           "<button type='button' data-edit='" + one.id + "'>Edit</button>" +
-          "<button type='button' data-note='" + one.id + "'>" + (one.note ? "Edit the note" : "Add a note") + "</button>" +
+          (isNote ? "" : "<button type='button' data-note='" + one.id + "'>" + (one.note ? "Edit the note" : "Add a note") + "</button>") +
           (mayClip(one) ? "<button type='button' data-clip='" + one.id + "'>Clip this event</button>" : (S.incident.clips ? "<button type='button' disabled title='Sync a camera first'>Clip this event</button>" : "")) +
+          (isNote && one.line_url ? "<a class='menu-link' href='" + escape(one.line_url) + "'>Open the line</a>" : "") +
           "<button type='button' class='danger' data-remove='" + one.id + "'>Remove</button></div></details></td></tr>";
       });
       html += "</tbody></table>";
     }
-    html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there. E adds an event at the moment being watched.</p>";
+    html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there; press an event's line for its card. E adds an event at the moment being watched.</p>";
     box.innerHTML = html;
     currentEventId = null;
     markCurrentEvent(now());
+  }
+
+  // The card's actions and the row's menu share these (chapter 11).
+  function noteOnEvent(noted) {
+    openEventBox(noted);
+    var opener = document.getElementById("event-note-open");
+    if (opener && eventBox.elements.note.hidden) { opener.click(); }
+    eventBox.elements.note.focus();
+  }
+
+  function askToRemove(gone) {
+    var words = gone.source === "note"
+      ? { title: "Remove this note?", body: "It is the office's note on a line of " + (gone.source_words || "").replace(/^Note by [^,]*, /, "") + ". Removing it here removes it from the line and from every chronology it is on.", ok: "Remove", danger: true }
+      : { title: "Remove this event?", body: "Its note and its clips' marks go with it; a clip already made stays on the Clips tab.", ok: "Remove", danger: true };
+    return window.UI.confirm(words).then(function (yes) { if (yes) { return post({ action: "event_remove", event: gone.id }); } return null; });
+  }
+
+  function goToRow(id) {
+    closeLayers();
+    showTab("chronology");
+    flashRow(id);
   }
 
 
@@ -1409,20 +1432,13 @@
     var note = event.target.closest("[data-note]");
     if (note) {
       var noted = eventById(note.dataset.note);
-      if (noted) {
-        openEventBox(noted);
-        var opener = document.getElementById("event-note-open");
-        if (opener && eventBox.elements.note.hidden) { opener.click(); }
-        eventBox.elements.note.focus();
-      }
+      if (noted) { noteOnEvent(noted); }
       return;
     }
     var remove = event.target.closest("[data-remove]");
     if (remove) {
       var gone = eventById(remove.dataset.remove);
-      if (!gone) { return; }
-      window.UI.confirm({ title: "Remove this event?", body: "Its note and its clips' marks go with it; a clip already made stays on the Clips tab.", ok: "Remove", danger: true })
-        .then(function (yes) { if (yes) { post({ action: "event_remove", event: gone.id }); } });
+      if (gone) { askToRemove(gone); }
       return;
     }
     chronologyActions(event);
@@ -1487,10 +1503,22 @@
     eventBox.elements.to_check.checked = !!given.to_check;
     // The note folds closed until pressed, or open when the event has one.
     eventBox.elements.note.hidden = !given.note;
-    document.getElementById("event-title").textContent = given.id ? "Edit event" : "New event";
+    // A note event (chapter 11): the words are the note's, the time is the
+    // line's and moves with the camera, and there is no note under a note.
+    var isNote = given.source === "note";
+    eventBox.elements.when.disabled = isNote;
+    eventBox.elements.until_when.disabled = isNote;
+    eventBox.elements.text.maxLength = isNote ? 2000 : 500;
+    document.getElementById("event-note-open").hidden = isNote;
+    if (isNote) { eventBox.elements.note.hidden = true; }
+    var title = isNote ? "Edit note" : (given.id ? "Edit event" : "New event");
+    document.getElementById("event-title").textContent = title;
+    document.getElementById("event-eyebrow").textContent = title;
     document.getElementById("event-save").textContent = given.id ? "Save" : "Add";
     document.getElementById("event-remove").hidden = !given.id;
-    document.getElementById("event-said").textContent = given.source === "words" ? "Quoted from the words as they stand." : (given.source === "camera" ? "What the camera showed, as described." : "");
+    document.getElementById("event-said").textContent = isNote
+      ? "The office's note on a line of " + (given.source_words || "").replace(/^Note by [^,]*, /, "") + "; its time is the line's and moves with the camera. Changing the words here changes the note on the line."
+      : (given.source === "words" ? "Quoted from the words as they stand." : (given.source === "camera" ? "What the camera showed, as described." : ""));
     var chosen = given.cameras || placedCameras().filter(function (cam) { return cam.starts_at <= at && at <= cam.starts_at + cam.length; }).map(function (cam) { return cam.id; });
     var cams = document.getElementById("event-cams");
     cams.innerHTML = placedCameras().map(function (cam) {
@@ -1602,10 +1630,9 @@
   });
   document.getElementById("event-remove").addEventListener("click", function () {
     var id = eventBox.elements.event.value;
-    if (!id) { return; }
-    window.UI.confirm({ title: "Remove this event?", body: "It leaves the chronology and the exports.", ok: "Remove", danger: true }).then(function (yes) {
-      if (yes) { post({ action: "event_remove", event: id }).then(closeEventBox); }
-    });
+    var found = eventById(id);
+    if (!id || !found) { return; }
+    askToRemove(found).then(function (posted) { if (posted) { closeEventBox(); } });
   });
   document.getElementById("event-clip").addEventListener("click", function () {
     var found = eventById(eventBox.elements.event.value);
@@ -2081,7 +2108,8 @@
   }
 
   function flashRow(id) {
-    var row = document.querySelector("[data-row='" + id + "']");
+    // A camera's row, or a Chronology row (the latter never lit before v1.81.0).
+    var row = document.querySelector("[data-row='" + id + "'], tr[data-event='" + id + "']");
     if (row) { row.classList.add("match-here"); row.scrollIntoView({ block: "nearest" }); window.setTimeout(function () { row.classList.remove("match-here"); }, 2000); }
   }
 
@@ -2241,6 +2269,38 @@
   Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) {
     tab.addEventListener("click", function () { showTab(tab.dataset.panel); });
   });
+
+  // The Event card (Phase 8 chapter 11): what the page knows, and which
+  // actions an event gets from where its card was opened.
+  if (window.EVENT_CARD) {
+    window.EVENT_CARD.setup({
+      time: timeOfDay,
+      seek: function (at) { seek(at); },
+      find: eventById,
+      restsOn: restsOnHtml,
+      clipsUrl: function () { return S.incident.clips_url; },
+      acts: function (ev, from) {
+        var acts = [];
+        if (ev.proposed) {
+          var busy = !!(S.proposals && S.proposals.busy);
+          acts.push({ words: "Accept", primary: true, disabled: busy, title: busy ? STILL_PROPOSING : "", act: function () { post({ action: "event_accept", event: ev.id }); } });
+          acts.push({ words: "Dismiss", disabled: busy, title: busy ? STILL_PROPOSING : "", act: function () { post({ action: "event_dismiss", event: ev.id }); } });
+          if (from !== "row") { acts.push({ words: "Go to the proposal", act: function () { openLayer("proposals"); flashRow(ev.id); } }); }
+          return acts;
+        }
+        acts.push({ words: "Edit", act: function () { openEventBox(ev); } });
+        if (ev.source !== "note") {
+          acts.push({ words: ev.note ? "Edit the note" : "Add a note", act: function () { noteOnEvent(ev); } });
+        }
+        if (mayClip(ev)) { acts.push({ words: "Clip this event", act: function () { openClipBox(ev); } }); }
+        else if (S.incident.clips) { acts.push({ words: "Clip this event", disabled: true, title: "Sync a camera first" }); }
+        if (ev.source === "note" && ev.line_url) { acts.push({ words: "Open the line", href: ev.line_url }); }
+        acts.push({ words: "Remove", danger: true, act: function () { askToRemove(ev); } });
+        if (from !== "row") { acts.push({ words: "Go to the row", act: function () { goToRow(ev.id); } }); }
+        return acts;
+      }
+    });
+  }
 
   // What Gideon's drawer calls (Phase 7 chapter 5): a citation seeks every
   // camera; + event opens the event box at the moment with the line filled.

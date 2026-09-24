@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.81.0, 2026-09-24
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Phase 8 chapter 11, a note is an event, and the Event card.
+
+- **A note on a line is an event on the chronology.** A note written on a
+  transcript line of a recording that is a synced camera of an incident is
+  an event on that incident's chronology, at the line's moment, with the
+  writer's name ("Note by alvarez, BWC2-1"), from the moment the camera is
+  synced: notes written before the recording joined included. One set of
+  words in two places: Edit on the chronology changes the note on the line,
+  Remove on the chronology removes it from the line, and a note changed or
+  removed under the line follows to every chronology. The migration makes
+  the events for the notes already written. The memo, the incident chat and
+  Propose events read them as events that are the office's own notes; the
+  chat's separate block of notes is gone.
+- **A mark alone on the Events lane.** No words beside the marks, so
+  nothing overlaps at any zoom. Hover a mark for a small card with the
+  time, the line and the source; press it and every camera goes there and
+  the card opens whole. Each mark takes keyboard focus; Enter opens.
+- **The Chronology rows simplified**: the time, the line, a small source
+  pill and the menu. The detail, seen on, rests on, the note, the why and
+  the clip mark move into the same **Event card**, which the row's line
+  opens; the card offers Edit, Add a note, Clip this event, Remove and Go
+  to the row (Accept and Dismiss on a proposal; Open the line on a note).
+- **The same card** from the focus camera's scrub-bar ticks and from the
+  recording page's timeline mark of a noted line (Go to the line, Change
+  the note). Escape closes it before anything else on the page.
+- In passing: Back now lights the Chronology row it returns to (it looked
+  for the row by the wrong attribute), and the event layer's duplicate
+  element id is gone.
+
 ## v1.80.2, 2026-09-24
 
 ```

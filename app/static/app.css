@@ -2226,7 +2226,9 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-strip .lane .track .playhead { top: 0; bottom: 0; }
 .inc-strip #lanes.away .playhead { display: none; }
 .inc-strip .zoom [data-pan] { padding: 0 6px; }
-.inc-strip .lane.events .track { background: transparent; border-top: 1px dashed var(--line); border-radius: 0; height: 12px; }
+/* The Events lane (Phase 8 chapter 11): a mark alone per event, the words
+   on the Event card. */
+.inc-strip .lane.events .track { background: transparent; border-top: 1px dashed var(--line); border-radius: 0; height: 14px; }
 .cite.all { margin-left: 2px; font-size: 0.85em; }
 @media (max-width: 1279px) {
   .inc-desk { grid-template-columns: minmax(0, 1fr); }
@@ -2251,11 +2253,12 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-lines .add-line { visibility: hidden; padding: 0 5px; }
 .inc-tile:hover .inc-lines .add-line:not([hidden]) { visibility: visible; }
 .inc-lines .cam-line { display: flex; gap: 6px; align-items: baseline; }
-.inc-strip .lane.events .track { height: 30px; }
-.inc-strip .lane.events .track .mk-ev { position: absolute; top: 0; bottom: 12px; width: 3px; background: var(--accent); border-radius: 2px; cursor: pointer; opacity: 0.85; }
+.inc-strip .lane.events .track .mk-ev { position: absolute; top: 1px; bottom: 1px; width: 4px; background: var(--accent); border-radius: 2px; cursor: pointer; opacity: 0.85; }
+.inc-strip .lane.events .track .mk-ev::before { content: ""; position: absolute; left: -5px; right: -5px; top: -4px; bottom: -4px; }
 .inc-strip .lane.events .track .mk-ev.proposed { background: var(--warn); }
-.inc-strip .lane.events .track .lbl { position: absolute; top: 14px; font-size: 11px; white-space: nowrap; color: var(--text); padding-left: 5px; line-height: 1.3; cursor: pointer; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; }
-.inc-strip .lane.events .track .lbl.proposed { color: var(--muted); }
+.inc-strip .lane.events .track .mk-ev.note { background: var(--muted); }
+.inc-strip .lane.events .track .mk-ev.here { opacity: 1; box-shadow: 0 0 0 2px var(--accent-soft); }
+.inc-strip .lane.events .track .mk-ev:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .inc-events { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
 .inc-events td { padding: 6px 6px; border-top: 1px solid var(--line); vertical-align: top; }
 /* Phase 7 chapter 2: why a proposal matters, in the assistant's words, and
@@ -2274,6 +2277,15 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-layer .inc-find-hits { max-height: none; border: 0; background: transparent; padding: 0; }
 .inc-events td { padding: 9px 8px; }
 .inc-events .what { font-size: var(--t-body); }
+/* The row's line is a press that opens the Event card (Phase 8 chapter 11). */
+.inc-events .line { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: var(--t-body); color: inherit; text-align: left; cursor: pointer; }
+.inc-events .line:hover, .inc-events .line:focus-visible { text-decoration: underline dotted; outline: none; }
+.inc-events .tell { margin-left: 6px; }
+.pill.src { font-size: 0.85em; font-weight: 400; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; line-height: 1.6; }
+.pill.src { white-space: nowrap; }
+.pill.src.src-assistant, .pill.src.src-report { background: var(--accent-soft); color: var(--accent); }
+.pill.src.src-note { background: var(--surface-2); color: var(--muted); font-style: italic; }
+.pill.src.src-watch { color: var(--accent); border: 1px solid var(--accent); background: transparent; }
 .inc-events .meta { margin-top: 3px; line-height: 1.4; }
 .inc-events .meta .clipmark { color: var(--accent); text-decoration: none; }
 .row-menu { position: relative; }
@@ -2285,6 +2297,8 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .row-menu .menu button:hover:not(:disabled) { background: var(--surface-2); }
 .row-menu .menu button.danger { color: var(--danger, var(--warn)); }
 .row-menu .menu button:disabled { color: var(--muted); cursor: not-allowed; }
+.row-menu .menu a.menu-link { display: block; text-align: left; padding: 6px 10px; border-radius: var(--radius); color: var(--text); font-size: var(--t-small); text-decoration: none; }
+.row-menu .menu a.menu-link:hover { background: var(--surface-2); }
 .inc-work .tabbar #two-panels { margin-left: 6px; align-self: center; }
 .inc-work .tabbar #two-panels.on { border-color: var(--accent); color: var(--accent); }
 .inc-work.two .panels { display: grid; grid-template-columns: 1fr 1fr; }
@@ -2425,7 +2439,7 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .player-bar .scrub .own { position: absolute; top: 4px; height: 4px; background: rgba(255, 255, 255, 0.35); border-radius: 2px; }
 .player-bar .scrub .played { position: absolute; left: 0; top: 4px; height: 4px; background: var(--accent); border-radius: 2px; }
 .player-bar .scrub .knob { position: absolute; top: 0; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--accent); }
-.player-bar .scrub .ev { position: absolute; top: 2px; width: 2px; height: 8px; background: rgba(255, 255, 255, 0.9); margin-left: -1px; }
+.player-bar .scrub .ev { position: absolute; top: 2px; width: 4px; height: 8px; background: rgba(255, 255, 255, 0.9); margin-left: -2px; cursor: pointer; border-radius: 1px; }
 .player-bar .scrub .clipping { position: absolute; top: 3px; height: 6px; background: color-mix(in srgb, var(--warn) 80%, var(--knob)); border-radius: 2px; }
 .player-bar .row { display: flex; align-items: center; gap: 8px; font-size: var(--t-small); }
 .player-bar .row button { background: transparent; border: 0; color: var(--knob); padding: 2px 6px; border-radius: 4px; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
@@ -2489,6 +2503,27 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .para-card-words .doc-cited { padding: 6px 8px; border-left: 3px solid var(--accent); font-size: var(--t-body); }
 .para-card-acts { gap: 8px; align-items: baseline; flex-wrap: wrap; margin-top: 8px; }
 [data-para-card].card-open { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
+
+/* The Event card (Phase 8 chapter 11): one card from any mark of an event or
+   a row's line, floating over the page from the body; light on hover, whole
+   on a press. */
+.event-card { position: fixed; z-index: 40; width: 36ch; max-width: calc(100vw - 16px); max-height: 70vh; overflow: auto; background: var(--surface); color: var(--text); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px 10px; font-size: var(--t-small); font-weight: 400; text-align: left; white-space: normal; box-sizing: border-box; }
+.event-card.light { pointer-events: none; width: auto; max-width: 40ch; padding: 6px 10px; border-color: var(--line); }
+.event-card.proposed { border-color: var(--warn); }
+.event-card:focus { outline: none; }
+.event-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.event-card .t { font-family: var(--mono); white-space: nowrap; }
+.event-card-line { margin: 4px 0 0; font-size: var(--t-body); }
+.event-card p { margin: 4px 0 0; }
+.event-card-note { font-style: italic; white-space: pre-line; }
+.event-card-why { font-style: italic; opacity: 0.85; }
+.event-card .clipmark { color: var(--accent); text-decoration: none; }
+.event-card-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.event-card-acts .btn { text-decoration: none; }
+[data-event-card].card-open { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
+/* The viewer's timeline: a noted line's mark, which takes the same card. */
+.timeline .note-tick { position: absolute; bottom: 0; width: 2px; height: 6px; margin-left: -1px; background: var(--muted); cursor: pointer; z-index: 1; }
+.timeline .note-tick::before { content: ""; position: absolute; left: -5px; right: -5px; top: -6px; bottom: 0; }
 .gideon-grip { position: absolute; top: 0; bottom: 0; left: -1px; width: 10px; cursor: ew-resize; touch-action: none; z-index: 2; }
 .gideon-grip::after { content: ""; position: absolute; top: 50%; left: 3px; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: var(--line); }
 .gideon-grip:hover::after, .gideon-grip:focus-visible::after, body.gideon-resizing .gideon-grip::after { background: var(--accent); }

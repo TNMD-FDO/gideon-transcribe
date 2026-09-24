@@ -371,11 +371,13 @@ def test_gideon_is_told_the_notes_as_the_offices_own_words(
     asked = engine_answering(monkeypatch, ["Yes [21:56:47]."])
     incident_chat.answer_incident_turn(turn.pk)
     user = asked[0]["messages"][-1]["content"]
+    # Chapter 11: the note is on the chronology, read as an event that is
+    # the office's own note; the separate block of notes is gone.
     assert (
-        "The office's notes on the cameras' lines:\n[21:56:47] BWC2-1 asker: "
-        "Check the footage." in user
+        "Event 1, 21:56:47, Check the footage.; seen on BWC2-1; the office's own "
+        "note, written by asker on the line at 21:56:47 on BWC2-1." in user
     )
-    assert user.index("office's notes on the cameras") < user.index("The question:")
+    assert "The office's notes on the cameras' lines" not in user
     assert notes.RULE in asked[0]["messages"][0]["content"]
     for row in Row.objects.all():
         assert "footage" not in json.dumps(row.details).lower()

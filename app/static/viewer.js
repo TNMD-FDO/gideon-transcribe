@@ -260,16 +260,71 @@
     document.dispatchEvent(new Event("transcript-drawn"));
   }
 
+  function noteHead(segment) {
+    return "Note" + (segment.note_by ? ", " + segment.note_by : "") + (segment.note_on ? ", " + segment.note_on : "");
+  }
+
   function noteLine(segment) {
     var line = document.createElement("p");
     line.className = "note-line";
     line.title = "Press to change this note";
     var head = document.createElement("b");
-    head.textContent = "Note" + (segment.note_by ? ", " + segment.note_by : "") +
-      (segment.note_on ? ", " + segment.note_on : "") + ": ";
+    head.textContent = noteHead(segment) + ": ";
     line.appendChild(head);
     line.appendChild(document.createTextNode(segment.note));
     return line;
+  }
+
+  // A noted line's mark at the foot of the timeline (Phase 8 chapter 2),
+  // which takes the Event card (chapter 11): hover it to read the note, press
+  // it to go to the line. Rebuilt only when the notes or the length change.
+  var noteTicksKey = "";
+  function drawNoteTicks() {
+    var timelineBox = document.getElementById("timeline");
+    if (!timelineBox) { return; }
+    var noted = duration ? (segments || []).filter(function (one) { return one.note; }) : [];
+    var key = duration + "|" + noted.map(function (one) { return one.id + "@" + one.start; }).join(",");
+    if (key === noteTicksKey) { return; }
+    noteTicksKey = key;
+    Array.prototype.forEach.call(timelineBox.querySelectorAll(".note-tick"), function (one) { one.remove(); });
+    noted.forEach(function (one) {
+      var tick = document.createElement("span");
+      tick.className = "note-tick";
+      tick.dataset.eventCard = "seg-" + one.id;
+      tick.style.left = ((one.start / duration) * 100) + "%";
+      timelineBox.appendChild(tick);
+    });
+  }
+
+  function indexOfSegment(id) {
+    for (var i = 0; i < segments.length; i += 1) { if (String(segments[i].id) === String(id)) { return i; } }
+    return -1;
+  }
+
+  if (window.EVENT_CARD) {
+    window.EVENT_CARD.setup({
+      time: clock,
+      find: function (id) {
+        var index = indexOfSegment(String(id).replace(/^seg-/, ""));
+        var segment = index >= 0 ? segments[index] : null;
+        if (!segment || !segment.note) { return null; }
+        return { id: id, at: segment.start, line: segment.note, source: "note", source_words: noteHead(segment), line_words: segment.text, note_by: segment.note_by, note_on: segment.note_on };
+      },
+      acts: function (ev) {
+        var index = indexOfSegment(String(ev.id).replace(/^seg-/, ""));
+        return [
+          { words: "Go to the line", act: function () {
+            var row = index >= 0 && column ? column.children[index] : null;
+            if (!row) { return; }
+            row.classList.add("here");
+            row.scrollIntoView({ block: "center" });
+            var shown = row.querySelector(".note-line");
+            if (shown) { shown.classList.add("lit"); }
+          } },
+          { words: "Change the note", act: function () { if (index >= 0) { noteOn(index); } } }
+        ];
+      }
+    });
   }
 
   function wordsOf(segment) {
@@ -493,14 +548,9 @@
         }
       }
     }
-    // A noted line: a small mark at its time along the foot (Phase 8 chapter 2).
-    if (duration && segments && segments.length) {
-      pen.fillStyle = unplayed;
-      segments.forEach(function (segment) {
-        if (!segment.note) { return; }
-        pen.fillRect(Math.round((segment.start / duration) * width), height - 6, 2, 6);
-      });
-    }
+    // A noted line's mark is an element over the canvas (chapter 11), so it
+    // can take the Event card.
+    drawNoteTicks();
   }
 
   // The peaks file holds a few pairs per pixel for a recording made since

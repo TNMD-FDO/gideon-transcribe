@@ -5,12 +5,19 @@ note already has: up to 2,000 characters, kept with who wrote it and when it
 last changed, written by a person and never by the assistant. This module
 holds what the recording page, the exports, the case page, Gideon and Search
 share about them; the Event's own note stays in chronology.py.
+
+Chapter 11: a note on a line of a recording that is a synced camera of an
+Incident is also an Event on that Incident's Chronology, at the line's moment
+(a note event). This module is the one writer of those rows: they are made,
+moved and removed here as the note and the camera come and go, and never
+carry an audit row of their own.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
@@ -46,8 +53,12 @@ def line_json(segment) -> dict:
     }
 
 
-def set_note(segment, text, *, by, request=None) -> dict:
-    """Write, change or clear the note on a line; one audit row, never the words."""
+def set_note(segment, text, *, by, request=None, where: str = "") -> dict:
+    """Write, change or clear the note on a line; one audit row, never the words.
+
+    `where` names the view it was done from when that is not the line itself
+    ("chronology", chapter 11); the row carries it and nothing else changes.
+    """
     wanted = clean(text)
     had = segment.note
     if wanted == had:
@@ -57,6 +68,7 @@ def set_note(segment, text, *, by, request=None) -> dict:
     segment.note_by = by if wanted else None
     segment.note_changed = timezone.now() if wanted else None
     segment.save(update_fields=["note", "note_by", "note_changed"])
+    reflect_line(segment)
     recording = segment.transcript.recording
     audit.write(
         audit.Category.EDITS,
@@ -67,55 +79,144 @@ def set_note(segment, text, *, by, request=None) -> dict:
         object_type="segment",
         object_id=segment.pk,
         object_label=f"{segment.start:.1f}-{segment.end:.1f}",
+        **({"where": where} if where else {}),
     )
     if recording.case_id:
         cases.note_activity(recording.case, by=by)
     return line_json(segment)
 
 
+# The note on the chronology (chapter 11) -------------------------------------------
+
+
+def reflect_line(segment) -> None:
+    """The note events of one line, made right: one on every Incident the
+    recording is a synced camera of while the line is shown and noted, none
+    otherwise. A sync never touches the Event's own changed marks."""
+    from core.chronology import NOTE, Event, running_cameras
+
+    recording = segment.transcript.recording
+    wanted = bool(segment.note) and not segment.same_as_other_side
+    for camera in incidents.IncidentCamera.objects.filter(
+        recording=recording
+    ).select_related("incident"):
+        if not (wanted and camera.is_synced()):
+            Event.objects.filter(incident=camera.incident, segment=segment).delete()
+            continue
+        at = camera.starts_at + segment.start
+        event = Event.objects.filter(incident=camera.incident, segment=segment).first()
+        if event is None:
+            Event.objects.create(
+                incident=camera.incident,
+                segment=segment,
+                at=at,
+                text=segment.note,
+                source=NOTE,
+                camera=camera,
+                cameras=running_cameras(camera.incident, at),
+                added_by=segment.note_by,
+            )
+            continue
+        event.at = at
+        event.text = segment.note
+        event.source = NOTE
+        event.camera = camera
+        event.save(update_fields=["at", "text", "source", "camera"])
+
+
+def reflect_camera(camera) -> None:
+    """Every note event of one camera, made right: called when the camera is
+    placed, re-placed or guessed, so a note written before the recording
+    joined appears the moment the camera is synced, and moves with it."""
+    from core.chronology import Event
+
+    transcript = getattr(camera.recording, "transcript", None)
+    if transcript is None:
+        return
+    noted = list(transcript.segments.exclude(note="").filter(same_as_other_side=False))
+    for segment in noted:
+        reflect_line(segment)
+    # A row whose line is no longer noted, or is hidden, is an orphan.
+    Event.objects.filter(
+        incident=camera.incident,
+        segment__transcript=transcript,
+    ).exclude(segment__in=noted).delete()
+
+
+def drop_note_events(recording, incident=None) -> None:
+    """A camera leaving an Incident, or a recording leaving its case, takes
+    its note events with it; the notes stay on the lines."""
+    from core.chronology import Event
+
+    found = Event.objects.filter(segment__transcript__recording=recording)
+    if incident is not None:
+        found = found.filter(incident=incident)
+    found.delete()
+
+
 # Processing again -----------------------------------------------------------------
 
 
 def remember(recording) -> list[dict]:
-    """The notes of the Transcript about to be replaced, by their moments."""
+    """The notes of the Transcript about to be replaced, by their moments.
+
+    Their note events (chapter 11) are let go of their lines first, so the
+    Transcript's deletion does not take them: the rows, with their marks and
+    their clips, wait for carry() to give them the new lines."""
+    from core.chronology import Event
+
     transcript = getattr(recording, "transcript", None)
     if transcript is None:
         return []
-    return [
+    kept = [
         {
             "start": one.start,
             "end": one.end,
             "note": one.note,
             "note_by_id": one.note_by_id,
             "note_changed": one.note_changed,
+            "events": [
+                str(pk)
+                for pk in Event.objects.filter(segment=one).values_list("pk", flat=True)
+            ],
         }
         for one in transcript.segments.exclude(note="").order_by("start", "id")
     ]
+    Event.objects.filter(segment__transcript=transcript).update(segment=None)
+    return kept
 
 
 def carry(kept: list[dict], transcript) -> int:
     """Put each remembered note on the new line that spans its moment, else the
     line with the nearest start. Two notes landing on one line are joined.
     Returns how many were carried; one audit row each, never the words."""
-    if not kept:
-        return 0
+    from core.chronology import Event
+
+    carried = 0
     lines = list(
         transcript.segments.filter(same_as_other_side=False).order_by("start", "id")
     )
-    if not lines:
-        return 0
-    carried = 0
-    for old in kept:
+    for old in kept if lines else []:
         at = old["start"]
         home = next((one for one in lines if one.start <= at < one.end), None)
         if home is None:
             home = min(lines, key=lambda one: abs(one.start - at))
+        joined = bool(home.note)
         home.note = clean(
             old["note"] if not home.note else home.note + "\n" + old["note"]
         )
         home.note_by_id = old["note_by_id"]
         home.note_changed = old["note_changed"] or timezone.now()
         home.save(update_fields=["note", "note_by", "note_changed"])
+        # The note's events go to the new line (chapter 11): when two notes
+        # join on one line, the line keeps the first's rows and the second's
+        # go, as one line holds one note event per Incident.
+        waiting = Event.objects.filter(pk__in=old.get("events", []))
+        if joined:
+            waiting.delete()
+        else:
+            waiting.update(segment=home)
+        reflect_line(home)
         audit.write(
             audit.Category.EDITS,
             "Note carried",
@@ -127,6 +228,13 @@ def carry(kept: list[dict], transcript) -> int:
             was=f"{old['start']:.1f}-{old['end']:.1f}",
         )
         carried += 1
+    # A note event with no line is an orphan (a note no line could take, or
+    # a Transcript with no lines): gone.
+    Event.objects.filter(
+        source="note",
+        segment__isnull=True,
+        incident__cameras__recording=transcript.recording,
+    ).delete()
     return carried
 
 
@@ -168,8 +276,9 @@ def _event_rows(case) -> list[dict]:
     from core.chronology import Event
 
     rows = []
+    # A note event is a line's note, listed once as that (chapter 11).
     found = (
-        Event.objects.filter(incident__case=case, proposed=False)
+        Event.objects.filter(incident__case=case, proposed=False, segment__isnull=True)
         .exclude(note="")
         .select_related("incident", "note_by")
     )
@@ -225,7 +334,9 @@ def count(case) -> int:
 
     return (
         lines
-        + Event.objects.filter(incident__case=case, proposed=False)
+        + Event.objects.filter(
+            incident__case=case, proposed=False, segment__isnull=True
+        )
         .exclude(note="")
         .count()
     )
@@ -316,33 +427,13 @@ def recording_block(recording) -> str:
     return "The office's notes on this recording:\n" + "\n".join(lines)
 
 
-def incident_block(incident) -> str:
-    """The notes on the synced cameras' lines, on the incident clock; "" when none."""
-    from core.incident_assistant import _clock, synced_cameras
+def any_on_chronology(incident) -> bool:
+    """Whether the Chronology carries a note event, or an Event with a note:
+    when it does, the assistant reading it is given the RULE (chapter 11)."""
+    from core.chronology import Event
 
-    lines = []
-    for camera in synced_cameras(incident):
-        transcript = getattr(camera.recording, "transcript", None)
-        if transcript is None:
-            continue
-        for one in (
-            transcript.segments.exclude(note="")
-            .filter(same_as_other_side=False)
-            .select_related("note_by")
-            .order_by("start", "id")
-        ):
-            lines.append(
-                (
-                    camera.starts_at + one.start,
-                    f"[{_clock(incident, camera.starts_at + one.start)}] "
-                    f"{camera.camera_id()} "
-                    + (f"{one.note_by.shown_name}: " if one.note_by else "")
-                    + one.note.replace("\n", " "),
-                )
-            )
-    if not lines:
-        return ""
-    lines.sort(key=lambda one: one[0])
-    return "The office's notes on the cameras' lines:\n" + "\n".join(
-        text for _, text in lines
+    return (
+        Event.objects.filter(incident=incident, proposed=False)
+        .filter(models.Q(segment__isnull=False) | ~models.Q(note=""))
+        .exists()
     )

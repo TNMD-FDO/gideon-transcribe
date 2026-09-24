@@ -115,7 +115,7 @@
           <input type="hidden" name="event">
           <input type="hidden" name="source" value="person">
           <input type="hidden" name="camera">
-          <span class="eyebrow" id="event-title">New event</span>
+          <span class="eyebrow" id="event-eyebrow">New event</span>
           <label>At <input type="text" name="when" class="mono" size="9" aria-label="When it happened"></label>
           <label>until <input type="text" name="until_when" class="mono" size="9" placeholder="optional" aria-label="When it ended"></label>
           <textarea name="text" class="grow" rows="2" maxlength="500" placeholder="What happened" aria-label="What happened"></textarea>
@@ -205,7 +205,7 @@
     <div id="lanes"></div>
     <div class="foot small muted">
       <button type="button" class="tiny ghost" id="strip-help" title="How the strip works" aria-label="How the strip works">?</button>
-      <span id="strip-help-words" hidden>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event. Drag across the clip track to make a clip of that span; a clip already made is on the Clips lane. Zoomed in, the wheel over the lanes moves along the strip.</span>
+      <span id="strip-help-words" hidden>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event: hover it for its line, press it for its card and to play from there. Drag across the clip track to make a clip of that span; a clip already made is on the Clips lane. Zoomed in, the wheel over the lanes moves along the strip.</span>
       <span class="grow"></span>
       <span class="zoom">Zoom
         <button type="button" class="tiny on" data-zoom="0">all</button>
@@ -257,6 +257,7 @@
   </script>
   {{ event_words|json_script:"event-words" }}
   <script src="{% static 'paragraph-card.js' %}"></script>
+  <script src="{% static 'event-card.js' %}"></script>
   <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'incident.js' %}"></script>
   <script src="{% static 'chat-ui.js' %}"></script>
