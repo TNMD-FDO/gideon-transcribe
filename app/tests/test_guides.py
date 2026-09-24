@@ -120,6 +120,11 @@ def test_the_install_guide_has_the_chapter_s_fixed_parts():
         assert wanted in text, f"the install guide does not have {wanted!r}"
     admin = text_of("admin-guide.md")
     assert "**Pieces**" in admin and "./transcribe add transcription" in admin
+    # The Timeline view (Phase 8 chapter 12); the picture export is gone.
+    user = text_of("user-guide.md")
+    assert "**Timeline**" in user and "spell" in user
+    assert "strip drawn as a picture" not in user
+    assert "and the picture alone." not in user
 
 
 # Rendering -------------------------------------------------------------------

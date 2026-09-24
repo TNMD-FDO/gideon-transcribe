@@ -29,9 +29,8 @@
     <details class="menu" id="export-menu">
       <summary class="btn small" title="Export the chronology">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
       <ul>
-        <li><button type="button" id="export-word">{% icon "word" %} Chronology to Word</button></li>
+        <li><a id="export-word" href="{% url 'incident-export' case.pk incident.pk 'word' %}">{% icon "word" %} Chronology to Word</a></li>
         <li><a href="{% url 'incident-export' case.pk incident.pk 'csv' %}">{% icon "text" %} Chronology as a spreadsheet (.csv)</a></li>
-        <li><button type="button" id="export-picture">{% icon "camera" %} The strip as a picture (.png)</button></li>
         {% if state.memo.on %}<li><button type="button" id="export-memo" hidden>{% icon "word" %} Memo to Word</button></li>{% endif %}
         {% comment %}The comparison's export (Phase 8 chapter 6): a link once a comparison is done, greyed until then.{% endcomment %}
         <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
@@ -242,8 +241,6 @@
     window.INCIDENT = {
       act: "{% url 'incident-act' case.pk incident.pk %}",
       state: "{% url 'incident-state' case.pk incident.pk %}",
-      exportWord: "{% url 'incident-export' case.pk incident.pk 'word' %}",
-      exportPicture: "{% url 'incident-export' case.pk incident.pk 'picture' %}",
       exportMemo: "{% url 'incident-export' case.pk incident.pk 'memo' %}",
       lines: "/incident-camera/",
       eventClip: "{% url 'incident' case.pk incident.pk %}/event/",

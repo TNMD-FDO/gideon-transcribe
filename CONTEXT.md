@@ -336,6 +336,18 @@ _Avoid_: popup, popover, modal, tooltip, lightbox, preview (the chat's word for 
 The card that opens from any mark of an Event (the strip's Events lane, the focus camera's scrub bar, the viewer's timeline mark of a noted line) and from the line of a Chronology row. Hovering a mark shows it light: the time, the line and where it came from. A press opens it whole: the detail, the cameras it is seen on, what it rests on, the note with its writer, the why, the clip mark, and the actions (Edit, a note, Clip this event, Remove, Go to the row; Accept and Dismiss on a proposal; Open the line on a note event). One at a time; Close, Escape or a press outside closes it, and the wall, the strip and the rows never move for it. Phase 8 chapter 11.
 _Avoid_: tooltip, popup, popover, pop-out, hover card, flyout, modal, dialog, marker (for the mark), label (the lane's old words beside a mark), pinned (that is a camera kept in the Sitting)
 
+**Timeline view**:
+The Chronology tab's second shape, a toggle beside Rows kept by the browser per person: a band of the cameras' spans on the Incident clock, then the Events down the page in time order grouped by Spell, each a numbered mark in its camera's colour, its time, its line and its source pill. Pressing a time plays every camera there and brings that camera to the front; pressing the line opens the Event card, which holds every action. Phase 8 chapter 12.
+_Avoid_: Gantt, chart, graph, list view
+
+**Spell**:
+A run of Events on a Chronology with no gap of ten minutes or more between neighbours, headed by its span on the Timeline view and in the Chronology figure, and named in the spreadsheet's last column. One event alone is a Spell headed by its time. Phase 8 chapter 12.
+_Avoid_: phase, segment, section, cluster
+
+**Chronology figure**:
+The Timeline view drawn on the Word export's page in the light palette: the band, the Spells, the numbered entries with the note, the why and the source under each in the small type, then the legends. It replaces the strip picture, which is gone. Phase 8 chapter 12.
+_Avoid_: strip picture, diagram, chart
+
 **Admin pill**:
 The small mark beside a page's title that says an Admin is viewing another person's Case, Workspace or Recording, with the audit sentence one hover or press behind it. It replaces the band across the page. Phase 8 chapter 7.
 _Avoid_: banner (the band it replaces), badge, tag, chip
@@ -389,7 +401,7 @@ An Incident's list of Events, in time order, the office's Notes on the synced ca
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
 
 **Event**:
-One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; or proposed by the assistant from a camera's Digest (source assistant, chapter 3), or found by the app's own search for a Watch phrase (source watch phrase, Phase 7 chapter 2); a proposal stays Proposed under the Chronology and joins it only when a person accepts it. Or the office's Note on a line of a synced camera's transcript, which is an Event on that Incident's Chronology at the line's moment by itself, with the source **note** and the writer's name on its pill ("Note by D. Meehan, BWC2-1"): the same words as the note, changed or removed from either place, gone from the Chronology when the camera leaves; Phase 8 chapter 11 calls that row a note event. Phase 6 chapter 2.
+One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; or proposed by the assistant from a camera's Digest (source assistant, chapter 3), or found by the app's own search for a Watch phrase (source watch phrase, Phase 7 chapter 2); a proposal stays Proposed under the Chronology and joins it only when a person accepts it. Or the office's Note on a line of a synced camera's transcript, which is an Event on that Incident's Chronology at the line's moment by itself, with the source **note** and the writer's name on its pill ("Note by D. Meehan, BWC2-1"): the same words as the note, changed or removed from either place, gone from the Chronology when the camera leaves; Phase 8 chapter 11 calls that row a note event. A press on an Event's mark, its time or its card seeks every camera and brings the camera it came from to the front (Phase 8 chapter 12). Phase 6 chapter 2.
 _Avoid_: mark (that is a live recording's), moment (that is a description), bookmark, flag; shadow, mirror, copy, link (for a note event)
 
 **Watch phrase**:

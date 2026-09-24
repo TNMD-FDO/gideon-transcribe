@@ -11,6 +11,7 @@ image-like is stored.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 import uuid
@@ -568,12 +569,70 @@ def to_check_count(incident) -> int:
 # The exports ----------------------------------------------------------------------
 
 
+# A spell (Phase 8 chapter 12): a run of events with no gap of this many
+# seconds or more between neighbours, headed by its span on the Timeline
+# view and in the chronology figure. One number, in one place; the page's
+# script carries the same.
+SPELL_GAP = 600
+
+# The cameras' colours as the page draws them (its --sp1 to --sp8), in the
+# page's order: the placed cameras by their start, then the unplaced.
+FIGURE_COLOURS = [
+    "#1f6fb2",
+    "#c2410c",
+    "#2e7d32",
+    "#8e24aa",
+    "#00838f",
+    "#ad1457",
+    "#6d4c41",
+    "#546e7a",
+]
+
+
+def camera_colours(incident) -> dict:
+    """Camera id -> the hex colour the page gives it, by the page's order."""
+    cameras = list(incident.cameras.all())
+    placed = sorted(
+        (one for one in cameras if one.is_placed()),
+        key=lambda one: (one.starts_at, one.added),
+    )
+    unplaced = [one for one in cameras if not one.is_placed()]
+    return {
+        str(one.pk): FIGURE_COLOURS[index % len(FIGURE_COLOURS)]
+        for index, one in enumerate(placed + unplaced)
+    }
+
+
+def spells(rows: list[dict]) -> list[list[dict]]:
+    """The rows in time order, split where a gap of SPELL_GAP or more begins."""
+    groups: list[list[dict]] = []
+    for row in rows:
+        if groups and row["seconds"] - groups[-1][-1]["seconds"] < SPELL_GAP:
+            groups[-1].append(row)
+        else:
+            groups.append([row])
+    return groups
+
+
+def spell_words(group: list[dict]) -> str:
+    """The heading of a spell: its span, or its one time."""
+    if len(group) == 1:
+        return group[0]["time"]
+    return f"{group[0]['time']} to {group[-1]['time']}"
+
+
 def _rows(incident) -> list[dict]:
     """The table every export prints, numbered in time order."""
     names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
+    colours = camera_colours(incident)
     rows = []
     for number, event in enumerate(incident.events.filter(proposed=False), 1):
         line, detail = line_and_detail(event.text)
+        # The colour the figure prints the number in: the event's camera's,
+        # else the first of the cameras it is seen on, else none.
+        colour = colours.get(str(event.camera_id), "")
+        if not colour:
+            colour = next((colours[one] for one in event.cameras if one in colours), "")
         rows.append(
             {
                 "id": str(event.pk),
@@ -588,6 +647,7 @@ def _rows(incident) -> list[dict]:
                 "text": event.text,
                 "source": source_words(event, names),
                 "camera": names.get(str(event.camera_id), ""),
+                "colour": colour,
                 "seen_on": ", ".join(
                     names[one] for one in event.cameras if one in names
                 ),
@@ -598,8 +658,13 @@ def _rows(incident) -> list[dict]:
                 "why": event.why,
                 "note": event.note,
                 "to_check": event.to_check,
+                "spell": "",
             }
         )
+    for group in spells(rows):
+        words = spell_words(group)
+        for row in group:
+            row["spell"] = words
     return rows
 
 
@@ -623,6 +688,7 @@ def spreadsheet(incident) -> bytes:
             "Note",
             "To check",
             "Why it matters",
+            "Spell",
         ]
     )
     for row in _rows(incident):
@@ -642,6 +708,7 @@ def spreadsheet(incident) -> bytes:
                 row["note"],
                 "yes" if row["to_check"] else "",
                 row["why"],
+                row["spell"],
             ]
         )
     return holder.getvalue().encode("utf-8-sig")
@@ -674,10 +741,150 @@ def word(incident, picture: bytes | None, exported_by: str) -> bytes:
     return holder.getvalue()
 
 
+def band_png(incident, width: int = 1300) -> bytes | None:
+    """The cameras' spans on the incident clock as a small picture, for the
+    figure's head (Phase 8 chapter 12): the ruler's times, one bar per camera
+    in its colour. None when there is nothing to draw."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:  # pragma: no cover - Pillow is in the app image
+        return None
+    low, high = incidents.span_of(incident)
+    if low is None or high is None or high <= low:
+        return None
+    colours = camera_colours(incident)
+    cameras = [one for one in incident.cameras.all() if one.is_placed()]
+    if not cameras:
+        return None
+    cameras.sort(key=lambda one: (one.starts_at, one.added))
+    left, right, top, lane = 16, 16, 30, 14
+    height = top + len(cameras) * lane + 12
+    image = Image.new("RGB", (width, height), "#ffffff")
+    draw = ImageDraw.Draw(image)
+    try:
+        font = ImageFont.load_default(size=18)
+    except TypeError:  # pragma: no cover - an older Pillow
+        font = ImageFont.load_default()
+
+    def x(at: float) -> float:
+        return left + ((at - low) / (high - low)) * (width - left - right)
+
+    for i in range(6):
+        at = low + (high - low) * i / 5
+        words = incidents.time_of_day(incident, at)
+        box = draw.textbbox((0, 0), words, font=font)
+        text_width = box[2] - box[0]
+        tx = x(at) - (0 if i == 0 else text_width if i == 5 else text_width / 2)
+        draw.text((tx, 4), words, fill="#5b6673", font=font)
+        draw.line([(x(at), top - 4), (x(at), height - 8)], fill="#d3d9e0", width=1)
+    for index, camera in enumerate(cameras):
+        y = top + index * lane
+        start, end = camera.starts_at, camera.starts_at + camera.length()
+        draw.rounded_rectangle(
+            [(x(start), y + 3), (max(x(end), x(start) + 3), y + lane - 3)],
+            radius=3,
+            fill=colours.get(str(camera.pk), "#546e7a"),
+        )
+    out = io.BytesIO()
+    image.save(out, format="PNG")
+    return out.getvalue()
+
+
+def _figure(document, incident, rows: list[dict]) -> None:
+    """The chronology figure (Phase 8 chapter 12): the band, then the events
+    down the page in spells, each a number in its camera's colour, its time,
+    its line, and under it the note, the why and the source in the small
+    type. Text and rules, so Word lays it out; nothing overlaps because the
+    entries stack."""
+    from docx.shared import Inches, Pt, RGBColor
+
+    band = band_png(incident)
+    if band:
+        # A band that will not embed is left out; the entries still print.
+        with contextlib.suppress(Exception):
+            document.add_picture(io.BytesIO(band), width=Inches(6.5))
+        legend = document.add_paragraph()
+        colours = camera_colours(incident)
+        cameras = sorted(
+            (one for one in incident.cameras.all() if one.is_placed()),
+            key=lambda one: (one.starts_at, one.added),
+        )
+        for index, camera in enumerate(cameras):
+            run = legend.add_run(("   " if index else "") + "\u25a0 ")
+            run.font.color.rgb = RGBColor.from_string(
+                colours[str(camera.pk)].lstrip("#")
+            )
+            run.font.size = Pt(9)
+            legend.add_run(camera.camera_id()).font.size = Pt(9)
+        tail = legend.add_run("   Each bar is one camera's recording on the clock.")
+        tail.font.size = Pt(8)
+        tail.italic = True
+    if not rows:
+        empty = document.add_paragraph("No events on the chronology yet.")
+        empty.runs[0].italic = True
+        return
+    for group in spells(rows):
+        heading = document.add_paragraph()
+        heading.paragraph_format.space_before = Pt(10)
+        heading.paragraph_format.space_after = Pt(2)
+        head = heading.add_run(spell_words(group))
+        head.bold = True
+        head.font.name = "Consolas"
+        count = heading.add_run(
+            f"   {len(group)} event{'' if len(group) == 1 else 's'}"
+        )
+        count.font.size = Pt(9)
+        count.font.color.rgb = RGBColor(0x5B, 0x66, 0x73)
+        table = document.add_table(rows=0, cols=3)
+        table.autofit = False
+        for row in group:
+            cells = table.add_row().cells
+            cells[0].width = Inches(0.4)
+            cells[1].width = Inches(0.9)
+            cells[2].width = Inches(5.2)
+            number = cells[0].paragraphs[0].add_run(str(row["number"]))
+            number.bold = True
+            if row["colour"]:
+                number.font.color.rgb = RGBColor.from_string(row["colour"].lstrip("#"))
+            time = cells[1].paragraphs[0].add_run(row["time"])
+            time.font.name = "Consolas"
+            time.font.size = Pt(10)
+            if row["end"]:
+                until = cells[1].add_paragraph().add_run(f"to {row['end']}")
+                until.font.name = "Consolas"
+                until.font.size = Pt(9)
+                until.font.color.rgb = RGBColor(0x5B, 0x66, 0x73)
+            words = cells[2].paragraphs[0]
+            words.add_run(row["line"])
+            if row["to_check"]:
+                mark = words.add_run("  To check")
+                mark.font.size = Pt(9)
+                mark.font.color.rgb = RGBColor(0x8A, 0x5A, 0x00)
+            if row["detail"]:
+                detail = cells[2].add_paragraph()
+                detail.add_run(row["detail"]).font.size = Pt(9)
+            under = []
+            if row["note"]:
+                under.append("Note: " + row["note"])
+            if row["why"]:
+                under.append("Why it matters: " + row["why"])
+            under.append(
+                row["source"]
+                + (f"; seen on {row['seen_on']}" if row["seen_on"] else "")
+            )
+            small = cells[2].add_paragraph()
+            run = small.add_run("  ".join(under))
+            run.italic = True
+            run.font.size = Pt(8)
+            run.font.color.rgb = RGBColor(0x5B, 0x66, 0x73)
+
+
 def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
-    """The Chronology's pages: the head, the cameras, the strip as a picture,
-    the events table and the legends. The memo's export (chapter 3) carries
-    them as its last pages."""
+    """The Chronology's pages: the head, the cameras, the chronology figure
+    (the band, the spells and the numbered entries) and the legends. The
+    memo's export (chapter 3) carries them as its last pages. `picture` was
+    the strip picture the page drew until v1.85.0; it is ignored, and the
+    figure is drawn here."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt
 
@@ -739,42 +946,8 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
             else ""
         )
         cells[3].text = incidents.PLACED_WORDS.get(camera.placed, "")
-    if picture:
-        document.add_paragraph()
-        try:
-            document.add_picture(io.BytesIO(picture), width=Inches(6.5))
-        except Exception:  # noqa: BLE001 - a picture the page could not draw is left out
-            note = document.add_paragraph("(The strip could not be drawn.)")
-            note.runs[0].italic = True
     document.add_paragraph()
-    table = document.add_table(rows=1, cols=5)
-    table.style = "Light Grid Accent 1"
-    for cell, title in zip(
-        table.rows[0].cells, ("#", "Time", "Event", "Source", "Seen on"), strict=True
-    ):
-        cell.text = title
-    for row in rows:
-        cells = table.add_row().cells
-        cells[0].text = str(row["number"]) + (" (to check)" if row["to_check"] else "")
-        cells[1].text = row["time"] + (f" to {row['end']}" if row["end"] else "")
-        cells[2].text = row["line"]
-        if row["detail"]:
-            # The detail under the line, in the smaller type (chapter 8).
-            detail = cells[2].add_paragraph()
-            detail.add_run(row["detail"]).font.size = Pt(9)
-        if row["why"]:
-            # The assistant's reason, or the watch phrase, under the line and
-            # apart from it (Phase 7 chapter 2).
-            why = cells[2].add_paragraph()
-            run = why.add_run("Why it matters: " + row["why"])
-            run.italic = True
-        if row["note"]:
-            # The office's note under the event, in italics (Phase 7).
-            note = cells[2].add_paragraph()
-            run = note.add_run("Note: " + row["note"])
-            run.italic = True
-        cells[3].text = row["source"]
-        cells[4].text = row["seen_on"]
+    _figure(document, incident, rows)
     document.add_paragraph()
     to_check = sum(1 for row in rows if row["to_check"])
     if to_check:

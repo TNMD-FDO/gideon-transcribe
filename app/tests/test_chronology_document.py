@@ -237,14 +237,16 @@ def test_the_exports_print_about_the_notes_and_the_marks(incident, person):
     text = docx_text(body)
     assert "The stop of 7 June." in text
     assert "Note: Cite page 4" in text
-    assert "1 (to check)" in text
+    # The mark sits beside the line in the figure (Phase 8 chapter 12).
+    assert "To check" in text
     assert "1 event marked to check" in text
     sheet = chronology.spreadsheet(incident).decode("utf-8-sig")
     head, first, second = sheet.strip().splitlines()[:3]
-    assert head.endswith("Added on,Note,To check,Why it matters")
-    # A person's event has no why (v1.64.0), so the last column is empty.
-    assert first.endswith("Cite page 4,yes,")
-    assert second.endswith(",,,")
+    assert head.endswith("Added on,Note,To check,Why it matters,Spell")
+    # A person's event has no why (v1.64.0); the last column is the spell
+    # (Phase 8 chapter 12), which both events share.
+    assert first.endswith("Cite page 4,yes,,21:56:27 to 21:56:57")
+    assert second.endswith(",,,,21:56:27 to 21:56:57")
 
 
 # The memo and the proposals are told --------------------------------------------

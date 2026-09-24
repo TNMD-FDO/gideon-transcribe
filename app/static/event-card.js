@@ -180,7 +180,7 @@
     if (seekLink) {
       seekLink.addEventListener("click", function (event) {
         event.preventDefault();
-        if (given.seek) { given.seek(ev.at); }
+        if (given.seek) { given.seek(ev.at, ev); }
       });
     }
     return box;

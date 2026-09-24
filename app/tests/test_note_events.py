@@ -371,7 +371,8 @@ def test_the_page_carries_the_event_card_and_the_marks_alone(person, a_case, cli
     )
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-8.md").read_text(encoding="utf-8")
     assert "## 11. A note is an event, and the Event card" in spec
-    assert "## 12. Deferred and ruled out" in spec
+    assert "## 12. The Timeline view" in spec
+    assert "## 13. Deferred and ruled out" in spec
 
 
 @pytest.mark.django_db(transaction=True)

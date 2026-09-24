@@ -231,9 +231,9 @@ def test_the_three_exports_come_back_in_their_shapes(person, a_case, incident, c
     assert "1,21:56:47,30.0,,Vehicle stopped,,Added by asker" in text
     assert "2,22:02:57,400.0,22:03:07,Pat-down" in text
 
-    # The Word document takes the picture the page drew.
-    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 40
-    word = client.post(f"{base}/word", {"picture": io.BytesIO(png)})
+    # The Word document is a plain link (Phase 8 chapter 12): the chronology
+    # figure is drawn by the server, so the page posts nothing.
+    word = client.get(f"{base}/word")
     assert word.status_code == 200
     assert word["Content-Disposition"].endswith('filename="Chronology - Stop.docx"')
     from docx import Document
@@ -246,15 +246,19 @@ def test_the_three_exports_come_back_in_their_shapes(person, a_case, incident, c
         for row in table.rows
         for cell in row.cells
     )
-    assert "Chronology: Stop" in words and "The strip could not be drawn." in words
-    assert "Vehicle stopped" in cells and "22:02:57 to 22:03:07" in cells
+    assert "Chronology: Stop" in words
+    # The figure: the band's legend, a spell heading, the entries by number.
+    assert "Each bar is one camera's recording on the clock." in words
+    assert "21:56:47 to 22:02:57" in words and "2 events" in words
+    assert "Vehicle stopped" in cells and "to 22:03:07" in cells
     assert "From its clock, checked" in cells and chronology.QUOTE_LEGEND in words
-    assert client.get(f"{base}/word").status_code == 404
-
-    picture = client.post(f"{base}/picture", {"picture": io.BytesIO(png)})
-    assert picture.status_code == 200 and picture["Content-Type"] == "image/png"
-    assert picture.content == png
+    assert len(document.inline_shapes) == 1  # the band, nothing else drawn
+    # The strip picture is gone.
     assert client.get(f"{base}/picture").status_code == 404
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 40
+    assert (
+        client.post(f"{base}/picture", {"picture": io.BytesIO(png)}).status_code == 404
+    )
     assert client.get(f"{base}/pdf").status_code == 404
 
     kinds = list(
@@ -262,9 +266,73 @@ def test_the_three_exports_come_back_in_their_shapes(person, a_case, incident, c
             "details__kind", flat=True
         )
     )
-    assert sorted(kinds) == ["csv", "picture", "word"]
+    assert sorted(kinds) == ["csv", "word"]
     for row in Row.objects.filter(event="chronology exported"):
         assert "Vehicle" not in json.dumps(row.details)
+
+
+def test_spells_split_at_ten_minutes():
+    """Phase 8 chapter 12: a spell is a run of events with no gap of ten
+    minutes or more between neighbours; one event alone is a spell headed by
+    its time."""
+    rows = [
+        {"seconds": 0.0, "time": "21:56:17"},
+        {"seconds": 300.0, "time": "22:01:17"},
+        {"seconds": 899.0, "time": "22:11:16"},
+        {"seconds": 1499.0, "time": "22:21:16"},
+        {"seconds": 5000.0, "time": "23:19:37"},
+    ]
+    groups = chronology.spells(rows)
+    assert [len(one) for one in groups] == [3, 1, 1]
+    assert chronology.spell_words(groups[0]) == "21:56:17 to 22:11:16"
+    assert chronology.spell_words(groups[1]) == "22:21:16"
+    assert chronology.spells([]) == []
+    assert chronology.SPELL_GAP == 600
+
+
+@pytest.mark.django_db
+def test_the_rows_carry_the_spell_and_the_cameras_colour(person, a_case, incident):
+    first, second = incident.cameras.order_by("starts_at")
+    chronology.add(
+        incident,
+        {"at": "30", "text": "Vehicle stopped", "camera": str(second.pk)},
+        by=person,
+    )
+    chronology.add(incident, {"at": "45", "text": "Step out"}, by=person)
+    chronology.add(incident, {"at": "2000", "text": "Tow truck"}, by=person)
+    rows = chronology._rows(incident)
+    colours = chronology.camera_colours(incident)
+    assert colours[str(first.pk)] == "#1f6fb2" and colours[str(second.pk)] == "#c2410c"
+    assert rows[0]["colour"] == "#c2410c"
+    # A person's event with no camera takes the first of its seen-on cameras.
+    assert rows[1]["colour"] in ("#1f6fb2", "#c2410c", "")
+    assert rows[0]["spell"] == rows[1]["spell"] == "21:56:47 to 21:57:02"
+    assert rows[2]["spell"] == "22:29:37"
+    sheet = chronology.spreadsheet(incident).decode("utf-8-sig")
+    assert sheet.splitlines()[0].endswith("Why it matters,Spell")
+    assert sheet.splitlines()[1].endswith(",21:56:47 to 21:57:02")
+
+
+def test_the_page_carries_the_timeline_and_the_focus_rule():
+    script = (APP / "static" / "incident.js").read_text(encoding="utf-8")
+    for wanted in (
+        "function showCameraOf",
+        "function drawTimeline",
+        "var SPELL_GAP = 600",
+        "inc-chronology-view",
+        "data-view='timeline'",
+        "seek: function (at, ev) { seek(at); if (ev) { showCameraOf(ev); } }",
+    ):
+        assert wanted in script, wanted
+    assert "drawPicture" not in script and "exportPicture" not in script
+    card = (APP / "static" / "event-card.js").read_text(encoding="utf-8")
+    assert "given.seek(ev.at, ev)" in card
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    for wanted in (".inc-timeline {", ".tl-spell {", ".view-toggle {", ".tl-num {"):
+        assert wanted in css, wanted
+    page = (APP / "templates" / "incident.html").read_text(encoding="utf-8")
+    assert 'id="export-picture"' not in page
+    assert '<a id="export-word" href=' in page
 
 
 def test_the_words_are_in_the_glossary_and_the_guide():

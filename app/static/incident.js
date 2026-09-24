@@ -217,7 +217,11 @@
 
   var STILL_PROPOSING = "The assistant is still proposing; accept or dismiss once it has finished";
 
-  function keptEvents() { return S.events.filter(function (one) { return !one.proposed; }); }
+  function keptEvents() {
+    var kept = S.events.filter(function (one) { return !one.proposed; });
+    kept.forEach(function (one, index) { one.number = index + 1; });
+    return kept;
+  }
 
   // The head ----------------------------------------------------------------------------
 
@@ -957,6 +961,32 @@
     if (!soundPinned) { setSound(id); }
   }
 
+  // The camera an event came from comes to the front (Phase 8 chapter 12):
+  // its own camera when it names a synced one on the page, else the first
+  // of the cameras it is seen on, else nothing. In Focus the front tile
+  // changes and the sound follows unless it is pinned; in Side and Grid the
+  // tile scrolls into view and takes the sound, as Find's hits do. A camera
+  // parked off the wall is swapped in first, as a press on its bar does.
+  function cameraOf(ev) {
+    if (!ev) { return null; }
+    var wanted = [ev.camera].concat(ev.cameras || []);
+    for (var i = 0; i < wanted.length; i += 1) {
+      var cam = wanted[i] ? cameraById(wanted[i]) : null;
+      if (cam && cam.starts_at !== null && cam.placed) { return cam; }
+    }
+    return null;
+  }
+
+  function showCameraOf(ev) {
+    var cam = cameraOf(ev);
+    if (!cam) { return; }
+    if (!cam.on_wall) { swapIn(cam.id, true); return; }
+    if (layout === "focus") { setFocus(cam.id); return; }
+    var entry = players[cam.id];
+    if (entry && entry.tile && entry.tile.scrollIntoView) { entry.tile.scrollIntoView({ block: "nearest" }); }
+    if (!soundPinned) { setSound(cam.id); }
+  }
+
   function sayWhoIsHeard() {
     var cam = cameraById(soundCamera);
     soundSaid.textContent = cam ? "Sound: " + cam.camera_id + (layout === "focus" && !soundPinned ? " (follows the focus)" : "") : "";
@@ -1118,7 +1148,7 @@
       // One press seeks every camera there; the same press opens the Event
       // card, which listens on the document (chapter 11).
       var found = eventById(mark.dataset.event);
-      if (found) { seek(found.at); }
+      if (found) { seek(found.at); showCameraOf(found); }
       return;
     }
     var track = event.target.closest(".track");
@@ -1202,7 +1232,7 @@
     if (id === currentEventId) { return; }
     currentEventId = id;
     var panel = document.getElementById("panel-chronology");
-    Array.prototype.forEach.call(panel.querySelectorAll("tr[data-event]"), function (row) {
+    Array.prototype.forEach.call(panel.querySelectorAll("tr[data-event], .tl-ev[data-event]"), function (row) {
       var on = row.dataset.event === id;
       row.classList.toggle("here", on);
       if (on && followBox.checked && !panel.hidden) { row.scrollIntoView({ block: "nearest" }); }
@@ -1236,6 +1266,10 @@
     if (M.state === "done" && kept.length) { lead += " The memo was written on " + M.events_count + " of them."; }
     var html = "<div class='row' style='gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap'>" +
       "<p class='lead grow' style='margin: 0; min-width: 16rem'>" + escape(lead) + "</p>" +
+      // Rows or Timeline (Phase 8 chapter 12): the same events, two shapes.
+      "<span class='view-toggle' role='group' aria-label='How the events are shown'>" +
+      "<button type='button' class='tiny' data-view='rows' aria-pressed='" + (chronologyView === "rows") + "'>Rows</button>" +
+      "<button type='button' class='tiny' data-view='timeline' aria-pressed='" + (chronologyView === "timeline") + "'>Timeline</button></span>" +
       "<button type='button' class='small primary' id='add-event-here'>+ Event here</button>" +
       (P.on ? "<button type='button' class='small' id='open-proposals' title='The assistant reads each synced camera in stretches and proposes the moments that matter; nothing joins the chronology until you accept it'>Propose events" +
         (proposed.length ? " <span class='pill warn small'>" + proposed.length + " waiting</span>" : "") + "</button>" : "") + "</div>";
@@ -1248,7 +1282,9 @@
       "<form class='inc-about-box' id='about-box' hidden><textarea name='about' rows='4' maxlength='2000' aria-label='About this chronology'>" + escape(about) + "</textarea>" +
       "<div class='row' style='gap: 6px; margin-top: 6px'><button type='submit' class='small primary'>Save</button><button type='button' class='small ghost' id='about-cancel'>Cancel</button>" +
       "<span class='muted small'>Printed on the export's cover and told to the memo as the office's own words.</span></div></form>";
-    if (kept.length) {
+    if (kept.length && chronologyView === "timeline") {
+      html += drawTimeline(kept);
+    } else if (kept.length) {
       html += "<table class='inc-events'><tbody>";
       kept.forEach(function (one) {
         // The row says what happened (Phase 8 chapter 11): the time, the line
@@ -1272,10 +1308,71 @@
       });
       html += "</tbody></table>";
     }
-    html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there; press an event's line for its card. E adds an event at the moment being watched.</p>";
+    html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there and brings the event's camera to the front; press an event's line for its card. E adds an event at the moment being watched.</p>";
     box.innerHTML = html;
     currentEventId = null;
     markCurrentEvent(now());
+  }
+
+  // The Timeline view (Phase 8 chapter 12): the cameras' spans as a band,
+  // then the events down the page in spells, each a numbered mark in its
+  // camera's colour, the time, the line and the source. Nothing overlaps
+  // because entries stack. The row menu is not here: the Event card holds
+  // every action.
+  var SPELL_GAP = 600;   // seconds between events that start a new spell
+  var chronologyView = "rows";
+  try { chronologyView = window.localStorage.getItem("inc-chronology-view") === "timeline" ? "timeline" : "rows"; } catch (ignored) { /* rows then */ }
+
+  function spells(events) {
+    var groups = [];
+    events.forEach(function (one) {
+      var last = groups[groups.length - 1];
+      if (last && one.at - last[last.length - 1].at < SPELL_GAP) { last.push(one); } else { groups.push([one]); }
+    });
+    return groups;
+  }
+
+  function drawTimeline(kept) {
+    var shown = span();
+    var cameras = S.cameras.slice();
+    var colourOf = {};
+    cameras.forEach(function (cam) { colourOf[cam.id] = cam.colour; });
+    function left(at) { return (100 * (at - shown[0]) / (shown[1] - shown[0])).toFixed(2) + "%"; }
+    function width(from, to) { return Math.max(0.3, 100 * (to - from) / (shown[1] - shown[0])).toFixed(2) + "%"; }
+    var ticks = "";
+    for (var i = 0; i <= 5; i += 1) { ticks += "<span>" + escape(timeOfDay(shown[0] + ((shown[1] - shown[0]) * i) / 5)) + "</span>"; }
+    var bars = "", legend = "";
+    cameras.forEach(function (cam, index) {
+      var placed = cam.starts_at !== null && cam.placed;
+      var start = placed ? cam.starts_at : shown[0];
+      bars += "<i class='" + (placed ? "" : "faint") + "' title='" + quoted(cam.camera_id + ", " + cam.placed_words) + "' style='top: " + (4 + index * 8) + "px; left: " + left(start) + "; width: " + width(start, start + cam.length) + "; background: " + cam.colour + "'></i>";
+      legend += "<span><i class='dot' style='background: " + cam.colour + "'></i>" + escape(cam.camera_id) + "</span>";
+    });
+    var html = "<div class='inc-timeline'><div class='tl-band'>" +
+      "<div class='tl-ticks mono small'>" + ticks + "</div>" +
+      "<div class='tl-spans' style='height: " + (8 + cameras.length * 8) + "px'>" + bars + "</div>" +
+      "<div class='tl-legend small'>" + legend + "<span class='muted'>The cameras' spans on the incident clock.</span></div></div>";
+    spells(kept).forEach(function (group) {
+      var first = group[0], last = group[group.length - 1];
+      html += "<div class='tl-spell'><span class='mono t'>" + escape(timeOfDay(first.at)) + (group.length > 1 ? " to " + escape(timeOfDay(last.at)) : "") + "</span>" +
+        "<span class='muted small'>" + group.length + " event" + (group.length === 1 ? "" : "s") + "</span><span class='rule'></span></div>";
+      group.forEach(function (one, index) {
+        var colour = colourOf[one.camera] || (one.cameras || []).map(function (id) { return colourOf[id]; }).filter(Boolean)[0] || "";
+        var isNote = one.source === "note";
+        html += "<div class='tl-ev' data-event='" + one.id + "'><div class='tl-col'>" +
+          "<span class='tl-num'" + (colour ? " style='background: " + colour + "'" : " data-plain='1'") + ">" + one.number + "</span>" +
+          (index < group.length - 1 ? "<span class='tl-stem'></span>" : "") + "</div>" +
+          "<div class='tl-body'><div class='tl-top'><a class='cite mono' href='#' data-at='" + one.at + "' title='Play every camera from here'>" + timeOfDay(one.at) + "</a>" +
+          "<button type='button' class='line' data-event-card='" + one.id + "' title='Everything about this event'>" + escape(one.line || one.text) + "</button>" +
+          (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") +
+          (one.until ? "<span class='muted small mono'>to " + timeOfDay(one.until) + "</span>" : "") + "</div>" +
+          "<div class='tl-under'><span class='pill src src-" + escape(one.source) + "' title='" + quoted(one.source_words) + "'>" + escape(one.source_words) + "</span>" +
+          (one.note && !isNote ? "<span class='muted small tell'>note</span>" : "") +
+          (one.clips ? "<span class='muted small tell'>" + escape(one.clips_words) + "</span>" : "") + "</div></div></div>";
+      });
+    });
+    html += "</div>";
+    return html;
   }
 
   // The card's actions and the row's menu share these (chapter 11).
@@ -1406,7 +1503,7 @@
       if (mark) {
         event.preventDefault();
         var found = eventById(mark.dataset.event);
-        if (found) { seek(found.at); showTab("chronology"); flashRow(found.id); }
+        if (found) { seek(found.at); showCameraOf(found); showTab("chronology"); flashRow(found.id); }
         return;
       }
       if (event.target.closest("#memo-write")) {
@@ -1416,14 +1513,14 @@
         return;
       }
       if (event.target.closest("#memo-cancel")) { post({ action: "memo_cancel" }); return; }
-      if (event.target.closest("#memo-export")) { drawPicture().then(function (blob) { return exportWith(C.exportMemo, blob); }); }
+      if (event.target.closest("#memo-export")) { exportWith(C.exportMemo); }
     });
   }
   var exportMemoButton = document.getElementById("export-memo");
   if (exportMemoButton) {
     exportMemoButton.addEventListener("click", function () {
       document.getElementById("export-menu").removeAttribute("open");
-      drawPicture().then(function (blob) { return exportWith(C.exportMemo, blob); });
+      exportWith(C.exportMemo);
     });
   }
 
@@ -1447,12 +1544,27 @@
   document.getElementById("layer-proposals").addEventListener("click", chronologyClick);
   function chronologyActions(event) {
     var cite = event.target.closest(".cite");
-    if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.at)); return; }
+    if (cite) {
+      event.preventDefault();
+      seek(parseFloat(cite.dataset.at));
+      // The time on a row or an entry brings the event's camera to the front.
+      var owner = cite.closest("[data-event]");
+      if (owner) { showCameraOf(eventById(owner.dataset.event)); }
+      return;
+    }
     var edit = event.target.closest("[data-edit]");
     if (edit) { var found = eventById(edit.dataset.edit); if (found) { openEventBox(found); } return; }
     var clip = event.target.closest("[data-clip]");
     if (clip) { var clipped = eventById(clip.dataset.clip); if (clipped) { openClipBox(clipped); } return; }
     if (event.target.closest("#add-event-here")) { openEventBox({ at: now() }); return; }
+    var view = event.target.closest("[data-view]");
+    if (view) {
+      chronologyView = view.dataset.view === "timeline" ? "timeline" : "rows";
+      try { window.localStorage.setItem("inc-chronology-view", chronologyView); } catch (ignored) { /* this page only */ }
+      drawChronology();
+      EVENT_CARD.refresh();
+      return;
+    }
     // About this chronology (Phase 7 chapter 1).
     if (event.target.closest("#about-edit")) {
       document.getElementById("about-line").hidden = true;
@@ -1874,80 +1986,6 @@
 
   // The picture: the strip drawn on a canvas from the same rows, in the light
   // palette whatever the theme, at twice the screen's resolution.
-  var LIGHT = ["#1f6fb2", "#c2410c", "#2e7d32", "#8e24aa", "#00838f", "#ad1457", "#6d4c41", "#546e7a"];
-
-  function drawPicture() {
-    var scale = 2;
-    var width = 1000, left = 130, right = 20, laneHeight = 22, top = 34;
-    var cameras = S.cameras.slice();
-    var events = S.events.filter(function (one) { return !one.proposed; }).sort(function (a, b) { return a.at - b.at; });
-    var height = top + cameras.length * laneHeight + 16 + 44 + 16;
-    var canvas = document.createElement("canvas");
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    var ctx = canvas.getContext("2d");
-    ctx.scale(scale, scale);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    var shown = span();
-    function x(at) { return left + ((at - shown[0]) / (shown[1] - shown[0])) * (width - left - right); }
-    ctx.font = "11px 'IBM Plex Mono', Consolas, monospace";
-    ctx.fillStyle = "#5b6673";
-    ctx.textBaseline = "middle";
-    for (var i = 0; i <= 6; i += 1) {
-      var at = shown[0] + ((shown[1] - shown[0]) * i) / 6;
-      var tx = x(at);
-      ctx.textAlign = i === 0 ? "left" : (i === 6 ? "right" : "center");
-      ctx.fillText(timeOfDay(at), tx, 14);
-      ctx.fillStyle = "#d3d9e0";
-      ctx.fillRect(tx, 24, 1, height - 24 - 16);
-      ctx.fillStyle = "#5b6673";
-    }
-    ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
-    cameras.forEach(function (cam, index) {
-      var y = top + index * laneHeight;
-      var placed = cam.starts_at !== null && cam.placed;
-      var start = placed ? cam.starts_at : shown[0];
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#171b21";
-      ctx.fillText(cam.camera_id.length > 16 ? cam.camera_id.slice(0, 15) + "…" : cam.camera_id, 8, y + laneHeight / 2);
-      ctx.fillStyle = "#e9edf1";
-      ctx.fillRect(left, y + 4, width - left - right, laneHeight - 8);
-      ctx.fillStyle = LIGHT[index % LIGHT.length];
-      ctx.globalAlpha = placed ? 0.9 : 0.3;
-      ctx.fillRect(x(start), y + 6, Math.max(2, x(start + cam.length) - x(start)), laneHeight - 12);
-      ctx.globalAlpha = 1;
-    });
-    var ey = top + cameras.length * laneHeight + 16;
-    ctx.fillStyle = "#171b21";
-    ctx.textAlign = "left";
-    ctx.fillText("Events", 8, ey + 10);
-    ctx.fillStyle = "#d3d9e0";
-    ctx.fillRect(left, ey + 20, width - left - right, 1);
-    var lastRight = -1;
-    events.forEach(function (one, index) {
-      var ex = x(one.at);
-      ctx.fillStyle = "#0f5e86";
-      ctx.fillRect(ex - 1, ey, 2, 22);
-      if (one.until) { ctx.globalAlpha = 0.25; ctx.fillRect(ex, ey + 4, Math.max(2, x(one.until) - ex), 14); ctx.globalAlpha = 1; }
-      ctx.font = "11px 'IBM Plex Sans', system-ui, sans-serif";
-      var label = String(index + 1) + " " + shortLabel(one.line || one.text);
-      var needs = ctx.measureText(label).width + 8;
-      if (ex >= lastRight) {
-        ctx.fillStyle = "#171b21";
-        ctx.fillText(label, ex + 4, ey + 32);
-        lastRight = ex + needs;
-      } else {
-        ctx.fillStyle = "#5b6673";
-        ctx.fillText(String(index + 1), ex + 3, ey + 32);
-      }
-    });
-    ctx.font = "10px 'IBM Plex Sans', system-ui, sans-serif";
-    ctx.fillStyle = "#5b6673";
-    ctx.fillText("Each bar is one camera's recording on the clock; a line on the Events lane is an event, numbered as in the table.", 8, height - 8);
-    return new Promise(function (resolve) { canvas.toBlob(function (blob) { resolve(blob); }, "image/png"); });
-  }
-
   function download(blob, name) {
     var url = URL.createObjectURL(blob);
     var link = document.createElement("a");
@@ -1959,9 +1997,10 @@
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
   }
 
-  function exportWith(url, blob) {
+  function exportWith(url) {
+    // The memo's export (chapter 3): asked for with a POST, nothing in it;
+    // the chronology figure is drawn by the server (Phase 8 chapter 12).
     var form = new FormData();
-    if (blob) { form.append("picture", blob, "strip.png"); }
     return fetch(url, { method: "POST", headers: { "X-CSRFToken": cookie("csrftoken") }, body: form })
       .then(function (answer) {
         if (!answer.ok) { window.UI.toast("The export did not work.", { problem: true }); return null; }
@@ -1970,14 +2009,6 @@
       });
   }
 
-  document.getElementById("export-word").addEventListener("click", function () {
-    document.getElementById("export-menu").removeAttribute("open");
-    drawPicture().then(function (blob) { return exportWith(C.exportWord, blob); });
-  });
-  document.getElementById("export-picture").addEventListener("click", function () {
-    document.getElementById("export-menu").removeAttribute("open");
-    drawPicture().then(function (blob) { return exportWith(C.exportPicture, blob); });
-  });
 
   // The Cameras tab ----------------------------------------------------------------------
 
@@ -2109,7 +2140,7 @@
 
   function flashRow(id) {
     // A camera's row, or a Chronology row (the latter never lit before v1.81.0).
-    var row = document.querySelector("[data-row='" + id + "'], tr[data-event='" + id + "']");
+    var row = document.querySelector("[data-row='" + id + "'], tr[data-event='" + id + "'], .tl-ev[data-event='" + id + "']");
     if (row) { row.classList.add("match-here"); row.scrollIntoView({ block: "nearest" }); window.setTimeout(function () { row.classList.remove("match-here"); }, 2000); }
   }
 
@@ -2275,7 +2306,7 @@
   if (window.EVENT_CARD) {
     window.EVENT_CARD.setup({
       time: timeOfDay,
-      seek: function (at) { seek(at); },
+      seek: function (at, ev) { seek(at); if (ev) { showCameraOf(ev); } },
       find: eventById,
       restsOn: restsOnHtml,
       clipsUrl: function () { return S.incident.clips_url; },
@@ -2609,7 +2640,7 @@
       }
     } else if (one.kind === "event") {
       showTab("chronology");
-      if (one.event) { flashRow(one.event); }
+      if (one.event) { showCameraOf(eventById(one.event)); flashRow(one.event); }
     } else if (one.kind === "memo") {
       showTab("memo");
       lightParagraph(document.getElementById("panel-memo"), one.para);

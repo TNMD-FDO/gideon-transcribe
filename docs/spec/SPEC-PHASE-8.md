@@ -21,6 +21,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **The sitting on the case page** (chapter 10, for the build): the Incidents tab's row carries the bar in small, and the offer to make an incident shows the bar as the incident would read; each camera's share is kept on the camera so a case page reads no Digest to draw a row.
 - **One sitting** (chapter 9, for the build): a bar on the incident page's Cameras tab that says how much of the incident the assistant can hold at once, in hours of camera, with a sentence for each zone that says what changes; everything said always read and the longest cameras' pictures left out first when the sitting is full, with a pin to keep one; the engine's window read from the engine so a larger model changes every bar and no setting; and the memo, the comparison and Gideon saying what they read.
 - **A note is an event, and the Event card** (chapter 11, for the build): a note on a line of a synced camera is an event on that incident's chronology at the line's moment, one thing in two places, changed or removed from either; the Events lane draws a mark alone per event, and one Event card, light on hover and whole on a press, carries what the lane's labels and the row's muted line used to spell out, from the strip, the focus camera's scrub bar, the Chronology row and the viewer's timeline.
+- **The Timeline view, the chronology figure, and the camera that comes to the front** (chapter 12, for the build): a press on an event, from the lane, a row, the card, a tick, the memo or Find, brings the event's own camera to the front as it seeks; the Chronology tab gains a Timeline view beside its rows, the cameras' spans as a band and the events down the page in spells with a numbered mark in the camera's colour; the Word export prints that figure in place of the strip picture, which goes.
 
 ## Contents
 
@@ -35,7 +36,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 9. One sitting
 10. The sitting on the case page
 11. A note is an event, and the Event card
-12. Deferred and ruled out
+12. The Timeline view, the chronology figure, and the camera that comes to the front
+13. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -839,7 +841,7 @@ Added to `CONTEXT.md` with this chapter. **Event card**: the card that opens fro
 
 - Each event is a mark at its time, or a short bar to its end: a person's and a quoted one in the accent colour, a proposal in the working colour, a note event in the muted colour; the current event's mark lit. No words beside a mark at any zoom.
 - Hovering a mark shows the Event card light: the time (and the end), the line, and the source pill. A press plays every camera from there and opens the card whole. Each mark takes keyboard focus in time order; with focus the light card shows, and Enter or Space opens it.
-- The strip's picture for the exports is unchanged: numbered marks with the first words, as chapter 8 has it.
+- The strip's picture for the exports is unchanged: numbered marks with the first words, as chapter 8 has it. (Superseded by chapter 12, v1.85.0: the strip picture is gone, and the Word export prints the chronology figure.)
 
 ### The Chronology tab's rows
 
@@ -900,7 +902,79 @@ Added to `CONTEXT.md` with this chapter. **Event card**: the card that opens fro
 - The words on a note event's layer and on its Remove question.
 - The migration's treatment of notes already written on synced cameras' lines (they become note events at the upgrade).
 
-## 12. Deferred and ruled out
+## 12. The Timeline view, the chronology figure, and the camera that comes to the front
+
+Written 2026-09-24 from the maintainer's two asks after the staged install went out: "in an incident when a note or event is selected, it should automatically show that camera as the focus", and "make the chronology a lot cleaner; the png export doesn't seem useful. How can we make this timeline look very clean and usable". The strip picture was a canvas drawing of the strip with each event's first words squeezed beside its tick, which collided as soon as two events were close. A mock-up was drawn and judged the same day: a vertical timeline, the cameras' spans as a band, the events down the page in spells, each a numbered mark in its camera's colour with its time, its line and its source; and the same figure on the Word export's page. Built as `v1.85.0`.
+
+### Principles
+
+1. **The camera you pressed is the camera you see.** A press on an event, from wherever the event is reached, seeks every camera and brings the event's own camera to the front, as Find's hits already did. Nobody should have to find the camera after finding the moment.
+2. **One list, two shapes.** The Chronology tab's rows and its Timeline view show the same events from the same state; a toggle chooses, and nothing is on one that is not reachable from the other. The Event card holds every action in both.
+3. **Nothing overlaps because entries stack.** The Timeline view and the figure run down the page, one entry after another, at any density; the strip's lane keeps its marks alone (chapter 11) and is the scrubbing surface, not the reading one.
+4. **The export is the view on paper.** The Word document prints the chronology figure, the Timeline view in the light palette with the note and the why under each entry; a screenshot of the strip is not a document.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Timeline view**: the Chronology tab's second shape, a toggle beside Rows. **Spell**: a run of events with no gap of ten minutes or more between neighbours, headed by its span. **Chronology figure**: the Timeline view drawn on the Word export's page in place of the strip picture. The pages never say Gantt, chart, graph, list view, phase, segment, section, cluster or diagram.
+
+### The camera comes to the front
+
+- **The camera** is the event's own (the words' camera, the note's line's camera, the assistant's camera, the watch phrase's) when it names a synced camera on the page; else the first of the cameras the event is seen on that is synced; else none, and the front camera is left as it is.
+- **Where it applies**: a press on a mark on the Events lane, on a row's or an entry's time, on the Event card's time (and so on the focus camera's scrub-bar ticks, which open the card), on the memo's event marks, on Find's event hits, and on a proposal's time in the Proposed events layer.
+- **What happens**: every camera seeks the event's moment as today; then, in the Focus layout, the event's camera comes to the front and the sound follows it unless the sound is pinned (chapter 5's rule for a press on a tile); in the Side and Grid layouts the camera's tile scrolls into view and takes the sound unless pinned. A camera parked off the wall is swapped in first, as a press on its bar does.
+- **Not from** the memo's plain citations (a time, not an event), the About line, or the Cameras tab.
+
+### The Timeline view
+
+- **The toggle**, Rows or Timeline, at the Chronology tab's head after the lead line, kept by the browser per person; Rows shipped. Event here and Propose events stay where they are.
+- **The band**: the ruler's six times across the width, then one thin bar per camera in the camera's colour (the lane's colour), from its start to its end on the incident's span, a parked or unplaced camera drawn faint; under it a legend of the cameras' dots and ids and the words "The cameras' spans on the incident clock." Nothing else is written on the band; hovering a bar says the camera.
+- **The spells**: the events in time order split where a gap of ten minutes or more begins; a heading per spell of its span ("21:56:24 to 21:58:47"), then "n events" in the muted colour, then a rule. One event alone is a spell headed by its time. The gap is one number in one place, in the page's script and in the server's export, and is not a setting.
+- **An entry**: the event's number in a circle in its camera's colour (a person's event with no camera and no seen-on camera in the muted colour); a stem down to the next entry of the spell; the time as a citation that plays every camera and brings the camera to the front; the line as a press that opens the Event card; the To check pill; an end as "to hh:mm:ss"; and under it the source pill and the one-word tells (note, clips) as the row carries them. The current event's entry is lit as the row is; Back lights the entry it returns to.
+- **Proposals** are not drawn; they have their layer, and the head's count says how many wait.
+- **The row menu is not on an entry**: the Event card holds Edit, the note, Clip this event, Remove, Go to the row and Open the line, as chapter 11 has it.
+
+### The chronology figure
+
+- **In the Word export** (Chronology to Word, and the memo's last pages), in place of the strip picture and the five-column table: the band as a small picture drawn by the server (the times, one bar per camera in its colour) with a legend line under it; then the spells and the entries as text and rules, each entry its number in its camera's colour, its time in the mono type and its end under it, its line with To check beside it, its detail in the smaller type, and under it, in the small italic type, the note, the why and the source with the cameras it is seen on. The To check count, the clips line, the legends and the AI notice follow as before.
+- **The spreadsheet** gains a last column, Spell, the heading's words.
+- **The strip picture is gone**: the export menu offers Chronology to Word and the spreadsheet; Chronology to Word is a plain link, since the page no longer draws anything for it; the memo's export the same. The audit row Chronology exported no longer carries the format png.
+
+### In and out
+
+- **In**: the rule for the camera and its seven sources; the toggle and the Timeline view; the figure in the Word export and the memo's last pages; the spreadsheet's column; the picture export's removal.
+- **Out**: the strip itself (unchanged; it drives the cameras), the Event card, the row's shape, the Proposed events layer's rows, the exports' cover.
+
+### What changes from earlier phases
+
+- Phase 6 chapter 2, Export: three exports become two; the Word document prints the chronology figure, not the strip as a picture and the table; the picture line reversed. Principle 5 (the picture is drawn from the rows, never kept) holds for the figure.
+- Phase 7 chapter 1, Where they print: a note and To check print in the figure's entry rather than the table's cell and number column.
+- Phase 8 chapter 1, The Chronology tab: the tab has two shapes.
+- Phase 8 chapter 11: "the strip's picture for the exports is unchanged" is superseded; the card's time brings the camera to the front.
+- `CONTEXT.md`: Timeline view, Spell, Chronology figure added; Event amended.
+
+### Audit rows
+
+- None added. Chronology exported loses the kind png.
+
+### Settings
+
+- None.
+
+### Not in this chapter
+
+- **A name for a spell** ("the stop", "the search"): ruled out; the app does not know what happened, and a wrong name on a heading is worse than none.
+- **A setting for the gap**: not chosen; one number, changed in the code if an office's cases want another.
+- **The strip replaced by the timeline**: ruled out; the strip is where the cameras are driven and placed by hand, and its marks now behave (chapter 11).
+- **A figure on the case page**: not chosen.
+- **Editing on the Timeline view**: ruled out, as on the card; the event's layer edits.
+
+### Left to the build
+
+- The gap that starts a spell (600 seconds) and the heading's words.
+- How the band is drawn in Word (a small picture drawn by the server, so it prints sharp at page width).
+- The stem between entries and the numbers' size, within the mock-up's measures.
+
+## 13. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -925,6 +999,7 @@ Added to `CONTEXT.md` with this chapter. **Event card**: the card that opens fro
 | Cases | Camera pinned; Camera unpinned; AI assistant call gains words_alone and window_source | 9 |
 | (none) | | 10 |
 | Edits | Note changed and Note removed gain where (chronology) | 11 |
+| (none; Chronology exported loses the kind png) | | 12 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -941,6 +1016,7 @@ Added to `CONTEXT.md` with this chapter. **Event card**: the card that opens fro
 | (none; Engine window becomes the fallback) | AI assistant | | 9 |
 | (none) | | | 10 |
 | (none) | | | 11 |
+| (none) | | | 12 |
 
 ## Sources
 
@@ -948,6 +1024,7 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-24, v1.85.0.** Chapter 12 (The Timeline view, the chronology figure, and the camera that comes to the front) written and built the same day from the maintainer's two asks and the mock-up judged the same day, with these decisions left to the build: a spell starts at a gap of 600 seconds; the heading reads the span and the count and never a name; the band in Word is a small picture drawn by the server with Pillow, the entries text and rules; the number's colour is the camera's lane colour, and the source pill still names the camera; the export keeps the note and the why under each entry; the memo's export posts nothing and the Word export is a plain link. Phase 6 chapter 2's export lines amended in place; chapter 11's picture line superseded.
 - **2026-09-24, v1.81.0.** Chapter 11 (A note is an event, and the Event card) written and built the same day from the maintainer's asks and picks (one thing in two views; a mark alone with the card on hover or a press; the rows simplified; the card from the row, the scrub bar and the viewer's timeline). Decisions left to the build: the hover delay is a quarter second and the card 36 characters wide; the current event's mark is lit on the lane; the row shows the "note" tell and the clip mark's words; a note event's layer is titled Edit note with the time greyed and a line saying it is the line's; its Remove question says it removes the note from the line and from every chronology; a press on a strip mark still seeks every camera as before and opens the card from the same press; the migration makes a note event for every note already on a synced camera's line. Chapter 11 in the contents, Deferred and ruled out now 12. In passing: a Chronology row is now lit by Back (the row was looked for by the wrong attribute since chapter 1), and the event layer's duplicate id is gone.
 - **2026-09-23, v1.79.0.** Chapter 10 built the same day, with these decisions left to the build: the offer's bar counts the templates' overhead with an empty chronology (the incident does not exist yet) and says nothing of it; the column keeps the figure, the bar and the word at every width (the table scrolls under 900 pixels as the tab's tables do); a share is refreshed on a draw that finds it never counted or older than the camera's newest Digest part, one reading of the record for the whole incident, so a Digest remade part by part is counted once at the next draw after its last part, and a transcript correction alone does not refresh it (the drift is a few tokens); the incident page's bar is now drawn from the kept shares by the same longest-first arithmetic the real fit follows, so the Cameras tab's bar and the case page's row are one set of figures and the real calls alone fit the record itself; a Digest part with no time (a test's) counts as fresh. Two migrations in two releases (0058, 0059) since chapter 9 shipped first.
 - **2026-09-23.** Chapter 10 (The sitting on the case page) written for the build from the maintainer's ask after v1.78.0: the Incidents tab's column and the offer's bar (A and B of the drawings); the case head's pill set aside; each camera's share kept on the camera.

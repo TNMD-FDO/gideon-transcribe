@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.85.0, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 8 chapter 12: the Timeline view, the chronology figure, and the
+camera that comes to the front.
+
+- **The camera comes to the front.** A press on an event, from a mark on
+  the Events lane, a row's time, the Event card (and so the scrub-bar
+  ticks), the memo's event marks, Find's event hits or a proposal's time,
+  seeks every camera and brings the event's own camera to the front: in
+  Focus the big picture changes and the sound follows unless pinned; in
+  Side and Grid the tile scrolls into view and takes the sound. A parked
+  camera is swapped in first. An event with no camera of its own takes the
+  first camera it is seen on; with none, the front camera stays.
+- **The Timeline view.** Rows or Timeline at the Chronology tab's head,
+  remembered per person: the cameras' spans as a band, then the events
+  down the page in spells (a new spell at a gap of ten minutes or more),
+  each a numbered mark in its camera's colour, the time, the line, the To
+  check pill and the source pill. The line opens the Event card as the row
+  does; the current event is lit; Back lights the entry it returns to.
+- **The chronology figure replaces the strip picture.** The Word export
+  and the memo's last pages print the band and the spells with the numbered
+  entries, the note, the why and the source under each, in place of the
+  strip picture and the five-column table. The spreadsheet gains a Spell
+  column. "The strip as a picture (.png)" is gone, Chronology to Word is a
+  plain link, and the page draws nothing for an export.
+
 ## v1.84.0, 2026-09-24
 
 ```

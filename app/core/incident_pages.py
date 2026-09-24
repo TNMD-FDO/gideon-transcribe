@@ -531,42 +531,26 @@ def _event_fields(request) -> dict:
 
 @login_required
 def export(request: HttpRequest, case_id, incident_id, kind: str) -> HttpResponse:
-    """The Chronology's three exports (chapter 2): Word with the strip as the
-    page drew it, the spreadsheet, and the picture alone."""
+    """The Chronology's two exports (chapter 2; Phase 8 chapter 12): Word
+    with the chronology figure drawn here, and the spreadsheet. The strip
+    picture the page drew is gone with v1.85.0."""
     _, incident = _incident(request, case_id, incident_id)
     if kind == "csv":
         body = chronology.spreadsheet(incident)
         content_type = "text/csv; charset=utf-8"
         name = chronology.export_name(incident, "csv")
     elif kind == "word":
-        if request.method != "POST":
-            raise Http404("the Word export is asked for from the page")
-        picture = request.FILES.get("picture")
-        body = chronology.word(
-            incident, picture.read() if picture else None, request.user.shown_name
-        )
+        body = chronology.word(incident, None, request.user.shown_name)
         content_type = (
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
         name = chronology.export_name(incident, "docx")
-    elif kind == "picture":
-        picture = request.FILES.get("picture") if request.method == "POST" else None
-        if picture is None:
-            raise Http404("the picture is drawn by the page")
-        body = picture.read()
-        content_type = "image/png"
-        name = chronology.export_name(incident, "png")
     elif kind == "memo":
         # The Incident memo (chapter 3), with the Chronology as its last pages.
-        if request.method != "POST":
-            raise Http404("the memo export is asked for from the page")
         memo = incident_assistant.memo_of(incident)
         if memo is None or memo.state != incident_assistant.DONE:
             raise Http404("no memo yet")
-        picture = request.FILES.get("picture")
-        body = incident_assistant.memo_word(
-            memo, picture.read() if picture else None, request.user.shown_name
-        )
+        body = incident_assistant.memo_word(memo, None, request.user.shown_name)
         content_type = (
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
