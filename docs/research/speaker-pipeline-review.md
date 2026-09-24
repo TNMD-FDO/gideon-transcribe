@@ -32,6 +32,11 @@ server. Primary sources where they exist; a claim without one is marked.
   torch 2.1.1 [S4]: it cannot drop into a stack that WhisperX holds at
   pyannote 4 and torch 2.8 [S5]. Not a candidate today; worth a look if its
   authors move to pyannote 4.
+- **NVIDIA's Nemotron 3 Diarization (2026-09-23)** lifts the Sortformer
+  line's ceiling to eight speakers and is open and ungated; probed on the
+  office's one corrected recording on 2026-09-24, it scored far worse than
+  community-1 there (`docs/research/nemotron-3-diarization.md`), so the
+  paragraph below stands for now with the ceiling point withdrawn.
 - **NVIDIA's Sortformer** is an end-to-end model with a ceiling of four
   speakers, English first, inside the NeMo research toolkit [S6][S7]. A
   traffic stop with two officers, a driver, a passenger and dispatch is
