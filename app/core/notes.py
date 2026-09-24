@@ -93,7 +93,7 @@ def reflect_line(segment) -> None:
     """The note events of one line, made right: one on every Incident the
     recording is a synced camera of while the line is shown and noted, none
     otherwise. A sync never touches the Event's own changed marks."""
-    from core.chronology import NOTE, Event, running_cameras
+    from core.chronology import NOTE, Event
 
     recording = segment.transcript.recording
     wanted = bool(segment.note) and not segment.same_as_other_side
@@ -113,7 +113,10 @@ def reflect_line(segment) -> None:
                 text=segment.note,
                 source=NOTE,
                 camera=camera,
-                cameras=running_cameras(camera.incident, at),
+                # Its own camera alone (v1.85.2): a note is on one line of one
+                # camera, and "seen on" every camera running at that moment
+                # read as if the note were on each. The person may add more.
+                cameras=[str(camera.pk)],
                 added_by=segment.note_by,
             )
             continue

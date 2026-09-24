@@ -116,6 +116,22 @@ def test_a_note_on_a_synced_cameras_line_is_an_event(person, a_case, client):
     assert not Row.objects.filter(event="event removed").exists()
     for row in Row.objects.all():
         assert "footage" not in json.dumps(row.details).lower()
+    # Seen on its own camera alone (v1.85.2), even where another camera runs
+    # at that moment: the second camera starts 281 seconds in.
+    later = Segment.objects.filter(transcript=first.transcript, start=300.0).first()
+    if later is None:
+        later = Segment.objects.create(
+            transcript=first.transcript,
+            start=300.0,
+            end=305.0,
+            text="Later words.",
+            speaker="Speaker 1",
+            speaker_label="SPEAKER_00",
+        )
+    assert post_note(client, first, later, "Both cameras run here.").status_code == 200
+    both = note_event(incident, later)
+    assert both is not None and both.cameras == [str(camera_of(incident, first).pk)]
+    post_note(client, first, later, "")
 
 
 @pytest.mark.django_db

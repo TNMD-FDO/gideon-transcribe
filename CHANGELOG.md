@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.85.2, 2026-09-24
+
+```
+Models: unchanged
+Database: migrates
+```
+
+- **A note event is seen on its own camera alone.** Since v1.81.0 a note
+  on a synced camera's line became an event whose "seen on" listed every
+  camera running at that moment, so on an incident whose cameras overlap
+  every note's Event card read as if the note were on each of them. A note
+  is on one line of one camera: the event now carries that camera alone,
+  and a person may add others as for any event. Migration 0062 puts the
+  rows already made right. Chapter 11's line is amended.
+
 ## v1.85.1, 2026-09-24
 
 ```
