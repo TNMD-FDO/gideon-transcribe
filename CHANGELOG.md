@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.85.1, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The upgrade runs the new release's own steps.** After the checkout,
+  `./transcribe upgrade` now hands over to the script it just checked out
+  for the rest of the upgrade (the release tag, the folders, the profile
+  migration, the images, `up -d`, the models, the check). Until now those
+  steps ran from the script that started the upgrade, the previous
+  release's, so a step a release added to the upgrade took effect one
+  release late: v1.83.0's profile migration did not run at the upgrade
+  that brought it in, the transcription service and the diarizer were left
+  running on the old images because Compose no longer saw them, and the
+  Status page's Pieces card read "not installed" until the next upgrade
+  put the profile in. A tag from before this release has no second half of
+  its own, and the steps run from the old script as before.
+
 ## v1.85.0, 2026-09-24
 
 ```

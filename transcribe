@@ -2724,6 +2724,29 @@ cmd_upgrade() {
   git -C "$HERE" checkout --quiet "$tag"
   pass "the checkout is at $tag"
 
+  # From here the release's own script takes over (v1.85.1). Until now the
+  # rest of the upgrade ran from the script that started it, the previous
+  # release's, so a step a release added to the upgrade (v1.83.0's profile
+  # migration) ran only at the upgrade after it, and the office's own
+  # server went one release with its transcription containers left behind.
+  # A tag from before v1.85.1 has no upgrade-finish, so the steps run from
+  # here as they always did.
+  if grep -q '^upgrade-finish)' "$HERE/transcribe"; then
+    exec "$HERE/transcribe" upgrade-finish "$tag" "$before" "$build"
+  fi
+  finish_the_upgrade "$tag" "$before" "$build"
+}
+
+cmd_upgrade_finish() {
+  # The second half of an upgrade, run by the release just checked out.
+  need_env
+  echo "Continuing with $1's own upgrade steps"
+  finish_the_upgrade "$1" "$2" "$3"
+}
+
+finish_the_upgrade() {
+  local tag="$1" before="$2" build="$3"
+
   # What the app says it is running. Written here rather than typed, because a
   # figure somebody typed would be a guess about the checkout rather than a
   # fact about it, and the Admin panel and the audit log both print it.
@@ -2905,6 +2928,7 @@ install-backup) shift && cmd_install_backup "$@" ;;
 install-timers) shift && cmd_install_timers "$@" ;;
 install-mail) shift && cmd_install_mail "$@" ;;
 upgrade) shift && cmd_upgrade "$@" ;;
+upgrade-finish) shift && cmd_upgrade_finish "$@" ;;
 tidy) cmd_tidy ;;
 rollback) shift && cmd_rollback "$@" ;;
 restore-dump) shift && cmd_restore_dump "$@" ;;

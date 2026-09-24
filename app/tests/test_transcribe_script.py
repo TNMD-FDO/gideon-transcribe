@@ -40,7 +40,7 @@ def test_every_usage_line_is_dispatched_and_the_other_way_round():
     )
     # Commands an operator is not told about are allowed only when they are
     # what the timers call or a step of another command.
-    quiet = {"backup-weekly", "install-timers", "restore-dump"}
+    quiet = {"backup-weekly", "install-timers", "restore-dump", "upgrade-finish"}
     assert dispatch - usage - quiet == set(), (
         f"dispatched, not in the usage block: {dispatch - usage - quiet}"
     )
@@ -67,6 +67,24 @@ def test_the_service_and_the_diarizer_are_behind_the_transcription_profile():
     assert "WHISPERX_GPU_UUID:-unset" in compose
     example = (HERE / ".env.example").read_text(encoding="utf-8")
     assert re.search(r"^COMPOSE_PROFILES=transcription$", example, re.M)
+
+
+def test_the_upgrade_hands_over_to_the_new_release():
+    """v1.85.1: after the checkout the upgrade execs the checked-out script's
+    own second half, so a step a release adds to the upgrade runs at the
+    upgrade that brings it in; a tag without the subcommand runs the steps
+    from the old script as before."""
+    body = text()
+    upgrade = body.split("cmd_upgrade() {", 1)[1].split("\n}\n", 1)[0]
+    assert 'git -C "$HERE" checkout --quiet "$tag"' in upgrade
+    assert "grep -q '^upgrade-finish)' \"$HERE/transcribe\"" in upgrade
+    assert 'exec "$HERE/transcribe" upgrade-finish "$tag" "$before" "$build"' in upgrade
+    assert 'finish_the_upgrade "$tag" "$before" "$build"' in upgrade
+    finish = body.split("finish_the_upgrade() {", 1)[1].split("\n}\n", 1)[0]
+    steps = ("set_env RELEASE_TAG", "migrate_the_profiles", "compose up -d")
+    for step in steps:
+        assert step in finish, step
+    assert "cmd_check" in finish
 
 
 @needs_bash

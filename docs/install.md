@@ -411,6 +411,8 @@ The last line is either `Everything checked passed.` or a count of what did not.
 
 ## 7. Upgrade
 
+From v1.85.1 the upgrade hands over to the release it has just checked out for its second half, so every step a release adds to the upgrade runs at the upgrade that brings it in. Upgrading from a release before v1.85.1 runs that release's own steps once more, as it always did; the release after that runs the new ones.
+
 Upgrades come as Releases on GitHub. The app never checks for them and never phones home, so somebody has to hear about them: on the repository's page, **Watch**, **Custom**, **Releases**, and GitHub emails you when one is published.
 
 Each Release's notes open with two fixed lines, and you read them before you do anything:
