@@ -1,6 +1,6 @@
 # Gideon Transcribe, Phase 5 specification
 
-The Speakers release, published as `v1.50.0`; chapter 3, the Speaker check, built as `v1.55.0`.
+The Speakers release, published as `v1.50.0`; chapter 3, the Speaker check, built as `v1.55.0`; chapter 4, the diarizer, written 2026-09-24 for `v1.80.0`.
 
 ## About this document
 
@@ -17,14 +17,17 @@ Nothing in this document is office-specific. No new environment key is needed an
 
 - **The Speaker check** (chapter 3, v1.55.0): after a Transcript lands with its Speakers told apart, the engine reads it in windows and proposes the lines whose words show they were given to the wrong Speaker. Every proposal is checked by the app, listed on the Speakers page as a Speaker correction with the words, the time and the reason, and moves a line only when a person accepts it, through the same move the number keys make. Shipped Off; a Speakers page in the Panel's Settings group holds its five settings.
 
-Chapter 1 adds no admin setting, no audit row, no table, and no environment key. Chapter 3 adds a Speakers settings page, five audit rows, and two tables.
+- **The diarizer** (chapter 4, for the build, `v1.80.0`): the model that tells voices apart becomes a Panel choice, Nemotron 3 Diarization by default (open, ungated, up to eight voices) in a container of its own, pyannote kept one setting away; the speaker-count hint and the embeddings stay pyannote's; one result shape whichever runs.
+
+Chapter 1 adds no admin setting, no audit row, no table, and no environment key. Chapter 4 adds one setting, no audit row and no table, and a second container in the WhisperX service's Compose file. Chapter 3 adds a Speakers settings page, five audit rows, and two tables.
 
 ## Contents
 
 1. The Speakers page
 2. Voice prints (deferred; the reservation and the rules)
 3. The Speaker check
-4. Deferred and ruled out
+4. The diarizer
+5. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 5. B. Settings added in Phase 5.
 
@@ -214,7 +217,78 @@ A **Speakers** page in the Panel's Settings group: Speaker check (Off); Speaker 
 - The overlap between windows and the cap on moves per window, within the rule that a window is about ten minutes of talk.
 - The exact wording of the state line and of the dismissed-because-stale notice.
 
-## 4. Deferred and ruled out
+## 4. The diarizer
+
+Written 2026-09-24 from the maintainer's decision the same day, after the probe of NVIDIA's Nemotron 3 Diarization (`docs/research/nemotron-3-diarization.md`): the only recording the office had corrected proved a bad reference, and by ear the new model was right where the page was wrong on eleven of thirteen disputed stretches, heard voices pyannote had merged into named speakers, and heard silence where the page had words. The maintainer's words: pyannote "was really never that great"; keep its plumbing but turned off; the app is in testing anyway. This chapter makes the model that tells voices apart a choice, ships Nemotron as the default, and keeps pyannote one Panel setting away. Every office that pulls this package gets the same choice, the same default, and no new question at install.
+
+### Principles
+
+1. **The diarizer is a choice, not a fork.** One Panel setting names the model that separates a Recording into Speakers. Whichever is chosen, the service returns the same result shape, so the Transcript, the Speakers page, the Speaker check, the incidents and every export are untouched; a Recording says which diarizer split it.
+2. **The default is the better model, and the other stays reachable.** A fresh install diarizes with Nemotron 3 and needs no Hugging Face token for it. pyannote's code, weights and gate stay in the package for an office that prefers it, or for the day the choice is reversed.
+3. **Nothing office-specific, nothing new to ask.** The diarizer runs on the same card as the WhisperX service, chosen by the same install question; its weights are fetched by the same `models.yaml`, pinned by revision, offline afterwards; its licence is in the third-party file.
+4. **The pinned stack stays pinned.** Nemotron does not go into the WhisperX image. It runs in a container of its own with its own pinned stack, called by the service for the spans, so the stack that took a research note to settle is not disturbed (ADR 0014).
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Diarizer**: the model that tells a Recording's voices apart, pyannote or Nemotron; the Panel's word and the Details tab's. The pages never say "engine" for it (the engine is the AI assistant's) and never "model" alone.
+
+### The choice
+
+- **The setting.** Transcription defaults page: **Diarizer**, a choice of `nemotron` ("Nemotron 3 Diarization, NVIDIA, up to eight voices, no token") and `pyannote` ("pyannote community-1, the diarizer until v1.80.0; needs the Hugging Face token given at install"). Default `nemotron`. When changed: the next Run; nothing already transcribed changes. `pyannote` is greyed with "not installed: give the Hugging Face token at install to fetch it" when its weights are not in the cache.
+- **Process again** follows the setting as it stands, like every other Run; a Recording split by one diarizer and processed again is split by the current one, names and corrections lost as today.
+- **The Speaker-count hint** ("exactly N", "between N and M", on the Upload page and per Side on a call) is pyannote's alone: Nemotron takes no count. Under `nemotron` the Upload page's hint control is greyed with "The Nemotron diarizer decides the count itself", the app sends no hint, and a stored hint on a Recording is kept unused. The recordings table's speaker cells are unchanged.
+- **Where it shows.** A Recording's Details tab says "Voices told apart by Nemotron 3 Diarization" or "by pyannote community-1", from the Transcript's provenance; the Word and text exports' processing record gains the same line. The case page and the Speakers page do not name the diarizer.
+
+### The service
+
+- **A second container, `diarizer`**, in the WhisperX service's Compose file, built from this repository as the third image (`ghcr.io/tnmd-fdo/gideon-transcribe-diarizer`, tagged with `RELEASE_TAG` like the other two, its digest recorded and checked as ADR 0013 has it). It holds NeMo's ASR extra at the pinned source commit, torch 2.8.0 with CUDA 12.8 (the WhisperX stack's own, confirmed by the probe on 2026-09-24 to load and run the model with the same output), the model's weights from the shared model cache, and a small HTTP API on the `whisperx` network with no published port. It reserves the same card as the WhisperX service by the same UUID and holds about 2 GB of it while a job diarizes.
+- **Its API**, for the WhisperX service alone: `POST /v1/diarize` with the prepared WAV, returning the spans as a list of `{start, end, speaker}` in seconds, with the model's name and version; `GET /healthz`. The Consumer never calls it; the WhisperX service's contract is the only one Consumers hold.
+- **The WhisperX service's contract** (`docs/whisperx-api.md`, amended with this chapter) gains one request field, `diarizer`: `nemotron` or `pyannote`, default `nemotron` from service 0.3.0. With `nemotron` the service transcribes and aligns as today, asks the diarizer container for the spans, and gives each word its Speaker by WhisperX's own `assign_word_speakers`, so both diarizers attribute words the same way. With `pyannote` nothing changes from today. A `speakers` hint or `return_speaker_embeddings` with `diarizer=nemotron` is refused, `400` with a `reason_class`, under the same rule that refuses a hint without `diarize`: a Consumer that sends one has a bug. The result's `settings_used` names the diarizer and its version; `speakers.labels` are `speaker_0`, `speaker_1` and on for Nemotron, which the app renames to Speaker 1 and on as it does pyannote's `SPEAKER_00`.
+- **The pins.** `models.yaml` gains a `diarizer` entry: `nvidia/Nemotron-3-Diarization`, revision pinned, licence OpenMDW-1.1, not gated, size recorded; `pull` fetches it into the shared cache like the others and the diarizer container reads it offline. pyannote's entry stays; when no Hugging Face token is given, `pull` skips the gated model, says so, and the Panel greys the `pyannote` choice.
+- **The diarizer's own settings**, in the service's environment file with the WhisperX service's fixed rules: the offline chunking configuration from the model card (spkcache 264, fifo 40, chunk 340, right context 40, update period 300 frames of 80 ms) and the batch size. Not Panel settings.
+- **The benchmark gate** runs once on the server before the tag, as for every model change: the diarizer's time per hour of audio and card memory, written into the research note.
+
+### In and out
+
+- The exports' processing record gains the diarizer's line; nothing else is exported differently. Nothing is imported.
+
+### What changes from earlier phases
+
+- Phase 1's Diarization chapter and `docs/whisperx-api.md`: the diarizer is a choice; the hint is pyannote's; the embeddings flag is pyannote's.
+- Phase 5 chapter 2 (voice prints, deferred): its reservation rests on the embeddings pyannote returns; under Nemotron there are none, and voice prints will need an embedding step of their own. One line there says so.
+- ADR 0002 (a fresh pinned WhisperX service) and ADR 0013 (two images pinned by tag): a third image, with the same rules (ADR 0014).
+- `CLAUDE.md`: "Two images are built here" becomes three. The box ledger: a third image on the Docker volume and about 2 GB more on the Transcribe card while a job runs; a ledger entry at the release.
+- `THIRD_PARTY_LICENSES.md`: NeMo (Apache-2.0) and the model (OpenMDW-1.1).
+
+### Audit rows
+
+- None added. Which diarizer split a Recording is in its Transcript's provenance, and the setting's change is the Panel's usual row.
+
+### Settings
+
+- **Diarizer** (Transcription defaults): `nemotron` or `pyannote`; default `nemotron`; the next Run.
+
+### After the upgrade, once
+
+- At the maintainer's word: Process again on the Recordings of two cases named in chat (the twelve-camera incident's, and a testing case's), so the office can judge Nemotron on footage it knows. Names and corrections on those Recordings are lost, as Process again always loses them; the incident's cameras had none. Not a feature; recorded in the changelog as the operator's act.
+
+### Not in this chapter
+
+- **Both splits side by side** on the Speakers page with a switch (the trial drawn first): not chosen; the office is testing and one split per Recording is enough.
+- **A per-upload choice** of diarizer: not chosen; one office-wide setting.
+- **Removing pyannote**: ruled out; it stays reachable for another office and for a reversal.
+- **The Speaker check's Accept all**: the probe found it harmful on a night-time body camera; left for later at the maintainer's word, with the finding in the research note.
+- **Streaming diarization** for Live recordings: not in this chapter, though the model can.
+
+### Left to the build
+
+- The diarizer container's base image and its exact size; the model card's offline chunking values as the environment file's defaults.
+- How the diarizer's version reaches `settings_used` (the model card's version string and the NeMo commit).
+- Whether the hint control on the Upload page greys or hides under `nemotron` (greys, by the "say where things land" rule, unless it crowds the page).
+- The refusal's `reason_class` names for a hint or embeddings sent with `nemotron`.
+- The pull's words when the gated pyannote model is skipped for want of a token.
+
+## 5. Deferred and ruled out
 
 - **Voice prints**: deferred to a later release; chapter 2.
 - **The speaker accuracy plan** (2026-09-15): deferred, held as future work at the maintainer's word. Four stages, none assuming a speaker count: measure the pipeline against hand-corrected transcripts; split lines where the voice changes mid-line, mark each line's voice call firm or mixed, and enforce hard rules in code; the voice veto (a per-line embedding held only until the Speaker check has run, every proposed move tested against the voices; needs Phase 1's stored-embeddings rule amended); the recording sketch and the rewrite form for the check. Default speaker counts ruled out: the office's videos vary too much.
@@ -251,6 +325,7 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- **2026-09-24.** Chapter 4 (The diarizer) written for the build from the maintainer's decision after the Nemotron 3 probe: Nemotron the default diarizer in its own container, pyannote kept reachable, the hint and the embeddings pyannote's, one result shape; ADR 0014 records the container and the source-commit pin; the contract gains `diarizer`. The maintainer's answers: Nemotron by default; the Recordings of two named cases processed again after the upgrade; the choice the Admin's on the Panel; the Speaker check's Accept all left for later.
 - 2026-09-15 (v1.56.0): **Swap two speakers between times** on the Speakers page, under the Lanes: two Speakers and two times, every line of one in the stretch becomes the other's and the other way round, one Undo entry that puts both sides back, the audit row Speakers swapped with the count and the stretch's length. The Speaker check's Suggested corrections offer the swap when eight or more of them lie between the same two Speakers, and a swap settles the corrections in its stretch (the ones it fulfilled accepted, the others dismissed). The check's answer holds up to 400 moves per window, and the page says when a window's list was cut short at the answer cap.
 - 2026-09-14 (v1.55.1): the Speakers page in three columns, the maintainer's pick from three mockups ("the transcript in the middle"): the cards, the Ledger at full height, and the player over the Lanes; the Ledger had been squeezed under the Lanes to a few lines. On a window under 1280 pixels the cards sit beside the player and the Lanes in a band across the top, and the Ledger runs full width under it.
 - 2026-09-14: chapter 3, the Speaker check, written and built as v1.55.0 the same day, with these decisions left to the build: windows overlap by six lines, at most sixty moves per window's answer, the state line's and the stale notice's wording as the page has them.

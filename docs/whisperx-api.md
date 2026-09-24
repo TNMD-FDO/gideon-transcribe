@@ -55,6 +55,7 @@ Request: a multipart body with two parts.
 | `model` | string | `large-v3`, `large-v3-turbo` | `large-v3-turbo` | The allow-list. Anything else is `400`. |
 | `diarize` | boolean | `true`, `false` | `false` | Separate the audio into Speakers. |
 | `speakers` | object or empty | empty, `{"exactly": N}`, or `{"between": [N, M]}` | empty | The Speaker-count hint, in its three shapes: let the service decide, exactly N, or between N and M. Mapped to pyannote's `num_speakers`, or `min_speakers` and `max_speakers` (pyannote ignores the min and max when `num_speakers` is given). N must not exceed M. |
+| `diarizer` | string | `nemotron`, `pyannote` | `nemotron` (from service 0.3.0; `pyannote` alone before it) | Which model tells voices apart when `diarize` is true (Phase 5 chapter 4, ADR 0014). `nemotron` runs Nemotron 3 Diarization in the service's own `diarizer` container and attributes words itself; `pyannote` runs the pipeline as before. The result has one shape either way. `speakers` or `return_speaker_embeddings` with `nemotron` is refused, `400`, `reason_class` `hint_not_supported` or `embeddings_not_supported`: Nemotron takes no count and returns no vectors, and a Consumer that asks has a bug. |
 | `vocabulary` | list of strings | up to 200 terms | empty | Names and terms to improve recognition. Built into the prompt (below). |
 | `context` | string | one line, up to 500 characters | empty | One line in the style of the speech, for example `Interview of a witness by an investigator about a robbery`. Built into the prompt first. |
 | `return_speaker_embeddings` | boolean | `true`, `false` | `false` | One vector per Speaker in the result. Needs `diarize`. Not requested or stored by the app in Phase 1; the flag exists for the day voice matching arrives. |
@@ -118,7 +119,9 @@ The app renders `stage` as the plain-word Step a user reads (loading the model, 
 | `words` (inside each segment) | `word`, `start`, `end`, `score`, `speaker`; a word the aligner could not place carries only `word`. |
 | `speakers` | An object: `labels`, the labels found in the engine's own form (`SPEAKER_00` and on), and, only when embeddings were asked for, `embeddings` (one list of floats per label) and `embedding_dimension`. Labels are per job; the app renames them before anyone sees them, and prefixes them with the Side for a multi-Side Recording. |
 | `settings_used` | `task` (as requested), `task_run` (`transcribe` or `translate`, what the service actually ran), `task_reason` (`requested`, `english_detected`, `mixed_detected`), `language`, `model` and its revision, `compute_type` (`float16`), `batch_size`, `vad` (`method`, `onset`, `offset`, `chunk_seconds`), `diarize` and the hint as applied, `vocabulary_terms_given`, `vocabulary_terms_used`, `context_given`, `prompt_tokens`, `return_speaker_embeddings`. |
-| `service` | `version`, `api_version`, and the pins (whisperx, faster-whisper, ctranslate2, torch, pyannote.audio, the diarization model revision). |
+| `service` | `version`, `api_version`, and the pins (whisperx, faster-whisper, ctranslate2, torch, pyannote.audio, the diarization model revision; from 0.3.0 also the diarizer container's NeMo commit and the Nemotron revision). |
+
+From service 0.3.0 `settings_used` also carries `diarizer` (`nemotron` or `pyannote`) and `diarizer_version` (the model's revision), and under `nemotron` the `speakers.labels` are `speaker_0`, `speaker_1` and on, in the model's order of arrival; the Consumer renames both forms alike. `timings_seconds.diarize` covers the call to the diarizer container.
 | `timings_seconds` | `queued`, `load`, `transcribe`, `align`, `diarize`, `total`. |
 | `gpu` | `uuid`, `name`. |
 
@@ -327,6 +330,7 @@ Every model is pinned to a revision in the service's `models.yaml`, and `pull` v
 | ASR, `large-v3` | `Systran/faster-whisper-large-v3` | MIT | the revision in `models.yaml` |
 | ASR, `large-v3-turbo` | `mobiuslabsgmbh/faster-whisper-large-v3-turbo` | MIT | the revision in `models.yaml` |
 | Diarization | `pyannote/speaker-diarization-community-1` | CC-BY-4.0, gated | revision `3533c8cf8e369892e6b79ff1bf80f7b0286a54ee` (last modified 2025-09-29) |
+| Diarizer (from 0.3.0) | `nvidia/Nemotron-3-Diarization` | OpenMDW-1.1, not gated | the revision in `models.yaml`, pinned by the build |
 | Alignment, one per language in `WHISPERX_ALIGN_LANGUAGES` | the torchaudio bundle for `en` and `es`; a HuggingFace wav2vec2 model for the other languages WhisperX supports | per model | a pin per model (see Left to the build) |
 
 The diarization repository is self-contained: it carries `segmentation/pytorch_model.bin`, `embedding/pytorch_model.bin`, and `plda/` itself, so one acceptance and one token cover Diarization; there is no second gated repository, as pyannote 3.1 had.
@@ -346,6 +350,8 @@ After the pull the service runs offline: `HF_HUB_OFFLINE=1` (no HTTP calls; only
 Every pinned model is loaded from the folder its revision was fetched into, and never by repository name. Fetching one exact revision leaves the cache with no note of where a branch points, so a lookup by name cannot be answered from the cache and reaches for the network; naming the folder keeps the service offline and makes the pin bind when a job runs as well as when the model was fetched.
 
 ### The HuggingFace token
+
+From service 0.3.0 the token is needed only for pyannote's gated model: `pull` without a token fetches everything else, says which gated model it skipped, and the Consumer offers only the diarizers whose weights are present.
 
 The token is a secret of the service alone: `HF_TOKEN`, read from the secret file named by `HF_TOKEN_FILE` in the service's `.env`, which is `whisperx-service/secrets/hf_token` under the Install home, mode 0400, owned by the installing admin. `./transcribe install` asks for it typed hidden on the terminal (never a command argument, never echoed) and writes the file; the service alone reads it, and the app never sees it. The file is never committed.
 
@@ -462,6 +468,16 @@ The service was built so that another application can use it beside the app with
 
 A Consumer may run the service twice from the same image, the second as a fast lane for short jobs that must not wait behind long ones (the app's `whisperx-fast`, under a Compose profile). The rules: each copy has a state folder of its own, because the job database is SQLite and two writers would corrupt it; the model folder may be shared, since a model file is only read; each copy reserves its card by UUID as usual and they may name the same card, in which case each loads its own copy of the model into memory (about eight gigabytes for the default) and the card's memory has to hold both beside anything else on it; the serial rule holds per copy, so two jobs can run at once, one in each. A Consumer keeps for each job which copy holds it, since ids are per copy. Nothing in the service knows about the other copy, which is the point.
 
+## The diarizer container (from service 0.3.0)
+
+Nemotron 3 Diarization does not run inside the WhisperX image: the model needs NeMo past its last release (a pinned source commit, ADR 0014), and NeMo's own pins would move a stack that is held still on purpose. It runs as a second container of the service's Compose project, `diarizer`, built from this repository as the third image, on the same card as the WhisperX service by the same UUID, on the `whisperx` network with no published port, holding about 2 GB of the card while a job diarizes and nothing between jobs.
+
+- **Its API is the WhisperX service's alone.** `POST /v1/diarize` takes the prepared WAV (16 kHz, mono) and answers with the spans, `{"spans": [{"start", "end", "speaker"}], "model": {"name", "revision", "nemo"}}`, seconds to three decimals, `speaker_0` and on in order of arrival; `GET /healthz` says it is up. No token: the network is private, and a Consumer never calls it.
+- **The WhisperX service** transcribes and aligns as today, asks the container for the spans when the job says `diarizer=nemotron`, and gives each word its Speaker with the same `assign_word_speakers` it uses for pyannote's spans. A job that asks for `nemotron` while the container is down fails `service_unreachable` before transcription starts, the way a missing model fails `model_unavailable`.
+- **Its stack**: torch 2.8.0 with CUDA 12.8 (the WhisperX image's wheels, so the driver requirement does not rise), NeMo's ASR extra from a source archive of one commit checked by sha256, the offline chunking from the model card in its environment file (spkcache 264, fifo 40, chunk 340, right context 40, update period 300, in frames of 80 ms), batch size 1. The pins and the reasons are in `docs/research/nemotron-3-diarization.md`.
+- **Its weights** are the `diarizer` entry of `models.yaml`, fetched by `pull` into the shared model cache and read offline; not gated, so an office that never gives a HuggingFace token still diarizes.
+- **Two copies on one card** (below) applies to the WhisperX service; the diarizer runs once and serves both lanes in arrival order.
+
 ## Left to the build
 
 - **The benchmark gate.** The Phase 1 benchmark gate on real hardware decides, and records in the service README: the model choice between `large-v3` and `large-v3-turbo` for the app's default; the batch size for `WHISPERX_BATCH_SIZE`; the measured speed figures that replace the research's reference points (about seventy times real time for batched transcription, about half a minute per hour of audio for Diarization on a datacentre card); the measured VRAM peak at the chosen batch size, written under "GPU budget" as the figure IT checks before another model is placed on the card; and the dropped-speech check on the jail-call files, which "may lower the thresholds, and any change is recorded in the settings". The gate also includes the translation leg (four checks defined in the Transcription, translation, and diarization choices chapter) and decides the Phone preprocessing profile, "band filter and gentle noise reduction for narrowband calls", which is "added as a third profile only if the Phase 1 benchmark gate shows it measurably lowers errors on the jail-call and phone files" (the Media handling chapter; it touches the service only through the ASR audio it receives).
@@ -505,6 +521,7 @@ and not a history. What was decided, on 2026-09-03:
 
 ## Amendments applied
 
+- From Phase 5 chapter 4 (The diarizer, 2026-09-24) to the request fields, the result, `models.yaml`, the token and a new section: `diarizer` (`nemotron` by default from 0.3.0, `pyannote`), the refusals `hint_not_supported` and `embeddings_not_supported`, `settings_used.diarizer` and `diarizer_version`, the `nvidia/Nemotron-3-Diarization` pin, the token optional, and the `diarizer` container. ADR 0014.
 - From "Translation-to-English behaviour" to the request fields: `task` gains `translate_if_needed`; new field `translate_if_mixed`, default `false`.
 - From "Translation-to-English behaviour" to language detection: three 30-second windows replace detection from the first 30 seconds; the mixed rule (two windows, different languages, each 0.5 or more); the winner by highest combined probability; under translate the non-English language with the highest combined probability is passed to Whisper.
 - From "Translation-to-English behaviour" to the result body: `language` gains `windows`, `combined`, `mixed`; `settings_used` gains `task_run` and `task_reason`; `word_timestamps.reason` is `translation` whenever translate ran, including when the service chose it; speed figures stay per model and Diarization setting, translate not separated.

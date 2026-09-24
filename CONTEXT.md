@@ -55,8 +55,12 @@ One timed span of a Transcript attributed to one Speaker.
 **Speaker**:
 A voice label in one Transcript, optionally given a name. Diarization creates Speakers, and the Sides of a Two-channel call are Speakers too. Inside a Case, Speakers given the same name are one Person.
 
+**Diarizer**:
+The model that tells a Recording's voices apart: Nemotron 3 Diarization (the default from v1.80.0, up to eight voices, no token) or pyannote community-1 (the diarizer until then, kept reachable). One Panel setting on the Transcription defaults page names it; a Recording's Details tab says which split it. Phase 5 chapter 4.
+_Avoid_: engine (the AI assistant's word), model alone, "speaker separation model"
+
 **Diarization**:
-The step that separates a Recording into Speakers. Always a user choice per Recording, with a speaker-count hint. The pages call the choice "Diarize" and carry a short warning that automatic speaker separation is sometimes wrong. On a Two-channel call it runs per Side with the app deciding the count; a Side with one Speaker is labelled by its Side alone.
+The step that separates a Recording into Speakers. Always a user choice per Recording, with a speaker-count hint (pyannote's alone; greyed under the Nemotron Diarizer). The pages call the choice "Diarize" and carry a short warning that automatic speaker separation is sometimes wrong. On a Two-channel call it runs per Side with the app deciding the count; a Side with one Speaker is labelled by its Side alone.
 _Avoid_: separate speakers (in a label), speaker identification (that is naming)
 
 **Spoken language**:
