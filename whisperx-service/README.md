@@ -155,11 +155,16 @@ Memory follows the batch size, at roughly a gigabyte for every 8 of it, so an
 office short of video memory can lower `WHISPERX_BATCH_SIZE` and lose little.
 The comment beside that setting in `.env.example` says what each step costs.
 
-**The diarizer beside it takes about 2 GB more** of the same card while a job
-diarizes with Nemotron (2.3 GB measured on 2026-09-24, an idle WhisperX's share
-included, for 25 minutes of audio in five seconds). It is a second container,
-`diarizer`, on the same card by the same UUID, with a 4 GB host-memory limit;
-its stack is in `docs/research/diarizer-pinned-stack.md`.
+**The diarizer beside it takes about 4 GB more** of the same card for a
+recording up to two hours: 1.3 GB held all the time with its model loaded,
+3.9 GB at its high point on a 50-minute recording and 6.4 GB on a 104-minute
+one (read on 2026-09-24; each diarized in six seconds or less). Its memory
+grows with the recording's length, about 2.5 GB for every hour of audio, so an
+eight-hour recording would want about 21 GB on the diarizer's side. So allow
+24 GB in all for the two, and more if your office sends recordings over two
+hours through Nemotron. It is a second container, `diarizer`, on the same card
+by the same UUID, with a 4 GB host-memory limit; its stack and the figures are
+in `docs/research/diarizer-pinned-stack.md`.
 
 ## Measuring it on your own recordings
 

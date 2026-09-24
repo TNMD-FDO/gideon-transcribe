@@ -30,7 +30,24 @@ Research date: 2026-09-24, the day the diarizer chapter (Phase 5 chapter 4) was 
 
 - Offline chunked inference with the model card's values: speaker cache 264, FIFO 40, chunk 340, right context 40, update period 300, all in frames of 80 ms; read from the service's `.env` (`DIARIZER_*`) so an office can change them without a rebuild.
 - Memory: the probe measured 2.3 GB of card memory in use while diarizing (an idle WhisperX's share included) and 5.0 seconds for 25 minutes of audio on torch 2.8.0. The Compose host-memory limit is 4 GB.
-- The benchmark gate for the release, run by hand on the server before the tag: time per hour of audio and the card's high point with the WhisperX service beside it. Figures to be written here when the maintainer runs it after `./transcribe upgrade v1.80.0 --build`.
+- **The benchmark gate**, read on the server on 2026-09-24 at v1.80.2 from the first three real jobs through the diarizer (case recordings, `large-v3-turbo`, speakers told apart), with a one-second sampler on the card:
+
+  | Recording | The diarizer's time | The whole job | WhisperX's own high point |
+  |---|---|---|---|
+  | 24.9 minutes | 1.4 s | 9.9 s | 6.7 GB |
+  | 50.6 minutes | 6.3 s | 27.4 s | 6.5 GB |
+  | 103.9 minutes | 5.8 s | 24.7 s | 6.8 GB |
+
+  | What | Figure |
+  |---|---|
+  | The diarizer process on the card, idle with the model loaded | 1.3 GB |
+  | The diarizer process, high point after the 50-minute recording | 3.9 GB |
+  | The diarizer process, high point after the 104-minute recording | 6.4 GB |
+  | The WhisperX process on the card, high point (the sampler's count) | 7.3 GB |
+  | The card in all, high point, both idle lanes included | 12.2 GB |
+  | The model's load at container start | 0.7 s |
+
+  Two things follow. Speed is not a concern: seconds per recording, under ten seconds per hour of audio. Card memory grows with the recording's length: the process held 1.3 GB idle, 3.9 GB after fifty minutes and 6.4 GB after a hundred, roughly 2.5 GB for every hour of audio on top of the idle share, because NeMo puts the whole prepared waveform on the card before chunking it. On that line an eight-hour recording, the service's ceiling, would want about 21 GB. So the allowance is stated as **24 GB for the WhisperX service and the diarizer together for recordings up to two hours** (20 for the service, as before, and 4 for the diarizer), with the note that longer recordings take about 2.5 GB more per hour on the diarizer's side, up to about 21 GB at the ceiling; an office short of card memory keeps long recordings for pyannote, or a later release diarizes long recordings in pieces. The chapter and the ledger said "about 2 GB" from the probe's 2.3 GB, which was read with the model idle in a different process; these figures replace it.
 
 ## What a bump has to prove
 

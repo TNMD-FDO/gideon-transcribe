@@ -10,7 +10,7 @@ The app runs on one server in your office, on Docker, and nothing it does leaves
 
 **A server.** One machine, in your building, that stays on. It needs:
 
-- **One NVIDIA graphics card** with at least **22 GB of video memory to spare**: 20 GB for the transcription service and about 2 GB for the diarizer that runs beside it. Those figures come from measuring the service on six hours of real recordings and adding room; they are in the service's own README under "GPU budget". If the AI assistant's engine is to run on the same card, it needs its own memory on top, and `LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it.
+- **One NVIDIA graphics card** with at least **24 GB of video memory to spare**: 20 GB for the transcription service and about 4 GB for the diarizer that runs beside it, which is enough for recordings up to two hours; the diarizer takes about 2.5 GB more for every further hour of a recording. Those figures come from measuring the service on six hours of real recordings and adding room; they are in the service's own README under "GPU budget". If the AI assistant's engine is to run on the same card, it needs its own memory on top, and `LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it.
 - **Ubuntu Server 24.04 or newer.**
 - **The NVIDIA driver.** `nvidia-smi` prints the card and the driver version when it is installed.
 - **The NVIDIA container toolkit with CDI turned on**, so Docker can hand the card to a container. `nvidia-ctk cdi list` prints the card when it is right.
