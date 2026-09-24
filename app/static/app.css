@@ -2482,6 +2482,10 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-strip .lane.clips .track .mk-clip { position: absolute; top: 3px; height: 8px; border-radius: 3px; background: var(--warn); opacity: 0.85; cursor: pointer; }
 .inc-strip .lane.clips .track .mk-clip.ghost { opacity: 0.45; border-right: 2px dashed var(--warn); cursor: default; }
 .inc-strip .foot #strip-help { width: 20px; height: 20px; border-radius: 50%; padding: 0; }
+/* v1.82.0: the Ask Gideon button is fixed to the window's bottom-right
+   corner, where the strip's Zoom sits whenever the foot scrolls there; the
+   foot leaves the button's width free (the page measures it). */
+.inc-strip .foot { padding-right: var(--corner, 0px); }
 .workgrip { position: relative; align-self: stretch; cursor: ew-resize; touch-action: none; }
 .workgrip::after { content: ""; position: absolute; top: 50%; left: 4px; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: var(--line); }
 .workgrip:hover::after, .workgrip:focus-visible::after, .inc-desk.resizing .workgrip::after { background: var(--accent); }

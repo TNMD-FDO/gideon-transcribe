@@ -55,6 +55,11 @@ COMBINED_CAP = 2000
 CASE_TOO_LARGE = engine.CASE_TOO_LARGE
 
 CITED = re.compile(r"\[Recording (\d{1,3}), (\d{1,2}):(\d{2}):(\d{2})\]")
+# The short shape the engine falls into once a sentence has named the
+# recording ("In Recording 15, the camera shows ... [00:03:40]"), and the
+# name it falls back on (v1.82.0).
+SHORT_CITED = re.compile(r"\[(\d{1,2}):(\d{2}):(\d{2})\]")
+NAMED = re.compile(r"\bRecording (\d{1,3})\b")
 
 
 class CaseChat(models.Model):
@@ -291,12 +296,43 @@ def pack(
     return readings
 
 
+def with_recordings_named(text: str) -> str:
+    """A short [hh:mm:ss] in a paragraph that has named "Recording n" before
+    it takes the full shape, [Recording n, hh:mm:ss] (v1.82.0).
+
+    The engine names the recording once and then writes the time alone, most
+    often for what the camera showed; the app reads the paragraph as a person
+    does, the nearest name before the time. A full citation names itself and
+    counts as a name for what follows it. A paragraph without a name is left
+    as it is.
+    """
+
+    def paragraph(words: str) -> str:
+        out, at = [], 0
+        for match in SHORT_CITED.finditer(words):
+            names = NAMED.findall(words[: match.start()])
+            out.append(words[at : match.start()])
+            if names:
+                hours, minutes, seconds = match.groups()
+                out.append(f"[Recording {names[-1]}, {hours}:{minutes}:{seconds}]")
+            else:
+                out.append(match.group(0))
+            at = match.end()
+        out.append(words[at:])
+        return "".join(out)
+
+    return "\n".join(paragraph(one) for one in text.split("\n"))
+
+
 def citations(text: str, starts_by_number: dict[int, dict]) -> dict:
-    """The [Recording n, hh:mm:ss] references that name a real line.
+    """The [Recording n, hh:mm:ss] references that name a real moment.
 
     `starts_by_number` maps a Recording's number in this question to
-    {"recording": id, "starts": {whole second: start}}. A reference the app
-    cannot match is left as plain text.
+    {"recording": id, "starts": {whole second: start}, "length": seconds}.
+    A time at a line's start is that line's; any other time inside the
+    recording's length is the moment itself (what the camera showed has
+    times of its own in the Digest; v1.82.0). A reference to a number not
+    read, or a time past the end, is left as plain text.
     """
     found: dict = {}
     for match in CITED.finditer(text):
@@ -304,11 +340,15 @@ def citations(text: str, starts_by_number: dict[int, dict]) -> dict:
         hours, minutes, seconds = (int(part) for part in match.groups()[1:])
         whole = hours * 3600 + minutes * 60 + seconds
         known = starts_by_number.get(number)
-        if known and whole in known["starts"]:
-            found[match.group(0)] = {
-                "recording": known["recording"],
-                "seconds": known["starts"][whole],
-            }
+        if not known:
+            continue
+        if whole in known["starts"]:
+            at = known["starts"][whole]
+        elif whole <= known.get("length", 0):
+            at = float(whole)
+        else:
+            continue
+        found[match.group(0)] = {"recording": known["recording"], "seconds": at}
     return found
 
 
@@ -424,11 +464,16 @@ def answer_case_turn(turn_id) -> None:
         for number, recording in enumerate(read, start=1):
             transcript = recording.transcript
             starts: dict[int, float] = {}
+            last = 0.0
             for line in prompts.lines_of(transcript):
                 starts.setdefault(int(line.start), line.start)
+                last = max(last, float(line.start or 0.0))
             starts_by_number[number] = {
                 "recording": str(recording.pk),
                 "starts": starts,
+                # How far a cited time may go: the recording's length, or the
+                # last line's start when the length is not known.
+                "length": float(recording.duration_seconds or 0.0) or last,
             }
             reading = reading_of(recording, transcript)
             reading["digest"] = bool(digests[recording.pk])
@@ -557,8 +602,11 @@ def answer_case_turn(turn_id) -> None:
             if line
         )
         turn.answer = f"{opening}\n\n{text}".strip() if opening else text
-        # The combined answer's Citations are checked again before display.
-        turn.answer = documents.with_note(turn.answer, papers_note)
+        # The combined answer's Citations are checked again before display;
+        # a time written short after the recording's name takes the full shape.
+        turn.answer = with_recordings_named(
+            documents.with_note(turn.answer, papers_note)
+        )
         turn.citations = {
             **citations(turn.answer, starts_by_number),
             **documents.citations_in(turn.answer, named),

@@ -2341,6 +2341,19 @@
     if (veryWide && veryWide.addEventListener) { veryWide.addEventListener("change", drawTwo); }
   }
 
+  // The strip's foot keeps clear of the Ask Gideon button (v1.82.0): the
+  // button is fixed to the window's corner, so the foot's right end is padded
+  // by the button's width and margin whenever the button is on the page.
+  function clearTheCorner() {
+    var button = document.getElementById("gideon-open");
+    var strip = document.querySelector(".inc-strip");
+    if (!strip) { return; }
+    var free = button && !button.hidden && button.offsetWidth ? button.offsetWidth + 28 : 0;
+    strip.style.setProperty("--corner", free + "px");
+  }
+  clearTheCorner();
+  window.addEventListener("resize", clearTheCorner);
+
   take(S);
   showTab(C.openTab || (placedCameras().length ? "chronology" : "cameras"));
   drawTwo();

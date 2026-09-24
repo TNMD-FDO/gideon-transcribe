@@ -501,7 +501,7 @@ The user's optional steer for one Summary, such as "the timeline of the evening 
 A conversation with the AI assistant grounded in one Transcript or, as a Case Chat, in every Transcript in a Case, and nothing else: it answers from those Transcripts and declines everything outside them. A Transcript or a Case can have several Chats; each can be exported to Word.
 
 **Citation**:
-A time in a Summary or a Chat answer that the app has matched to a Segment, shown as a link that seeks the player. In a Case Chat it names the Recording as well and opens that Recording in the viewer at that moment.
+A time in a Summary or a Chat answer that the app has matched to a Segment, shown as a link that seeks the player. In a Case Chat it names the Recording as well and opens that Recording in the viewer at that moment; a time inside the Recording where no line starts, which is how the Digest cites what the camera showed, is a Citation to that second, and the pill's hover shows the Digest's line for it (v1.82.0).
 
 **Gideon**:
 What the chat is called on the pages, as shipped: the value of the Appearance setting What the chat is called, which an office may change. The tab, the Ask button, the drawer's head and a conversation's export title carry it; code, settings, file names and audit rows keep the word Chat. Not the engine: GIDEON, the office's other project, is what the app talks to. Phase 7 chapter 5.

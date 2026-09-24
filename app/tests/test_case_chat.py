@@ -48,6 +48,51 @@ def test_a_citation_names_a_recording_and_a_real_line():
     assert found == {"[Recording 1, 00:12:45]": {"recording": "r1", "seconds": 765.4}}
 
 
+def test_a_time_inside_the_recording_links_where_no_line_starts():
+    """v1.82.0: what the camera showed has times of its own in the Digest, so
+    a cited second inside the recording links to that second; past the end,
+    or a number not read, stays plain text."""
+    starts = {1: {"recording": "r1", "starts": {765: 765.4}, "length": 900.0}}
+    found = case_chat.citations(
+        "Said at [Recording 1, 00:12:45]; seen at [Recording 1, 00:12:46]; "
+        "past the end [Recording 1, 00:15:01]; not read [Recording 2, 00:00:10].",
+        starts,
+    )
+    assert found == {
+        "[Recording 1, 00:12:45]": {"recording": "r1", "seconds": 765.4},
+        "[Recording 1, 00:12:46]": {"recording": "r1", "seconds": 766.0},
+    }
+
+
+def test_a_short_time_after_the_recordings_name_takes_the_full_shape():
+    """v1.82.0: the engine names the recording once and writes the time alone;
+    the nearest name before it in the paragraph is the recording, a full
+    citation counts as a name, and a paragraph with no name is left alone."""
+    named = case_chat.with_recordings_named
+    assert (
+        named("In Recording 15, the camera shows a door [00:03:40]. Later [00:04:21].")
+        == "In Recording 15, the camera shows a door [Recording 15, 00:03:40]. "
+        "Later [Recording 15, 00:04:21]."
+    )
+    assert (
+        named("Recording 1 says so [00:00:05]; Recording 2 too [00:00:09].")
+        == "Recording 1 says so [Recording 1, 00:00:05]; "
+        "Recording 2 too [Recording 2, 00:00:09]."
+    )
+    assert (
+        named("Blue [Recording 3, 00:12:45], and again [00:12:50].")
+        == "Blue [Recording 3, 00:12:45], and again [Recording 3, 00:12:50]."
+    )
+    # A new paragraph starts afresh; "Recordings 4 and 5" names none.
+    assert named("Recording 4 here.\nAlone [00:00:01].") == (
+        "Recording 4 here.\nAlone [00:00:01]."
+    )
+    assert named("Recordings 4 and 5 agree [00:00:01].") == (
+        "Recordings 4 and 5 agree [00:00:01]."
+    )
+    assert named("No citation at all.") == "No citation at all."
+
+
 def test_the_not_read_line_counts_each_reason():
     assert case_chat.not_read_line([]) == ""
     assert (
@@ -412,6 +457,61 @@ def test_a_recording_that_left_leaves_its_citation_marked(owner, a_case, client)
     assert state["chats"][0]["turns"][0]["citations"] == {
         "[Recording 1, 00:12:45]": {"removed": True}
     }
+
+
+@pytest.mark.django_db
+def test_a_picture_moments_pill_shows_the_digests_line(
+    owner, a_case, client, monkeypatch
+):
+    """v1.82.0: a citation to a second where nothing was said carries the
+    Digest's line marked seen for that span on the pill's hover; a line
+    marked said is not read as one."""
+    from core import assistant
+    from core.assistant import DigestPart
+
+    signed_in(client, owner)
+    recording = a_recording(owner, a_case, "Body camera")
+    DigestPart.objects.create(
+        transcript=recording.transcript,
+        number=1,
+        span_start=0.0,
+        span_end=900.0,
+        signature="x",
+        text=(
+            "1. [00:00:00]-[00:00:30] (said) A greeting.\n"
+            "2. [00:06:30]-[00:06:40] (seen) A black handgun on the ground "
+            "next to the front tire.\n"
+            "3. [00:12:45] (both) The car was blue."
+        ),
+    )
+    monkeypatch.setattr(assistant, "digests_on", lambda: True)
+    here = str(recording.pk)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner, name="Gun?")
+    CaseChatTurn.objects.create(
+        chat=chat,
+        number=1,
+        question="Gun?",
+        answer=(
+            "Seen [Recording 1, 00:06:35]; said [Recording 1, 00:12:45]; "
+            "nothing [Recording 1, 00:00:10]."
+        ),
+        citations={
+            "[Recording 1, 00:06:35]": {"recording": here, "seconds": 395.0},
+            "[Recording 1, 00:12:45]": {"recording": here, "seconds": 765.0},
+            "[Recording 1, 00:00:10]": {"recording": here, "seconds": 10.0},
+        },
+        readings=[case_chat.reading_of(recording, recording.transcript)],
+        state="done",
+    )
+    cited = client.get(f"/case/{a_case.pk}/chat").json()["chats"][0]["turns"][0][
+        "citations"
+    ]
+    seen = cited["[Recording 1, 00:06:35]"]
+    assert seen["line"] == "Seen: A black handgun on the ground next to the front tire."
+    assert seen["href"] == f"/recording/{recording.pk}?t=395.0"
+    assert seen["clock"] == "00:06:35"
+    assert cited["[Recording 1, 00:12:45]"]["line"] == "Speaker 2: The car was blue."
+    assert cited["[Recording 1, 00:00:10]"]["line"] == ""
 
 
 @pytest.mark.django_db

@@ -9,6 +9,7 @@ and while the AI assistant or Chat across cases is Off.
 from __future__ import annotations
 
 import json
+import re
 
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
@@ -121,6 +122,9 @@ def _media_of(recording) -> str:
 
 
 def _line_at(recording, seconds: float) -> str:
+    """The line the pill's hover shows: the transcript line at that second, or,
+    when nothing was said there, what the camera showed as the Digest has it
+    (v1.82.0)."""
     from core.jobs import Segment
 
     segment = (
@@ -133,9 +137,36 @@ def _line_at(recording, seconds: float) -> str:
         .first()
     )
     if segment is None:
-        return ""
+        return _seen_at(recording, seconds)
     who = f"{segment.speaker}: " if segment.speaker else ""
     return (who + segment.text)[:200]
+
+
+STAMPED = re.compile(r"\[(\d{1,2}):(\d{2}):(\d{2})\]")
+MARKED = re.compile(r"\((said|seen|both)\)")
+
+
+def _seen_at(recording, seconds: float) -> str:
+    """The Digest's line whose span holds the second, marked seen or both, as
+    "Seen: ..."; "" when the Digest has none there."""
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None or not assistant.digests_on():
+        return ""
+    for line in assistant.digest_text(transcript).splitlines():
+        marked = MARKED.search(line)
+        if marked is None or marked.group(1) == "said":
+            continue
+        times = [
+            int(h) * 3600 + int(m) * 60 + int(s)
+            for h, m, s in STAMPED.findall(line[: marked.start()])
+        ]
+        if not times:
+            continue
+        low, high = min(times), max(times)
+        if low <= int(seconds) <= high:
+            words = " ".join(line[marked.end() :].split())
+            return f"Seen: {words}"[:200] if words else ""
+    return ""
 
 
 def _earlier_line(chat: CaseChat, still_here: dict) -> str:

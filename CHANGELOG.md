@@ -19,7 +19,31 @@ installs or upgrades to.
 
 ## Unreleased
 
-- The Watch phrases setting's help on the Incidents page, and the guides, now say where the search looks: in each synced camera's spoken words and in what its picture showed, as the vision model wrote it into the video's Digest. The search itself is unchanged.
+Nothing yet.
+
+## v1.82.0, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **What the camera showed links again in the case chat.** A cited time
+  that is not the start of a transcript line but lies inside the recording
+  now links to that second (the Digest's picture moments have times of
+  their own), with the Digest's "Seen: ..." line on the pill's hover; and a
+  short `[hh:mm:ss]` written after the recording has been named in the
+  sentence ("In Recording 15, the camera shows ... [00:03:40]") is read as
+  that recording's citation and takes the full shape in the saved answer.
+  Both had left picture citations as plain text.
+- **The strip's Zoom keeps clear of Ask Gideon.** The incident page's strip
+  leaves the button's width free at the right of its foot, so the fixed
+  button no longer covers the Zoom buttons when the foot scrolls into the
+  corner.
+- The Watch phrases setting's help on the Incidents page, and the guides,
+  now say where the search looks: in each synced camera's spoken words and
+  in what its picture showed, as the vision model wrote it into the video's
+  Digest. The search itself is unchanged.
 
 ## v1.81.1, 2026-09-24
 
