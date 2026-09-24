@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.80.2, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The diarizer container could not find its weights offline.** The pull
+  fetches the model at its pinned revision, but NeMo's own loader asks the
+  cache for "main", which a fetch by revision does not record, and with the
+  network off that is a refusal. The container now opens the model file at
+  the pinned revision itself. Found at the v1.80.1 upgrade. The rebuild is
+  from cache except the last layer: `./transcribe upgrade v1.80.2 --build`.
+
 ## v1.80.1, 2026-09-24
 
 ```

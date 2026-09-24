@@ -31,6 +31,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 MODEL = os.environ.get("DIARIZER_MODEL", "nvidia/Nemotron-3-Diarization")
 REVISION = os.environ.get("DIARIZER_REVISION", "")
+# The one file in the repository that holds the model. The service's pull
+# fetched the snapshot at REVISION; the file is looked up at that revision, so
+# the offline cache answers. NeMo's own from_pretrained asks for "main", which
+# a snapshot fetched by commit does not record, and offline that is a refusal.
+MODEL_FILE = os.environ.get("DIARIZER_MODEL_FILE", "Nemotron-3-Diarization.nemo")
 # The model card's offline configuration, in frames of 80 ms.
 CHUNKING = {
     "spkcache_len": int(os.environ.get("DIARIZER_SPKCACHE_LEN", "264")),
@@ -56,8 +61,13 @@ def load() -> None:
     from nemo.collections.asr.models import SortformerEncLabelModel
 
     began = time.monotonic()
-    kwargs = {"map_location": "cuda"}
-    model = SortformerEncLabelModel.from_pretrained(MODEL, **kwargs)
+    if REVISION:
+        from huggingface_hub import hf_hub_download
+
+        path = hf_hub_download(MODEL, MODEL_FILE, revision=REVISION)
+        model = SortformerEncLabelModel.restore_from(path, map_location="cuda")
+    else:
+        model = SortformerEncLabelModel.from_pretrained(MODEL, map_location="cuda")
     model = model.to("cuda").eval()
     mods = getattr(model, "sortformer_modules", None)
     if mods is not None:
