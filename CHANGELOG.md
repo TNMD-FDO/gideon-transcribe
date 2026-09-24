@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.82.1, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **A fresh install on another server now starts.** The install wrote the
+  `transcribe` account's numbers into the transcription service's
+  environment file under the app's names (`APP_UID`, `APP_GID`) while the
+  service's compose reads `WHISPERX_UID` and `WHISPERX_GID`, and it never
+  wrote the service's two folders (`WHISPERX_MODELS_DIR`,
+  `WHISPERX_STATE_DIR`), so `docker compose up` failed on any server whose
+  file had not been completed by hand. Install and every upgrade now write
+  the four values where the file still holds the example's placeholder,
+  leaving anything an office set alone, and the models and state folders
+  are made with the app's account as owner. A test keeps every value the
+  service's compose refuses to start without among the ones the install
+  writes.
+- The Hugging Face token step no longer says the model pull will refuse
+  without a token: the pull skips pyannote, and Nemotron, the default
+  diarizer, needs none. The README and the install guide say the same, and
+  the README no longer lists sharing, chat across a case, mail and backups
+  as not built.
+
 ## v1.82.0, 2026-09-24
 
 ```

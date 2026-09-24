@@ -109,6 +109,33 @@ def our_image_lines() -> list[str]:
     return lines
 
 
+SCRIPT = HERE / "transcribe"
+
+
+def test_the_install_writes_every_value_the_service_refuses_to_start_without():
+    """v1.82.1: the service's compose has `${KEY:?...}` guards; each guarded
+    key must be written by the install (a `set_service_env` or
+    `service_env_default` call in `transcribe`), or a fresh install elsewhere
+    stops at its first `docker compose up`. Until this release the account's
+    numbers were written under the app's names and the two folders never."""
+    guarded = set(
+        re.findall(r"\$\{([A-Z_]+):\?", SERVICE_COMPOSE.read_text(encoding="utf-8"))
+    )
+    written = set(
+        re.findall(
+            r"(?:set_service_env|service_env_default) ([A-Z_]+) ",
+            SCRIPT.read_text(encoding="utf-8"),
+        )
+    )
+    missing = sorted(guarded - written)
+    assert not missing, (
+        "the service's compose refuses to start without these, and the "
+        f"install never writes them: {missing}"
+    )
+    four = {"WHISPERX_UID", "WHISPERX_GID", "WHISPERX_MODELS_DIR", "WHISPERX_STATE_DIR"}
+    assert four <= written
+
+
 def test_both_of_our_images_are_named_after_the_release():
     """A fixed tag here means every Release builds an image of another name.
 

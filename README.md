@@ -47,9 +47,8 @@ session ends, by design.
 Also built: the AI assistant, summaries, a chat over the transcript and
 speaker name suggestions, against an office's own vLLM or a small Local
 engine the stack runs itself, and the retention policy with its recycle bin.
-**Not built yet**, and said so rather than implied: the rest of Cases:
-sharing a case with colleagues, the speakers tab, chat across a case, email
-notifications, and backups. The
+Sharing a case with colleagues, the speakers tab, chat across a case,
+email notifications and backups are built too. The
 specification for all of it is in `docs/spec/`, and the changelog says
 exactly what each Release holds.
 
@@ -87,8 +86,9 @@ the Compose plugin:
 
 1. **Before you start.** In the directory: a sign-in group, an optional admin
    group, a read-only service account, and the CA root as PEM. On the server:
-   a hostname and a certificate from the office's own CA. On Hugging Face: an
-   account that has accepted the diarization model's terms, and a read token.
+   a hostname and a certificate from the office's own CA. On Hugging Face,
+   only if you want pyannote as a second diarizer: an account that has
+   accepted its terms, and a read token; the default diarizer needs none.
 2. **Prepare the server.** One `sudo` session creates the `transcribe` system
    user (no login, not in the docker group), the app's data folder on the
    data drive, and an empty install home.

@@ -343,7 +343,8 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `there is no transcribe account; the install guide's server preparation makes it` | Step 1 was skipped. | Run the `useradd` in Step 1, then `./transcribe install` again. |
 | `nvidia-smi is not on this server, so no GPU can be reserved` | The NVIDIA driver is not installed, or the machine has not been rebooted since. | Install the driver, reboot, and check `nvidia-smi` prints the card. |
 | `There is already a .env here.` | `install` was run before. | It will not overwrite anything. `./transcribe install --reconfigure` changes the office facts; `./transcribe directory` changes only the directory. |
-| `There is no Hugging Face token stored; the model pull will refuse.` | The token step was skipped, or Enter was pressed with nothing stored. | `./transcribe install --reconfigure` and type the token when asked. |
+| `There is no Hugging Face token stored: the pull skips pyannote` | The token step was skipped, or Enter was pressed with nothing stored. Not an error: Nemotron, the default diarizer, needs no token. | To have pyannote as well, `./transcribe install --reconfigure`, type the token when asked, and run the pull again. |
+| `user: <uid>:<gid>` or `/replace/with/the/app-data-folder` in a `docker compose` error | An install from a tag before v1.82.1 left the service's environment file half written. | `./transcribe upgrade` to v1.82.1 or later completes `whisperx-service/.env`; or fill in `WHISPERX_UID`, `WHISPERX_GID`, `WHISPERX_MODELS_DIR` and `WHISPERX_STATE_DIR` by hand. |
 | `There is no Docker network called '...' on this server.` | The engine's network was mistyped, or the engine's own stack is not running. | `docker network ls` lists them; start the engine's stack first, then `./transcribe engine`. |
 | `The AI assistant refused the connection. Ask IT.` (in the app) | The engine wants a different token from the one in `secrets/llm_api_token`, or the file is empty. | `./transcribe engine`, paste the engine's token, then `docker compose up -d`. |
 | The Status page says `AI assistant: unreachable since ...` | The engine is down, or `llm-worker` is not on its network. | Check the engine's own stack; `./transcribe check` proves the network membership; `./transcribe engine` fixes it. For the Local engine, `./transcribe logs vllm`: the first start downloads the model and takes minutes. |
@@ -547,7 +548,7 @@ At install and upgrade only:
 | Host | For |
 |---|---|
 | `github.com` | the clone and the fetch |
-| `ghcr.io` and `pkg-containers.githubusercontent.com` | the app's two prebuilt images |
+| `ghcr.io` and `pkg-containers.githubusercontent.com` | the app's three prebuilt images |
 | `registry-1.docker.io` and `production.cloudflare.docker.com` | the upstream images: the database, the web server, the upload sidecar |
 | `huggingface.co` and `*.hf.co` | the models; `*.hf.co` covers the download hosts, which Hugging Face changes without notice |
 | `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `deb.debian.org` | only when an image is built on the server rather than pulled |

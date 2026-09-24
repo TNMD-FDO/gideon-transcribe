@@ -529,6 +529,7 @@ cmd_install() {
   cmd_engine
   ask_the_backup
   ask_the_mail
+  ensure_the_service_env
   make_the_data_folders
 
   echo
@@ -618,13 +619,44 @@ ask_the_office_facts() {
   set_env TZ "${value:-UTC}"
   set_service_env TZ "${value:-UTC}"
 
-  # The app runs as its own account, and compose needs its numbers.
+  # The app runs as its own account, and compose needs its numbers; the
+  # service's own compose reads them under its own names (v1.82.1).
   if id "$APP_USER" >/dev/null 2>&1; then
     set_env APP_UID "$(id -u "$APP_USER")"
     set_env APP_GID "$(id -g "$APP_USER")"
-    set_service_env APP_UID "$(id -u "$APP_USER")"
-    set_service_env APP_GID "$(id -g "$APP_USER")"
+    set_service_env WHISPERX_UID "$(id -u "$APP_USER")"
+    set_service_env WHISPERX_GID "$(id -g "$APP_USER")"
     green "The app will run as $APP_USER ($(id -u "$APP_USER"):$(id -g "$APP_USER"))."
+  fi
+}
+
+service_env_default() {
+  # Write a service value only where the file still has nothing, or the
+  # example's placeholder; a value an office set is left alone.
+  local key="$1" value="$2" had
+  had="$(service_env_value "$key")"
+  case "$had" in
+    ""|/replace/with/*|"<"*">") set_service_env "$key" "$value" ;;
+  esac
+}
+
+ensure_the_service_env() {
+  # The four values the service's compose refuses to start without: the
+  # account's numbers and its two folders under the app data folder. Until
+  # v1.82.1 the install wrote the numbers under the app's names and never
+  # wrote the folders, so a fresh install elsewhere stopped at its first
+  # `docker compose up`; the office's own file had been completed by hand.
+  # Called at install and at every upgrade, and it changes nothing set.
+  [ -f "$SERVICE_ENV" ] || return 0
+  local data
+  data="$(env_value APP_DATA_DIR)"
+  if id "$APP_USER" >/dev/null 2>&1; then
+    service_env_default WHISPERX_UID "$(id -u "$APP_USER")"
+    service_env_default WHISPERX_GID "$(id -g "$APP_USER")"
+  fi
+  if [ -n "$data" ]; then
+    service_env_default WHISPERX_MODELS_DIR "$data/models/whisperx"
+    service_env_default WHISPERX_STATE_DIR "$data/whisperx"
   fi
 }
 
@@ -638,8 +670,10 @@ make_the_data_folders() {
   data="$(env_value APP_DATA_DIR)"
   [ -n "$data" ] || return 0
 
+  # The models and state folders too (v1.82.1): the service and the Local
+  # engine run as the app's account and write into them.
   local made=""
-  for folder in scratch cases uploads; do
+  for folder in scratch cases uploads models models/whisperx whisperx models/vllm; do
     if [ ! -d "$data/$folder" ]; then
       sudo mkdir -p "$data/$folder" || return 0
       made="$made $folder"
@@ -781,7 +815,7 @@ ask_the_hugging_face_token() {
   elif secret_present "$SERVICE_SECRETS/hf_token"; then
     green "The stored Hugging Face token was kept."
   else
-    amber "There is no Hugging Face token stored; the model pull will refuse."
+    amber "There is no Hugging Face token stored: the pull skips pyannote; Nemotron, the default diarizer, needs no token."
   fi
 }
 
@@ -2227,6 +2261,7 @@ cmd_upgrade() {
   # 6 and 7. The images, then up. The folders first: a release can add one
   # Caddy mounts, and Docker would create a missing mount source as root,
   # which the app could then never write into.
+  ensure_the_service_env
   make_the_data_folders
   ensure_the_token_file
 
