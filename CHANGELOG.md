@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.84.0, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The card, for offices whose card is not the one the stack was built on.
+
+- **The install fits the card.** `./transcribe install` and `./transcribe
+  add transcription` read the card's memory and set the service's batch
+  size from it: 16 from 32 GB, 8 from 24 GB, 4 from 16 GB, and under 16 GB
+  the install refuses with the reason. The Local engine's share of the card
+  is computed to give it 20 GB (0.21 of 96 GB, 0.42 of 48 GB) instead of a
+  fixed 0.21, and offered at install only when the card has room for both.
+  The office's own card still yields 16 and 0.21, so nothing changes there.
+- **The self-test says whether the card is verified, and never fails on
+  the generation.** It prints the card's generation against the list of
+  cards the stack has been run on (one, so far), warns on any other with a
+  request to report, says a card below compute capability 7.5 is not
+  expected to work, and prints whether the service and the diarizer fit the
+  card at the batch size set.
+- `docs/research/graphics-cards.md` keeps the verified cards, what is
+  expected of the others from the pinned stack's sources, a table for what
+  offices report, and the batch-size rule the script uses; the service's
+  README and the install guide point at it.
+
 ## v1.83.0, 2026-09-24
 
 ```

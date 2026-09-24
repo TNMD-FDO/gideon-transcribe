@@ -718,22 +718,48 @@ ask_the_card() {
   esac
 }
 
+fit_the_card() {
+  # The batch size for a card of GB gigabytes (v1.84.0), from the service
+  # README's rule of thumb (about a gigabyte of the card per 8 of batch, on
+  # top of the 12 GB the model holds, plus the diarizer's 4 GB): 16 on a card
+  # with 32 GB or more, 8 from 24, 4 from 16, and under 16 nothing fits.
+  # Every figure is an estimate until an office measures its card;
+  # docs/research/graphics-cards.md keeps what is measured. Prints the batch
+  # size, or nothing when the card is too small.
+  local gb="${1:-0}"
+  if [ "$gb" -ge 32 ]; then echo 16
+  elif [ "$gb" -ge 24 ]; then echo 8
+  elif [ "$gb" -ge 16 ]; then echo 4
+  fi
+}
+
+engine_share_for() {
+  # The share of a card of GB gigabytes that gives the Local engine its
+  # 20 GB, to two places: 0.21 of 96 GB, 0.42 of 48 GB. Never above 0.9.
+  awk -v gb="$1" 'BEGIN { if (gb <= 0) { print "0.21"; exit } s = 20 / gb; if (s > 0.9) s = 0.9; printf "%.2f", s }'
+}
+
 configure_transcription() {
   # The shared half of `ask_the_card` and `add transcription`: the card, the
   # room on it, the token, the profile.
   ask_the_gpu
-  local gpu gb
+  local gpu gb batch
   gpu="$(service_env_value WHISPERX_GPU_UUID)"
   gb="$(card_memory_gb "$gpu")"
   if [ -n "$gb" ]; then
-    if [ "$gb" -lt 16 ]; then
-      red "That card has ${gb} GB, which is not enough for the service and the diarizer (16 GB at the least, 24 GB to spare). Nothing was written."
+    batch="$(fit_the_card "$gb")"
+    if [ -z "$batch" ]; then
+      red "That card has ${gb} GB, which is not enough for the service and the diarizer (16 GB at the least, 24 GB to spare; CPU-only transcription is not offered). Nothing was written."
       set_service_env WHISPERX_GPU_UUID "<GPU UUID>"
       return 1
-    elif [ "$gb" -lt 24 ]; then
-      amber "That card has ${gb} GB: under the 24 GB the service and the diarizer want to spare. Short recordings will do; a recording over an hour may run out of memory (docs/research/graphics-cards.md)."
+    fi
+    set_service_env WHISPERX_BATCH_SIZE "$batch"
+    if [ "$gb" -lt 24 ]; then
+      amber "That card has ${gb} GB: under the 24 GB the service and the diarizer want to spare. Batch size $batch; short recordings will do, and a recording over an hour may run out of memory (docs/research/graphics-cards.md)."
+    elif [ "$gb" -lt 32 ]; then
+      green "That card has ${gb} GB, enough for the service and the diarizer at batch size $batch (a little slower than 16)."
     else
-      green "That card has ${gb} GB, enough for the service and the diarizer."
+      green "That card has ${gb} GB, enough for the service and the diarizer at batch size $batch."
     fi
   fi
   ask_the_hugging_face_token || true
@@ -780,10 +806,7 @@ configure_the_local_engine() {
   # The env-and-token half of `engine local on`, for the install: nothing is
   # started here, and the panel's defaults already point at the Local engine.
   local gpu="$1" gb="${2:-}" share model
-  share="$LOCAL_SHARE_DEFAULT"
-  if [ -n "$gb" ] && [ "$gb" -gt 0 ]; then
-    share="$(awk -v gb="$gb" 'BEGIN { s = 20 / gb; if (s > 0.9) s = 0.9; printf "%.2f", s }')"
-  fi
+  share="$(engine_share_for "${gb:-0}")"
   model="$( [ -n "$(env_value LLM_LOCAL_MODEL)" ] && env_value LLM_LOCAL_MODEL || echo "$LOCAL_MODEL_DEFAULT")"
   set_env LLM_LOCAL_GPU_UUID "$gpu"
   set_env LLM_LOCAL_MODEL "$model"
@@ -1479,7 +1502,11 @@ WORDS
     return 1
   fi
   model="$(ask "The model, as Hugging Face names it" "$( [ -n "$(env_value LLM_LOCAL_MODEL)" ] && env_value LLM_LOCAL_MODEL || echo "$LOCAL_MODEL_DEFAULT")")"
-  share="$(ask "The share of the card's memory the engine may use (0.21 of 96 GB is 20 GB)" "$( [ -n "$(env_value LLM_LOCAL_GPU_FRACTION)" ] && env_value LLM_LOCAL_GPU_FRACTION || echo "$LOCAL_SHARE_DEFAULT")")"
+  # The share that gives the engine its 20 GB on this card, unless the .env
+  # already holds one (v1.84.0).
+  local fitted
+  fitted="$(engine_share_for "$(card_memory_gb "$gpu")")"
+  share="$(ask "The share of the card's memory the engine may use (20 GB of this card is $fitted)" "$( [ -n "$(env_value LLM_LOCAL_GPU_FRACTION)" ] && env_value LLM_LOCAL_GPU_FRACTION || echo "$fitted")")"
   case "$share" in
     0.[0-9]*|0,[0-9]*) ;;
     *) red "The share is a fraction between 0 and 1, like 0.21. Nothing was written."; return 1 ;;

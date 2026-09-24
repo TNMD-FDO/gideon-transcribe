@@ -70,6 +70,38 @@ def test_the_service_and_the_diarizer_are_behind_the_transcription_profile():
 
 
 @needs_bash
+def test_the_card_fitting_rule(tmp_path):
+    """v1.84.0: the batch size by the card's memory, and the Local engine's
+    share that gives it 20 GB; the office's 96 GB card still yields 16 and
+    0.21, so its .env is untouched."""
+    source = text()
+    wanted = []
+    for name in ("fit_the_card", "engine_share_for"):
+        match = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", source, re.M | re.S)
+        assert match, name
+        wanted.append(match.group(0))
+    probe = (
+        "set -euo pipefail\n"
+        + "\n".join(wanted)
+        + "\nfor gb in 8 16 23 24 31 32 48 96; do"
+        ' printf "%s:%s:%s\\n" "$gb"'
+        ' "$(fit_the_card $gb)" "$(engine_share_for $gb)"; done\n'
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.split() == [
+        "8::0.90",
+        "16:4:0.90",
+        "23:4:0.87",
+        "24:8:0.83",
+        "31:8:0.65",
+        "32:16:0.62",
+        "48:16:0.42",
+        "96:16:0.21",
+    ]
+
+
+@needs_bash
 def test_adding_one_profile_never_removes_another(tmp_path):
     env = tmp_path / ".env"
     env.write_text("COMPOSE_PROFILES=\n", encoding="utf-8")

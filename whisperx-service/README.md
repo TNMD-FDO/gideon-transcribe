@@ -156,6 +156,12 @@ what it is using at that instant.
 Memory follows the batch size, at roughly a gigabyte for every 8 of it, so an
 office short of video memory can lower `WHISPERX_BATCH_SIZE` and lose little.
 The comment beside that setting in `.env.example` says what each step costs.
+From v1.84.0 `./transcribe` sets the batch size by the card's memory (16 from
+32 GB, 8 from 24, 4 from 16, and under 16 the install refuses), and the
+self-test prints the card's generation against the list of cards the stack
+has been run on and whether the service and the diarizer fit at the batch
+size set; `docs/research/graphics-cards.md` keeps the verified cards, what is
+expected of the others, and what offices report.
 
 **The diarizer beside it takes about 4 GB more** of the same card for a
 recording up to two hours: 1.3 GB held all the time with its model loaded,

@@ -37,6 +37,59 @@ PINNED = [
 
 STATE_DIR = "/srv/state"
 
+# The card generations the pinned stack has been run on, by compute
+# capability, and where (v1.84.0). Any other generation gets a warning, not a
+# failure: the stack is expected to run on compute capability 7.5 and up under
+# a driver of 570 or newer (docs/research/graphics-cards.md), and an office
+# that runs it on another card is asked to report what it saw.
+VERIFIED = {
+    (12, 0): "RTX PRO 6000 Blackwell, 96 GB, driver 595, measured 2026-09-03",
+}
+EXPECTED_FROM = (7, 5)
+
+# The service's own budget, from the README's GPU budget: what the model
+# holds, what each 8 of batch adds, and the diarizer beside it.
+MODEL_GB = 12.0
+GB_PER_8_OF_BATCH = 1.0
+DIARIZER_GB = 4.0
+
+
+def card_verdict(major: int, minor: int) -> tuple[str, str | None]:
+    """What the self-test says about a card's generation: a line for the
+    report, and a warning when the generation is not verified."""
+    key = (major, minor)
+    if key in VERIFIED:
+        return f"verified ({VERIFIED[key]})", None
+    line = "not yet verified on this generation"
+    if key < EXPECTED_FROM:
+        return line, (
+            f"the card reports compute capability {major}.{minor}, below "
+            f"{EXPECTED_FROM[0]}.{EXPECTED_FROM[1]}, which the pinned stack "
+            "is not expected to run on (docs/research/graphics-cards.md)"
+        )
+    return line, (
+        f"the card reports compute capability {major}.{minor}; the stack was "
+        "pinned for 12.0 (Blackwell) and is expected to run on this generation "
+        "under a driver of 570 or newer, but it has not been verified here. "
+        "Please report what you see (docs/research/graphics-cards.md)"
+    )
+
+
+def fit_verdict(memory_gb: float, batch: int) -> tuple[str, str | None]:
+    """Whether the service and the diarizer fit the card at this batch size,
+    by the README's rule of thumb; a warning when they do not."""
+    wanted = MODEL_GB + GB_PER_8_OF_BATCH * batch / 8 + DIARIZER_GB
+    line = f"{wanted:.0f} GB wanted at batch {batch}, {memory_gb:.0f} GB on the card"
+    if memory_gb >= wanted + 4:
+        return line, None
+    if memory_gb >= wanted:
+        return line + ": tight", None
+    return line, (
+        f"the card's {memory_gb:.0f} GB is under the {wanted:.0f} GB the service and "
+        f"the diarizer want at batch size {batch}; lower WHISPERX_BATCH_SIZE, or "
+        "expect a long recording to run out of memory"
+    )
+
 
 def _line(label: str, value: str) -> None:
     print(f"  {label:<22} {value}")
@@ -52,6 +105,10 @@ def _package_versions() -> list[str]:
             _line(name, "MISSING")
             problems.append(f"the package {name} is not installed")
     return problems
+
+
+# What the self-test says but does not fail on (v1.84.0).
+warnings: list[str] = []
 
 
 def _gpu() -> list[str]:
@@ -81,11 +138,17 @@ def _gpu() -> list[str]:
         uuid = getattr(properties, "uuid", None)
         if uuid is not None:
             _line("uuid", f"GPU-{uuid}")
-        if capability != "12.0":
-            problems.append(
-                f"the card reports compute capability {capability}, but the "
-                "stack was pinned for 12.0 (Blackwell)"
-            )
+        # A generation the stack has not been run on is a warning, not a
+        # failure (v1.84.0): the office is told, and asked to report.
+        verdict, warning = card_verdict(properties.major, properties.minor)
+        _line("generation", verdict)
+        if warning:
+            warnings.append(warning)
+        batch = int(os.environ.get("WHISPERX_BATCH_SIZE", "16") or 16)
+        verdict, warning = fit_verdict(memory_gb, batch)
+        _line("fit", verdict)
+        if warning:
+            warnings.append(warning)
 
     if torch.cuda.device_count() != 1:
         problems.append(
@@ -180,6 +243,12 @@ def selftest() -> int:
     print()
     problems += _folders()
     print()
+
+    if warnings:
+        print("Worth knowing:")
+        for warning in warnings:
+            print(f"  - {warning}")
+        print()
 
     if not problems:
         print("Everything this container needs is in place.")
