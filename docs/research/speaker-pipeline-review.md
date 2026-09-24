@@ -33,10 +33,12 @@ server. Primary sources where they exist; a claim without one is marked.
   pyannote 4 and torch 2.8 [S5]. Not a candidate today; worth a look if its
   authors move to pyannote 4.
 - **NVIDIA's Nemotron 3 Diarization (2026-09-23)** lifts the Sortformer
-  line's ceiling to eight speakers and is open and ungated; probed on the
-  office's one corrected recording on 2026-09-24, it scored far worse than
-  community-1 there (`docs/research/nemotron-3-diarization.md`), so the
-  paragraph below stands for now with the ceiling point withdrawn.
+  line's ceiling to eight speakers and is open and ungated. Probed on
+  2026-09-24 (`docs/research/nemotron-3-diarization.md`): the only
+  corrected recording proved a bad reference, and by ear Nemotron was right
+  where the page was wrong on eleven of thirteen disputed stretches. A
+  proper trial is proposed there; the paragraph below stands only on its
+  facts, and "the right model to run" is an open question.
 - **NVIDIA's Sortformer** is an end-to-end model with a ceiling of four
   speakers, English first, inside the NeMo research toolkit [S6][S7]. A
   traffic stop with two officers, a driver, a passenger and dispatch is
