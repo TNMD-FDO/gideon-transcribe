@@ -1,0 +1,12 @@
+# NeMo's ASR extra from the source archive of one commit of the NeMo Speech
+# repository, checked by sha256 as pip installs it: the released nemo-toolkit
+# 3.0.0 cannot load Nemotron 3 Diarization (its encoder has no rotary
+# attention), and this commit of 2026-09-23 can. The archive's hash names one
+# tree and nothing else, so the install is reproducible and a changed archive
+# fails the build (ADR 0014). The pin becomes a PyPI version the day NVIDIA
+# releases one that loads the model. Everything NeMo pulls in is held by
+# constraints.txt.
+-c constraints.txt
+Cython==3.3.0
+packaging==24.2
+nemo-toolkit[asr] @ https://github.com/NVIDIA-NeMo/Speech/archive/cf724ac337d1ebc7d0dda1e23fb80916f52927a5.tar.gz#sha256=a095a36ce9bfd7901eb164552a4c579010473f01c0d9ccd54c9706185acc3c81

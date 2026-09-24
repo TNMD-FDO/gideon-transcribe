@@ -1068,6 +1068,26 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="diarizer",
+            page=TRANSCRIPTION,
+            name="Diarizer",
+            kind=CHOICE,
+            default="nemotron",
+            choices=("nemotron", "pyannote"),
+            what_it_does=(
+                'The model that tells voices apart. "nemotron": Nemotron 3 '
+                "Diarization, NVIDIA, up to eight voices, no token, decides the "
+                "count itself (the Upload page's speaker hint is greyed). "
+                '"pyannote": pyannote community-1, the diarizer until v1.80.0; '
+                "takes the speaker hint; needs the Hugging Face token given at "
+                "install, or the Status page says it is not installed."
+            ),
+            when_changed=(
+                "The next Run; nothing already transcribed changes. Process again "
+                "follows the setting as it stands."
+            ),
+        ),
+        Definition(
             key="diarize_by_default",
             page=TRANSCRIPTION,
             name="Diarization ticked by default",
@@ -2857,6 +2877,11 @@ def chat_history_tokens() -> int:
 
 def engine_window_tokens() -> int:
     return get("engine_window_tokens")
+
+
+def diarizer() -> str:
+    """Which model tells voices apart (Phase 5 chapter 4): nemotron or pyannote."""
+    return str(get("diarizer") or "nemotron")
 
 
 def reading_tokens() -> int:

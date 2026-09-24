@@ -94,6 +94,8 @@ services:
       WHISPERX_VAD_OFFSET: "${WHISPERX_VAD_OFFSET:-0.363}"
       WHISPERX_ALIGN_LANGUAGES: "${WHISPERX_ALIGN_LANGUAGES:-en,es}"
       WHISPERX_LOG_LEVEL: "${WHISPERX_LOG_LEVEL:-info}"
+      # The diarizer container (Phase 5 chapter 4), on this network.
+      DIARIZER_URL: "http://diarizer:8100"
       TZ: "${TZ:-UTC}"
 
     networks:
@@ -139,6 +141,65 @@ services:
   # about eight gigabytes of it for the default model; a smaller memory limit
   # because it holds one short job at a time. Reached at
   # http://whisperx-fast:8000 from the app's containers, under the same token.
+  # The diarizer (Phase 5 chapter 4, ADR 0014): Nemotron 3 Diarization on
+  # NeMo, in a container of its own so the WhisperX image's pinned stack is
+  # not disturbed. The WhisperX service calls it at http://diarizer:8100 for
+  # the spans and attributes words itself; nothing else calls it, and it has
+  # no token. It reads the model folder offline, on the same card as the
+  # WhisperX service, and holds about 2 GB of it while a job diarizes.
+  diarizer:
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-diarizer:${RELEASE_TAG:-dev}
+    build:
+      context: ./diarizer
+    restart: unless-stopped
+    user: "${WHISPERX_UID:?set WHISPERX_UID in .env}:${WHISPERX_GID:?set WHISPERX_GID in .env}"
+    init: true
+    deploy:
+      resources:
+        limits:
+          # Host memory: the model is 100M parameters; NeMo and torch are the
+          # rest. Counted against Transcribe's line in the box ledger.
+          memory: 4G
+        reservations:
+          devices:
+            - driver: cdi
+              capabilities: ["gpu"]
+              device_ids:
+                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:?set WHISPERX_GPU_UUID in .env}"
+    volumes:
+      - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
+    environment:
+      DIARIZER_MODEL: nvidia/Nemotron-3-Diarization
+      # The pinned revision, echoed into every result's settings_used.
+      DIARIZER_REVISION: f667ed73aee57d40cc39428eb768b4fd87a0a29e
+      # The model card's offline configuration, in frames of 80 ms.
+      DIARIZER_SPKCACHE_LEN: "${DIARIZER_SPKCACHE_LEN:-264}"
+      DIARIZER_FIFO_LEN: "${DIARIZER_FIFO_LEN:-40}"
+      DIARIZER_CHUNK_LEN: "${DIARIZER_CHUNK_LEN:-340}"
+      DIARIZER_RIGHT_CONTEXT: "${DIARIZER_RIGHT_CONTEXT:-40}"
+      DIARIZER_UPDATE_PERIOD: "${DIARIZER_UPDATE_PERIOD:-300}"
+      TZ: "${TZ:-UTC}"
+    networks:
+      - whisperx
+    expose:
+      - "8100"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8100/healthz", timeout=3).status == 200 else 1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # The model loads in seconds; the first start may compile kernels.
+      start_period: 180s
+    stop_grace_period: 20s
+    logging:
+      driver: journald
+
   whisperx-fast:
     extends:
       service: whisperx

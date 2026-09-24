@@ -344,6 +344,7 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
 
     speakers: dict[str, Any] = {"labels": []}
     timings["diarize"] = 0.0
+    diarizer_used: dict[str, Any] = {}
 
     if request.get("diarize"):
         stage("diarizing")
@@ -356,12 +357,32 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
             counts["min_speakers"], counts["max_speakers"] = hint["between"]
 
         wanted = bool(request.get("return_speaker_embeddings"))
-        # The pipeline takes the audio whisperx already loaded, so the file
-        # is read once for the whole job.
-        diarized = engine.diarization()(audio, return_embeddings=wanted, **counts)
         embeddings = None
-        if wanted:
-            diarized, embeddings = diarized
+        diarizer_used: dict[str, Any] = {"name": "pyannote"}
+        if request.get("diarizer", "nemotron") == "nemotron":
+            # Phase 5 chapter 4: the diarizer container reads the prepared
+            # WAV and answers with the spans; the words are given their
+            # Speakers here, by the same step pyannote's spans go through.
+            from service import diarizer_client
+
+            answer = diarizer_client.diarize(
+                Path(job["audio_path"]), timeout=_diarizer_timeout(job)
+            )
+            diarized = _spans_frame(answer.get("spans") or [])
+            diarizer_used = {
+                "name": "nemotron",
+                "model": (answer.get("model") or {}).get("name", ""),
+                "revision": (answer.get("model") or {}).get("revision", "")
+                or engine.settings.get("diarizer_revision")
+                or "",
+                "nemo": (answer.get("model") or {}).get("nemo", ""),
+            }
+        else:
+            # The pipeline takes the audio whisperx already loaded, so the
+            # file is read once for the whole job.
+            diarized = engine.diarization()(audio, return_embeddings=wanted, **counts)
+            if wanted:
+                diarized, embeddings = diarized
 
         transcribed = whisperx.assign_word_speakers(diarized, transcribed, embeddings)
         timings["diarize"] = round(time.monotonic() - at, 3)
@@ -398,7 +419,9 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
         "word_timestamps": {"present": word_timestamps, "reason": reason},
         "segments": _segments(transcribed),
         "speakers": speakers,
-        "settings_used": _settings_used(engine, request, decision, prompt),
+        "settings_used": _settings_used(
+            engine, request, decision, prompt, diarizer_used
+        ),
         "service": _service(),
         "timings_seconds": timings,
         "gpu": _card(),
@@ -480,7 +503,36 @@ def _language_part(request, detection, decision) -> dict[str, Any]:
     return part
 
 
-def _settings_used(engine, request, decision, prompt) -> dict[str, Any]:
+def _spans_frame(spans: list[dict[str, Any]]):
+    """The diarizer container's spans in the shape whisperx's word assignment
+    reads: a table of start, end, speaker."""
+    import pandas
+
+    return pandas.DataFrame(
+        [
+            {
+                "start": float(one["start"]),
+                "end": float(one["end"]),
+                "speaker": str(one["speaker"]),
+            }
+            for one in spans
+        ],
+        columns=["start", "end", "speaker"],
+    )
+
+
+def _diarizer_timeout(job: dict[str, Any]) -> float:
+    """Generous: the model runs a minute of audio in well under a second, so
+    ten minutes plus a minute per hour of audio is far from the mark."""
+    seconds = float((job.get("audio") or {}).get("duration_seconds", 0.0) or 0.0)
+    hours = seconds / 3600
+    return 600.0 + 60.0 * hours
+
+
+def _settings_used(
+    engine, request, decision, prompt, diarizer_used=None
+) -> dict[str, Any]:
+    used = diarizer_used or {}
     return {
         "task": request.get("task", "transcribe"),
         "task_run": decision.task_run,
@@ -497,6 +549,18 @@ def _settings_used(engine, request, decision, prompt) -> dict[str, Any]:
             "chunk_seconds": 30,
         },
         "diarize": bool(request.get("diarize")),
+        # Which model told the voices apart (Phase 5 chapter 4), and its pin.
+        "diarizer": (
+            request.get("diarizer", "nemotron") if request.get("diarize") else None
+        ),
+        "diarizer_version": (
+            used.get("revision")
+            if used.get("name") == "nemotron"
+            else (
+                engine.settings["model_revisions"].get("diarization") if used else None
+            )
+        ),
+        "diarizer_nemo": used.get("nemo") or None,
         "speakers": request.get("speakers"),
         "vocabulary_terms_given": len(request.get("vocabulary") or []),
         "vocabulary_terms_used": prompt.vocabulary_terms_used,

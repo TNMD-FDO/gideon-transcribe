@@ -200,11 +200,15 @@
                 need who said what, and read the result with that in mind.
               </p>
 
-              <div id="hint-wrap" style="margin-left: 24px">
+              <div id="hint-wrap" style="margin-left: 24px"{% if diarizer == "nemotron" %} title="The Nemotron diarizer decides the count itself"{% endif %}>
                 <div class="field">
                   <label for="hint">Speakers</label>
+                  {% if diarizer == "nemotron" %}
+                    {% comment %}Phase 5 chapter 4: the hint is pyannote's; greyed with the reason, never hidden.{% endcomment %}
+                    <span class="muted small">The Nemotron diarizer decides the count itself; the hint is not used.</span>
+                  {% endif %}
                   <span class="row">
-                    <select id="hint">
+                    <select id="hint"{% if diarizer == "nemotron" %} disabled{% endif %}>
                       <option value="">Let the app decide</option>
                       <option value="exactly">Exactly</option>
                       <option value="between">Between</option>

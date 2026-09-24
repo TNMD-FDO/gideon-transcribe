@@ -19,7 +19,7 @@ from typing import Any, Protocol
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from service import errors, pins
+from service import diarizer_client, errors, pins
 from service.audio import Audio, probe
 from service.auth import Tokens, bearer
 from service.models_file import Models
@@ -104,6 +104,7 @@ def create_app(
     models: Models,
     runner: Runner,
     probe_audio: Callable[[Path], Audio] = probe,
+    diarizer_up: Callable[[], bool] = diarizer_client.is_up,
 ) -> FastAPI:
     """Build the app.
 
@@ -153,13 +154,21 @@ def create_app(
                 f"the model {submission.model} is not in the model folder. "
                 "Run the pull command"
             )
-        # A job that asks for speakers must find the diarization model here and
-        # not after an hour of transcription.
-        if submission.diarize and not models.is_cached(models.diarization):
-            raise errors.model_unavailable(
-                "the diarization model is not in the model folder. Run the pull "
-                "command, which needs the HuggingFace token and the accepted "
-                "licence together"
+        # A job that asks for speakers must find its diarizer here and not
+        # after an hour of transcription: pyannote's model in the folder, or
+        # the diarizer container up with Nemotron loaded (Phase 5 chapter 4).
+        if submission.diarize and submission.diarizer == "pyannote":
+            if not models.is_cached(models.diarization):
+                raise errors.model_unavailable(
+                    "the pyannote diarization model is not in the model folder. "
+                    "Run the pull command with the HuggingFace token and the "
+                    "accepted licence, or choose the Nemotron diarizer"
+                )
+        elif submission.diarize and not diarizer_up():
+            raise errors.diarizer_unavailable(
+                "the diarizer container is not answering, so Nemotron cannot "
+                "separate the speakers. Check `docker compose ps diarizer`, or "
+                "choose the pyannote diarizer"
             )
 
         waiting = store.duplicate_of(consumer.name, submission.client_reference)
@@ -295,6 +304,11 @@ def create_app(
                 "service": SERVICE_VERSION,
                 "api": API_VERSION,
                 "pins": pins.versions(),
+            },
+            # Which diarizers a job may ask for right now (Phase 5 chapter 4).
+            "diarizers": {
+                "nemotron": diarizer_up(),
+                "pyannote": models.is_cached(models.diarization),
             },
             "uptime_seconds": round(time.monotonic() - started_at),
             "last_failure": (

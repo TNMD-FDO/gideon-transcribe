@@ -113,6 +113,8 @@ def client(settings, store, runner):
         models,
         runner,
         probe_audio=lambda path: Audio(600.0, 16000, 1),
+        # The diarizer container is up in these tests unless a test says not.
+        diarizer_up=lambda: getattr(runner, "diarizer_is_up", True),
     )
     return TestClient(app)
 
@@ -215,7 +217,12 @@ def test_a_hint_whose_least_is_above_its_most_is_refused(client):
 
 
 def test_a_hint_is_accepted_with_diarize(client):
-    assert submit(client, diarize=True, speakers={"between": [2, 4]}).status_code == 202
+    assert (
+        submit(
+            client, diarize=True, diarizer="pyannote", speakers={"between": [2, 4]}
+        ).status_code
+        == 202
+    )
 
 
 def test_too_much_vocabulary_is_refused(client):
@@ -402,3 +409,44 @@ def test_a_consumer_sees_its_own_running_job_in_full(client, store):
     store.take_next()
     body = client.get("/v1/status", headers=headers()).json()
     assert body["current_job"]["id"] == job_id
+
+
+# The diarizer (Phase 5 chapter 4) ------------------------------------------------
+
+
+def test_the_diarizer_is_a_choice_and_nemotron_is_the_default(client):
+    answer = submit(client, diarize=True)
+    assert answer.status_code == 202, answer.text
+    answer = submit(client, diarize=True, diarizer="pyannote")
+    assert answer.status_code == 202, answer.text
+    answer = submit(client, diarize=True, diarizer="whisper")
+    assert answer.status_code == 400
+    assert "diarizer must be one of" in answer.json()["error"]
+
+
+def test_a_hint_or_embeddings_with_nemotron_is_refused(client):
+    answer = submit(client, diarize=True, speakers={"exactly": 2})
+    assert answer.status_code == 400
+    assert answer.json()["reason_class"] == "hint_not_supported"
+    answer = submit(client, diarize=True, return_speaker_embeddings=True)
+    assert answer.status_code == 400
+    assert answer.json()["reason_class"] == "embeddings_not_supported"
+    # With pyannote both are as they were.
+    answer = submit(client, diarize=True, diarizer="pyannote", speakers={"exactly": 2})
+    assert answer.status_code == 202, answer.text
+    answer = submit(
+        client, diarize=True, diarizer="pyannote", return_speaker_embeddings=True
+    )
+    assert answer.status_code == 202, answer.text
+
+
+def test_a_nemotron_job_needs_the_diarizer_container(client, runner):
+    runner.diarizer_is_up = False
+    answer = submit(client, diarize=True)
+    assert answer.status_code == 503
+    assert answer.json()["reason_class"] == "diarizer_unavailable"
+    # A job without diarization, and a pyannote job, do not need it.
+    assert submit(client).status_code == 202
+    assert submit(client, diarize=True, diarizer="pyannote").status_code == 202
+    told = client.get("/v1/status", headers=headers()).json()
+    assert told["diarizers"] == {"nemotron": False, "pyannote": True}

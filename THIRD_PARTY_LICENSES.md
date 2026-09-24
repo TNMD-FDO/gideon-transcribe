@@ -20,7 +20,10 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | faster-whisper | MIT | |
 | CTranslate2 | MIT | |
 | pyannote.audio (code) | MIT | |
-| pyannote/speaker-diarization-community-1 (weights) | CC-BY-4.0 | behind a Hugging Face gate that each office accepts itself; attribution required; never redistributed with the app |
+| pyannote/speaker-diarization-community-1 (weights) | CC-BY-4.0 | behind a Hugging Face gate that each office accepts itself; attribution required; never redistributed with the app; one of the two diarizers from v1.80.0, fetched only when a token is given |
+| NVIDIA NeMo (`nemo-toolkit[asr]`, code) | Apache-2.0 | the diarizer image's toolkit, from a pinned source archive of the NeMo Speech repository checked by hash at build; `docs/research/diarizer-pinned-stack.md` is the list of what it brings |
+| nvidia/Nemotron-3-Diarization (weights) | OpenMDW-1.1 | the default diarizer from v1.80.0; open weights, not gated, commercial use allowed; fetched by the model pull into the model folder, never shipped in an image |
+| every other component pinned on the diarizer stack | as pinned | `docs/research/diarizer-pinned-stack.md` is the list |
 | OpenAI Whisper (code and model weights) | MIT | the Hugging Face mirror `openai/whisper-large-v3` is tagged Apache-2.0 and is not gated |
 | PyTorch | BSD-3-Clause | |
 | every other component pinned on the WhisperX stack | as pinned | `docs/research/whisperx-pinned-stack.md` is the list |
@@ -50,7 +53,7 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | vLLM | Apache-2.0 | the Local engine's upstream image, behind the `llm` Compose profile, off by default; pulled by digest only when an office turns the profile on |
 | Qwen3.5-4B weights (`Qwen/Qwen3.5-4B`) | Apache-2.0 | the Local engine's default model, not gated; downloaded by the Local engine itself on its first start, never shipped in an image; an office that names another model in `LLM_LOCAL_MODEL` takes on that model's licence |
 | restic | BSD-2-Clause | the Backup chapter's upstream image; not yet shipped |
-| `nvidia/cuda` base image | NVIDIA Deep Learning Container Licence (proprietary) | the WhisperX service's base; see note 2 |
+| `nvidia/cuda` base image | NVIDIA Deep Learning Container Licence (proprietary) | the WhisperX service's base, and the diarizer's; see note 2 |
 | ffmpeg as Debian and Ubuntu build it, with its codec packages | GPL v2 or later | see note 1 |
 
 ## 1. ffmpeg and the GPL

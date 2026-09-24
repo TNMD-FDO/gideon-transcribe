@@ -124,8 +124,8 @@ ledger's section 9 and changes there first, if it ever does.
   casually.
 - The app never phones home, checks for updates, or reaches any service
   outside the office at run time.
-- Two images are built here (`app`, `whisperx`); everything else is an
-  upstream image.
+- Three images are built here (`app`, `whisperx`, `diarizer`); everything
+  else is an upstream image.
 
 ## Where the reasons live
 

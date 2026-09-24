@@ -25,6 +25,12 @@ TOO_LONG = "too_long"
 # refused. A missing alignment model is not this: it is the no_alignment_model
 # flag on an otherwise finished job.
 MODEL_UNAVAILABLE = "model_unavailable"
+# Phase 5 chapter 4: the Nemotron diarizer takes no speaker count and returns
+# no vectors; a Consumer that asks for either with it has a bug. And the
+# diarizer container must answer before a job that needs it is accepted.
+HINT_NOT_SUPPORTED = "hint_not_supported"
+EMBEDDINGS_NOT_SUPPORTED = "embeddings_not_supported"
+DIARIZER_UNAVAILABLE = "diarizer_unavailable"
 
 # A CUDA fault or an out-of-memory. The only class that is retried, once, after
 # the model process has been reloaded.
@@ -106,6 +112,28 @@ def too_long(message: str) -> ServiceError:
 
 def too_large(message: str) -> ServiceError:
     return ServiceError(413, message, TOO_LARGE)
+
+
+def hint_not_supported() -> ServiceError:
+    return ServiceError(
+        400,
+        "speakers was given with diarizer nemotron. Nemotron decides the count "
+        "itself; send the hint only with diarizer pyannote",
+        HINT_NOT_SUPPORTED,
+    )
+
+
+def embeddings_not_supported() -> ServiceError:
+    return ServiceError(
+        400,
+        "return_speaker_embeddings was asked for with diarizer nemotron, which "
+        "returns none; ask for them only with diarizer pyannote",
+        EMBEDDINGS_NOT_SUPPORTED,
+    )
+
+
+def diarizer_unavailable(message: str) -> ServiceError:
+    return ServiceError(503, message, DIARIZER_UNAVAILABLE)
 
 
 def model_unavailable(message: str) -> ServiceError:

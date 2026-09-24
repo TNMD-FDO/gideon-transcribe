@@ -64,6 +64,11 @@
         ["Model loaded", loaded.model
           ? loaded.model + " (" + String(loaded.revision).slice(0, 12) + ")"
           : "none"],
+        // Which diarizers a job may ask for (Phase 5 chapter 4).
+        ["Diarizers", service.diarizers
+          ? "Nemotron " + (service.diarizers.nemotron ? "up" : "not answering") +
+            ", pyannote " + (service.diarizers.pyannote ? "installed" : "not installed (no Hugging Face token at the pull)")
+          : "not reported by this service version"],
         ["GPU", (gpu.name || "") + " " + (gpu.uuid || "")],
         ["VRAM", gpu.vram_used_mb === undefined ? "" :
           gpu.vram_used_mb + " MB used, " + gpu.vram_free_mb + " MB free"],

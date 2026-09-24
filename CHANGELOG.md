@@ -21,6 +21,50 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.80.0, 2026-09-24
+
+```
+Models: changed
+Database: unchanged
+```
+
+Phase 5 chapter 4, the diarizer. The model that tells voices apart is now
+a choice, and the default is new.
+
+- **Nemotron 3 Diarization is the diarizer** on a fresh install and after
+  this upgrade: NVIDIA's open model, not gated, no Hugging Face token, up
+  to eight voices. It runs in a third container of its own, `diarizer`,
+  built from this repository beside the WhisperX service and called by it
+  on the service's private network (ADR 0014). pyannote community-1 stays
+  in the package, one Panel setting away.
+- **Diarizer** on the Panel's Transcription defaults page: `nemotron` or
+  `pyannote`. The next recording transcribed follows the change; nothing
+  already transcribed changes.
+- **The speaker-count hint is pyannote's alone.** Under Nemotron the
+  Upload page's Speakers box is greyed with the reason, the app sends no
+  hint, and a stored hint is kept unused. The stretch embeddings a Live
+  recording asks for are pyannote's too.
+- **Where it shows.** A recording's Details tab and the exports'
+  processing record say "Voices told apart by Nemotron 3 Diarization" or
+  "by pyannote community-1". The Status page's WhisperX block lists which
+  diarizers are installed.
+- **The service** is 0.3.0: the request gains `diarizer`, a hint or
+  embeddings sent with `nemotron` are refused (`hint_not_supported`,
+  `embeddings_not_supported`), a Nemotron job while the container is down
+  is refused with `diarizer_unavailable`, and `settings_used` names the
+  diarizer and its version. `pull` fetches the Nemotron weights (about
+  0.45 GB) and, without a token, skips the gated pyannote model and says
+  so instead of failing.
+- **The Hugging Face token is optional at install**: an office gives one
+  to have pyannote as well.
+- **Three images** are built and published now: `app`, `whisperx` and
+  `diarizer`, each pinned by tag and checked by digest at upgrade. The
+  first build of the diarizer image on the server takes a while; the
+  upgrade's build floor of 40 GB free applies.
+- After this upgrade, at the maintainer's word, the recordings of two
+  cases are processed again so the office can judge the new diarizer on
+  footage it knows: the operator's act, not a feature.
+
 ## v1.79.0, 2026-09-23
 
 ```

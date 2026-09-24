@@ -114,11 +114,16 @@ def _pull_diarization(model: dict[str, Any], token: str | None) -> list[str]:
     pinned = model.get("revision")
 
     if not token:
-        _say("  no HuggingFace token was found, so the licence gate cannot open")
-        return [
-            "there is no HuggingFace token. The service reads it from the file "
-            "named by HF_TOKEN_FILE, which the install writes"
-        ]
+        # Phase 5 chapter 4: pyannote is one of two diarizers, and the token
+        # is needed for it alone. Without one the gated model is skipped and
+        # said so; the Consumer offers only the diarizers whose weights are
+        # present, and the Nemotron diarizer needs no token.
+        _say(
+            "  skipped: no HuggingFace token, so the licence gate cannot open. "
+            "The pyannote diarizer stays unavailable until a token is given and "
+            "the pull is run again; the Nemotron diarizer needs none"
+        )
+        return []
 
     try:
         path = snapshot_download(repository, revision=pinned, token=token)
@@ -212,6 +217,31 @@ def _warm_the_kernel_cache(default_model: str) -> list[str]:
     return []
 
 
+def _pull_diarizer(model: dict[str, Any] | None) -> list[str]:
+    """Nemotron 3 Diarization for the diarizer container (Phase 5 chapter 4):
+    not gated, so no token; pinned by revision like every other model."""
+    from huggingface_hub import snapshot_download
+
+    _say("The diarizer model")
+    if not model:
+        _say("  none listed in models.yaml")
+        return []
+    repository = model["repository"]
+    pinned = model.get("revision")
+    try:
+        path = snapshot_download(repository, revision=pinned)
+    except Exception as exc:  # noqa: BLE001 - the message is the report
+        _say("  COULD NOT BE FETCHED")
+        _say(f"    {exc}")
+        return ["the diarizer model could not be fetched; is the server online?"]
+    got = _revision_of(path)
+    if pinned and got != pinned:
+        _say(f"  revision {got}, but models.yaml pins {pinned}")
+        return ["the diarizer model is not at the revision it is pinned to"]
+    _say(f"  at its pinned revision {got}")
+    return []
+
+
 def pull() -> int:
     """Fetch and check every model. Returns 0 when everything is in place."""
     import yaml
@@ -231,6 +261,8 @@ def pull() -> int:
     problems = _pull_asr(models["asr"], token)
     _say()
     problems += _pull_diarization(models["diarization"], token)
+    _say()
+    problems += _pull_diarizer(models.get("diarizer"))
     _say()
     problems += _pull_alignment(models.get("alignment") or {}, languages)
     _say()

@@ -205,7 +205,13 @@ def test_a_stretch_is_cut_from_what_arrived_and_tried_again_while_short(
     # The request: the live priority ahead of an ended recording, and the
     # voices, so the stretches' speakers can be matched afterwards.
     asked = queue.request_for(run)
-    assert asked["priority"] == 100 and asked["return_speaker_embeddings"] is True
+    # Under the Nemotron diarizer (the default from v1.80.0) no embeddings are
+    # asked for; pyannote's are what match labels across stretches.
+    assert asked["priority"] == 100 and asked["return_speaker_embeddings"] is False
+    settings_store.set_to("diarizer", "pyannote")
+    asked = queue.request_for(run)
+    assert asked["return_speaker_embeddings"] is True
+    settings_store.set_to("diarizer", "nemotron")
 
     # A stretch with nothing to cut from is written off, to be tried at Stop.
     live.stretch_closed(recording, 600)

@@ -2,13 +2,13 @@ name: Release
 
 # What turns a tag into something another office can install.
 #
-# Two images are built here and pushed to ghcr.io, and the tag becomes a
+# Three images are built here and pushed to ghcr.io, and the tag becomes a
 # GitHub Release whose notes are that version's section of CHANGELOG.md. A
 # Release is the only thing an installer ever installs or upgrades to.
 #
 # Nothing here is required for the app to run. An office that cannot reach
-# ghcr.io builds both images on its own server, because compose.yaml carries
-# `image:` and `build:` for both and no pull policy: Compose pulls first and
+# ghcr.io builds the images on its own server, because compose.yaml carries
+# `image:` and `build:` for each and no pull policy: Compose pulls first and
 # builds from source when the pull finds nothing. That is the fallback, and it
 # is the path this office used before it published anything.
 #
@@ -70,6 +70,12 @@ jobs:
             context: ./whisperx-service
             dockerfile: whisperx-service/Dockerfile
             image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx
+          # The diarizer (Phase 5 chapter 4, ADR 0014): the third image,
+          # built from its own folder beside the service.
+          - name: diarizer
+            context: ./whisperx-service/diarizer
+            dockerfile: whisperx-service/diarizer/Dockerfile
+            image: ghcr.io/tnmd-fdo/gideon-transcribe-diarizer
 
     steps:
       - name: Check out the repository
@@ -187,7 +193,8 @@ jobs:
           tag="${{ github.ref_name }}"
           : > digests.txt
           for image in ghcr.io/tnmd-fdo/gideon-transcribe-app \
-                       ghcr.io/tnmd-fdo/gideon-transcribe-whisperx; do
+                       ghcr.io/tnmd-fdo/gideon-transcribe-whisperx \
+                       ghcr.io/tnmd-fdo/gideon-transcribe-diarizer; do
             digest="$(docker buildx imagetools inspect "$image:$tag" \
               --format '{{.Manifest.Digest}}')"
             echo "$image:$tag@$digest" >> digests.txt

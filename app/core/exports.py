@@ -657,6 +657,18 @@ def _appearances_table(document, who, Pt) -> None:
                 run.font.size = Pt(9)
 
 
+def diarizer_words(used: dict) -> str:
+    """Which model split the voices (Phase 5 chapter 4), from settings_used:
+    a result from before the choice existed is pyannote's."""
+    if not used.get("diarize"):
+        return "not diarized"
+    which = used.get("diarizer") or "pyannote"
+    version = used.get("diarizer_version") or ""
+    if which == "nemotron":
+        return "Nemotron 3 Diarization" + (f" ({version[:8]})" if version else "")
+    return "pyannote community-1" + (f" ({version[:8]})" if version else "")
+
+
 def _provenance(recording, transcript, segments, corrections, exported_by):
     """How this Transcript came to be, as the rows the last pages print.
 
@@ -714,6 +726,7 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
             else f"no ({transcript.word_timestamps_reason or 'not available'})",
         ),
         ("Diarization", "yes" if used.get("diarize") else "no"),
+        ("Voices told apart by", diarizer_words(used)),
         ("Compute type", used.get("compute_type", "")),
         ("Batch size", str(used.get("batch_size", ""))),
         (

@@ -17,11 +17,12 @@ can transcribe beside another on the same card.
 
 - A server with an NVIDIA card, the NVIDIA container toolkit with CDI turned
   on, and Docker with the Compose plugin.
-- A HuggingFace account that has accepted the conditions of the diarization
-  model, and a token belonging to that account. Both are needed together, and
-  neither is enough on its own. See "The HuggingFace gate" in
-  `docs/whisperx-api.md`.
-- Somewhere for the models (about 6 GB) and somewhere for the service's own
+- Only if you want the pyannote diarizer as well as the default Nemotron one:
+  a HuggingFace account that has accepted the conditions of pyannote's
+  diarization model, and a token belonging to that account. Both are needed
+  together, and neither is enough on its own. See "The HuggingFace gate" in
+  `docs/whisperx-api.md`. Nemotron 3 Diarization is open and needs no token.
+- Somewhere for the models (about 6.5 GB) and somewhere for the service's own
   state.
 - Video memory: see "GPU budget" below.
 
@@ -86,15 +87,17 @@ docker compose run --rm whisperx pull
 ```
 
 This is the only time the service reaches the network on purpose. It fetches
-the two transcription models, the diarization model, and the alignment models
-for the languages in `WHISPERX_ALIGN_LANGUAGES`, checks each against the
-revision it is pinned to in `models.yaml`, and finishes by loading the default
-model on the card once so that the driver's compiled kernels are cached and the
-first person to use the service does not wait for them.
+the two transcription models, the Nemotron diarizer's weights, pyannote's
+diarization model when a token is stored (without one it says that model was
+skipped and goes on), and the alignment models for the languages in
+`WHISPERX_ALIGN_LANGUAGES`, checks each against the revision it is pinned to
+in `models.yaml`, and finishes by loading the default model on the card once
+so that the driver's compiled kernels are cached and the first person to use
+the service does not wait for them.
 
-If it fails at the diarization model, the cause is almost always one of two
-things: the token is wrong, or the account that token belongs to has not
-accepted the model's conditions on its HuggingFace page.
+If it fails at pyannote's model, the cause is almost always one of two things:
+the token is wrong, or the account that token belongs to has not accepted the
+model's conditions on its HuggingFace page.
 
 **6. Start it.**
 
@@ -151,6 +154,12 @@ what it is using at that instant.
 Memory follows the batch size, at roughly a gigabyte for every 8 of it, so an
 office short of video memory can lower `WHISPERX_BATCH_SIZE` and lose little.
 The comment beside that setting in `.env.example` says what each step costs.
+
+**The diarizer beside it takes about 2 GB more** of the same card while a job
+diarizes with Nemotron (2.3 GB measured on 2026-09-24, an idle WhisperX's share
+included, for 25 minutes of audio in five seconds). It is a second container,
+`diarizer`, on the same card by the same UUID, with a 4 GB host-memory limit;
+its stack is in `docs/research/diarizer-pinned-stack.md`.
 
 ## Measuring it on your own recordings
 

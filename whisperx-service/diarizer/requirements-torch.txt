@@ -1,0 +1,9 @@
+# torch for the diarizer image: the same wheels as the WhisperX image
+# (whisperx-service/requirements-torch.txt), so the two containers share one
+# CUDA 12.8 runtime and the package's driver requirement does not rise. NeMo
+# asks for torch 2.7 or above; the probe of 2026-09-24 loaded and ran the
+# model on these exact wheels with output identical to a CUDA 13 build
+# (docs/research/diarizer-pinned-stack.md). Do not move to a CUDA 13 torch.
+--index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0+cu128
+torchaudio==2.8.0+cu128

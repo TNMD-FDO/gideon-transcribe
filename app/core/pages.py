@@ -256,6 +256,8 @@ def upload(request: HttpRequest) -> HttpResponse:
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
+            # The speaker hint is pyannote's alone (Phase 5 chapter 4).
+            "diarizer": settings_store.diarizer(),
             "limits": {
                 "largest_file": uploads.as_gb(settings_store.largest_file_bytes()),
                 "longest_hours": settings_store.longest_recording_seconds() // 3600,

@@ -10,7 +10,7 @@ The app runs on one server in your office, on Docker, and nothing it does leaves
 
 **A server.** One machine, in your building, that stays on. It needs:
 
-- **One NVIDIA graphics card** with at least **20 GB of video memory to spare** for the transcription service. That figure comes from measuring the service on six hours of real recordings and adding room; it is in the service's own README under "GPU budget". If the AI assistant's engine is to run on the same card, it needs its own memory on top, and `LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it.
+- **One NVIDIA graphics card** with at least **22 GB of video memory to spare**: 20 GB for the transcription service and about 2 GB for the diarizer that runs beside it. Those figures come from measuring the service on six hours of real recordings and adding room; they are in the service's own README under "GPU budget". If the AI assistant's engine is to run on the same card, it needs its own memory on top, and `LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it.
 - **Ubuntu Server 24.04 or newer.**
 - **The NVIDIA driver.** `nvidia-smi` prints the card and the driver version when it is installed.
 - **The NVIDIA container toolkit with CDI turned on**, so Docker can hand the card to a container. `nvidia-ctk cdi list` prints the card when it is right.
@@ -98,9 +98,9 @@ The app's certificate comes from your office CA, on the Web Server template, for
 
 5. **Create the DNS record for the hostname now**, pointing at the server's LAN address, before anybody tries the name. The zone lives on your domain controllers, and a caching resolver in front of them remembers "that name does not exist" for the zone's negative TTL, usually an hour. A name that is looked up before it exists goes on failing for that long.
 
-### The Hugging Face account and token
+### The Hugging Face account and token (optional)
 
-The speaker-separation model is downloaded once, by the server, from Hugging Face, and it is behind a gate: somebody has to accept its conditions before it can be fetched.
+The app tells voices apart with Nemotron 3 Diarization, whose weights are open and need no account. Skip this section unless your office wants pyannote, the other diarizer, as well: it is downloaded once, by the server, from Hugging Face, and it is behind a gate: somebody has to accept its conditions before it can be fetched.
 
 1. **The account must be a user account**, not an organisation. Acceptance is granted to individuals. An office is better served by a shared account that outlives one person, with its password kept where the office keeps such things.
 2. **Accept the conditions** of the model named in the service's README. The gate's form asks for a company or university and a use case whose options are all commercial; "Other" is the honest answer.
@@ -108,7 +108,7 @@ The speaker-separation model is downloaded once, by the server, from Hugging Fac
 4. **Both are needed.** A token from an account that has not accepted is refused, and acceptance without a token cannot download anything.
 5. Each office accepts the licence itself. The model is never redistributed with the app.
 
-You will type the token once, into `./transcribe install`. Nothing is shown as you type, and it goes into a file only the service reads.
+You will type the token once, into `./transcribe install`, or press Enter to give none. Nothing is shown as you type, and it goes into a file only the service reads. Without one the model fetch skips pyannote and says so, and the Panel offers Nemotron alone; `./transcribe install --reconfigure` takes a token later.
 
 ## 3. Install
 
@@ -185,19 +185,19 @@ If you run it a second time it refuses to overwrite anything. `./transcribe inst
 
 The things install printed, in order. Each is one command, run from the install home.
 
-**Get the images.** Compose pulls the app's two images from the registry, and the upstream ones (the database, the web server, the upload sidecar):
+**Get the images.** Compose pulls the app's three images from the registry (the app, the transcription service, and the diarizer beside it), and the upstream ones (the database, the web server, the upload sidecar):
 
 ```bash
 docker compose pull
 ```
 
-If the registry cannot be reached from your server, or nothing is published there yet, build the two images on the server instead. It takes ten to twenty minutes the first time and is mostly waiting:
+If the registry cannot be reached from your server, or nothing is published there yet, build the three images on the server instead. It takes twenty to forty minutes the first time and is mostly waiting:
 
 ```bash
 docker compose build
 ```
 
-**Fetch the models.** About 6 GB, once, into the App data folder. This is the step that needs the Hugging Face token:
+**Fetch the models.** About 6.5 GB, once, into the App data folder. The Hugging Face token, if you gave one, is used here for pyannote; without one the pull says that model was skipped and goes on:
 
 ```bash
 docker compose run --rm whisperx pull
@@ -348,7 +348,7 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `The AI assistant refused the connection. Ask IT.` (in the app) | The engine wants a different token from the one in `secrets/llm_api_token`, or the file is empty. | `./transcribe engine`, paste the engine's token, then `docker compose up -d`. |
 | The Status page says `AI assistant: unreachable since ...` | The engine is down, or `llm-worker` is not on its network. | Check the engine's own stack; `./transcribe check` proves the network membership; `./transcribe engine` fixes it. For the Local engine, `./transcribe logs vllm`: the first start downloads the model and takes minutes. |
 | `the engine token file is empty` in `./transcribe logs vllm` | The Local engine refuses to start without a token. | `./transcribe engine local on` writes one when the file is empty. |
-| `error from registry: denied` during a pull | The two images are not published, or the server is not signed in to the registry. | Nothing. Compose falls back to building them on the server, which is slower and otherwise the same. |
+| `error from registry: denied` during a pull | The three images are not published, or the server is not signed in to the registry. | Nothing. Compose falls back to building them on the server, which is slower and otherwise the same. |
 | `The registry had nothing to give, so the images are built here.` | As above, during an upgrade. Not an error. | Wait. Ten to twenty minutes the first time. |
 | `The build failed, so the upgrade stops here.` | Building an image on the server failed. The old containers are still running. | Read the message above it. Usually the server cannot reach one of the appendix's hosts. `./transcribe rollback <the tag you were on>` puts the checkout back. |
 | `There is no release called vX.Y.Z.` | The tag does not exist, or the server cannot reach GitHub. | Check the tag on the Releases page, and that `github.com` is reachable from the server. |
@@ -362,6 +362,7 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `Bind as the bind account` fails | The bind account's name or password is wrong, or the CA root does not match the domain controllers' certificates. | Do not keep trying passwords; the domain may lock the account. Check `LDAP_CA_FILE` is the right root, then `./transcribe directory`. |
 | `Read the Sign-in group: 0 member(s)` | The group is empty, or the DN is wrong. | Add a member in the directory; check the DN against `.env`. |
 | `the service did not answer` | The transcription service is down. | `./transcribe logs whisperx`. The usual causes: the models were not pulled (`docker compose run --rm whisperx pull`), or the card's UUID in `whisperx-service/.env` is wrong (`nvidia-smi -L` lists them). |
+| `the diarizer container is not answering` (in the app, on a recording that failed) | The diarizer beside the transcription service is down or still loading its model. | `docker compose ps diarizer`, then `./transcribe logs diarizer`. It loads for about a minute after a start; if it stays down, the Nemotron weights were not pulled. Until it is back, an Admin can choose the pyannote diarizer on the Panel if the token was given. |
 | The Installation page says the release is `not tagged` | The server is running code that was not installed by `./transcribe upgrade`. | `./transcribe upgrade <the newest tag>`. |
 | Uploading is paused because the server is low on space | Free space on the data drive is under the minimum the app keeps. | Free space, or have users clear finished batches. The minimum is a setting on the panel's Limits page. |
 
@@ -386,7 +387,7 @@ Then, from the install home, with nobody's transcription running:
 
 It refuses if a job is running or if a tracked file has been edited by hand. Then it takes a dump of the database and a copy of your configuration into the backup folder under the App data folder, fetches the tag and checks it out, reads the two lines out to you, pulls the images (or builds them if the registry has nothing), starts everything, removes the images of every Release but this one and the one before it along with this app's own build cache records, restarts the web server so it re-reads its configuration, fetches models if the Release said to, and ends with `./transcribe check`. A build refuses to start with less than 40 GB free on the root filesystem, where Docker keeps images and build cache, because a WhisperX build that runs out of room stops every container on the server; `./transcribe tidy` makes room by hand between upgrades, touching only this app's images and cache.
 
-When it pulls, it also checks that what arrived is what the Release was built as. Every Release from v1.0.0 records the exact identity of its two images, and the upgrade compares the pulled images against that record before it starts anything. A mismatch stops the upgrade and prints both identities; the way on is `./transcribe upgrade <tag> --build`, which builds from the Release's own source instead of trusting the registry. A Release with no record, which is every one before v1.0.0, is said so, and the upgrade goes on.
+When it pulls, it also checks that what arrived is what the Release was built as. Every Release from v1.0.0 records the exact identity of its images (two until v1.79.0, three from v1.80.0), and the upgrade compares the pulled images against that record before it starts anything. A mismatch stops the upgrade and prints both identities; the way on is `./transcribe upgrade <tag> --build`, which builds from the Release's own source instead of trusting the registry. A Release with no record, which is every one before v1.0.0, is said so, and the upgrade goes on.
 
 **Nothing is ever pushed from a workstation to the server, and nothing is ever copied over the install folder.** This command is the only way code reaches the server.
 

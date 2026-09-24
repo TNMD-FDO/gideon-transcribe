@@ -141,7 +141,14 @@ FIELDS = {
     "return_speaker_embeddings",
     "client_reference",
     "priority",
+    "diarizer",
 }
+
+# Which model tells voices apart (Phase 5 chapter 4): Nemotron 3 Diarization in
+# the service's own diarizer container, or the pyannote pipeline as before.
+NEMOTRON = "nemotron"
+PYANNOTE = "pyannote"
+DIARIZERS = (NEMOTRON, PYANNOTE)
 
 
 @dataclass(frozen=True)
@@ -175,6 +182,8 @@ class Submission:
     client_reference: str | None = None
     # 0 to 100; higher runs first, equal priorities in arrival order.
     priority: int = 0
+    # nemotron or pyannote; meaningful only with diarize (service 0.3.0).
+    diarizer: str = NEMOTRON
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -189,6 +198,7 @@ class Submission:
             "return_speaker_embeddings": self.return_speaker_embeddings,
             "client_reference": self.client_reference,
             "priority": self.priority,
+            "diarizer": self.diarizer,
         }
 
 
@@ -307,6 +317,15 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
             "return_speaker_embeddings was asked for without diarize. There are "
             "no speakers to describe unless they are being separated"
         )
+    diarizer = body.get("diarizer") or NEMOTRON
+    if diarizer not in DIARIZERS:
+        raise errors.invalid(f"diarizer must be one of: {', '.join(DIARIZERS)}")
+    # Nemotron takes no speaker count and returns no vectors: a Consumer that
+    # asks for either with it has a bug, and is told so rather than humoured.
+    if diarize and diarizer == NEMOTRON and body.get("speakers") not in (None, {}, ""):
+        raise errors.hint_not_supported()
+    if diarize and diarizer == NEMOTRON and embeddings:
+        raise errors.embeddings_not_supported()
 
     reference = body.get("client_reference")
     if reference is not None and not isinstance(reference, str):
@@ -330,4 +349,5 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
         return_speaker_embeddings=embeddings,
         client_reference=reference,
         priority=priority,
+        diarizer=diarizer,
     )

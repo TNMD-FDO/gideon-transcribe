@@ -945,6 +945,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
                 else f"no ({transcript.word_timestamps_reason or 'not available'})",
             ),
             ("Diarization", "yes" if used.get("diarize") else "no"),
+            ("Voices told apart by", exports.diarizer_words(used)),
             (
                 "Speaker hint",
                 str(recording.speakers_exactly or recording.speakers_between or "none"),

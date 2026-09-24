@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import multiprocessing as mp
+import os
 import queue
 import threading
 import time
@@ -240,6 +241,12 @@ class Runner:
             "model_revisions": {
                 model.name: model.revision for model in self.models.models
             },
+            # The diarizer container (Phase 5 chapter 4): where it answers,
+            # and the pinned revision of the model it serves.
+            "diarizer_url": os.environ.get("DIARIZER_URL", "http://diarizer:8100"),
+            "diarizer_revision": (
+                self.models.diarizer.revision if self.models.diarizer else None
+            ),
         }
 
     def _diarization_model(self) -> str:

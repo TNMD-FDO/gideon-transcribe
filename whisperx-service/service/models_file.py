@@ -22,9 +22,14 @@ class Model:
 class Models:
     """What may be asked for, and whether it is already on the server."""
 
-    def __init__(self, models: list[Model], diarization: Model) -> None:
+    def __init__(
+        self, models: list[Model], diarization: Model, diarizer: Model | None = None
+    ) -> None:
         self.models = models
         self.diarization = diarization
+        # Nemotron 3 Diarization, served by the diarizer container (Phase 5
+        # chapter 4); None for a models file from before it.
+        self.diarizer = diarizer
 
     @classmethod
     def load(cls, path: Path = MODELS_FILE) -> Models:
@@ -47,7 +52,15 @@ class Models:
             revision=raw["diarization"].get("revision"),
             licence=raw["diarization"].get("licence", ""),
         )
-        return cls(models, diarization)
+        diarizer = None
+        if raw.get("diarizer"):
+            diarizer = Model(
+                name="diarizer",
+                repository=raw["diarizer"]["repository"],
+                revision=raw["diarizer"].get("revision"),
+                licence=raw["diarizer"].get("licence", ""),
+            )
+        return cls(models, diarization, diarizer)
 
     @property
     def names(self) -> tuple[str, ...]:

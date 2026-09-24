@@ -43,6 +43,18 @@ diarization:
   gated: true
   size_gb: 0.033
 
+# The diarizer container's model (Phase 5 chapter 4, ADR 0014): Nemotron 3
+# Diarization, open weights, no gate and no token. Served by the `diarizer`
+# service in the Compose file, which reads this snapshot offline. The
+# revision was the repository's head when the probe of 2026-09-24 ran and the
+# chapter was built; it moves only through a research ticket, like every pin.
+diarizer:
+  repository: nvidia/Nemotron-3-Diarization
+  revision: f667ed73aee57d40cc39428eb768b4fd87a0a29e
+  licence: OpenMDW-1.1
+  gated: false
+  size_gb: 0.45
+
 # The alignment models for the languages in WHISPERX_ALIGN_LANGUAGES, so that
 # those languages are aligned offline from the first run. Both come from
 # torchaudio's own bundles, which torch fetches by URL rather than from a

@@ -75,6 +75,9 @@ def request_for(run: Run) -> dict:
         "vocabulary": _office_vocabulary() + list(recording.vocabulary or []),
         "context": recording.context or "",
         "return_speaker_embeddings": False,
+        # Which model tells voices apart (Phase 5 chapter 4); the service
+        # refuses a hint or an embeddings request with nemotron.
+        "diarizer": settings_store.diarizer(),
         # The Run's own id, which is the service's duplicate protection: a
         # submission it has seen comes back as that job rather than a second.
         "client_reference": str(run.id),
@@ -86,9 +89,11 @@ def request_for(run: Run) -> dict:
         "priority": (100 if run.stretch else 90) if recording.is_live else 0,
     }
 
-    if run.stretch and recording.diarize:
+    if run.stretch and recording.diarize and request["diarizer"] == "pyannote":
         # Each stretch is labelled on its own; the voices are what match the
-        # labels across stretches when the Transcript is put together.
+        # labels across stretches when the Transcript is put together. Only
+        # pyannote returns them; under Nemotron the stretches keep their own
+        # labels, as a stretch with one voice does.
         request["return_speaker_embeddings"] = True
 
     if not recording.translate and not recording.spoken_language:
@@ -99,7 +104,11 @@ def request_for(run: Run) -> dict:
             "translate_mixed"
         ) and settings_store.get("translation_available")
 
-    if recording.diarize and not recording.is_two_channel_call:
+    if (
+        recording.diarize
+        and not recording.is_two_channel_call
+        and request["diarizer"] == "pyannote"
+    ):
         if recording.speakers_exactly:
             request["speakers"] = {"exactly": recording.speakers_exactly}
         elif recording.speakers_between:
