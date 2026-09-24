@@ -1794,12 +1794,16 @@ def _rows() -> list[Definition]:
             needs="incidents",
             what_it_does=(
                 "Words and phrases the office always wants an event for, one "
-                "per line. On every Propose events run the app itself searches "
-                "each synced camera's transcript, and its record's picture "
-                "lines, for them, whole words and any case, and proposes an "
-                "event at every line that carries one, before and whether or "
-                "not the engine is asked. The floor under the assistant's "
-                "judgement; an empty list loses nothing of the finder."
+                "per line. On every Propose events run, before the engine is "
+                "asked and whether or not it is, the app itself looks for each "
+                "phrase in two places on every synced camera: in the words "
+                "spoken (the transcript) and in what the camera showed (the "
+                "lines of the video's Digest that the vision model wrote from "
+                "the picture). Whole words, any case. Every line that carries "
+                'one becomes a proposal marked Watch phrase, so "gun" catches '
+                'both "I got gun" and a handgun seen on the ground. The floor '
+                "under the assistant's judgement; an empty list loses nothing "
+                "of the finder."
             ),
             when_changed="The next run.",
         ),

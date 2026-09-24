@@ -19,7 +19,7 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+- The Watch phrases setting's help on the Incidents page, and the guides, now say where the search looks: in each synced camera's spoken words and in what its picture showed, as the vision model wrote it into the video's Digest. The search itself is unchanged.
 
 ## v1.81.1, 2026-09-24
 
