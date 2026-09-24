@@ -21,6 +21,54 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.83.0, 2026-09-24
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The install is staged, for other offices (ADR 0015).
+
+- **An office installs without a card.** The transcription service and
+  the diarizer are behind the `transcription` Compose profile, which the
+  install writes when the office names a card and `./transcribe add
+  transcription` writes later. Without it the app, its workers, the
+  database and the web server run alone: cases, incidents, notes, clips,
+  documents and sharing work, the start and upload pages say transcription
+  is not installed yet, and a recording uploaded is kept as "Waiting for
+  the card" and transcribed within a minute of the piece being added. The
+  upgrade adds the profile once to an install that already has a card, so
+  no office's service stops.
+- **`./transcribe install` asks what the server has**, in this order: the
+  office facts, the certificate (the office's own, or a self-signed one
+  made now), the directory, the card (or none yet), and, with a card, the
+  engine (the Local engine on that card when it has about 20 GB to spare,
+  a shared one, or none) and the fast lane; then the backup and the mail.
+  It prints what is left for the pieces this install has.
+- **One command per piece later**: `./transcribe add transcription`,
+  `fast-lane`, `engine`, `directory`, `mail` or `backup`; `./transcribe
+  remove` for the three with a clean off; `./transcribe pieces` lists
+  them, and `check` prints the list first. `fast-lane on|off` and `engine
+  local on|off` still work.
+- **The Pieces card** on the Panel's Status page: each piece on, off, not
+  installed or not answering, with the one command IT runs on the server
+  to add it; the page runs nothing. A piece not installed is a plain pill,
+  never red; the service's own card says "not installed" rather than "not
+  reachable".
+- **A self-signed certificate** at install, for an office without its own
+  authority: a root to trust once on the workstations and a certificate
+  for the app's name, made with openssl into `tls/`, renewed with
+  `./transcribe tls self-signed`, replaced by the office's own by
+  overwriting the two files. `check` notes it and never fails on it.
+- The install guide opens with what you need by what the server has, marks
+  the directory and the office certificate optional with their
+  alternatives, follows the script's order, and gathers every piece under
+  "Add a piece later"; the README's short version and the admin guide's
+  Status page say the same.
+- The Status page's "upload piece(s) pending" reads "upload part(s)
+  pending", since Piece is now a word of its own.
+
 ## v1.82.1, 2026-09-24
 
 ```

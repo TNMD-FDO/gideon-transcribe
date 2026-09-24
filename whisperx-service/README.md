@@ -28,6 +28,8 @@ can transcribe beside another on the same card.
 
 ## Installing it
 
+From v1.83.0 the service and the diarizer start only under the `transcription` Compose profile, so that the whole stack can run on a server with no card yet. Run from this folder, the `.env` written from `.env.example` carries `COMPOSE_PROFILES=transcription` and the commands below need nothing more; run as part of the whole stack, the stack's own `.env` carries the list and `./transcribe add transcription` writes it.
+
 On a full installation of Gideon Transcribe, `./transcribe install` does all of
 this and you never edit a file by hand. Running the service on its own:
 

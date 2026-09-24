@@ -5,9 +5,17 @@
 # Run it from the Install home, the folder this file is in. Every subcommand
 # is meant to be safe to run twice, and none of them ever prints a secret.
 #
-#   ./transcribe install      ask the office facts and write both .env files
+#   ./transcribe install      ask what this server has and write both .env files
 #   ./transcribe status       what is running, and whether it is healthy
 #   ./transcribe check        the smoke checks, as a plain report
+#   ./transcribe pieces       which pieces of the install are on, off or not installed
+#   ./transcribe add PIECE    add a piece: transcription, fast-lane, engine, directory,
+#                             mail or backup; each asks its own questions
+#   ./transcribe remove PIECE stop a piece that has a clean off: transcription,
+#                             fast-lane or engine
+#   ./transcribe tls self-signed
+#                             make a self-signed certificate for an office without
+#                             its own authority, or renew the one made before
 #   ./transcribe directory    ask the office's directory facts and write them
 #   ./transcribe engine       point the AI assistant at the office's engine
 #   ./transcribe engine local on|off
@@ -141,6 +149,87 @@ profile_remove() {
   # would stop the script on the way to writing an empty list.
   kept="$(env_value COMPOSE_PROFILES | tr ',' '\n' | grep -vx "$1" | grep -v '^$' | paste -sd, - || true)"
   set_env COMPOSE_PROFILES "$kept"
+}
+
+# The pieces (v1.83.0): what this server has, read from the same places the
+# app reads them, so `./transcribe pieces` and the Status page never disagree.
+transcription_is_on() {
+  profile_on transcription
+}
+
+have_a_card() {
+  command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1
+}
+
+card_memory_gb() {
+  # The card's memory in whole gigabytes, by UUID; empty when it cannot be read.
+  local mb
+  mb="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits -i "$1" 2>/dev/null | head -1 | tr -dc '0-9')"
+  [ -n "$mb" ] && echo $((mb / 1024))
+}
+
+shared_engine_is_on() {
+  local network
+  network="$(env_value LLM_NETWORK)"
+  [ -n "$network" ] && [ "$network" != "transcribe-llm" ]
+}
+
+directory_is_on() {
+  [ "$(env_value LDAP_ENABLED)" = "true" ]
+}
+
+mail_is_on() {
+  [ -n "$(env_value SMTP_HOST)" ] && [ -n "$(env_value MAIL_FROM)" ]
+}
+
+piece_line() {
+  # One row of the pieces table: the piece, its state, and what to do.
+  printf '  %-14s %-15s %s\n' "$1" "$2" "$3"
+}
+
+cmd_pieces() {
+  need_env
+  echo "The pieces of this installation:"
+  echo
+  if ! transcription_is_on; then
+    piece_line transcription "not installed" "no card yet; ./transcribe add transcription"
+  elif compose ps --status running --services 2>/dev/null | grep -qx whisperx; then
+    piece_line transcription on "the service is running"
+  else
+    piece_line transcription "not answering" "the service container is not running; docker compose up -d"
+  fi
+  if ! transcription_is_on; then
+    piece_line fast-lane "not installed" "needs transcription first"
+  elif fast_lane_is_on; then
+    piece_line fast-lane on "on card $(service_env_value WHISPERX_FAST_GPU_UUID)"
+  else
+    piece_line fast-lane off "./transcribe add fast-lane"
+  fi
+  if local_engine_is_on; then
+    piece_line engine on "the Local engine, $(env_value LLM_LOCAL_MODEL)"
+  elif shared_engine_is_on; then
+    piece_line engine on "a shared engine on '$(env_value LLM_NETWORK)'"
+  else
+    piece_line engine off "./transcribe add engine"
+  fi
+  if directory_is_on; then
+    piece_line directory on "sign-in against $(env_value LDAP_URI)"
+  else
+    piece_line directory off "local admins only; ./transcribe add directory"
+  fi
+  if mail_is_on; then
+    piece_line mail on "through $(env_value SMTP_HOST)"
+  else
+    piece_line mail off "./transcribe add mail"
+  fi
+  if backup_on; then
+    piece_line backup on "to $(env_value BACKUP_TARGET)"
+  else
+    piece_line backup off "./transcribe add backup"
+  fi
+  echo
+  echo "  The Panel's Status page shows the same list; each is added here, on the"
+  echo "  server, with one command. The page runs nothing."
 }
 
 # status -----------------------------------------------------------------------
@@ -285,6 +374,9 @@ cmd_check() {
   echo "Gideon Transcribe: checks"
   echo
 
+  cmd_pieces
+  echo
+
   echo "The server"
   if id "$APP_USER" >/dev/null 2>&1; then
     if id -nG "$APP_USER" | tr ' ' '\n' | grep -qx docker; then
@@ -365,6 +457,9 @@ cmd_check() {
     else
       fail "the certificate does not name $hostname"
     fi
+    if certificate_is_self_signed; then
+      note "the certificate is self-signed: every workstation must trust tls/self-signed-root.pem or the browser warns; replace it with the office's own when you have one"
+    fi
   else
     fail "there is no certificate at tls/cert.pem"
   fi
@@ -398,7 +493,9 @@ for one in directory.test_connection():
 
   echo
   echo "The WhisperX service"
-  if compose exec -T app python -c "
+  if ! transcription_is_on; then
+    note "transcription is not installed (no card yet); ./transcribe add transcription"
+  elif compose exec -T app python -c "
 from core import whisperx
 raise SystemExit(0 if whisperx.is_alive() else 1)
 " >/dev/null 2>&1; then
@@ -406,7 +503,9 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
   else
     fail "the service does not answer"
   fi
-  if fast_lane_is_on; then
+  if ! transcription_is_on; then
+    :
+  elif fast_lane_is_on; then
     if compose exec -T app python -c "
 from core import whisperx
 raise SystemExit(0 if whisperx.is_alive(whisperx.FAST) else 1)
@@ -510,9 +609,12 @@ cmd_install() {
 
   echo "Gideon Transcribe: install"
   echo
-  echo "This asks for the facts about this office and writes them to two"
-  echo "environment files beside this script. Nothing you type here leaves"
-  echo "this server, and none of it is ever committed to the repository."
+  echo "This asks what this server has and the facts about this office, and"
+  echo "writes them to two environment files beside this script. A piece the"
+  echo "server does not have yet (a card, an engine, the directory, mail, a"
+  echo "backup store) is added later with one command: ./transcribe add."
+  echo "Nothing you type here leaves this server, and none of it is ever"
+  echo "committed to the repository."
   echo
 
   prerequisites || exit 1
@@ -521,35 +623,376 @@ cmd_install() {
   [ -f "$SERVICE_ENV" ] || cp "$HERE/whisperx-service/.env.example" "$SERVICE_ENV"
 
   ask_the_office_facts
-  ask_the_gpu
-  ask_the_fast_lane
-  make_the_secrets
+  ask_the_certificate
   cmd_directory
-  ask_the_hugging_face_token
-  cmd_engine
+  make_the_secrets
+  ask_the_card
+  if transcription_is_on; then
+    ask_the_engine
+    ask_the_fast_lane
+  fi
   ask_the_backup
   ask_the_mail
+  ensure_the_token_file
   ensure_the_service_env
   make_the_data_folders
 
+  print_what_remains "$build"
+}
+
+print_what_remains() {
+  # The numbered list of what is left, for the pieces this install has.
+  local build="$1" n=1
   echo
   echo "Written. What is left, in order:"
   echo
-  echo "  1. Put the certificate and its key in tls/ (cert.pem and key.pem,"
-  echo "     the key mode 0600), and the office CA root in ca/office-root.pem."
+  if [ ! -s "$HERE/tls/cert.pem" ]; then
+    echo "  $n. Put the certificate and its key in tls/ (cert.pem and key.pem,"
+    echo "     the key mode 0600), and the office CA root in ca/office-root.pem."
+    n=$((n + 1))
+  fi
   if [ "$build" = "yes" ]; then
-    echo "  2. docker compose build"
+    echo "  $n. docker compose build"
   else
-    echo "  2. docker compose pull        (or run install --build to build here)"
+    echo "  $n. docker compose pull        (or run install --build to build here)"
   fi
-  echo "  3. docker compose run --rm whisperx pull"
-  echo "  4. docker compose up -d"
-  echo "  5. docker compose run --rm app create-local-admin"
-  echo "  6. ./transcribe check"
+  n=$((n + 1))
+  if transcription_is_on; then
+    echo "  $n. docker compose run --rm whisperx selftest    (proves the card)"
+    n=$((n + 1))
+    echo "  $n. docker compose run --rm whisperx pull        (fetches the models)"
+    n=$((n + 1))
+  fi
+  echo "  $n. docker compose up -d"
+  n=$((n + 1))
+  echo "  $n. docker compose run --rm app create-local-admin"
+  n=$((n + 1))
+  echo "  $n. ./transcribe check"
+  n=$((n + 1))
+  if certificate_is_self_signed; then
+    echo "  $n. Trust tls/self-signed-root.pem on every workstation (./transcribe tls"
+    echo "     self-signed prints how), or the browser warns at every sign-in."
+    n=$((n + 1))
+  fi
   if backup_on; then
-    echo "  7. ./transcribe backup            the first Snapshot"
-    echo "  8. ./transcribe restore-drill     the first proof that it restores"
+    echo "  $n. ./transcribe backup            the first Snapshot"
+    n=$((n + 1))
+    echo "  $n. ./transcribe restore-drill     the first proof that it restores"
+    n=$((n + 1))
   fi
+  echo
+  if ! transcription_is_on; then
+    echo "  Without a card, recordings people upload are kept and wait. When the"
+    echo "  card and its driver are in:   ./transcribe add transcription"
+  fi
+  if ! local_engine_is_on && ! shared_engine_is_on; then
+    echo "  The AI assistant is off until there is an engine:   ./transcribe add engine"
+  fi
+  echo "  ./transcribe pieces lists what is on, off and not installed."
+}
+
+ask_the_card() {
+  # The transcription piece, at install: a card now, or later.
+  echo
+  if ! have_a_card; then
+    echo "No card is visible on this server (nvidia-smi does not answer), so"
+    echo "transcription is not installed now. Everything else works: cases,"
+    echo "incidents, notes, clips, documents. Recordings people upload are kept"
+    echo "and transcribed when the card arrives:   ./transcribe add transcription"
+    return 0
+  fi
+  echo "The cards on this server:"
+  nvidia-smi --query-gpu=index,name,memory.total,uuid --format=csv,noheader 2>/dev/null | sed 's/^/  /'
+  echo
+  echo "Transcription needs one card with 24 GB of memory to spare (20 GB for"
+  echo "the service and about 4 GB for the diarizer, for recordings up to two"
+  echo "hours). Without it everything else works and recordings wait for it."
+  local answer
+  answer="$(ask "Use a card for transcription now? (yes or no)" "$( transcription_is_on && echo yes || echo yes)")"
+  case "$answer" in
+    y|Y|yes|YES|Yes) configure_transcription ;;
+    *)
+      echo "  Transcription is not installed now. When it should be:"
+      echo "  ./transcribe add transcription"
+      ;;
+  esac
+}
+
+configure_transcription() {
+  # The shared half of `ask_the_card` and `add transcription`: the card, the
+  # room on it, the token, the profile.
+  ask_the_gpu
+  local gpu gb
+  gpu="$(service_env_value WHISPERX_GPU_UUID)"
+  gb="$(card_memory_gb "$gpu")"
+  if [ -n "$gb" ]; then
+    if [ "$gb" -lt 16 ]; then
+      red "That card has ${gb} GB, which is not enough for the service and the diarizer (16 GB at the least, 24 GB to spare). Nothing was written."
+      set_service_env WHISPERX_GPU_UUID "<GPU UUID>"
+      return 1
+    elif [ "$gb" -lt 24 ]; then
+      amber "That card has ${gb} GB: under the 24 GB the service and the diarizer want to spare. Short recordings will do; a recording over an hour may run out of memory (docs/research/graphics-cards.md)."
+    else
+      green "That card has ${gb} GB, enough for the service and the diarizer."
+    fi
+  fi
+  ask_the_hugging_face_token || true
+  set_env WHISPERX_URL "http://whisperx:8000"
+  profile_add transcription
+  green "Transcription is on; the service starts with the stack."
+}
+
+ask_the_engine() {
+  # The AI assistant's engine, at install, once a card is named: the Local
+  # engine on that card when it has room, a shared one, or none.
+  echo
+  echo "The AI assistant (summaries, chat, proposed events, vision) needs a"
+  echo "language-model engine. This server can run a small one itself, the"
+  echo "Local engine, beside transcription on the same card, when the card has"
+  echo "about 20 GB more to give. An office that already runs an engine on the"
+  echo "LAN points the app at it instead. Or leave the assistant off for now:"
+  echo "everything else works, and ./transcribe add engine turns it on later."
+  local gpu gb room=no suggested=none
+  gpu="$(service_env_value WHISPERX_GPU_UUID)"
+  gb="$(card_memory_gb "$gpu")"
+  if [ -n "$gb" ] && [ $((gb - 24)) -ge 20 ]; then
+    room=yes
+    suggested=local
+    echo "  The card has ${gb} GB: room for the Local engine beside transcription."
+  elif [ -n "$gb" ]; then
+    echo "  The card has ${gb} GB: not enough for the Local engine beside transcription."
+  fi
+  local answer
+  answer="$(ask "The engine: local, shared, or none" "$suggested")"
+  case "$answer" in
+    local|Local|LOCAL)
+      if [ "$room" != "yes" ]; then
+        amber "The card is short of room for the Local engine; it may still run with a smaller share. Continuing."
+      fi
+      configure_the_local_engine "$gpu" "$gb"
+      ;;
+    shared|Shared|SHARED) cmd_engine || true ;;
+    *) echo "  No engine. The AI assistant is off; ./transcribe add engine later." ;;
+  esac
+}
+
+configure_the_local_engine() {
+  # The env-and-token half of `engine local on`, for the install: nothing is
+  # started here, and the panel's defaults already point at the Local engine.
+  local gpu="$1" gb="${2:-}" share model
+  share="$LOCAL_SHARE_DEFAULT"
+  if [ -n "$gb" ] && [ "$gb" -gt 0 ]; then
+    share="$(awk -v gb="$gb" 'BEGIN { s = 20 / gb; if (s > 0.9) s = 0.9; printf "%.2f", s }')"
+  fi
+  model="$( [ -n "$(env_value LLM_LOCAL_MODEL)" ] && env_value LLM_LOCAL_MODEL || echo "$LOCAL_MODEL_DEFAULT")"
+  set_env LLM_LOCAL_GPU_UUID "$gpu"
+  set_env LLM_LOCAL_MODEL "$model"
+  set_env LLM_LOCAL_GPU_FRACTION "$share"
+  set_env LLM_NETWORK "transcribe-llm"
+  profile_add llm
+  if grep -q '^COMPOSE_FILE=' "$ENV_FILE"; then
+    sed -i 's/^COMPOSE_FILE=/# COMPOSE_FILE=/' "$ENV_FILE"
+  fi
+  if ! secret_present "$SECRETS/llm_api_token"; then
+    write_secret "$SECRETS/llm_api_token" "$(openssl rand -hex 32)"
+    own_the_secrets
+  fi
+  green "The Local engine is on: $model within $share of the card; it starts with the stack."
+  echo "  The first start downloads the model (about 8 GB) and takes some minutes."
+  echo "  Then, on the Panel's Status page, press Test connection; when it answers"
+  echo "  'ready', turn the AI assistant toggle on (Settings, AI assistant)."
+}
+
+# The certificate (v1.83.0): the office's own, or a self-signed one for now.
+
+certificate_is_self_signed() {
+  [ -s "$HERE/tls/self-signed-root.pem" ] && [ -s "$HERE/tls/cert.pem" ] \
+    && openssl verify -CAfile "$HERE/tls/self-signed-root.pem" "$HERE/tls/cert.pem" >/dev/null 2>&1
+}
+
+ask_the_certificate() {
+  echo
+  if [ -s "$HERE/tls/cert.pem" ] && [ -s "$HERE/tls/key.pem" ] && ! certificate_is_self_signed; then
+    green "The certificate in tls/ is the office's own; kept."
+    return 0
+  fi
+  echo "The app answers over HTTPS with a certificate for its name. An office"
+  echo "with its own certificate authority requests one (the install guide has"
+  echo "the request) and puts it in tls/. An office without one can have a"
+  echo "self-signed certificate made now: workstations trust its root once,"
+  echo "and the office's own certificate replaces it later without a reinstall."
+  local answer
+  answer="$(ask "The certificate: the office's own (yes), or make a self-signed one now (self-signed)" "$( certificate_is_self_signed && echo self-signed || echo yes)")"
+  case "$answer" in
+    self-signed|self|s|S) make_a_self_signed_certificate ;;
+    *) echo "  Put cert.pem and key.pem in tls/ before 'docker compose up -d'." ;;
+  esac
+}
+
+make_a_self_signed_certificate() {
+  # A root the office trusts once, and a leaf for the app's name signed by
+  # it; running again renews the leaf under the same root.
+  local hostname
+  hostname="$(env_value APP_HOSTNAME)"
+  if [ -z "$hostname" ]; then
+    red "The app's address is not set yet (APP_HOSTNAME in .env). Nothing was written."
+    return 1
+  fi
+  mkdir -p "$HERE/tls"
+  if [ ! -s "$HERE/tls/self-signed-root.key" ] || [ ! -s "$HERE/tls/self-signed-root.pem" ]; then
+    openssl ecparam -name prime256v1 -genkey -noout -out "$HERE/tls/self-signed-root.key"
+    chmod 600 "$HERE/tls/self-signed-root.key"
+    openssl req -x509 -new -key "$HERE/tls/self-signed-root.key" -sha256 -days 3650 \
+      -subj "/CN=Gideon Transcribe at $hostname (self-signed root)" \
+      -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign" \
+      -out "$HERE/tls/self-signed-root.pem"
+    green "A self-signed root was made: tls/self-signed-root.pem (ten years)."
+  fi
+  openssl ecparam -name prime256v1 -genkey -noout -out "$HERE/tls/key.pem"
+  chmod 600 "$HERE/tls/key.pem"
+  openssl req -new -key "$HERE/tls/key.pem" -subj "/CN=$hostname" \
+    -addext "subjectAltName=DNS:$hostname" -out "$HERE/tls/self-signed.csr"
+  printf 'subjectAltName=DNS:%s\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n' "$hostname" >"$HERE/tls/self-signed.ext"
+  openssl x509 -req -in "$HERE/tls/self-signed.csr" -CA "$HERE/tls/self-signed-root.pem" \
+    -CAkey "$HERE/tls/self-signed-root.key" -CAcreateserial -days 730 -sha256 \
+    -extfile "$HERE/tls/self-signed.ext" -out "$HERE/tls/cert.pem" 2>/dev/null
+  rm -f "$HERE/tls/self-signed.csr" "$HERE/tls/self-signed.ext"
+  green "A self-signed certificate for $hostname was written to tls/cert.pem and tls/key.pem (two years)."
+  echo
+  echo "  Every workstation must trust the root once, or the browser warns:"
+  echo "    copy tls/self-signed-root.pem to the workstation, then as an administrator"
+  echo "    Windows:  certutil -addstore -f Root self-signed-root.pem"
+  echo "              (or Group Policy: Computer Configuration, Windows Settings,"
+  echo "              Security Settings, Public Key Policies, Trusted Root"
+  echo "              Certification Authorities)"
+  echo "    Mac:      sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain self-signed-root.pem"
+  echo "  The office's own certificate replaces it later: put its cert.pem and"
+  echo "  key.pem in tls/ and run 'docker compose restart caddy'."
+  if compose ps --status running --services 2>/dev/null | grep -qx caddy; then
+    compose restart caddy >/dev/null 2>&1 || true
+  fi
+}
+
+cmd_tls() {
+  need_env
+  case "${1:-}" in
+    self-signed) make_a_self_signed_certificate ;;
+    *)
+      red "tls takes 'self-signed': ./transcribe tls self-signed"
+      exit 1
+      ;;
+  esac
+}
+
+# add and remove (v1.83.0): one command per piece --------------------------------------
+
+cmd_add() {
+  need_env
+  case "${1:-}" in
+    transcription) add_transcription "${2:-}" ;;
+    fast-lane)
+      if ! transcription_is_on; then
+        red "The fast lane needs transcription first: ./transcribe add transcription"
+        exit 1
+      fi
+      cmd_fast_lane_on
+      ;;
+    engine)
+      local answer
+      answer="$(ask "The engine: local (a small model on this server's card) or shared (an engine on the LAN)" "local")"
+      case "$answer" in
+        shared|Shared|SHARED) cmd_engine && compose up -d ;;
+        *) cmd_engine_local_on ;;
+      esac
+      ;;
+    directory) cmd_directory ;;
+    mail) cmd_install_mail ;;
+    backup) cmd_install_backup ;;
+    *)
+      red "add takes one piece: transcription, fast-lane, engine, directory, mail or backup."
+      echo
+      cmd_pieces
+      exit 1
+      ;;
+  esac
+}
+
+add_transcription() {
+  local build="${1:-}"
+  cat <<'WORDS'
+Transcription
+-------------
+The transcription service and the diarizer, on one card of this server. This
+names the card, fetches the models (about 6.5 GB, once), starts both
+containers and checks them. Recordings uploaded while there was no card are
+picked up within a minute.
+
+WORDS
+  if ! have_a_card; then
+    red "No card is visible on this server: nvidia-smi does not answer. Install the driver, reboot, and check 'nvidia-smi' prints the card; then run this again."
+    exit 1
+  fi
+  configure_transcription || exit 1
+  echo
+  if [ "$build" = "--build" ]; then
+    compose --profile transcription build whisperx diarizer
+  elif ! compose --profile transcription pull --quiet whisperx diarizer 2>/dev/null; then
+    echo "  The images could not be pulled; building them here instead."
+    compose --profile transcription build whisperx diarizer
+  fi
+  compose run --rm whisperx selftest || { red "The service's self-test failed on this card; see above. Nothing was started."; exit 1; }
+  compose run --rm whisperx pull
+  compose up -d
+  echo
+  if compose exec -T app python -c "
+from core import whisperx
+raise SystemExit(0 if whisperx.is_alive() else 1)
+" >/dev/null 2>&1; then
+    green "Transcription is on and the service answers."
+  else
+    amber "Transcription is on; the service is still starting (./transcribe logs whisperx)."
+  fi
+  echo "  Recordings that waited for the card are picked up within a minute."
+  echo "  The Panel's Status page shows the piece; ./transcribe check asks it."
+}
+
+cmd_remove() {
+  need_env
+  case "${1:-}" in
+    transcription)
+      if fast_lane_is_on; then
+        cmd_fast_lane_off
+      fi
+      compose --profile transcription stop whisperx diarizer 2>/dev/null || true
+      compose --profile transcription rm -f whisperx diarizer 2>/dev/null || true
+      profile_remove transcription
+      compose up -d
+      green "Transcription is off. The models stay in the app data folder for the next add;"
+      echo "  recordings uploaded from now on wait for the card."
+      ;;
+    fast-lane) cmd_fast_lane_off ;;
+    engine)
+      if local_engine_is_on; then
+        cmd_engine_local_off
+      elif shared_engine_is_on; then
+        set_env LLM_NETWORK "transcribe-llm"
+        if grep -q '^COMPOSE_FILE=' "$ENV_FILE"; then
+          sed -i 's/^COMPOSE_FILE=/# COMPOSE_FILE=/' "$ENV_FILE"
+        fi
+        compose up -d
+        panel_set engine_address ""
+        panel_set engine_model ""
+        panel_set assistant_available off
+        green "The shared engine is forgotten; the AI assistant is off. The token file is kept."
+      else
+        note "no engine is on"
+      fi
+      ;;
+    *)
+      red "remove takes transcription, fast-lane or engine. The directory, mail and the backup are changed by running add again."
+      exit 1
+      ;;
+  esac
 }
 
 prerequisites() {
@@ -573,8 +1016,9 @@ prerequisites() {
   if command -v nvidia-smi >/dev/null 2>&1; then
     pass "the nvidia driver $(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)"
   else
-    fail "nvidia-smi is not on this server, so no GPU can be reserved"
-    ok=no
+    # Not a stop (v1.83.0): an office installs without a card and adds
+    # transcription when the card and its driver arrive.
+    note "nvidia-smi is not on this server: no transcription until a card and its driver are added (./transcribe add transcription then)"
   fi
 
   if id "$APP_USER" >/dev/null 2>&1; then
@@ -2262,6 +2706,7 @@ cmd_upgrade() {
   # Caddy mounts, and Docker would create a missing mount source as root,
   # which the app could then never write into.
   ensure_the_service_env
+  migrate_the_profiles
   make_the_data_folders
   ensure_the_token_file
 
@@ -2294,7 +2739,9 @@ cmd_upgrade() {
   compose restart caddy
 
   # 8. The models, when the release says they changed.
-  if models_changed "$tag"; then
+  if ! transcription_is_on; then
+    note "transcription is not installed, so no models to fetch"
+  elif models_changed "$tag"; then
     echo
     amber "This release changes the models, so they are fetched now."
     compose run --rm whisperx pull
@@ -2328,6 +2775,18 @@ read_the_release_lines() {
     sed -n "/^## $tag/,/^## /p" | grep -E '^(Models|Database):' | sed 's/^/  /' ||
     amber "  its changelog says nothing about models or the database"
   echo
+}
+
+migrate_the_profiles() {
+  # v1.83.0 put the transcription service behind the `transcription` Compose
+  # profile. An install from before it has a card named and no profile, and
+  # its upgrade must not stop its service: the profile is added here, once.
+  local gpu
+  gpu="$(service_env_value WHISPERX_GPU_UUID)"
+  if ! transcription_is_on && [ -n "$gpu" ] && [ "$gpu" != "<GPU UUID>" ]; then
+    profile_add transcription
+    pass "added transcription to COMPOSE_PROFILES (the service is behind a profile from v1.83.0)"
+  fi
 }
 
 models_changed() {
@@ -2401,6 +2860,10 @@ case "${1:-}" in
 install) shift && cmd_install "$@" ;;
 status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
+pieces) shift && cmd_pieces "$@" ;;
+add) shift && cmd_add "$@" ;;
+remove) shift && cmd_remove "$@" ;;
+tls) shift && cmd_tls "$@" ;;
 directory) shift && cmd_directory "$@" ;;
 engine) shift && cmd_engine "$@" ;;
 fast-lane) shift && cmd_fast_lane "$@" ;;

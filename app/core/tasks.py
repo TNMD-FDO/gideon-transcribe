@@ -31,7 +31,7 @@ def prepare_recording(recording_id: str) -> None:
     that a Recording joins the transcription queue the moment it is Ready and
     waits for nothing.
     """
-    from core import pipeline
+    from core import pieces, pipeline
     from core.recordings import MediaState, Recording
 
     recording = Recording.objects.filter(pk=recording_id).first()
@@ -52,6 +52,11 @@ def prepare_recording(recording_id: str) -> None:
             # Transcribed in stretches while it recorded: only the tail is
             # left, on the Job that has been open since the first stretch.
             job = live.finish_stretches(recording)
+        elif not pieces.transcription_installed():
+            # The transcription piece is not installed (v1.83.0): the
+            # Recording stays Ready with no Job, and keep_the_queue_moving
+            # hands it over within a minute of the piece being added.
+            job = None
         else:
             job = queue.make_job(recording)
         if job is not None:
@@ -282,15 +287,19 @@ def keep_the_queue_moving(timestamp: int) -> None:
     while nothing was watching, and a poll that was lost with a worker. Both
     are cheap to check and neither should need a person to notice.
     """
-    from core import queue, uploads
+    from core import pieces, queue, uploads
 
     dropped = uploads.drop_abandoned()
     if dropped:
         log.info("%d abandoned upload(s) were dropped", dropped)
 
-    for recording in queue.ready_without_a_job():
-        job = queue.make_job(recording)
-        hand_over_job.defer(job_id=str(job.pk))
+    # Not while the transcription piece is absent (v1.83.0): a Job made now
+    # would only fail at the hand-over. The Recordings wait, Ready with no
+    # Job, and this sweep takes them the minute the piece is added.
+    if pieces.transcription_installed():
+        for recording in queue.ready_without_a_job():
+            job = queue.make_job(recording)
+            hand_over_job.defer(job_id=str(job.pk))
 
     # A video left queued for vision with no task behind it (v1.54.1).
     from core import vision

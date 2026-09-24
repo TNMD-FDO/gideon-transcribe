@@ -641,6 +641,14 @@ A language-model engine run outside the app that the AI assistant reaches over t
 The optional language-model engine shipped with the app for an office that has no Shared engine. Off by default; the AI assistant behaves the same against either.
 _Avoid_: temporary vLLM, bundled model (implementation terms)
 
+**Piece**:
+One optional part of an installation an office adds when it has what the part needs: Transcription (a card), the Fast lane, an Engine (Local or Shared), the Directory, Mail, the Backup. Each is on, off, or not installed on the Status page's Pieces card, and added on the server with `./transcribe add <piece>`; the page runs nothing. An install without a card has every piece but Transcription: cases, incidents, notes, clips and documents work, and a recording uploaded waits for the card. From v1.83.0 (ADR 0015).
+_Avoid_: module, component, add-on, profile (Compose's word for how a piece is switched on, never a page word), stage (the viewer's column)
+
+**Self-signed certificate**:
+The certificate `./transcribe install` can make for an office without its own certificate authority: a root the office trusts once on its workstations, and a certificate for the app's name signed by it, replaced later by the office's own without a reinstall. `./transcribe check` notes it and never fails on it.
+_Avoid_: internal certificate, Caddy certificate, temporary certificate
+
 **Backup**:
 The app's nightly copy of everything it needs to come back after the server is lost: the database, the Cases' files, and the configuration, carried encrypted to a store off the box. Whole-app only: nothing is ever taken out of a Backup for one person, and a restore never brings a Workspace back.
 _Avoid_: archive, dump (that is one part of it), export (that is a user's file)

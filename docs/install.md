@@ -6,29 +6,41 @@ The app runs on one server in your office, on Docker, and nothing it does leaves
 
 **Nothing is ever pushed from a workstation to the server, and nothing is ever copied over the install folder.** Code reaches the server only by `./transcribe upgrade <tag>`, which fetches a Release from GitHub and checks it out. If you find yourself copying files onto the server by hand, stop: that is not how this app is installed or changed.
 
-## 1. What you need
+## 1. What you need, by what the server has
 
-**A server.** One machine, in your building, that stays on. It needs:
+The app is installed in pieces. The server alone runs the app; each piece is added when the office has what it needs, at install or later with one command. Nothing has to wait for everything: an office whose graphics card is still on order installs today and adds transcription when the card arrives.
 
-- **One NVIDIA graphics card** with at least **24 GB of video memory to spare**: 20 GB for the transcription service and about 4 GB for the diarizer that runs beside it, which is enough for recordings up to two hours; the diarizer takes about 2.5 GB more for every further hour of a recording. Those figures come from measuring the service on six hours of real recordings and adding room; they are in the service's own README under "GPU budget". If the AI assistant's engine is to run on the same card, it needs its own memory on top, and `LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it.
+| What the server has | What it gives you | What it needs |
+|---|---|---|
+| **The server alone** | Cases, incidents synced by their clocks or by sound, notes, the chronology, clips, documents, sharing, the Panel. Recordings people upload are kept and wait for the card. | Ubuntu Server 24.04 or newer; Docker with the Compose plugin; a data drive; a name in your DNS; a certificate (the office's own, or a self-signed one the install makes). |
+| **A graphics card** (the Transcription piece) | Transcription, translation to English, speakers told apart, the Speakers page. | One NVIDIA card with **24 GB of video memory to spare**: 20 GB for the transcription service and about 4 GB for the diarizer beside it, enough for recordings up to two hours; the diarizer takes about 2.5 GB more for every further hour. A card with less runs short recordings; under 16 GB the install refuses. The NVIDIA driver (`nvidia-smi` prints the card) and the container toolkit with CDI (`nvidia-ctk cdi list` prints it). |
+| **Room on the card for an engine** (the Engine piece, Local) | The AI assistant: summaries, chat, proposed events, the incident memo, vision. | About **20 GB more** of the same card for the Local engine (`LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it); or an engine your office already runs on the LAN, which needs no room here. |
+| **The fast lane** (a piece) | A recording made in the app transcribed without waiting behind a long job. | About **8 GB more** of the card. |
+| **The office directory** (a piece) | Sign-in with office accounts and groups. | Active Directory: a sign-in group, a read-only account, the CA root. Without it, Local admins only. |
+| **A mail relay** (a piece) | Notifications, the retention digest, the Operator mail. | An SMTP relay that accepts the server's mail. |
+| **A backup store** (a piece) | Nightly encrypted Snapshots off the box and a monthly restore drill. | An SFTP account on an office file store. |
+
+Those memory figures come from measuring the service on six hours of real recordings and adding room; they are in the service's own README under "GPU budget", and `docs/research/graphics-cards.md` keeps what offices report about their cards.
+
+**The server itself** needs:
+
 - **Ubuntu Server 24.04 or newer.**
-- **The NVIDIA driver.** `nvidia-smi` prints the card and the driver version when it is installed.
-- **The NVIDIA container toolkit with CDI turned on**, so Docker can hand the card to a container. `nvidia-ctk cdi list` prints the card when it is right.
 - **Docker with the Compose plugin.** `docker compose version` prints a version when it is right. The app needs Compose as a plugin (`docker compose`, with a space), not the older separate `docker-compose`.
 - **A data drive**, separate from the drive the operating system is on, and large. Recordings are big: a six-hour body-worn camera export is about 13 GB. The app keeps 200 GB free on this drive by default and pauses uploads when it cannot.
 - **An account on the server with `sudo` and in the `docker` group**, for the person installing. This guide calls it the compose admin. It is a separate thing from the `transcribe` account the app runs as, which is made in the server preparation step and is never in the docker group.
+- **For the transcription piece**, now or later: the NVIDIA driver and the NVIDIA container toolkit with CDI turned on, so Docker can hand the card to a container.
 
-**A name and a certificate.** The app answers on one hostname in your office's DNS, over HTTPS, with a certificate from your office's own certificate authority. Section 2 has the request.
+**A name and a certificate.** The app answers on one hostname in your office's DNS, over HTTPS. The certificate comes from your office's own certificate authority (section 2 has the request), or the install makes a self-signed one now and the office's own replaces it later.
 
-**Access to the office directory.** Sign-in is against your Active Directory. Section 2 has the checklist.
+**Access to the office directory**, if sign-in is to be against Active Directory. Section 2 has the checklist; an office without it runs with Local admins and adds the directory later.
 
 **Network access from the server**, at install and upgrade time, to the hosts in the appendix: GitHub for the code, the container registries for the images, Hugging Face for the models. At run time the server talks only to your domain controllers and to itself.
 
 ## 2. Before you start
 
-Three things are done away from the server, and each needs somebody with the right permissions. Do them first, so the install itself is not held up.
+Three things are done away from the server, and each needs somebody with the right permissions. Do the ones your office wants first, so the install itself is not held up. None of them is required to install: without the directory the app runs with Local admins (`./transcribe add directory` later), without a certificate from the office the install makes a self-signed one (below), and without a Hugging Face token the default diarizer needs none.
 
-### The directory checklist
+### The directory checklist (optional)
 
 You are making two groups, one read-only account, and one file. Do it by clicking, or with PowerShell; both come to the same thing.
 
@@ -65,9 +77,11 @@ Three warnings:
 - **Never test the bind with a wrong password against the real account.** A domain lockout policy can lock it after a few wrong tries, for a period, and then nobody can sign in to the app.
 - **A blank password may be accepted as an anonymous bind**, so a test that "passes" with an empty password proves nothing. Test with the real one.
 
-### The certificate request
+### The certificate request (or a self-signed one)
 
 The app's certificate comes from your office CA, on the Web Server template, for the app's hostname. The key is made on the server and never leaves it.
+
+**No certificate authority?** Answer `self-signed` when `./transcribe install` asks about the certificate, and it makes one: a root (`tls/self-signed-root.pem`, ten years) that every workstation trusts once, and a certificate for the app's name signed by it (two years). It prints the trust step for Windows (`certutil -addstore -f Root self-signed-root.pem` as an administrator, or Group Policy's Trusted Root Certification Authorities) and for a Mac. `./transcribe tls self-signed` renews it under the same root, so the workstations need nothing again. The office's own certificate replaces it later: put its `cert.pem` and `key.pem` in `tls/` and `docker compose restart caddy`. `./transcribe check` notes a self-signed certificate and never fails on it.
 
 1. **On the server**, make the key and the request. Replace `<hostname>` with the app's full name, the one people will type:
 
@@ -150,7 +164,7 @@ Check: `ls` shows `transcribe`, `compose.yaml`, `app/`, and the rest.
 
 ### Step 3: place the certificate
 
-From the staging folder where the certificate waited:
+Skip this step for a self-signed certificate: the install makes it in Step 4. Otherwise, from the staging folder where the certificate waited:
 
 ```bash
 mkdir -p tls ca && mv <staging>/<hostname>.cer tls/cert.pem && mv <staging>/key.pem tls/key.pem && mv <staging>/office-root.pem ca/office-root.pem && chmod 600 tls/key.pem && rmdir <staging>
@@ -164,20 +178,20 @@ Check: `ls -l tls ca` shows the three files, the key readable only by you.
 ./transcribe install
 ```
 
-It first checks what the server has: Docker, the Compose plugin, the NVIDIA driver, and the `transcribe` account. If one is missing it says which, and stops.
+It first checks what the server has: Docker, the Compose plugin, the `transcribe` account, and the NVIDIA driver. Docker, Compose and the account are required and it stops without them; a missing driver is a note, and the install goes on without transcription.
 
-Then it asks, in plain words, for the facts about your office, offering a sensible default where there is one:
+Then it asks, in plain words, in this order, offering a sensible default where there is one:
 
-- whether directory sign-in is on, and if so the directory's address, the bind account and its password, the base DN, and the two groups;
-- the address people will type, the port, the server's LAN address to listen on, and which networks may connect;
-- the App data folder and the time zone;
-- which graphics card the transcription service should use, chosen from a list by its UUID rather than its number, because numbers move between reboots;
-- the Hugging Face token;
-- the AI assistant's engine, if your office runs one: the Docker network a vLLM listens on, and its token. Leave the network blank for none. The engine's address and served model name are entered in the Admin panel afterwards, where Test connection proves them. `./transcribe engine` asks these again on its own. An office with no engine of its own can start the Local engine instead, after the install: see "The Local engine" below.
+- the address people will type, the port, the server's LAN address to listen on, which networks may connect, the App data folder and the time zone;
+- the certificate: the office's own already in `tls/` (yes), or a self-signed one made now (`self-signed`);
+- whether directory sign-in is on, and if so the directory's address, the bind account and its password, the base DN, and the two groups; no means Local admins only;
+- the card: with a driver it lists the cards with their memory and asks whether to use one for transcription now, chosen by its UUID rather than its number, because numbers move between reboots, and then the Hugging Face token (Enter for none); without a driver, or with no for now, transcription is not installed and it says the one command that adds it later;
+- with a card: the AI assistant's engine, `local` (the Local engine on that card, offered when the card has about 20 GB to spare beyond transcription), `shared` (an engine your office already runs: the Docker network it listens on, its address, its model name and its token), or `none`; and then whether to turn on the fast lane;
+- the backup target and the mail relay, each with Enter for none.
 
 Nothing you type leaves the server, and none of it is ever committed to the repository. The random secrets the app needs, the database password and the like, it makes itself; nobody types them.
 
-It writes two environment files, `.env` here and `whisperx-service/.env`, and the secret files under `secrets/` and `whisperx-service/secrets/`. Then it prints what is left, in order, which is Step 5.
+It writes two environment files, `.env` here and `whisperx-service/.env`, and the secret files under `secrets/` and `whisperx-service/secrets/`. Then it prints what is left, in order, for the pieces this install has, which is Step 5.
 
 If you run it a second time it refuses to overwrite anything. `./transcribe install --reconfigure` is how you change the office facts later, and `./transcribe directory` changes only the directory ones.
 
@@ -197,7 +211,13 @@ If the registry cannot be reached from your server, or nothing is published ther
 docker compose build
 ```
 
-**Fetch the models.** About 6.5 GB, once, into the App data folder. The Hugging Face token, if you gave one, is used here for pyannote; without one the pull says that model was skipped and goes on:
+**Prove the card** (with transcription): the service's self-test names the card, its memory and driver, and says whether the pinned stack has been verified on that generation:
+
+```bash
+docker compose run --rm whisperx selftest
+```
+
+**Fetch the models** (with transcription). About 6.5 GB, once, into the App data folder. The Hugging Face token, if you gave one, is used here for pyannote; without one the pull says that model was skipped and goes on:
 
 ```bash
 docker compose run --rm whisperx pull
@@ -221,11 +241,27 @@ docker compose run --rm app create-local-admin
 ./transcribe check
 ```
 
-Section 4 says what each line of that means. When every line passes, the app is installed.
+Section 4 says what each line of that means. When every line passes, the app is installed. An install without a card ends with notes, not failures: transcription not installed, and the self-signed certificate if you chose one.
+
+### Add a piece later
+
+Every piece is added on the server with one command, which asks its own questions, writes what it needs, starts what it starts and checks it:
+
+```bash
+./transcribe pieces
+```
+
+lists the pieces with their state (on, off, not installed) and the command for each, and the Panel's Status page shows the same list. Then one of:
+
+```bash
+./transcribe add transcription
+```
+
+when the card and its driver are in: it lists the cards, names one, takes the Hugging Face token if you have one, pulls the two images, runs the self-test, fetches the models, starts the service and the diarizer, and checks that the service answers. Recordings uploaded while there was no card are picked up within a minute. `./transcribe add engine` (below, the Local engine or a shared one), `./transcribe add fast-lane`, `./transcribe add directory`, `./transcribe add mail` and `./transcribe add backup` are the rest. `./transcribe remove transcription`, `fast-lane` or `engine` stop a piece and free its memory; the directory, mail and the backup are changed by running `add` again.
 
 ### The fast lane
 
-A second copy of the transcription service for what must not wait behind a long job: a recording made in the app, and later the interpreter. The install asks whether to turn it on; the answer is no unless you say yes, and nothing is lost without it but the waiting. It needs about eight gigabytes of the card's memory. Later, or to change your mind:
+A second copy of the transcription service for what must not wait behind a long job: a recording made in the app, and later the interpreter. The install asks whether to turn it on; the answer is no unless you say yes, and nothing is lost without it but the waiting. It needs about eight gigabytes of the card's memory. Later, or to change your mind (`./transcribe add fast-lane` is the same):
 
 ```bash
 ./transcribe fast-lane on
@@ -239,7 +275,7 @@ The admin guide's "The fast lane" section says what it does and what the Status 
 
 ### The Local engine
 
-The AI assistant needs a language-model engine. If your office already runs a vLLM, `./transcribe engine` points the app at it. If not, the stack can run a small one itself, on the same card as the transcription service, within a share of that card's memory:
+The AI assistant needs a language-model engine. The install offers one when a card is named; later, `./transcribe add engine` asks `local` or `shared`. If your office already runs a vLLM, `./transcribe engine` points the app at it. If not, the stack can run a small one itself, on the same card as the transcription service, within a share of that card's memory:
 
 ```bash
 ./transcribe engine local on
@@ -275,7 +311,7 @@ Leave the relay empty to run without mail. The install says what that loses: no 
 
 ## 4. Check
 
-`./transcribe check` runs every smoke check and prints a plain report. Run it whenever something seems wrong; it never changes anything. Each line is `pass`, `amber`, or `FAIL`, and a failure says what to do.
+`./transcribe check` runs every smoke check and prints a plain report. Run it whenever something seems wrong; it never changes anything. It opens with the pieces table (the same one `./transcribe pieces` prints and the Status page shows), then each line is `pass`, `amber`, or `FAIL`, and a failure says what to do. A piece that is not installed is a note, never a failure.
 
 **The server**
 
@@ -294,6 +330,7 @@ Leave the relay empty to run without mail. The install says what that loses: no 
 | hostname resolves | DNS answers for the app's name. |
 | the certificate is good until DATE | Its expiry. Amber within a month; the admin guide has the renewal. |
 | the certificate names hostname | The certificate is for the right name. |
+| the certificate is self-signed: every workstation must trust tls/self-signed-root.pem | A note, not a failure. Replace it with the office's own when you have one. |
 
 **The containers**
 
@@ -341,7 +378,10 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | What you see | What it means | What to do |
 |---|---|---|
 | `there is no transcribe account; the install guide's server preparation makes it` | Step 1 was skipped. | Run the `useradd` in Step 1, then `./transcribe install` again. |
-| `nvidia-smi is not on this server, so no GPU can be reserved` | The NVIDIA driver is not installed, or the machine has not been rebooted since. | Install the driver, reboot, and check `nvidia-smi` prints the card. |
+| `nvidia-smi is not on this server: no transcription until a card and its driver are added` | A note at install: the NVIDIA driver is not installed, there is no card, or the machine has not been rebooted since. The install goes on without transcription. | When the card is in: install the driver, reboot, check `nvidia-smi` prints the card, then `./transcribe add transcription`. |
+| `Waiting for the card` on a recording's row | Transcription is not installed on this server, and the recording is kept until it is. | `./transcribe add transcription`; the recording is picked up within a minute. |
+| `Recording needs the transcription piece` (in the app) | Record and Record now cannot wait for a card the way an upload can. | The same. |
+| `transcription is not installed (no card yet)` from `check` | A note, not a failure: the office chose to install without a card. | Nothing, until the card arrives. |
 | `There is already a .env here.` | `install` was run before. | It will not overwrite anything. `./transcribe install --reconfigure` changes the office facts; `./transcribe directory` changes only the directory. |
 | `There is no Hugging Face token stored: the pull skips pyannote` | The token step was skipped, or Enter was pressed with nothing stored. Not an error: Nemotron, the default diarizer, needs no token. | To have pyannote as well, `./transcribe install --reconfigure`, type the token when asked, and run the pull again. |
 | `user: <uid>:<gid>` or `/replace/with/the/app-data-folder` in a `docker compose` error | An install from a tag before v1.82.1 left the service's environment file half written. | `./transcribe upgrade` to v1.82.1 or later completes `whisperx-service/.env`; or fill in `WHISPERX_UID`, `WHISPERX_GID`, `WHISPERX_MODELS_DIR` and `WHISPERX_STATE_DIR` by hand. |
@@ -522,7 +562,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `SMTP_USER`, `SMTP_PASSWORD_FILE` | The relay's sign-in, only when it wants one; the password lives in `secrets/smtp_password`, written by the install. |
 | `MAIL_FROM` | The sender, shown as "Gideon Transcribe <address>". Required when `SMTP_HOST` is set. |
 | `COMPOSE_FILE` | Which compose files Compose reads. Left out entirely for most offices; uncommented only for a shared engine. Never set empty: Compose reads an empty value as a path and refuses to start. |
-| `COMPOSE_PROFILES` | A comma-separated list. `llm` starts the Local engine in this stack (`./transcribe engine local on` and `off`); `fast` starts the fast lane (`./transcribe fast-lane on` and `off`). Empty means neither. |
+| `COMPOSE_PROFILES` | A comma-separated list of the pieces that start with the stack. `transcription` is the transcription service and the diarizer (written when the install names a card, or by `./transcribe add transcription`); `llm` starts the Local engine (`./transcribe add engine`, or `engine local on` and `off`); `fast` starts the fast lane (`./transcribe add fast-lane`, or `fast-lane on` and `off`). Empty means none: an install without a card. |
 | `LLM_LOCAL_MODEL` | The model the Local engine loads, as Hugging Face names it. Default `Qwen/Qwen3.5-4B`, which fits in 20 GB with its cache. |
 | `LLM_LOCAL_GPU_UUID` | Which card the Local engine uses, by UUID; `engine local on` asks and offers the least busy one. |
 | `LLM_LOCAL_GPU_FRACTION` | The share of that card's memory the engine may take, leaving the rest for transcription. Default 0.21, which is 20 GB of a 96 GB card. |
@@ -533,10 +573,11 @@ All in the install home and all ignored by git, so none of them is ever committe
 
 | File | What it is |
 |---|---|
-| `whisperx-service/.env` | The transcription service's own settings, written by `./transcribe install`. |
+| `whisperx-service/.env` | The transcription service's own settings, written by `./transcribe install`: the card's UUID (`WHISPERX_GPU_UUID`), the account's numbers (`WHISPERX_UID`, `WHISPERX_GID`) and its two folders under the App data folder (`WHISPERX_MODELS_DIR`, `WHISPERX_STATE_DIR`), which the service refuses to start without. |
 | `whisperx-service/secrets/` | The service's tokens file and the Hugging Face token. |
 | `secrets/` | The app's secret files named above. |
 | `tls/cert.pem`, `tls/key.pem` | The certificate and its key, the key mode 0600. |
+| `tls/self-signed-root.pem`, `tls/self-signed-root.key` | The self-signed root and its key, only when the install made one; the root is what the workstations trust. |
 | `ca/office-root.pem` | The office CA root as PEM. |
 
 And under the App data folder, `backup/`, where `./transcribe upgrade` puts the database dump and the configuration copy it takes before every upgrade, and `./transcribe backup-db` puts a dump on demand.

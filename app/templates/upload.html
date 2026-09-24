@@ -24,11 +24,16 @@
       <p class="notice danger">
         Uploading is paused because the server is low on space. Ask IT.
       </p>
-    {% elif not service_is_up %}
+    {% elif not service_is_up and transcription_installed %}
       <p class="notice danger">
         Transcription is not available right now. Try again later.
       </p>
     {% else %}
+    {% if not transcription_installed %}
+      <p class="notice warn">
+        Transcription is not installed on this server yet. Recordings you upload are kept and transcribed when the card arrives.
+      </p>
+    {% endif %}
 
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 

@@ -11,7 +11,9 @@
   <div class="page roomy start">
     <h1>{{ greeting }}</h1>
     <p class="lead">What do you want to do?</p>
-    {% if not service_is_up %}
+    {% if not transcription_installed %}
+      <p class="notice warn">Transcription is not installed on this server yet. Recordings you upload are kept and transcribed when the card arrives.</p>
+    {% elif not service_is_up %}
       <p class="notice danger">Transcription is not available right now. Try again later; uploads and recordings will wait.</p>
     {% endif %}
     <div class="starts">

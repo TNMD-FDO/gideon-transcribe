@@ -1,0 +1,94 @@
+"""The `transcribe` script itself (v1.83.0): it parses, every command in its
+usage block is dispatched and every dispatched command is in the usage block,
+the pieces it adds are the app's pieces, and the pure profile helpers keep
+their rule: adding one profile never removes another. Bash is on the CI
+runner and on the office's server; where it is not, these are skipped."""
+
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+from core import pieces
+
+HERE = Path(__file__).resolve().parent.parent.parent
+SCRIPT = HERE / "transcribe"
+BASH = shutil.which("bash")
+
+needs_bash = pytest.mark.skipif(BASH is None, reason="no bash on this machine")
+
+
+def text() -> str:
+    return SCRIPT.read_text(encoding="utf-8")
+
+
+@needs_bash
+def test_the_script_parses():
+    done = subprocess.run([BASH, "-n", str(SCRIPT)], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+
+
+def test_every_usage_line_is_dispatched_and_the_other_way_round():
+    usage = set(re.findall(r"^#   \./transcribe ([a-z-]+)", text(), re.M))
+    dispatch = set(re.findall(r"^([a-z-]+)\) (?:shift && )?cmd_", text(), re.M))
+    # `help` is the usage itself; `status` and the rest are commands.
+    assert usage - dispatch == set(), (
+        f"in the usage block, not dispatched: {usage - dispatch}"
+    )
+    # Commands an operator is not told about are allowed only when they are
+    # what the timers call or a step of another command.
+    quiet = {"backup-weekly", "install-timers", "restore-dump"}
+    assert dispatch - usage - quiet == set(), (
+        f"dispatched, not in the usage block: {dispatch - usage - quiet}"
+    )
+
+
+def test_the_pieces_the_script_adds_are_the_apps():
+    body = text().split("cmd_add() {", 1)[1].split("\n}\n", 1)[0]
+    added = re.findall(r"^    ([a-z-]+)\)", body, re.M)
+    assert tuple(added) == pieces.PIECES
+
+
+def test_the_service_and_the_diarizer_are_behind_the_transcription_profile():
+    compose = (HERE / "whisperx-service" / "compose.yaml").read_text(encoding="utf-8")
+    # The services section alone: the networks section names a `whisperx` too.
+    section = compose.split("\nservices:\n", 1)[1].split("\nsecrets:\n", 1)[0]
+    services = re.split(r"^  ([a-z-]+):\n", section, flags=re.M)
+    # re.split gives [head, name, body, name, body, ...]
+    by_name = dict(zip(services[1::2], services[2::2], strict=True))
+    for name in ("whisperx", "diarizer"):
+        assert 'profiles: ["transcription"]' in by_name[name], name
+    assert 'profiles: ["fast"]' in by_name["whisperx-fast"]
+    # The card is a default, never a demand, so the stack starts without it.
+    assert "WHISPERX_GPU_UUID:?" not in compose
+    assert "WHISPERX_GPU_UUID:-unset" in compose
+    example = (HERE / ".env.example").read_text(encoding="utf-8")
+    assert re.search(r"^COMPOSE_PROFILES=transcription$", example, re.M)
+
+
+@needs_bash
+def test_adding_one_profile_never_removes_another(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("COMPOSE_PROFILES=\n", encoding="utf-8")
+    # The helpers, sourced out of the script with the pieces they need:
+    # env_value and set_env read and write $ENV_FILE.
+    source = text()
+    wanted = []
+    for name in ("env_value", "set_env", "profile_on", "profile_add", "profile_remove"):
+        match = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", source, re.M | re.S)
+        assert match, name
+        wanted.append(match.group(0))
+    probe = (
+        "set -euo pipefail\n"
+        f'ENV_FILE="{env.as_posix()}"\n'
+        + "\n".join(wanted)
+        + "\nprofile_add transcription\nprofile_add llm\nprofile_add transcription\n"
+        "profile_remove llm\nprofile_add fast\nprofile_remove transcription\n"
+        "env_value COMPOSE_PROFILES\n"
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "fast"

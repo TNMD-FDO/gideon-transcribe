@@ -29,6 +29,7 @@ from core import (
     guides,
     lifecycle,
     mail,
+    pieces,
     settings_store,
     uploads,
     whisperx,
@@ -166,6 +167,9 @@ def status_lines(request: HttpRequest) -> JsonResponse:
 
     return JsonResponse(
         {
+            # The Pieces of this installation (v1.83.0): each on, off, not
+            # installed or not answering, with the command IT runs to add it.
+            "pieces": pieces.listed(),
             "services": _services(),
             "service": _whisperx(),
             # The fast lane, when the office turned it on at install.
@@ -265,6 +269,13 @@ def _database() -> dict:
 
 
 def _service_health() -> dict:
+    if not pieces.transcription_installed():
+        # Not a fault: the office has no card yet (v1.83.0).
+        return {
+            "name": "whisperx",
+            "state": "not installed",
+            "says": "no card yet; ./transcribe add transcription",
+        }
     if whisperx.is_alive():
         return {"name": "whisperx", "state": "healthy", "says": "answering"}
     return {"name": "whisperx", "state": "unreachable", "says": "no answer"}
@@ -312,6 +323,8 @@ def _worker(queue: str) -> dict:
 
 def _whisperx(lane: str = "") -> dict:
     """The service's own status endpoint, rendered for an Admin."""
+    if not pieces.transcription_installed():
+        return {"up": False, "installed": False, "says": "not installed"}
     try:
         return {"up": True, **whisperx.status(lane)}
     except Exception as problem:  # noqa: BLE001 - any failure is "not reachable"
@@ -908,8 +921,8 @@ def installation(request: HttpRequest) -> HttpResponse:
         ("WhisperX service", os.environ.get("WHISPERX_URL", "not set")),
         ("Engine network", os.environ.get("LLM_NETWORK", "not set")),
         (
-            "Local engine profile",
-            os.environ.get("COMPOSE_PROFILES") or "off (a shared engine)",
+            "Compose profiles",
+            os.environ.get("COMPOSE_PROFILES") or "none",
         ),
         ("Media threads per job", os.environ.get("MEDIA_THREADS_PER_JOB", "not set")),
         ("Media jobs at once", os.environ.get("MEDIA_CONCURRENT_JOBS", "not set")),

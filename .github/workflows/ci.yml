@@ -115,6 +115,13 @@ jobs:
           : > whisperx-service/secrets/hf_token
           : > whisperx-service/secrets/tokens
           docker compose -f whisperx-service/compose.yaml config --quiet
+          # The transcription piece (v1.83.0): the service and the diarizer are
+          # behind a profile, and the fast lane, which extends the service,
+          # must not inherit it.
+          docker compose -f whisperx-service/compose.yaml --profile transcription config --quiet
+          docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx whisperx
+          docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx diarizer
+          ! docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx whisperx-fast
           # The fast lane, which is the service a second time under a profile.
           docker compose -f whisperx-service/compose.yaml --profile fast config --quiet
 
@@ -134,6 +141,14 @@ jobs:
           mkdir -p tls ca whisperx-service/secrets
           touch whisperx-service/.env
           docker compose config --quiet
+          # Without the transcription profile (an install with no card) the
+          # service and the diarizer are absent; with it they are present and
+          # the fast lane is not.
+          ! docker compose config --services | grep -qx whisperx
+          docker compose --profile transcription config --quiet
+          docker compose --profile transcription config --services | grep -qx whisperx
+          docker compose --profile transcription config --services | grep -qx diarizer
+          ! docker compose --profile transcription config --services | grep -qx whisperx-fast
           # The backup profile's service, and the drill's override project.
           docker compose --profile backup config --quiet
           DRILL_DIR=/tmp/drill docker compose -p transcribe-drill             -f compose.yaml -f compose.drill.yaml config --quiet

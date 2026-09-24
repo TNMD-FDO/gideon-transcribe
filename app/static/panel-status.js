@@ -29,6 +29,19 @@
   }
 
   function draw(state) {
+    // The Pieces card (v1.83.0): each piece with its state and, when it is
+    // off or not installed, the one command IT runs on the server.
+    var pieces = document.getElementById("pieces");
+    if (pieces && state.pieces) {
+      pieces.innerHTML = "<dl class='kv'>" + state.pieces.map(function (one) {
+        var tone = one.state === "on" ? "ok" : (one.state === "not answering" ? "danger" : "");
+        var mark = "<span class='pill" + (tone ? " " + tone : "") + "'>" + escape(one.state) + "</span>";
+        var how = one.state === "on" ? "" : " <code>" + escape(one.command) + "</code>";
+        return "<dt>" + escape(one.title) + "</dt><dd>" + mark +
+          " <span class='muted small'>" + escape(one.says) + "</span>" + how + "</dd>";
+      }).join("") + "</dl>";
+    }
+
     var services = document.getElementById("services");
     if (!state.services.length) {
       services.innerHTML =
@@ -38,14 +51,18 @@
       services.innerHTML = "<dl class='kv'>" + state.services.map(function (one) {
         var mark = one.state === "healthy"
           ? "<span class='pill ok'>healthy</span>"
-          : "<span class='pill danger'>" + escape(one.state) + "</span>";
+          : one.state === "not installed"
+            ? "<span class='pill'>not installed</span>"
+            : "<span class='pill danger'>" + escape(one.state) + "</span>";
         return "<dt>" + escape(one.name) + "</dt><dd>" + mark +
           " <span class='muted small'>" + escape(one.says) + "</span></dd>";
       }).join("") + "</dl>";
     }
 
     var service = state.service;
-    if (!service.up) {
+    if (!service.up && service.installed === false) {
+      facts("service", [["Installed", "no: this server has no card yet; ./transcribe add transcription"]]);
+    } else if (!service.up) {
       facts("service", [["Reachable", "no: " + (service.says || "")]]);
     } else {
       var gpu = service.gpu || {};
@@ -140,7 +157,7 @@
 
     document.getElementById("media").textContent =
       state.media.running + " media job(s) running, " +
-      state.media.pieces + " upload piece(s) pending";
+      state.media.pieces + " upload part(s) pending";
 
     var directory = document.getElementById("directory");
     if (directory) {

@@ -110,8 +110,16 @@ def test_the_install_guide_has_the_chapter_s_fixed_parts():
         "certreq",
         "useradd",
         "Nothing is ever pushed",
+        # The pieces (v1.83.0, ADR 0015).
+        "./transcribe add",
+        "./transcribe pieces",
+        "self-signed",
+        "Waiting for the card",
+        "Add a piece later",
     ):
         assert wanted in text, f"the install guide does not have {wanted!r}"
+    admin = text_of("admin-guide.md")
+    assert "**Pieces**" in admin and "./transcribe add transcription" in admin
 
 
 # Rendering -------------------------------------------------------------------

@@ -24,6 +24,7 @@ from core import (
     exports,
     guides,
     lifecycle,
+    pieces,
     pipeline,
     settings_store,
     tasks,
@@ -88,6 +89,9 @@ def start(request: HttpRequest) -> HttpResponse:
             "greeting": greeting(),
             "can_record": dictation.on(),
             "service_is_up": whisperx.is_alive(),
+            # The transcription piece (v1.83.0): absent, the page says
+            # recordings wait for the card rather than that something is down.
+            "transcription_installed": pieces.transcription_installed(),
             # The Cases tile's counts (Phase 8 chapter 1).
             "cases_line": _cases_line(request.user),
         },
@@ -165,6 +169,10 @@ def state_words(one) -> tuple[str, str]:
         return "Refused", "danger"
     if one.media_state == "failed":
         return "Failed", "danger"
+    if one.media_state == "ready" and not pieces.transcription_installed():
+        # Ready, no Job and no transcript: the transcription piece is not
+        # installed, and the Recording waits for it (v1.83.0).
+        return pieces.WAITING, "warn"
     return one.get_media_state_display(), ""
 
 
@@ -256,6 +264,7 @@ def upload(request: HttpRequest) -> HttpResponse:
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
+            "transcription_installed": pieces.transcription_installed(),
             # The speaker hint is pyannote's alone (Phase 5 chapter 4).
             "diarizer": settings_store.diarizer(),
             "limits": {
@@ -289,7 +298,10 @@ def submit(request: HttpRequest) -> JsonResponse:
 
     # Asked when the page opens and again here, because the answer can change
     # in between and a Batch nobody can transcribe is worse than a refusal.
-    if not whisperx.is_alive():
+    # Unless the transcription piece is not installed at all (v1.83.0): then
+    # the Batch is made, the bytes upload, and the Recordings wait for the
+    # card rather than being refused.
+    if pieces.transcription_installed() and not whisperx.is_alive():
         return JsonResponse(
             {
                 "error": Refusal.MESSAGES[Refusal.SERVICE_UNREACHABLE],
@@ -778,7 +790,11 @@ def retry(request: HttpRequest, recording_id) -> JsonResponse:
     if not whisperx.is_alive():
         return JsonResponse(
             {
-                "error": "Transcription is not available right now. Try again later.",
+                "error": (
+                    pieces.NEEDS_THE_PIECE
+                    if not pieces.transcription_installed()
+                    else "Transcription is not available right now. Try again later."
+                ),
                 "reason_class": Refusal.SERVICE_UNREACHABLE,
             },
             status=503,
@@ -846,7 +862,11 @@ def process_again(request: HttpRequest, recording_id) -> JsonResponse:
     if not whisperx.is_alive():
         return JsonResponse(
             {
-                "error": "Transcription is not available right now. Try again later.",
+                "error": (
+                    pieces.NEEDS_THE_PIECE
+                    if not pieces.transcription_installed()
+                    else "Transcription is not available right now. Try again later."
+                ),
                 "reason_class": Refusal.SERVICE_UNREACHABLE,
             },
             status=503,

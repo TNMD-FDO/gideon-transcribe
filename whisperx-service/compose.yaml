@@ -34,6 +34,12 @@ services:
     build:
       context: .
     restart: unless-stopped
+    # The transcription piece (v1.83.0, ADR 0015): the service and the
+    # diarizer start only under the `transcription` profile, which
+    # `./transcribe install` writes when the office names a card and
+    # `./transcribe add transcription` writes later. An office with no card
+    # yet runs the rest of the stack without them.
+    profiles: ["transcription"]
 
     # The app's own system user, never root. The ids come from the office's
     # `transcribe` account, and the two mounted folders belong to it.
@@ -60,7 +66,11 @@ services:
               # through CDI.
               capabilities: ["gpu"]
               device_ids:
-                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:?set WHISPERX_GPU_UUID in .env}"
+                # A default rather than a demand (v1.83.0): Compose reads every
+                # service's variables whether or not its profile is on, and an
+                # install without a card must still bring the stack up. The
+                # install writes the UUID before the profile is ever started.
+                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:-unset}"
 
     volumes:
       # The model folder: the ASR, diarization, and alignment models, and the
@@ -130,17 +140,6 @@ services:
     logging:
       driver: journald
 
-  # The fast lane: the same service a second time, for what must not wait
-  # behind a long job (the app's Live recordings, and later the pieces of one
-  # being transcribed while it records, and the Interpreter's Turns). Off
-  # unless the `fast` profile is on, which `./transcribe fast-lane on` sets
-  # after asking; an office with one modest card leaves it off and loses
-  # nothing but the waiting. It shares the model folder (read once, cached
-  # twice) and has a state folder of its own, because two copies writing one
-  # job database would corrupt it. Same card unless the .env says otherwise,
-  # about eight gigabytes of it for the default model; a smaller memory limit
-  # because it holds one short job at a time. Reached at
-  # http://whisperx-fast:8000 from the app's containers, under the same token.
   # The diarizer (Phase 5 chapter 4, ADR 0014): Nemotron 3 Diarization on
   # NeMo, in a container of its own so the WhisperX image's pinned stack is
   # not disturbed. The WhisperX service calls it at http://diarizer:8100 for
@@ -152,6 +151,7 @@ services:
     build:
       context: ./diarizer
     restart: unless-stopped
+    profiles: ["transcription"]
     user: "${WHISPERX_UID:?set WHISPERX_UID in .env}:${WHISPERX_GID:?set WHISPERX_GID in .env}"
     init: true
     deploy:
@@ -165,7 +165,7 @@ services:
             - driver: cdi
               capabilities: ["gpu"]
               device_ids:
-                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:?set WHISPERX_GPU_UUID in .env}"
+                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:-unset}"
     volumes:
       - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
     environment:
@@ -200,10 +200,32 @@ services:
     logging:
       driver: journald
 
+  # The fast lane: the same service a second time, for what must not wait
+  # behind a long job (the app's Live recordings, and later the parts of one
+  # being transcribed while it records, and the Interpreter's Turns). Off
+  # unless the `fast` profile is on, which `./transcribe fast-lane on` sets
+  # after asking; an office with one modest card leaves it off and loses
+  # nothing but the waiting. It shares the model folder (read once, cached
+  # twice) and has a state folder of its own, because two copies writing one
+  # job database would corrupt it. Same card unless the .env says otherwise,
+  # about eight gigabytes of it for the default model; a smaller memory limit
+  # because it holds one short job at a time. Reached at
+  # http://whisperx-fast:8000 from the app's containers, under the same token.
+  #
+  # Written out in full rather than with `extends: whisperx` (v1.83.0):
+  # Compose merges an extended service's `profiles` list into the child's,
+  # and the lane would then start under the `transcription` profile alone,
+  # on a card the office never named for it. Every line here that is not the
+  # lane's own (the memory limit, the card, the state folder) is the service's,
+  # and a change to the service above is made here too.
   whisperx-fast:
-    extends:
-      service: whisperx
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-whisperx:${RELEASE_TAG:-dev}
+    build:
+      context: .
+    restart: unless-stopped
     profiles: ["fast"]
+    user: "${WHISPERX_UID:?set WHISPERX_UID in .env}:${WHISPERX_GID:?set WHISPERX_GID in .env}"
+    init: true
     deploy:
       resources:
         limits:
@@ -223,6 +245,44 @@ services:
     volumes:
       - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
       - "${WHISPERX_FAST_STATE_DIR:-/var/tmp/whisperx-fast-unset}:/srv/state"
+    secrets:
+      - hf_token
+      - tokens
+    environment:
+      HF_TOKEN_FILE: /run/secrets/hf_token
+      WHISPERX_TOKENS_FILE: /run/secrets/tokens
+      WHISPERX_MAX_UPLOAD_GB: "${WHISPERX_MAX_UPLOAD_GB:-2}"
+      WHISPERX_MAX_AUDIO_HOURS: "${WHISPERX_MAX_AUDIO_HOURS:-8}"
+      WHISPERX_JOB_TIMEOUT_BASE_MINUTES: "${WHISPERX_JOB_TIMEOUT_BASE_MINUTES:-30}"
+      WHISPERX_JOB_TIMEOUT_PER_AUDIO_HOUR_MINUTES: "${WHISPERX_JOB_TIMEOUT_PER_AUDIO_HOUR_MINUTES:-60}"
+      WHISPERX_RESULT_HOURS: "${WHISPERX_RESULT_HOURS:-24}"
+      WHISPERX_JOB_HISTORY_DAYS: "${WHISPERX_JOB_HISTORY_DAYS:-30}"
+      WHISPERX_BATCH_SIZE: "${WHISPERX_BATCH_SIZE:-16}"
+      WHISPERX_VAD_ONSET: "${WHISPERX_VAD_ONSET:-0.50}"
+      WHISPERX_VAD_OFFSET: "${WHISPERX_VAD_OFFSET:-0.363}"
+      WHISPERX_ALIGN_LANGUAGES: "${WHISPERX_ALIGN_LANGUAGES:-en,es}"
+      WHISPERX_LOG_LEVEL: "${WHISPERX_LOG_LEVEL:-info}"
+      DIARIZER_URL: "http://diarizer:8100"
+      TZ: "${TZ:-UTC}"
+    networks:
+      - whisperx
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=3).status == 200 else 1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+    stop_grace_period: 30s
+    logging:
+      driver: journald
 
 secrets:
   hf_token:

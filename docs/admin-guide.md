@@ -46,9 +46,11 @@ Every setting has a table in the settings catalogue in the repository (`docs/spe
 
 ## The Status page
 
-Everything on it is read again every five seconds. It has six blocks.
+Everything on it is read again every five seconds. It has these blocks.
 
-**Services**: each container, whether it is listening, and whether its own health check passes. Amber is slow or waiting; red is down.
+**Pieces**: the optional parts of this installation (Transcription, the Fast lane, the Engine, the Directory, Mail, the Backup), each on, off, not installed or not answering, with the one command IT runs on the server to add it (`./transcribe add transcription` and the rest). The page runs nothing: the app is never given the Docker socket (ADR 0009). A piece that is not installed is a plain pill, never red; a piece that is installed and does not answer is red. `./transcribe pieces` on the server prints the same list.
+
+**Services**: each container, whether it is listening, and whether its own health check passes. Amber is slow or waiting; red is down. The transcription service reads "not installed" on a server with no card yet.
 
 **WhisperX service**: whether the transcription service answers, which model it has loaded, what it is doing, and which diarizers are installed: Nemotron when its container is up with the model loaded, pyannote when its weights were fetched with a token.
 
@@ -339,6 +341,8 @@ docker compose restart caddy
 ```
 
 Nothing else restarts and nobody is signed out.
+
+**A self-signed certificate.** An office without its own authority has the certificate `./transcribe install` made: a root in `tls/self-signed-root.pem` that every workstation trusts once, and a certificate for the app's name signed by it, good for two years. `./transcribe check` notes it and never fails on it. `./transcribe tls self-signed` renews the certificate under the same root, so the workstations need nothing again. When the office has its own certificate, put its `cert.pem` and `key.pem` in `tls/` and restart the web server as above; the note goes, and the root files may be deleted.
 
 **A note on DNS.** The directory's zone lives on the domain controllers, and a caching resolver in front of them keeps a "name does not exist" answer for the zone's negative TTL, usually an hour. So when the app's name is first created, create the record before anyone tries the name, or flush that resolver's cache; otherwise the name goes on failing for an hour after it exists.
 

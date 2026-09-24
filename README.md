@@ -80,27 +80,35 @@ whether the database migrates.
 ## Installing (the short version)
 
 The full guide is [`docs/install.md`](docs/install.md), written for an IT
-generalist. In outline, on a server with an NVIDIA GPU, Ubuntu Server 24.04
-or newer, the NVIDIA driver, the container toolkit with CDI, and Docker with
-the Compose plugin:
+generalist. The app is installed in pieces: the server alone runs cases,
+incidents, notes, clips and documents; a graphics card adds transcription; room
+on the card, or an engine the office already runs, adds the AI assistant; the
+directory, mail and a backup store are pieces too. Each is added at install or
+later with one command, `./transcribe add <piece>`. In outline, on a server
+with Ubuntu Server 24.04 or newer and Docker with the Compose plugin (and, for
+transcription, an NVIDIA card with its driver and the container toolkit with
+CDI):
 
-1. **Before you start.** In the directory: a sign-in group, an optional admin
-   group, a read-only service account, and the CA root as PEM. On the server:
-   a hostname and a certificate from the office's own CA. On Hugging Face,
-   only if you want pyannote as a second diarizer: an account that has
-   accepted its terms, and a read token; the default diarizer needs none.
+1. **Before you start**, for the pieces you want. In the directory: a sign-in
+   group, an optional admin group, a read-only service account, and the CA
+   root as PEM; or Local admins only for now. On the server: a hostname, and
+   a certificate from the office's own CA, or a self-signed one the install
+   makes. On Hugging Face, only if you want pyannote as a second diarizer: an
+   account that has accepted its terms, and a read token; the default
+   diarizer needs none.
 2. **Prepare the server.** One `sudo` session creates the `transcribe` system
    user (no login, not in the docker group), the app's data folder on the
    data drive, and an empty install home.
 3. **Clone a Release tag** into that install home, then put `cert.pem`,
-   `key.pem`, and the CA root into `tls/` and `ca/`.
-4. **`./transcribe install`.** It asks the office facts in plain words, writes
-   both `.env` files, generates the secrets, and reports anything missing.
-5. **Pull the images and the models**, `docker compose up -d`, create the
-   Local admin, and run `./transcribe check`, which prints a plain report of
-   every check.
+   `key.pem`, and the CA root into `tls/` and `ca/` if the office has them.
+4. **`./transcribe install`.** It asks what the server has and the office
+   facts in plain words, writes both `.env` files, generates the secrets,
+   and prints what is left for the pieces this install has.
+5. **Pull the images** (and, with a card, prove it and fetch the models),
+   `docker compose up -d`, create the Local admin, and run
+   `./transcribe check`, which prints a plain report of every check.
 6. **Smoke test.** Sign in, see the status page green, upload one recording
-   and watch it through to a transcript.
+   and watch it through to a transcript, or to "Waiting for the card".
 
 Upgrading is `./transcribe upgrade <tag>`; each Release's notes open with two
 fixed lines, whether the models changed and whether the database migrates.
