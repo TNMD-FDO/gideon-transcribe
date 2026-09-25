@@ -1049,7 +1049,11 @@ def answer_turn(turn_id) -> None:
         system = prompts.system_message(
             ground.text,
             template.text,
-            prompts.with_camera_rules(prompts.CHAT_FORMAT, seen)
+            (
+                prompts.with_record_rules(prompts.CHAT_FORMAT)
+                if digest
+                else prompts.with_camera_rules(prompts.CHAT_FORMAT, seen)
+            )
             + ("\n\n" + documents.RULE if papers else ""),
         )
         earlier = [

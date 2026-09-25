@@ -477,7 +477,10 @@ def test_the_chat_is_told_the_digest_and_the_descriptions_at_the_times_asked(
     assert prompts.NEAR_HEADING in user
     assert "[00:10:00]-[00:15:00] [camera] A bag on the seat." in user
     assert "[camera] A doorway." not in user
-    assert asked[0]["messages"][0]["content"].endswith(prompts.CAMERA_RULES)
+    # The camera rules and, since the Digest's lines are marked, the record
+    # rules (v1.87.1).
+    system = asked[0]["messages"][0]["content"]
+    assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
     assert turn.citations == {"[00:10:00]": 600.0}
 
     # No time in the question: the Digest alone for the picture.
@@ -524,7 +527,8 @@ def test_the_case_chat_reads_a_digest_after_each_transcript_and_alone_when_too_b
     assert user.count(prompts.RECORD_HEADING) == 1
     assert user.index("Look at that") < user.index(prompts.RECORD_HEADING)
     assert "(both) The first stop." in user
-    assert asked[0]["messages"][0]["content"].endswith(prompts.CAMERA_RULES)
+    system = asked[0]["messages"][0]["content"]
+    assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
     assert turn.readings[0]["digest"] is True and turn.readings[1]["digest"] is False
 
     # Over the hours ceiling: the recording with a Digest contributes the

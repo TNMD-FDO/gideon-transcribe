@@ -489,7 +489,11 @@ def answer_case_turn(turn_id) -> None:
         system = prompts.system_message(
             ground.text,
             template.text,
-            prompts.with_camera_rules(prompts.CASE_CHAT_FORMAT, any(digests.values()))
+            (
+                prompts.with_record_rules(prompts.CASE_CHAT_FORMAT)
+                if any(digests.values())
+                else prompts.CASE_CHAT_FORMAT
+            )
             + ("\n\n" + notes.RULE if notes.any_on(read) else "")
             + ("\n\n" + documents.RULE if documents.of_case(case) else ""),
         )

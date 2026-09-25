@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-25, at v1.87.1 (the camera is in the case chat's timeline; nothing shared moves).** Prompt plumbing alone: a call that reads a Digest is told the record's marks. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.87.0 (the case chat reads an incident at one sitting; nothing shared moves).** The case chat reads an incident's cameras as one record, as the memo does, so a twelve-camera question sends the engine about a third fewer tokens and one call in place of three; each engine call's time limit grows by one second per 500 tokens sent. The engine's request priority and the app's four lanes are unchanged; no port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.86.2 (proposed events waiting count as needing you; nothing shared moves).** One pill's tone on the dashboard line, so Home's Needs you lists a case with proposals waiting. Pages alone; no port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.86.1 (My recordings lists the Workspace alone; nothing shared moves).** Found on the server walk after v1.86.0: My recordings listed the person's cased uploads too, and the Panel's view of another person's recordings showed no rows since the batch grouping. Pages alone; no port, memory, card, timer, network or engine request moves.

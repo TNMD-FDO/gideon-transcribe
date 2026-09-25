@@ -88,7 +88,8 @@ SHIPPED_HISTORY = {
     "prompt:ground_rules": ("7a65498ab25fbf63",),
     "prompt:chat": ("0db99390974f3bef", "a31c1f00877b1dce"),
     "prompt:suggestions": ("122c6e749064c4d6",),
-    "prompt:case_chat": ("0003b7162b10fbfd", "6ad6dc860e5113fb"),
+    # Re-shipped in v1.87.1: the record of what the camera showed is named.
+    "prompt:case_chat": ("0003b7162b10fbfd", "6ad6dc860e5113fb", "235d9d531fff0035"),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
     "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
@@ -323,8 +324,9 @@ CHAT = (
 
 CASE_CHAT = (
     "Answer the user's questions using only the transcripts of the recordings "
-    "in this case. If the answer is not in them, say so in one sentence and do "
-    "not guess. Quote the transcripts when it helps. For every statement you "
+    "in this case and, where a recording has one, its record of what the "
+    "camera showed. If the answer is not in them, say so in one sentence and "
+    "do not guess. Quote the transcripts when it helps. For every statement you "
     "rely on, give the recording and the time as [Recording 3, 00:12:45], "
     "copied from the line it appears on, and never make one up. When several "
     "recordings bear on the question, say which says what. Keep answers short "
@@ -653,8 +655,9 @@ CAMERA_NOTE = (
 # nothing. Two sources kept apart, neither winning, names from the words
 # only, nothing inferred from the picture, only the listed times, briefly.
 CAMERA_RULES = (
-    "The block headed What the camera showed is a model's description of the "
-    "picture at the listed times, not the transcript. Use it by these rules.\n"
+    "The block headed What the camera showed, and a record line marked (seen) "
+    "or (both), is a model's description of the picture at the listed times, "
+    "not the transcript. Use it by these rules.\n"
     "Two sources, kept apart: a fact from the words is cited with its line's "
     'time; a fact from the camera is written as "the camera shows ..." and '
     "cited with the camera line's time. Never put a camera fact and a spoken "
@@ -1280,6 +1283,26 @@ def summary_input(focus: str, length: str, seen: int = 0, digest: bool = False) 
 def with_camera_rules(answer_format: str, seen) -> str:
     """The answer format, with the camera rules after it when a block is given."""
     return answer_format + ("\n\n" + CAMERA_RULES if seen else "")
+
+
+# A Digest's lines are marked, and until v1.87.1 nothing told the model what
+# the marks meant or that the picture belongs in an account of what happened:
+# asked for a timeline over twelve cameras, it left the camera out.
+RECORD_RULES = (
+    "A record's lines are marked: (said) is what the words say; (seen) is what "
+    "the camera showed at that time and not the words; (both) is both. A line "
+    "marked (seen) or (both) is a camera fact: use it under the camera rules, "
+    'written as "the camera shows ..." and cited with its line\'s time. Asked '
+    "what happened, for a timeline, or what a stretch shows, give what the "
+    "camera showed alongside what was said, in time order; the picture is part "
+    "of the record and is never left out because the question said transcript."
+)
+
+
+def with_record_rules(answer_format: str) -> str:
+    """The answer format, the camera rules and the record's marks after it,
+    for a call that reads a Digest (v1.87.1)."""
+    return answer_format + "\n\n" + CAMERA_RULES + "\n\n" + RECORD_RULES
 
 
 def with_narrative_rules(answer_format: str) -> str:

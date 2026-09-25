@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.87.1, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The camera is in the case chat's timeline.** Asked for a timeline over an
+incident's cameras, the case chat left what the cameras showed out. Wherever
+a Digest is read, the model was given the camera rules written for a block
+headed What the camera showed, a heading a Digest never carries, and nothing
+told it what a Digest's (said), (seen) and (both) marks mean or that the
+picture belongs in an account of what happened. A call that reads a Digest
+is now told both, in the case chat and in a recording's chat alike, and the
+Case chat template's shipped wording names the record of what the camera
+showed beside the transcripts. An office that has not edited that template
+follows the new wording by itself; one that has sees "shipped wording
+changed" on the template's card.
+
 ## v1.87.0, 2026-09-25
 
 ```

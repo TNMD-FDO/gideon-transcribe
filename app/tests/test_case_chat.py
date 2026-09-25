@@ -411,6 +411,12 @@ def test_an_incidents_cameras_are_read_as_one_record(
     assert set(turn.citations) == {"[Recording 2, 00:00:10]", "[Recording 3, 00:00:05]"}
     assert turn.readings[1]["incident"] == "Stop" and turn.readings[1]["digest"] is True
     assert turn.readings[2]["incident"] == "Stop"
+    # The model is told what the record's marks mean and that the picture
+    # belongs in an account of what happened (v1.87.1).
+    system = asked[0]["messages"][0]["content"]
+    assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
+    assert "(seen) is what the camera showed" in prompts.RECORD_RULES
+    assert "record of what the camera showed" in system
     # The second camera has no Digest, so the answer says it was read from
     # its words; the first, read from its Digest in the record, is not named.
     assert turn.answer.startswith("Recording 3 was read from the transcript alone.")
