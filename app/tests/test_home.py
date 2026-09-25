@@ -213,6 +213,23 @@ def test_needs_you_and_recent_cases(client, ana, cases_on):
     needs = page.split("Needs you", 1)[1].split("Recent cases", 1)[0]
     assert "Busy matter" in needs and "1 event to check" in needs
     assert "Quiet matter" not in needs
+    # A proposal waiting for accept or dismiss is enough on its own (v1.86.2).
+    waiting = Case.objects.create(owner=ana, name="Waiting matter")
+    second = a_recording(ana, batch, "second", case=waiting)
+    second.stamp = dict(first.stamp)
+    second.recording_type = "Body camera"
+    second.save()
+    proposed_in = incidents.make(waiting, "Search", [second], by=ana)
+    chronology.Event.objects.create(
+        incident=proposed_in, at=20.0, text="Maybe", source="assistant", proposed=True
+    )
+    needs = (
+        client.get(reverse("home"))
+        .content.decode()
+        .split("Needs you", 1)[1]
+        .split("Recent cases", 1)[0]
+    )
+    assert "Waiting matter" in needs and "1 proposed event waiting" in needs
     recent = page.split("Recent cases", 1)[1]
     assert "Busy matter" in recent and "Quiet matter" in recent
     assert 'id="open-new"' in page and 'id="new-box"' in page

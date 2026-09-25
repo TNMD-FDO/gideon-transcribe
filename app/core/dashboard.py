@@ -92,10 +92,13 @@ def pills(case, role: str = "owner") -> list[dict]:
         proposals = Event.objects.filter(
             incident__case=case, proposed=True, dismissed=False
         ).count()
+        # Proposals wait for a person's accept or dismiss: warm, so the case
+        # sits under Needs you on Home (v1.86.2, at the maintainer's word).
         if proposals:
             add(
                 _count(proposals, "proposed event waiting", "proposed events waiting"),
                 incidents_tab,
+                WARN,
             )
         # Memos being written, and memos with newer events.
         writing = incident_assistant.IncidentMemo.objects.filter(

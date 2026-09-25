@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.86.2, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A case with proposed events waiting is under Needs you.** The "proposed
+events waiting" pill on the dashboard line is now in the warning tone, like
+events to check, so a case whose proposals wait for accept or dismiss sits
+under Needs you on Home on its own. On the server walk of v1.86.0 a case
+with 115 proposals waiting was under Needs you only for its stale memo. At
+the maintainer's word.
+
 ## v1.86.1, 2026-09-25
 
 ```

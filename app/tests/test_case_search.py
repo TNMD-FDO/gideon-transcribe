@@ -171,6 +171,8 @@ def test_the_line_has_a_pill_for_everything_with_a_state(
     ]
     tones = {one["words"]: one["tone"] for one in pills}
     assert tones["1 incident not synced"] == "warn" and tones["1 clip rendering"] == ""
+    # Proposals wait for a person, so they are warm too (v1.86.2).
+    assert tones["1 proposed event waiting"] == "warn"
     hrefs = {one["words"]: one["href"] for one in pills}
     assert hrefs["1 clip failed"].endswith("?tab=clips")
     assert hrefs["1 event to check"].endswith("?tab=incidents")
