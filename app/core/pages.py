@@ -54,14 +54,17 @@ def recordings(request: HttpRequest) -> HttpResponse:
     """My recordings: everything that is the person's, in two parts.
 
     Recorded here (what they recorded from the New recording page and keep on
-    their own), and Uploaded this session (kept until sign-out unless moved
-    to a case). One place to look for "where did it go".
+    their own), and Uploaded this session: the Workspace, kept until sign-out.
+    A recording moved to a case is listed with the case, not here (until
+    v1.86.1 every upload of theirs was listed, the cased ones included, so a
+    batch that had gone into a case still offered Done with these, which
+    cleared nothing). One place to look for "where did it go".
     """
     from core import dictation, dictation_pages
 
     recorded_here = dictation_pages.tab_context(request) if dictation.on() else {}
     rows = _with_their_state(
-        request.user.recordings.filter(is_dictation=False).order_by("-created")
+        lifecycle.in_the_workspace(request.user).order_by("-created")
     )
     return render(
         request,

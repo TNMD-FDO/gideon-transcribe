@@ -21,6 +21,7 @@ from core.cases import Case
 from core.jobs import Job, JobState, Segment, Transcript
 from core.models import LoginSession, User
 from core.recordings import Batch, MediaState, Recording
+from django.test import Client
 from django.urls import reverse
 
 APP = Path(__file__).resolve().parent.parent
@@ -263,6 +264,28 @@ def test_a_shared_case_shows_who_shared_it(client, ana, cases_on):
     signed_in(client, ana)
     page = client.get(reverse("home")).content.decode()
     assert "Warehouse" in page and "Shared by ben" in page
+
+
+def test_my_recordings_lists_the_workspace_alone(client, ana, cases_on):
+    """A batch that went into a case is listed with the case, not on My
+    recordings (v1.86.1); the Admin's view of somebody's workspace shows the
+    same rows, grouped, and never Done with these."""
+    signed_in(client, ana)
+    case = Case.objects.create(owner=ana, name="Stop")
+    kept = Batch.objects.create(user=ana)
+    a_recording(ana, kept, "case-upload", case=case)
+    mine = Batch.objects.create(user=ana)
+    a_recording(ana, mine, "session-upload")
+    page = client.get(reverse("recordings")).content.decode()
+    assert "session-upload" in page and f'data-batch="{mine.pk}"' in page
+    assert "case-upload" not in page and f'data-batch="{kept.pk}"' not in page
+    assert "Done with these" in page
+    boss = User.objects.create_local_admin("boss", PASSWORD)
+    other = signed_in(Client(), boss)
+    theirs = other.get(f"/panel/users/{ana.username}/workspace").content.decode()
+    assert "session-upload" in theirs and f'data-batch="{mine.pk}"' in theirs
+    assert f'href="/batch/{mine.pk}/download"' in theirs
+    assert "case-upload" not in theirs and "Done with these" not in theirs
 
 
 # The words --------------------------------------------------------------------------

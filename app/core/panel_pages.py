@@ -842,13 +842,20 @@ def workspace(request: HttpRequest, username: str) -> HttpResponse:
         affected_user=person,
     )
 
-    from core.pages import standing_line
+    from core.pages import _with_their_state, batch_groups, standing_line
 
+    # The Workspace: what is in no case. The table is grouped by batch
+    # (Phase 8 chapter 13), so the groups come too; without them, from
+    # v1.86.0 to v1.86.1, this view showed the headings and no rows.
+    rows = _with_their_state(
+        person.recordings.filter(case__isnull=True).order_by("-created")
+    )
     return render(
         request,
         "recordings.html",
         {
-            "recordings": person.recordings.order_by("-created"),
+            "recordings": rows,
+            "groups": batch_groups(rows),
             "standing_line": standing_line(),
             "storage_warning": "",
             "someone_elses": person,

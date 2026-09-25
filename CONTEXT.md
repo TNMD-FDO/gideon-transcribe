@@ -252,7 +252,7 @@ What the Upload page shows from Submit until every Recording in the Batch has en
 _Avoid_: queue page, progress page, upload status
 
 **Recordings page**:
-"My recordings" in the Rail: everything that is the person's, in two parts, Recorded here (with the Record now setting on) and Uploaded this session, the list of their uploaded Recordings grouped by Batch, each group with its Download transcripts and Open the batch (from v1.86.0), and each row with Open, Process again, Details, and Delete, kept until sign-out unless moved to a Case. Sign-in landed here in Phase 1, on the Start page from v1.29.0, and on Home from v1.86.0. The pages say "my recordings" or "your recordings", never Workspace.
+"My recordings" in the Rail: everything that is the person's, in two parts, Recorded here (with the Record now setting on) and Uploaded this session, the Recordings they uploaded that are in no Case (the Workspace; from v1.86.1, before which every upload of theirs was listed, the cased ones included), grouped by Batch, each group with its Download transcripts and Open the batch (from v1.86.0), and each row with Open, Process again, Details, and Delete, kept until sign-out unless moved to a Case, and then listed with the Case. Sign-in landed here in Phase 1, on the Start page from v1.29.0, and on Home from v1.86.0. The pages say "my recordings" or "your recordings", never Workspace.
 _Avoid_: dashboard, Workspace page, Recordings tab (it is My recordings)
 
 **WhisperX service**:

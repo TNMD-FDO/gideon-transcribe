@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.86.1, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**My recordings lists this session's recordings alone.** Uploaded this
+session listed every upload of the person's, the ones inside a case
+included, so a batch that had gone into a case still showed there with
+Download transcripts and Done with these while Home rightly said nothing
+was uploaded this session, and Done with these on such a batch cleared
+nothing. The page now lists the Workspace alone: what is in no case and not
+yet removed. A recording moved to a case is listed with the case. Found on
+the server walk after v1.86.0; the listing was older than that release.
+
+**The Panel's view of somebody's recordings shows its rows again.** From
+v1.86.0 the table is grouped by batch, and the Panel's view of another
+person's workspace passed no groups, so it showed the headings and no rows.
+It now shows the person's recordings that are in no case, grouped by batch
+with each batch's download, and never Done with these.
+
 ## v1.86.0, 2026-09-25
 
 ```
