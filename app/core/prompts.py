@@ -379,7 +379,9 @@ CHAT_FORMAT = (
 CASE_CHAT_FORMAT = (
     'Answer in plain text. Each recording opens with a line "Recording n of '
     'N"; give every reference as [Recording n, hh:mm:ss], the n from that line '
-    "and the time copied from the transcript line it appears on."
+    "and the time copied from the transcript line it appears on. Every line "
+    "of a list carries the reference of the line it rests on, copied from "
+    "that line; a list never repeats one reference for several lines."
 )
 # The combining call, when a Case was read in parts: plumbing, not a template.
 COMBINING = (

@@ -545,8 +545,11 @@
   // The case rail in the viewer -----------------------------------------------
 
   var rail = document.getElementById("caserail");
-  if (rail) {
-    var body = rail.closest(".body");
+  // The rail without its frame (a page that carries the rail's markup but
+  // not the viewer's body) has nothing to open or shut; until v1.87.3 the
+  // script threw on such a page and took the rest of its work with it.
+  var body = rail ? rail.closest(".body") : null;
+  if (rail && body) {
     var hide = document.getElementById("hide-case");
     var reopen = document.getElementById("show-case");
 

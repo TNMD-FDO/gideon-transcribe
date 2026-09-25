@@ -21,6 +21,34 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.87.3, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The viewer no longer says a jump failed when it did not.** A citation
+clicked from a chat seeks the recording and plays it at once. The viewer
+watches every jump for five seconds and, finding the recording five seconds
+past the point it was sent to, said "the browser gave up at once, which
+means the file itself cannot be jumped about in", which was untrue: the
+file was fine and playing from the right place. The watch now knows a
+recording that landed and played on, and a file that has not yet arrived
+over a slow link, which it now waits a minute for before saying it is still
+loading. Found on the office's copy.
+
+**The recording page loads without a script error.** The case rail's
+script threw on the recording page, which carries the rail without the
+viewer's frame around it, and took the rest of its work with it. Found on
+the walk of 23 September and again today.
+
+**A list never repeats one reference for several lines.** Asked for a long
+timeline, the model cited one recording at 00:00:00 a hundred and ninety
+times, so nearly every pill pointed at the start of the recording. The Case
+chat answer format now says that every line of a list carries the
+reference of the line it rests on.
+
 ## v1.87.2, 2026-09-25
 
 ```

@@ -416,8 +416,10 @@ def test_an_incidents_cameras_are_read_as_one_record(
     system = asked[0]["messages"][0]["content"]
     assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
     assert "(seen) is what the camera showed" in prompts.RECORD_RULES
-    # In a list, a line from the picture begins with Camera: (v1.87.2).
+    # In a list, a line from the picture begins with Camera: (v1.87.2), and
+    # each line carries its own line's reference (v1.87.3).
     assert "begins with Camera:" in prompts.RECORD_RULES
+    assert "never repeats one reference" in prompts.CASE_CHAT_FORMAT
     assert "record of what the camera showed" in system
     # The second camera has no Digest, so the answer says it was read from
     # its words; the first, read from its Digest in the record, is not named.

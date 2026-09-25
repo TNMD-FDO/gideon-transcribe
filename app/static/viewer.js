@@ -96,9 +96,33 @@
 
     if (seekWatch) { window.clearTimeout(seekWatch); }
     player.currentTime = wanted;
-    seekWatch = window.setTimeout(function () {
+    var armed = Date.now();
+    var looks = 0;
+    function watch() {
       seekWatch = null;
+      var elapsed = (Date.now() - armed) / 1000;
       if (Math.abs(player.currentTime - wanted) < 1.5) { return; }
+      // Landed and playing on from there since: a citation clicked from a
+      // chat seeks and plays at once, and five seconds of playback is not a
+      // jump that failed (v1.87.3).
+      if (!player.paused && player.currentTime >= wanted - 1.5
+          && player.currentTime <= wanted + elapsed + 1.5) { return; }
+      // Nothing of the file has arrived yet: the browser keeps the wanted
+      // time as the place to start and goes there when the file's index
+      // comes, so this is a slow file over a slow link, not a fault. Look
+      // again, for up to a minute, before saying anything.
+      if (player.readyState === 0) {
+        if (looks < 11) {
+          looks += 1;
+          seekWatch = window.setTimeout(watch, 5000);
+          return;
+        }
+        window.VIEWER.sayTrouble(
+          "This recording is still loading: nothing of the file has arrived " +
+          "after a minute. It will jump to that point when it does."
+        );
+        return;
+      }
 
       if (!withinSeekable(wanted)) {
         window.VIEWER.sayTrouble(
@@ -126,7 +150,8 @@
         "still plays from where it is. Process again remakes the playback " +
         "copy."
       );
-    }, 5000);
+    }
+    seekWatch = window.setTimeout(watch, 5000);
 
     // Going somewhere on purpose is asking to watch from there, so a follow
     // that was paused for reading comes back rather than leaving the
