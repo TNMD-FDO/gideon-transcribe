@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.87.2, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A timeline line from the picture begins with Camera:.** After v1.87.1 the
+case chat's timeline carried what the cameras showed, but folded it into
+the same shape as what was said, so a reader could not tell a description
+from a spoken fact. The record rules now ask that, in a timeline or a list,
+a line that rests on the picture begin with "Camera:". At the maintainer's
+word.
+
 ## v1.87.1, 2026-09-25
 
 ```

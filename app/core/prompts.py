@@ -1295,7 +1295,9 @@ RECORD_RULES = (
     'written as "the camera shows ..." and cited with its line\'s time. Asked '
     "what happened, for a timeline, or what a stretch shows, give what the "
     "camera showed alongside what was said, in time order; the picture is part "
-    "of the record and is never left out because the question said transcript."
+    "of the record and is never left out because the question said transcript. "
+    "In a timeline or a list, a line that rests on the picture begins with "
+    "Camera: so a reader can tell a description from a spoken fact."
 )
 
 
