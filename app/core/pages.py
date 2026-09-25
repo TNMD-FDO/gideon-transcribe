@@ -60,14 +60,17 @@ def recordings(request: HttpRequest) -> HttpResponse:
     from core import dictation, dictation_pages
 
     recorded_here = dictation_pages.tab_context(request) if dictation.on() else {}
+    rows = _with_their_state(
+        request.user.recordings.filter(is_dictation=False).order_by("-created")
+    )
     return render(
         request,
         "recordings.html",
         {
             "page": "recordings",
-            "recordings": _with_their_state(
-                request.user.recordings.filter(is_dictation=False).order_by("-created")
-            ),
+            "recordings": rows,
+            # Grouped by batch (Phase 8 chapter 13), each with its download.
+            "groups": batch_groups(rows),
             "standing_line": standing_line(),
             "storage_warning": uploads.storage_warning(request.user),
             "recorded_here": bool(recorded_here),
@@ -78,24 +81,9 @@ def recordings(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def start(request: HttpRequest) -> HttpResponse:
-    """Where a person lands: one question, what do you want to do."""
-    from core import dictation
-
-    return render(
-        request,
-        "start.html",
-        {
-            "page": "start",
-            "greeting": greeting(),
-            "can_record": dictation.on(),
-            "service_is_up": whisperx.is_alive(),
-            # The transcription piece (v1.83.0): absent, the page says
-            # recordings wait for the card rather than that something is down.
-            "transcription_installed": pieces.transcription_installed(),
-            # The Cases tile's counts (Phase 8 chapter 1).
-            "cases_line": _cases_line(request.user),
-        },
-    )
+    """The Start page, v1.29.0 to v1.85.2: an old link lands on Home (Phase 8
+    chapter 13). Not a permanent redirect, so a browser never keeps it."""
+    return redirect(reverse("home"))
 
 
 def _cases_line(user) -> str:
@@ -125,6 +113,28 @@ def _cases_line(user) -> str:
         if office:
             return f"None of yours yet; {count(office)} in the office"
     return "None yet"
+
+
+def batch_groups(rows) -> list[dict]:
+    """The recordings page's rows grouped by their batch, newest batch first,
+    each group with how many transcripts are ready and the batch's download:
+    the transcripts are never only on the batch page (Phase 8 chapter 13)."""
+    groups: dict = {}
+    for one in rows:
+        group = groups.get(one.batch_id)
+        if group is None:
+            group = groups[one.batch_id] = {
+                "batch": one.batch,
+                "rows": [],
+                "done": 0,
+                "download": reverse("batch-download", args=[one.batch_id]),
+                "url": reverse("batch", args=[one.batch_id]),
+                "finished": one.batch.is_finished,
+            }
+        group["rows"].append(one)
+        if hasattr(one, "transcript"):
+            group["done"] += 1
+    return list(groups.values())
 
 
 def _with_their_state(recordings):
@@ -193,8 +203,8 @@ def user_guide(request: HttpRequest) -> HttpResponse:
 def greeting() -> str:
     """Good morning, afternoon or evening, by the office's own clock.
 
-    The Start page is where signing in lands, so this is the app's first
-    line to a person, and it should sound like somebody rather than a form.
+    Home is where signing in lands, so this is the app's first line to a
+    person, and it should sound like somebody rather than a form.
     TZ is set at install, so the hour is the office's and not the server's
     idea of UTC.
     """
@@ -452,8 +462,20 @@ def batch(request: HttpRequest, batch_id) -> HttpResponse:
             # The Case the Batch was added to, when it was: the page offers
             # the way back while it runs and returns there when it finishes.
             "case": _case_of(found),
+            # The rail's actions carry the case (Phase 8 chapter 13).
+            "here_case": _here_case(request.user, _case_of(found)),
         },
     )
+
+
+def _here_case(user, case_dict):
+    from core import home
+    from core.cases import Case
+
+    if not case_dict:
+        return None
+    case = Case.objects.filter(pk=case_dict["id"]).first()
+    return home.here_case_for(user, case)
 
 
 def _case_of(batch) -> dict | None:
@@ -708,9 +730,9 @@ def clear_recordings(request: HttpRequest) -> JsonResponse:
             "ok": True,
             "recordings": gone,
             "freed": uploads.as_size(freed),
-            # Done with a Batch: back to Start for the next thing; cleared
+            # Done with a Batch: back to Home for the next thing; cleared
             # the whole Workspace: back to the (now empty) page itself.
-            "where": reverse("start") if batch_id else reverse("home"),
+            "where": reverse("home") if batch_id else reverse("recordings"),
         }
     )
 

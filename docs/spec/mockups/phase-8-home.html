@@ -1,0 +1,194 @@
+<!-- The six landings drawn on 2026-09-25 for Phase 8 chapter 13. The first three
+     (A, one home with content; B, land on Cases; C, keep the doors and trim the
+     bar) were drawn in the chat and are described in the chapter; the three
+     below mix A and C. The pick: E, with the download rule added at the pick. -->
+<title>Home page mock-ups</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f4f5f7;--text:#171b21;--muted:#5b6673;--line:#d3d9e0;--paper:#fff;--app-bg:#12161b;--app-surface:#171d24;--app-surface2:#1f2630;--app-text:#e6eaf0;--app-muted:#8a96a3;--app-line:#262d36;--accent:#5fb3e6;--accent-ink:#0b1116;--accent-soft:#1f3a4d;--warn:#f2c14e;--warn-bg:#3a2f12;--ok:#7fbf7a;--ok-bg:#1d3320}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e1114;--text:#e6eaf0;--muted:#9aa6b2;--line:#2a323c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1114;--text:#e6eaf0;--muted:#9aa6b2;--line:#2a323c;color-scheme:dark}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;margin:0;padding-block:24px 48px;padding-inline:16px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+h1{font-size:22px;margin:0;text-wrap:balance}
+h2{font-size:16px;margin:0 0 8px;font-weight:600}
+p.lead{margin:0;color:var(--muted);max-width:70ch;line-height:1.5}
+.why{color:var(--muted);font-size:14px;line-height:1.5;max-width:75ch;margin:8px 0 0}
+.why b{color:var(--text);font-weight:500}
+.figure{overflow-x:auto}
+.app{background:var(--app-bg);color:var(--app-text);border:1px solid var(--app-line);border-radius:10px;min-width:760px;font-size:13px}
+.bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--app-line);background:var(--app-surface)}
+.bar .brand{font-weight:600;display:flex;align-items:center;gap:8px}
+.bar .brand i{width:18px;height:18px;border-radius:5px;background:var(--accent);display:inline-block}
+.bar a{color:var(--app-muted);text-decoration:none}
+.bar a.on{color:var(--app-text);font-weight:500;border-bottom:2px solid var(--accent);padding-bottom:2px}
+.bar .acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.bar .who{color:var(--app-muted);font-size:12px;margin-left:14px}
+.btn{font-size:12px;border:1px solid #3a4553;border-radius:6px;padding:5px 10px;color:var(--app-text);white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+.btn.ghost{border-color:transparent;color:var(--app-muted)}
+.page{padding:18px 22px 22px}
+.greet{font-size:20px;font-weight:600;margin:0 0 4px}
+.sub{color:var(--app-muted);margin:0 0 14px}
+.strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px;padding:10px 12px;background:var(--app-surface);border:1px solid var(--app-line);border-radius:8px}
+.strip .lab{color:var(--app-muted);margin-right:4px}
+.pill{font-size:11px;padding:1px 8px;border-radius:9px;background:var(--app-surface2);color:#aeb8c4;border:1px solid var(--app-line);white-space:nowrap}
+.pill.run{background:var(--accent-soft);color:#9fd0f0;border-color:#2a5a7a}
+.pill.warn{background:var(--warn-bg);color:var(--warn);border-color:#5a4a1a}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:#2f5a2f}
+.sect{border:1px solid var(--app-line);border-radius:10px;background:var(--app-surface);margin:0 0 14px;overflow:hidden}
+.sect .head{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--app-line)}
+.sect .head .ico{width:34px;height:34px;border-radius:8px;background:var(--app-surface2);display:flex;align-items:center;justify-content:center;flex:none;color:var(--accent);font-size:16px;font-weight:600}
+.sect .head b{display:block;font-size:14px;font-weight:600}
+.sect .head .cap{color:var(--app-muted);font-size:12px;line-height:1.4;margin-top:2px;max-width:60ch}
+.sect .head .acts{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+.rows{padding:4px 14px 8px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--app-line);flex-wrap:wrap}
+.row:first-child{border-top:0}
+.row b{font-weight:500}
+.row .r{margin-left:auto;color:var(--app-muted);font-size:12px;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',Consolas,monospace}
+.empty{padding:10px 14px;color:var(--app-muted);font-size:12px}
+.rule{color:var(--app-muted);font-size:12px;padding:8px 14px 0}
+.twocol{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
+.card{border:1px solid var(--app-line);border-radius:10px;background:var(--app-surface);padding:14px}
+.card b{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+.card .cap{color:var(--app-muted);font-size:12px;line-height:1.45}
+.card .go{margin-top:10px}
+.railwrap{display:grid;grid-template-columns:220px minmax(0,1fr)}
+.rail{border-right:1px solid var(--app-line);background:var(--app-surface);padding:12px}
+.rail .item{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:8px;color:var(--app-text);text-decoration:none}
+.rail .item.on{background:var(--app-surface2)}
+.rail .item .ico{width:22px;height:22px;border-radius:6px;background:var(--app-surface2);flex:none;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:12px;font-weight:600}
+.rail .item.on .ico{background:var(--accent-soft)}
+.rail .item b{display:block;font-weight:500;font-size:13px}
+.rail .item span{display:block;color:var(--app-muted);font-size:11px;line-height:1.35}
+.rail .do{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.rail .do .btn{text-align:center;padding:8px 10px;font-size:13px}
+.rail .grp{color:var(--app-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;margin:10px 10px 4px}
+.tag{display:inline-block;font-size:12px;padding:3px 10px;border-radius:6px;background:var(--accent-soft);color:#9fd0f0;margin-bottom:8px}
+.q{border:1px solid var(--line);border-radius:10px;padding:14px 18px;max-width:75ch}
+.q b{font-size:13px}
+.q p{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+</style>
+<div class="wrap">
+  <div>
+    <h1>The home page: three more shapes</h1>
+    <p class="lead">Each mixes A and C: the content of A, with the doors' plain words about what each thing does. Made-up office data. All three keep Cases as the word, keep My recordings as the working page, and put Upload files and Record now in the bar on every page so the same two buttons are always in the same place.</p>
+  </div>
+
+  <section>
+    <span class="tag">D</span>
+    <h2>D. The doors become sections, each saying what it is for</h2>
+    <div class="figure"><div class="app">
+      <div class="bar"><span class="brand"><i></i>Gideon Transcribe</span><a class="on">Home</a><a>Cases</a><a>My recordings</a><a>Clips</a><a>Panel</a><a>Help</a><span class="acts"><span class="btn primary">&#8593; Upload files</span><span class="btn">&#9679; Record now</span><span class="who">Ana Ruiz &middot; Sign out</span></span></div>
+      <div class="page">
+        <p class="greet">Good morning, Ana</p>
+        <div class="strip"><span class="lab">Running now</span><span class="pill run">3 of 5 transcribing</span><span class="pill run">2 preparing</span><span class="pill">4 videos enriched tonight from 22:00</span></div>
+
+        <div class="sect">
+          <div class="head"><span class="ico">C</span><div><b>Cases</b><div class="cap">A case keeps a matter's recordings together and keeps them after you sign out. Everything you want to keep goes in one.</div></div><span class="acts"><span class="btn">New case</span><span class="btn ghost">All 14 cases</span></span></div>
+          <div class="rows">
+            <div class="row"><b>Traffic stop, 7 June</b><span class="pill run">2 transcribing</span><span class="pill warn">3 events to check</span><span class="r">yesterday</span></div>
+            <div class="row"><b>Warehouse interview</b><span class="pill">Shared by Ben</span><span class="pill ok">New</span><span class="r">Tuesday</span></div>
+            <div class="row"><b>Jail calls, March</b><span class="pill warn">deletes in 12 days</span><span class="btn" style="font-size:11px;padding:2px 8px">Keep</span><span class="r">3 weeks ago</span></div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="head"><span class="ico">&#8593;</span><div><b>This session</b><div class="cap">What you uploaded or recorded today. It stays until you sign out, or 8 hours after you stop working. Put a recording in a case to keep it.</div></div><span class="acts"><span class="btn ghost">My recordings</span></span></div>
+          <div class="rows">
+            <div class="row"><b>call_0917.m4a</b><span class="pill ok">Ready</span><span class="r mono">12:41 &middot; uploaded 10:02</span></div>
+            <div class="row"><b>hearing_0924.mp4</b><span class="pill run">Transcribing</span><span class="r mono">1:05:12 &middot; uploaded 10:05</span></div>
+            <div class="row"><b>Dictation, 24 Sep 09:40</b><span class="pill ok">Ready</span><span class="pill">Recorded here</span><span class="r mono">4:12</span></div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="head"><span class="ico">&#9986;</span><div><b>Clips</b><div class="cap">Short pieces you cut from a recording or an incident, ready to play or download for a hearing.</div></div><span class="acts"><span class="btn ghost">7 clips, 2 rendering</span></span></div>
+        </div>
+      </div>
+    </div></div>
+    <p class="why"><b>What it gives:</b> every section is a door with its caption, as the tiles were, and its content under it. Nothing is only a door. <b>With Cases off:</b> the Cases section is absent and This session comes first. <b>Risk:</b> the captions repeat on every visit; they could fold away after the first week, but that is a rule to write.</p>
+  </section>
+
+  <section>
+    <span class="tag">E</span>
+    <h2>E. A rail down the left with a line under each place <span style="display:inline-block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;background:var(--accent);color:#fff;border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:middle">The pick</span></h2>
+    <div class="figure"><div class="app">
+      <div class="bar"><span class="brand"><i></i>Gideon Transcribe</span><span class="acts"><span class="who">Ana Ruiz &middot; Admin &middot; Sign out</span></span></div>
+      <div class="railwrap">
+        <div class="rail">
+          <div class="do"><span class="btn primary">&#8593; Upload files</span><span class="btn">&#9679; Record now</span></div>
+          <div class="grp">Places</div>
+          <a class="item on"><span class="ico">H</span><div><b>Home</b><span>What is running, and what needs you</span></div></a>
+          <a class="item"><span class="ico">C</span><div><b>Cases</b><span>Kept for a matter, after sign-out</span></div></a>
+          <a class="item"><span class="ico">M</span><div><b>My recordings</b><span>This session only, then gone</span></div></a>
+          <a class="item"><span class="ico">&#9986;</span><div><b>Clips</b><span>Pieces cut for a hearing</span></div></a>
+          <div class="grp">Office</div>
+          <a class="item"><span class="ico">P</span><div><b>Panel</b><span>Settings, status, people</span></div></a>
+          <a class="item"><span class="ico">?</span><div><b>Help</b><span>The guide, at this page</span></div></a>
+        </div>
+        <div class="page">
+          <p class="greet">Good morning, Ana</p>
+          <div class="strip"><span class="lab">Running now</span><span class="pill run">3 of 5 transcribing</span><span class="pill run">2 preparing</span></div>
+          <div class="sect"><div class="head"><div><b>Needs you</b><div class="cap">Cases with something to settle.</div></div></div>
+            <div class="rows">
+              <div class="row"><b>Traffic stop, 7 June</b><span class="pill warn">3 events to check</span><span class="pill warn">memo has newer events</span><span class="r">yesterday</span></div>
+              <div class="row"><b>Jail calls, March</b><span class="pill warn">deletes in 12 days</span><span class="btn" style="font-size:11px;padding:2px 8px">Keep</span><span class="r">3 weeks ago</span></div>
+            </div></div>
+          <div class="sect"><div class="head"><div><b>This session</b><div class="cap">Stays until you sign out. Put it in a case to keep it.</div></div></div>
+            <div class="rows">
+              <div class="row"><b>call_0917.m4a</b><span class="pill ok">Ready</span><span class="r mono">12:41</span></div>
+              <div class="row"><b>hearing_0924.mp4</b><span class="pill run">Transcribing</span><span class="r mono">1:05:12</span></div>
+            </div></div>
+          <div class="sect"><div class="head"><div><b>Recent cases</b></div><span class="acts"><span class="btn">New case</span></span></div>
+            <div class="rows">
+              <div class="row"><b>Warehouse interview</b><span class="pill">Shared by Ben</span><span class="r">Tuesday</span></div>
+              <div class="row"><b>Traffic stop, 7 June</b><span class="r">yesterday</span></div>
+            </div></div>
+        </div>
+      </div>
+    </div></div>
+    <p class="why"><b>What it gives:</b> the one-line explanation sits beside each place, always, without taking the page; the two actions are at the top of the rail on every page; Home is short because it leads with what needs you. <b>Cost:</b> the largest change to every page's frame (every page gains the rail and loses the top bar), and the rail takes 220 pixels from the incident page, which is already tight under 1280.</p>
+  </section>
+
+  <section>
+    <span class="tag">F</span>
+    <h2>F. Two columns: start something, or go somewhere</h2>
+    <div class="figure"><div class="app">
+      <div class="bar"><span class="brand"><i></i>Gideon Transcribe</span><a class="on">Home</a><a>Cases</a><a>My recordings</a><a>Clips</a><a>Panel</a><a>Help</a><span class="acts"><span class="btn primary">&#8593; Upload files</span><span class="btn">&#9679; Record now</span><span class="who">Ana Ruiz &middot; Sign out</span></span></div>
+      <div class="page">
+        <p class="greet">Good morning, Ana</p>
+        <div class="strip"><span class="lab">Running now</span><span class="pill run">3 of 5 transcribing</span><span class="pill run">2 preparing</span><span class="pill">4 videos enriched tonight from 22:00</span></div>
+        <div class="twocol">
+          <div>
+            <div class="card"><b>&#8593; Upload files</b><div class="cap">One recording or a whole batch: jail calls, body camera, interviews, hearings. Drop them in and the transcripts come back.</div><div class="go"><span class="btn primary">Upload files</span></div></div>
+            <div class="card" style="margin-top:10px"><b>&#9679; Record now</b><div class="cap">A dictation, a meeting in the room, or a call on this computer. The transcript comes back finished.</div><div class="go"><span class="btn">Record now</span></div></div>
+            <div class="card" style="margin-top:10px"><b>New case</b><div class="cap">A case keeps a matter's recordings together and keeps them after you sign out.</div><div class="go"><span class="btn">New case</span></div></div>
+          </div>
+          <div>
+            <div class="sect"><div class="head"><div><b>Your cases</b><div class="cap">Kept after sign-out, under the office's retention.</div></div><span class="acts"><span class="btn ghost">All 14</span></span></div>
+              <div class="rows">
+                <div class="row"><b>Traffic stop, 7 June</b><span class="pill run">2 transcribing</span><span class="pill warn">3 to check</span><span class="r">yesterday</span></div>
+                <div class="row"><b>Warehouse interview</b><span class="pill">Shared by Ben</span><span class="pill ok">New</span><span class="r">Tuesday</span></div>
+                <div class="row"><b>Jail calls, March</b><span class="pill warn">deletes in 12 days</span><span class="r">3 weeks ago</span></div>
+              </div></div>
+            <div class="sect"><div class="head"><div><b>This session</b><div class="cap">Stays until you sign out, or 8 hours after you stop working.</div></div><span class="acts"><span class="btn ghost">My recordings</span></span></div>
+              <div class="rows">
+                <div class="row"><b>call_0917.m4a</b><span class="pill ok">Ready</span><span class="r mono">12:41</span></div>
+                <div class="row"><b>hearing_0924.mp4</b><span class="pill run">Transcribing</span><span class="r mono">1:05:12</span></div>
+              </div></div>
+            <div class="sect"><div class="head"><div><b>Clips</b><div class="cap">Pieces cut for a hearing.</div></div><span class="acts"><span class="btn ghost">7 clips, 2 rendering</span></span></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="why"><b>What it gives:</b> the left column is the old Start page's three doors with their full captions, so a new person reads what each thing does; the right column is where things are, with their states. The bar's two buttons are the same actions, so a person who has learned them never needs the cards again. <b>Risk:</b> the two columns need about 1100 pixels; under that the cards stack above the lists, which is the Start page with more under it.</p>
+  </section>
+
+  <section class="q">
+    <b>What to judge</b>
+    <p>Whether the captions should always show (D and F) or live beside the places (E). Whether Home should lead with "what needs you" (E) or with the places in a fixed order (D, F). Whether the rail is worth changing every page's frame for. All three keep the same bar buttons, the same cases rows and the same session rows, so the pick changes the frame and the order, not the parts.</p>
+  </section>
+</div>

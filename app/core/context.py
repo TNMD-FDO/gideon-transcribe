@@ -15,7 +15,12 @@ def workspace(request) -> dict:
     """
     if not request.user.is_authenticated:
         return {}
+    from core import home
+
     return {
+        # The rail's Home item says how many batches wait for their download
+        # (Phase 8 chapter 13), until Done with these.
+        "ready_count": home.ready_count(request.user),
         "idle_timeout_seconds": int(settings_store.idle_timeout().total_seconds()),
         # What the chat is called on the pages (Phase 7 chapter 5).
         "chat_name": settings_store.chat_name(),

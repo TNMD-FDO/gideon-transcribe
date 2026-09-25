@@ -10,6 +10,7 @@ from core import (
     dictation_pages,
     document_pages,
     exports,
+    home,
     incident_clips,
     incident_pages,
     live_pages,
@@ -28,7 +29,10 @@ from core import (
 
 urlpatterns = [
     path("healthz", views.healthz, name="healthz"),
-    path("", pages.recordings, name="home"),
+    # Home (Phase 8 chapter 13) is where sign-in and the brand land; My
+    # recordings is the working page beside it. /start is kept for old links.
+    path("", home.home, name="home"),
+    path("recordings", pages.recordings, name="recordings"),
     path("upload", pages.upload, name="upload"),
     path("start", pages.start, name="start"),
     # The user guide, rendered from docs/user-guide.md (ADR 0012).

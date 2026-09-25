@@ -128,7 +128,7 @@ def test_somebody_else_signing_in_lands_on_start(client, admin, db):
 
     answer = sign_in(client, username="other", next="/upload")
 
-    assert answer["Location"] == "/start"
+    assert answer["Location"] == "/"
 
 
 def test_a_next_outside_the_app_is_ignored(client, admin):
@@ -138,11 +138,11 @@ def test_a_next_outside_the_app_is_ignored(client, admin):
     for wanted in ("https://elsewhere.example/x", "//elsewhere.example", "upload", ""):
         client.post("/sign-out")
         answer = sign_in(client, next=wanted)
-        assert answer["Location"] == "/start", wanted
+        assert answer["Location"] == "/", wanted
 
 
 def test_a_fresh_sign_in_ignores_next(client, admin):
-    assert sign_in(client, next="/upload")["Location"] == "/start"
+    assert sign_in(client, next="/upload")["Location"] == "/"
 
 
 # The gone page -----------------------------------------------------------------------
@@ -161,7 +161,7 @@ def test_the_gone_page_is_the_apps_own(client, admin, someone):
     # An Admin may see the case, so its name is the way back.
     assert "Back to the case Theirs" in answer.text
     assert 'href="/cases"' in answer.text
-    assert 'href="/start"' in answer.text
+    assert 'href="/"' in answer.text and ">Home</a>" in answer.text
 
 
 def test_the_gone_page_never_says_whether_a_case_is_there(db, someone):

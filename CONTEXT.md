@@ -38,8 +38,8 @@ A user-chosen span of a Recording, marked by a start and an end, with its own ti
 _Avoid_: excerpt (that is the text that goes with a Clip), cut, segment (that is a Transcript unit)
 
 **Clips page**:
-The list of every Clip in a user's Workspace, with Download all. A Case's Clips are listed on the Case page instead, so a Clip appears in one place only.
-_Avoid_: My Clips (the working name), clip library
+"Clips" in the Rail (the page's heading reads My clips): one table of every Clip the person saved, under a heading row for each place it lives, with Download all. Before v1.30.0 it listed the Workspace's Clips only. See My clips.
+_Avoid_: clip library
 
 **Adjust**:
 Changing a saved Clip's start, end, or options, which renders its file again and clears its downloaded mark. Changing only the title or note is a Rename and renders nothing.
@@ -184,19 +184,31 @@ A ready-made line on the Staff side of a Session, translated once and shown or s
 _Avoid_: canned response, macro
 
 **My clips**:
-The Clips page in the top bar: one table of every Clip the person saved, under a heading row for each place it lives (a Case, Recorded here, This session), the place touched last on top. A Clip in a Case is here and on the Case's Clips tab both. Before v1.30.0 the page listed the Workspace's Clips only.
+The Clips page in the Rail: one table of every Clip the person saved, under a heading row for each place it lives (a Case, Recorded here, This session), the place touched last on top. A Clip in a Case is here and on the Case's Clips tab both. Before v1.30.0 the page listed the Workspace's Clips only.
 _Avoid_: Your clips, clip library
 
+**Home**:
+Where sign-in and the brand land, from v1.86.0 (Phase 8 chapter 13): the greeting, the notices, and then only the sections with something in them, in a fixed order: Ready to download, Needs you (the Cases with a warning pill), Running now, This session (the Recordings not in a Case, with the keep-or-lose line said once), Recent cases (every Case, with its Dashboard line's pills). Nothing on it is only a door; the Rail's two actions are the doors.
+_Avoid_: Start page (v1.29.0 to v1.85.2), dashboard, landing page, menu
+
+**Rail**:
+The column down the left of every page, from v1.86.0: the two actions at its top, Upload files and Record now (with the Record now setting on, or inside a Case with Live recording on), each carrying the Case the person is inside; then the places, each with its icon, its name and one line saying what it is for (Home "What is running, and what needs you"; Cases "Kept for a matter, after sign-out"; My recordings "This session only, then gone"; Clips "Pieces cut for a hearing"; Panel "Settings, status, people"; Help "The guide, at this page"). The place the person is on is lit; an action is not a place and lights nothing. It folds to icons on a narrow window and on the incident page. The top bar keeps the brand, the person's name, Sign out and the theme.
+_Avoid_: sidebar, menu, nav, top bar (for the places)
+
+**Ready to download**:
+Home's first section, when a Batch of this session has finished with at least one Transcript: the batch, how many transcripts are ready, Download transcripts, Open the batch and Done with these. It stays until Done with these; the Rail's Home item counts such batches. The same download is on My recordings, on the batch's group. Phase 8 chapter 13.
+_Avoid_: inbox, notifications, downloads page
+
 **Start page**:
-Where sign-in lands: one question, what do you want to do, and three doors, Upload files, Record now (with the Record now setting on), Open a case (with Folder management on). Nothing else is on it. The top bar reads Start, Cases, My recordings, Clips, Panel, Help.
-_Avoid_: home, dashboard, landing page, menu
+Where sign-in landed from v1.29.0 to v1.85.2: one question, what do you want to do, and three doors, Upload files, Record now, Cases. Superseded by Home; /start follows to Home.
+_Avoid_: the old word for Home
 
 **Recorded here**:
 The first part of the My recordings page, with the Record now setting on: everything the person recorded from the New recording page and kept on its own, newest first, each with Play, Open, the memo or summary, Send to, Add to a case, Delete; and under them what colleagues have sent, "Sent to you". Kept for as long as the office keeps a case. Phase 3. It was a tab of its own, called Record, and before that Dictations, each for one release.
 _Avoid_: Record tab, Dictations page (the earlier names), recorder
 
 **Record now**:
-The Start page's door to the New recording page, and the name of the Admin setting (key `dictation`) that turns it and Recorded here on. Phase 3.
+The Rail's second action, the door to the New recording page (the Start page's door before v1.86.0), and the name of the Admin setting (key `dictation`) that turns it and Recorded here on. Phase 3.
 _Avoid_: Record tab, Dictation setting
 
 **Memo**:
@@ -210,7 +222,7 @@ _Avoid_: forward, share (that is a Case's), email (the mail is one part of it)
 ### Processing
 
 **Batch**:
-The set of Recordings a user submits together, with shared settings and per-Recording overrides. Every Job belongs to one Batch, and a user has one unfinished Batch at a time.
+The set of Recordings a user submits together, with shared settings and per-Recording overrides. Every Job belongs to one Batch, and a user has one unfinished Batch at a time. A finished Batch's download is offered on Home (Ready to download) and on My recordings until Done with these, never only on the Batch page (Phase 8 chapter 13).
 
 **Job**:
 One Recording's pass through the Queue, holding one Run per Side. A Job is Queued, Running, Done, Failed, or Cancelled.
@@ -240,8 +252,8 @@ What the Upload page shows from Submit until every Recording in the Batch has en
 _Avoid_: queue page, progress page, upload status
 
 **Recordings page**:
-"My recordings" in the top bar: everything that is the person's, in two parts, Recorded here (with the Record now setting on) and Uploaded this session, the list of their uploaded Recordings with Open, Process again, Details, and Delete, kept until sign-out unless moved to a Case. Sign-in landed here in Phase 1 and lands on the Start page from v1.29.0. The pages say "my recordings" or "your recordings", never Workspace.
-_Avoid_: home, dashboard, Workspace page, Recordings tab (it is My recordings)
+"My recordings" in the Rail: everything that is the person's, in two parts, Recorded here (with the Record now setting on) and Uploaded this session, the list of their uploaded Recordings grouped by Batch, each group with its Download transcripts and Open the batch (from v1.86.0), and each row with Open, Process again, Details, and Delete, kept until sign-out unless moved to a Case. Sign-in landed here in Phase 1, on the Start page from v1.29.0, and on Home from v1.86.0. The pages say "my recordings" or "your recordings", never Workspace.
+_Avoid_: dashboard, Workspace page, Recordings tab (it is My recordings)
 
 **WhisperX service**:
 The independent transcription engine that runs one job at a time for the whole office, consumed by the app and, later, by other Consumers.
@@ -259,7 +271,7 @@ An application that holds a token for the WhisperX service and submits Runs to i
 One authenticated sign-in of a user, ended by logout, idle timeout, or a newer sign-in by the same user. A user has one at a time.
 
 **Workspace**:
-A user's holding area while Folder management is off. Everything in it is discarded when the user's Login session ends, once any running Batch has finished and a grace period has passed; nothing in a Workspace outlives the session. What a user wants to keep, they export before signing out.
+A user's holding area for what is not in a Case. Everything in it is discarded when the user's Login session ends, once any running Batch has finished and a grace period has passed; nothing in a Workspace outlives the session. What a user wants to keep, they export before signing out.
 _Avoid_: session (that is the login), scratch (that is the disk location)
 
 **Discard**:
@@ -271,7 +283,7 @@ A user removing Recordings from their own Workspace while still signed in, eithe
 _Avoid_: clean up, reset, empty, start over
 
 **Folder management**:
-The admin toggle that enables Cases. Off: Workspaces only; every Case is hidden from everyone and kept, its Retention policy clock paused, nothing deleted. On: users may keep Recordings in Cases, and everything Off hid comes back as it was.
+The admin toggle that enables Cases. Off: Workspaces only; every Case is hidden from everyone and kept, its Retention policy clock paused, nothing deleted, and the Rail's Cases and Home's case sections are absent. On: users may keep Recordings in Cases, and everything Off hid comes back as it was.
 
 **Case**:
 A named page of retained Recordings for one legal matter, owned by one user, kept under the App data folder, shareable with named colleagues, and subject to the Retention policy. Exists only when Folder management is on. Nothing but the name is typed; users never see the folder behind it, and nothing inside a shared Case is private to one person.
@@ -293,7 +305,7 @@ An optional label for a Recording (Body camera, Jail call, Interview, and the li
 _Avoid_: source type, category
 
 **Dashboard line**:
-The line of pills under a case's name on the case page, one for everything in the case that has a state (transcribing, preparing, tonight's vision, an incident not synced, events to check, proposals waiting, a memo with newer events, clips rendering or failed, whom it is shared with, the retention warning), each a link to where it is dealt with; absent when nothing is pending. Phase 7 chapter 3.
+The line of pills under a case's name on the case page, one for everything in the case that has a state (transcribing, preparing, tonight's vision, an incident not synced, events to check, proposals waiting, a memo with newer events, clips rendering or failed, whom it is shared with, the retention warning), each a link to where it is dealt with; absent when nothing is pending. Phase 7 chapter 3. Its pills are drawn on Home's case rows too, and a case with a pill in the warning tone is under Needs you (Phase 8 chapter 13).
 _Avoid_: dashboard (the line has no heading), status bar, alerts
 
 **Find**:

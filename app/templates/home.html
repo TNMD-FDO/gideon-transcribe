@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Home{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Home (Phase 8 chapter 13): the greeting, the notices, then only the
+    sections that have something in them, in a fixed order: Ready to
+    download, Needs you, Running now, This session, Recent cases. Nothing
+    here is only a door; the rail's two actions are the doors.
+  {% endcomment %}
+  <div class="page roomy workbench home">
+    <h1>{{ greeting }}</h1>
+    {% if not transcription_installed %}
+      <p class="notice warn">Transcription is not installed on this server yet. Recordings you upload are kept and transcribed when the card arrives.</p>
+    {% elif not service_is_up %}
+      <p class="notice danger">Transcription is not available right now. Try again later; uploads and recordings will wait.</p>
+    {% endif %}
+    {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
+
+    {% if ready %}
+      <section class="home-sect ready" id="ready-to-download">
+        <div class="head">
+          <span class="ico">{% icon "download" %}</span>
+          <div><b>Ready to download</b><span class="cap">The transcripts of a batch that has finished. They are here until you press Done with these.</span></div>
+        </div>
+        {% for one in ready %}
+          <div class="row ready-row" data-batch="{{ one.batch.pk }}">
+            <b>{{ one.done }} transcript{{ one.done|pluralize }} ready</b>
+            <span class="muted small">uploaded {{ one.when|date:"j M" }} at {{ one.when|time:"g:i a" }}{% if one.failed %}, {{ one.failed }} not transcribed{% endif %}</span>
+            <span class="grow"></span>
+            <a href="{{ one.download }}" class="btn primary small">{% icon "download" %} Download transcripts</a>
+            <a href="{{ one.url }}" class="btn small">Open the batch</a>
+            <button type="button" class="btn ghost small clear-recordings" data-batch="{{ one.batch.pk }}">Done with these</button>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    {% if needs %}
+      <section class="home-sect" id="needs-you">
+        <div class="head">
+          <span class="ico">{% icon "warning" %}</span>
+          <div><b>Needs you</b><span class="cap">Cases with something to settle.</span></div>
+        </div>
+        {% for row in needs %}
+          <div class="row">
+            <a href="{% url 'case' row.case.pk %}" class="plain"><b>{{ row.case.name }}</b></a>
+            {% for pill in row.pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
+            {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
+            <span class="grow"></span>
+            <span class="muted small">{{ row.case.last_activity|date:"j M" }}</span>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    {% if running %}
+      <section class="home-sect" id="running-now">
+        <div class="head">
+          <span class="ico">{% icon "again" %}</span>
+          <div><b>Running now</b></div>
+          <div class="pills">{% for pill in running %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}</div>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="home-sect" id="this-session">
+      <div class="head">
+        <span class="ico">{% icon "upload" %}</span>
+        <div><b>This session</b><span class="cap">{{ keep_line }}</span></div>
+        <a href="{% url 'recordings' %}" class="btn ghost small">My recordings</a>
+      </div>
+      {% if session %}
+        {% for recording in session %}
+          <div class="row">
+            {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}
+            <span class="pill small {{ recording.state_tone }}">{{ recording.state_word }}</span>
+            <span class="grow"></span>
+            <span class="muted small mono">{% if recording.duration_seconds %}{{ recording.length }} &middot; {% endif %}uploaded {{ recording.batch.created|date:"j M" }} at {{ recording.batch.created|time:"g:i a" }}</span>
+            {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="btn small">Open</a>{% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted small empty-line">Nothing uploaded this session.</p>
+      {% endif %}
+      {% if recorded_here %}
+        <p class="muted small empty-line"><a href="{% url 'recordings' %}#recorded-here">{{ recorded_here }} recorded here</a></p>
+      {% endif %}
+    </section>
+
+    {% if cases_on %}
+      <section class="home-sect" id="recent-cases">
+        <div class="head">
+          <span class="ico">{% icon "case" %}</span>
+          <div><b>Recent cases</b><span class="cap">A case keeps a matter's recordings together, and keeps them after you sign out.</span></div>
+          <button type="button" class="btn small" id="open-new">New case</button>
+          <a href="{% url 'cases' %}" class="btn ghost small">All cases</a>
+        </div>
+        {% include "new-case-box.html" %}
+        {% if cases_rows %}
+          {% for row in cases_rows %}
+            <div class="row">
+              <a href="{% url 'case' row.case.pk %}" class="plain"><b>{{ row.case.name }}</b></a>
+              {% if row.shared_by %}<span class="pill small">Shared by {{ row.shared_by }}</span>{% if row.is_new %}<span class="pill small ok">New</span>{% endif %}{% endif %}
+              {% for pill in row.pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
+              {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
+              <span class="grow"></span>
+              <span class="muted small">{{ row.recordings }} recording{{ row.recordings|pluralize }} &middot; {{ row.case.last_activity|date:"j M" }}</span>
+              <a href="{% url 'case' row.case.pk %}" class="btn small">Open</a>
+            </div>
+          {% endfor %}
+        {% elif cases_line and "in the office" in cases_line %}
+          <p class="muted small empty-line">{{ cases_line }}. <a href="{% url 'cases' %}?who=everyone">Everyone's cases</a></p>
+        {% else %}
+          <p class="muted small empty-line">No cases yet.</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {% if clips_count %}
+      <section class="home-sect" id="clips-line">
+        <div class="head">
+          <span class="ico">{% icon "clip" %}</span>
+          <div><b>Clips</b></div>
+          <a href="{% url 'clips' %}" class="btn ghost small">{{ clips_count }} clip{{ clips_count|pluralize }}{% if clips_rendering %}, {{ clips_rendering }} rendering{% endif %}</a>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+
+  <script src="{% static 'clearing.js' %}"></script>
+  {% if cases_on %}<script src="{% static 'cases.js' %}"></script>{% endif %}
+{% endblock %}

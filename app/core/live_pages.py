@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, live
+from core import cases, home, live
 from core.cases import Case
 from core.recordings import Recording
 
@@ -69,6 +69,7 @@ def record(request: HttpRequest) -> HttpResponse:
         "record.html",
         {
             "page": "cases" if case is not None else "record",
+            "here_case": home.here_case_for(request.user, case),
             "chosen_case": str(case.pk) if case is not None else "",
             "case_name": case.name if case is not None else "",
             "styles": list(live.STYLES.items()),
@@ -123,7 +124,9 @@ def start(request: HttpRequest) -> JsonResponse:
             "title": recording.title,
             "filename": recording.original_filename,
             "case": (
-                reverse("case", args=[case.pk]) if case is not None else reverse("home")
+                reverse("case", args=[case.pk])
+                if case is not None
+                else reverse("recordings")
             ),
             "longest_seconds": live.longest_seconds(),
         }
@@ -229,6 +232,6 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
     told["case"] = (
         reverse("case", args=[recording.case_id])
         if recording.case_id
-        else (reverse("home") if recording.is_dictation else "")
+        else (reverse("recordings") if recording.is_dictation else "")
     )
     return JsonResponse(told)

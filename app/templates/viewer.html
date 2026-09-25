@@ -24,10 +24,10 @@
             <a href="{% url 'case' recording.case_id %}" title="Back to the case {{ recording.case.name }}" class="btn ghost icon">{% icon "back" %}</a>
             <span class="crumb muted small"><a href="{% url 'case' recording.case_id %}">{{ recording.case.name }}</a></span>
           {% elif recording.is_dictation %}
-            <a href="{% url 'home' %}" title="Back to My recordings" class="btn ghost icon">{% icon "back" %}</a>
-            <span class="crumb muted small"><a href="{% url 'home' %}">My recordings</a></span>
+            <a href="{% url 'recordings' %}" title="Back to My recordings" class="btn ghost icon">{% icon "back" %}</a>
+            <span class="crumb muted small"><a href="{% url 'recordings' %}">My recordings</a></span>
           {% else %}
-            <a href="{% url 'home' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
+            <a href="{% url 'recordings' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
           {% endif %}
           <h1 id="recording-title">{{ recording.title }}</h1>
           {% if is_someone_elses %}{% if recording.case_id %}{% include "admin-pill.html" with owner=recording.user what="case" %}{% else %}{% include "admin-pill.html" with owner=recording.user what="Workspace" %}{% endif %}{% endif %}

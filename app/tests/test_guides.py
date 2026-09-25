@@ -245,7 +245,7 @@ def test_an_admin_reads_the_admin_guide(client):
     page = answer.content.decode()
     assert "The Admin guide" in page
     # It sits inside the panel, rail and all.
-    assert "Back to your recordings" in page
+    assert "Back to the app" in page
 
 
 def test_a_stranger_is_sent_to_sign_in(client):

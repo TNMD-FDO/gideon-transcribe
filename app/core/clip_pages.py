@@ -503,7 +503,7 @@ def groups_of(clips: list, user, standing: str) -> list:
             key = ("here", user.pk)
             heading = {
                 "name": "Recorded here",
-                "url": reverse("home"),
+                "url": reverse("recordings"),
                 "line": (
                     "Clips of your own recordings, kept for as long as the "
                     "office keeps a case."
@@ -514,7 +514,7 @@ def groups_of(clips: list, user, standing: str) -> list:
             key = ("session", user.pk)
             heading = {
                 "name": "This session",
-                "url": reverse("home"),
+                "url": reverse("recordings"),
                 "line": standing,
                 "kind": "session",
             }

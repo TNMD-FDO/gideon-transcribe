@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, documents, engine, notes, settings_store
+from core import assistant, audit, cases, documents, engine, home, notes, settings_store
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -118,7 +118,7 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     """The page itself."""
     recording = open_recording(request, recording_id)
     if recording is None:
-        return redirect(reverse("home"))
+        return redirect(reverse("recordings"))
 
     # Opening a Recording in a Case is use of that Case, so its Retention
     # clock moves. An Admin looking into somebody else's does not count.
@@ -127,7 +127,12 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     return render(
         request,
         "viewer.html",
-        {"page": "viewer", "panels_shown": PANELS, **_page_context(request, recording)},
+        {
+            "page": "viewer",
+            "panels_shown": PANELS,
+            "here_case": home.here_case_for(request.user, recording.case),
+            **_page_context(request, recording),
+        },
     )
 
 
@@ -148,7 +153,7 @@ def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
         .first()
     )
     if recording is None or not cases.standing(recording, request.user):
-        return redirect(reverse("home"))
+        return redirect(reverse("recordings"))
     context = _page_context(request, recording)
     transcript = context["transcript"]
     features = context["assistant"]

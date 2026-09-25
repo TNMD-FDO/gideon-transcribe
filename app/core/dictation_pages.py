@@ -126,7 +126,7 @@ def record_tab(request: HttpRequest) -> HttpResponse:
     from django.shortcuts import redirect
 
     new = request.GET.get("new", "")
-    return redirect(reverse("home") + (f"?new={new}" if new else ""))
+    return redirect(reverse("recordings") + (f"?new={new}" if new else ""))
 
 
 @login_required
@@ -142,7 +142,7 @@ def dictations(request: HttpRequest) -> HttpResponse:
     """The old address of the Dictations page: My recordings now."""
     from django.shortcuts import redirect
 
-    return redirect(reverse("home"))
+    return redirect(reverse("recordings"))
 
 
 @login_required

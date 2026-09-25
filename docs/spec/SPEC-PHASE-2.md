@@ -174,7 +174,7 @@ The owner or an Admin can move a Recording to another Case, with the same mechan
 
 ### The Cases page
 
-When Folder management is on, the Cases page is the landing page at sign-in, with "your recordings" (the Workspace) reachable at the top.
+When Folder management is on, the Cases page is the landing page at sign-in, with "your recordings" (the Workspace) reachable at the top. (Superseded at v1.29.0 by the Start page and at v1.86.0 by Home, Phase 8 chapter 13: sign-in lands on Home whatever the settings say.)
 
 - One list holds the user's own Cases and the Cases shared with them: Name, Recordings, size, Last activity, Retention (the clock's line), and the owner when it is someone else. Sortable by any column, with a text filter on the name. The page has three views in one strip of tabs, Mine, Everyone's (an Admin's alone), and Recycle bin, so the bin is a view of this page rather than a page to find. The chosen Case's details (the same facts, with Open, Case page, and Keep in its last days) sit in a pane beside the table from 1280 pixels, or open under its row on a narrower window; Up and Down move along the rows and Enter opens.
 - A shared Case shows the owner's name and a Shared mark, New until first opened (see the Sharing chapter).

@@ -120,7 +120,7 @@ def test_an_upload_waits_for_the_card(admin, client, monkeypatch):
     assert (
         "notice warn" in page and "Transcription is not available right now" not in page
     )
-    start = client.get(reverse("start")).content.decode()
+    start = client.get(reverse("home")).content.decode()
     assert "not installed on this server yet" in start
     # Submit is accepted, where the service being down would refuse it.
     answer = client.post(
@@ -135,7 +135,7 @@ def test_an_upload_waits_for_the_card(admin, client, monkeypatch):
     recording.save(update_fields=["media_state"])
     tasks.keep_the_queue_moving(0)
     assert not Job.objects.exists()
-    rows = client.get(reverse("home")).content.decode()
+    rows = client.get(reverse("recordings")).content.decode()
     assert "Waiting for the card" in rows
     # The piece added: the sweep hands the Recording over.
     monkeypatch.setenv("COMPOSE_PROFILES", "transcription")
@@ -144,7 +144,8 @@ def test_an_upload_waits_for_the_card(admin, client, monkeypatch):
     tasks.keep_the_queue_moving(0)
     assert Job.objects.filter(batch=recording.batch).count() == 1
     assert len(handed) == 1
-    assert "Waiting for the card" not in client.get(reverse("home")).content.decode()
+    rows = client.get(reverse("recordings")).content.decode()
+    assert "Waiting for the card" not in rows
 
 
 @pytest.mark.django_db

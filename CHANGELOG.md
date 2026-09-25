@@ -21,6 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.86.0, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 8 chapter 13: one home and the rail.
+
+- **Home.** Sign-in lands on Home: the greeting, the notices, then only the
+  sections with something in them: **Ready to download** (a batch of this
+  session that has finished, with Download transcripts, Open the batch and
+  Done with these), **Needs you** (the cases with a warning on their
+  dashboard line), **Running now**, **This session** (this session's
+  uploads with the rule for how long they stay, said once), **Recent
+  cases** (every case with its state pills, New case and All cases) and
+  **Clips**. Nothing on it is only a door. The Start page is gone; an old
+  `/start` link follows to Home.
+- **The rail.** Down the left of every page: Upload files and Record now
+  at the top, carrying the case you are inside so the recording lands in
+  it; then the places, each with one line saying what it is for (Home,
+  Cases, My recordings, Clips; Panel and Help under Office). The place you
+  are on is lit; the Home item counts the batches waiting for their
+  download. It folds to icons on a narrow window and on the incident page.
+  The top bar keeps the brand, your name, Sign out and the theme.
+- **A batch's download is never only on the batch page.** Home's Ready to
+  download and My recordings' batch groups (each with Download
+  transcripts, Open the batch and Done with these) carry it too; Done with
+  these lands on Home.
+- The route named home now means Home, and My recordings is at
+  `/recordings`; every link that meant My recordings points there. The
+  Cases page and Home share one New case box. The glossary gains Home,
+  Rail and Ready to download; the Start page entry becomes history.
+
 ## v1.85.2, 2026-09-24
 
 ```

@@ -27,27 +27,6 @@
   <nav class="nav">
     <a class="brand" href="{% url 'home' %}"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></svg>Gideon Transcribe</a>
     {% if user.is_authenticated %}
-      <span class="links">
-        <a href="{% url 'start' %}"{% if page == "start" or page == "upload" %} class="on"{% endif %}>Start</a>
-        {% if folder_management %}
-          <a href="{% url 'cases' %}"{% if page == "cases" %} class="on"{% endif %}>Cases</a>
-        {% endif %}
-        <a href="{% url 'home' %}"{% if page == "recordings" %} class="on"{% endif %}>My recordings</a>
-        {% if clips_available %}
-          <a href="{% url 'clips' %}"{% if page == "clips" %} class="on"{% endif %}>Clips</a>
-        {% endif %}
-        {% if user.is_admin %}
-          <a href="{% url 'panel' %}"{% if page == "panel" %} class="on"{% endif %}>Panel</a>
-        {% endif %}
-        {% comment %}
-          Help opens the user guide at the section about the page it was
-          pressed on, so the answer is a click away rather than a read away.
-          The "?" opens the same guide beside the page, on a window with the
-          room for it; the stylesheet hides it on one without.
-        {% endcomment %}
-        <a href="{% help_url page %}"{% if page == "help" %} class="on"{% endif %}>Help</a>
-        <a href="{% help_url page %}" id="help-beside" class="help-beside" title="Open the guide beside this page" aria-expanded="false">?</a>
-      </span>
       <span class="who">
         {{ user.shown_name }}{% if user.is_admin %} &middot; Admin{% endif %}
         &middot; <a href="{% url 'sign-out' %}">Sign out</a>
@@ -69,33 +48,87 @@
   {% endif %}
 
   {% comment %}
-    The shell holds the page and, when it is open, the guide beside it: a
-    real column the page makes room for, never a layer over it.
+    The frame (Phase 8 chapter 13): the rail down the left on every page,
+    with the two actions at its top and the places under them, each with
+    one line saying what it is for; then the shell, which holds the page
+    and, when it is open, the guide beside it. An action is not a place and
+    lights nothing; the place the person is on carries aria-current.
   {% endcomment %}
-  <div class="shell">
-    <main class="{% block main_class %}narrow{% endblock %}">
-      {% if messages %}
-        {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
-      {% endif %}
-      {% block content %}{% endblock %}
-      {% comment %}
-        Report a problem (Phase 8 chapter 3): one small link at the right of
-        every page's foot, for a signed-in person, while Reports is on. The
-        incident page fills the window and carries the link in its panel's
-        head instead, so it empties this block.
-      {% endcomment %}
-      {% block foot %}{% if user.is_authenticated and reports_on %}<footer class="page-foot"><a href="#" id="report-open" class="small muted">Report a problem</a></footer>{% endif %}{% endblock %}
-    </main>
+  <div class="frame{% if not user.is_authenticated %} no-rail{% endif %}">
     {% if user.is_authenticated %}
-      <aside id="help-pane" class="help-pane" hidden aria-label="The guide">
-        <div class="help-head">
-          <b class="grow">Guide</b>
-          <a class="help-full small" href="{% help_url page %}">Open as a page</a>
-          <button type="button" class="ghost tiny help-close" title="Close the guide">Close</button>
+      <nav class="rail" aria-label="Main">
+        <div class="do">
+          <a class="btn primary" href="{% url 'upload' %}{% if here_case %}?case={{ here_case.pk }}{% endif %}" title="Upload files{% if here_case %} into {{ here_case.name }}{% endif %}">{% icon "upload" %}<span>Upload files</span></a>
+          {% if dictation or live_recording and here_case %}
+            <a class="btn" href="{% url 'record-new' %}{% if here_case %}?case={{ here_case.pk }}{% endif %}" title="Record now{% if here_case %} into {{ here_case.name }}{% endif %}">{% icon "mic" %}<span>Record now</span></a>
+          {% endif %}
         </div>
-        <div class="help-body guide"></div>
-      </aside>
+        <div class="grp">Places</div>
+        <a class="item{% if page == "home" %} on{% endif %}" href="{% url 'home' %}"{% if page == "home" %} aria-current="page"{% endif %} title="Home: what is running, and what needs you">
+          <span class="ico">{% icon "home" %}</span>
+          <span class="words"><b>Home{% if ready_count %} <span class="pill small ok">{{ ready_count }} ready</span>{% endif %}</b><span class="line">What is running, and what needs you</span></span>
+        </a>
+        {% if folder_management %}
+          <a class="item{% if page == "cases" %} on{% endif %}" href="{% url 'cases' %}"{% if page == "cases" %} aria-current="page"{% endif %} title="Cases: kept for a matter, after sign-out">
+            <span class="ico">{% icon "case" %}</span>
+            <span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span>
+          </a>
+        {% endif %}
+        <a class="item{% if page == "recordings" %} on{% endif %}" href="{% url 'recordings' %}"{% if page == "recordings" %} aria-current="page"{% endif %} title="My recordings: this session only, then gone">
+          <span class="ico">{% icon "recordings" %}</span>
+          <span class="words"><b>My recordings</b><span class="line">This session only, then gone</span></span>
+        </a>
+        {% if clips_available %}
+          <a class="item{% if page == "clips" %} on{% endif %}" href="{% url 'clips' %}"{% if page == "clips" %} aria-current="page"{% endif %} title="Clips: pieces cut for a hearing">
+            <span class="ico">{% icon "clip" %}</span>
+            <span class="words"><b>Clips</b><span class="line">Pieces cut for a hearing</span></span>
+          </a>
+        {% endif %}
+        <div class="grp">Office</div>
+        {% if user.is_admin %}
+          <a class="item{% if page == "panel" %} on{% endif %}" href="{% url 'panel' %}"{% if page == "panel" %} aria-current="page"{% endif %} title="Panel: settings, status, people">
+            <span class="ico">{% icon "panel" %}</span>
+            <span class="words"><b>Panel</b><span class="line">Settings, status, people</span></span>
+          </a>
+        {% endif %}
+        {% comment %}
+          Help opens the user guide at the section about the page it was
+          pressed on, so the answer is a click away rather than a read away.
+          The "?" opens the same guide beside the page, on a window with the
+          room for it; the stylesheet hides it on one without.
+        {% endcomment %}
+        <a class="item{% if page == "help" %} on{% endif %}" href="{% help_url page %}"{% if page == "help" %} aria-current="page"{% endif %} title="Help: the guide, at this page">
+          <span class="ico">{% icon "help" %}</span>
+          <span class="words"><b>Help</b><span class="line">The guide, at this page</span></span>
+        </a>
+        <a href="{% help_url page %}" id="help-beside" class="help-beside" title="Open the guide beside this page" aria-expanded="false">? beside</a>
+      </nav>
     {% endif %}
+    <div class="shell">
+      <main class="{% block main_class %}narrow{% endblock %}">
+        {% if messages %}
+          {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+        {% comment %}
+          Report a problem (Phase 8 chapter 3): one small link at the right of
+          every page's foot, for a signed-in person, while Reports is on. The
+          incident page fills the window and carries the link in its panel's
+          head instead, so it empties this block.
+        {% endcomment %}
+        {% block foot %}{% if user.is_authenticated and reports_on %}<footer class="page-foot"><a href="#" id="report-open" class="small muted">Report a problem</a></footer>{% endif %}{% endblock %}
+      </main>
+      {% if user.is_authenticated %}
+        <aside id="help-pane" class="help-pane" hidden aria-label="The guide">
+          <div class="help-head">
+            <b class="grow">Guide</b>
+            <a class="help-full small" href="{% help_url page %}">Open as a page</a>
+            <button type="button" class="ghost tiny help-close" title="Close the guide">Close</button>
+          </div>
+          <div class="help-body guide"></div>
+        </aside>
+      {% endif %}
+    </div>
   </div>
 
   {% if user.is_authenticated and reports_on %}{% include "report-box.html" %}<script src="{% static 'report.js' %}"></script>{% endif %}

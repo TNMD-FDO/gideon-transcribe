@@ -229,7 +229,7 @@ def page(request: HttpRequest, recording_id) -> HttpResponse:
     """The Speakers page of one Recording."""
     recording = viewer.open_recording(request, recording_id)
     if recording is None:
-        return redirect(reverse("home"))
+        return redirect(reverse("recordings"))
     cases.used(recording, by=request.user)
     return render(
         request, "speakers-page.html", context(request, recording, in_window=False)

@@ -281,7 +281,7 @@ def test_an_admin_looking_in_may_not_rename(owner, somebody_else, client):
 def test_my_recordings_offers_rename_on_own_rows_only(owner, somebody_else, client):
     a_recording(owner)
     signed_in(client, owner)
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert "rename-recording" in page
     signed_in(client, somebody_else)
     page = client.get(f"/panel/users/{owner.username}/workspace").content.decode()

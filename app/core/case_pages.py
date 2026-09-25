@@ -31,6 +31,7 @@ from core import (
     documents,
     engine,
     exports,
+    home,
     live,
     notes,
     pages,
@@ -255,6 +256,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
         {
             "page": "cases",
             "case": case,
+            "here_case": home.here_case_for(request.user, case),
             "tab": tab,
             "warned": retention.is_warned(left),
             "deletes_line": retention.deletes_line(left),

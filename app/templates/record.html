@@ -19,7 +19,7 @@
        data-case="{{ chosen_case }}"
        data-csrf="{{ csrf_token }}">
     <p class="muted small" style="margin: 0 0 4px">
-      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'home' %}">My recordings</a>{% endif %}
+      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'recordings' %}">My recordings</a>{% endif %}
     </p>
     <div class="row">
       <h1 class="grow">New recording</h1>

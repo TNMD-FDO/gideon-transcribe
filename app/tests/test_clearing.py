@@ -80,8 +80,9 @@ def test_clearing_a_batch_takes_that_batch_and_leaves_the_rest(client):
     assert answer.status_code == 200
     assert answer.json()["recordings"] == 2
     assert what_is_left() == {keeping.pk}
-    # Somewhere to go next, which is the point of the loop.
-    assert answer.json()["where"] == reverse("start")
+    # Somewhere to go next, which is the point of the loop: Home (Phase 8
+    # chapter 13), where the next batch's download will show.
+    assert answer.json()["where"] == reverse("home")
 
 
 def test_clearing_without_a_batch_takes_the_whole_workspace(client):
@@ -179,20 +180,20 @@ def test_a_stranger_cannot_clear_anything(client):
 # Where a person lands ---------------------------------------------------------
 
 
-def test_everybody_lands_on_start():
+def test_everybody_lands_on_home():
     from core.views import where_they_land
 
     # With Cases on, where the specification would send them to Cases.
     settings_store.set_to("folder_management", True)
     person = a_person()
-    assert where_they_land(person) == reverse("start")
+    assert where_they_land(person) == reverse("home")
 
     # And with Cases off, where there is no Cases page at all.
     settings_store.set_to("folder_management", False)
-    assert where_they_land(person) == reverse("start")
+    assert where_they_land(person) == reverse("home")
 
 
-def test_signing_in_opens_the_start_page(client):
+def test_signing_in_opens_home(client):
     settings_store.set_to("folder_management", True)
     person = a_person()
 
@@ -201,26 +202,26 @@ def test_signing_in_opens_the_start_page(client):
     )
 
     assert answer.status_code == 302
-    assert answer["Location"] == reverse("start")
+    assert answer["Location"] == reverse("home")
 
 
-def test_the_start_page_greets_and_asks_one_question(client):
+def test_home_greets_and_the_rail_has_the_places(client):
     settings_store.set_to("folder_management", True)
     person = a_person()
     signed_in(client, person)
 
-    page = client.get(reverse("start")).content.decode()
+    page = client.get(reverse("home")).content.decode()
 
     assert "Good morning" in page or "Good afternoon" in page or "Good evening" in page
-    assert "What do you want to do?" in page
-    # The Cases tile with its count line (Phase 8 chapter 1).
-    assert "Upload files" in page and "None yet" in page
-    # Record now waits on the Record now setting; Open a case on Cases.
-    assert "Record now" not in page
+    # The doors' question went with the Start page (Phase 8 chapter 13).
+    assert "What do you want to do?" not in page
+    assert "Upload files" in page and "No cases yet." in page
+    # Record now waits on the Record now setting.
+    assert 'href="/record/new"' not in page
     settings_store.set_to("folder_management", False)
-    assert "None yet" not in client.get(reverse("start")).content.decode()
-    # The bar: Start, My recordings, and never Upload or Record on their own.
-    assert ">Start</a>" in page and ">My recordings</a>" in page
+    assert "Recent cases" not in client.get(reverse("home")).content.decode()
+    # The rail: the places with their lines, never a bare Upload or Recordings.
+    assert "<b>Home" in page and "<b>My recordings</b>" in page
     assert ">Upload</a>" not in page and ">Recordings</a>" not in page
 
 

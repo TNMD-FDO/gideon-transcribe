@@ -20,6 +20,7 @@ from core import (
     chronology,
     documents,
     engine,
+    home,
     incident_assistant,
     incident_chat,
     incident_clips,
@@ -63,6 +64,7 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
         {
             "page": "cases",
             "case": case,
+            "here_case": home.here_case_for(request.user, case),
             "incident": incident,
             "role": role,
             "state": state,

@@ -1,0 +1,15 @@
+{% comment %}
+  New case: the one box, on the Cases page and on Home (Phase 8 chapter 13).
+  cases.js binds it by its ids, so the two pages share the script unchanged.
+{% endcomment %}
+<div id="new-box" class="card" hidden style="margin-bottom: 14px">
+  <label for="new-name">Name</label>
+  <div class="row" style="gap: 6px">
+    <input id="new-name" type="text" maxlength="200" class="grow"
+           placeholder="The name you will recognise it by">
+    <button type="button" class="btn primary" id="make-it">Create</button>
+    <button type="button" class="btn ghost" id="never-mind">Cancel</button>
+  </div>
+  <p class="muted" style="margin: 8px 0 0">The name is the only thing typed about a case.</p>
+  <p class="notice warn" id="new-warning" hidden></p>
+</div>

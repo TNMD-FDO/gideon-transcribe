@@ -615,20 +615,58 @@ body.session-ended #gideon { pointer-events: none; opacity: 0.45; }
 /* The mark: the favicon's waveform on a rounded square, drawn in the sprite's
  * stroke so it is the same on every page and in the browser tab. */
 .nav .brand .mark { width: 20px; height: 20px; flex: none; }
-.nav .links { display: flex; gap: 2px; }
-.nav .links a {
-  padding: 6px 11px;
-  border-radius: var(--radius);
-  color: var(--muted);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
-  transition: background-color var(--quick), color var(--quick);
-}
-.nav .links a:hover { background: var(--surface-2); color: var(--text); }
-.nav .links a.on { background: var(--accent-soft); color: var(--accent); }
 .nav .who { margin-left: auto; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .nav .who a { text-decoration: none; }
+
+/* The frame (Phase 8 chapter 13): the rail down the left on every page, the
+   two actions at its top and the places under them, each with one line
+   saying what it is for; then the shell. From 1400 pixels the rail shows
+   its lines; from 900 to 1399 it folds to icons and names; under 900 it is a
+   row of icons under the top bar. The incident page folds it at every
+   width, since its desk needs the room. */
+.frame { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 49px); }
+.frame.no-rail { grid-template-columns: minmax(0, 1fr); }
+.rail { border-right: 1px solid var(--line); background: var(--surface); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; align-self: stretch; }
+.rail .do { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+.rail .do .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 10px; font-size: 14px; text-decoration: none; }
+.rail .do .btn .i { width: 16px; height: 16px; flex: none; }
+.rail .grp { color: var(--muted); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; margin: 8px 8px 2px; }
+.rail .item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 8px; border-radius: var(--radius); color: var(--text); text-decoration: none; transition: background-color var(--quick); }
+.rail .item:hover { background: var(--surface-2); }
+.rail .item.on { background: var(--accent-soft); }
+.rail .item.on b { color: var(--accent); }
+.rail .item .ico { width: 24px; height: 24px; border-radius: 6px; background: var(--surface-2); flex: none; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+.rail .item .ico .i { width: 15px; height: 15px; }
+.rail .item.on .ico { background: var(--surface); }
+.rail .item .words { display: flex; flex-direction: column; min-width: 0; }
+.rail .item b { font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.rail .item .line { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.rail .help-beside { display: none; margin: 4px 8px 0; font-size: 12px; color: var(--muted); text-decoration: none; }
+.rail .help-beside.on { color: var(--accent); }
+@media (min-width: 1500px) { .rail a.help-beside { display: inline-block; } }
+@media (max-width: 1399px) {
+  .frame { grid-template-columns: 148px minmax(0, 1fr); }
+  .rail .item .line { display: none; }
+  .rail .do .btn span { display: none; }
+  .rail .do .btn { justify-content: center; }
+}
+@media (max-width: 899px) {
+  .frame { display: block; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px 12px; }
+  .rail .do { flex-direction: row; margin: 0 8px 0 0; }
+  .rail .grp { display: none; }
+  .rail .item b span.pill { display: none; }
+  .rail .item .words b { font-size: 13px; }
+}
+/* The incident page: the rail folded, whatever the width. The viewer and
+   the incident page never scroll as a page, so the frame takes the height
+   the body shares out and the shell scrolls inside it. */
+body.incident-page .frame { grid-template-columns: 148px minmax(0, 1fr); }
+body.incident-page .rail .item .line { display: none; }
+body.incident-page .rail .do .btn span { display: none; }
+body.viewer .frame { flex: 1; min-height: 0; }
+body.viewer .shell { min-height: 0; height: 100%; }
+body.viewer .rail { overflow-y: auto; }
 
 /* The shell: the page, and the guide beside it when that is open. The pane
    is a column the page makes room for, sticky so it stays in view while a
@@ -660,10 +698,6 @@ body.viewer .help-pane { position: static; height: auto; align-self: stretch; }
 .help-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; padding: 12px 16px 40px; font-size: 0.95em; }
 .help-body.guide { max-width: none; }
 .help-body h1 { font-size: 1.3em; }
-/* The "?" shows only where a pane has room. */
-.nav .links a.help-beside { display: none; border-radius: 999px; border: 1px solid var(--line); padding: 2px 9px; }
-.nav .links a.help-beside.on { border-color: var(--accent); }
-@media (min-width: 1500px) { .nav .links a.help-beside { display: inline-block; } }
 
 main { padding: 20px 24px 60px; }
 main.narrow { max-width: 40rem; margin: 0 auto; }
@@ -684,7 +718,32 @@ main.wide { max-width: none; }
 .centre { text-align: center; }
 .dialog.centre { justify-content: center; }
 
-/* The first thing somebody sees after signing in ---------------------------- */
+
+/* Home (Phase 8 chapter 13): the sections, each a head with an icon, a
+   word and one line, then its rows; and the batch heads on My recordings. */
+.home-sect { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); margin: 0 0 14px; overflow: hidden; }
+.home-sect .head { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.home-sect .head > div { min-width: 0; }
+.home-sect .head .ico { width: 32px; height: 32px; border-radius: 8px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; flex: none; color: var(--accent); }
+.home-sect .head .ico .i { width: 16px; height: 16px; }
+.home-sect .head b { display: block; font-size: var(--t-body); font-weight: 600; }
+.home-sect .head .cap { color: var(--muted); font-size: var(--t-small); line-height: 1.4; margin-top: 2px; max-width: 64ch; display: block; }
+.home-sect .head .btn, .home-sect .head .pills { margin-left: auto; align-self: center; }
+.home-sect .head .btn + .btn { margin-left: 6px; }
+.home-sect .head .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.home-sect .row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.home-sect .row:first-of-type { border-top: 0; }
+.home-sect .head + .row { border-top: 0; }
+.home-sect .row .plain { padding: 0; }
+.home-sect .row b { font-weight: 500; }
+.home-sect .empty-line { margin: 0; padding: 10px 14px; }
+.home-sect .pill.small { font-size: 11px; line-height: 18px; padding: 0 8px; }
+.home-sect.ready { border-color: var(--accent); }
+.home-sect .card { margin: 10px 14px 4px; }
+.tbl tr.batch-head td { background: var(--surface-2); padding: 8px 10px; border-top: 2px solid var(--line); }
+.rail .item b .pill.small { font-size: 10px; line-height: 16px; padding: 0 6px; }
+
+/* The welcome head of the upload page ------------------------------------ */
 
 .welcome { text-align: center; margin: 8px 0 22px; }
 .welcome h1 { font-size: 1.9em; margin-bottom: 6px; }
@@ -1560,12 +1619,6 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .tbl tr.group a:hover { text-decoration: underline; }
 /* Recorded here: a recording that failed says why, in the row, and is not polled. */
 .dictations .failed-line { color: var(--danger); }
-/* The Start page: three doors. */
-.start .starts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 56rem; }
-@media (max-width: 760px) { .start .starts { grid-template-columns: 1fr; } }
-.start .start-card { display: grid; gap: 6px; padding: 18px; text-decoration: none; color: inherit; border: 2px solid var(--line); }
-.start .start-card:hover, .start .start-card:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
-.start .start-card .icon, .start .start-card svg { width: 26px; height: 26px; color: var(--accent); }
 /* Recorded here: the row just recorded, and the play button with its player. */
 .dictations tr.new td { background: var(--accent-soft); }
 .dictations .play-cell { width: 2.4rem; white-space: nowrap; }

@@ -103,9 +103,10 @@ def rows(event):
 
 def test_recording_exists_only_under_its_setting(ana, client):
     signed_in(client, ana)
-    start = client.get(reverse("start")).content.decode()
+    # Record now is the rail's button, on Home and on every page.
+    start = client.get(reverse("recordings")).content.decode()
     assert "Record now" in start and 'href="/record/new"' in start
-    home = client.get(reverse("home")).content.decode()
+    home = client.get(reverse("recordings")).content.decode()
     assert "Recorded here" in home and "Uploaded this session" in home
     assert client.get(reverse("record-new")).status_code == 200
     # The old addresses lead to the new pages.
@@ -114,8 +115,10 @@ def test_recording_exists_only_under_its_setting(ana, client):
     assert client.get(reverse("dictate")).status_code == 302
     settings_store.set_to("dictation", False)
     assert client.get(reverse("record-new")).status_code == 404
-    assert "Record now" not in client.get(reverse("start")).content.decode()
-    assert "Recorded here" not in client.get(reverse("home")).content.decode()
+    assert (
+        'href="/record/new"' not in client.get(reverse("recordings")).content.decode()
+    )
+    assert "Recorded here" not in client.get(reverse("recordings")).content.decode()
     told = settings_store.definition("dictation")
     assert told.needs == "live_recording" and told.default is False
 
@@ -129,7 +132,7 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
         reverse("record-start"), json.dumps({"dictation": True}), "application/json"
     )
     assert answer.status_code == 200, answer.content
-    assert answer.json()["case"] == "/"
+    assert answer.json()["case"] == "/recordings"
     recording = Recording.objects.get(pk=answer.json()["id"])
     assert recording.is_dictation and recording.case is None
     assert recording.recording_type == "Dictation" and not recording.diarize
@@ -140,7 +143,7 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
     assert list(lifecycle.in_the_workspace(ana)) == []
     recording.media_state = MediaState.READY
     recording.save()
-    page = client.get(reverse("home") + f"?new={recording.pk}").content.decode()
+    page = client.get(reverse("recordings") + f"?new={recording.pk}").content.decode()
     assert recording.title in page and "New recording" in page
     assert (
         page.index("Recorded here")
@@ -154,7 +157,7 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
     recording.save()
     recording.folder.mkdir(parents=True, exist_ok=True)
     (recording.folder / "playback.m4a").write_bytes(b"x")
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert f'data-src="/media/{ana.pk}/{recording.pk}/playback.m4a"' in page
     # Without the setting a dictation cannot start.
     settings_store.set_to("dictation", False)
@@ -170,7 +173,7 @@ def test_a_failed_recording_says_why_and_is_not_watched(ana, client):
     recording.failure_message = "The file is empty"
     recording.save()
     signed_in(client, ana)
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     # The row says what went wrong, in its own words, and nothing on it asks
     # the server where it stands: a final state drawn is a final state kept.
     assert 'class="small failed-line">The file is empty</div>' in page
@@ -179,7 +182,7 @@ def test_a_failed_recording_says_why_and_is_not_watched(ana, client):
     waiting = live.start(ana, None, dictation=True)
     waiting.media_state = MediaState.READY
     waiting.save()
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert 'class="muted small queue-line" data-state="preparing"' in page
 
 
@@ -229,7 +232,7 @@ def test_the_memo_is_one_click_with_the_shipped_template(ana, client, quiet_task
     assert template is not None and template.recording_types == ["Dictation"]
     assert "do not summarise" in template.text and "[unclear]" in template.text
     signed_in(client, ana)
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert "Write the memo" in page
     answer = client.post(reverse("dictation-memo", args=[recording.pk]))
     assert answer.status_code == 200
@@ -242,7 +245,7 @@ def test_the_memo_is_one_click_with_the_shipped_template(ana, client, quiet_task
     memo.state = "done"
     memo.text = "Dear colleague"
     memo.save()
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert (
         "Open the memo" in page and f"/recording/{recording.pk}?panel=summary" in page
     )
@@ -288,7 +291,7 @@ def test_send_to_gives_one_colleague_that_dictation(
     )
     # Ben sees it under Sent to you, reads it, and can do nothing more with it.
     signed_in(client, ben)
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert "Sent to you" in page and recording.title in page
     assert "Write the memo" not in page and "Send to" not in page
     assert client.get(reverse("viewer", args=[recording.pk])).status_code == 200
@@ -375,7 +378,7 @@ def test_the_offices_retention_takes_each_dictation_on_its_own(ana, client):
     recording.refresh_from_db()
     assert dictation.days_left(recording) == 5
     signed_in(client, ana)
-    page = client.get(reverse("home")).content.decode()
+    page = client.get(reverse("recordings")).content.decode()
     assert "unless opened" in page and 'class="expiring"' in page
     assert dictation.for_tonights_digest() == {
         ana.pk: [{"title": recording.title, "days_left": 5}]

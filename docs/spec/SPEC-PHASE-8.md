@@ -22,6 +22,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **One sitting** (chapter 9, for the build): a bar on the incident page's Cameras tab that says how much of the incident the assistant can hold at once, in hours of camera, with a sentence for each zone that says what changes; everything said always read and the longest cameras' pictures left out first when the sitting is full, with a pin to keep one; the engine's window read from the engine so a larger model changes every bar and no setting; and the memo, the comparison and Gideon saying what they read.
 - **A note is an event, and the Event card** (chapter 11, for the build): a note on a line of a synced camera is an event on that incident's chronology at the line's moment, one thing in two places, changed or removed from either; the Events lane draws a mark alone per event, and one Event card, light on hover and whole on a press, carries what the lane's labels and the row's muted line used to spell out, from the strip, the focus camera's scrub bar, the Chronology row and the viewer's timeline.
 - **The Timeline view, the chronology figure, and the camera that comes to the front** (chapter 12, for the build): a press on an event, from the lane, a row, the card, a tick, the memo or Find, brings the event's own camera to the front as it seeks; the Chronology tab gains a Timeline view beside its rows, the cameras' spans as a band and the events down the page in spells with a numbered mark in the camera's colour; the Word export prints that figure in place of the strip picture, which goes.
+- **One home and the rail** (chapter 13, for the build): sign-in lands on Home, which leads with a finished batch's download, the cases that need the person, what is running, this session's recordings with the keep-or-lose line and every case; a rail down the left of every page carries the two actions at its top and the places with one line each saying what they are for; the Start page and the top bar's places go; a batch's download is on Home and on My recordings, never only on the batch page.
 
 ## Contents
 
@@ -37,7 +38,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 10. The sitting on the case page
 11. A note is an event, and the Event card
 12. The Timeline view, the chronology figure, and the camera that comes to the front
-13. Deferred and ruled out
+13. One home and the rail
+14. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -145,7 +147,7 @@ None. Two panels and the panel's open state are the browser's, per person.
 
 - **Notes on a transcript** and the case's Notes section: chapter 2.
 - **The Panel's pages** and the Cases list at 49 inches: they are lists and settings, and their widths stay as they are.
-- **A redesign of the Start page** beyond the tile's words.
+- **A redesign of the Start page** beyond the tile's words. (Superseded by chapter 13, v1.86.0: the Start page went, and Home and the rail took its place.)
 - **Remembering a layout per screen**: the width is read, not stored.
 
 ### Left to the build
@@ -974,9 +976,88 @@ Added to `CONTEXT.md` with this chapter. **Timeline view**: the Chronology tab's
 - How the band is drawn in Word (a small picture drawn by the server, so it prints sharp at page width).
 - The stem between entries and the numbers' size, within the mock-up's measures.
 
-## 13. Deferred and ruled out
+## 13. One home and the rail
 
-- **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19; the glossary's word stands.
+Written 2026-09-25 from the maintainer's asks the same day: the top level was unintuitive, a Start page asking "what do you want to do" with three doors beside a top bar of six places that overlapped it; people should know what each thing does; and after a batch, downloading the transcripts had to be obvious, since a person who left the batch page had no way back to its download but the page's address. Six landings were drawn the same day (three in the chat, three on a page; kept as `docs/spec/mockups/phase-8-home.html`) and E was picked: a rail down the left with one line under each place, the two actions at the top of the rail on every page, and Home leading with what needs the person; at the pick the download rule was added. "Workspaces" as the word for Cases was raised again and ruled out again: Workspace names the holding area behind My recordings. Built as `v1.86.0`.
+
+### Principles
+
+1. **A place says what it is for.** Every place in the rail carries one line in plain words, always there, so nobody has to open a page to learn what it holds.
+2. **An action is a button, always in the same place.** Upload files and Record now sit at the top of the rail on every page; inside a case they put the recording in that case. An action is not a place and lights nothing.
+3. **Home leads with what needs you.** A finished batch's download first, then the cases with something to settle, then what is running; the rest under them. Nothing on Home is only a door.
+4. **A batch's download is wherever the person is.** On the batch page as before, on Home until Done with these, and on My recordings on the batch's group. Leaving the batch page loses nothing.
+5. **Words stay.** Cases stay Cases; Workspace stays the holding area; My recordings stays the working page.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter: **Home**, **Rail**, **Ready to download**; the Start page entry becomes history; Recordings page, Workspace, Clips page, My clips, Record now, Folder management, Dashboard line and Batch amended. The pages never say sidebar, menu, nav, dashboard, landing page, inbox or notifications.
+
+### The rail
+
+- **On every page**, down the left: at the top **Upload files** (the primary button, always) and **Record now** (with the Record now setting on, or inside a case with Live recording on; a bare New recording page without Record now has nowhere to land). Both carry the case the person is inside (`?case=`), so the upload page preselects Into a case and the recording lands in it; an Admin looking into somebody else's case gets neither, since those pages would refuse it.
+- **The places**, each an icon, its name and one line: Home, "What is running, and what needs you"; Cases (with Folder management on), "Kept for a matter, after sign-out"; My recordings, "This session only, then gone"; Clips (with Clips available), "Pieces cut for a hearing". Under **Office**: Panel (an Admin), "Settings, status, people"; Help, "The guide, at this page", with the "?" that opens the guide beside the page as a small link under it where the window has room.
+- **The place the person is on** is lit and carries `aria-current`; the upload page, the batch page and the record page light nothing. The Home item carries a count when batches wait for their download ("1 ready").
+- **Widths.** From 1400 pixels the rail shows its lines; from 900 to 1399 it folds to icons and names; under 900 it is a row of icons under the top bar, the lines as titles. The incident page folds it at every width, since its desk needs the room.
+- **The top bar** keeps the brand (to Home), the person's name, Sign out and the theme.
+
+### Home
+
+- **Where sign-in and the brand land**; `/start` follows to Home for old links, not permanently.
+- **In order**: the greeting; the notices (transcription not installed; the service down; the storage warning); **Ready to download**; **Needs you**; **Running now**; **This session**; **Recent cases**; **Clips**. A section with nothing in it is not drawn.
+- **Ready to download**: one row per finished batch of this session with at least one transcript: "5 transcripts ready, uploaded 10:02" (and how many were not transcribed), Download transcripts (the batch's zip, as the batch page offers it), Open the batch, Done with these. It stays until Done with these; a batch whose recordings went into a case is the case's.
+- **Needs you**: the cases from the person's list whose dashboard line carries a pill in the warning tone (an incident not synced, events to check, a memo with newer events, clips failed, the retention warning), each with those pills and Keep where retention warns.
+- **Running now**: one line of pills for the person's own work in hand: the unfinished batch ("2 of 5 transcribed", to the batch page), a Process again, transcripts preparing, tonight's vision.
+- **This session**: the recordings not in a case, newest first, each with its state pill, its length, when it was uploaded and Open; above them the keep-or-lose line said once, plainly ("These stay until you sign out, or 8 hours after you stop working. Put a recording in a case to keep it."; without Cases, "Export anything you want to keep."); "n recorded here" when Record now is on; a small My recordings link.
+- **Recent cases** (with Folder management on): every case the person can open, by last activity, each with its name, Shared by and New, its dashboard pills, Keep where warned, its count of recordings and its date, Open; New case opens the same box the Cases page has; All cases. An Admin who owns none sees the office's count and a link to Everyone's cases; empty, "No cases yet."
+- **Clips**: one line with the count and how many are rendering, to the Clips page.
+
+### The batch's download, wherever the person is
+
+- **On the batch page**: unchanged; its finished state is the download.
+- **On Home**: Ready to download, above everything, until Done with these.
+- **On My recordings**: Uploaded this session grouped by batch, each group headed by when it was uploaded, its count and how many transcripts are ready, with Download transcripts, Open the batch and, once finished, Done with these. The rows keep their details pane and their acts.
+- **In the rail**: the Home item's count, from the same rule.
+- **Done with these** from any of the three lands on Home.
+
+### What goes
+
+- The Start page (`start.html`) and its tiles; the top bar's places; the Cases page's "Your recordings" button and its own copy of the New case box (one box, included on both pages).
+- The route name `home` now means Home; My recordings is `recordings`, and every link that meant My recordings (the recording page's crumb, the New recording page's, the gone page's way, the clips page's headings, the after-recording landing, the redirects when a recording is missing) points there.
+
+### What changes from earlier phases
+
+- Phase 8 chapter 1, The Start page and its "Not in this chapter" line: superseded; the tile's words went with the page.
+- Phase 2 chapter 1, The Cases page as the landing: superseded at v1.29.0 by the Start page and at v1.86.0 by Home.
+- Phase 1, the batch page: its download gains two other doors, Home and My recordings.
+- `CONTEXT.md`: the entries above.
+
+### Audit rows
+
+- None added.
+
+### Settings
+
+- None.
+
+### Not in this chapter
+
+- **Workspaces as the word for Cases**: ruled out again; Workspace names the holding area, and renaming both is a change of the app's vocabulary for a look.
+- **A top bar of places**: replaced by the rail; a bar has no room for a line under each place.
+- **Folding My recordings into Home**: ruled out; the working page with its details pane, Rename, Process again, Move to case, Clear and the Admin's view of somebody's Workspace stays a page.
+- **A list of past batches beyond this session**: not chosen; a batch is the session's.
+- **A "downloaded" mark** to hide Ready to download: not chosen; the count stays until Done with these, and the guide says so.
+- **The case page's own Record and Add recordings** beside the rail's: kept this release; the walk decides.
+
+### Left to the build
+
+- The rail's widths and where it folds; the words of the six lines.
+- The keep-or-lose line's words.
+- The order of the pills under Needs you (the dashboard line's).
+- How Recent cases performs for a person with many cases (every case is listed, at the maintainer's word; the pills cost about a dozen queries a case).
+
+## 14. Deferred and ruled out
+
+- **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19, and again with chapter 13 on 2026-09-25; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
 - **Dialogs for proposals and a page for them**: ruled out; the layer keeps the cameras in view.
 - **Filtering the chronology in place as Find**: ruled out; the words said on a camera are not events.
@@ -1000,6 +1081,7 @@ Added to `CONTEXT.md` with this chapter. **Timeline view**: the Chronology tab's
 | (none) | | 10 |
 | Edits | Note changed and Note removed gain where (chronology) | 11 |
 | (none; Chronology exported loses the kind png) | | 12 |
+| (none) | | 13 |
 
 ## Appendix B. Settings added in Phase 8
 
@@ -1017,6 +1099,7 @@ Added to `CONTEXT.md` with this chapter. **Timeline view**: the Chronology tab's
 | (none) | | | 10 |
 | (none) | | | 11 |
 | (none) | | | 12 |
+| (none) | | | 13 |
 
 ## Sources
 
@@ -1024,6 +1107,7 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-25, v1.86.0.** Chapter 13 (One home and the rail) written and built the same day from the maintainer's asks and the pick of landing E among six drawn, with these decisions left to the build: the rail is 220 pixels from 1400, folds to icons and names from 900 to 1399 and to a row under 900, and is folded on the incident page at every width; the six lines are as the chapter has them; the keep-or-lose line reads "These stay until you sign out, or n hours after you stop working. Put a recording in a case to keep it."; every case is listed under Recent cases; the New case box is one include on both pages; the route name home now means Home and My recordings is recordings. Chapter 1's Start page lines superseded; Phase 2's Cases landing line amended.
 - **2026-09-24, v1.85.0.** Chapter 12 (The Timeline view, the chronology figure, and the camera that comes to the front) written and built the same day from the maintainer's two asks and the mock-up judged the same day, with these decisions left to the build: a spell starts at a gap of 600 seconds; the heading reads the span and the count and never a name; the band in Word is a small picture drawn by the server with Pillow, the entries text and rules; the number's colour is the camera's lane colour, and the source pill still names the camera; the export keeps the note and the why under each entry; the memo's export posts nothing and the Word export is a plain link. Phase 6 chapter 2's export lines amended in place; chapter 11's picture line superseded.
 - **2026-09-24, v1.81.0.** Chapter 11 (A note is an event, and the Event card) written and built the same day from the maintainer's asks and picks (one thing in two views; a mark alone with the card on hover or a press; the rows simplified; the card from the row, the scrub bar and the viewer's timeline). Decisions left to the build: the hover delay is a quarter second and the card 36 characters wide; the current event's mark is lit on the lane; the row shows the "note" tell and the clip mark's words; a note event's layer is titled Edit note with the time greyed and a line saying it is the line's; its Remove question says it removes the note from the line and from every chronology; a press on a strip mark still seeks every camera as before and opens the card from the same press; the migration makes a note event for every note already on a synced camera's line. Chapter 11 in the contents, Deferred and ruled out now 12. In passing: a Chronology row is now lit by Back (the row was looked for by the wrong attribute since chapter 1), and the event layer's duplicate id is gone.
 - **2026-09-23, v1.79.0.** Chapter 10 built the same day, with these decisions left to the build: the offer's bar counts the templates' overhead with an empty chronology (the incident does not exist yet) and says nothing of it; the column keeps the figure, the bar and the word at every width (the table scrolls under 900 pixels as the tab's tables do); a share is refreshed on a draw that finds it never counted or older than the camera's newest Digest part, one reading of the record for the whole incident, so a Digest remade part by part is counted once at the next draw after its last part, and a transcript correction alone does not refresh it (the drift is a few tokens); the incident page's bar is now drawn from the kept shares by the same longest-first arithmetic the real fit follows, so the Cameras tab's bar and the case page's row are one set of figures and the real calls alone fit the record itself; a Digest part with no time (a test's) counts as fresh. Two migrations in two releases (0058, 0059) since chapter 9 shipped first.

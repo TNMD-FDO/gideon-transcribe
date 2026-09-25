@@ -8,13 +8,15 @@ Nothing you upload leaves the building. The app runs on the office's own server,
 
 The sign-in page carries your office's logo and name when your Admin has set them. Sign in with your office username and password, the same ones you use for your computer. You can sign in if you are in the office's sign-in group. If you are not and think you should be, ask IT.
 
-You land on the Start page, which asks one question, what do you want to do, and offers **Upload files**, **Record now** (when your office has turned recording on), and **Open a case** (when it uses cases). Along the top of every page are **Start**, **Cases**, **My recordings**, **Clips**, the **Panel** for Admins, and this guide under **Help**.
+You land on Home. Down the left of every page is the rail: at its top the two things you do, **Upload files** and **Record now** (when your office has turned recording on), and under them the places, each with a line saying what it is for: **Home** (what is running, and what needs you), **Cases** (kept for a matter, after sign-out; when your office uses cases), **My recordings** (this session only, then gone), **Clips** (pieces cut for a hearing), the **Panel** for Admins, and this guide under **Help**. The place you are on is lit. Inside a case, Upload files and Record now put the recording in that case.
+
+Home shows, in this order and only when there is something to show: **Ready to download**, a batch that has finished with its transcripts, until you press Done with these; **Needs you**, the cases with something to settle; **Running now**; **This session**, what you have uploaded today with the rule for how long it stays; and **Recent cases**, every case you can open with its state. On a narrow window the rail folds to icons.
 
 You have one login session at a time. Signing in from a second browser ends the first.
 
 ## Uploading a batch
 
-A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. **Upload files** on the Start page opens the Upload page.
+A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. **Upload files** at the top of the rail opens the Upload page.
 
 When your office uses cases, the page starts with one question, **Where do they go?**: **This session only**, or **Into a case**, with the case chosen beside it. Nothing else is chosen for you: a plain transcript needs no settings at all.
 
@@ -68,13 +70,15 @@ Then two choices:
 
 Every recording counts against your quota until it goes, so an office running batches all day works in a loop: upload, download, done with these, upload again.
 
+Leave the batch page and the transcripts are still yours to download. Home shows the batch under **Ready to download**, with **Download transcripts** and **Done with these**, until you press Done with these, and the rail's Home item counts the batches waiting; My recordings lists this session's uploads by batch, each with its download. You never have to find the batch page again.
+
 ## My recordings
 
-**My recordings** in the top bar is the one place to look for anything that is yours. It has two parts, each saying how long it keeps things.
+**My recordings** in the rail is the one place to look for anything that is yours, and where you work on it; Home shows this session's uploads too, but the details and the buttons are here. It has two parts, each saying how long it keeps things.
 
 **Recorded here**, when your office has recording on, is everything you recorded at your desk and kept on your own, with what colleagues have sent you under it. It is described under [Recording at your desk](#recording-at-your-desk) below.
 
-**Uploaded this session** is a table of everything you have uploaded and not yet removed, newest first. Click a recording and its details appear beside the table (under the row, on a laptop): the file, its state, its clips, and what you can do with it: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Move to case** when your office uses cases, and **Delete**. Up and down move along the rows; Enter opens. These stay until you sign out, unless you move them to a case.
+**Uploaded this session** is a table of everything you have uploaded and not yet removed, newest first, grouped by batch: each group is headed by when it was uploaded, how many transcripts are ready, **Download transcripts**, **Open the batch** and, once the batch has finished, **Done with these**. Click a recording and its details appear beside the table (under the row, on a laptop): the file, its state, its clips, and what you can do with it: **Open** to read it in the viewer, **Process again** to send it through transcription again with new settings, **Move to case** when your office uses cases, and **Delete**. Up and down move along the rows; Enter opens. These stay until you sign out, unless you move them to a case.
 
 **Clear my recordings** removes all the uploaded ones at once, after telling you what would go. **Upload files** starts a new batch.
 
@@ -289,7 +293,7 @@ Days while the office has cases turned off do not count against any case.
 
 ## Recording at your desk
 
-When your office has it on, **Record now** is on the Start page, and **New recording** is beside **Recorded here** on My recordings. Either opens the New recording page, which asks one question, what are you recording:
+When your office has it on, **Record now** is at the top of the rail on every page, and **New recording** is beside **Recorded here** on My recordings. Either opens the New recording page, which asks one question, what are you recording:
 
 - **Dictation.** Just you. The product is the memo, written out as you dictated it.
 - **Meeting or interview in the room.** The microphone hears everyone; the people expected are buttons, and you tap who is talking so the transcript names them. The product is the transcript, with an Interview summary one click away.

@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from core import documents, incidents
+from core import home as home_page
 from core.case_pages import _on_or_404, _their_case
 from core.documents import READY, Document
 from core.recordings import Recording
@@ -56,6 +57,7 @@ def add(request: HttpRequest, case_id) -> HttpResponse:
         back = f"/recording/{home['recording'].pk}?panel=details"
     context = {
         "page": "cases",
+        "here_case": home_page.here_case_for(request.user, case),
         "case": case,
         "home_kind": documents.home_words(home) if home else "",
         "home_name": " and ".join(
@@ -278,6 +280,7 @@ def page(request: HttpRequest, case_id, document_id) -> HttpResponse:
         {
             "page": "cases",
             "case": document.case,
+            "here_case": home_page.here_case_for(request.user, document.case),
             "document": document,
             "rows": rows,
             "open_page": open_page,

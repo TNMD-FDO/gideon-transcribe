@@ -15,7 +15,7 @@ register = template.Library()
 # The page word each view puts in its context, and the user guide heading it
 # is about. A page not listed here opens the guide at the top.
 SECTIONS = {
-    "start": "signing-in",
+    "home": "signing-in",
     "recordings": "my-recordings",
     "record": "recording-at-your-desk",
     "upload": "uploading-a-batch",

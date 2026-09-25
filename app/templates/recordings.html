@@ -13,6 +13,7 @@
     </div>
 
     {% if recorded_here %}
+      <span id="recorded-here"></span>
       {% include "recorded_here.html" %}
     {% endif %}
 
@@ -33,7 +34,10 @@
         One table, and one block of details per recording. On a wide window
         the chosen recording's details sit in the pane on the right; on a
         narrow one they open under its row. The script moves the block
-        between the two places; the markup is the same either way.
+        between the two places; the markup is the same either way. The rows
+        are grouped by batch (Phase 8 chapter 13), each group headed by when
+        it was uploaded and, once it has finished, its download: the
+        transcripts are never only on the batch page.
       {% endcomment %}
       <div class="panes benched">
         <div class="pane-list">
@@ -44,71 +48,85 @@
               </tr>
             </thead>
             <tbody>
-              {% for recording in recordings %}
-                <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
-                    {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
-                  <td><b>{{ recording.title }}</b></td>
-                  <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span></td>
-                  <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
-                  <td>{% if recording.clips.count %}{{ recording.clips.count }}{% endif %}</td>
-                  <td class="muted">{{ recording.batch.created|date:"j M" }}, {{ recording.batch.created|time:"g:i a" }}</td>
-                  <td class="acts">
-                    {% if recording.transcript %}
-                      <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
-                    {% endif %}
-                  </td>
-                </tr>
-                <tr class="detail-row" hidden>
+              {% for group in groups %}
+                <tr class="batch-head" data-batch="{{ group.batch.pk }}">
                   <td colspan="6">
-                    <div class="detail" id="detail-{{ recording.pk }}">
-                      <h2>{{ recording.title }}</h2>
-                      <p class="muted small">
-                        {{ recording.original_filename }}
-                        {% if recording.duration_seconds %}&middot; {{ recording.length }}{% endif %}
-                        &middot; uploaded {{ recording.batch.created|date:"j M" }} at {{ recording.batch.created|time:"g:i a" }}
-                      </p>
-                      <dl class="kv">
-                        <dt>State</dt>
-                        <dd>{{ recording.state_word }}{% if recording.failure_message %}: {{ recording.failure_message }}{% endif %}</dd>
-                        {% if recording.is_two_channel_call %}
-                          <dt>Sides</dt>
-                          <dd>Two-channel call, {{ recording.sides.count }} sides, each transcribed on its own</dd>
-                        {% endif %}
-                        <dt>Clips</dt>
-                        <dd>{{ recording.clips.count }}</dd>
-                      </dl>
-                      <div class="row actions">
-                        {% if recording.transcript %}
-                          <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
-                        {% endif %}
-                        {% if not someone_elses %}
-                          <button type="button" class="small rename-recording"
-                                  data-recording="{{ recording.pk }}"
-                                  data-title="{{ recording.title }}">Rename</button>
-                        {% endif %}
-                        {% if recording.transcript and not recording.being_replaced %}
-                          <button type="button" class="small process-again"
-                                  data-recording="{{ recording.pk }}"
-                                  data-diarize="{% if recording.diarize %}yes{% else %}no{% endif %}"
-                                  data-title="{{ recording.title }}">Process again</button>
-                          {% if folder_management and not someone_elses %}
-                            <button type="button" class="small move"
-                                    data-recording="{{ recording.pk }}"
-                                    data-title="{{ recording.title }}">Move to case</button>
-                          {% endif %}
-                        {% elif recording.media_state == "failed" %}
-                          <button type="button" class="small retry"
-                                  data-recording="{{ recording.pk }}">Retry</button>
-                        {% endif %}
-                        <span class="grow"></span>
-                        <button type="button" class="ghost small danger delete"
-                                data-recording="{{ recording.pk }}"
-                                data-title="{{ recording.title }}"
-                                data-clips="{{ recording.clips.count }}">Delete</button>
-                      </div>
+                    <div class="row" style="gap: 8px">
+                      <b>Uploaded {{ group.batch.created|date:"j M" }} at {{ group.batch.created|time:"g:i a" }}</b>
+                      <span class="muted small">{{ group.rows|length }} recording{{ group.rows|length|pluralize }}{% if group.done %}, {{ group.done }} transcript{{ group.done|pluralize }} ready{% endif %}</span>
+                      <span class="grow"></span>
+                      {% if group.done %}<a href="{{ group.download }}" class="btn small{% if group.finished %} primary{% endif %}">{% icon "download" %} Download transcripts</a>{% endif %}
+                      <a href="{{ group.url }}" class="btn ghost small">Open the batch</a>
+                      {% if not someone_elses and group.finished %}<button type="button" class="btn ghost small clear-recordings" data-batch="{{ group.batch.pk }}">Done with these</button>{% endif %}
                     </div>
                   </td>
                 </tr>
+                {% for recording in group.rows %}
+                  <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
+                      {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
+                    <td><b>{{ recording.title }}</b></td>
+                    <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span></td>
+                    <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
+                    <td>{% if recording.clips.count %}{{ recording.clips.count }}{% endif %}</td>
+                    <td class="muted">{{ recording.batch.created|date:"j M" }}, {{ recording.batch.created|time:"g:i a" }}</td>
+                    <td class="acts">
+                      {% if recording.transcript %}
+                        <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  <tr class="detail-row" hidden>
+                    <td colspan="6">
+                      <div class="detail" id="detail-{{ recording.pk }}">
+                        <h2>{{ recording.title }}</h2>
+                        <p class="muted small">
+                          {{ recording.original_filename }}
+                          {% if recording.duration_seconds %}&middot; {{ recording.length }}{% endif %}
+                          &middot; uploaded {{ recording.batch.created|date:"j M" }} at {{ recording.batch.created|time:"g:i a" }}
+                        </p>
+                        <dl class="kv">
+                          <dt>State</dt>
+                          <dd>{{ recording.state_word }}{% if recording.failure_message %}: {{ recording.failure_message }}{% endif %}</dd>
+                          {% if recording.is_two_channel_call %}
+                            <dt>Sides</dt>
+                            <dd>Two-channel call, {{ recording.sides.count }} sides, each transcribed on its own</dd>
+                          {% endif %}
+                          <dt>Clips</dt>
+                          <dd>{{ recording.clips.count }}</dd>
+                        </dl>
+                        <div class="row actions">
+                          {% if recording.transcript %}
+                            <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
+                          {% endif %}
+                          {% if not someone_elses %}
+                            <button type="button" class="small rename-recording"
+                                    data-recording="{{ recording.pk }}"
+                                    data-title="{{ recording.title }}">Rename</button>
+                          {% endif %}
+                          {% if recording.transcript and not recording.being_replaced %}
+                            <button type="button" class="small process-again"
+                                    data-recording="{{ recording.pk }}"
+                                    data-diarize="{% if recording.diarize %}yes{% else %}no{% endif %}"
+                                    data-title="{{ recording.title }}">Process again</button>
+                            {% if folder_management and not someone_elses %}
+                              <button type="button" class="small move"
+                                      data-recording="{{ recording.pk }}"
+                                      data-title="{{ recording.title }}">Move to case</button>
+                            {% endif %}
+                          {% elif recording.media_state == "failed" %}
+                            <button type="button" class="small retry"
+                                    data-recording="{{ recording.pk }}">Retry</button>
+                          {% endif %}
+                          <span class="grow"></span>
+                          <button type="button" class="ghost small danger delete"
+                                  data-recording="{{ recording.pk }}"
+                                  data-title="{{ recording.title }}"
+                                  data-clips="{{ recording.clips.count }}">Delete</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
               {% endfor %}
             </tbody>
           </table>
