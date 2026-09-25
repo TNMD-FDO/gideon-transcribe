@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.87.0, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The case chat reads an incident's cameras at one sitting.** The synced
+cameras of an incident are now one item of a Reading, the incident's record
+in time order by the cameras' clock, each line cited as its recording and
+its own time, the way the memo and Gideon on the incident page read them.
+Before, every camera's transcript and its Digest both went in, so twelve
+cameras cost three Readings and a third more tokens than the memo reads for
+the same incident. When the record would not fit a Reading, the longest
+unpinned camera is read from its words alone, as the Sitting does, and the
+answer says so.
+
+**A part knows what it holds, and the combine stitches.** When a case is
+still read in parts, each part is told which recordings it holds and that
+the others hold the rest, so it never says the case lacks what its share
+does not contain; the combining call writes one answer in time order and
+treats a difference between parts as coverage, naming a disagreement only
+where two parts describe the same moment differently. From the maintainer's
+finding that a question over twelve cameras came back as three answers
+compared against each other.
+
+**A call's time limit grows with what it sends.** Every feature's time limit
+gains one second for every 500 tokens the call sends, on top of the setting,
+so a Reading of a hundred thousand tokens gets more than three minutes on
+top while a small chat call keeps its own. A third Reading had run into the
+fixed limit on the office's copy. The catalogue rows say so.
+
 ## v1.86.2, 2026-09-25
 
 ```

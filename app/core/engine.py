@@ -65,6 +65,13 @@ PRIORITY = 1
 # clip. The words differ by version, so any of these means the same thing.
 NO_VISION_WORDS = ("video", "image", "multimodal", "multi-modal", "modality")
 
+# The engine reads at least this many tokens a second, so a call's time limit
+# grows by one second for every 500 tokens it sends, on top of the feature's
+# setting (v1.87.0): a Reading of a hundred thousand tokens gets more than
+# three minutes on top, and a small chat call keeps its own limit. Measured on
+# the office's engine, where two Readings of 125,000 tokens ran at once in 76
+# and 92 seconds; the figure is a floor, not the rate.
+TOKENS_PER_SECOND = 500
 # The check and Test connection are quick questions, not calls.
 CHECK_TIMEOUT = 10
 # What Test connection asks the model, and the only answer it wants.
@@ -373,6 +380,22 @@ def status_for_the_panel() -> dict:
 # One call ----------------------------------------------------------------------
 
 
+def reading_allowance(messages: list[dict]) -> float:
+    """The seconds a call's time limit grows by for what it sends: one for
+    every TOKENS_PER_SECOND tokens, the text estimated at four characters a
+    token. A picture or a clip in a message counts nothing here."""
+    chars = 0
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, str):
+            chars += len(content)
+        elif isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict) and isinstance(part.get("text"), str):
+                    chars += len(part["text"])
+    return chars / 4 / TOKENS_PER_SECOND
+
+
 def complete(
     messages: list[dict],
     *,
@@ -398,6 +421,7 @@ def complete(
     """
     from openai import APIConnectionError, APITimeoutError
 
+    timeout = timeout + reading_allowance(messages)
     extra_body: dict = {
         "chat_template_kwargs": {"enable_thinking": thinking},
         "priority": PRIORITY,

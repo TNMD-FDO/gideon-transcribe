@@ -304,6 +304,18 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
     user = combining["messages"][-1]["content"]
     assert user.startswith(prompts.COMBINING)
     assert "Part 1 of 3:\nPart one says blue" in user and "Part 3 of 3:" in user
+    # The combine joins the parts in time order and never dresses coverage up
+    # as disagreement (v1.87.0).
+    assert "not a disagreement" in prompts.COMBINING
+    # Each part was told which recordings it holds (v1.87.0).
+    parts_asked = [one["messages"][-1]["content"] for one in asked[:3]]
+    assert all("This is part " in one for one in parts_asked)
+    assert any(
+        one.startswith(
+            "This is part 2 of 3 of the case's recordings: it holds Recording 2 of 3."
+        )
+        for one in parts_asked
+    )
     turn.refresh_from_db()
     assert turn.parts == 3 and turn.state == "done"
     # Each part read was counted as it came back, for the page's wait line.
@@ -312,6 +324,186 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
     assert set(turn.citations) == {"[Recording 1, 00:12:45]", "[Recording 3, 00:12:45]"}
     row = Row.objects.get(category="llm", event="AI assistant call")
     assert row.details["readings"] == 3 and row.details["input_tokens"] == 400
+
+
+def a_synced_incident(owner, a_case, *, digest_lines=2):
+    """A call and an incident of two synced cameras: the first with a Digest,
+    the second with its words alone; the second starts 281 s after the first."""
+    from core import incidents
+    from core.assistant import DigestPart
+    from tests.test_incident_assistant import stamp, video
+
+    settings_store.set_to("incidents", True)
+    settings_store.set_to("moments_available", True)
+    settings_store.set_to("digests_available", True)
+    a_recording(owner, a_case, "Jail call 1")
+    first = video(
+        owner,
+        a_case,
+        "first",
+        stamp=stamp("21:56:19", "BWC2-1"),
+        lines=(
+            (10.0, "Speaker 1", "Step out of the vehicle for me."),
+            (30.0, "Officer Hale", "Hands where I can see them."),
+        ),
+    )
+    second = video(
+        owner,
+        a_case,
+        "second",
+        stamp=stamp("22:01:00", "BWC2-2"),
+        lines=((5.0, "Speaker 4", "Stay in the car, please."),),
+    )
+    lines = [
+        '1. [00:00:10]-[00:00:14] (said) Speaker 1 said "Step out of the vehicle '
+        'for me."',
+        "2. [00:00:30]-[00:00:34] (both) Officer Hale asked for hands in view; "
+        "the camera showed a grey jacket.",
+    ]
+    for n in range(2, digest_lines):
+        lines.append(
+            f"{n + 1}. [00:01:{n:02d}]-[00:01:{n + 3:02d}] (seen) A long description "
+            "of the roadside and the two officers standing by the car, at length."
+        )
+    DigestPart.objects.create(
+        transcript=first.transcript, number=1, text="\n".join(lines), made_at=None
+    )
+    return incidents.make(a_case, "Stop", [first, second], by=owner)
+
+
+@pytest.mark.django_db
+def test_an_incidents_cameras_are_read_as_one_record(
+    owner, a_case, client, monkeypatch
+):
+    """v1.87.0: the synced cameras of an incident are one item of a Reading,
+    the incident's record in time order by the cameras' clock, each line
+    cited as its recording and its own time, as the memo and the incident
+    page's Gideon read them; a camera's own transcript and Digest are not
+    sent as well."""
+    swallow_defer(monkeypatch)
+    a_synced_incident(owner, a_case)
+    asked = reachable(
+        monkeypatch,
+        ["The stop began [Recording 2, 00:00:10]; then [Recording 3, 00:00:05]."],
+    )
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(chat=chat, number=1, question="What happened?")
+    case_chat.answer_case_turn(turn.pk)
+
+    assert len(asked) == 1
+    user = asked[0]["messages"][-1]["content"]
+    # Every recording keeps its header; the incident's two cameras are one item.
+    for n in (1, 2, 3):
+        assert f"Recording {n} of 3" in user
+    assert "The record of the incident Stop: its 2 synced cameras" in user
+    assert "each camera's Digest" in user
+    # The first camera's Digest lines, cited as the recording and its own
+    # time, and never its transcript lines as well.
+    assert "[Recording 2, 00:00:10]-[00:00:14] (said) Speaker 1 said" in user
+    assert "[Recording 2, 00:00:10] Step out" not in user
+    # The second camera has no Digest, so its words, without its numbered label.
+    assert "[Recording 3, 00:00:05] Stay in the car, please." in user
+    # In time order by the clock: the second camera starts 281 s later.
+    assert user.index("[Recording 2, 00:00:30]") < user.index("[Recording 3, 00:00:05]")
+    turn.refresh_from_db()
+    assert turn.state == "done" and turn.parts == 0
+    assert set(turn.citations) == {"[Recording 2, 00:00:10]", "[Recording 3, 00:00:05]"}
+    assert turn.readings[1]["incident"] == "Stop" and turn.readings[1]["digest"] is True
+    assert turn.readings[2]["incident"] == "Stop"
+    # The second camera has no Digest, so the answer says it was read from
+    # its words; the first, read from its Digest in the record, is not named.
+    assert turn.answer.startswith("Recording 3 was read from the transcript alone.")
+
+
+@pytest.mark.django_db
+def test_a_cameras_words_go_alone_when_the_record_would_not_fit_a_reading(
+    owner, a_case, client, monkeypatch
+):
+    """v1.87.0: when the incident's record is larger than a Reading, the
+    longest unpinned camera is read by its words alone, as the Sitting does,
+    and the answer says so; the cameras are never sent separately."""
+    swallow_defer(monkeypatch)
+    a_synced_incident(owner, a_case, digest_lines=40)
+    # The Digest alone is over this; the words of both cameras are well under.
+    monkeypatch.setattr(settings_store, "reading_tokens", lambda: 600)
+    asked = reachable(monkeypatch, ["Hands [Recording 2, 00:00:30]."])
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(chat=chat, number=1, question="Hands?")
+    case_chat.answer_case_turn(turn.pk)
+
+    assert len(asked) == 1
+    user = asked[0]["messages"][-1]["content"]
+    assert "the words alone of BWC2-1" in user
+    assert "[Recording 2, 00:00:30] Officer Hale: Hands where I can see them." in user
+    assert "(seen) A long description" not in user
+    turn.refresh_from_db()
+    assert turn.state == "done" and turn.parts == 0
+    assert (
+        turn.readings[1]["digest"] is False and turn.readings[2]["incident"] == "Stop"
+    )
+    # The first camera's words went alone; the second never had a Digest.
+    assert turn.answer.startswith(
+        "Recording 2 and Recording 3 were read from the transcript alone."
+    )
+    assert turn.citations == {
+        "[Recording 2, 00:00:30]": {
+            "recording": turn.readings[1]["recording"],
+            "seconds": 30.0,
+        }
+    }
+
+
+def test_a_calls_time_limit_grows_with_what_it_sends(monkeypatch):
+    """v1.87.0: one second for every 500 tokens sent, the text at four
+    characters a token, on top of the feature's setting; a picture counts
+    nothing."""
+    messages = [
+        {"role": "system", "content": "x" * 4000},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "y" * 2000},
+                {"type": "image_url", "image_url": {"url": "data:..."}},
+            ],
+        },
+    ]
+    assert engine.reading_allowance(messages) == 3.0
+    given = []
+
+    class Completions:
+        def create(self, **request):
+            class Choice:
+                finish_reason = "stop"
+
+                class message:
+                    content = "ready"
+
+            class Answer:
+                choices = [Choice()]
+                usage = None
+                model = "the-model"
+
+            return Answer()
+
+    class Client:
+        class chat:
+            completions = Completions()
+
+    monkeypatch.setattr(
+        engine, "client", lambda timeout: given.append(timeout) or Client()
+    )
+    monkeypatch.setattr(engine, "model_name", lambda: "the-model")
+    engine.complete(
+        messages,
+        max_completion_tokens=8,
+        temperature=0,
+        top_p=1,
+        thinking=False,
+        timeout=120,
+    )
+    assert given == [123.0]
 
 
 @pytest.mark.django_db

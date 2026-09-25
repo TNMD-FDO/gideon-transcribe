@@ -377,7 +377,7 @@ The Speaker whose turns a small Speaker's lines sit inside: the one whose line e
 _Avoid_: cluster, match, similarity, confidence
 
 **Sitting**:
-Everything the AI assistant reads of an Incident in one call before it writes the memo, checks the report or answers a question: what was said on every synced camera and, as room allows, what each showed. The bar on the incident page's Cameras tab says how full the Sitting is, in hours of camera, against what the engine can hold at once. When it is full, the longest cameras are read by their words alone, and every output written that way says so. Phase 8 chapter 9.
+Everything the AI assistant reads of an Incident in one call before it writes the memo, checks the report or answers a question, on the incident page or, from v1.87.0, in the Case Chat: what was said on every synced camera and, as room allows, what each showed. The bar on the incident page's Cameras tab says how full the Sitting is, in hours of camera, against what the engine can hold at once. When it is full, the longest cameras are read by their words alone, and every output written that way says so. Phase 8 chapter 9.
 _Avoid_: context, context window, tokens, prompt, budget (on a page a person reads; the Panel keeps tokens)
 
 **Pinned**:
@@ -536,7 +536,7 @@ A Chat grounded in every Transcript in a Case, as the Case stands when each ques
 _Avoid_: cross-Case Chat (would mean several Cases), Case-wide Chat
 
 **Reading**:
-One pass of the AI assistant over whole Transcripts that fit together in one call, about six hours of talk. A Case Chat question takes one Reading when the Case fits and otherwise several Readings and a combining step, which the page calls parts.
+One pass of the AI assistant over whole Transcripts that fit together in one call, about six hours of talk. A Case Chat question takes one Reading when the Case fits and otherwise several Readings and a combining step, which the page calls parts. An Incident's synced cameras are one item of a Reading, read as the Incident's record at one Sitting rather than as their own Transcripts and Digests (v1.87.0); each part is told which Recordings it holds, and the combining step joins the parts in time order rather than comparing them.
 
 **Speaker suggestion**:
 A name or role the AI assistant proposes for an unnamed Speaker when a user asks, with the Segment that shows why. Nothing changes until the user accepts it. Inside a Case, the AI assistant is told the Case's People, so it can recognise a Person already named elsewhere.

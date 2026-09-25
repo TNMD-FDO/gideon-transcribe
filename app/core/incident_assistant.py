@@ -312,6 +312,79 @@ def record_of(incident, words_alone: set[str] | frozenset[str] = frozenset()) ->
     }
 
 
+def case_record(incident, numbers: dict, words_alone=frozenset()) -> dict:
+    """The incident's record as the Case Chat reads it (v1.87.0).
+
+    The synced cameras among the recordings a question reads, each one's
+    Digest (its transcript when it has none, or when it is named in
+    `words_alone`), every line cited as [Recording n, hh:mm:ss] on that
+    recording's own clock, merged in time order by the Incident clock. The
+    Sitting's rule holds (Phase 8 chapter 9): a camera contributes its Digest
+    or its words, never both. `numbers` maps a recording's id to its number
+    in the question.
+
+    Returns rows as (seconds on the incident, recording number, line), the
+    camera names by how each was read, and the numbers the record covers.
+    """
+    rows: list[tuple[float, int, str]] = []
+    used: list[str] = []
+    transcript_only: list[str] = []
+    read_alone: list[str] = []
+    covered: list[int] = []
+    seconds: dict[str, float] = {}
+    for camera in synced_cameras(incident):
+        number = numbers.get(camera.recording_id)
+        transcript = getattr(camera.recording, "transcript", None)
+        if number is None or transcript is None:
+            continue
+        name = camera.camera_id()
+        covered.append(number)
+        seconds[name] = float(camera.recording.duration_seconds or 0.0)
+        digest = assistant.digest_text(transcript) if assistant.digests_on() else ""
+        if digest and name in words_alone:
+            digest = ""
+            read_alone.append(name)
+        if digest:
+            for raw in digest.splitlines():
+                line = DIGEST_NUMBER.sub("", raw).strip()
+                if not line:
+                    continue
+                match = CLOCK_TIME_IN.search(line)
+                own = 0.0
+                if match:
+                    hours, minutes, secs = (int(part) for part in match.groups())
+                    own = float(hours * 3600 + minutes * 60 + secs)
+                    cited = (
+                        f"[Recording {number}, {hours:02d}:{minutes:02d}:{secs:02d}]"
+                    )
+                    line = line[: match.start()] + cited + line[match.end() :]
+                rows.append((camera.starts_at + own, number, line))
+            used.append(name)
+            continue
+        for line in prompts.lines_of(transcript):
+            label = prompts.plain_speaker(line.speaker)
+            # A numbered label is this camera's alone and is not carried.
+            who = "" if not label or assistant._is_a_label(label) else f"{label}: "
+            own = prompts.clock(line.start)[1:-1]
+            rows.append(
+                (
+                    camera.starts_at + line.start,
+                    number,
+                    f"[Recording {number}, {own}] {who}{line.text}",
+                )
+            )
+        transcript_only.append(name)
+    rows.sort(key=lambda one: (one[0], one[1]))
+    return {
+        "rows": rows,
+        "used": used,
+        "transcript_only": transcript_only,
+        "words_alone": read_alone,
+        "covered": covered,
+        "seconds": seconds,
+    }
+
+
 def _record_text(incident, record: dict, dropped: set[str]) -> str:
     """The record as the memo reads it; a dropped camera is one line."""
     lines = [

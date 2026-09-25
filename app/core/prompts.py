@@ -382,11 +382,31 @@ CASE_CHAT_FORMAT = (
 # The combining call, when a Case was read in parts: plumbing, not a template.
 COMBINING = (
     "The same question was answered separately over several parts of one "
-    "case's recordings. Write one answer from these part answers. Keep every "
-    "[Recording n, hh:mm:ss] reference exactly as written and add none. Where "
-    "the parts disagree, say so. If no part found an answer, say the "
-    "transcripts do not answer it."
+    "case's recordings, each part reading different recordings. Write one "
+    "answer from these part answers, in time order by the cameras' clock "
+    "where the parts give one. A difference between parts is what different "
+    "recordings covered, not a disagreement: name a disagreement only where "
+    "two parts describe the same moment and say different things. Keep every "
+    "[Recording n, hh:mm:ss] reference exactly as written and add none. Leave "
+    "out a part's report that its recordings do not mention something, unless "
+    "no part found an answer; then say the transcripts do not answer it."
 )
+
+
+def part_line(part: int, parts: int, numbers: list[int], total: int) -> str:
+    """What one Reading is told when a case is read in parts (v1.87.0): which
+    recordings it holds, so it never mistakes its share for the whole case."""
+    held = [f"Recording {n}" for n in sorted(numbers)]
+    held_words = ", ".join(held[:-1]) + " and " + held[-1] if len(held) > 1 else held[0]
+    return (
+        f"This is part {part} of {parts} of the case's recordings: it holds "
+        f"{held_words} of {total}. The other parts hold the rest and are asked "
+        "the same question separately. Answer from these recordings alone, and "
+        "never say the case lacks something they do not contain; say instead "
+        "that these recordings do not mention it."
+    )
+
+
 SUGGESTIONS_FORMAT = (
     "Answer with the JSON asked for. For every unnamed speaker, suggest a name "
     "when somebody says it or addresses them by it; otherwise suggest a role, "

@@ -533,6 +533,20 @@ def answer_case_turn(turn_id) -> None:
             ):
                 digest_only.add(recording.pk)
                 rendered[number - 1] = (number, text_of(number, recording, True))
+        # An incident's synced cameras are one item of a Reading, read as the
+        # incident's record at one sitting, the way the memo and the incident
+        # page's Gideon read them (Phase 8 chapter 9; v1.87.0).
+        rendered, holds = _with_incident_blocks(
+            case,
+            read,
+            rendered,
+            readings_kept,
+            reading_tokens=settings_store.reading_tokens(),
+            fits=fits_alone,
+            header=lambda number, recording: header_line(
+                number, total, recording, recording.transcript
+            ),
+        )
         groups = pack(rendered, settings_store.reading_tokens())
         by_number = dict(rendered)
         for group in groups:
@@ -553,8 +567,15 @@ def answer_case_turn(turn_id) -> None:
         )
 
         def ask_reading(group: list[int], answer_cap: int) -> str:
+            # A part is told which recordings it holds (v1.87.0).
+            told = []
+            if len(groups) > 1:
+                part = groups.index(group) + 1
+                numbers = [n for key in group for n in holds.get(key, [key])]
+                told.append(prompts.part_line(part, len(groups), numbers, total))
             user = "\n\n".join(
                 [
+                    *told,
                     people,
                     *(by_number[number] for number in group),
                     *([papers] if papers else []),
@@ -647,6 +668,101 @@ def answer_case_turn(turn_id) -> None:
 
 def time_limit_for_the_question() -> int:
     return settings_store.case_chat_question_seconds() * (2 if thinking() else 1)
+
+
+def _with_incident_blocks(
+    case,
+    read: list,
+    rendered: list,
+    readings_kept: list,
+    *,
+    reading_tokens,
+    fits,
+    header,
+) -> tuple[list, dict]:
+    """Each incident's synced cameras among the recordings read, as one item
+    of a Reading (v1.87.0): the incident's record in place of the cameras'
+    own transcripts and Digests. The item is keyed by its first camera's
+    number and holds the rest; `holds` says which. A camera's Digest goes
+    first when the record would not fit a Reading, the longest unpinned
+    camera first, as the Sitting does (Phase 8 chapter 9); when the record
+    cannot fit even so, the cameras stay as they were.
+    """
+    from core import incident_assistant, sitting
+
+    numbers = {recording.pk: number for number, recording in enumerate(read, 1)}
+    by_number = dict(rendered)
+    holds: dict[int, list[int]] = {}
+    taken: set[int] = set()
+    for incident in case.incidents.order_by("created"):
+        free = {pk: number for pk, number in numbers.items() if number not in taken}
+        pins = sitting.pinned_names(incident)
+        words_alone: list[str] = []
+        while True:
+            record = incident_assistant.case_record(
+                incident, free, words_alone=set(words_alone)
+            )
+            if len(record["covered"]) < 2:
+                record = None
+                break
+            text = _incident_block(incident, record, read, header)
+            if prompts.tokens(text) <= reading_tokens and fits(text):
+                break
+            movable = [name for name in record["used"] if name not in pins]
+            if not movable:
+                record = None
+                break
+            words_alone.append(
+                max(movable, key=lambda name: record["seconds"].get(name, 0.0))
+            )
+        if record is None:
+            continue
+        covered = sorted(record["covered"])
+        first = covered[0]
+        by_number[first] = text
+        for number in covered[1:]:
+            by_number.pop(number, None)
+        holds[first] = covered
+        taken.update(covered)
+        for number in covered:
+            kept = readings_kept[number - 1]
+            kept["incident"] = incident.name
+            if kept.get("digest"):
+                camera = next(
+                    one
+                    for one in incident_assistant.synced_cameras(incident)
+                    if numbers.get(one.recording_id) == number
+                )
+                kept["digest"] = camera.camera_id() not in record["words_alone"]
+    return sorted(by_number.items()), holds
+
+
+def _incident_block(incident, record: dict, read: list, header) -> str:
+    """The item's text: each camera's header line, what the record is, and
+    its lines; the office's notes on the cameras' lines after them."""
+    lines = [header(number, read[number - 1]) for number in record["covered"]]
+    count = len(record["covered"])
+    alone = record["words_alone"]
+    how = (
+        "each camera's Digest, a condensation of its words and its picture"
+        if not alone
+        else (
+            f"the words alone of {', '.join(alone)} and the Digest of the rest"
+            if len(alone) < count
+            else "each camera's words"
+        )
+    )
+    lines.append(
+        f"The record of the incident {incident.name}: its {count} synced cameras "
+        f"among these recordings, {how}, merged in time order by the cameras' "
+        "clock. Every line is cited as the recording it came from and the time "
+        "on that recording; the placements above give each camera's start on "
+        "the clock."
+    )
+    lines.extend(line for _, _, line in record["rows"])
+    noted = [notes.recording_block(read[number - 1]) for number in record["covered"]]
+    lines.extend(one for one in noted if one)
+    return "\n".join(lines)
 
 
 def _messages(system: str, user: str, history: list[tuple[str, str]]):
