@@ -422,7 +422,11 @@ _Avoid_: keyword, trigger, alert, hotword, rule
 
 **Incident memo**:
 The memo the AI assistant writes across every synced camera of an Incident, on the Incident page's Memo tab: written from the incident record (the cameras' Digests merged onto the Incident clock, made by the app for the call and never stored) and on the Chronology's Events, each sentence that rests on an Event carrying its number, every time the time of day and a citation that plays every camera. One per Incident, replaced by Regenerate, marked stale when the Events or the cameras change, exported to Word with the Chronology as its last pages. Its instructions are the Incident memo template. Phase 6 chapter 3.
-_Avoid_: report, narrative, incident summary (a Summary is one recording's), timeline
+_Avoid_: report, narrative, incident summary (a Summary is one recording's), timeline (the Timeline view and the Timeline report are other things)
+
+**Timeline report**:
+The Incident's Chronology as a document a person hands over, from Export on the Incident page (Phase 8 chapter 14): the cover, the cameras and the band of their spans, then the Events down the pages in Spells, each entry with a still from its camera at its moment, the words heard on that camera around it, what the camera showed from its Digest, the Note and the why. Made from the Chronology as it stands when it is asked for, never kept; the stills are cut for the document and deleted with it. The Chronology is where the Events are decided; the report only prints them.
+_Avoid_: timeline export, incident report, storyboard, slideshow, the memo (the Incident memo is the assistant's account; the report is the office's events)
 
 **Note**:
 A person's own line under an Event, or under a line of a Transcript, up to 2,000 characters: what it means for the case, a page cite, a thing to do. Kept with who wrote it and when it last changed; written and changed where it sits (the event box, or the box under the line); printed in the Chronology's exports and in the transcript exports that say "with notes", never in a plain export, a caption or a Clip; told to Gideon as the office's own words and never written or rewritten by it; listed together on the Notes tab. A note on a line of a recording that is a synced camera of an Incident is also an Event on that Incident's Chronology, at the line's moment, one thing in two places (Phase 8 chapter 11); a note on an unsynced camera's line, or on a recording in no Incident, is a line note alone. Phase 7 chapter 1 for an Event, Phase 8 chapter 2 for a line.

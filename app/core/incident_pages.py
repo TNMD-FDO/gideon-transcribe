@@ -29,6 +29,7 @@ from core import (
     settings_store,
     sharing,
     sitting,
+    timeline_report,
 )
 from core.case_pages import _their_case
 from core.incidents import Incident, IncidentCamera
@@ -296,6 +297,8 @@ def state_json(incident: Incident, user) -> dict:
         # The assistant on the Incident (chapter 3).
         "proposals": incident_assistant.proposals_json(incident),
         "memo": incident_assistant.memo_json(incident),
+        # The Timeline report (Phase 8 chapter 14): offered on the Export menu.
+        "report": timeline_report.json_for(incident),
         # One sitting (Phase 8 chapter 9): the Cameras tab's bar and the
         # line the memo, the comparison and Gideon carry.
         "sitting": sitting.json_for(incident),
@@ -547,6 +550,18 @@ def export(request: HttpRequest, case_id, incident_id, kind: str) -> HttpRespons
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
         name = chronology.export_name(incident, "docx")
+    elif kind == "report":
+        # The Timeline report (Phase 8 chapter 14): the chronology as a
+        # document with stills, made while the person waits, never kept.
+        from core import timeline_report
+
+        if not timeline_report.on():
+            raise Http404("the timeline report is off")
+        body = timeline_report.word(incident, request.user.shown_name)
+        content_type = (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        name = timeline_report.export_name(incident)
     elif kind == "memo":
         # The Incident memo (chapter 3), with the Chronology as its last pages.
         memo = incident_assistant.memo_of(incident)

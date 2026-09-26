@@ -21,6 +21,30 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.88.0, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Timeline report** (Phase 8 chapter 14). Export on the incident page
+offers Timeline report (Word): the chronology as a document a person hands
+over. The cover names the case, the incident, the clock, the span and the
+cameras; the cameras follow in a table with the band of their spans; then
+the events run down the pages in their spells, each entry with its number
+in its camera's colour, its time of day and its camera, the event's line, a
+still from that camera at that moment, the words heard on that camera in
+the twenty seconds either side, a line beginning Camera for what the
+picture showed, and the note and the why. The report prints the chronology
+as it stands and decides nothing; it is made while the person waits and
+each still is cut from its video, so past a limit the rest print without
+one and the report says how many. Five settings on the Incidents page:
+Timeline report, Stills in the report, Still height, Most stills in a
+report, Words around an event. From the maintainer's ask after a timeline
+was drawn by the case chat, and their answer to where: the incident page,
+where the events are decided.
+
 ## v1.87.3, 2026-09-25
 
 ```

@@ -23,6 +23,7 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 - **A note is an event, and the Event card** (chapter 11, for the build): a note on a line of a synced camera is an event on that incident's chronology at the line's moment, one thing in two places, changed or removed from either; the Events lane draws a mark alone per event, and one Event card, light on hover and whole on a press, carries what the lane's labels and the row's muted line used to spell out, from the strip, the focus camera's scrub bar, the Chronology row and the viewer's timeline.
 - **The Timeline view, the chronology figure, and the camera that comes to the front** (chapter 12, for the build): a press on an event, from the lane, a row, the card, a tick, the memo or Find, brings the event's own camera to the front as it seeks; the Chronology tab gains a Timeline view beside its rows, the cameras' spans as a band and the events down the page in spells with a numbered mark in the camera's colour; the Word export prints that figure in place of the strip picture, which goes.
 - **One home and the rail** (chapter 13, for the build): sign-in lands on Home, which leads with a finished batch's download, the cases that need the person, what is running, this session's recordings with the keep-or-lose line and every case; a rail down the left of every page carries the two actions at its top and the places with one line each saying what they are for; the Start page and the top bar's places go; a batch's download is on Home and on My recordings, never only on the batch page.
+- **The Timeline report** (chapter 14, for the build): the chronology as a document from the incident page's Export menu, the events down the pages in spells with a still from each event's camera at its moment, the words heard around it and what the camera showed; five settings on the Incidents page.
 
 ## Contents
 
@@ -39,7 +40,8 @@ Read it with the same companions as Phase 7: `CONTEXT.md` (the glossary, with th
 11. A note is an event, and the Event card
 12. The Timeline view, the chronology figure, and the camera that comes to the front
 13. One home and the rail
-14. Deferred and ruled out
+14. The Timeline report
+15. Deferred and ruled out
 
 Appendices: A. Audit rows added in Phase 8. B. Settings added in Phase 8.
 
@@ -1055,7 +1057,70 @@ Added to `CONTEXT.md` with this chapter: **Home**, **Rail**, **Ready to download
 - The order of the pills under Needs you (the dashboard line's).
 - How Recent cases performs for a person with many cases (every case is listed, at the maintainer's word; the pills cost about a dozen queries a case).
 
-## 14. Deferred and ruled out
+## 14. The Timeline report
+
+Written 2026-09-25 from the maintainer's ask after a timeline was drawn by the case chat: "build this as a report that can be generated from the case page or maybe the incident page instead ... I want it to be clean and maybe incorporate stills of what was seen along with the other available data. I want this to look and feel like a well crafted document, not just bullet points." The question of where was settled the same day: on the incident page, because the chronology is where the events are decided by a person, and a document generated from it is a record of decided facts, where a document generated from a chat answer would be a record of one question's guess. The case page reaches each incident's report by the link it already has.
+
+### Principles
+
+1. **The report prints the chronology; it decides nothing.** Every entry is an event a person accepted or wrote, in the order and with the words the chronology holds. Nothing in the report is written by the assistant at export time, and nothing is kept: the document is made from the chronology as it stands when it is asked for.
+2. **Every entry shows its evidence.** Under each event: the still from its camera at that moment, the words heard on that camera around it as the transcript labels them, and what the picture showed in the camera's own description, each marked for what it is. A reader can check the event without opening the app.
+3. **Words and picture are kept apart on the page.** A quoted line is the transcript's; a line that begins Camera is a model's description of the picture, as the chat's rule (chapter 13 of Phase 2, v1.87.2) and the memo's have it. A still is a frame, captioned with its camera and its time, never a claim.
+4. **A document, not a list.** The cover, the cameras, the band, the spells as headings, the entries as composed blocks with the still beside the words; the app's export shape (Phase 1), the office head, the legends and the notice.
+5. **Made while the person waits, within a limit.** Each still is cut from its playback copy at export time. The stills have a limit, past which the rest of the entries print without one and the report says how many, so a long chronology never outruns a request.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter. **Timeline report**: the Incident's Chronology as a document, from Export on the Incident page. The pages never say timeline export, incident report, storyboard or slideshow, and never call the report the memo.
+
+### The document
+
+- **The cover**: the office head; "Timeline report: <incident>"; "What happened, on the cameras' clock, camera by camera"; the facts (Case, Incident, Clock, Span, Cameras, Events, Made from the chronology as it stood at, Exported by and when); About this chronology when the office wrote it.
+- **The cameras**: a table (Camera, Recording, Starts, Ends) and the band of their spans with its legend, drawn as the chronology figure draws them (chapter 12).
+- **How to read it**: one italic paragraph saying what an entry is, what the still is, what the words are, what a Camera line is, and what a spell is.
+- **The spells**: the events in time order, split where a gap of ten minutes or more begins (chapter 12's number, one place); each spell a heading of its span and its count.
+- **An entry**: the number in the event's camera's colour, the time of day in the mono type with its end when it has one, and the camera; the event's line in bold with To check beside it; its detail; then, when the event has a camera, "Said on <camera>" and up to eight lines heard on that camera within the window either side of the moment, the nearest chosen and printed in time order, each its time of day and its words with the transcript's speaker label; then up to three lines beginning Camera, the camera's Digest lines marked (seen) or (both) within the window, their spans dropped; then, in the small italic type, the note, the why, and the source with the cameras it is seen on. Beside it, when there is one, the still, captioned with the camera and the time.
+- **The event's camera** is the event's own when it is synced, else the first synced camera the event is seen on, else none (chapter 12's rule); an event with none prints its words alone.
+- **The still**: one frame of the camera's playback copy at the event's moment, cut at the Still height setting and never above the camera's own, printed at one width beside the words; none when the camera was not running at that moment, when the frame cannot be cut, past the limit, or when stills are off. The stills are cut a few at a time and deleted with the document.
+- **The tail**: the to-check count, the count of events that print without a still, the legends, the AI notice when any event is the assistant's, and a provenance line saying what a still is, whose the words are, what a Camera line is, and that every time is the cameras' clock.
+- **The file**: "Timeline report - <incident>.docx", the app's export shape, from a plain link under Export beside Chronology to Word; greyed with "add an event first" while the chronology has none (the document then says "No events on the chronology yet.").
+
+### In and out
+
+- **In**: the export, its document, the five settings, the audit row's kind.
+- **Out**: the chronology itself, the Timeline view, the memo and its export, the chronology figure, the case page (which reaches the report through the incident).
+
+### What changes from earlier phases
+
+- Phase 6 chapter 2, Export: the menu gains a third document. The audit row Chronology exported gains the kind report.
+- Phase 8 chapter 12: the chronology figure's band and legend are drawn again at the report's head; the spell's number is shared.
+- `CONTEXT.md`: Timeline report added; the Incident memo's Avoid line names the report and the view as other things.
+
+### Audit rows
+
+- None added. Chronology exported carries the kind report.
+
+### Settings
+
+- Five on the Incidents page, group Timeline report: **Timeline report** (On; greyed while Incidents is Off), **Stills in the report** (On), **Still height** (360 pixels, 120 to 1,080), **Most stills in a report** (80, 0 to 500), **Words around an event** (20 seconds, 0 to 120). The catalogue has the rows.
+
+### Not in this chapter
+
+- **A report from the case chat's answer**: ruled out; a chat answer is one question's reading, and the chronology is where the office decides.
+- **A report written by the assistant**: not chosen; the memo is that, and the report is the office's own events. A memo section in the report, or the report as the memo's appendix, is a later thought once both are in use.
+- **A queued report with a card and a poll**: not chosen; the still limit keeps the report inside a request. If offices' chronologies outgrow it, the report becomes a Job.
+- **A case-wide report across incidents, or a case memo**: not in this chapter; the maintainer sees the use, and it comes after this one so both share one document style.
+- **Stills in the chronology figure or the memo's pages**: not chosen; those stay text and rules.
+- **PDF**: not chosen; Word prints and converts, as every export.
+
+### Left to the build
+
+- The still's width on the page (2.4 inches) and its caption's words.
+- The window's default (20 seconds) and the caps of eight spoken lines and three camera lines an entry carries.
+- How many stills are cut at once (four) and the default limit (80).
+- The wording of the reading paragraph and the provenance line.
+
+## 15. Deferred and ruled out
 
 - **Workspace as the word for a Case**: ruled out with the layout picks of 2026-09-19, and again with chapter 13 on 2026-09-25; the glossary's word stands.
 - **A rail of sections and a density switch**: not chosen.
@@ -1100,6 +1165,7 @@ Added to `CONTEXT.md` with this chapter: **Home**, **Rail**, **Ready to download
 | (none) | | | 11 |
 | (none) | | | 12 |
 | (none) | | | 13 |
+| Timeline report; Stills in the report; Still height; Most stills in a report; Words around an event | Incidents | On; On; 360 px; 80; 20 s | 14 |
 
 ## Sources
 
@@ -1107,7 +1173,8 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
-- **2026-09-25, v1.87.0.** Chapter 9's Sitting reaches the Case Chat: an Incident's synced cameras among the Recordings a question reads are one item of a Reading, the Incident's record with each line cited as its Recording and its own time, the longest unpinned camera's words going alone when the record would not fit, as on the incident page. Phase 2 chapter 7 carries the rule.
+- **2026-09-25, v1.88.0.** Chapter 14 (The Timeline report) written and built the same day from the maintainer's ask; Deferred and ruled out becomes chapter 15. Decisions left to the build: the still's width 2.4 inches and its caption "<camera> at <time>"; the window's default 20 seconds; eight spoken lines and three camera lines at most an entry; four stills cut at once; the limit's default 80; the reading paragraph and the provenance line as shipped.
+- **2026-09-25, v1.87.1.** Chapter 9's Sitting reaches the Case Chat: an Incident's synced cameras among the Recordings a question reads are one item of a Reading, the Incident's record with each line cited as its Recording and its own time, the longest unpinned camera's words going alone when the record would not fit, as on the incident page. Phase 2 chapter 7 carries the rule.
 - **2026-09-25, v1.86.2.** Proposed events waiting are in the warning tone, so a case with proposals waiting for accept or dismiss is under Needs you on its own: the maintainer's word after the server walk of v1.86.0, where a case with 115 proposals waiting sat under Needs you only for its stale memo. Phase 7 chapter 3's tone list is amended the same day.
 - **2026-09-25, v1.86.0.** Chapter 13 (One home and the rail) written and built the same day from the maintainer's asks and the pick of landing E among six drawn, with these decisions left to the build: the rail is 220 pixels from 1400, folds to icons and names from 900 to 1399 and to a row under 900, and is folded on the incident page at every width; the six lines are as the chapter has them; the keep-or-lose line reads "These stay until you sign out, or n hours after you stop working. Put a recording in a case to keep it."; every case is listed under Recent cases; the New case box is one include on both pages; the route name home now means Home and My recordings is recordings. Chapter 1's Start page lines superseded; Phase 2's Cases landing line amended.
 - **2026-09-24, v1.85.0.** Chapter 12 (The Timeline view, the chronology figure, and the camera that comes to the front) written and built the same day from the maintainer's two asks and the mock-up judged the same day, with these decisions left to the build: a spell starts at a gap of 600 seconds; the heading reads the span and the count and never a name; the band in Word is a small picture drawn by the server with Pillow, the entries text and rules; the number's colour is the camera's lane colour, and the source pill still names the camera; the export keeps the note and the why under each entry; the memo's export posts nothing and the Word export is a plain link. Phase 6 chapter 2's export lines amended in place; chapter 11's picture line superseded.

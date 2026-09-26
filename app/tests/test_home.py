@@ -318,5 +318,5 @@ def test_the_words_are_in_the_glossary_the_guide_and_the_spec():
     assert "Ready to download" in guide and "Done with these" in guide
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-8.md").read_text(encoding="utf-8")
     assert "## 13. One home and the rail" in spec
-    assert "## 14. Deferred and ruled out" in spec
+    assert "## 15. Deferred and ruled out" in spec
     assert not (APP / "templates" / "start.html").exists()

@@ -32,6 +32,8 @@
         <li><a id="export-word" href="{% url 'incident-export' case.pk incident.pk 'word' %}">{% icon "word" %} Chronology to Word</a></li>
         <li><a href="{% url 'incident-export' case.pk incident.pk 'csv' %}">{% icon "text" %} Chronology as a spreadsheet (.csv)</a></li>
         {% if state.memo.on %}<li><button type="button" id="export-memo" hidden>{% icon "word" %} Memo to Word</button></li>{% endif %}
+        {% comment %}The Timeline report (Phase 8 chapter 14): a plain link, greyed until the chronology has an event.{% endcomment %}
+        {% if state.report.on %}{% if state.report.events %}<li><a id="export-report" href="{% url 'incident-export' case.pk incident.pk 'report' %}">{% icon "word" %} Timeline report (Word)</a></li>{% else %}<li><span class="muted" id="export-report-off" title="Add an event first">{% icon "word" %} Timeline report: add an event first</span></li>{% endif %}{% endif %}
         {% comment %}The comparison's export (Phase 8 chapter 6): a link once a comparison is done, greyed until then.{% endcomment %}
         <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
         <li><span class="muted" id="export-comparison-off" title="Compare with the report first" hidden>{% icon "word" %} Comparison to Word: compare with the report first</span></li>

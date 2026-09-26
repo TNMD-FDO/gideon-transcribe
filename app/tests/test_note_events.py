@@ -389,7 +389,7 @@ def test_the_page_carries_the_event_card_and_the_marks_alone(person, a_case, cli
     assert "## 11. A note is an event, and the Event card" in spec
     assert "## 12. The Timeline view" in spec
     assert "## 13. One home and the rail" in spec
-    assert "## 14. Deferred and ruled out" in spec
+    assert "## 15. Deferred and ruled out" in spec
 
 
 @pytest.mark.django_db(transaction=True)

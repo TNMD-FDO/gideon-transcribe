@@ -136,6 +136,11 @@ An Incidents page in the Settings group between Vision and Speakers, specified i
 | Incident chat | On or Off; greyed while Incidents or the AI assistant is Off | On | 7 (chapter 5) | Ask Gideon on the incident page: a chat grounded in the incident record and the Chronology, every time a citation that plays every camera, a cited line one press from an Event. | The next incident page drawn. Off hides the button and keeps every conversation. |
 | Incident chat answer cap | 500 to 16,000 tokens; greyed while Incident chat is Off | 2,000 | 7 (chapter 5) | The most one answer may run to. | The next question. |
 | Incident chat time limit | 30 to 3,600 seconds; greyed while Incident chat is Off | 300 | 7 (chapter 5) | How long one answer's call may take. Doubled while Let the model think is On. Plus one second for every 500 tokens the call sends (v1.87.0). | The next question. |
+| Timeline report | On or Off; greyed while Incidents is Off | On | 8 (chapter 14) | Timeline report (Word) on the Incident page's Export menu: the Chronology as a document, the Events down the pages in Spells, each with a still from its camera at its moment, the words heard on that camera around it, and what the camera showed. | The next Incident page drawn. |
+| Stills in the report | On or Off; greyed while Timeline report is Off | On | 8 (chapter 14) | A still from the Event's camera at its moment beside each entry. Off prints the words alone. | The next report. |
+| Still height | 120 to 1,080 pixels; greyed while Stills in the report is Off | 360 | 8 (chapter 14) | The height each still is cut at, never above the camera's own; on the page it prints at one width. Larger is sharper and a bigger file. | The next report. |
+| Most stills in a report | 0 to 500; greyed while Stills in the report is Off | 80 | 8 (chapter 14) | The report is made while the person waits and each still is cut from its video, so past this many Events the rest print without one, and the report says how many. | The next report. |
+| Words around an event | 0 to 120 seconds; greyed while Timeline report is Off | 20 | 8 (chapter 14) | How far either side of an Event's moment the report quotes the words heard on its camera, at most eight lines, and what the camera showed; 0 quotes none. | The next report. |
 
 ## Notices
 

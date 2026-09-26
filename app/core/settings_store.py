@@ -1907,6 +1907,91 @@ def _rows() -> list[Definition]:
             ),
             when_changed="The next memo.",
         ),
+        # Phase 8 chapter 14: the Timeline report.
+        Definition(
+            key="incidents_report",
+            page=INCIDENTS,
+            group="Timeline report",
+            name="Timeline report",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents",
+            what_it_does=(
+                "Timeline report (Word) on the incident page's Export menu: the "
+                "chronology as a document, the events down the pages in spells, "
+                "each with a still from its camera at its moment, the words heard "
+                "on that camera around it, and what the camera showed."
+            ),
+            when_changed="The next incident page drawn.",
+        ),
+        Definition(
+            key="incidents_report_stills",
+            page=INCIDENTS,
+            group="Timeline report",
+            name="Stills in the report",
+            kind=TOGGLE,
+            default=True,
+            needs="incidents_report",
+            what_it_does=(
+                "A still from the event's camera at its moment beside each entry. "
+                "Off prints the words alone."
+            ),
+            when_changed="The next report.",
+        ),
+        Definition(
+            key="incidents_report_still_height",
+            page=INCIDENTS,
+            group="Timeline report",
+            name="Still height",
+            kind=NUMBER,
+            default=360,
+            least=120,
+            most=1080,
+            unit="pixels",
+            needs="incidents_report_stills",
+            what_it_does=(
+                "The height each still is cut at, never above the camera's own; "
+                "on the page it prints at one width. Larger is sharper and a "
+                "bigger file."
+            ),
+            when_changed="The next report.",
+        ),
+        Definition(
+            key="incidents_report_stills_most",
+            page=INCIDENTS,
+            group="Timeline report",
+            name="Most stills in a report",
+            kind=NUMBER,
+            default=80,
+            least=0,
+            most=500,
+            unit="stills",
+            needs="incidents_report_stills",
+            what_it_does=(
+                "The report is made while you wait and each still is cut from its "
+                "video, so past this many events the rest print without one, and "
+                "the report says how many."
+            ),
+            when_changed="The next report.",
+        ),
+        Definition(
+            key="incidents_report_words_seconds",
+            page=INCIDENTS,
+            group="Timeline report",
+            name="Words around an event",
+            kind=NUMBER,
+            default=20,
+            least=0,
+            most=120,
+            unit="seconds",
+            needs="incidents_report",
+            what_it_does=(
+                "How far either side of an event's moment the report quotes the "
+                "words heard on its camera, at most eight lines, and what the "
+                "camera showed; 0 quotes none."
+            ),
+            when_changed="The next report.",
+        ),
         # Phase 7 chapter 1: the clip across cameras.
         Definition(
             key="incidents_clips",
