@@ -1226,6 +1226,15 @@ def test_the_settings_templates_and_documents_exist(db, client):
     assert settings_store.time_limit_seconds("incident_memo") == 600
     assert settings_store.incident_events_answer_cap() == 2000
     assert settings_store.incident_memo_answer_cap() == 4000
+    # v1.94.1: the writer is told to tell the account rather than list the
+    # sheet, and the sheet's schema puts the timeline last, as the format
+    # says, so a cut at the cap loses the end of the timeline and no list.
+    assert "the timeline is your notes, not your sentences" in prompts.INCIDENT_MEMO
+    assert "a time on every sentence is wrong" in prompts.INCIDENT_MEMO
+    assert list(prompts.memo_sheet_schema()["properties"])[-1] == "timeline"
+    assert set(prompts.memo_sheet_schema()["required"]) == {
+        key for key, _ in prompts.SHEET_LISTS
+    } | {"outcome"}
     for key, text, name in (
         (PromptTemplate.INCIDENT_EVENTS, prompts.INCIDENT_EVENTS, "Proposed events"),
         (PromptTemplate.INCIDENT_MEMO, prompts.INCIDENT_MEMO, "Incident memo"),

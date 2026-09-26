@@ -115,6 +115,8 @@ SHIPPED_HISTORY = {
         "17b7b7a1dab39181",
         # v1.91.0: written from the facts sheet alone (ADR 0016).
         "a5ec82bb5ef84c66",
+        # v1.94.1: the account told, not listed; a time only where it cites.
+        "1351a23f4c6e87b5",
     ),
     # v1.91.0: the facts sheet, the first of the memo's two passes.
     # v1.91.1: officers only when they did something.
@@ -572,8 +574,13 @@ INCIDENT_MEMO = (
     "heading on its own line with its span of the clock (Pursuit 20:24 to "
     "20:27, The stop, Questioning at the car) followed by prose that carries "
     "the story from the sheet's first moment to its outcome, two hundred "
-    "words a phase at most, with the quotes and times inline; never one "
-    "sentence per entry of the sheet. Questioning and rights: every "
+    "words a phase at most. Write it as a reader tells it, not as the sheet "
+    "lists it: the timeline is your notes, not your sentences. Fold several "
+    "entries into one sentence, leave out the entries that do not move the "
+    "story, and let a paragraph run from cause to effect. Give a time only "
+    "where a sentence quotes the record or where the attorney would go to "
+    "the footage, so most sentences carry none; a paragraph with a time on "
+    "every sentence is wrong and is rewritten. Questioning and rights: every "
     "advisement of rights, quoted, with who read it, the time and the "
     "camera; every question put to a person before rights were read, with "
     "the answer and the time; whether the person asked for a lawyer, asked "
@@ -706,17 +713,6 @@ def memo_sheet_schema() -> dict:
                     "cameras": {"type": "array", "maxItems": 20, "items": camera},
                 },
             ),
-            "timeline": entries(
-                "timeline",
-                {
-                    "at": at,
-                    "camera": camera,
-                    "what": text(300),
-                    "quote": text(400),
-                    "said_by": text(80),
-                    "event": {"type": "integer"},
-                },
-            ),
             "rights": entries(
                 "rights",
                 {
@@ -763,6 +759,21 @@ def memo_sheet_schema() -> dict:
             ),
             "gaps": entries("gaps", {"at": at, "camera": camera, "what": text(300)}),
             "outcome": text(800),
+            # Last, in the schema as in the format (v1.94.1): the engine
+            # fills the properties in the schema's order, whatever the
+            # format says, so an answer cut at the cap now loses the end of
+            # the timeline and not the rights, the searches or the outcome.
+            "timeline": entries(
+                "timeline",
+                {
+                    "at": at,
+                    "camera": camera,
+                    "what": text(300),
+                    "quote": text(400),
+                    "said_by": text(80),
+                    "event": {"type": "integer"},
+                },
+            ),
         },
         "required": [key for key, _ in SHEET_LISTS] + ["outcome"],
         "additionalProperties": False,

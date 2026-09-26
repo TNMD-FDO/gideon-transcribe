@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.94.1, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The two prose items left from the review of the memo written on the
+twelve-camera incident, which did not depend on the size of that incident.
+
+**The account is told, not listed.** The Incident memo template's What
+happened part now tells the writer that the timeline is its notes, not
+its sentences: fold several entries into one sentence, leave out the
+entries that do not move the story, let a paragraph run from cause to
+effect, and give a time only where a sentence quotes the record or where
+the attorney would go to the footage, so most sentences carry none. The
+template is re-shipped; an office's unedited copy follows it at the
+upgrade, and an edited copy is left alone and marked as behind on the
+Templates page.
+
+**The facts sheet's schema puts the timeline last**, as its format has
+said since v1.91.1. The engine fills a structured answer in the schema's
+order, whatever the format says, so a sheet cut at its cap lost the
+rights, the searches, the statements, the gaps and the outcome while the
+timeline ran on; now it loses the end of the timeline and no list.
+
 ## v1.94.0, 2026-09-26
 
 ```
