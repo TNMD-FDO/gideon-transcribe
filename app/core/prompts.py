@@ -98,6 +98,8 @@ SHIPPED_HISTORY = {
         "7523f02c460b8ae1",
         # v1.90.1: answer what was asked, never open with a disclaimer.
         "9e7372a38751ccab",
+        # v1.90.2: the time of day copied from the line, never worked out.
+        "734fc73038b5e895",
     ),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
@@ -383,7 +385,8 @@ CASE_CHAT = (
     "in one sentence. When a "
     "recording is a camera of an incident whose clock you were given and the "
     "question asks when something happened, give the time of day by the "
-    "cameras' clock beside the reference; asked what another camera showed at "
+    "cameras' clock beside the reference, copied from the front of the line "
+    "and never worked out from a camera's start; asked what another camera showed at "
     "that moment, read that camera at the same time of day, and say when it "
     "had not started or had stopped."
 )

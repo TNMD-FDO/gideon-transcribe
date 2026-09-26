@@ -321,8 +321,9 @@ def case_record(incident, numbers: dict, words_alone=frozenset()) -> dict:
 
     The synced cameras among the recordings a question reads, each one's
     Digest (its transcript when it has none, or when it is named in
-    `words_alone`), every line cited as [Recording n, hh:mm:ss] on that
-    recording's own clock, merged in time order by the Incident clock. The
+    `words_alone`), every line opening with the time of day by the cameras'
+    clock in parentheses (v1.90.2) and cited as [Recording n, hh:mm:ss] on
+    that recording's own clock, merged in time order by the Incident clock. The
     Sitting's rule holds (Phase 8 chapter 9): a camera contributes its Digest
     or its words, never both. `numbers` maps a recording's id to its number
     in the question.
@@ -362,7 +363,9 @@ def case_record(incident, numbers: dict, words_alone=frozenset()) -> dict:
                         f"[Recording {number}, {hours:02d}:{minutes:02d}:{secs:02d}]"
                     )
                     line = line[: match.start()] + cited + line[match.end() :]
-                rows.append((camera.starts_at + own, number, line))
+                # The time of day in front, to copy, never to work out (v1.90.2).
+                clock = incidents.time_of_day(incident, camera.starts_at + own)
+                rows.append((camera.starts_at + own, number, f"({clock}) {line}"))
             used.append(name)
             continue
         for line in prompts.lines_of(transcript):
@@ -370,11 +373,12 @@ def case_record(incident, numbers: dict, words_alone=frozenset()) -> dict:
             # A numbered label is this camera's alone and is not carried.
             who = "" if not label or assistant._is_a_label(label) else f"{label}: "
             own = prompts.clock(line.start)[1:-1]
+            clock = incidents.time_of_day(incident, camera.starts_at + line.start)
             rows.append(
                 (
                     camera.starts_at + line.start,
                     number,
-                    f"[Recording {number}, {own}] {who}{line.text}",
+                    f"({clock}) [Recording {number}, {own}] {who}{line.text}",
                 )
             )
         transcript_only.append(name)

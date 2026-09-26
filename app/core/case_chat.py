@@ -760,9 +760,10 @@ def _incident_block(incident, record: dict, read: list, header) -> str:
     lines.append(
         f"The record of the incident {incident.name}: its {count} synced cameras "
         f"among these recordings, {how}, merged in time order by the cameras' "
-        "clock. Every line is cited as the recording it came from and the time "
-        "on that recording; the placements above give each camera's start on "
-        "the clock."
+        "clock. Every line opens with the time of day by that clock in "
+        "parentheses, to copy as it stands and never to work out; then the "
+        "reference to give for the line, the recording it came from and the "
+        "time on that recording, in square brackets."
     )
     lines.extend(line for _, _, line in record["rows"])
     noted = [notes.recording_block(read[number - 1]) for number in record["covered"]]

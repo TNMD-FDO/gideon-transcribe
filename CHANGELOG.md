@@ -21,6 +21,19 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.90.2, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The case chat copies the time of day instead of working it out.** Asked
+when rights were read, it had added a camera's start to a line's own time
+and given 21:03:52 for 20:43:52. Every record line it reads for an incident
+now opens with the time of day by the cameras' clock, and the wording says
+to copy it and never to compute one.
+
 ## v1.90.1, 2026-09-26
 
 ```

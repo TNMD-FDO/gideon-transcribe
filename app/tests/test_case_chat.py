@@ -404,6 +404,12 @@ def test_an_incidents_cameras_are_read_as_one_record(
     assert "[Recording 2, 00:00:10] Step out" not in user
     # The second camera has no Digest, so its words, without its numbered label.
     assert "[Recording 3, 00:00:05] Stay in the car, please." in user
+    # Each line opens with the time of day by the cameras' clock (v1.90.2):
+    # the model copies it and never adds a camera's start to a line's time,
+    # which it had done wrongly on the office's copy.
+    assert "(21:56:27) [Recording 2, 00:00:10]-[00:00:14]" in user
+    assert "(22:01:03) [Recording 3, 00:00:05] Stay in the car" in user
+    assert "to copy as it stands and never to work out" in user
     # In time order by the clock: the second camera starts 281 s later.
     assert user.index("[Recording 2, 00:00:30]") < user.index("[Recording 3, 00:00:05]")
     turn.refresh_from_db()
