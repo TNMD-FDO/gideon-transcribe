@@ -93,6 +93,9 @@ MIDDLEWARE = [
     # upload library. Caddy could serve them, but it would need them on the
     # host, and they belong with the code that refers to them.
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Below WhiteNoise, so the static files keep their own caching and every
+    # page and answer of the app's own says private, no-store (v1.93.1).
+    "core.middleware.NoStoreMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

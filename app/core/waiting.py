@@ -106,13 +106,15 @@ def in_words(minutes: float, measured: bool, now=None) -> str:
 
 
 def on_the_clock(when) -> str:
-    """A time of day as an office reads it: 3:40 pm, not 15:40.
+    """A time of day as an office reads it: 3:40 p.m., not 15:40.
 
     Written out rather than left to strftime, whose no-padding flag differs
     between the server and a workstation and is not there at all on Windows.
+    Spelt as the pages spell it (Django's "g:i a" gives "p.m."), so a batch
+    page does not say "2:12 p.m." in one line and "2:13 pm" in the next.
     """
     hour = when.hour % 12 or 12
-    return f"{hour}:{when.minute:02d} {'am' if when.hour < 12 else 'pm'}"
+    return f"{hour}:{when.minute:02d} {'a.m.' if when.hour < 12 else 'p.m.'}"
 
 
 def for_run(run, service_speed: dict | None, runs_ahead: int = 0) -> str | None:

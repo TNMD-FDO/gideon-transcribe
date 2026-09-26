@@ -184,3 +184,31 @@ class LoginSessionMiddleware:
             },
             status=401,
         )
+
+
+# What a browser may keep --------------------------------------------------------
+
+NO_STORE = "private, no-store"
+
+
+class NoStoreMiddleware:
+    """Every answer says `Cache-Control: private, no-store` unless it set its own.
+
+    The recordings themselves have been sent that way by Caddy since the media
+    routes were built; the pages carried no Cache-Control at all, so a browser
+    could show Home with a batch that Done with these had already removed
+    (seen on 2026-09-26), and could keep a case page on the disk of whatever
+    machine opened it after the session that was allowed to see it had ended.
+    An answer that sets its own header (the office logo, a document's page
+    pictures) keeps it. Static files do not pass through here: WhiteNoise
+    answers them above this middleware.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        answer = self.get_response(request)
+        if not answer.has_header("Cache-Control"):
+            answer["Cache-Control"] = NO_STORE
+        return answer

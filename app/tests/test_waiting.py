@@ -56,7 +56,7 @@ def test_a_measured_figure_says_about_and_a_reference_one_says_roughly():
 
 def test_over_ten_minutes_it_carries_a_time_of_day():
     said = waiting.in_words(35, True, now=datetime(2026, 9, 4, 15, 5))
-    assert said == "about 35 minutes, around 3:40 pm"
+    assert said == "about 35 minutes, around 3:40 p.m."
 
 
 def test_under_ten_minutes_it_does_not():
@@ -64,10 +64,10 @@ def test_under_ten_minutes_it_does_not():
 
 
 def test_the_clock_reads_as_an_office_writes_it():
-    assert waiting.on_the_clock(datetime(2026, 9, 4, 15, 40)) == "3:40 pm"
-    assert waiting.on_the_clock(datetime(2026, 9, 4, 9, 5)) == "9:05 am"
-    assert waiting.on_the_clock(datetime(2026, 9, 4, 0, 30)) == "12:30 am"
-    assert waiting.on_the_clock(datetime(2026, 9, 4, 12, 0)) == "12:00 pm"
+    assert waiting.on_the_clock(datetime(2026, 9, 4, 15, 40)) == "3:40 p.m."
+    assert waiting.on_the_clock(datetime(2026, 9, 4, 9, 5)) == "9:05 a.m."
+    assert waiting.on_the_clock(datetime(2026, 9, 4, 0, 30)) == "12:30 a.m."
+    assert waiting.on_the_clock(datetime(2026, 9, 4, 12, 0)) == "12:00 p.m."
 
 
 def test_nothing_ahead_means_it_is_starting():
@@ -89,7 +89,7 @@ def test_the_overall_line_covers_the_last_recording_and_its_own_audio():
         MEASURED,
         now=datetime(2026, 9, 4, 15, 0),
     )
-    assert said == "Everything done by about 3:03 pm"
+    assert said == "Everything done by about 3:03 p.m."
 
 
 def test_the_overall_line_is_nothing_when_nothing_is_running():

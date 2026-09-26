@@ -314,6 +314,8 @@ Everything an Admin does on the server itself is one script, `./transcribe`, run
 
 `status` says what is running. `check` runs every smoke check and prints a plain report. `logs` follows one service's log, or all of them with no name. `backup-db` takes a dump of the database into the backup folder under the app data folder.
 
+**What a browser keeps.** Every page and answer is sent with `Cache-Control: private, no-store`, as the recordings themselves are, so a browser shows nothing from its cache and keeps no page on its disk once the tab is closed. The office logo and a document's page pictures are the two things a browser may keep for a while. A page that shows something an action just removed is a fault to report, not a cache to clear.
+
 ### A background job that has stopped moving
 
 Media work, polling, and the nightly sweeps run as background jobs on the app's own queue. A worker that dies holding a job leaves it marked as being done, and the app puts those back in line on its own every ten minutes. For the times that is not enough, when something is wedged and somebody is waiting:

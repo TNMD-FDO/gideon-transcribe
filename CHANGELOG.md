@@ -21,6 +21,39 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.93.1, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the walk of the never-walked areas at v1.93.0 on the server: a batch
+from files, the comparison on a real report, a Live recording on the fast
+lane, the Panel as another person, and the install script on a bare machine.
+
+**Pages are never kept by a browser.** Every page and answer is sent with
+`Cache-Control: private, no-store`, as the recordings themselves have been.
+The pages carried no Cache-Control at all, so a browser could show Home with
+a batch that Done with these had already removed, and could keep a case page
+on the disk of whatever machine opened it. The office logo and a document's
+page pictures keep their own short-lived headers.
+
+**Small words.** The batch page's opening line no longer ends a sentence
+with the time's own full stop ("Started 2:12 p.m.."), and the estimate under
+it spells the hour the way the rest of the app does ("2:13 p.m.", not "pm").
+A line the model heard nothing on is left out of the plain text and Word
+transcripts. A signed-in person who is not an Admin and opens a Panel
+address lands on Home with "That page is for Admins" rather than a silent
+trip through the sign-in page. The install script's prerequisite failures
+name the guide's step that puts each right (Step 0 for Docker and its
+Compose plugin, Step 1 for the transcribe account), and the guide's "When it
+fails" table has a row for each.
+
+Not in this release, pending the maintainer's own try of two clicks: the
+confirm dialogs (Done with these, Remove this event), which the walk could
+not make take through the browser tool.
+
 ## v1.93.0, 2026-09-26
 
 ```

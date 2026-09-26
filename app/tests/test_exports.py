@@ -206,6 +206,22 @@ def test_a_correction_is_marked_on_the_line_and_in_the_legend():
     assert "[00:00:00] Speaker 1 (corrected): Hello." in text
 
 
+def test_a_line_the_model_heard_nothing_on_is_left_out():
+    """v1.93.1: a Segment with no words is a stamp and nothing after it."""
+    one = recording()
+    one.transcript.segments = Segments(
+        [
+            segment(0, 4, "Hello.", "Speaker 1", "SPEAKER_00"),
+            segment(17, 18, "", "Speaker 1", "SPEAKER_00"),
+            segment(19, 20, "   "),
+        ]
+    )
+    text = exports.plain_text(one)
+
+    assert "[00:00:00] Speaker 1: Hello." in text
+    assert "[00:00:17]" not in text and "[00:00:19]" not in text
+
+
 # Captions ---------------------------------------------------------------------
 
 

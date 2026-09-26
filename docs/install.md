@@ -463,7 +463,9 @@ The last line is either `Everything checked passed.` or a count of what did not.
 
 | What you see | What it means | What to do |
 |---|---|---|
-| `there is no transcribe account; the install guide's server preparation makes it` | Step 1 was skipped. | Run the `useradd` in Step 1, then `./transcribe install` again. |
+| `there is no docker on this server; the install guide's Step 0 installs it` | Docker is not installed. | Step 0's Docker commands, then `./transcribe install` again. |
+| `the docker compose plugin is not installed, or this account is not in the docker group yet; the install guide's Step 0 has both` | Docker is there without its Compose plugin (a `docker.io` package, or a Docker installed another way), or the group was added and this session has not seen it. | Step 0's Docker commands install both; sign out and in again after `usermod`; then `./transcribe install` again. |
+| `there is no transcribe account; the install guide's Step 1 makes it` | Step 1 was skipped. | Run the `useradd` in Step 1, then `./transcribe install` again. |
 | `nvidia-smi is not on this server: no transcription until a card and its driver are added` | A note at install: the NVIDIA driver is not installed, there is no card, or the machine has not been rebooted since. The install goes on without transcription. | When the card is in: install the driver, reboot, check `nvidia-smi` prints the card, then `./transcribe add transcription`. |
 | `the container toolkit's CDI list is empty or nvidia-ctk is missing` | The driver is in but Docker cannot hand the card to a container yet. A note at install; the self-test would fail later without it. | Step 0's container toolkit commands, then `./transcribe add transcription` (or `./transcribe install --reconfigure`). |
 | `There is no certificate in tls/ yet` from `bring-up` | The stack cannot start without one. | Put the office's `cert.pem` and `key.pem` in `tls/`, or `./transcribe tls self-signed`, then `./transcribe bring-up` again. |

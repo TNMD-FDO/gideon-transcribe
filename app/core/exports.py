@@ -386,6 +386,10 @@ def plain_text(recording: Recording, with_notes: bool = False) -> str:
 
     lines = []
     for segment in segments:
+        if not (segment.text or "").strip():
+            # A Segment the model heard nothing on (v1.93.1): a stamp with no
+            # words after it says nothing a reader can use.
+            continue
         name = segment.speaker
         if name and segment.corrected:
             name = f"{name} (corrected)"
@@ -555,6 +559,8 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
     _running_head(talk, title, kind, recording.sha256, Pt, RGBColor)
 
     for segment in segments:
+        if not (segment.text or "").strip():
+            continue
         line = document.add_paragraph()
         line.paragraph_format.space_after = Pt(6)
         mark = "*" if segment.corrected else " "

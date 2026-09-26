@@ -14,8 +14,10 @@ should not outlive the person who is making it.
 from __future__ import annotations
 
 import logging
+from functools import wraps
 
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -54,8 +56,21 @@ RAIL = [
 
 
 def admins_only(view):
-    """Users never see any of this, and an Admin is the only one who does."""
-    return login_required(user_passes_test(lambda user: user.is_admin)(view))
+    """Users never see any of this, and an Admin is the only one who does.
+
+    A signed-in person who is not an Admin lands on Home with a word
+    (v1.93.1); before, they were sent through the sign-in page and on to
+    Home with none, which read as a sign-in that had not taken.
+    """
+
+    @wraps(view)
+    def gate(request, *args, **kwargs):
+        if not request.user.is_admin:
+            messages.info(request, "That page is for Admins.")
+            return redirect(reverse("home"))
+        return view(request, *args, **kwargs)
+
+    return login_required(gate)
 
 
 # The tray ---------------------------------------------------------------------

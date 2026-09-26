@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-26, at v1.93.1 (pages never kept by a browser, and small words; nothing shared moves).** A response header on the app's own pages; no port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.93.0 (the guides brought current; nothing shared moves).**
 - **2026-09-26, at v1.92.2 (the guide's host figures; nothing shared moves).**
 - **2026-09-26, at v1.92.1 (the card's memory to the nearest gigabyte; nothing shared moves).**

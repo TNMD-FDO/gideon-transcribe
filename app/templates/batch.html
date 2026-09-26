@@ -7,8 +7,8 @@
   <div class="page workbench">
     <h1 id="heading">Batch of {{ batch.recordings.count }}</h1>
     <p id="lead" class="lead">
-      Started {{ batch.created|time:"g:i a" }}. One transcription runs at a
-      time for the whole office, so a batch works through the line in order.
+      Started at {{ batch.created|time:"g:i a" }} and works through the line
+      in order: one transcription runs at a time for the whole office.
     </p>
     {% if not case %}
       <p class="notice">{{ standing_line }}</p>

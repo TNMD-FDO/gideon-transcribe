@@ -1240,14 +1240,14 @@ prerequisites() {
   if command -v docker >/dev/null 2>&1; then
     pass "docker $(docker --version | sed 's/Docker version //; s/,.*//')"
   else
-    fail "there is no docker on this server"
+    fail "there is no docker on this server; the install guide's Step 0 installs it"
     ok=no
   fi
 
   if docker compose version >/dev/null 2>&1; then
     pass "the compose plugin $(docker compose version --short)"
   else
-    fail "the docker compose plugin is not installed"
+    fail "the docker compose plugin is not installed, or this account is not in the docker group yet; the install guide's Step 0 has both"
     ok=no
   fi
 
@@ -1278,7 +1278,7 @@ prerequisites() {
   if id "$APP_USER" >/dev/null 2>&1; then
     pass "the $APP_USER account exists"
   else
-    fail "there is no $APP_USER account; the install guide's server preparation makes it"
+    fail "there is no $APP_USER account; the install guide's Step 1 makes it"
     ok=no
   fi
 

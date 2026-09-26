@@ -257,6 +257,24 @@ def test_the_cards_memory_is_read_to_the_nearest_gigabyte():
     assert '[ "$gb" != "$(env_value CARD_MEMORY_GB)" ]' in migrate
 
 
+def test_every_prerequisite_failure_names_its_step():
+    """v1.93.1: a stranger on a bare machine reads which step of the guide
+    puts each missing thing right, and the guide's failure table has a row
+    for each failure in the script's own words."""
+    body = text()
+    prerequisites = body.split("prerequisites() {", 1)[1].split("\n}\n", 1)[0]
+    guide = (HERE / "docs" / "install.md").read_text(encoding="utf-8")
+    for words in (
+        "there is no docker on this server; the install guide's Step 0 installs it",
+        "the docker compose plugin is not installed, or this account is not in "
+        "the docker group yet; the install guide's Step 0 has both",
+        "account; the install guide's Step 1 makes it",
+    ):
+        assert words in prerequisites, words
+        assert words in guide, words
+    assert "server preparation" not in prerequisites
+
+
 def test_the_install_prints_the_ladder_checks_cdi_and_offers_the_rest():
     body = text()
     install = body.split("cmd_install() {", 1)[1].split("\n}\n", 1)[0]
