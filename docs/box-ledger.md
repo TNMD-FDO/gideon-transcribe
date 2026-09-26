@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-26, at v1.92.2 (the guide's host figures; nothing shared moves).**
 - **2026-09-26, at v1.92.1 (the card's memory to the nearest gigabyte; nothing shared moves).**
 - **2026-09-26, at v1.92.0 (the install walked as a newcomer; nothing shared moves).** Guide, script and Installation page; no port, memory, card, timer, network or engine request moves. The guide's new Step 0 is for another office's server; on this one the operating-system layer stays GIDEON's.
 - **2026-09-26, at v1.91.1 (the facts sheet's cap and labels; nothing shared moves).** The sheet's cap default rises to 12,000 tokens, one engine request's answer; nothing else moves.

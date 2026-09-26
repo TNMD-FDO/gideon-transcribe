@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.92.2, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The install guide's host figures corrected.** v1.92.0 said the office ran
+the app on a server of 8 cores and 64 GB; that was never checked and was
+wrong. The guide now states the app's own estimate of what serves it (about
+4 cores and 16 GB without a card, about 4 GB more with the diarizer), says
+it is an estimate, and says nothing about the writing office's server,
+which is a much larger shared machine and no guide to the least that works.
+
 ## v1.92.1, 2026-09-26
 
 ```
