@@ -1485,13 +1485,28 @@
       html = (M.notice ? "<p class='notice small' style='margin: 0 0 8px'>" + escape(M.notice) + "</p>" : "") +
         "<div class='row' style='align-items: center; gap: 8px; margin: 0 0 6px'><b class='grow'>Incident memo</b>" +
         "<button type='button' class='small' id='memo-export'>Memo to Word</button>" +
-        "<button type='button' class='small ghost' id='memo-write'>Regenerate</button></div>" +
+        "<button type='button' class='small ghost' id='memo-write'>Regenerate</button>" +
+        (M.rewrite_possible ? "<button type='button' class='small ghost' id='memo-rewrite' title='Write the memo again from its facts sheet, without reading the cameras again'>Rewrite from the sheet</button>" : "") +
+        "</div>" +
         "<p class='muted small' style='margin: 0 0 8px'>" + escape(M.written_words || "") + "</p>" +
         (M.stale_words ? "<p class='notice warn small' style='margin: 0 0 10px'>" + escape(M.stale_words) + "</p>" : "") +
         "<div class='inc-memo'>" + memoHtml(M.text || "", M.citations, M.event_numbers) + "</div>" +
-        (M.cut_short ? "<p class='muted small'>The memo was cut short.</p>" : "");
+        (M.cut_short ? "<p class='muted small'>The memo was cut short.</p>" : "") +
+        sheetHtml(M);
     }
     box.innerHTML = html;
+  }
+
+  // The facts sheet (v1.91.0): what the memo was written from, under a fold,
+  // its times citations like the memo's own.
+  function sheetHtml(M) {
+    if (!M.sheet_text) { return ""; }
+    var moments = (M.sheet && M.sheet.checks && M.sheet.checks.moments) || 0;
+    return "<details class='inc-sheet' style='margin-top: 14px'><summary class='muted'>Facts sheet" +
+      (moments ? " (" + moments + " moment" + (moments === 1 ? "" : "s") + ")" : "") + "</summary>" +
+      "<p class='muted small' style='margin: 6px 0 8px'>What the memo was written from, drawn by the assistant from the record and the chronology and checked by the app. " +
+      escape(M.sheet_words || "") + (M.sheet_cut_short ? " The sheet was cut at its cap." : "") + "</p>" +
+      "<div class='inc-memo'>" + memoHtml(M.sheet_text, M.citations, M.event_numbers) + "</div></details>";
   }
 
   var memoPanel = document.getElementById("panel-memo");
@@ -1513,6 +1528,7 @@
         return;
       }
       if (event.target.closest("#memo-cancel")) { post({ action: "memo_cancel" }); return; }
+      if (event.target.closest("#memo-rewrite")) { post({ action: "memo_rewrite" }); return; }
       if (event.target.closest("#memo-export")) { exportWith(C.exportMemo); }
     });
   }

@@ -70,6 +70,7 @@ class PromptTemplate(models.Model):
     SPEAKER_CHECK = "speaker_check"
     INCIDENT_EVENTS = "incident_events"
     INCIDENT_MEMO = "incident_memo"
+    MEMO_SHEET = "memo_sheet"
     INCIDENT_CHAT = "incident_chat"
     COMPARISON = "comparison"
     DEFAULTS = {
@@ -82,6 +83,7 @@ class PromptTemplate(models.Model):
         SPEAKER_CHECK: ("Speaker check", prompts.SPEAKER_CHECK),
         INCIDENT_EVENTS: ("Proposed events", prompts.INCIDENT_EVENTS),
         INCIDENT_MEMO: ("Incident memo", prompts.INCIDENT_MEMO),
+        MEMO_SHEET: ("Memo facts sheet", prompts.MEMO_SHEET),
         INCIDENT_CHAT: ("Incident chat", prompts.INCIDENT_CHAT),
         COMPARISON: ("Comparison", prompts.COMPARISON),
     }

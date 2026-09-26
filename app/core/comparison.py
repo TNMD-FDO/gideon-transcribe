@@ -533,7 +533,10 @@ def compare(comparison_id, attempt: int = 1) -> None:
             comparison.save(update_fields=["stage"])
             whole = _paragraph_lines([row for window in windows for row in window])
             user = prompts.comparison_left_out_input(
-                against["head"], against["events"], whole
+                against["head"],
+                against["events"],
+                whole,
+                most=settings_store.compare_left_out_most(),
             )
             if prompts.fits(system, user, answer_cap=cap, window=assistant.window()):
                 answer = engine.complete(

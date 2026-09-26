@@ -116,6 +116,10 @@ class IncidentMemo(models.Model):
     # The Chronology's numbering when the memo was written: "4" -> Event id.
     event_numbers = models.JSONField(default=dict, blank=True)
     cut_short = models.BooleanField(default=False)
+    # The facts sheet the memo was written from (v1.91.0, ADR 0016), with
+    # the app's checks under "checks"; kept with the memo, printed with it.
+    sheet = models.JSONField(default=dict, blank=True)
+    sheet_cut_short = models.BooleanField(default=False)
     model = models.CharField(max_length=120, blank=True, default="")
     template_version = models.IntegerField(default=1)
     ground_rules_version = models.IntegerField(default=1)
@@ -1165,11 +1169,38 @@ def ask_for_memo(incident, *, by) -> IncidentMemo | None:
     memo.citations = {}
     memo.event_numbers = {}
     memo.cut_short = False
+    memo.sheet = {}
+    memo.sheet_cut_short = False
     memo.written_at = None
     memo.save()
     from core import tasks
 
     tasks.write_incident_memo.defer(memo_id=str(memo.pk))
+    return memo
+
+
+def ask_for_rewrite(incident, *, by) -> IncidentMemo | None:
+    """Rewrite from the sheet (v1.91.0): the memo's second pass alone, without
+    reading the cameras again. Only a written memo with a sheet, while the
+    chronology and the cameras are as they were; otherwise nothing, and the
+    page offers Regenerate."""
+    memo = memo_of(incident)
+    if memo is None or memo.state != DONE or not memo.sheet:
+        return None
+    if stale_words(memo, incident):
+        return None
+    memo.asked_by = by
+    memo.state = QUEUED
+    memo.stage = ""
+    memo.reason_class = ""
+    memo.text = ""
+    memo.citations = {}
+    memo.cut_short = False
+    memo.written_at = None
+    memo.save()
+    from core import tasks
+
+    tasks.write_incident_memo.defer(memo_id=str(memo.pk), from_sheet=True)
     return memo
 
 
@@ -1199,8 +1230,136 @@ def memo_citations(incident, text: str) -> dict:
     return found
 
 
-def write_memo(memo_id, attempt: int = 1) -> None:
-    """The call: the record and the Chronology in, the memo out, one audit row."""
+def _parse_sheet(text: str) -> dict:
+    """The sheet as the engine answered it, or as much as can be salvaged."""
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        try:
+            parsed = json.loads(prompts.salvage_json(text))
+        except ValueError:
+            raise engine.Problem(
+                engine.BAD_OUTPUT, "the facts sheet was unreadable"
+            ) from None
+    if not isinstance(parsed, dict):
+        raise engine.Problem(engine.BAD_OUTPUT, "the facts sheet was not a sheet")
+    sheet: dict = {}
+    for key, _ in prompts.SHEET_LISTS:
+        rows = parsed.get(key)
+        sheet[key] = (
+            [one for one in rows if isinstance(one, dict)]
+            if isinstance(rows, list)
+            else []
+        )
+    sheet["outcome"] = str(parsed.get("outcome", "") or "").strip()
+    return sheet
+
+
+_BARE = re.compile(r"[^a-z0-9 ]+")
+
+
+def _bare_words(text: str) -> str:
+    """Letters, digits and spaces alone, for a quote looked for in the record
+    whatever its punctuation and apostrophes."""
+    return " ".join(_BARE.sub(" ", text.lower()).split())
+
+
+# A sheet whose last moment falls this far before the last camera stops has
+# not reached the end (v1.91.0).
+SHEET_END_SLACK = 600.0
+
+
+def check_sheet(incident, sheet: dict, record: dict) -> dict:
+    """The app's checks on the facts sheet (v1.91.0): every time inside the
+    incident's span, every quote looked for in the record word for word, and
+    the timeline reaching the incident's end. Nothing is dropped: an entry
+    is marked, the timeline is put in time order, and the figures are kept
+    under "checks" for the page and the export."""
+    low, high = incidents.span_of(incident)
+    haystack = _bare_words(" ".join(line for _, _, line in record.get("rows") or []))
+    outside = found = not_found = 0
+    for key, _ in prompts.SHEET_LISTS:
+        for entry in sheet.get(key) or []:
+            at = _sheet_seconds(incident, str(entry.get("at", "")))
+            if "at" in entry:
+                if at is None or low is None or not (low - 1 <= at <= high + 1):
+                    entry["time_outside"] = True
+                    outside += 1
+                else:
+                    entry.pop("time_outside", None)
+                    entry["seconds"] = round(at, 2)
+            for field in ("quote",):
+                words = str(entry.get(field, "") or "").strip()
+                if not words:
+                    continue
+                if haystack and _bare_words(words) in haystack:
+                    entry["verbatim"] = True
+                    found += 1
+                else:
+                    entry["verbatim"] = False
+                    not_found += 1
+    timeline = sheet.get("timeline") or []
+    timeline.sort(key=lambda one: one.get("seconds", float("inf")))
+    last = max((one["seconds"] for one in timeline if "seconds" in one), default=None)
+    reaches = bool(
+        high is not None and last is not None and last >= high - SHEET_END_SLACK
+    )
+    sheet["checks"] = {
+        "moments": len(timeline),
+        "times_outside": outside,
+        "quotes_found": found,
+        "quotes_not_found": not_found,
+        "reaches_the_end": reaches,
+        "last_moment": _clock(incident, last) if last is not None else "",
+    }
+    return sheet
+
+
+def _sheet_seconds(incident, words: str) -> float | None:
+    match = CLOCK_TIME_IN.search(words if words.startswith("[") else f"[{words}]")
+    if not match:
+        return None
+    hours, minutes, seconds = (int(part) for part in match.groups())
+    of_day = hours * 3600 + minutes * 60 + seconds
+    if incident.has_clock():
+        return float((of_day - incident.clock_zero) % incidents.DAY)
+    return float(of_day)
+
+
+def sheet_words(sheet: dict) -> str:
+    """The checks in a line for the Memo tab and the export."""
+    checks = (sheet or {}).get("checks") or {}
+    if not checks:
+        return ""
+    said = f"{_count_words(checks.get('moments', 0), 'moment')}"
+    if checks.get("last_moment"):
+        said += f", the last at {checks['last_moment']}"
+    said += (
+        "; the timeline reaches the incident's end."
+        if checks.get("reaches_the_end")
+        else "; the timeline stops before the last camera does."
+    )
+    quotes = checks.get("quotes_found", 0) + checks.get("quotes_not_found", 0)
+    if quotes:
+        said += (
+            f" {_count_words(quotes, 'quote')} checked against the record"
+            + (
+                f", {checks['quotes_not_found']} not found word for word"
+                if checks.get("quotes_not_found")
+                else ", every one found"
+            )
+            + "."
+        )
+    if checks.get("times_outside"):
+        said += f" {_count_words(checks['times_outside'], 'time')} not on the record."
+    return said
+
+
+def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
+    """The memo in two passes (v1.91.0, ADR 0016): the record and the
+    Chronology in, the facts sheet out, checked by the app; then the sheet
+    in, the memo out. One audit row. `from_sheet` is Rewrite from the sheet:
+    the second pass alone on the sheet the memo keeps."""
     memo = (
         IncidentMemo.objects.filter(pk=memo_id)
         .select_related("incident", "incident__case", "asked_by")
@@ -1212,7 +1371,7 @@ def write_memo(memo_id, attempt: int = 1) -> None:
 
             tasks.write_incident_memo.configure(
                 schedule_in={"seconds": assistant.QUEUE_GRACE_SECONDS}
-            ).defer(memo_id=str(memo_id), attempt=attempt + 1)
+            ).defer(memo_id=str(memo_id), attempt=attempt + 1, from_sheet=from_sheet)
         return
     if memo.state not in (QUEUED, RUNNING):
         return
@@ -1220,9 +1379,12 @@ def write_memo(memo_id, attempt: int = 1) -> None:
     started = time.monotonic()
     ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
     template = PromptTemplate.named(PromptTemplate.INCIDENT_MEMO)
+    sheet_template = PromptTemplate.named(PromptTemplate.MEMO_SHEET)
     templates_line = (
-        f"ground-rules v{ground.version}; Incident memo v{template.version}"
+        f"ground-rules v{ground.version}; Incident memo v{template.version}; "
+        f"Memo facts sheet v{sheet_template.version}"
     )
+    from_sheet = from_sheet and bool(memo.sheet)
     memo.state = RUNNING
     memo.stage = "Reading the cameras"
     memo.template_version = template.version
@@ -1256,18 +1418,68 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             + ("\n\n" + notes.RULE if notes.any_on_chronology(incident) else ""),
         )
         wanted = settings_store.incident_memo_answer_cap()
-        # One sitting (Phase 8 chapter 9): everything said is read; the
-        # longest cameras' pictures go first when the whole does not fit.
-        from core import sitting
+        usage = {"input_tokens": 0, "output_tokens": 0}
+        calls = 0
+        if from_sheet:
+            # Rewrite from the sheet: the cameras as the memo read them.
+            record = {
+                "rows": [],
+                "used": list(memo.cameras_used),
+                "transcript_only": list(memo.cameras_transcript_only),
+                "left_out": [],
+            }
+            words_alone = list(memo.cameras_words_alone)
+        else:
+            # Pass one, the facts sheet: the record read once, into data.
+            # One sitting (Phase 8 chapter 9): everything said is read; the
+            # longest cameras' pictures go first when the whole does not fit.
+            from core import sitting
 
-        record, user, words_alone = sitting.fit(
-            incident,
-            system=system,
-            wrap=lambda body: prompts.incident_memo_input(
-                _cameras_line(incident), event_lines, body, about=incident.about
-            ),
-            answer_cap=assistant.cap(wanted),
+            sheet_system = prompts.system_message(
+                ground.text,
+                sheet_template.text,
+                prompts.MEMO_SHEET_FORMAT + "\n\n" + prompts.INCIDENT_RULES,
+            )
+            sheet_cap = settings_store.memo_sheet_answer_cap()
+            record, user, words_alone = sitting.fit(
+                incident,
+                system=sheet_system,
+                wrap=lambda body: prompts.incident_memo_input(
+                    _cameras_line(incident), event_lines, body, about=incident.about
+                ),
+                answer_cap=assistant.cap(sheet_cap),
+            )
+            memo.stage = "Drawing the facts sheet"
+            memo.save(update_fields=["stage"])
+            answer = engine.complete(
+                assistant._messages(sheet_system, user),
+                max_completion_tokens=assistant.cap(sheet_cap),
+                thinking=False,
+                timeout=assistant.time_limit(FEATURE_MEMO),
+                schema=prompts.memo_sheet_schema(),
+                **assistant.SUGGESTION_SAMPLING,
+            )
+            calls += 1
+            usage["input_tokens"] += answer.get("input_tokens", 0) or 0
+            usage["output_tokens"] += answer.get("output_tokens", 0) or 0
+            if assistant.thought_it_away(answer):
+                raise assistant.ThoughtItAway()
+            memo.sheet = check_sheet(incident, _parse_sheet(answer["text"]), record)
+            memo.sheet_cut_short = answer.get("finish_reason") == "length"
+            memo.model = answer.get("model", "")
+            if not IncidentMemo.objects.filter(pk=memo.pk).exists():
+                return
+            memo.save(update_fields=["sheet", "sheet_cut_short", "model"])
+        # Pass two, the memo, from the sheet alone.
+        user = prompts.memo_input_from_sheet(
+            _cameras_line(incident),
+            prompts.sheet_text(memo.sheet),
+            about=incident.about,
         )
+        if not prompts.fits(
+            system, user, answer_cap=assistant.cap(wanted), window=assistant.window()
+        ):
+            raise engine.Problem(engine.TOO_LONG, "the facts sheet is too long")
         memo.stage = "Writing the memo"
         memo.save(update_fields=["stage"])
         answer = engine.complete(
@@ -1277,21 +1489,21 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             timeout=assistant.time_limit(FEATURE_MEMO),
             **assistant.SAMPLING,
         )
-        usage = {
-            "input_tokens": answer.get("input_tokens", 0) or 0,
-            "output_tokens": answer.get("output_tokens", 0) or 0,
-        }
-        calls = 1
+        usage["input_tokens"] += answer.get("input_tokens", 0) or 0
+        usage["output_tokens"] += answer.get("output_tokens", 0) or 0
+        calls += 1
         if assistant.thought_it_away(answer):
             raise assistant.ThoughtItAway()
         text = answer["text"].strip()
         # A memo cut at the cap goes on from where it stopped (v1.90.1): up
         # to two more calls, each shown the memo so far, stitched in order.
-        while answer.get("finish_reason") == "length" and calls < MEMO_CALLS_MOST:
+        continued = 1
+        while answer.get("finish_reason") == "length" and continued < MEMO_CALLS_MOST:
             if not IncidentMemo.objects.filter(pk=memo.pk).exists():
                 return
             calls += 1
-            memo.stage = f"Continuing the memo, call {calls} of {MEMO_CALLS_MOST}"
+            continued += 1
+            memo.stage = f"Continuing the memo, call {continued} of {MEMO_CALLS_MOST}"
             memo.save(update_fields=["stage"])
             answer = engine.complete(
                 assistant._messages(system, user)
@@ -1318,10 +1530,13 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             record,
             set(words_alone),
         )
-        memo.citations = memo_citations(incident, memo.text)
+        # The sheet's times cite too, on the page and in the export.
+        memo.citations = memo_citations(
+            incident, memo.text + "\n" + prompts.sheet_text(memo.sheet)
+        )
         memo.event_numbers = numbers
         memo.cut_short = answer.get("finish_reason") == "length"
-        memo.model = answer.get("model", "")
+        memo.model = answer.get("model", "") or memo.model
         memo.cameras_used = record["used"]
         memo.cameras_transcript_only = list(record["transcript_only"])
         memo.cameras_not_read = []
@@ -1354,6 +1569,9 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             events=memo.events_count,
             cut_short=memo.cut_short,
             calls=calls,
+            sheet_cut_short=memo.sheet_cut_short,
+            moments=len(memo.sheet.get("timeline") or []),
+            from_sheet=from_sheet,
         )
     except engine.Problem as problem:
         if not IncidentMemo.objects.filter(pk=memo.pk).exists():
@@ -1493,6 +1711,15 @@ def memo_json(incident) -> dict:
             "citations": memo.citations if memo.state == DONE else {},
             "event_numbers": memo.event_numbers if memo.state == DONE else {},
             "cut_short": memo.cut_short,
+            "sheet": memo.sheet if memo.state == DONE else {},
+            "sheet_text": prompts.sheet_text(memo.sheet) if memo.state == DONE else "",
+            "sheet_words": sheet_words(memo.sheet) if memo.state == DONE else "",
+            "sheet_cut_short": memo.sheet_cut_short,
+            "rewrite_possible": (
+                memo.state == DONE
+                and bool(memo.sheet)
+                and not stale_words(memo, incident)
+            ),
             "written_words": written_words(memo),
             "stale_words": stale_words(memo, incident),
             "notice": assistant.notice(memo.model, memo.written_at)
@@ -1627,6 +1854,29 @@ def memo_word(memo: IncidentMemo, picture: bytes | None, exported_by: str) -> by
     if memo.cut_short:
         note = document.add_paragraph("The memo was cut short.")
         note.runs[0].italic = True
+    if memo.sheet:
+        # The facts sheet the memo was written from (v1.91.0), so a reader
+        # sees the moments behind the narrative and can ask for more.
+        document.add_page_break()
+        document.add_heading("Facts sheet", level=1)
+        about = document.add_paragraph(
+            "What the memo was written from: the people, moments, rights, "
+            "questions, searches, statements and gaps the assistant drew from "
+            "the record and the chronology, checked by the app. "
+            + sheet_words(memo.sheet)
+            + (" The sheet was cut at its cap." if memo.sheet_cut_short else "")
+        )
+        about.runs[0].italic = True
+        for raw in prompts.sheet_text(memo.sheet).splitlines():
+            line = raw.rstrip()
+            if not line:
+                continue
+            if line.endswith(":") and len(line) <= 60:
+                document.add_heading(line[:-1], level=2)
+            elif line.startswith("- "):
+                paragraph(line[2:], style="List Bullet")
+            else:
+                paragraph(line)
     document.add_page_break()
     chronology.pages(document, incident, picture, exported_by)
     import io

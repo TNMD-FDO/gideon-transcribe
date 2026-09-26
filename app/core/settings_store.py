@@ -334,6 +334,22 @@ def _rows() -> list[Definition]:
             when_changed="The next comparison.",
         ),
         Definition(
+            key="documents_compare_left_out_most",
+            page=DOCUMENTS,
+            name="Omissions at most",
+            kind=NUMBER,
+            default=15,
+            least=5,
+            most=100,
+            unit="findings",
+            needs="documents_compare",
+            what_it_does=(
+                "How many events the report leaves out one comparison may list, "
+                "the ones that matter most first (v1.91.0)."
+            ),
+            when_changed="The next comparison.",
+        ),
+        Definition(
             key="documents_compare_time_seconds",
             page=DOCUMENTS,
             name="Comparison time limit",
@@ -1918,7 +1934,27 @@ def _rows() -> list[Definition]:
             unit="tokens",
             needs="incidents_memo",
             what_it_does=(
-                'The most a memo may run to; a cap hit shows "The memo was cut short."'
+                "The most one call of the memo may run to; a memo cut at the cap "
+                "goes on from where it stopped, three calls at most, and one "
+                'still cut after that shows "The memo was cut short."'
+            ),
+            when_changed="The next memo.",
+        ),
+        Definition(
+            key="incidents_memo_sheet_answer_tokens",
+            page=INCIDENTS,
+            group="The assistant",
+            name="Facts sheet answer cap",
+            kind=NUMBER,
+            default=8000,
+            least=1000,
+            most=16000,
+            unit="tokens",
+            needs="incidents_memo",
+            what_it_does=(
+                "The most the memo's facts sheet may run to: the data the "
+                "assistant draws from the record before the memo is written "
+                "from it (v1.91.0). A sheet cut at the cap is said on the Memo tab."
             ),
             when_changed="The next memo.",
         ),
@@ -3148,6 +3184,14 @@ def incident_chat_answer_cap() -> int:
 
 def incident_memo_answer_cap() -> int:
     return get("incidents_memo_answer_tokens")
+
+
+def memo_sheet_answer_cap() -> int:
+    return get("incidents_memo_sheet_answer_tokens")
+
+
+def compare_left_out_most() -> int:
+    return get("documents_compare_left_out_most")
 
 
 def vision_window() -> tuple[str, str]:

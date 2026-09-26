@@ -113,7 +113,11 @@ SHIPPED_HISTORY = {
         "96f59676a039b88c",
         # v1.90.1: people who matter, phases of prose, the notes never copied.
         "17b7b7a1dab39181",
+        # v1.91.0: written from the facts sheet alone (ADR 0016).
+        "a5ec82bb5ef84c66",
     ),
+    # v1.91.0: the facts sheet, the first of the memo's two passes.
+    "prompt:memo_sheet": ("437c424c772c9ea4",),
     "prompt:incident_chat": ("1e49dfacd7a8a160", "b34225f790a3e94e"),
     # Re-shipped in v1.90.0: an officer's say-so is not the record agreeing.
     "prompt:comparison": ("127d85e163af4cba", "d59b992243fb63bf"),
@@ -528,68 +532,355 @@ INCIDENT_EVENTS_SECOND_LOOK = (
 )
 # The Incident memo: a memo across cameras, written on the chronology.
 INCIDENT_MEMO = (
-    "You are an experienced defence investigator. You have been given the "
-    "record of one incident seen across several cameras, on one clock, and "
-    "the chronology of events the office settled. Write the memo you hand "
-    "the assigned attorney: clean, factual, readable in one sitting; the "
-    "attorney will check it against the cameras. Keep the working out of the "
-    "memo: work out who each person is and build the timeline privately, and "
-    "show none of it. No tables, no speaker lists, no transcript labels such "
-    "as Speaker 1, no fields reading not stated; a detail the record lacks is "
-    "left out. Third person, past tense, plain English, short paragraphs. "
-    "Introduce each person naturally the first time, by a name only as the "
-    "words give it and a role only as the words give it; after that the last "
-    "name. An officer the words never name is the officer on that camera "
-    "(the officer wearing BWL7-004997) when the record makes that plain, "
+    "You are an experienced defence investigator. The office's assistant has "
+    "drawn a facts sheet from the record of one incident seen across several "
+    "cameras, on one clock, and from the chronology of events the office "
+    "settled; the sheet is what you write from and all you may use. Write "
+    "the memo you hand the assigned attorney: clean, factual, readable in "
+    "one sitting; the attorney will check it against the cameras. Keep the "
+    "working out of the memo: no tables, no lists of the sheet's entries, no "
+    "transcript labels such as Speaker 1, no fields reading not stated; a "
+    "detail the sheet lacks is left out. Third person, past tense, plain "
+    "English, short paragraphs. Introduce each person naturally the first "
+    "time, by a name only as the sheet gives it and a role only as the sheet "
+    "gives it; after that the last name. An officer the sheet does not name "
+    "is the officer wearing that camera (the officer wearing BWL7-004997), "
     "otherwise Officer A, Officer B in order of appearance, kept the same "
-    "throughout. A person seen only in the picture is described by clothing, "
-    "position or what they did, never named. Quote exactly when the words "
-    "matter: anything the person stopped said, requests for consent and the "
-    "answers, advisements of rights, commands, and the reasons officers gave "
-    "for what they did. Point at the evidence with the time of day and the "
-    "camera; give an event's number only where a sentence rests on it, and "
-    "never walk the events one after another. Never narrate the footage: do "
-    "not write that the camera view shifted, the footage shows or the video "
-    "captures; what a camera showed is said only where the picture is the "
-    "evidence for a fact. Mark inferences (it appears) and give the basis. "
-    "Attribute the officers' characterisations to them; never adopt them as "
-    "fact. The chronology's events are the spine and the office's notes are "
-    "its reading of them; contradict neither. Where the words leave a key "
-    "moment unclear, say so at that point. The parts, in this order, each "
-    "heading on its own line followed by a colon. Summary: one or two "
-    "paragraphs, two hundred words at most, with the date and the times of "
-    "day the incident ran: why the officers were there, who was stopped, "
-    "what was found, how it ended, and what the attorney most needs to know. "
-    "The cameras: the heading alone; the office fills this part in. People: "
+    "throughout. A person the sheet knows only from the picture is described "
+    "by clothing, position or what they did, never named. A quote is copied "
+    "from the sheet exactly, in quotation marks; a quote the sheet marks as "
+    "not found word for word is given without quotation marks, as what was "
+    "said in substance. Point at the evidence with the time of day and the "
+    "camera, copied from the sheet; give an event's number only where a "
+    "sentence rests on it. Never narrate the footage: do not write that the "
+    "camera view shifted, the footage shows or the video captures; what a "
+    "camera showed is said only where the picture is the evidence for a "
+    "fact. Mark inferences (it appears) and give the basis. Attribute the "
+    "officers' characterisations to them; never adopt them as fact. The "
+    "chronology's events are the spine and the office's notes are its "
+    "reading of them; contradict neither. Where the sheet marks a moment "
+    "unclear, say so at that point. The parts, in this order, each heading "
+    "on its own line followed by a colon. Summary: one or two paragraphs, "
+    "two hundred words at most, with the date and the times of day the "
+    "incident ran: why the officers were there, who was stopped, what was "
+    "found, how it ended, and what the attorney most needs to know. The "
+    "cameras: the heading alone; the office fills this part in. People: "
     "only those who matter to the memo, one line each, how the record "
-    "identifies them and where, and which cameras show them; not every "
-    "officer who appears. What happened: the account in phases, six at "
-    "most, each phase a heading on its own line with its span of the clock "
-    "(Pursuit 20:24 to 20:27, The stop, Questioning at the car) followed by "
-    "a paragraph or two of narrative, two hundred words at most, with the "
-    "quotes and times inline. The chronology's lines and the record's are "
-    "notes to write from, never sentences to copy: no sentence begins with "
-    "a time and a speaker's label, and a watch phrase is never mentioned as "
-    "such. Questioning and rights: "
-    "every advisement of rights, quoted, with who read it, the time and the "
+    "identifies them and where, and which cameras show them. What "
+    "happened: one continuous account in phases, six at most, each phase a "
+    "heading on its own line with its span of the clock (Pursuit 20:24 to "
+    "20:27, The stop, Questioning at the car) followed by prose that carries "
+    "the story from the sheet's first moment to its outcome, two hundred "
+    "words a phase at most, with the quotes and times inline; never one "
+    "sentence per entry of the sheet. Questioning and rights: every "
+    "advisement of rights, quoted, with who read it, the time and the "
     "camera; every question put to a person before rights were read, with "
     "the answer and the time; whether the person asked for a lawyer, asked "
-    "to stop, or said they did not understand. Searches, seizures and force: "
-    "each search of a person, a bag, a vehicle or a place, who asked for "
-    "consent and what was answered, what was found and where it went; each "
-    "restraint, use of force, injury or complaint of pain and any medical "
-    "attention; with times and cameras. Statements that matter: exact quotes "
-    "that carry weight, who said them, the time, the camera, and whether it "
-    "answered a question or was said unprompted. Gaps and unclear parts: a "
-    "camera muted, turned off or pointed away and when; a stretch no camera "
-    "recorded; where the cameras or the words disagree; an event the record "
-    "does not bear out. Points for counsel: numbered, most significant first, "
-    "eight at most, each two to four sentences saying why something may "
-    "matter and referring to the times above; legal issues as questions for "
-    "counsel, never conclusions, the doctrine named in plain terms and no "
-    "cases or statutes cited. Nine hundred to eighteen hundred words; finish "
-    "every part."
+    "to stop, or said they did not understand. Searches, seizures and "
+    "force: each search of a person, a bag, a vehicle or a place, who asked "
+    "for consent and what was answered, what was found and where it went; "
+    "each restraint, use of force, injury or complaint of pain and any "
+    "medical attention; with times and cameras. Statements that matter: "
+    "exact quotes that carry weight, who said them, the time, the camera, "
+    "and whether it answered a question or was said unprompted. Gaps and "
+    "unclear parts: a camera muted, turned off or pointed away and when; a "
+    "stretch no camera recorded; where the cameras or the words disagree; "
+    "an event the record does not bear out. Points for counsel: numbered, "
+    "most significant first, eight at most, each two to four sentences "
+    "saying why something on the sheet may matter and referring to the "
+    "times above; legal issues as questions for counsel, never conclusions, "
+    "the doctrine named in plain terms and no cases or statutes cited. Nine "
+    "hundred to eighteen hundred words; finish every part."
 )
+# The facts sheet (v1.91.0, ADR 0016): the first of the memo's two passes.
+# The model reads the record once, into data; the memo is written from the
+# data alone, so it cannot copy the record line by line.
+MEMO_SHEET = (
+    "You are an experienced defence investigator. You have been given the "
+    "record of one incident seen across several cameras, on one clock, and "
+    "the chronology of events the office settled. Before the memo is "
+    "written, set down the facts sheet it will be written from: everything "
+    "the memo needs, as data, nothing worked up into prose. The sheet is all "
+    "the writer will have, so be generous with what matters and exact with "
+    "every time and every quote. People: each person who matters, how the "
+    "record identifies them (a name only as the words give it, a role only "
+    "as the words give it, otherwise the officer wearing a camera, or "
+    "clothing and position), where that identification falls, and the "
+    "cameras that show them. Timeline: the moments that tell the story in "
+    "order, from the first camera's start to how it ended, forty to one "
+    "hundred and twenty of them, each with its time by the incident clock, "
+    "its camera, one plain sentence of what happened, a quote copied word "
+    "for word when the words matter, who said it, and the number of the "
+    "chronology event it rests on if any; every phase of the incident is "
+    "covered, and the last entries carry the conclusion: custody, "
+    "transport, release, the tow, the cameras stopping. Rights: every "
+    "advisement of rights, quoted, who read it, to whom, the answer, and "
+    "whether the person asked for a lawyer, asked to stop or said they did "
+    "not understand. Questions before rights: every question an officer put "
+    "to a person before that person's rights were read, with the answer. "
+    "Searches, seizures and force: each search of a person, a bag, a "
+    "vehicle or a place, who asked for consent and the answer, what was "
+    "found and where it went; each restraint, use of force, injury or "
+    "complaint of pain and any medical attention. Statements: exact quotes "
+    "that carry weight, who said them, and whether they answered a question "
+    "or were unprompted. Gaps: a camera muted, turned off or pointed away; "
+    "a stretch no camera recorded; where the cameras or the words disagree; "
+    "an event the record does not bear out. Outcome: how it ended, in two "
+    "or three sentences. A speaker's numbered label (Speaker 3) is never a "
+    "name: who said a thing is a name the words give, the officer wearing a "
+    "camera, an officer, or the person stopped. A camera's description is a "
+    "description. Nothing that is not in the record or the chronology."
+)
+MEMO_SHEET_FORMAT = (
+    'Answer with JSON only, in this shape: {"people": [{"who": "", "how": '
+    '"", "where": "hh:mm:ss on CAMERA", "cameras": [""]}], "timeline": '
+    '[{"at": "hh:mm:ss", "camera": "", "what": "", "quote": "", "said_by": '
+    '"", "event": 0}], "rights": [{"at": "hh:mm:ss", "camera": "", '
+    '"read_by": "", "to": "", "quote": "", "answer": "", "asked_for": ""}], '
+    '"questions_before_rights": [{"at": "hh:mm:ss", "camera": "", '
+    '"asked_by": "", "to": "", "question": "", "answer": ""}], '
+    '"searches_and_force": [{"at": "hh:mm:ss", "camera": "", "what": "", '
+    '"consent": "", "found": "", "went": ""}], "statements": [{"at": '
+    '"hh:mm:ss", "camera": "", "who": "", "quote": "", "prompted": true}], '
+    '"gaps": [{"at": "hh:mm:ss", "camera": "", "what": ""}], "outcome": ""}. '
+    "Every time copied from the record or the chronology by the incident "
+    "clock; an event number only where the entry rests on that event, else "
+    "0; an empty string where there is nothing. No other text."
+)
+# The sheet's lists, in the order the memo's writer reads them.
+SHEET_LISTS = (
+    ("people", "People"),
+    ("timeline", "Timeline, in order"),
+    ("rights", "Rights"),
+    ("questions_before_rights", "Questions before rights"),
+    ("searches_and_force", "Searches, seizures and force"),
+    ("statements", "Statements that matter"),
+    ("gaps", "Gaps and unclear parts"),
+)
+SHEET_MOST = {
+    "people": 30,
+    "timeline": 160,
+    "rights": 20,
+    "questions_before_rights": 80,
+    "searches_and_force": 40,
+    "statements": 60,
+    "gaps": 30,
+}
+
+
+def memo_sheet_schema() -> dict:
+    """The facts sheet's shape, bounded, so the engine's structured output
+    cannot run on until the cap cuts it."""
+
+    def text(most=400):
+        return {"type": "string", "maxLength": most}
+
+    def entries(key, fields):
+        return {
+            "type": "array",
+            "maxItems": SHEET_MOST[key],
+            "items": {
+                "type": "object",
+                "properties": fields,
+                "required": list(fields),
+                "additionalProperties": False,
+            },
+        }
+
+    at = text(12)
+    camera = text(60)
+    return {
+        "type": "object",
+        "properties": {
+            "people": entries(
+                "people",
+                {
+                    "who": text(120),
+                    "how": text(300),
+                    "where": text(80),
+                    "cameras": {"type": "array", "maxItems": 20, "items": camera},
+                },
+            ),
+            "timeline": entries(
+                "timeline",
+                {
+                    "at": at,
+                    "camera": camera,
+                    "what": text(300),
+                    "quote": text(400),
+                    "said_by": text(80),
+                    "event": {"type": "integer"},
+                },
+            ),
+            "rights": entries(
+                "rights",
+                {
+                    "at": at,
+                    "camera": camera,
+                    "read_by": text(80),
+                    "to": text(80),
+                    "quote": text(600),
+                    "answer": text(200),
+                    "asked_for": text(200),
+                },
+            ),
+            "questions_before_rights": entries(
+                "questions_before_rights",
+                {
+                    "at": at,
+                    "camera": camera,
+                    "asked_by": text(80),
+                    "to": text(80),
+                    "question": text(300),
+                    "answer": text(300),
+                },
+            ),
+            "searches_and_force": entries(
+                "searches_and_force",
+                {
+                    "at": at,
+                    "camera": camera,
+                    "what": text(300),
+                    "consent": text(200),
+                    "found": text(200),
+                    "went": text(200),
+                },
+            ),
+            "statements": entries(
+                "statements",
+                {
+                    "at": at,
+                    "camera": camera,
+                    "who": text(80),
+                    "quote": text(400),
+                    "prompted": {"type": "boolean"},
+                },
+            ),
+            "gaps": entries("gaps", {"at": at, "camera": camera, "what": text(300)}),
+            "outcome": text(800),
+        },
+        "required": [key for key, _ in SHEET_LISTS] + ["outcome"],
+        "additionalProperties": False,
+    }
+
+
+def _sheet_time(entry: dict) -> str:
+    if entry.get("time_outside"):
+        return "(time not on the record)"
+    at = str(entry.get("at", "")).strip()
+    return f"[{at}]" if at else ""
+
+
+def _quoted(entry: dict, key: str = "quote") -> str:
+    words = str(entry.get(key, "")).strip()
+    if not words:
+        return ""
+    if entry.get("verbatim") is False:
+        return f"{words} (not found word for word in the record)"
+    return f'"{words}"'
+
+
+def sheet_text(sheet: dict) -> str:
+    """The facts sheet as the memo's writer reads it and as the page and the
+    export print it: one heading a list, one line an entry, the times in
+    brackets so they cite, the event numbers as marks."""
+    if not isinstance(sheet, dict):
+        return ""
+    out: list[str] = []
+    for key, heading in SHEET_LISTS:
+        rows = [one for one in sheet.get(key) or [] if isinstance(one, dict)]
+        if not rows:
+            continue
+        out.append(f"{heading}:")
+        for one in rows:
+            when = _sheet_time(one)
+            camera = str(one.get("camera", "")).strip()
+            tag = camera + ":" if camera else ""
+            head = " ".join(part for part in (when, tag) if part)
+            if key == "people":
+                where = str(one.get("where", "")).strip()
+                cams = ", ".join(
+                    str(c) for c in one.get("cameras") or [] if str(c).strip()
+                )
+                who = str(one.get("who", "")).strip()
+                bits = [who + ": " + str(one.get("how", "")).strip()]
+                if where:
+                    bits.append(f"identified at {where}")
+                if cams:
+                    bits.append(f"seen on {cams}")
+                out.append("- " + "; ".join(b for b in bits if b.strip(": ")))
+                continue
+            if key == "timeline":
+                line = str(one.get("what", "")).strip()
+                quote = _quoted(one)
+                if quote:
+                    who = str(one.get("said_by", "")).strip()
+                    line += f" {who + ' said ' if who else 'Said: '}{quote}"
+                try:
+                    number = int(one.get("event") or 0)
+                except (TypeError, ValueError):
+                    number = 0
+                if number > 0:
+                    line += f" (Event {number})"
+            elif key == "rights":
+                line = (
+                    f"read by {one.get('read_by', '') or 'an officer'} to "
+                    f"{one.get('to', '') or 'the person'}: {_quoted(one)}"
+                    + (f"; answer: {one.get('answer')}" if one.get("answer") else "")
+                    + (
+                        f"; asked for: {one.get('asked_for')}"
+                        if one.get("asked_for")
+                        else ""
+                    )
+                )
+            elif key == "questions_before_rights":
+                line = (
+                    f"{one.get('asked_by', '') or 'an officer'} asked "
+                    f"{one.get('to', '') or 'the person'}: {_quoted(one, 'question')}"
+                    + (
+                        f"; answer: {_quoted(one, 'answer')}"
+                        if one.get("answer")
+                        else ""
+                    )
+                )
+            elif key == "searches_and_force":
+                line = str(one.get("what", "")).strip() + "".join(
+                    f"; {field}: {one.get(field)}"
+                    for field in ("consent", "found", "went")
+                    if one.get(field)
+                )
+            elif key == "statements":
+                how = "answering a question" if one.get("prompted") else "unprompted"
+                line = f"{one.get('who', '') or 'a person'} ({how}): {_quoted(one)}"
+            else:
+                line = str(one.get("what", "")).strip()
+            out.append("- " + (head + " " if head else "") + line)
+        out.append("")
+    outcome = str(sheet.get("outcome", "")).strip()
+    if outcome:
+        out.extend(["Outcome:", outcome, ""])
+    return "\n".join(out).strip()
+
+
+def memo_input_from_sheet(cameras_line: str, sheet: str, about: str = "") -> str:
+    """What the memo's writer is given (v1.91.0): the cameras, the office's
+    About, and the facts sheet; never the record."""
+    return "\n\n".join(
+        [
+            cameras_line,
+            *(
+                ["The office's note on the incident:\n" + about]
+                if about.strip()
+                else []
+            ),
+            "The facts sheet, drawn from the record and the chronology (every "
+            "time by the incident clock; an event number where an entry rests "
+            "on the chronology):\n" + sheet,
+            LENGTH_LINES["detailed"],
+        ]
+    )
+
+
 # Gideon on the incident page (Phase 7 chapter 5): questions answered from
 # the incident record and the chronology, in the investigator's voice.
 INCIDENT_CHAT = (
@@ -1138,7 +1429,9 @@ def comparison_input(
     )
 
 
-def comparison_left_out_input(head: str, events: list[str], paragraphs: str) -> str:
+def comparison_left_out_input(
+    head: str, events: list[str], paragraphs: str, most: int = 15
+) -> str:
     """The chronology against the whole report: what the report leaves out."""
     return "\n\n".join(
         [
@@ -1153,7 +1446,7 @@ def comparison_left_out_input(head: str, events: list[str], paragraphs: str) -> 
             "or turned off. Radio talk, the scene described, pleasantries and "
             "an officer's remarks to another officer are not findings. Give "
             "each as not_in_report with the event's time as at and its line as "
-            "the claim, page and paragraph empty; fifteen at most, the ones that "
+            f"the claim, page and paragraph empty; {most} at most, the ones that "
             "matter most. An event the report mentions anywhere, in any words, "
             "is not a finding. No other marks.",
         ]
@@ -1163,8 +1456,9 @@ def comparison_left_out_input(head: str, events: list[str], paragraphs: str) -> 
 def incident_memo_input(
     cameras_line: str, events: list[str], record: str, about: str = ""
 ) -> str:
-    """What the memo is written from: the cameras, the office's About, the
-    chronology with its notes, the record."""
+    """What the memo's facts sheet is drawn from (v1.91.0; the memo itself
+    until then): the cameras, the office's About, the chronology with its
+    notes, the record."""
     listed = "\n".join(events) if events else "none; write on the record alone."
     return "\n\n".join(
         [

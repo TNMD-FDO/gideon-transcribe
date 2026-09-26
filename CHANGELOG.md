@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.91.0, 2026-09-26
+
+```
+Models: unchanged
+Database: migrates (0063: the memo's facts sheet)
+```
+
+**The incident memo is written in two passes** (ADR 0016). On the office's
+copy the engine's model wrote the memo by copying the record's lines,
+speaker labels and all, however the wording was tuned. Now the assistant
+first draws a **Facts sheet** from the record and the chronology, as data:
+the people who matter, the moments in order from the first camera to the
+conclusion, the rights advisements, the questions before rights, the
+searches and force, the statements that matter, the gaps, the outcome. The
+app checks it (every time on the record, every quote looked for word for
+word, the timeline reaching the end) and marks what it finds. Then the memo
+is written from the sheet alone, so it tells the story instead of copying
+lines. The sheet sits under a fold below the memo with its times as
+citations, prints in Memo to Word before the chronology, and **Rewrite from
+the sheet** writes the memo again without reading the cameras. The Memo
+facts sheet template joins the Templates page; the Facts sheet answer cap
+(8,000 tokens) joins the Incidents page.
+
+**The comparison's omissions cap is a setting**: Omissions at most, 15 as
+shipped, on the Documents page.
+
 ## v1.90.2, 2026-09-26
 
 ```

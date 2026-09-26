@@ -603,6 +603,61 @@ KEPT = MEMO.replace(
     "BWC2-1: camera, [21:56:17] to [22:06:17].\n"
     "BWC2-2: camera, [22:00:58] to [22:10:58]; no picture read.\n\n",
 )
+# The facts sheet (v1.91.0): the first pass's answer, out of order, with one
+# quote the record holds word for word, one it does not, and one time off
+# the record.
+SHEET = json.dumps(
+    {
+        "people": [
+            {
+                "who": "The driver",
+                "how": "the person asked out of the car",
+                "where": "21:56:27 on BWC2-1",
+                "cameras": ["BWC2-1"],
+            }
+        ],
+        "timeline": [
+            {
+                "at": "22:01:03",
+                "camera": "BWC2-2",
+                "what": "The passenger was told to stay in the car.",
+                "quote": "Stay in the car please",
+                "said_by": "the officer wearing BWC2-2",
+                "event": 0,
+            },
+            {
+                "at": "21:56:27",
+                "camera": "BWC2-1",
+                "what": "The driver was asked out of the car.",
+                "quote": "Step out of the vehicle for me.",
+                "said_by": "an officer",
+                "event": 1,
+            },
+            {
+                "at": "22:10:00",
+                "camera": "BWC2-2",
+                "what": "The cameras stopped.",
+                "quote": "",
+                "said_by": "",
+                "event": 0,
+            },
+        ],
+        "rights": [],
+        "questions_before_rights": [],
+        "searches_and_force": [],
+        "statements": [
+            {
+                "at": "23:59:00",
+                "camera": "BWC2-1",
+                "who": "the driver",
+                "quote": "Not mine",
+                "prompted": True,
+            }
+        ],
+        "gaps": [],
+        "outcome": "Both went on their way.",
+    }
+)
 
 
 def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
@@ -623,18 +678,56 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
         },
         by=person,
     )
-    asked = engine_answering(monkeypatch, [MEMO])
+    asked = engine_answering(monkeypatch, [SHEET, MEMO])
     memo = incident_assistant.ask_for_memo(incident, by=person)
     assert memo is not None and memo.state == "queued"
     incident_assistant.write_memo(memo.pk)
     memo.refresh_from_db()
     assert memo.state == "done" and memo.text == KEPT.strip()
-    # What the memo was given: the cameras, the chronology numbered, the
-    # record on the clock, the fixed rules with the templates.
+    # Two passes (v1.91.0, ADR 0016). The first, the facts sheet, is given
+    # the cameras, the chronology numbered, the record on the clock, the
+    # fixed incident rules with the sheet's template, and answers as data.
+    assert len(asked) == 2
     system = asked[0]["messages"][0]["content"]
     user = asked[0]["messages"][-1]["content"]
-    assert prompts.INCIDENT_RULES in system and prompts.NARRATIVE_RULES in system
-    assert prompts.INCIDENT_MEMO in system
+    assert prompts.MEMO_SHEET in system and prompts.INCIDENT_RULES in system
+    assert prompts.MEMO_SHEET_FORMAT in system and prompts.INCIDENT_MEMO not in system
+    assert asked[0]["schema"] == prompts.memo_sheet_schema()
+    assert asked[0]["max_completion_tokens"] == 8000
+    # The second, the memo, is given the sheet and never the record.
+    writer = asked[1]["messages"]
+    assert prompts.INCIDENT_MEMO in writer[0]["content"]
+    assert prompts.NARRATIVE_RULES in writer[0]["content"]
+    given = writer[-1]["content"]
+    assert "The facts sheet, drawn from the record" in given
+    assert "Timeline, in order:" in given and "Outcome:" in given
+    assert "BWC2-2: [22:01:03] Stay in the car, please." not in given
+    assert "Event 1, 21:56:27, Asked out of the car" not in given
+    assert asked[1]["max_completion_tokens"] == 4000
+    # The app's checks on the sheet: in time order, the quotes looked for in
+    # the record, a time off the record marked, the end reached.
+    checks = memo.sheet["checks"]
+    assert checks["moments"] == 3 and checks["reaches_the_end"] is True
+    assert checks["quotes_not_found"] == 1 and checks["times_outside"] == 1
+    assert checks["last_moment"] == "22:10:00"
+    timeline = memo.sheet["timeline"]
+    assert [one["at"] for one in timeline] == ["21:56:27", "22:01:03", "22:10:00"]
+    assert timeline[1]["verbatim"] is True
+    statement = memo.sheet["statements"][0]
+    assert statement["time_outside"] is True and statement["verbatim"] is False
+    assert not memo.sheet_cut_short
+    sheet_text = prompts.sheet_text(memo.sheet)
+    assert "- [21:56:27] BWC2-1: The driver was asked out of the car." in sheet_text
+    assert '"Step out of the vehicle for me." (Event 1)' in sheet_text
+    assert (
+        "(time not on the record) BWC2-1: the driver (answering a question): "
+        in sheet_text
+    )
+    assert "Not mine (not found word for word in the record)" in sheet_text
+    words = incident_assistant.sheet_words(memo.sheet)
+    assert words.startswith("3 moments, the last at 22:10:00; the timeline reaches")
+    assert "3 quotes checked against the record, 1 not found word for word." in words
+    assert "1 time not on the record." in words
     assert (
         "Event 1, 21:56:27, Asked out of the car; seen on BWC2-1; added by a person."
         in user
@@ -645,8 +738,8 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     )
     assert "BWC2-2: [22:01:03] Stay in the car, please." in user
     assert "BWC2-1, 21:56:17 to 22:06:17, from its clock, checked" in user
-    assert asked[0]["max_completion_tokens"] == 4000
-    # The citations inside the span, the marks by the numbering at writing.
+    # The citations inside the span, the marks by the numbering at writing;
+    # the sheet's times cite too (v1.91.0).
     assert memo.citations == {
         "[21:56:27]": 10.0,
         "[21:56:47]": 30.0,
@@ -656,6 +749,7 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
         "[22:01:03]": 286.0,
         # The app's cameras line ends BWC2-2 at its end (v1.89.0).
         "[22:10:58]": 881.0,
+        "[22:10:00]": 823.0,
     }
     assert memo.event_numbers == {"1": str(first.pk), "2": str(second.pk)}
     assert memo.cameras_used == ["BWC2-1"]
@@ -672,9 +766,17 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     state = incident_assistant.memo_json(incident)
     assert state["state"] == "done" and state["event_numbers"]["2"] == str(second.pk)
     assert state["notice"] and state["busy"] is False
-    # The row: metadata only.
+    # The tab has the sheet, its words, and Rewrite from the sheet on offer.
+    assert state["sheet_text"].startswith("People:")
+    assert state["sheet"]["checks"]["moments"] == 3
+    assert state["sheet_words"] and state["rewrite_possible"] is True
+    # The row: metadata only, the calls and the moments counted.
     row = Row.objects.get(event="AI assistant call", details__feature="incident_memo")
     assert row.details["events"] == 2 and "Asked" not in json.dumps(row.details)
+    assert row.details["calls"] == 2 and row.details["moments"] == 3
+    assert row.details["from_sheet"] is False and "Not mine" not in json.dumps(
+        row.details
+    )
     # The chronology changes: the tab says so, and so does the case page.
     chronology.add(incident, {"at": "40", "text": "Tow truck"}, by=person)
     assert incident_assistant.stale_words(memo, incident) == (
@@ -682,6 +784,9 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
         "Regenerate to write it on them."
     )
     assert incident_assistant.memo_line(incident).endswith(", 1 event newer")
+    # A stale memo cannot be rewritten from its sheet; the page says use Regenerate.
+    assert incident_assistant.memo_json(incident)["rewrite_possible"] is False
+    assert incident_assistant.ask_for_rewrite(incident, by=person) is None
     chronology.change(first, {"at": "11", "text": "Asked out"}, by=person)
     chronology.remove(Event.objects.get(text="Tow truck"), by=person)
     assert "an event changed" in incident_assistant.stale_words(memo, incident)
@@ -709,6 +814,11 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     assert "Privileged and confidential. Attorney work product." in head
     assert "Traffic stop, Stop - Incident memo" in head
     assert "PAGE" in foot and "NUMPAGES" in foot
+    # The facts sheet is printed after the memo, before the Chronology (v1.91.0).
+    body = "\n".join(p.text for p in exported.paragraphs)
+    assert "Facts sheet" in body and "What the memo was written from" in body
+    assert "The driver was asked out of the car." in body
+    assert body.index("Facts sheet") < body.index("Chronology")
 
     # Regenerate resets the one row; a failed engine says so.
     def failing(messages, **options):
@@ -749,7 +859,7 @@ def test_a_memo_cut_at_the_cap_goes_on_from_where_it_stopped(
     monkeypatch.setattr(engine, "is_reachable", lambda: True)
     monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
     head, tail = MEMO.split("What happened:")
-    pieces = [(head + "What happened:", "length"), (tail, "stop")]
+    pieces = [(SHEET, "stop"), (head + "What happened:", "length"), (tail, "stop")]
     asked = []
 
     def complete(messages, **options):
@@ -771,14 +881,96 @@ def test_a_memo_cut_at_the_cap_goes_on_from_where_it_stopped(
     assert memo.text == KEPT.strip()
     # The second call: the same system and input, then the memo so far as the
     # assistant's turn, then the ask to go on.
-    assert len(asked) == 2
-    assert asked[1][0] == asked[0][0] and asked[1][1] == asked[0][1]
-    assert asked[1][2]["role"] == "assistant"
-    assert asked[1][2]["content"].endswith("What happened:")
-    assert asked[1][3] == {"role": "user", "content": prompts.CONTINUE_MEMO}
+    assert len(asked) == 3
+    assert asked[2][0] == asked[1][0] and asked[2][1] == asked[1][1]
+    assert asked[2][2]["role"] == "assistant"
+    assert asked[2][2]["content"].endswith("What happened:")
+    assert asked[2][3] == {"role": "user", "content": prompts.CONTINUE_MEMO}
     said = Row.objects.filter(event="AI assistant call").order_by("-at").first()
-    assert said.details["calls"] == 2 and said.details["cut_short"] is False
-    assert said.details["input_tokens"] == 20 and said.details["output_tokens"] == 10
+    assert said.details["calls"] == 3 and said.details["cut_short"] is False
+    assert said.details["input_tokens"] == 30 and said.details["output_tokens"] == 15
+
+
+def test_rewrite_from_the_sheet_runs_the_second_pass_alone(
+    incident, person, monkeypatch, client
+):
+    """v1.91.0: a written memo keeps its facts sheet, and Rewrite from the
+    sheet writes the memo again from it without reading the cameras: one
+    call, the sheet unchanged, the row saying so. A stale memo refuses."""
+    settings_store.set_to("incidents_memo", True)
+    chronology.add(incident, {"at": "10", "text": "Asked out of the car"}, by=person)
+    engine_answering(monkeypatch, [SHEET, MEMO])
+    memo = incident_assistant.ask_for_memo(incident, by=person)
+    incident_assistant.write_memo(memo.pk)
+    memo.refresh_from_db()
+    assert memo.state == "done" and memo.sheet["checks"]["moments"] == 3
+    sheet_before = json.dumps(memo.sheet, sort_keys=True)
+    asked = engine_answering(monkeypatch, [MEMO])
+    again = incident_assistant.ask_for_rewrite(incident, by=person)
+    assert again is not None and again.pk == memo.pk
+    assert again.state == "queued" and again.text == "" and again.sheet
+    incident_assistant.write_memo(again.pk, from_sheet=True)
+    again.refresh_from_db()
+    assert again.state == "done" and again.text == KEPT.strip()
+    assert json.dumps(again.sheet, sort_keys=True) == sheet_before
+    assert len(asked) == 1
+    assert prompts.INCIDENT_MEMO in asked[0]["messages"][0]["content"]
+    assert "Timeline, in order:" in asked[0]["messages"][-1]["content"]
+    row = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert row.details["from_sheet"] is True and row.details["calls"] == 1
+    assert again.cameras_used == ["BWC2-1"]
+    assert again.cameras_transcript_only == ["BWC2-2"]
+    # From the page: the action, and its refusal once the chronology moved.
+    signed_in(client, person)
+    act = f"/case/{incident.case_id}/incident/{incident.pk}/act"
+    engine_answering(monkeypatch, [MEMO])
+    got = client.post(act, {"action": "memo_rewrite"})
+    assert got.status_code == 200 and got.json()["said"] == (
+        "Rewriting the memo from its facts sheet."
+    )
+    chronology.add(incident, {"at": "40", "text": "Tow truck"}, by=person)
+    got = client.post(act, {"action": "memo_rewrite"})
+    assert got.status_code == 400 and "use Regenerate" in got.json()["error"]
+
+
+def test_the_sheet_is_checked_and_a_bad_one_is_a_bad_output(incident, person):
+    """The app's checks, on their own: an unreadable answer is the engine's
+    bad output; a time before the incident is marked, never dropped; the
+    timeline that stops early is said so."""
+    from core import engine
+
+    with pytest.raises(engine.Problem) as caught:
+        incident_assistant._parse_sheet("not json at all {")
+    assert caught.value.reason == engine.BAD_OUTPUT
+    with pytest.raises(engine.Problem):
+        incident_assistant._parse_sheet("[1, 2]")
+    sheet = incident_assistant._parse_sheet(
+        json.dumps(
+            {
+                "people": "not a list",
+                "timeline": [
+                    {
+                        "at": "21:56:30",
+                        "camera": "BWC2-1",
+                        "what": "Early.",
+                        "quote": "",
+                    },
+                    "not an entry",
+                ],
+                "outcome": 7,
+            }
+        )
+    )
+    assert sheet["people"] == [] and len(sheet["timeline"]) == 1
+    record = incident_assistant.record_of(incident)
+    checked = incident_assistant.check_sheet(incident, sheet, record)
+    assert checked["checks"]["reaches_the_end"] is False
+    assert checked["checks"]["moments"] == 1 and checked["checks"]["times_outside"] == 0
+    assert "stops before the last camera does" in incident_assistant.sheet_words(
+        checked
+    )
+    assert incident_assistant.sheet_words({}) == ""
+    assert prompts.sheet_text({}) == "" and prompts.sheet_text("x") == ""
 
 
 def test_a_continuation_is_stitched_where_the_cut_fell():
@@ -820,18 +1012,16 @@ def test_the_memo_needs_a_synced_camera_and_reads_a_long_camera_by_words_alone(
         ),
         made_at=None,
     )
-    asked = engine_answering(monkeypatch, [MEMO, MEMO])
+    asked = engine_answering(monkeypatch, [SHEET, MEMO, SHEET, MEMO])
+    # The sheet's call reads the record (v1.91.0); the memo's reads the sheet.
     system_cost = prompts.tokens(
         prompts.system_message(
             PromptTemplate.named(PromptTemplate.GROUND_RULES).text,
-            PromptTemplate.named(PromptTemplate.INCIDENT_MEMO).text,
-            prompts.INCIDENT_MEMO_FORMAT
-            + "\n\n"
-            + prompts.NARRATIVE_RULES
-            + "\n\n"
-            + prompts.INCIDENT_RULES,
+            PromptTemplate.named(PromptTemplate.MEMO_SHEET).text,
+            prompts.MEMO_SHEET_FORMAT + "\n\n" + prompts.INCIDENT_RULES,
         )
     )
+    settings_store.set_to("incidents_memo_answer_tokens", 500)
     words_alone = incident_assistant.record_of(incident, words_alone={"BWC2-1"})
     assert words_alone["words_alone"] == ["BWC2-1"] and not words_alone["used"]
     event_lines, _ = incident_assistant._chronology_lines(incident)
@@ -844,7 +1034,7 @@ def test_the_memo_needs_a_synced_camera_and_reads_a_long_camera_by_words_alone(
     )
     settings_store.set_to("engine_window_tokens", 4096)
     settings_store.set_to(
-        "incidents_memo_answer_tokens", 4096 - system_cost - alone_cost - 5
+        "incidents_memo_sheet_answer_tokens", 4096 - system_cost - alone_cost - 5
     )
     memo = incident_assistant.ask_for_memo(incident, by=person)
     incident_assistant.write_memo(memo.pk)
@@ -868,7 +1058,7 @@ def test_the_memo_needs_a_synced_camera_and_reads_a_long_camera_by_words_alone(
     incidents.pin(camera, False, by=person)
     assert Row.objects.filter(event="Camera pinned").count() == 1
     assert Row.objects.filter(event="Camera unpinned").count() == 1
-    settings_store.set_to("incidents_memo_answer_tokens", 4096 - system_cost - 5)
+    settings_store.set_to("incidents_memo_sheet_answer_tokens", 4096 - system_cost - 5)
     memo = incident_assistant.ask_for_memo(incident, by=person)
     incident_assistant.write_memo(memo.pk)
     memo.refresh_from_db()
@@ -1009,6 +1199,7 @@ def test_the_settings_templates_and_documents_exist(db, client):
     for key, text, name in (
         (PromptTemplate.INCIDENT_EVENTS, prompts.INCIDENT_EVENTS, "Proposed events"),
         (PromptTemplate.INCIDENT_MEMO, prompts.INCIDENT_MEMO, "Incident memo"),
+        (PromptTemplate.MEMO_SHEET, prompts.MEMO_SHEET, "Memo facts sheet"),
     ):
         row = PromptTemplate.named(key)
         assert row.text == text and not row.behind and row.name == name
@@ -1017,6 +1208,13 @@ def test_the_settings_templates_and_documents_exist(db, client):
     signed_in(client, admin)
     templates = client.get("/panel/templates").content.decode()
     assert "Proposed events" in templates and "Incident memo" in templates
+    assert "Memo facts sheet" in templates
+    assert settings_store.definition("incidents_memo_sheet_answer_tokens").page == (
+        "incidents"
+    )
+    assert settings_store.definition("documents_compare_left_out_most").page == (
+        "documents"
+    )
     panel = client.get("/panel/settings/incidents").content.decode()
     for name in (
         "Case chat knows the incidents",

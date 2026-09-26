@@ -516,6 +516,17 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                 {"error": why or "The memo cannot be written."}, status=400
             )
         said = "Writing the memo."
+    elif action == "memo_rewrite":
+        # Rewrite from the sheet (v1.91.0): the second pass alone.
+        if incident_assistant.ask_for_rewrite(incident, by=user) is None:
+            return JsonResponse(
+                {
+                    "error": "The memo cannot be rewritten from its facts sheet "
+                    "now; use Regenerate."
+                },
+                status=400,
+            )
+        said = "Rewriting the memo from its facts sheet."
     elif action == "memo_cancel":
         incident_assistant.cancel_memo(incident)
     else:

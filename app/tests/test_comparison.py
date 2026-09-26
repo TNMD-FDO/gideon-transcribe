@@ -166,7 +166,8 @@ def test_an_agrees_on_an_officers_words_alone_is_not_on_camera(
     the model marked it."""
     incident, report, first = stop
     made = comparison.ask_for(report, incident, by=person)
-    engine_answering(
+    settings_store.set_to("documents_compare_left_out_most", 7)
+    asked = engine_answering(
         monkeypatch,
         [
             findings_json(
@@ -233,6 +234,8 @@ def test_an_agrees_on_an_officers_words_alone_is_not_on_camera(
     # at 3,000 on a five-page report.
     assert settings_store.definition("documents_compare_answer_tokens").default == 6000
     assert "basis" in prompts.COMPARISON_FORMAT
+    # The omissions cap is the Admin's (v1.91.0), 15 as shipped.
+    assert "7 at most" in asked[1]["messages"][-1]["content"]
 
 
 def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
@@ -343,7 +346,7 @@ def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     assert "[Report, page 1, paragraph 3] A small bag was found" in user
     assert "Event 1, 21:56:47, Gun found" in user and "I got gun" in user
     assert "Do not report what the report leaves out here." in user
-    assert "fifteen at most" in asked[1]["messages"][-1]["content"]
+    assert "15 at most" in asked[1]["messages"][-1]["content"]
     assert "Radio talk" in asked[1]["messages"][-1]["content"]
     assert (
         "Which events of the chronology does the report not mention"

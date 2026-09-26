@@ -163,11 +163,14 @@ def compare_report(comparison_id: str, attempt: int = 1) -> None:
 
 
 @app.task(queue="llm", name="write_incident_memo")
-def write_incident_memo(memo_id: str, attempt: int = 1) -> None:
-    """The Incident memo (Phase 6 chapter 3)."""
+def write_incident_memo(
+    memo_id: str, attempt: int = 1, from_sheet: bool = False
+) -> None:
+    """The Incident memo (Phase 6 chapter 3), in two passes since v1.91.0;
+    `from_sheet` is Rewrite from the sheet."""
     from core import incident_assistant
 
-    incident_assistant.write_memo(memo_id, attempt)
+    incident_assistant.write_memo(memo_id, attempt, from_sheet=from_sheet)
 
 
 @app.task(queue="default", name="hand_over_job")
