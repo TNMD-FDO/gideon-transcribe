@@ -32,6 +32,7 @@ from core import (
     audit,
     chronology,
     engine,
+    expectation,
     incidents,
     prompts,
     settings_store,
@@ -120,6 +121,9 @@ class IncidentMemo(models.Model):
     # the app's checks under "checks"; kept with the memo, printed with it.
     sheet = models.JSONField(default=dict, blank=True)
     sheet_cut_short = models.BooleanField(default=False)
+    # The time expectation given at the ask (v1.95.0): the size measured,
+    # the office's figure, when it was asked for and when the worker began.
+    expectation = models.JSONField(default=dict, blank=True)
     model = models.CharField(max_length=120, blank=True, default="")
     template_version = models.IntegerField(default=1)
     ground_rules_version = models.IntegerField(default=1)
@@ -576,12 +580,18 @@ def ask_for_proposals(incident, *, by, look_for: str = "") -> bool:
     incident.proposals_reason = ""
     incident.proposals_by = by
     incident.proposals_look_for = " ".join(str(look_for or "").split())[:300]
+    from core import sitting
+
+    incident.proposals_expectation = expectation.note(
+        "incident_events", sitting.record_tokens(incident)
+    )
     incident.save(
         update_fields=[
             "proposals_state",
             "proposals_reason",
             "proposals_by",
             "proposals_look_for",
+            "proposals_expectation",
         ]
     )
     from core import tasks
@@ -799,7 +809,8 @@ def propose(incident_id, attempt: int = 1) -> None:
         f"ground-rules v{ground.version}; Proposed events v{template.version}"
     )
     incident.proposals_state = RUNNING
-    incident.save(update_fields=["proposals_state"])
+    incident.proposals_expectation = expectation.started(incident.proposals_expectation)
+    incident.save(update_fields=["proposals_state", "proposals_expectation"])
     look_for = incident.proposals_look_for
     usage = {"input_tokens": 0, "output_tokens": 0}
     model = ""
@@ -840,6 +851,7 @@ def propose(incident_id, attempt: int = 1) -> None:
                 windows=windows,
                 second_looks=second_looks,
                 watch_hits=watch_found,
+                **expectation.for_audit(incident.proposals_expectation),
                 look_for=bool(look_for),
             )
 
@@ -1075,6 +1087,9 @@ def proposals_json(incident) -> dict:
         "pending": pending,
         "busy": state in (QUEUED, RUNNING),
         "never_read": never_read,
+        "expectation": expectation.json_of(
+            incident.proposals_expectation, state, "proposals"
+        ),
     }
 
 
@@ -1172,6 +1187,11 @@ def ask_for_memo(incident, *, by) -> IncidentMemo | None:
     memo.sheet = {}
     memo.sheet_cut_short = False
     memo.written_at = None
+    from core import sitting
+
+    memo.expectation = expectation.note(
+        "incident_memo", sitting.record_tokens(incident)
+    )
     memo.save()
     from core import tasks
 
@@ -1197,6 +1217,9 @@ def ask_for_rewrite(incident, *, by) -> IncidentMemo | None:
     memo.citations = {}
     memo.cut_short = False
     memo.written_at = None
+    memo.expectation = expectation.note(
+        "incident_memo_rewrite", prompts.tokens(prompts.sheet_text(memo.sheet))
+    )
     memo.save()
     from core import tasks
 
@@ -1415,11 +1438,18 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
     )
     from_sheet = from_sheet and bool(memo.sheet)
     memo.state = RUNNING
-    memo.stage = "Reading the cameras"
+    memo.stage = "Reading the sheet" if from_sheet else "Reading the cameras"
     memo.template_version = template.version
     memo.ground_rules_version = ground.version
+    memo.expectation = expectation.started(memo.expectation)
     memo.save(
-        update_fields=["state", "stage", "template_version", "ground_rules_version"]
+        update_fields=[
+            "state",
+            "stage",
+            "template_version",
+            "ground_rules_version",
+            "expectation",
+        ]
     )
     usage: dict = {"input_tokens": 0, "output_tokens": 0}
     try:
@@ -1478,7 +1508,7 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
                 ),
                 answer_cap=assistant.cap(sheet_cap),
             )
-            memo.stage = "Drawing the facts sheet"
+            memo.stage = "Drawing the facts sheet (1 of 2)"
             memo.save(update_fields=["stage"])
             answer = engine.complete(
                 assistant._messages(sheet_system, user),
@@ -1509,7 +1539,11 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
             system, user, answer_cap=assistant.cap(wanted), window=assistant.window()
         ):
             raise engine.Problem(engine.TOO_LONG, "the facts sheet is too long")
-        memo.stage = "Writing the memo"
+        memo.stage = (
+            "Writing the memo from the sheet"
+            if from_sheet
+            else "Writing the memo (2 of 2)"
+        )
         memo.save(update_fields=["stage"])
         answer = engine.complete(
             assistant._messages(system, user),
@@ -1601,6 +1635,7 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
             sheet_cut_short=memo.sheet_cut_short,
             moments=len(memo.sheet.get("timeline") or []),
             from_sheet=from_sheet,
+            **expectation.for_audit(memo.expectation),
         )
     except engine.Problem as problem:
         if not IncidentMemo.objects.filter(pk=memo.pk).exists():
@@ -1623,6 +1658,8 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
             started=started,
             outcome=problem.reason,
             reason=problem.reason,
+            from_sheet=from_sheet,
+            **expectation.for_audit(memo.expectation),
         )
 
 
@@ -1761,6 +1798,8 @@ def memo_json(incident) -> dict:
             "cameras_transcript_only": memo.cameras_transcript_only,
             "cameras_words_alone": memo.cameras_words_alone,
             "busy": memo.state in (QUEUED, RUNNING),
+            # The time expectation while it runs (v1.95.0); {} otherwise.
+            "expectation": expectation.json_of(memo.expectation, memo.state, "memo"),
         }
     )
     return out

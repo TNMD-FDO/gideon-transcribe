@@ -156,6 +156,8 @@ class Incident(models.Model):
     proposals_cut = models.IntegerField(default=0)
     proposals_watch = models.IntegerField(default=0)
     proposals_look_for = models.CharField(max_length=300, blank=True, default="")
+    # The run's time expectation, given at the ask (v1.95.0).
+    proposals_expectation = models.JSONField(default=dict, blank=True)
     # About this chronology (Phase 7 chapter 1): the office's paragraph
     # before the events, printed on the export's cover and told to the memo.
     about = models.TextField(max_length=2000, blank=True, default="")

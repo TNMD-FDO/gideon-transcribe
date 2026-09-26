@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import models
 from django.utils import timezone
 
-from core import audit, documents, engine, notes, prompts, settings_store
+from core import audit, documents, engine, expectation, notes, prompts, settings_store
 from core.assistant import (
     DONE,
     FAILED,
@@ -116,6 +116,9 @@ class CaseChatTurn(models.Model):
     # the Recording that would not fit. Never the question or an answer.
     reason_detail = models.CharField(max_length=200, blank=True, default="")
     cut_short = models.BooleanField(default=False)
+    # The time expectation given at the ask (v1.95.0): the size measured,
+    # the office's figure, when it was asked for and when the worker began.
+    expectation = models.JSONField(default=dict, blank=True)
     model = models.CharField(max_length=120, blank=True, default="")
     asked_at = models.DateTimeField(auto_now_add=True)
     answered_at = models.DateTimeField(null=True, blank=True)
@@ -371,7 +374,8 @@ def answer_case_turn(turn_id) -> None:
     template = PromptTemplate.named(PromptTemplate.CASE_CHAT)
     templates_line = f"ground-rules v{ground.version}; case-chat v{template.version}"
     turn.state = RUNNING
-    turn.save(update_fields=["state"])
+    turn.expectation = expectation.started(turn.expectation)
+    turn.save(update_fields=["state", "expectation"])
 
     usage = {"input_tokens": 0, "output_tokens": 0}
     calls = {"readings": 0, "read": 0, "model": ""}
@@ -651,6 +655,7 @@ def answer_case_turn(turn_id) -> None:
             started=started,
             outcome="ok",
             cut_short=turn.cut_short,
+            **expectation.for_audit(turn.expectation),
         )
     except engine.Problem as problem:
         turn.state = FAILED
@@ -668,6 +673,7 @@ def answer_case_turn(turn_id) -> None:
             started=started,
             outcome=problem.reason,
             reason=problem.reason,
+            **expectation.for_audit(turn.expectation),
         )
 
 
@@ -792,6 +798,7 @@ def _record(
     outcome: str,
     reason: str = "",
     cut_short: bool = False,
+    **more,
 ) -> None:
     """The case_chat_turn row: the Case as the object, metadata only."""
     from urllib.parse import urlparse
@@ -819,4 +826,5 @@ def _record(
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),
         cut_short=cut_short,
+        **more,
     )

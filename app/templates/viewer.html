@@ -473,6 +473,7 @@
   <script src="{% static 'viewer.js' %}"></script>
   {% if clips_available %}<script src="{% static 'clip-tool.js' %}"></script>{% endif %}
   {% if assistant.assistant and transcript %}
+    <script src="{% static 'expectation.js' %}"></script>
     <script src="{% static 'chat-ui.js' %}"></script>
     <script src="{% static 'assistant.js' %}"></script>
     {% if gideon_kind %}{% include "gideon-drawer.html" %}<script src="{% static 'gideon.js' %}"></script>{% endif %}

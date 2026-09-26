@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import cases, dictation, exports, live, media_access, retention
+from core import cases, dictation, expectation, exports, live, media_access, retention
 from core.dictation import DictationShare
 from core.recordings import Recording
 
@@ -54,6 +54,14 @@ def _memo_state(recording) -> tuple[str, str]:
     if memo.state == assistant.FAILED:
         return "failed", str(memo.pk)
     return ("done" if memo.text else "failed"), str(memo.pk)
+
+
+def _memo_expectation(recording) -> dict:
+    """The Memo's time expectation while it is written (v1.95.0)."""
+    memo = dictation.memo_of(recording)
+    if memo is None:
+        return {}
+    return expectation.json_of(memo.expectation, memo.state, "dictation")
 
 
 def _style_name(recording: Recording) -> str:
@@ -163,6 +171,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             **line,
             "memo": memo_state,
             "memo_id": memo_id,
+            "memo_expectation": _memo_expectation(recording),
             "viewer": reverse("viewer", args=[recording.pk]),
         }
     )

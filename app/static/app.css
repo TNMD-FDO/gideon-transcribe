@@ -1583,6 +1583,17 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 @keyframes chat-thinking { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
 .chat-ui .notice.quiet { background: transparent; border-left-width: 2px; padding: 2px 8px; margin: 0; color: var(--muted); }
 .chat-ui .foot-hint { margin: 4px 0 0; }
+
+/* The time expectation under a written output (v1.95.0): the step and the
+ * office's usual time on one line with a count that ticks in place, and a
+ * second line for leaving the page or, past the figure, the reassurance. */
+.expect { display: grid; gap: 4px; }
+.expect p { margin: 0; }
+.expect .expect-figure, .expect .expect-elapsed { color: var(--muted); }
+.expect .expect-elapsed { font-variant-numeric: tabular-nums; }
+.expect .expect-second { color: var(--muted); font-size: var(--t-small); max-width: 62ch; }
+.expect .expect-second.over { color: var(--text); }
+.expect.inline, .expect.inline p { display: inline; }
 .tiny { font-size: 0.78em; }
 /* The cited line in the transcript, lit for a moment when its pill is clicked. */
 .seg.lit { outline: 2px solid var(--accent); outline-offset: -2px; transition: outline-color 1.2s ease; }

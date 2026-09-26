@@ -23,6 +23,7 @@ from core import (
     case_chat,
     cases,
     engine,
+    expectation,
     exports,
     incidents,
     settings_store,
@@ -58,6 +59,20 @@ def _body(request) -> dict:
         return json.loads(request.body or b"{}")
     except json.JSONDecodeError:
         return {}
+
+
+def _expected(chat, case) -> dict:
+    """The turn's time expectation at the ask (v1.95.0): an incident chat is
+    given the incident's record, a case chat every readable transcript."""
+    from core import sitting
+
+    if chat.incident_id:
+        return expectation.note("incident_chat", sitting.record_tokens(chat.incident))
+    readable = case_chat.readable(case)[0]
+    size = sum(
+        assistant.reading_size(getattr(one, "transcript", None)) for one in readable
+    )
+    return expectation.note("case_chat_turn", size)
 
 
 def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
@@ -109,6 +124,7 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
         "cut_short": turn.cut_short,
         "parts": turn.parts,
         "parts_done": turn.parts_done,
+        "expectation": expectation.json_of(turn.expectation, turn.state, "chat"),
         "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
         "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
     }
@@ -273,7 +289,10 @@ def ask(request: HttpRequest, chat_id) -> JsonResponse:
         chat.name = Chat.name_from(question)
         chat.save(update_fields=["name"])
     turn = CaseChatTurn.objects.create(
-        chat=chat, number=chat.turns.count() + 1, question=question[:4000]
+        chat=chat,
+        number=chat.turns.count() + 1,
+        question=question[:4000],
+        expectation=_expected(chat, case),
     )
     if chat.incident_id:
         tasks.answer_incident_turn.defer(turn_id=str(turn.pk))

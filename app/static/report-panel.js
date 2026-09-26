@@ -127,7 +127,11 @@
         "<button type='button' class='small' data-run" + (C.possible && !C.busy ? "" : " disabled") + " title='" + escape(C.why || "The assistant reads the report in windows of pages against the record; every finding cites the paragraph and the moment, and you mark them") + "'>" +
         (C.state === "done" ? "Compare again" : "Compare with the report") + "</button>" +
         (C.state === "done" && C.export_url ? "<a class='btn small ghost' href='" + escape(C.export_url) + "'>Comparison to Word</a>" : "") +
-        "<span class='muted small grow'>" + escape(C.words || (C.possible ? "" : C.why || "")) + (C.stale ? "; " + escape(C.stale) + ", Compare again to refresh" : "") + "</span></div>";
+        "<div class='muted small grow'>" +
+        (C.busy && C.expectation && C.expectation.words
+          ? window.Expectation.html({ step: (C.words || "").replace(/\.\.\.$/, ""), state: C.state, expectation: C.expectation, inline: true, leaveable: false })
+          : escape(C.words || (C.possible ? "" : C.why || "")) + (C.stale ? "; " + escape(C.stale) + ", Compare again to refresh" : "")) +
+        "</div></div>";
       if (C.state === "done") {
         html += "<div class='row search-kinds' style='margin-bottom: 8px'>" +
           "<button type='button' class='pill small" + (!kept.filter ? " on" : "") + "' data-filter=''>All (" + Object.keys(counts).reduce(function (n, k) { return n + counts[k]; }, 0) + ")</button>" +

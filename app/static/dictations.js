@@ -44,10 +44,27 @@
           if (now && now !== startedAt) { window.clearInterval(timer); window.location.reload(); return; }
           if (now) { window.clearInterval(timer); return; }
           if (cell && said.says) { cell.textContent = said.says; }
+          expectationLine(recordingId, said);
           if (tries > 900) { window.clearInterval(timer); }
         })
         .catch(function () {});
     }, 4000);
+  }
+
+  // The time expectation under the Writing pill (v1.95.0): drawn from the
+  // poll's answer, and its count ticks in place between polls.
+  function expectationLine(recordingId, said) {
+    var cell = document.querySelector("tr[data-recording='" + recordingId + "'] .memo-cell");
+    var E = said.memo_expectation;
+    if (!cell || !window.Expectation) { return; }
+    var box = cell.querySelector(".expect");
+    if (!E || !E.words || (said.memo !== "queued" && said.memo !== "running")) {
+      if (box) { box.remove(); }
+      return;
+    }
+    if (box && box.dataset.started === (E.started_at || "")) { return; }
+    if (box) { box.remove(); }
+    cell.insertAdjacentHTML("beforeend", window.Expectation.html({ step: "", state: said.memo, expectation: E, inline: false }));
   }
 
   document.querySelectorAll("tr[data-recording] .queue-line").forEach(function (line) {
@@ -110,6 +127,10 @@
         var cell = write.closest(".memo-cell");
         cell.innerHTML = "<span class='pill warn'>Writing</span>";
         watch(write.dataset.recording, null, function (said) { return said.memo === "done" || said.memo === "failed"; });
+        fetch("/dictation/" + write.dataset.recording + "/state", { cache: "no-store" })
+          .then(function (answer) { return answer.json(); })
+          .then(function (said) { expectationLine(write.dataset.recording, said); })
+          .catch(function () {});
       });
       return;
     }

@@ -241,6 +241,10 @@ _Avoid_: stage, status (a Step is what the user reads)
 **Estimated wait**:
 The app's figure for how long until a Job starts, worked out from the audio ahead of it and the WhisperX service's measured speed.
 
+**Expectation**:
+The app's figure for how long a written output (a memo, proposed events, a comparison, a summary, a chat answer) usually takes, from the office's own last runs of that output scaled to what this run is given, shown under the output with the step it is on and how long it has been: "usually about 4 minutes" once the office has three runs behind it, "roughly 4 minutes" until then. Past the figure the page says the run is working normally and why it can take longer; it never stops a run. From v1.95.0.
+_Avoid_: ETA, progress bar, countdown, percent done, stage (that is a Step)
+
 **Retry**:
 Submitting a Failed Job again with the same settings. Media work that already succeeded is not repeated.
 

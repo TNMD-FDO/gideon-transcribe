@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 from django.db import models
 from django.utils import timezone
 
-from core import audit, engine, prompts, settings_store
+from core import audit, engine, expectation, prompts, settings_store
 
 log = logging.getLogger("transcribe.assistant")
 
@@ -413,6 +413,9 @@ class Summary(models.Model):
     digest_parts = models.IntegerField(default=0)
     stage = models.CharField(max_length=60, blank=True, default="")
     state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
+    # The time expectation given at the ask (v1.95.0): the size measured,
+    # the office's figure, when it was asked for and when the worker began.
+    expectation = models.JSONField(default=dict, blank=True)
     reason_class = models.CharField(max_length=40, blank=True, default="")
     text = models.TextField(blank=True, default="")
     citations = models.JSONField(default=dict, blank=True)
@@ -465,6 +468,9 @@ class ChatTurn(models.Model):
     reason_class = models.CharField(max_length=40, blank=True, default="")
     cut_short = models.BooleanField(default=False)
     model = models.CharField(max_length=120, blank=True, default="")
+    # The time expectation given at the ask (v1.95.0): the size measured,
+    # the office's figure, when it was asked for and when the worker began.
+    expectation = models.JSONField(default=dict, blank=True)
     transcript_created = models.DateTimeField(null=True, blank=True)
     asked_at = models.DateTimeField(auto_now_add=True)
     answered_at = models.DateTimeField(null=True, blank=True)
@@ -862,7 +868,8 @@ def write_summary(summary_id) -> None:
     )
     summary.state = RUNNING
     summary.ground_rules_version = ground.version
-    summary.save(update_fields=["state", "ground_rules_version"])
+    summary.expectation = expectation.started(summary.expectation)
+    summary.save(update_fields=["state", "ground_rules_version", "expectation"])
 
     usage: dict = {}
     try:
@@ -967,6 +974,7 @@ def write_summary(summary_id) -> None:
             usage=usage,
             started=started,
             outcome="ok",
+            **expectation.for_audit(summary.expectation),
         )
     except engine.Problem as problem:
         summary.state = FAILED
@@ -984,6 +992,7 @@ def write_summary(summary_id) -> None:
             started=started,
             outcome=problem.reason,
             reason=problem.reason,
+            **expectation.for_audit(summary.expectation),
         )
 
 
@@ -1004,7 +1013,8 @@ def answer_turn(turn_id) -> None:
     template = PromptTemplate.named(PromptTemplate.CHAT)
     templates_line = f"ground-rules v{ground.version}; Chat v{template.version}"
     turn.state = RUNNING
-    turn.save(update_fields=["state"])
+    turn.expectation = expectation.started(turn.expectation)
+    turn.save(update_fields=["state", "expectation"])
 
     usage: dict = {}
     try:
@@ -1119,6 +1129,7 @@ def answer_turn(turn_id) -> None:
             usage=usage,
             started=started,
             outcome="ok",
+            **expectation.for_audit(turn.expectation),
         )
     except engine.Problem as problem:
         turn.state = FAILED
@@ -1136,6 +1147,7 @@ def answer_turn(turn_id) -> None:
             started=started,
             outcome=problem.reason,
             reason=problem.reason,
+            **expectation.for_audit(turn.expectation),
         )
 
 
@@ -2018,6 +2030,20 @@ def seconds_left(transcript) -> int:
         return prepare_plan(transcript.recording, transcript)["seconds"]
     left = max(0, transcript.prepare_total - transcript.prepare_done)
     return int(round(left * seconds_per_description()))
+
+
+def reading_size(transcript) -> int:
+    """What a reading of one transcript is given, in tokens (v1.95.0): its
+    lines and, when the office keeps digests and one is there, the digest.
+    The expectation's size for a summary, a chat turn and a case chat."""
+    if transcript is None:
+        return 0
+    tokens = prompts.tokens(prompts.render(prompts.lines_of(transcript)))
+    if digests_on():
+        digest = digest_text(transcript)
+        if digest:
+            tokens += prompts.tokens(digest)
+    return tokens
 
 
 def about(seconds: int) -> str:

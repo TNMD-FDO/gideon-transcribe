@@ -1412,7 +1412,11 @@
       html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
         "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera in stretches, proposes the moments that matter and says why; the watch phrases are searched first. Nothing joins the chronology until you accept it'>Propose again</button>" +
         "<input type='text' id='look-for' class='small' maxlength='300' placeholder='Look for, this run only' aria-label='Look for, this run only' title='Something to look for on this run alone: anything about the gun and the ring camera'" + (P.possible && !P.busy ? "" : " disabled") + ">" +
-        "<span class='small muted' id='propose-said'>" + escape(P.words || (P.possible ? "" : "Sync a camera that has a transcript first.")) + "</span></div>";
+        "<div class='small muted grow' id='propose-said'>" +
+        (P.busy && P.expectation && P.expectation.words
+          ? window.Expectation.html({ step: (P.words || "").replace(/\.\.\.$/, ""), state: P.state, expectation: P.expectation, inline: true })
+          : escape(P.words || (P.possible ? "" : "Sync a camera that has a transcript first."))) +
+        "</div></div>";
     }
 
     if (!proposed.length) {
@@ -1475,9 +1479,16 @@
         (M.possible ? "<button type='button' class='small primary' id='memo-write'>Write the memo</button>" : "<p class='muted small'>" + escape(M.why_not || "") + "</p>") +
         "<p class='muted small' style='margin-top: 10px'>The memo is written by the assistant across every synced camera, on the chronology's events. Every time in it plays every camera from there.</p>";
     } else if (M.busy) {
-      html = "<p class='lead'>" + escape(M.stage || "Waiting for the engine") + "...</p>" +
-        "<p class='muted small'>The memo is being written; it will show here when it lands.</p>" +
-        "<button type='button' class='small ghost' id='memo-cancel'>Cancel</button>";
+      // The time expectation (v1.95.0): the step, the office's usual time
+      // and how long it has been, ticking in place; the old two lines when
+      // a run from before the upgrade carries none.
+      var E = M.expectation || {};
+      html = "<div class='row' style='align-items: flex-start; gap: 10px; flex-wrap: nowrap'><span class='pill warn' style='margin-top: 2px'>Writing</span>" +
+        "<div class='grow'>" +
+        (E.words
+          ? window.Expectation.html({ step: M.stage, state: M.state, expectation: E })
+          : "<p class='lead' style='margin: 0'>" + escape(M.stage || "Waiting for the engine") + "...</p><p class='muted small'>The memo is being written; it will show here when it lands.</p>") +
+        "</div><button type='button' class='small ghost' id='memo-cancel'>Cancel</button></div>";
     } else if (M.state === "failed") {
       html = "<p class='problem'>" + escape(M.reason_words || "The memo could not be written.") + "</p>" +
         "<button type='button' class='small primary' id='memo-write'>Try again</button>";

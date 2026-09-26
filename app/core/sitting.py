@@ -229,6 +229,12 @@ def _overhead(incident) -> int:
     )
 
 
+def record_tokens(incident) -> int:
+    """What a reading of the incident is given, in tokens (v1.95.0): every
+    synced camera's record and the overhead. The expectation's size."""
+    return _overhead(incident) + sum(one["record"] for one in _shares_of(incident))
+
+
 def _hours_words(hours: float) -> str:
     """Halves under ten hours, whole above; never "0"."""
     if hours < 10:

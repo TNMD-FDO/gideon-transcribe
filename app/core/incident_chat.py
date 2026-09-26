@@ -12,7 +12,7 @@ import time
 
 from django.utils import timezone
 
-from core import assistant, engine, incidents, prompts, settings_store
+from core import assistant, engine, expectation, incidents, prompts, settings_store
 from core.assistant import DONE, FAILED, QUEUED, RUNNING, PromptTemplate
 from core.case_chat import CaseChat, CaseChatTurn
 
@@ -151,7 +151,8 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         f"ground-rules v{ground.version}; Incident chat v{template.version}"
     )
     turn.state = RUNNING
-    turn.save(update_fields=["state"])
+    turn.expectation = expectation.started(turn.expectation)
+    turn.save(update_fields=["state", "expectation"])
     usage: dict = {"input_tokens": 0, "output_tokens": 0}
     try:
         problem = assistant._unreachable()
@@ -255,6 +256,7 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             cameras=len(record["used"]) + len(record["transcript_only"]),
             words_alone=len(words_alone),
             cut_short=turn.cut_short,
+            **expectation.for_audit(turn.expectation),
         )
     except engine.Problem as problem:
         turn.state = FAILED
@@ -274,4 +276,5 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             started=started,
             outcome=problem.reason,
             reason=problem.reason,
+            **expectation.for_audit(turn.expectation),
         )

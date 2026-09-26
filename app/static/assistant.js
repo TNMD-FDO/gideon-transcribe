@@ -195,6 +195,14 @@
         } else if (one.stage && one.stage.indexOf("condensing") === 0) {
           // "condensing 2 of 5": the digest's parts being made (chapter 6).
           body = "<p class='muted'>Condensing the recording (" + escape(one.stage.replace("condensing ", "")) + ")...</p>";
+        } else if (one.expectation && one.expectation.words && window.Expectation) {
+          // The time expectation (v1.95.0), on the reading and writing steps;
+          // the preparing and condensing lines keep the vision's own pace.
+          body = window.Expectation.html({
+            step: told ? "Reading the transcript and " + plural(told, "moment") : "Reading the transcript",
+            state: one.state,
+            expectation: one.expectation
+          });
         } else if (told) {
           body = "<p class='muted'>Reading the transcript and " + plural(told, "moment") + "...</p>";
         } else {

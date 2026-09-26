@@ -29,6 +29,7 @@ from core import (
     audit,
     chronology,
     engine,
+    expectation,
     incidents,
     prompts,
     settings_store,
@@ -91,6 +92,9 @@ class Comparison(models.Model):
     windows = models.IntegerField(default=0)
     cut_short = models.IntegerField(default=0)
     left_out_check = models.BooleanField(default=False)
+    # The time expectation given at the ask (v1.95.0): the size measured,
+    # the office's figure, when it was asked for and when the worker began.
+    expectation = models.JSONField(default=dict, blank=True)
     # v1.74.2: answers the app could not read, and the findings it dropped
     # by reason, so an empty comparison says why.
     unreadable = models.IntegerField(default=0)
@@ -182,7 +186,12 @@ def ask_for(document: Document, home, *, by) -> Comparison | None:
         if isinstance(home, incidents.Incident)
         else {"recording": home}
     )
-    comparison = Comparison.objects.create(document=document, asked_by=by, **fields)
+    comparison = Comparison.objects.create(
+        document=document,
+        asked_by=by,
+        expectation=expectation.note("compare_report", _size_of(document, home)),
+        **fields,
+    )
     from core import tasks
 
     tasks.compare_report.defer(comparison_id=str(comparison.pk))
@@ -190,6 +199,21 @@ def ask_for(document: Document, home, *, by) -> Comparison | None:
 
 
 # The reading --------------------------------------------------------------------------
+
+
+def _size_of(document: Document, home) -> int:
+    """What the comparison is given, in tokens (v1.95.0): the record once per
+    window of pages, and the pages themselves."""
+    from core import sitting
+
+    windows = _paragraph_windows(document)
+    if isinstance(home, incidents.Incident):
+        record = sitting.record_tokens(home)
+    else:
+        record = assistant.reading_size(getattr(home, "transcript", None))
+    return len(windows) * record + sum(
+        prompts.tokens(_paragraph_lines(one)) for one in windows
+    )
 
 
 def _paragraph_windows(document: Document) -> list[list[dict]]:
@@ -409,8 +433,15 @@ def compare(comparison_id, attempt: int = 1) -> None:
     comparison.stage = "Reading the record"
     comparison.template_version = template.version
     comparison.ground_rules_version = ground.version
+    comparison.expectation = expectation.started(comparison.expectation)
     comparison.save(
-        update_fields=["state", "stage", "template_version", "ground_rules_version"]
+        update_fields=[
+            "state",
+            "stage",
+            "template_version",
+            "ground_rules_version",
+            "expectation",
+        ]
     )
     usage: dict = {"input_tokens": 0, "output_tokens": 0}
     calls = 0
@@ -602,6 +633,7 @@ def compare(comparison_id, attempt: int = 1) -> None:
             "ok",
             calls=calls,
             words_alone=len(comparison.cameras_words_alone),
+            **expectation.for_audit(comparison.expectation),
         )
         counts = comparison.counts()
         audit.write(
@@ -641,6 +673,7 @@ def compare(comparison_id, attempt: int = 1) -> None:
             started,
             problem.reason,
             reason=problem.reason,
+            **expectation.for_audit(comparison.expectation),
         )
 
 

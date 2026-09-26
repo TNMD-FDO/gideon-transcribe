@@ -22,6 +22,7 @@ from core import (
     assistant,
     audit,
     cases,
+    expectation,
     exports,
     incidents,
     settings_store,
@@ -101,6 +102,9 @@ def _summary_json(summary: Summary, transcript) -> dict:
             )
         ),
         "stage": summary.stage,
+        "expectation": expectation.json_of(
+            summary.expectation, summary.state, "summary"
+        ),
         "text": summary.text,
         "citations": summary.citations,
         "cut_short": summary.cut_short,
@@ -155,6 +159,7 @@ def _chat_json(chat: Chat, transcript) -> dict:
                 if one.reason_class
                 else "",
                 "cut_short": one.cut_short,
+                "expectation": expectation.json_of(one.expectation, one.state, "chat"),
                 "asked_at": one.asked_at.isoformat() if one.asked_at else "",
                 "answered_at": one.answered_at.isoformat() if one.answered_at else "",
             }
@@ -394,6 +399,9 @@ def new_summary(request: HttpRequest, recording_id) -> JsonResponse:
         template_version=template.version,
         focus=str(wanted.get("focus", ""))[:200],
         length=length,
+        expectation=expectation.note(
+            "summary", assistant.reading_size(getattr(recording, "transcript", None))
+        ),
     )
     tasks.write_summary.defer(summary_id=str(summary.pk))
     return JsonResponse({"id": str(summary.pk)})
@@ -415,6 +423,10 @@ def regenerate_summary(request: HttpRequest, summary_id) -> JsonResponse:
     summary.citations = {}
     summary.cut_short = False
     summary.asked_by = request.user
+    summary.expectation = expectation.note(
+        "summary",
+        assistant.reading_size(getattr(summary.recording, "transcript", None)),
+    )
     summary.save()
     tasks.write_summary.defer(summary_id=str(summary.pk))
     return JsonResponse({"id": str(summary.pk)})
@@ -477,7 +489,15 @@ def ask(request: HttpRequest, chat_id) -> JsonResponse:
     if not chat.name:
         chat.name = Chat.name_from(question)
         chat.save(update_fields=["name"])
-    turn = ChatTurn.objects.create(chat=chat, number=number, question=question[:4000])
+    turn = ChatTurn.objects.create(
+        chat=chat,
+        number=number,
+        question=question[:4000],
+        expectation=expectation.note(
+            "chat_turn",
+            assistant.reading_size(getattr(chat.recording, "transcript", None)),
+        ),
+    )
     tasks.answer_turn.defer(turn_id=str(turn.pk))
     return JsonResponse({"id": str(turn.pk)})
 

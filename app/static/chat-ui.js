@@ -205,13 +205,19 @@
     function waiting(turn) {
       var since = sinceOf(turn);
       var line = (turn && turn.reading) || options.readingLine(state);
+      // The office's own figure for this question (v1.95.0), when the turn
+      // carries one; the page's fixed words for a turn from before.
+      var E = (turn && turn.expectation) || {};
+      var usual = E.words || options.expectation;
       var expect = (turn && turn.parts_done !== undefined && turn.parts)
-        ? "Part " + turn.parts_done + " of " + turn.parts + " read"
-        : options.expectation;
+        ? "Part " + turn.parts_done + " of " + turn.parts + " read" + (E.words ? " \u00b7 " + E.words : "")
+        : usual;
+      var over = E.words && window.Expectation && window.Expectation.isOver(E) ? E.over_words : "";
       return "<div class='waiting'><span class='thinking' aria-hidden='true'><i></i><i></i><i></i></span>" +
         "<span class='grow'>" + escape(line) + "</span>" +
         "<span class='muted tiny'>" + (expect ? escape(expect) + " &middot; " : "") +
-        "<span class='seconds' data-since='" + since + "'></span> s</span></div>";
+        "<span class='seconds' data-since='" + since + "'></span> s" +
+        (over ? " &middot; " + escape(over) : "") + "</span></div>";
     }
 
     function drawList(chat) {

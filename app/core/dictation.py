@@ -165,7 +165,7 @@ def write_memo(recording: Recording, by, request=None):
     Meeting summary for the others), at the Detailed length for a memo so
     nothing is cut short.
     """
-    from core import assistant, tasks
+    from core import assistant, expectation, tasks
     from core.assistant import Summary, SummaryTemplate
 
     word = product_of(recording)
@@ -184,6 +184,9 @@ def write_memo(recording: Recording, by, request=None):
         template_version=template.version,
         focus="",
         length="detailed" if word == "memo" else "standard",
+        expectation=expectation.note(
+            "summary", assistant.reading_size(getattr(recording, "transcript", None))
+        ),
     )
     tasks.write_summary.defer(summary_id=str(summary.pk))
     note_used(recording, by=by)

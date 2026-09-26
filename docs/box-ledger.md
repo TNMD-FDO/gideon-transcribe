@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-26, at v1.95.0 (a time expectation under every written output; nothing shared moves).** One JSON field on six models (migration 0065) and three figures more on each engine audit row; no port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.94.1 (the memo told, not listed; nothing shared moves).** Two prompt wordings; no port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.94.0 (one set of speakers across a Live recording; the service image changes; nothing shared moves).** The WhisperX service is 0.4.0 and its image is rebuilt or pulled at the upgrade; one more fast-lane job per Live recording, at Stop, of about a minute, on the card the lane already holds. No port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.93.1 (pages never kept by a browser, and small words; nothing shared moves).** A response header on the app's own pages; no port, memory, card, timer, network or engine request moves.

@@ -21,6 +21,35 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.95.0, 2026-09-26
+
+```
+Models: unchanged
+Database: migrates (0065: the expectation kept on each written output)
+```
+
+**A time expectation under everything the assistant writes.** The memo,
+proposed events, the comparison, a summary, a dictation's memo and the
+three chats now say, while they are written, the step the run is on, how
+long that output usually takes on the office's own engine, and how long it
+has been, ticking on the page: "Drawing the facts sheet (1 of 2). Usually
+about 4 minutes · 1:12 so far", and "Waiting for the engine. Usually about
+4 minutes once it starts" while the run is in the line. The figure is the
+office's own: every run has always left an audit row with how long it
+took, and from this release the row also carries how much the run was
+given, so the next ask reads the office's last twenty runs of that output
+and scales their pace to this incident or recording. Until three runs
+exist the figure is a plain guess, worded "roughly". Past the figure the
+page says the run is working normally and why a large one can take longer,
+and, where the person may leave, that the output will be there when it
+lands. Nothing is stopped and nothing is a countdown. The three chats'
+fixed guesses ("usually 5 to 20 seconds", "about a minute") give way to the
+measured words once the office has history.
+
+The memo's steps name the pass: "Drawing the facts sheet (1 of 2)",
+"Writing the memo (2 of 2)", and "Writing the memo from the sheet" on a
+rewrite.
+
 ## v1.94.1, 2026-09-26
 
 ```
