@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-26, at v1.90.1 (the outputs, second reading; nothing shared moves).** Prompt wordings and the memo's continuation calls; a comparison may now make two calls where it made one, and a memo three, each within the feature's own time limit. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.90.0 (the outputs a defender reads; nothing shared moves).** Prompt templates re-shipped and Word exports styled; one Appearance setting. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.89.0 (the walk's decisions; nothing shared moves).** Pages, one search rule and one Templates setting. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.88.1 (the incident desk on wide screens, wrapping event lines; nothing shared moves).** Pages alone. No port, memory, card, timer, network or engine request moves.

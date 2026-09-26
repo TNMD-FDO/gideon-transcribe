@@ -84,6 +84,10 @@ def proposals_on() -> bool:
     )
 
 
+# A memo cut at the cap is continued this many calls at most (v1.90.1).
+MEMO_CALLS_MOST = 3
+
+
 def memo_on() -> bool:
     return bool(
         incidents.on() and _assistant_on() and settings_store.get("incidents_memo")
@@ -1269,15 +1273,44 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             timeout=assistant.time_limit(FEATURE_MEMO),
             **assistant.SAMPLING,
         )
-        usage = answer
+        usage = {
+            "input_tokens": answer.get("input_tokens", 0) or 0,
+            "output_tokens": answer.get("output_tokens", 0) or 0,
+        }
+        calls = 1
         if assistant.thought_it_away(answer):
             raise assistant.ThoughtItAway()
+        text = answer["text"].strip()
+        # A memo cut at the cap goes on from where it stopped (v1.90.1): up
+        # to two more calls, each shown the memo so far, stitched in order.
+        while answer.get("finish_reason") == "length" and calls < MEMO_CALLS_MOST:
+            if not IncidentMemo.objects.filter(pk=memo.pk).exists():
+                return
+            calls += 1
+            memo.stage = f"Continuing the memo, call {calls} of {MEMO_CALLS_MOST}"
+            memo.save(update_fields=["stage"])
+            answer = engine.complete(
+                assistant._messages(system, user)
+                + [
+                    {"role": "assistant", "content": text},
+                    {"role": "user", "content": prompts.CONTINUE_MEMO},
+                ],
+                max_completion_tokens=assistant.cap(wanted),
+                thinking=assistant.thinking(),
+                timeout=assistant.time_limit(FEATURE_MEMO),
+                **assistant.SAMPLING,
+            )
+            usage["input_tokens"] += answer.get("input_tokens", 0) or 0
+            usage["output_tokens"] += answer.get("output_tokens", 0) or 0
+            if assistant.thought_it_away(answer):
+                break
+            text = prompts.stitch_continuation(text, answer["text"].rstrip())
         if not IncidentMemo.objects.filter(pk=memo.pk).exists():
             # Cancelled while the engine wrote: nothing is kept.
             return
         memo.text = with_app_cameras(
             incident,
-            prompts.with_heading_colons(answer["text"].strip()),
+            prompts.with_heading_colons(text),
             record,
             set(words_alone),
         )
@@ -1316,6 +1349,7 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             words_alone=len(memo.cameras_words_alone),
             events=memo.events_count,
             cut_short=memo.cut_short,
+            calls=calls,
         )
     except engine.Problem as problem:
         if not IncidentMemo.objects.filter(pk=memo.pk).exists():

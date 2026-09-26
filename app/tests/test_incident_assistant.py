@@ -726,6 +726,77 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     assert incident_assistant.memo_line(incident) == "no memo yet"
 
 
+def test_a_memo_cut_at_the_cap_goes_on_from_where_it_stopped(
+    incident, person, monkeypatch
+):
+    """v1.90.1: the twelve-camera memo hit its 4,000-token cap five parts
+    short. A cut memo is continued, up to three calls, each shown the memo
+    so far and told to go on; the pieces are stitched, the memo is whole,
+    and the audit row counts the calls."""
+    settings_store.set_to("incidents_memo", True)
+    cams = cameras_of(incident)
+    chronology.add(incident, {"at": "10", "text": "Asked out of the car"}, by=person)
+    chronology.add(
+        incident,
+        {
+            "at": "30",
+            "text": "Hands where I can see them.",
+            "source": "words",
+            "camera": str(cams["BWC2-1"].pk),
+        },
+        by=person,
+    )
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    head, tail = MEMO.split("What happened:")
+    pieces = [(head + "What happened:", "length"), (tail, "stop")]
+    asked = []
+
+    def complete(messages, **options):
+        asked.append(messages)
+        text, finish = pieces.pop(0)
+        return {
+            "text": text,
+            "finish_reason": finish,
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "model": "the-model",
+        }
+
+    monkeypatch.setattr(engine, "complete", complete)
+    memo = incident_assistant.ask_for_memo(incident, by=person)
+    incident_assistant.write_memo(memo.pk)
+    memo.refresh_from_db()
+    assert memo.state == "done" and not memo.cut_short
+    assert memo.text == KEPT.strip()
+    # The second call: the same system and input, then the memo so far as the
+    # assistant's turn, then the ask to go on.
+    assert len(asked) == 2
+    assert asked[1][0] == asked[0][0] and asked[1][1] == asked[0][1]
+    assert asked[1][2]["role"] == "assistant"
+    assert asked[1][2]["content"].endswith("What happened:")
+    assert asked[1][3] == {"role": "user", "content": prompts.CONTINUE_MEMO}
+    said = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert said.details["calls"] == 2 and said.details["cut_short"] is False
+    assert said.details["input_tokens"] == 20 and said.details["output_tokens"] == 10
+
+
+def test_a_continuation_is_stitched_where_the_cut_fell():
+    stitch = prompts.stitch_continuation
+    assert stitch("Why'd y", "ou run?") == "Why'd you run?"
+    assert stitch("At [2", "0:45:30] he said no.") == "At [20:45:30] he said no."
+    assert stitch("He said no.", "Then the search began.") == (
+        "He said no.\nThen the search began."
+    )
+    assert stitch("Summary:", "\n\nThe stop began at [20:24:36].") == (
+        "Summary:\nThe stop began at [20:24:36]."
+    )
+    assert stitch("the officer", "Points for counsel:") == (
+        "the officer\nPoints for counsel:"
+    )
+    assert stitch("", "Whole.") == "Whole." and stitch("Whole.", "") == "Whole."
+
+
 def test_the_memo_needs_a_synced_camera_and_reads_a_long_camera_by_words_alone(
     incident, person, monkeypatch
 ):

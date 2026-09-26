@@ -322,7 +322,7 @@ def _rows() -> list[Definition]:
             page=DOCUMENTS,
             name="Comparison answer cap",
             kind=NUMBER,
-            default=3000,
+            default=6000,
             least=500,
             most=16000,
             unit="tokens",

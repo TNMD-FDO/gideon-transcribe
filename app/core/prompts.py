@@ -96,6 +96,8 @@ SHIPPED_HISTORY = {
         "6ad6dc860e5113fb",
         "235d9d531fff0035",
         "7523f02c460b8ae1",
+        # v1.90.1: answer what was asked, never open with a disclaimer.
+        "9e7372a38751ccab",
     ),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
@@ -107,6 +109,8 @@ SHIPPED_HISTORY = {
         "bd737802d03d8bd6",
         "49543deef4508ef9",
         "96f59676a039b88c",
+        # v1.90.1: people who matter, phases of prose, the notes never copied.
+        "17b7b7a1dab39181",
     ),
     "prompt:incident_chat": ("1e49dfacd7a8a160", "b34225f790a3e94e"),
     # Re-shipped in v1.90.0: an officer's say-so is not the record agreeing.
@@ -369,10 +373,14 @@ CASE_CHAT = (
     "unless the user asks for detail. A question about what was said or done "
     "is answered from the transcripts, however it is worded: what was asked "
     "before rights were read, what was searched, what force was used, who "
-    "said what, in what order. Refuse only a question that asks for legal "
-    "advice, an opinion on guilt, credibility or strategy, or a fact the "
-    "transcripts do not hold, and then say what they do hold: I can only "
-    "answer from the transcripts in this case; they show ... When a "
+    "said what, in what order. Answer the question that was asked and "
+    "nothing beside it: asked for the questions put to a person, give the "
+    "questions and their answers, not every line spoken; asked what "
+    "happened, give the moments, not the transcript. When the transcripts "
+    "hold part of the answer, give that part and say in one sentence what "
+    "is missing; never open with a disclaimer. Refuse only a question that "
+    "asks for legal advice or an opinion on guilt, credibility or strategy, "
+    "in one sentence. When a "
     "recording is a camera of an incident whose clock you were given and the "
     "question asks when something happened, give the time of day by the "
     "cameras' clock beside the reference; asked what another camera showed at "
@@ -550,11 +558,16 @@ INCIDENT_MEMO = (
     "day the incident ran: why the officers were there, who was stopped, "
     "what was found, how it ended, and what the attorney most needs to know. "
     "The cameras: the heading alone; the office fills this part in. People: "
-    "each person, one line, how the record identifies them and where, and "
-    "which cameras show them. What happened: the account in phases, each "
-    "phase a bold heading with its span of the clock (Pursuit 20:24 to "
-    "20:27, The stop, Questioning at the car) followed by a paragraph or two "
-    "of narrative with the quotes and times inline. Questioning and rights: "
+    "only those who matter to the memo, one line each, how the record "
+    "identifies them and where, and which cameras show them; not every "
+    "officer who appears. What happened: the account in phases, six at "
+    "most, each phase a heading on its own line with its span of the clock "
+    "(Pursuit 20:24 to 20:27, The stop, Questioning at the car) followed by "
+    "a paragraph or two of narrative, two hundred words at most, with the "
+    "quotes and times inline. The chronology's lines and the record's are "
+    "notes to write from, never sentences to copy: no sentence begins with "
+    "a time and a speaker's label, and a watch phrase is never mentioned as "
+    "such. Questioning and rights: "
     "every advisement of rights, quoted, with who read it, the time and the "
     "camera; every question put to a person before rights were read, with "
     "the answer and the time; whether the person asked for a lawyer, asked "
@@ -630,12 +643,36 @@ COMPARISON_FORMAT = (
     'Answer with JSON only: {"findings": [{"page": 4, "paragraph": 2, '
     '"claim": "the report says what, in a few words", "at": "hh:mm:ss", '
     '"mark": "agrees" or "differs" or "not_on_camera" or "not_in_report", '
-    '"why": "one sentence"}]}. The page and paragraph copied from the line '
-    "the claim appears on; the time copied from the record or the "
-    "chronology, left empty only for not_on_camera. For not_in_report the "
-    "claim is the event or moment the report leaves out, with its time, and "
-    "page and paragraph empty. No other text."
+    '"basis": "picture" or "person" or "officer" or "none", '
+    '"why": "one sentence"}]}. The basis is what the record holds the claim '
+    "on: picture, the camera showing the thing; person, the words of the "
+    "person stopped or another civilian; officer, an officer's words alone; "
+    "none, nothing. The page and paragraph copied from the line the claim "
+    "appears on; the time copied from the record or the chronology, left "
+    "empty only for not_on_camera. For not_in_report the claim is the event "
+    "or moment the report leaves out, with its time, and page and paragraph "
+    "empty. No other text."
 )
+# A memo cut at the cap is continued (v1.90.1): the model is shown what it
+# wrote and told to go on from there.
+CONTINUE_MEMO = (
+    "The memo was cut off at the cap. Continue exactly where it stopped, "
+    "mid-sentence if that is where it stopped, without repeating anything "
+    "already written, and finish every remaining part in order."
+)
+
+
+def stitch_continuation(text: str, more: str) -> str:
+    """The continuation joined to what was cut: straight on when the cut fell
+    inside a word, a time or a sentence, otherwise on a new line."""
+    more = more.lstrip("\n")
+    if not text or not more:
+        return text + more
+    if text[-1].isspace() or text[-1] in ".!?:" or more[0].isupper() or more[0] in "*#":
+        return text.rstrip() + "\n" + more
+    return text + more
+
+
 INCIDENT_CHAT_FORMAT = (
     "Answer in plain text. Give every time as [hh:mm:ss] copied from the "
     "record or the chronology. Keep to the question."
@@ -1106,9 +1143,16 @@ def comparison_left_out_input(head: str, events: list[str], paragraphs: str) -> 
             "The chronology, as the office wrote it:\n" + "\n".join(events),
             "The whole report (each paragraph on its own line):\n" + paragraphs,
             "Which events of the chronology does the report not mention at all? "
-            "Give each as not_in_report with the event's time as at and its line "
-            "as the claim, page and paragraph empty. An event the report mentions "
-            "anywhere, in any words, is not a finding. No other marks.",
+            "Only an event the report should have told: a plea, a denial, a "
+            "request for a lawyer or to stop, a command, force, an injury or a "
+            "complaint of pain, a search or what was found, a question put to a "
+            "person and the answer, a statement about ownership, a camera muted "
+            "or turned off. Radio talk, the scene described, pleasantries and "
+            "an officer's remarks to another officer are not findings. Give "
+            "each as not_in_report with the event's time as at and its line as "
+            "the claim, page and paragraph empty; fifteen at most, the ones that "
+            "matter most. An event the report mentions anywhere, in any words, "
+            "is not a finding. No other marks.",
         ]
     )
 

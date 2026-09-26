@@ -307,6 +307,19 @@ def _keep_or_why(
     mark = str(item.get("mark", "")).strip().lower().replace(" ", "_")
     if mark not in MARKS:
         return None, MARK_UNKNOWN
+    basis = str(item.get("basis", "")).strip().lower()
+    why = " ".join(str(item.get("why", "")).split())[:WHY_MOST]
+    # The record agrees only on the picture or a civilian's words (v1.90.1):
+    # an agrees the model rests on an officer's words alone, or on nothing,
+    # is not on camera, and the why says so.
+    if mark == AGREES and basis in ("officer", "none"):
+        mark = NOT_ON_CAMERA
+        said = (
+            "An officer's words alone: "
+            if basis == "officer"
+            else "Nothing on the record: "
+        )
+        why = (said + why)[:WHY_MOST]
     page = item.get("page")
     n = item.get("paragraph")
     try:
@@ -335,7 +348,8 @@ def _keep_or_why(
         "paragraph": paragraph,
         "claim": claim,
         "at": at,
-        "why": " ".join(str(item.get("why", "")).split())[:WHY_MOST],
+        "basis": basis,
+        "why": why,
         "dismissed": False,
         "note": "",
         "event": "",

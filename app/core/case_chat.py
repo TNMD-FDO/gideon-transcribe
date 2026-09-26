@@ -650,6 +650,7 @@ def answer_case_turn(turn_id) -> None:
             calls=calls,
             started=started,
             outcome="ok",
+            cut_short=turn.cut_short,
         )
     except engine.Problem as problem:
         turn.state = FAILED
@@ -789,6 +790,7 @@ def _record(
     started: float,
     outcome: str,
     reason: str = "",
+    cut_short: bool = False,
 ) -> None:
     """The case_chat_turn row: the Case as the object, metadata only."""
     from urllib.parse import urlparse
@@ -815,4 +817,5 @@ def _record(
         input_tokens=usage.get("input_tokens", 0),
         output_tokens=usage.get("output_tokens", 0),
         duration_seconds=round(time.monotonic() - started, 1),
+        cut_short=cut_short,
     )

@@ -17,7 +17,15 @@ import io
 import json
 
 import pytest
-from core import chronology, comparison, documents, incidents, settings_store, tasks
+from core import (
+    chronology,
+    comparison,
+    documents,
+    incidents,
+    prompts,
+    settings_store,
+    tasks,
+)
 from core.audit import Row
 from core.cases import Case
 from core.comparison import Comparison
@@ -147,6 +155,84 @@ def findings_json(*items):
 
 
 # The run ------------------------------------------------------------------------------
+def test_an_agrees_on_an_officers_words_alone_is_not_on_camera(
+    stop, person, monkeypatch
+):
+    """v1.90.1: on the office's copy the comparison marked "agrees" on who was
+    driving from an officer's "I'm assuming he's the driver". The model now
+    says what each finding rests on, and an agrees resting on an officer's
+    words alone, or on nothing, is kept as not on camera with the why saying
+    so; the picture and a civilian's words still agree; a differs is left as
+    the model marked it."""
+    incident, report, first = stop
+    made = comparison.ask_for(report, incident, by=person)
+    engine_answering(
+        monkeypatch,
+        [
+            findings_json(
+                {
+                    "page": 1,
+                    "paragraph": 2,
+                    "claim": "Aldridge was the driver",
+                    "at": "21:56:17",
+                    "mark": "agrees",
+                    "basis": "officer",
+                    "why": "Officer Hale says I'm assuming he's the driver.",
+                },
+                {
+                    "page": 1,
+                    "paragraph": 2,
+                    "claim": "The driver was asked out of the car",
+                    "at": "21:56:17",
+                    "mark": "agrees",
+                    "basis": "picture",
+                    "why": "The camera shows the driver stepping out.",
+                },
+                {
+                    "page": 1,
+                    "paragraph": 3,
+                    "claim": "The driver said the bag was not his",
+                    "at": "21:57:17",
+                    "mark": "differs",
+                    "basis": "officer",
+                    "why": "An officer says the driver admitted the bag.",
+                },
+                {
+                    "page": 1,
+                    "paragraph": 3,
+                    "claim": "The bag was in the car",
+                    "at": "21:57:17",
+                    "mark": "agrees",
+                    "basis": "none",
+                    "why": "Nothing shows the bag.",
+                },
+            ),
+            findings_json(),
+        ],
+    )
+    comparison.compare(made.pk)
+    made.refresh_from_db()
+    assert made.state == "done"
+    rows = {one["claim"]: one for one in made.findings}
+    driver = rows["Aldridge was the driver"]
+    assert driver["mark"] == "not_on_camera" and driver["basis"] == "officer"
+    assert driver["why"].startswith("An officer's words alone: Officer Hale says")
+    assert driver["at"] == 0.0
+    assert rows["The driver was asked out of the car"]["mark"] == "agrees"
+    assert rows["The driver said the bag was not his"]["mark"] == "differs"
+    bag = rows["The bag was in the car"]
+    assert bag["mark"] == "not_on_camera"
+    assert bag["why"].startswith("Nothing on the record: ")
+    assert made.counts() == {
+        "agrees": 1,
+        "differs": 1,
+        "not_on_camera": 2,
+        "not_in_report": 0,
+    }
+    # The cap's default rose with the walk: one window's findings had been cut
+    # at 3,000 on a five-page report.
+    assert settings_store.definition("documents_compare_answer_tokens").default == 6000
+    assert "basis" in prompts.COMPARISON_FORMAT
 
 
 def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
@@ -257,6 +343,8 @@ def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     assert "[Report, page 1, paragraph 3] A small bag was found" in user
     assert "Event 1, 21:56:47, Gun found" in user and "I got gun" in user
     assert "Do not report what the report leaves out here." in user
+    assert "fifteen at most" in asked[1]["messages"][-1]["content"]
+    assert "Radio talk" in asked[1]["messages"][-1]["content"]
     assert (
         "Which events of the chronology does the report not mention"
         in (asked[1]["messages"][-1]["content"])

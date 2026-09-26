@@ -21,6 +21,41 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.90.1, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From a second reading of the outputs on the office's copy after v1.90.0: the
+Word exports were right (running head, marking, page numbers, the memo's
+headings) and the model's answers were not yet.
+
+**The comparison keeps an officer's say-so out of "agrees".** The new
+wording alone had not stopped the model: fifteen agreements, none differing,
+"I'm assuming he's the driver" still counted as the record agreeing. Each
+finding now says what it rests on (the picture, the person's words, an
+officer's words, nothing), and an agreement resting on an officer's words
+alone, or on nothing, is kept as not on camera, with the why saying so. The
+pass for what the report leaves out asks only for what the report should
+have told, fifteen at most, and skips radio talk and scene descriptions
+(thirty-nine "not in the report" rows had been mostly those). The
+Comparison answer cap ships at 6,000 tokens; a five-page report's one
+window had been cut at 3,000.
+
+**A memo cut at the cap goes on from where it stopped**, up to three calls
+in all, stitched where the cut fell; the twelve-camera memo had stopped at
+2,100 words with five parts unwritten. The template lists only the people
+who matter, keeps What happened to six phases of prose, and says the
+chronology's lines are notes to write from, never sentences to copy.
+
+**The case chat answers what was asked**, the questions and their answers
+rather than every line spoken, gives the part the transcripts hold and says
+what is missing, and never opens with a disclaimer; the refusal sentence
+the last wording offered had been quoted as a preface. Its audit row says
+whether the answer was cut.
+
 ## v1.90.0, 2026-09-25
 
 ```
