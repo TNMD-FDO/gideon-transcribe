@@ -440,3 +440,217 @@ def test_the_line_says_finishing_for_a_recording_in_stretches(
         "state": "transcribing",
         "says": "Finishing: about 1 minute.",
     }
+
+
+# The speakers pass (v1.94.0) -------------------------------------------------------
+#
+# Under Nemotron a stretch carries no voice prints, so at merge every stretch
+# numbers its own speakers; one diarize-only pass over the whole recording at
+# Stop matches them, and the lines take the whole recording's speakers.
+
+
+def merged_in_two_stretches(person, a_case, tmp_path, monkeypatch, with_voices):
+    FakeMedia(monkeypatch)
+    recording = a_live_recording(person, a_case, tmp_path)
+    recording.diarize = True
+    recording.save()
+    live.stretch_closed(recording, 300)
+    tasks.prepare_stretch.func(str(recording.pk), 1, attempt=1)
+    live.stretch_closed(recording, 600)
+    tasks.prepare_stretch.func(str(recording.pk), 2, attempt=1)
+    job = Job.objects.get(recording=recording)
+    job.open = False
+    job.save()
+    first, second = job.runs.order_by("stretch")
+    first.service_job_id, second.service_job_id = "s1", "s2"
+    first.state = second.state = "done"
+    first.save()
+    second.save()
+    voices = (
+        ({"speaker_0": [1.0, 0.0], "speaker_1": [0.0, 1.0]}, {"speaker_0": [0.0, 1.0]})
+        if with_voices
+        else (None, None)
+    )
+    results = {
+        "s1": a_result(
+            [(2.0, 8.0, "hello", "speaker_0"), (10.0, 15.0, "hi", "speaker_1")],
+            labels=["speaker_0", "speaker_1"],
+            embeddings=voices[0],
+        ),
+        "s2": a_result(
+            [(1.0, 4.0, "yes", "speaker_0"), (20.0, 25.0, "new", "speaker_1")],
+            labels=["speaker_0", "speaker_1"],
+            embeddings=voices[1],
+        ),
+    }
+    monkeypatch.setattr(whisperx, "result", lambda job_id, lane="": results[job_id])
+    monkeypatch.setattr(whisperx, "delete", lambda job_id, lane="": None)
+    queue.merge(job)
+    return recording
+
+
+def speakers_of(recording):
+    return list(
+        Transcript.objects.get(recording=recording)
+        .segments.order_by("start")
+        .values_list("text", "speaker")
+    )
+
+
+def test_under_nemotron_the_merge_asks_for_one_pass_over_the_whole_recording(
+    on, person, a_case, tmp_path, quiet, monkeypatch
+):
+    recording = merged_in_two_stretches(person, a_case, tmp_path, monkeypatch, False)
+    # Without voice prints every stretch numbered its own speakers.
+    assert speakers_of(recording) == [
+        ("hello", "Speaker 1"),
+        ("hi", "Speaker 2"),
+        ("yes", "Speaker 3"),
+        ("new", "Speaker 4"),
+    ]
+    from core.jobs import SPEAKERS
+
+    passes = Job.objects.filter(recording=recording, kind=SPEAKERS)
+    assert passes.count() == 1
+    job = passes.get()
+    assert job.is_speakers_pass and job.state == JobState.QUEUED and not job.open
+    (run,) = job.runs.all()
+    assert run.stretch == 0 and run.audio_path == run.side.asr_path
+    assert queue.request_for(run) == {
+        "task": "diarize",
+        "model": settings_store.get("model"),
+        "diarize": True,
+        "diarizer": "nemotron",
+        "client_reference": str(run.id),
+        "priority": 90,
+    }
+    assert {"job_id": str(job.pk)} in quiet["hand_over"]
+    recording.refresh_from_db()
+    assert live.speakers_pass_state(recording) == "waiting"
+    assert ("Speakers", "being matched over the whole recording") in (
+        live.provenance_rows(recording)
+    )
+
+
+def test_with_voice_prints_the_stretches_are_matched_at_merge_and_no_pass_is_asked(
+    on, person, a_case, tmp_path, quiet, monkeypatch
+):
+    recording = merged_in_two_stretches(person, a_case, tmp_path, monkeypatch, True)
+    assert speakers_of(recording) == [
+        ("hello", "Speaker 1"),
+        ("hi", "Speaker 2"),
+        ("yes", "Speaker 2"),
+        ("new", "Speaker 3"),
+    ]
+    from core.jobs import SPEAKERS
+
+    assert not Job.objects.filter(recording=recording, kind=SPEAKERS).exists()
+    assert live.speakers_pass_state(recording) == ""
+
+
+def a_pass_result(turns):
+    return {
+        "segments": [],
+        "speakers": {
+            "labels": sorted({t[2] for t in turns}),
+            "turns": [
+                {"start": start, "end": end, "speaker": label}
+                for start, end, label in turns
+            ],
+        },
+        "settings_used": {
+            "task_run": "diarize",
+            "diarize": True,
+            "diarizer": "nemotron",
+        },
+        "service": {"version": "0.4.0"},
+        "timings_seconds": {"diarize": 3.0, "total": 3.2},
+    }
+
+
+def test_the_pass_gives_every_line_the_speaker_whose_turn_covers_it(
+    on, person, a_case, tmp_path, quiet, monkeypatch
+):
+    recording = merged_in_two_stretches(person, a_case, tmp_path, monkeypatch, False)
+    from core.jobs import SPEAKERS
+
+    job = Job.objects.get(recording=recording, kind=SPEAKERS)
+    (run,) = job.runs.all()
+    run.service_job_id = "p1"
+    run.save()
+    # A line a person renamed before the pass landed keeps its name.
+    transcript = Transcript.objects.get(recording=recording)
+    renamed = transcript.segments.get(text="hi")
+    renamed.speaker = "Ana"
+    renamed.save()
+    # The whole recording: the first voice again at the end, the second in
+    # the middle, and nobody's turn over a line keeps that line's label.
+    turns = [
+        (0.0, 9.0, "speaker_0"),
+        (9.5, 16.0, "speaker_1"),
+        (300.0, 306.0, "speaker_1"),
+        (319.0, 326.0, "speaker_0"),
+    ]
+    monkeypatch.setattr(
+        whisperx, "result", lambda job_id, lane="": a_pass_result(turns)
+    )
+    monkeypatch.setattr(whisperx, "delete", lambda job_id, lane="": None)
+
+    queue.take_state_from(job, {"p1": {"state": "done"}})
+    job.refresh_from_db()
+    assert job.state == JobState.DONE
+    assert speakers_of(recording) == [
+        ("hello", "Speaker 1"),
+        ("hi", "Ana"),
+        ("yes", "Speaker 2"),
+        ("new", "Speaker 1"),
+    ]
+    labels = dict(transcript.segments.values_list("text", "speaker_label"))
+    assert labels["new"] == "speaker_0" and labels["yes"] == "speaker_1"
+    recording.refresh_from_db()
+    assert live.speakers_pass_state(recording) == "done"
+    assert ("Speakers", "matched over the whole recording at Stop") in (
+        live.provenance_rows(recording)
+    )
+    run.refresh_from_db()
+    assert run.state == "done" and run.settings_used["task_run"] == "diarize"
+
+
+def test_a_pass_that_fails_leaves_the_stretches_labels_and_says_so(
+    on, person, a_case, tmp_path, quiet, monkeypatch
+):
+    recording = merged_in_two_stretches(person, a_case, tmp_path, monkeypatch, False)
+    from core.jobs import SPEAKERS
+
+    job = Job.objects.get(recording=recording, kind=SPEAKERS)
+    (run,) = job.runs.all()
+    run.service_job_id = "p1"
+    run.save()
+    monkeypatch.setattr(whisperx, "delete", lambda job_id, lane="": None)
+    queue.take_state_from(
+        job, {"p1": {"state": "failed", "failure": {"reason_class": "internal"}}}
+    )
+    job.refresh_from_db()
+    assert job.state == JobState.FAILED
+    assert speakers_of(recording)[2] == ("yes", "Speaker 3")
+    recording.refresh_from_db()
+    assert live.speakers_pass_state(recording) == "failed"
+    assert (
+        "Speakers",
+        "numbered within each stretch; the pass at Stop failed",
+    ) in live.provenance_rows(recording)
+
+
+def test_the_page_says_the_speakers_are_being_matched_while_the_pass_runs(
+    on, person, a_case, tmp_path, quiet, monkeypatch, client
+):
+    recording = merged_in_two_stretches(person, a_case, tmp_path, monkeypatch, False)
+    signed_in(client, person)
+    told = client.get(reverse("segments", args=[recording.pk])).json()
+    assert told["speakers_pass"] == "waiting"
+    page = client.get(reverse("viewer", args=[recording.pk])).content.decode()
+    assert 'id="speakers-pass" class="notice small" >' in page
+    assert "being matched over the whole recording" in page
+    live.mark_speakers_pass(recording, "done")
+    page = client.get(reverse("viewer", args=[recording.pk])).content.decode()
+    assert 'id="speakers-pass" class="notice small" hidden>' in page

@@ -123,7 +123,7 @@ The service's contract gained a `priority` field for this (service 0.2.0); a job
 
 ## The fast lane
 
-A second copy of the transcription service, beside the first on the same card, for what must not wait behind a long job: a recording made in the app (which already goes to the front of the line, but the front of the line is still behind whatever is running), and later the pieces of one transcribed while it records, and the Interpreter. It is a copy of the same image with the same model, so what it transcribes is of the same quality; it shares the model folder and has a state folder of its own. It needs about eight gigabytes of the card's memory for the default model.
+A second copy of the transcription service, beside the first on the same card, for what must not wait behind a long job: a recording made in the app (which already goes to the front of the line, but the front of the line is still behind whatever is running), the five-minute stretches of one transcribed while it records, the pass at Stop that matches its speakers over the whole recording, and later the Interpreter. It is a copy of the same image with the same model, so what it transcribes is of the same quality; it shares the model folder and has a state folder of its own. It needs about eight gigabytes of the card's memory for the default model.
 
 The installer asks whether to turn it on, no by default. Later:
 

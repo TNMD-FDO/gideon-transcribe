@@ -150,6 +150,12 @@ NEMOTRON = "nemotron"
 PYANNOTE = "pyannote"
 DIARIZERS = (NEMOTRON, PYANNOTE)
 
+# The diarize-only task (service 0.4.0): who spoke when over the whole file
+# and no words, for a Consumer that transcribed the file in pieces and needs
+# one set of speakers across them. It implies diarize; the diarizer rules
+# are the same as for a transcription with speakers.
+DIARIZE = "diarize"
+
 
 @dataclass(frozen=True)
 class Speakers:
@@ -294,8 +300,8 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
         )
 
     task = body.get("task", TRANSCRIBE)
-    if task not in TASKS:
-        raise errors.invalid(f"task must be one of: {', '.join(TASKS)}")
+    if task not in (*TASKS, DIARIZE):
+        raise errors.invalid(f"task must be one of: {', '.join((*TASKS, DIARIZE))}")
 
     language = body.get("language") or None
     if language is not None and (
@@ -310,7 +316,7 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
     if model not in models:
         raise errors.invalid(f"model must be one of: {', '.join(models)}")
 
-    diarize = _boolean(body, "diarize", False)
+    diarize = True if task == DIARIZE else _boolean(body, "diarize", False)
     embeddings = _boolean(body, "return_speaker_embeddings", False)
     if embeddings and not diarize:
         raise errors.invalid(

@@ -13,12 +13,13 @@ being prepared.
 from __future__ import annotations
 
 import logging
+import re
 
 from django.db import transaction
 from django.utils import timezone
 
 from core import audit, settings_store, whisperx
-from core.jobs import Job, JobState, Reason, Run, Segment, Transcript
+from core.jobs import SPEAKERS, Job, JobState, Reason, Run, Segment, Transcript
 from core.recordings import MediaState, Recording, Side
 
 log = logging.getLogger("transcribe.queue")
@@ -56,8 +57,21 @@ def request_for(run: Run) -> dict:
     The task and language follow the person's two choices. A Two-channel call
     sends an empty speaker hint for each Side, whatever the hint says: an
     "exactly 2" meant for the whole call would be wrong for one side of it.
+    A speakers pass (v1.94.0) asks for the turns alone.
     """
     recording = run.job.recording
+    if run.job.kind == SPEAKERS:
+        return {
+            # The diarize-only task (service 0.4.0): who spoke when over the
+            # whole recording, and no words.
+            "task": "diarize",
+            "model": recording.model or settings_store.get("model"),
+            "diarize": True,
+            "diarizer": settings_store.diarizer(),
+            "client_reference": str(run.id),
+            # Behind a stretch of one still recording, ahead of the uploads.
+            "priority": 90,
+        }
 
     # Translate ticked asks for English whatever is spoken; unticked asks for
     # the speech in its own language. The service decides the rest from the
@@ -209,7 +223,7 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
         job.save(update_fields=["state"])
 
     if runs and all(run.state == "done" for run in runs) and not job.open:
-        return merge(job)
+        return relabel(job) if job.kind == SPEAKERS else merge(job)
 
     return job
 
@@ -266,6 +280,12 @@ def merge(job: Job) -> Job:
     from core import speaker_check
 
     speaker_check.on_transcript(job.recording)
+    # A Live recording transcribed in stretches whose speakers could not be
+    # matched by voice gets one pass over the whole recording (v1.94.0).
+    if job.recording.is_live and any(run.stretch for run in job.runs.all()):
+        from core import live
+
+        live.ask_for_speakers_pass(job.recording, results)
     _the_batch_may_have_finished(job)
 
     seconds = (job.finished - job.created).total_seconds()
@@ -287,6 +307,137 @@ def merge(job: Job) -> Job:
         transcript.segments.count(),
     )
     return job
+
+
+# The speakers pass (v1.94.0) ----------------------------------------------------------
+#
+# Each stretch of a Live recording is diarized on its own, and under Nemotron
+# the stretches carry no voice prints to match their labels by, so two people
+# in a nine-minute meeting came back as four speakers. One diarize-only pass
+# over the whole recording at Stop says who spoke when across all of it; every
+# line then takes the speaker of the turn that covers most of it, numbered in
+# the order people first spoke, and the taps name them again. The words are
+# not touched. A line somebody has already renamed keeps its name.
+
+MACHINE_NAME = re.compile(r"^(?:.+ )?Speaker \d+$")
+
+
+@transaction.atomic
+def relabel(job: Job) -> Job:
+    """The pass landed: the Transcript's Segments take the whole recording's
+    speakers. A pass that fails leaves the stretches' labels as they were."""
+    from core import live
+
+    recording = job.recording
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        live.mark_speakers_pass(recording, "failed")
+        return fail(job, Reason.MERGE_FAILED)
+    try:
+        results = {
+            run.pk: whisperx.result(run.service_job_id, run.lane)
+            for run in job.runs.all()
+        }
+    except whisperx.ServiceError as problem:
+        live.mark_speakers_pass(recording, "failed")
+        return fail(job, problem.reason_class)
+
+    runs = {run.pk: run for run in job.runs.all()}
+    many_sides = len({run.side_id for run in runs.values()}) > 1
+    count: dict = {}
+    changed = 0
+    for run_id, result in results.items():
+        turns = (result.get("speakers") or {}).get("turns") or []
+        changed += apply_turns(transcript, runs[run_id].side, turns, many_sides, count)
+
+    if recording.speaker_taps:
+        try:
+            live.name_from_taps(recording, transcript)
+        except Exception:  # noqa: BLE001 - a naming that fails leaves the labels
+            log.exception("the taps of recording %s could not be applied", recording.pk)
+
+    for run_id, result in results.items():
+        run = runs[run_id]
+        run.settings_used = result.get("settings_used", {})
+        run.service_versions = result.get("service", {})
+        run.timings = result.get("timings_seconds", {})
+        run.finished = timezone.now()
+        run.save()
+        whisperx.delete(run.service_job_id, run.lane)
+
+    job.state = JobState.DONE
+    job.finished = timezone.now()
+    job.save(update_fields=["state", "finished"])
+    live.mark_speakers_pass(recording, "done")
+    audit.write(
+        audit.Category.JOBS,
+        "Speakers matched",
+        system="worker",
+        affected_user=recording.user,
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        lines_changed=changed,
+        speakers=sum(count.values()),
+    )
+    log.info(
+        "speakers pass for %s: %d line(s) changed, %d speaker(s)",
+        recording.pk,
+        changed,
+        sum(count.values()),
+    )
+    return job
+
+
+def apply_turns(transcript, side, turns: list, many_sides: bool, count: dict) -> int:
+    """Give each Segment of a Side the speaker of the turn that covers most of
+    it. `count` carries the numbering across Sides. Returns the lines changed.
+
+    A Segment nobody's turn touches keeps the label it had; a Segment a person
+    renamed keeps the name.
+    """
+    ordered = sorted(
+        (
+            {
+                "start": float(one["start"]),
+                "end": float(one["end"]),
+                "speaker": str(one["speaker"]),
+            }
+            for one in turns
+        ),
+        key=lambda one: (one["start"], one["end"]),
+    )
+    named: dict[str, str] = {}
+    changed = 0
+    for segment in transcript.segments.filter(side=side).order_by("start", "pk"):
+        best, most = None, 0.0
+        for turn in ordered:
+            if turn["end"] <= segment.start:
+                continue
+            if turn["start"] >= segment.end:
+                break
+            overlap = min(turn["end"], segment.end) - max(turn["start"], segment.start)
+            if overlap > most:
+                best, most = turn["speaker"], overlap
+        if best is None:
+            continue
+        if best not in named:
+            count[side.pk] = count.get(side.pk, 0) + 1
+            named[best] = (
+                f"{side.name} Speaker {count[side.pk]}"
+                if many_sides
+                else f"Speaker {count[side.pk]}"
+            )
+        name = named[best]
+        if segment.speaker and not MACHINE_NAME.match(segment.speaker):
+            continue
+        if segment.speaker == name and segment.speaker_label == best:
+            continue
+        segment.speaker = name
+        segment.speaker_label = best
+        segment.save(update_fields=["speaker", "speaker_label"])
+        changed += 1
+    return changed
 
 
 def _store(job: Job, results: dict) -> Transcript:
@@ -577,6 +728,12 @@ def fail(job: Job, reason_class: str) -> Job:
     job.finished = timezone.now()
     job.save()
     _the_batch_may_have_finished(job)
+    if job.kind == SPEAKERS:
+        # The Transcript stays as the stretches made it; the Details say why
+        # the labels are per stretch (v1.94.0).
+        from core import live
+
+        live.mark_speakers_pass(job.recording, "failed")
 
     audit.write(
         audit.Category.JOBS,

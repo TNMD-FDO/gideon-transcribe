@@ -49,7 +49,7 @@ Request: a multipart body with two parts.
 
 | Field | Type | Allowed values | Default | Meaning |
 |---|---|---|---|---|
-| `task` | string | `transcribe`, `translate`, `translate_if_needed` | `transcribe` | What to produce. `transcribe` writes the speech in its own language. `translate` writes English, whatever the language spoken (Translation is to English only). `translate_if_needed` transcribes when the speech is English and translates otherwise (see Language detection and tasks). |
+| `task` | string | `transcribe`, `translate`, `translate_if_needed`, `diarize` | `transcribe` | What to produce. `transcribe` writes the speech in its own language. `translate` writes English, whatever the language spoken (Translation is to English only). `translate_if_needed` transcribes when the speech is English and translates otherwise (see Language detection and tasks). `diarize` (service 0.4.0) writes no words: it says who spoke when over the whole file, for a Consumer that transcribed the file in pieces and needs one set of speakers across them. It implies `diarize`, loads no Whisper model, and follows the same diarizer rules; `model` is still validated and reported. |
 | `translate_if_mixed` | boolean | `true`, `false` | `false` | Applies only to `task=transcribe` with `language` empty: when detection finds a mixed file, the service runs translate instead. Consumers that leave it false see no change. |
 | `language` | string | a two-letter Whisper language code, or empty | empty | Empty means detect the language once from the opening audio (three windows, below). A code switches detection off. The service never switches language mid-file. |
 | `model` | string | `large-v3`, `large-v3-turbo` | `large-v3-turbo` | The allow-list. Anything else is `400`. |
@@ -122,6 +122,8 @@ The app renders `stage` as the plain-word Step a user reads (loading the model, 
 | `service` | `version`, `api_version`, and the pins (whisperx, faster-whisper, ctranslate2, torch, pyannote.audio, the diarization model revision; from 0.3.0 also the diarizer container's NeMo commit and the Nemotron revision). |
 
 From service 0.3.0 `settings_used` also carries `diarizer` (`nemotron` or `pyannote`) and `diarizer_version` (the model's revision), and under `nemotron` the `speakers.labels` are `speaker_0`, `speaker_1` and on, in the model's order of arrival; the Consumer renames both forms alike. `timings_seconds.diarize` covers the call to the diarizer container.
+
+From service 0.4.0 a `task=diarize` job's result has the same parts with `segments` empty, `word_timestamps` `{present: false, reason: "diarize_only"}`, `language` with nothing detected, `settings_used.task_run` `diarize`, and under `speakers`, beside `labels`, the `turns`: an ordered list of `start`, `end` and `speaker`, one entry per stretch of speech, in the diarizer's own labels. `timings_seconds` has zero for `load`, `transcribe` and `align`.
 | `timings_seconds` | `queued`, `load`, `transcribe`, `align`, `diarize`, `total`. |
 | `gpu` | `uuid`, `name`. |
 
@@ -521,6 +523,7 @@ and not a history. What was decided, on 2026-09-03:
 
 ## Amendments applied
 
+- Service 0.4.0 (2026-09-26): the `diarize` task and the result's `speakers.turns`, for the app's Live recordings, whose stretches are diarized one by one and, under Nemotron, carried no voice prints to match their speakers by; one pass over the whole file at Stop matches them instead.
 - From Phase 5 chapter 4 (The diarizer, 2026-09-24) to the request fields, the result, `models.yaml`, the token and a new section: `diarizer` (`nemotron` by default from 0.3.0, `pyannote`), the refusals `hint_not_supported` and `embeddings_not_supported`, `settings_used.diarizer` and `diarizer_version`, the `nvidia/Nemotron-3-Diarization` pin, the token optional, and the `diarizer` container. ADR 0014.
 - From "Translation-to-English behaviour" to the request fields: `task` gains `translate_if_needed`; new field `translate_if_mixed`, default `false`.
 - From "Translation-to-English behaviour" to language detection: three 30-second windows replace detection from the first 30 seconds; the mixed rule (two windows, different languages, each 0.5 or more); the winner by highest combined probability; under translate the non-English language with the highest combined probability is passed to Whisper.

@@ -1735,6 +1735,29 @@
       .catch(function () { /* the next change will bring it */ });
   }
 
+  // The speakers pass over a Live recording (v1.94.0): while it runs the
+  // transcript is asked for again every few seconds, and when it lands the
+  // labels change in place and the notice goes.
+  var passNotice = document.getElementById("speakers-pass");
+  function watchSpeakersPass() {
+    if (!passNotice || passNotice.hidden) { return; }
+    fetch("/recording/" + window.VIEWER.recording + "/segments")
+      .then(function (answer) { return answer.json(); })
+      .then(function (body) {
+        if (body.speakers_pass === "waiting" || body.speakers_pass === "running") {
+          window.setTimeout(watchSpeakersPass, 5000);
+          return;
+        }
+        passNotice.hidden = true;
+        if (body.speakers_pass === "done") {
+          reloadSegments();
+          UI.toast("The speakers were matched over the whole recording.");
+        }
+      })
+      .catch(function () { window.setTimeout(watchSpeakersPass, 10000); });
+  }
+  if (passNotice && !passNotice.hidden) { window.setTimeout(watchSpeakersPass, 5000); }
+
   if (channel) {
     channel.onmessage = function (event) {
       var said = event.data || {};

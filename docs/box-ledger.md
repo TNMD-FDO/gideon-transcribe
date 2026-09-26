@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-26, at v1.94.0 (one set of speakers across a Live recording; the service image changes; nothing shared moves).** The WhisperX service is 0.4.0 and its image is rebuilt or pulled at the upgrade; one more fast-lane job per Live recording, at Stop, of about a minute, on the card the lane already holds. No port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.93.1 (pages never kept by a browser, and small words; nothing shared moves).** A response header on the app's own pages; no port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.93.0 (the guides brought current; nothing shared moves).**
 - **2026-09-26, at v1.92.2 (the guide's host figures; nothing shared moves).**

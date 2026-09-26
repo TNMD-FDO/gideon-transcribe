@@ -189,6 +189,12 @@ def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
     )
 
 
+def _speakers_pass_running(recording) -> bool:
+    from core import live
+
+    return live.speakers_pass_state(recording) in ("waiting", "running")
+
+
 def _page_context(request: HttpRequest, recording: Recording) -> dict:
     """What the viewer's page and its windows are drawn from."""
     from core import exports
@@ -267,6 +273,8 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # between its recordings without going back to the case page.
         "in_case": _the_rest_of_the_case(recording),
         "transcript": transcript,
+        # The speakers pass over a Live recording still to land (v1.94.0).
+        "speakers_pass_running": _speakers_pass_running(recording),
         "speakers": speakers,
         "language_name": (
             exports.language_name(transcript.language) if transcript is not None else ""
@@ -321,10 +329,15 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
     if transcript is None:
         return JsonResponse({"segments": []})
 
+    from core import live
+
     return JsonResponse(
         {
             "word_timestamps": transcript.word_timestamps,
             "word_timestamps_reason": transcript.word_timestamps_reason,
+            # The speakers pass over a Live recording (v1.94.0): "", waiting,
+            # running, done or failed; the page watches it while it runs.
+            "speakers_pass": live.speakers_pass_state(recording),
             # What both Sides of a call said together: shown once, named for
             # both, and counted here so the page can say so plainly.
             "shared_segments": transcript.shared_segments,

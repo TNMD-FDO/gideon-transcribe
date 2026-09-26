@@ -21,6 +21,36 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.94.0, 2026-09-26
+
+```
+Models: unchanged
+Database: migrates (0064: a Job's kind)
+```
+
+The WhisperX service moves to 0.4.0, so `./transcribe upgrade` rebuilds or
+pulls its image; the models are the same.
+
+**One set of speakers across a live recording.** A recording made on the
+Record page is transcribed five minutes at a time while it records, and
+each stretch is diarized on its own. The labels were matched across the
+stretches by voice prints that only the pyannote diarizer returns; under
+Nemotron, the default, every stretch numbered its own speakers, and a
+nine-minute meeting of two people came back as four. Now, at Stop, once
+the transcript is on the page, one diarize-only pass over the whole
+recording runs on the fast lane and says who spoke when across all of it.
+Each line takes the speaker of the turn that covers most of it, numbered in
+the order people first spoke; a line somebody has already renamed keeps
+its name, and the taps name the speakers again. The words are not touched.
+The page says "The speakers are being matched over the whole recording"
+above the transcript and changes the labels in place when the pass lands,
+in under a minute for an hour's meeting; the Details say the speakers were
+matched over the whole recording, or that the pass failed and the labels
+are per stretch. Under pyannote nothing changes.
+
+**The service's contract** gains the `diarize` task, which loads no model
+and returns the `turns` under `speakers` with no segments (service 0.4.0).
+
 ## v1.93.1, 2026-09-26
 
 ```

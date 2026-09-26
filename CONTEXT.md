@@ -155,6 +155,10 @@ _Avoid_: voice note, voice memo
 Five minutes of a Live recording, transcribed while the next five record (Phase 3, step five): cut from the pieces already on the server, prepared on its own, and sent as a Run of the recording's one open Job; a pause closes one, and the last is sent at Stop. Nothing is shown before the Transcript is whole.
 _Avoid_: chunk, segment (taken), partial transcript
 
+**Speakers pass**:
+One diarize-only run over the whole of a Live recording at Stop, on the Fast lane, after its Stretches' Transcript is on the page: who spoke when across all of it, from which every line takes the Speaker of the turn covering most of it, numbered in the order people first spoke. Needed under the Nemotron diarizer, whose Stretches carry no voice prints to match their Speakers by; under pyannote the Stretches are matched by voice at merge and no pass runs. A line a person has renamed keeps its name. Its Job's kind is "speakers". From v1.94.0.
+_Avoid_: re-diarization, second pass (say the speakers pass), speaker matching (the page says "matched over the whole recording")
+
 **Interpreter**:
 The door on the New recording page beside the three styles, and the feature as a whole: a Session between a Visitor who speaks another language and Staff, heard by Whisper, translated by the office's engine, and (when built) spoken by a Voice on the server, Turn by Turn, kept as a Recording with both languages. Never a substitute for a certified interpreter. Phase 3 chapter 3; built text-only in v1.33.0 to v1.34.0 and withdrawn in v1.35.0 at the maintainer's decision (deferred); the words stay for the chapter.
 _Avoid_: translator, bot

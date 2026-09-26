@@ -440,6 +440,29 @@ def test_a_hint_or_embeddings_with_nemotron_is_refused(client):
     assert answer.status_code == 202, answer.text
 
 
+def test_the_diarize_task_is_accepted_and_implies_diarize(client, runner):
+    """Service 0.4.0: task=diarize is who spoke when over the whole file and
+    no words; it needs its diarizer like any job with speakers, and the
+    Nemotron rules on hints and vectors still hold."""
+    answer = submit(client, task="diarize")
+    assert answer.status_code == 202, answer.text
+    answer = submit(
+        client, task="diarize", diarizer="pyannote", speakers={"exactly": 2}
+    )
+    assert answer.status_code == 202, answer.text
+    answer = submit(client, task="diarize", speakers={"exactly": 2})
+    assert answer.status_code == 400
+    assert answer.json()["reason_class"] == "hint_not_supported"
+    answer = submit(client, task="speakers")
+    assert answer.status_code == 400
+    assert "task must be one of" in answer.json()["error"]
+    runner.diarizer_is_up = False
+    answer = submit(client, task="diarize")
+    assert answer.status_code == 503
+    assert answer.json()["reason_class"] == "diarizer_unavailable"
+    runner.diarizer_is_up = True
+
+
 def test_a_nemotron_job_needs_the_diarizer_container(client, runner):
     runner.diarizer_is_up = False
     answer = submit(client, diarize=True)

@@ -243,6 +243,10 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
     def stage(name: str, percent: float | None = None) -> None:
         outbox.put(_message("stage", job_id=job_id, stage=name, percent=percent))
 
+    if request.get("task") == "diarize":
+        _run_diarize_only(engine, job, outbox, stage)
+        return
+
     started = time.monotonic()
     stage("loading model")
     pipeline = engine.pipeline_for(request["model"])
@@ -435,6 +439,123 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
             job_id=job_id,
             path=str(path),
             wall_seconds=timings["total"],
+            peak_vram_gb=round(peak_used, 2),
+        )
+    )
+
+
+def _run_diarize_only(engine: Engine, job: dict[str, Any], outbox, stage) -> None:
+    """The diarize-only task (service 0.4.0): who spoke when over the whole
+    file, and no words.
+
+    A Consumer that transcribed a file in pieces while it was being recorded
+    has one set of words and one set of speaker labels per piece; this pass
+    gives it one set of speakers across the whole file, in a minute, without
+    transcribing the words again. Nemotron answers from the diarizer
+    container as for a transcription with speakers; pyannote runs its own
+    pipeline. The result has the result's shape with no segments and, under
+    `speakers`, the `turns`.
+    """
+    import whisperx
+
+    job_id = job["job_id"]
+    request = job["request"]
+    started = time.monotonic()
+    stage("diarizing")
+    at = time.monotonic()
+    peak_used, _ = _vram()
+    diarizer_used: dict[str, Any] = {"name": "pyannote"}
+    if request.get("diarizer", "nemotron") == "nemotron":
+        from service import diarizer_client
+
+        answer = diarizer_client.diarize(
+            Path(job["audio_path"]), timeout=_diarizer_timeout(job)
+        )
+        spans = _spans_frame(answer.get("spans") or [])
+        diarizer_used = {
+            "name": "nemotron",
+            "model": (answer.get("model") or {}).get("name", ""),
+            "revision": (answer.get("model") or {}).get("revision", "")
+            or engine.settings.get("diarizer_revision")
+            or "",
+            "nemo": (answer.get("model") or {}).get("nemo", ""),
+        }
+    else:
+        hint = request.get("speakers") or {}
+        counts: dict[str, Any] = {}
+        if "exactly" in hint:
+            counts["num_speakers"] = hint["exactly"]
+        elif "between" in hint:
+            counts["min_speakers"], counts["max_speakers"] = hint["between"]
+        audio = whisperx.load_audio(job["audio_path"])
+        spans = engine.diarization()(audio, **counts)
+    peak_used = max(peak_used, _vram()[0])
+    turns = sorted(
+        (
+            {
+                "start": round(float(row["start"]), 3),
+                "end": round(float(row["end"]), 3),
+                "speaker": str(row["speaker"]),
+            }
+            for _, row in spans.iterrows()
+        ),
+        key=lambda one: (one["start"], one["end"]),
+    )
+    labels = sorted({one["speaker"] for one in turns})
+    seconds = round(time.monotonic() - at, 3)
+
+    stage("finishing")
+    total = round(time.monotonic() - started, 3)
+    result = {
+        "audio": job["audio"],
+        "language": {
+            "requested": request.get("language") or "",
+            "detected": "",
+            "probability": None,
+            "windows": [],
+            "combined": {},
+            "mixed": False,
+        },
+        "word_timestamps": {"present": False, "reason": "diarize_only"},
+        "segments": [],
+        "speakers": {"labels": labels, "turns": turns},
+        "settings_used": {
+            "task": "diarize",
+            "task_run": "diarize",
+            "task_reason": "requested",
+            "language": request.get("language") or "",
+            "model": request.get("model", ""),
+            "model_revision": engine.settings["model_revisions"].get(
+                request.get("model", "")
+            ),
+            "diarize": True,
+            "speakers": request.get("speakers") or {},
+            "diarizer": diarizer_used.get("name"),
+            "diarizer_version": diarizer_used.get("revision")
+            or engine.settings.get("diarizer_revision")
+            or "",
+            "diarizer_nemo": diarizer_used.get("nemo") or None,
+            "return_speaker_embeddings": False,
+        },
+        "service": _service(),
+        "timings_seconds": {
+            "queued": job.get("queued_seconds", 0.0),
+            "load": 0.0,
+            "transcribe": 0.0,
+            "align": 0.0,
+            "diarize": seconds,
+            "total": total,
+        },
+        "gpu": _card(),
+    }
+    path = Path(job["result_path"])
+    path.write_text(json.dumps(result), encoding="utf-8")
+    outbox.put(
+        _message(
+            "result",
+            job_id=job_id,
+            path=str(path),
+            wall_seconds=total,
             peak_vram_gb=round(peak_used, 2),
         )
     )

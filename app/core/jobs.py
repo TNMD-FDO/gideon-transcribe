@@ -95,6 +95,10 @@ STEPS = {
 }
 MERGING = "Merging sides"
 
+# A Job's kind (v1.94.0): "" for a transcription, SPEAKERS for the pass over
+# a whole Live recording that matches the speakers across its stretches.
+SPEAKERS = "speakers"
+
 
 class Job(models.Model):
     """One Recording's pass through the Queue, made the moment it is Ready."""
@@ -110,6 +114,10 @@ class Job(models.Model):
     state = models.CharField(
         max_length=20, choices=JobState.CHOICES, default=JobState.QUEUED
     )
+    # "" for a transcription; SPEAKERS for the pass at Stop over a whole
+    # Live recording, which writes no words and only re-labels the Segments
+    # the stretches made (v1.94.0, migration 0064).
+    kind = models.CharField(max_length=20, blank=True, default="")
     merging = models.BooleanField(default=False)
     # More Runs are still to come (a Live recording being transcribed in
     # stretches while it records), so the Runs that are done are not merged
@@ -137,6 +145,10 @@ class Job(models.Model):
     def in_stretches(self) -> bool:
         """Whether this Job's Runs are stretches rather than whole Sides."""
         return self.runs.filter(stretch__gt=0).exists()
+
+    @property
+    def is_speakers_pass(self) -> bool:
+        return self.kind == SPEAKERS
 
     @property
     def failure_message(self) -> str:

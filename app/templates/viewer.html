@@ -382,6 +382,10 @@
               <button type="button" id="resume-follow">Resume (F)</button>
             </span>
           </div>
+          <p id="speakers-pass" class="notice small" {% if not speakers_pass_running %}hidden{% endif %}>
+            The speakers are being matched over the whole recording. The
+            labels change here by themselves in a moment.
+          </p>
           <ol id="transcript" class="transcript"></ol>
         {% else %}
           <div class="jobstate" id="waiting">

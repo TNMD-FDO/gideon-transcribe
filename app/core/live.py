@@ -463,6 +463,61 @@ def note_upload(recording: Recording, tus_id: str) -> None:
     change_live(recording, lambda live: live.update(tus_id=(tus_id or "")[:80]))
 
 
+# The speakers pass (v1.94.0) --------------------------------------------------------
+#
+# Under Nemotron a stretch carries no voice prints, so the labels the stretches
+# gave cannot be matched by voice and every stretch numbers its own speakers.
+# One diarize-only pass over the whole recording at Stop, on the fast lane,
+# matches them: queue.relabel gives each line the whole recording's speaker.
+
+SPEAKERS_PASS_STATES = ("waiting", "running", "done", "failed")
+
+
+def wants_speakers_pass(recording: Recording, results: dict) -> bool:
+    """Whether the stretches' speakers still need matching: more than one
+    stretch carried speakers, and none carried the voice prints that match
+    them at merge (pyannote's)."""
+    if not recording.diarize:
+        return False
+    with_speakers = [
+        one for one in results.values() if (one.get("speakers") or {}).get("labels")
+    ]
+    if len(with_speakers) < 2:
+        return False
+    return not any(
+        (one.get("speakers") or {}).get("embeddings") for one in with_speakers
+    )
+
+
+def ask_for_speakers_pass(recording: Recording, results: dict):
+    """One Job of the speakers kind, a Run per Side over the whole prepared
+    audio, handed to the service like any other. The Transcript is already
+    on the page; the labels change when the pass lands."""
+    if not wants_speakers_pass(recording, results):
+        return None
+    from core.jobs import SPEAKERS, Job, JobState, Run
+    from core.tasks import hand_over_job
+
+    job = Job.objects.create(
+        recording=recording, batch=recording.batch, kind=SPEAKERS, state=JobState.QUEUED
+    )
+    for side in _live_sides(recording):
+        Run.objects.create(job=job, side=side)
+    mark_speakers_pass(recording, "waiting")
+    hand_over_job.defer(job_id=str(job.pk))
+    log.info("recording %s: speakers pass asked for", recording.pk)
+    return job
+
+
+def mark_speakers_pass(recording: Recording, state: str) -> None:
+    change_live(recording, lambda live: live.update(speakers_pass=state))
+
+
+def speakers_pass_state(recording) -> str:
+    """ "", or waiting, running, done, failed."""
+    return str((getattr(recording, "live", None) or {}).get("speakers_pass") or "")
+
+
 def ended(
     recording: Recording,
     *,
@@ -769,6 +824,15 @@ def provenance_rows(recording) -> list[tuple[str, str]]:
                 f"in {count} stretch{'es' if count != 1 else ''}, the last at Stop",
             )
         )
+    matched = facts.get("speakers_pass")
+    if matched == "done":
+        rows.append(("Speakers", "matched over the whole recording at Stop"))
+    elif matched == "failed":
+        rows.append(
+            ("Speakers", "numbered within each stretch; the pass at Stop failed")
+        )
+    elif matched:
+        rows.append(("Speakers", "being matched over the whole recording"))
     if facts.get("named_from_taps"):
         count = facts["named_from_taps"]
         rows.append(
