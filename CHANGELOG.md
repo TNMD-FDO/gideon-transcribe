@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.91.1, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the first two-pass memo on the office's copy: every part written, the
+questions before rights listed one by one, the points for counsel tied to
+the record. Three things fixed. **The facts sheet was cut at its cap** with
+four lists unwritten: the cap ships at 12,000 tokens and the sheet puts its
+timeline last, so a cut costs the timeline's end, which the app reports,
+and never a whole list. **The machine's speaker labels reached the memo**
+through the sheet ("Speaker 4 asked"): the app now scrubs them out of the
+sheet as "a voice on <camera>", quotes untouched, and the sheet lists an
+officer only when he did something. **A continued memo had joined two words
+at the seam** ("Aldridgeanswered"): a cut memo is trimmed back to its last
+whole sentence and the model begins with the sentence that was cut.
+
 ## v1.91.0, 2026-09-26
 
 ```

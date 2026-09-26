@@ -1298,6 +1298,7 @@ def check_sheet(incident, sheet: dict, record: dict) -> dict:
                 else:
                     entry["verbatim"] = False
                     not_found += 1
+            _scrub_labels(entry)
     timeline = sheet.get("timeline") or []
     timeline.sort(key=lambda one: one.get("seconds", float("inf")))
     last = max((one["seconds"] for one in timeline if "seconds" in one), default=None)
@@ -1324,6 +1325,34 @@ def _sheet_seconds(incident, words: str) -> float | None:
     if incident.has_clock():
         return float((of_day - incident.clock_zero) % incidents.DAY)
     return float(of_day)
+
+
+# A camera's numbered speaker label, or the model's "unidentified speaker",
+# is that camera's voice and never a name (v1.91.1): the sheet says so.
+_LABEL = re.compile(
+    r"\b(?:speaker\s*\d+|unidentified(?:\s+speaker)?|unknown\s+speaker)\b",
+    re.IGNORECASE,
+)
+_WHO_FIELDS = ("said_by", "asked_by", "read_by", "who", "to")
+_TEXT_FIELDS = ("what", "how", "answer", "consent", "found", "went", "asked_for")
+
+
+def _scrub_labels(entry: dict) -> None:
+    """The machine's speaker labels out of a sheet entry: a voice on the
+    camera where a person is named by one, a voice in the text; a quote is
+    left as it is."""
+    camera = str(entry.get("camera", "")).strip()
+    voice = f"a voice on {camera}" if camera else "a voice"
+    for field in _WHO_FIELDS:
+        words = entry.get(field)
+        if isinstance(words, str) and _LABEL.search(words):
+            entry[field] = _LABEL.sub(voice, words).strip()
+            # "A voice on X on X" reads badly: one camera is enough.
+            entry[field] = " ".join(entry[field].split())
+    for field in _TEXT_FIELDS:
+        words = entry.get(field)
+        if isinstance(words, str) and _LABEL.search(words):
+            entry[field] = " ".join(_LABEL.sub("a voice", words).split())
 
 
 def sheet_words(sheet: dict) -> str:

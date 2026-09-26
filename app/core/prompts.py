@@ -117,7 +117,8 @@ SHIPPED_HISTORY = {
         "a5ec82bb5ef84c66",
     ),
     # v1.91.0: the facts sheet, the first of the memo's two passes.
-    "prompt:memo_sheet": ("437c424c772c9ea4",),
+    # v1.91.1: officers only when they did something.
+    "prompt:memo_sheet": ("437c424c772c9ea4", "2ecefcb6080f757d"),
     "prompt:incident_chat": ("1e49dfacd7a8a160", "b34225f790a3e94e"),
     # Re-shipped in v1.90.0: an officer's say-so is not the record agreeing.
     "prompt:comparison": ("127d85e163af4cba", "d59b992243fb63bf"),
@@ -606,7 +607,9 @@ MEMO_SHEET = (
     "record identifies them (a name only as the words give it, a role only "
     "as the words give it, otherwise the officer wearing a camera, or "
     "clothing and position), where that identification falls, and the "
-    "cameras that show them. Timeline: the moments that tell the story in "
+    "cameras that show them; an officer is listed only when he did "
+    "something the memo will tell, never one entry per camera. Timeline: "
+    "the moments that tell the story in "
     "order, from the first camera's start to how it ended, forty to one "
     "hundred and twenty of them, each with its time by the incident clock, "
     "its camera, one plain sentence of what happened, a quote copied word "
@@ -632,20 +635,22 @@ MEMO_SHEET = (
     "description. Nothing that is not in the record or the chronology."
 )
 MEMO_SHEET_FORMAT = (
-    'Answer with JSON only, in this shape: {"people": [{"who": "", "how": '
-    '"", "where": "hh:mm:ss on CAMERA", "cameras": [""]}], "timeline": '
-    '[{"at": "hh:mm:ss", "camera": "", "what": "", "quote": "", "said_by": '
-    '"", "event": 0}], "rights": [{"at": "hh:mm:ss", "camera": "", '
+    'Answer with JSON only, in this shape and this order: {"people": '
+    '[{"who": "", "how": "", "where": "hh:mm:ss on CAMERA", "cameras": '
+    '[""]}], "outcome": "", "rights": [{"at": "hh:mm:ss", "camera": "", '
     '"read_by": "", "to": "", "quote": "", "answer": "", "asked_for": ""}], '
     '"questions_before_rights": [{"at": "hh:mm:ss", "camera": "", '
     '"asked_by": "", "to": "", "question": "", "answer": ""}], '
     '"searches_and_force": [{"at": "hh:mm:ss", "camera": "", "what": "", '
     '"consent": "", "found": "", "went": ""}], "statements": [{"at": '
     '"hh:mm:ss", "camera": "", "who": "", "quote": "", "prompted": true}], '
-    '"gaps": [{"at": "hh:mm:ss", "camera": "", "what": ""}], "outcome": ""}. '
-    "Every time copied from the record or the chronology by the incident "
-    "clock; an event number only where the entry rests on that event, else "
-    "0; an empty string where there is nothing. No other text."
+    '"gaps": [{"at": "hh:mm:ss", "camera": "", "what": ""}], "timeline": '
+    '[{"at": "hh:mm:ss", "camera": "", "what": "", "quote": "", "said_by": '
+    '"", "event": 0}]}. The timeline comes last so that an answer cut at '
+    "the cap loses the end of the timeline and not a whole list. Every time "
+    "copied from the record or the chronology by the incident clock; an "
+    "event number only where the entry rests on that event, else 0; an "
+    "empty string where there is nothing. No other text."
 )
 # The sheet's lists, in the order the memo's writer reads them.
 SHEET_LISTS = (
@@ -950,21 +955,38 @@ COMPARISON_FORMAT = (
 # A memo cut at the cap is continued (v1.90.1): the model is shown what it
 # wrote and told to go on from there.
 CONTINUE_MEMO = (
-    "The memo was cut off at the cap. Continue exactly where it stopped, "
-    "mid-sentence if that is where it stopped, without repeating anything "
-    "already written, and finish every remaining part in order."
+    "The memo was cut off at the cap, and what was written has been cut "
+    "back to the end of its last whole sentence. Continue from there: begin "
+    "with the sentence that was cut, whole, then go on, without repeating "
+    "anything before it, and finish every remaining part in order."
 )
 
 
+_SENTENCE_END = re.compile(r"[.!?:][\"')\]]*(?=\s|$)")
+
+
+def cut_back(text: str) -> str:
+    """A cut answer trimmed to the end of its last whole sentence (or heading),
+    so the continuation can begin a sentence and the seam is never inside a
+    word (v1.91.1: a memo had read "Aldridgeanswered")."""
+    text = text.rstrip()
+    last = None
+    for match in _SENTENCE_END.finditer(text):
+        last = match.end()
+    return text[:last].rstrip() if last else text
+
+
 def stitch_continuation(text: str, more: str) -> str:
-    """The continuation joined to what was cut: straight on when the cut fell
-    inside a word, a time or a sentence, otherwise on a new line."""
-    more = more.lstrip("\n")
+    """The continuation joined to the cut-back text: on a new line after a
+    heading or before one, otherwise with a space."""
+    text = cut_back(text)
+    more = more.strip()
     if not text or not more:
         return text + more
-    if text[-1].isspace() or text[-1] in ".!?:" or more[0].isupper() or more[0] in "*#":
-        return text.rstrip() + "\n" + more
-    return text + more
+    first = more.splitlines()[0].strip()
+    if text.endswith(":") or (first.endswith(":") and len(first) <= 60):
+        return text + "\n" + more
+    return text + " " + more
 
 
 INCIDENT_CHAT_FORMAT = (

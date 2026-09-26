@@ -643,7 +643,16 @@ SHEET = json.dumps(
             },
         ],
         "rights": [],
-        "questions_before_rights": [],
+        "questions_before_rights": [
+            {
+                "at": "21:57:00",
+                "camera": "BWC2-1",
+                "asked_by": "Speaker 4",
+                "to": "Unidentified speaker",
+                "question": "Whose car is it?",
+                "answer": "Speaker 2 said it was a rental.",
+            }
+        ],
         "searches_and_force": [],
         "statements": [
             {
@@ -693,7 +702,7 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     assert prompts.MEMO_SHEET in system and prompts.INCIDENT_RULES in system
     assert prompts.MEMO_SHEET_FORMAT in system and prompts.INCIDENT_MEMO not in system
     assert asked[0]["schema"] == prompts.memo_sheet_schema()
-    assert asked[0]["max_completion_tokens"] == 8000
+    assert asked[0]["max_completion_tokens"] == 12000
     # The second, the memo, is given the sheet and never the record.
     writer = asked[1]["messages"]
     assert prompts.INCIDENT_MEMO in writer[0]["content"]
@@ -724,9 +733,21 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
         in sheet_text
     )
     assert "Not mine (not found word for word in the record)" in sheet_text
+    # The machine's labels are scrubbed (v1.91.1): a voice on the camera.
+    asked_before = memo.sheet["questions_before_rights"][0]
+    assert asked_before["asked_by"] == "a voice on BWC2-1"
+    assert asked_before["to"] == "a voice on BWC2-1"
+    assert asked_before["answer"] == "a voice said it was a rental."
+    assert asked_before["question"] == "Whose car is it?"
+    assert "Speaker" not in sheet_text and "Unidentified" not in sheet_text
+    assert (
+        "- [21:57:00] BWC2-1: a voice on BWC2-1 asked a voice on BWC2-1: "
+        '"Whose car is it?"; answer: "a voice said it was a rental."'
+    ) in sheet_text
     words = incident_assistant.sheet_words(memo.sheet)
     assert words.startswith("3 moments, the last at 22:10:00; the timeline reaches")
     assert "3 quotes checked against the record, 1 not found word for word." in words
+    assert "timeline" in prompts.MEMO_SHEET_FORMAT.split('"gaps"')[1]
     assert "1 time not on the record." in words
     assert (
         "Event 1, 21:56:27, Asked out of the car; seen on BWC2-1; added by a person."
@@ -750,6 +771,7 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
         # The app's cameras line ends BWC2-2 at its end (v1.89.0).
         "[22:10:58]": 881.0,
         "[22:10:00]": 823.0,
+        "[21:57:00]": 43.0,
     }
     assert memo.event_numbers == {"1": str(first.pk), "2": str(second.pk)}
     assert memo.cameras_used == ["BWC2-1"]
@@ -973,20 +995,28 @@ def test_the_sheet_is_checked_and_a_bad_one_is_a_bad_output(incident, person):
     assert prompts.sheet_text({}) == "" and prompts.sheet_text("x") == ""
 
 
-def test_a_continuation_is_stitched_where_the_cut_fell():
+def test_a_continuation_is_stitched_at_a_sentence_end():
+    """v1.91.1: the office's memo read "Aldridgeanswered" where a cut fell at a
+    word boundary. The cut text is trimmed back to its last whole sentence
+    and the model is told to begin with the sentence that was cut."""
     stitch = prompts.stitch_continuation
-    assert stitch("Why'd y", "ou run?") == "Why'd you run?"
-    assert stitch("At [2", "0:45:30] he said no.") == "At [20:45:30] he said no."
-    assert stitch("He said no.", "Then the search began.") == (
-        "He said no.\nThen the search began."
+    assert prompts.cut_back("He said no. Then Aldridge") == "He said no."
+    assert prompts.cut_back('He said no. Then Aldridge answered, "Yes') == (
+        "He said no."
+    )
+    assert prompts.cut_back("Was it his? (It was.) Then") == "Was it his? (It was.)"
+    assert prompts.cut_back("no sentence end at all") == "no sentence end at all"
+    assert stitch("He said no. Then Aldridge", "Then Aldridge answered no.") == (
+        "He said no. Then Aldridge answered no."
     )
     assert stitch("Summary:", "\n\nThe stop began at [20:24:36].") == (
         "Summary:\nThe stop began at [20:24:36]."
     )
-    assert stitch("the officer", "Points for counsel:") == (
-        "the officer\nPoints for counsel:"
+    assert stitch("the officer left.", "Points for counsel:\n1. The stop.") == (
+        "the officer left.\nPoints for counsel:\n1. The stop."
     )
     assert stitch("", "Whole.") == "Whole." and stitch("Whole.", "") == "Whole."
+    assert "cut back to the end of its last whole sentence" in prompts.CONTINUE_MEMO
 
 
 def test_the_memo_needs_a_synced_camera_and_reads_a_long_camera_by_words_alone(

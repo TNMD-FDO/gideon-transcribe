@@ -1946,7 +1946,7 @@ def _rows() -> list[Definition]:
             group="The assistant",
             name="Facts sheet answer cap",
             kind=NUMBER,
-            default=8000,
+            default=12000,
             least=1000,
             most=16000,
             unit="tokens",
