@@ -231,6 +231,32 @@ def test_the_ladder_says_where_this_server_sits():
     assert "What a server has, and what that opens:" in rows[5]
 
 
+@needs_bash
+def test_the_cards_memory_is_read_to_the_nearest_gigabyte():
+    """v1.92.1: a 96 GB card reports 97,887 MiB and read as 95 GB."""
+    probe = _sourced(["mib_to_gb"]) + (
+        "\nfor mb in 97887 98304 24576 24000 16380 8192; do"
+        ' printf "%s:%s " "$mb" "$(mib_to_gb $mb)"; done\n'
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.split() == [
+        "97887:96",
+        "98304:96",
+        "24576:24",
+        "24000:23",
+        "16380:16",
+        "8192:8",
+    ]
+    body = text()
+    prerequisites = body.split("prerequisites() {", 1)[1].split("\n}\n", 1)[0]
+    assert "DRIVER_FLOOR" in prerequisites and re.search(
+        r"^DRIVER_FLOOR=570$", body, re.M
+    )
+    migrate = body.split("migrate_the_card_memory() {", 1)[1].split("\n}\n", 1)[0]
+    assert '[ "$gb" != "$(env_value CARD_MEMORY_GB)" ]' in migrate
+
+
 def test_the_install_prints_the_ladder_checks_cdi_and_offers_the_rest():
     body = text()
     install = body.split("cmd_install() {", 1)[1].split("\n}\n", 1)[0]

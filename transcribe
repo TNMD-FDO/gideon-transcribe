@@ -64,6 +64,8 @@ DIARIZER_GB=4
 ENGINE_GB=20
 FAST_LANE_GB=8
 LEAST_CARD_GB=16
+# The oldest driver the pinned stack runs under (docs/research/graphics-cards.md).
+DRIVER_FLOOR=570
 
 green() { printf '\033[32m%s\033[0m\n' "$1"; }
 amber() { printf '\033[33m%s\033[0m\n' "$1"; }
@@ -201,11 +203,17 @@ have_a_card() {
   command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1
 }
 
+mib_to_gb() {
+  # Mebibytes as the driver reports them to the nearest gigabyte (v1.92.1):
+  # a 96 GB card reports 97,887 MiB, which divided down read as 95.
+  echo $((($1 + 512) / 1024))
+}
+
 card_memory_gb() {
   # The card's memory in whole gigabytes, by UUID; empty when it cannot be read.
   local mb
   mb="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits -i "$1" 2>/dev/null | head -1 | tr -dc '0-9')"
-  [ -n "$mb" ] && echo $((mb / 1024))
+  [ -n "$mb" ] && mib_to_gb "$mb"
 }
 
 shared_engine_is_on() {
@@ -277,8 +285,10 @@ cmd_pieces() {
 largest_card_gb() {
   # The largest card's memory in whole gigabytes, or nothing without a card.
   have_a_card || return 0
-  nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null \
-    | tr -dc '0-9\n' | grep . | sort -n | tail -1 | awk '{ printf "%d", $1 / 1024 }'
+  local mb
+  mb="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null \
+    | tr -dc '0-9\n' | grep . | sort -n | tail -1)"
+  [ -n "$mb" ] && mib_to_gb "$mb"
 }
 
 print_the_ladder() {
@@ -1242,7 +1252,16 @@ prerequisites() {
   fi
 
   if command -v nvidia-smi >/dev/null 2>&1; then
-    pass "the nvidia driver $(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)"
+    local driver
+    driver="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)"
+    # The pinned stack wants a driver of 570 or newer (v1.92.1;
+    # docs/research/graphics-cards.md); an older one is a note here, and the
+    # self-test would say so again.
+    if [ "${driver%%.*}" -lt "$DRIVER_FLOOR" ] 2>/dev/null; then
+      note "the nvidia driver is $driver; the transcription stack needs $DRIVER_FLOOR or newer (the install guide's Step 0 shows how to pick a newer one)"
+    else
+      pass "the nvidia driver $driver"
+    fi
     # The container toolkit with CDI is what hands the card to a container;
     # found here (v1.92.0) rather than at the self-test half an hour on.
     if command -v nvidia-ctk >/dev/null 2>&1 && nvidia-ctk cdi list 2>/dev/null | grep -q '^nvidia.com/gpu='; then
@@ -3085,11 +3104,13 @@ migrate_the_card_memory() {
   # v1.92.0: the Installation page says what the card opens, from its
   # memory written to .env by the install; an install from before gets the
   # value here, once, from the card the service reserved.
+  # Read again at every upgrade (v1.92.1), so a replaced card and a changed
+  # rounding both reach the page.
   local gpu gb
   gpu="$(service_env_value WHISPERX_GPU_UUID)"
-  if transcription_is_on && [ -z "$(env_value CARD_MEMORY_GB)" ] && [ -n "$gpu" ] && [ "$gpu" != "<GPU UUID>" ]; then
+  if transcription_is_on && [ -n "$gpu" ] && [ "$gpu" != "<GPU UUID>" ]; then
     gb="$(card_memory_gb "$gpu")"
-    if [ -n "$gb" ]; then
+    if [ -n "$gb" ] && [ "$gb" != "$(env_value CARD_MEMORY_GB)" ]; then
       set_env CARD_MEMORY_GB "$gb"
       pass "recorded the card's memory (${gb} GB) for the Installation page"
     fi

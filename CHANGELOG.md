@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.92.1, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the first look at v1.92.0 on the office's server. **The card's memory
+reads to the nearest gigabyte**: a 96 GB card reports 97,887 MiB and had
+read as 95; the upgrade now re-reads the card's memory every time, so a
+replaced card reaches the Installation page too. **A narrow segment of the
+card's bar carries no label** of its own; the legend under the bar names it.
+**The install notes a driver older than 570**, the floor the transcription
+stack needs, beside the driver check it already made.
+
 ## v1.92.0, 2026-09-26
 
 ```

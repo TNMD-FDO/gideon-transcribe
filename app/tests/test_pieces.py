@@ -199,6 +199,12 @@ def test_where_a_server_sits_on_the_ladder(monkeypatch):
     assert [one["name"] for one in whole["segments"]][-2:] == ["Fast lane", "Room"]
     assert whole["next"].startswith("Nothing left to open")
     assert abs(sum(one["share"] for one in whole["segments"]) - 100) < 0.5
+    # A narrow segment carries no label of its own (v1.92.1): the diarizer's
+    # 4 GB of 96 is 4.2 percent; transcription's 20 GB is 20.8 and labelled.
+    by_name = {one["name"]: one for one in whole["segments"]}
+    assert by_name["Diarizer"]["narrow"] is True
+    assert by_name["Fast lane"]["narrow"] is True
+    assert by_name["Transcription"]["narrow"] is False
     # An engine on the LAN: no Local engine drawn, the assistant is on.
     lan = pieces.fitment(48, engine_on_lan=True)
     assert "engine on the LAN" in lan["words"] and lan["fast_lane_room"] is True
@@ -220,6 +226,8 @@ def test_the_installation_page_and_the_pieces_say_what_the_card_opens(
     page = client.get(reverse("panel-installation")).content.decode()
     assert "What the card opens" in page and "24 GB" in page
     assert "fit-seg fit-t" in page and "fit-seg fit-d" in page
+    # On a 24 GB card every segment is wide enough for its label (v1.92.1).
+    assert "fit-narrow" not in page
     assert "the Local engine needs 44 GB in all" in page
     by_name = {
         one["name"]: one
@@ -234,6 +242,9 @@ def test_the_installation_page_and_the_pieces_say_what_the_card_opens(
     }
     assert "the card has room for it" in by_name["fast-lane"]["says"]
     assert "the card has room for the Local engine" in by_name["engine"]["says"]
+    # On a 96 GB card the diarizer's segment is too narrow for a label.
+    page = client.get(reverse("panel-installation")).content.decode()
+    assert "fit-seg fit-d fit-narrow" in page and "fit-seg fit-t fit-narrow" not in page
     monkeypatch.delenv("CARD_MEMORY_GB")
     page = client.get(reverse("panel-installation")).content.decode()
     assert "no card recorded" in page and "No card:" in page

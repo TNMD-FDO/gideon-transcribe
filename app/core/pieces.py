@@ -127,6 +127,8 @@ def fitment(gb: int | None, *, engine_on_lan: bool = False) -> dict:
         segments.append({"name": "Room", "gb": gb - used, "kind": "room"})
     for one in segments:
         one["share"] = round(one["gb"] / gb * 100, 1)
+        # A label needs room; under this share the legend alone names it.
+        one["narrow"] = one["share"] < 12
     reach = (
         "short recordings"
         if gb < 24

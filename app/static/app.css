@@ -476,6 +476,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .fit-e { background: var(--fit-e); }
 .fit-f { background: var(--fit-f); }
 .fit-room { background: var(--line); color: var(--muted); }
+.fit-seg.fit-narrow { font-size: 0; }
 .fit-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; }
 .fit-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .kv {
