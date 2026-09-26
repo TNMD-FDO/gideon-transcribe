@@ -38,7 +38,7 @@ A user-chosen span of a Recording, marked by a start and an end, with its own ti
 _Avoid_: excerpt (that is the text that goes with a Clip), cut, segment (that is a Transcript unit)
 
 **Clips page**:
-"Clips" in the Rail (the page's heading reads My clips): one table of every Clip the person saved, under a heading row for each place it lives, with Download all. Before v1.30.0 it listed the Workspace's Clips only. See My clips.
+"Clips" in the Rail (the page's heading reads Clips since v1.89.0): one table of every Clip the person saved, under a heading row for each place it lives, with Download all. Before v1.30.0 it listed the Workspace's Clips only. See My clips.
 _Avoid_: clip library
 
 **Adjust**:

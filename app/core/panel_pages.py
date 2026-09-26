@@ -281,6 +281,14 @@ def _service_health() -> dict:
     return {"name": "whisperx", "state": "unreachable", "says": "no answer"}
 
 
+def _when(moment) -> str:
+    """A moment in the office's time: the hour today, the day and hour otherwise."""
+    local = timezone.localtime(moment)
+    if local.date() == timezone.localdate():
+        return f"{local:%H:%M}"
+    return f"{local:%d %b %H:%M}"
+
+
 def _worker(queue: str) -> dict:
     """A worker is alive if its queue has run something lately.
 
@@ -306,18 +314,21 @@ def _worker(queue: str) -> dict:
 
     last = row[0] if row else None
     name = "worker" if queue == "default" else "media-worker"
+    # In the office's own time, with the day when it is not today (v1.93.0);
+    # the row had printed the database's UTC hour, five hours out.
+    when = _when(last) if last else ""
 
     if queue == "default":
         alive = last is not None and (timezone.now() - last).total_seconds() < 300
         return {
             "name": name,
             "state": "healthy" if alive else "not running",
-            "says": f"last ran {last:%H:%M}" if last else "nothing has run yet",
+            "says": f"last ran {when}" if last else "nothing has run yet",
         }
     return {
         "name": name,
         "state": "healthy",
-        "says": f"last media job {last:%d %b %H:%M}" if last else "no media job yet",
+        "says": f"last media job {when}" if last else "no media job yet",
     }
 
 

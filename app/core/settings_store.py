@@ -1970,8 +1970,9 @@ def _rows() -> list[Definition]:
             unit="seconds",
             needs="incidents_memo",
             what_it_does=(
-                "How long the memo's call may take. Doubled while Let the model "
-                "think is On."
+                "How long each of the memo's calls may take, the facts sheet, the "
+                "memo and a continuation each. Doubled while Let the model think "
+                "is On."
             ),
             when_changed="The next memo.",
         ),

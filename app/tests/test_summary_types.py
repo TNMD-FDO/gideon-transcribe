@@ -275,7 +275,7 @@ def test_a_type_that_leaves_the_setting_stays_on_the_template(on, admin, client)
     assert hearing.recording_types == ["Jail call"]
     signed_in(client, admin)
     page = client.get("/panel/templates").content.decode()
-    assert "no longer listed" in page
+    assert "not in your Recording types list" in page
     # Saving the row keeps the greyed type, because the page still sent it.
     client.post(
         f"/panel/templates/summary/{hearing.pk}",

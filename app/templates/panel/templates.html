@@ -78,7 +78,7 @@
             {% for one in item.types %}
               <label class="row" style="gap: 4px{% if one.gone %}; opacity: .6{% endif %}">
                 <input type="checkbox" name="types" value="{{ one.name }}"{% if one.ticked %} checked{% endif %}>
-                {{ one.name }}{% if one.gone %} <span class="muted">(no longer listed)</span>{% endif %}
+                {{ one.name }}{% if one.gone %} <span class="muted">(not in your Recording types list)</span>{% endif %}
               </label>
             {% empty %}
               <span class="muted">none listed under Cases settings</span>

@@ -87,8 +87,9 @@
             ", pyannote " + (service.diarizers.pyannote ? "installed" : "not installed (no Hugging Face token at the pull)")
           : "not reported by this service version"],
         ["GPU", (gpu.name || "") + " " + (gpu.uuid || "")],
-        ["VRAM", gpu.vram_used_mb === undefined ? "" :
-          gpu.vram_used_mb + " MB used, " + gpu.vram_free_mb + " MB free"],
+        // The service reports gigabytes (v1.93.0); nothing while no model is loaded.
+        ["VRAM", (gpu.vram_used_gb === undefined || gpu.vram_used_gb === null) ? "nothing loaded" :
+          gpu.vram_used_gb + " GB used, " + gpu.vram_free_gb + " GB free"],
         ["In line", (line.length === undefined ? "?" : line.length) + " job(s), " +
           (line.audio_minutes === undefined ? "?" : line.audio_minutes) +
           " audio minutes"],
@@ -118,8 +119,8 @@
       facts("fast-lane", [
         ["Model loaded", laneLoaded.model || "none"],
         ["GPU", (laneGpu.name || "") + " " + (laneGpu.uuid || "")],
-        ["VRAM", laneGpu.vram_used_mb === undefined ? "" :
-          laneGpu.vram_used_mb + " MB used"],
+        ["VRAM", (laneGpu.vram_used_gb === undefined || laneGpu.vram_used_gb === null) ? "nothing loaded" :
+          laneGpu.vram_used_gb + " GB used, " + laneGpu.vram_free_gb + " GB free"],
         ["In line", (laneLine.length === undefined ? "?" : laneLine.length) + " job(s)"],
         ["Running now", lane.current_job ? lane.current_job.stage : "nothing"]
       ]);

@@ -93,7 +93,7 @@
                 {% endcomment %}
                 {% if folder_management %}
                   <input type="text" name="to" class="small" style="max-width: 10rem"
-                         placeholder="Give cases to (username)">
+                         placeholder="username">
                   <button type="submit" name="action" value="reassign" class="small"
                           data-confirm-title="Give every case {{ row.user.username }} owns to the named person?" data-confirm="The days left on each case are kept." data-confirm-ok="Reassign">Reassign to a named user</button>
                   <button type="submit" name="action" value="delete-data" class="small ghost danger"

@@ -1,4 +1,4 @@
-// The guide beside the page. The "?" in the top bar opens the user guide (or
+// The guide beside the page. "? Guide beside" in the rail opens the user guide (or
 // the admin guide, from the Panel) in a pane on the right of the page, at the
 // section about the page, and the page makes room for it rather than being
 // covered. It stays open from page to page, each time at that page's section,

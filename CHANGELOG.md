@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.93.0, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The guides brought current, from a walk of the documentation and the app
+at v1.92.1.
+
+**One bug.** The Status page's VRAM row, on the service and on the fast
+lane, had been blank since the service began reporting its memory in
+gigabytes; it reads again, and says "nothing loaded" while no model is.
+The two workers' "last ran" rows printed the database's UTC hour; they
+print the office's own time now, with the day when it is not today.
+
+**Twelve stale passages** in the user guide, the admin guide and the
+glossary, from a week that changed the pages faster than the words: the
+Clips place and its heading; Home as the way back; the rail's Record now
+inside a case; "? Guide beside"; the body
+camera summary as the investigator's memo; the comparison's basis rule
+and omissions cap; the Panel's rail groups; Marking on exports; the
+memo's two passes, its facts sheet cap and template; Omissions at most;
+the twelve prompt templates.
+
+**Four small things on the pages.** A recording type a template carries
+that is not in the office's list reads "not in your Recording types
+list" rather than "no longer listed"; the Users page's Reassign box says
+"username"; the Upload page's first type option reads "No recording
+type"; the memo's time limit says it applies to each of the memo's
+calls.
+
 ## v1.92.2, 2026-09-26
 
 ```

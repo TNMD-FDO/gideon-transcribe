@@ -58,7 +58,7 @@
               </select>
               {% comment %}The type for the batch, asked here where the case is chosen (v1.89.0, from the walk): the case page, the memo and the Timeline report print it, and buried in the options it was mostly left blank.{% endcomment %}
               <select id="batch-type" aria-label="Recording type for the batch" style="margin-top: 6px">
-                <option value="">Recording type: none</option>
+                <option value="">No recording type</option>
                 {% for one in recording_types %}
                   <option value="{{ one }}">{{ one }}</option>
                 {% endfor %}
