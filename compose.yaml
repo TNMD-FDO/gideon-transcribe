@@ -169,6 +169,10 @@ services:
       ALLOWED_CLIENT_CIDRS: "${ALLOWED_CLIENT_CIDRS:-}"
       LLM_NETWORK: "${LLM_NETWORK:-transcribe-llm}"
       COMPOSE_PROFILES: "${COMPOSE_PROFILES:-}"
+      # The card's memory in GB, written by the install (v1.92.0), so the
+      # Installation page can say what the card opens and what the next
+      # size up would; empty on a server with no card.
+      CARD_MEMORY_GB: "${CARD_MEMORY_GB:-}"
       # The upload sidecar, which the status page asks whether it is alive.
       # A fixed address on this stack's own network, not an office fact.
       TUSD_URL: "http://tusd:1080"

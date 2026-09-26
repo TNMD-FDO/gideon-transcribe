@@ -942,6 +942,10 @@ def installation(request: HttpRequest) -> HttpResponse:
     facts += [
         ("WhisperX GPU", _the_services_gpu()),
     ]
+    # Where this server sits on the ladder (v1.92.0): from the card's memory
+    # the install recorded, never asked of the card here.
+    fit = pieces.fitment(pieces.card_memory_gb(), engine_on_lan=pieces._engine_on_lan())
+    facts += [("Card memory", f"{fit['gb']} GB" if fit["gb"] else "no card recorded")]
     # The Backup's read-only rows: the target as account and host, the
     # schedule, the keep rule, and whether its two secrets are set.
     facts += backups.installation_rows()
@@ -969,6 +973,7 @@ def installation(request: HttpRequest) -> HttpResponse:
         {
             **furniture(request, "panel-installation"),
             "facts": facts,
+            "fit": fit,
             "secrets": [
                 (name, "set" if _has_something(path) else "missing")
                 for name, path in secrets

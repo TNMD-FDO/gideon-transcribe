@@ -77,6 +77,23 @@ whether the database migrates.
 | `docs/adr/` | the decisions that are hard to reverse, and why |
 | `docs/research/` | the facts the pins and the designs rest on, with sources |
 
+## What to buy
+
+One number decides most of it: the graphics card's memory. Everything else
+the app needs is an ordinary Ubuntu server. The full ladder, with the
+download sizes and the host figures, is at the top of the install guide.
+
+| The card | What it opens |
+|---|---|
+| none | Cases, incidents, notes, clips, documents; uploads wait for a card |
+| 16 to 23 GB | Transcription of short recordings |
+| 24 to 31 GB | Recordings up to about two hours |
+| 32 GB and up | The measured speed, and room for the fast lane |
+| 44 GB and up | The AI assistant on the Local engine, vision included; or an engine your office already runs on the LAN, with no card here at all |
+| 96 GB | The measured setup, everything at once |
+
+![What a card opens, by its memory](docs/install-ladder.svg)
+
 ## Installing (the short version)
 
 The full guide is [`docs/install.md`](docs/install.md), written for an IT
@@ -101,12 +118,14 @@ CDI):
    data drive, and an empty install home.
 3. **Clone a Release tag** into that install home, then put `cert.pem`,
    `key.pem`, and the CA root into `tls/` and `ca/` if the office has them.
-4. **`./transcribe install`.** It asks what the server has and the office
-   facts in plain words, writes both `.env` files, generates the secrets,
-   and prints what is left for the pieces this install has.
-5. **Pull the images** (and, with a card, prove it and fetch the models),
-   `docker compose up -d`, create the Local admin, and run
-   `./transcribe check`, which prints a plain report of every check.
+4. **`./transcribe install`.** It says where this server sits on the
+   ladder, asks what the server has and the office facts in plain words,
+   writes both `.env` files, generates the secrets, and offers to do the
+   rest itself.
+5. **The rest**, which the install runs when you say yes, or
+   `./transcribe bring-up` runs later: the images, the card's self-test and
+   the models, the start, the Local admin, and `./transcribe check`, which
+   prints a plain report of every check.
 6. **Smoke test.** Sign in, see the status page green, upload one recording
    and watch it through to a transcript, or to "Waiting for the card".
 

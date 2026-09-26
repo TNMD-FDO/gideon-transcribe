@@ -48,7 +48,7 @@ Every setting has a table in the settings catalogue in the repository (`docs/spe
 
 Everything on it is read again every five seconds. It has these blocks.
 
-**Pieces**: the optional parts of this installation (Transcription, the Fast lane, the Engine, the Directory, Mail, the Backup), each on, off, not installed or not answering, with the one command IT runs on the server to add it (`./transcribe add transcription` and the rest). The page runs nothing: the app is never given the Docker socket (ADR 0009). A piece that is not installed is a plain pill, never red; a piece that is installed and does not answer is red. `./transcribe pieces` on the server prints the same list.
+**Pieces**: the optional parts of this installation (Transcription, the Fast lane, the Engine, the Directory, Mail, the Backup), each on, off, not installed or not answering, with the one command IT runs on the server to add it (`./transcribe add transcription` and the rest). A row that is off says what it would take (v1.92.0): whether the card has room for the fast lane or the Local engine, or that the Local engine needs a card of 44 GB and an engine on the LAN needs none. The page runs nothing: the app is never given the Docker socket (ADR 0009). A piece that is not installed is a plain pill, never red; a piece that is installed and does not answer is red. `./transcribe pieces` on the server prints the same list.
 
 **Services**: each container, whether it is listening, and whether its own health check passes. Amber is slow or waiting; red is down. The transcription service reads "not installed" on a server with no card yet.
 
@@ -296,6 +296,8 @@ With a relay named in `.env` (`./transcribe install` or `./transcribe install-ma
 ## The Installation page
 
 What this server is, read from its environment and shown so that an Admin can check an installation without opening a terminal: the address and port, the bind address, the client networks allowed in, the time zone, the app data folder, the WhisperX service's address and the card it reserved, the engine network and profile, the media worker's thread and job limits, and the backup target, schedule, keep rule and last run.
+
+**What the card opens** (v1.92.0): where this server sits on the install guide's ladder, from the card's memory the install recorded (`CARD_MEMORY_GB`): a bar of the card with the transcription service, the diarizer, the Local engine and the fast lane drawn on it in the order the install fills it and the room left grey, a line saying what the card gives (the batch size and how long a recording it runs), and a line saying what the next size up would open. A server with no card reads "no card recorded" and the line says what a card would add. The figures are the app's estimates, the same ones `./transcribe` fits by.
 
 **Secrets** are shown as set or missing, never as values. **How this office gets releases** names the repository and says, in one sentence, that the app never checks for updates: a person subscribes to the repository's Releases on GitHub and runs the upgrade by hand.
 

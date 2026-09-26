@@ -165,3 +165,75 @@ def test_the_service_down_still_refuses_when_the_piece_is_installed(
     assert not Batch.objects.exists()
     page = client.get(reverse("upload")).content.decode()
     assert "Transcription is not available right now" in page
+
+
+def test_where_a_server_sits_on_the_ladder(monkeypatch):
+    """v1.92.0: the card's memory, as the install recorded it, gives the
+    words for the Installation page and the Pieces card, and the bar."""
+    monkeypatch.delenv("CARD_MEMORY_GB", raising=False)
+    assert pieces.card_memory_gb() is None
+    none = pieces.fitment(None)
+    assert none["words"].startswith("No card:") and "44 GB" in none["next"]
+    assert none["segments"] == []
+    small = pieces.fitment(12)
+    assert "under the 16 GB" in small["words"] and small["batch"] == 0
+    card = pieces.fitment(24)
+    assert card["batch"] == 8 and "recordings up to about two hours" in card["words"]
+    assert card["engine_room"] is False and card["fast_lane_room"] is False
+    assert "the Local engine needs 44 GB in all" in card["next"]
+    assert [one["name"] for one in card["segments"]] == ["Transcription", "Diarizer"]
+    assert sum(one["gb"] for one in card["segments"]) == 24
+    big = pieces.fitment(48)
+    assert big["engine_room"] is True and big["fast_lane_room"] is False
+    assert [one["name"] for one in big["segments"]] == [
+        "Transcription",
+        "Diarizer",
+        "Local engine",
+        "Room",
+    ]
+    assert (
+        big["segments"][-1]["gb"] == 4
+        and "the fast lane needs 8 GB more" in big["next"]
+    )
+    whole = pieces.fitment(96)
+    assert [one["name"] for one in whole["segments"]][-2:] == ["Fast lane", "Room"]
+    assert whole["next"].startswith("Nothing left to open")
+    assert abs(sum(one["share"] for one in whole["segments"]) - 100) < 0.5
+    # An engine on the LAN: no Local engine drawn, the assistant is on.
+    lan = pieces.fitment(48, engine_on_lan=True)
+    assert "engine on the LAN" in lan["words"] and lan["fast_lane_room"] is True
+    monkeypatch.setenv("CARD_MEMORY_GB", "24")
+    assert pieces.card_memory_gb() == 24
+    monkeypatch.setenv("CARD_MEMORY_GB", "nonsense")
+    assert pieces.card_memory_gb() is None
+
+
+@pytest.mark.django_db
+def test_the_installation_page_and_the_pieces_say_what_the_card_opens(
+    admin, client, monkeypatch
+):
+    monkeypatch.setenv("COMPOSE_PROFILES", "transcription")
+    monkeypatch.setenv("CARD_MEMORY_GB", "24")
+    monkeypatch.setenv("LLM_NETWORK", "transcribe-llm")
+    monkeypatch.setattr(whisperx, "is_alive", lambda lane="": True)
+    signed_in(client, admin)
+    page = client.get(reverse("panel-installation")).content.decode()
+    assert "What the card opens" in page and "24 GB" in page
+    assert "fit-seg fit-t" in page and "fit-seg fit-d" in page
+    assert "the Local engine needs 44 GB in all" in page
+    by_name = {
+        one["name"]: one
+        for one in client.get(reverse("panel-status-lines")).json()["pieces"]
+    }
+    assert "it needs 8 GB more on the card" in by_name["fast-lane"]["says"]
+    assert "the Local engine needs a card of 44 GB" in by_name["engine"]["says"]
+    monkeypatch.setenv("CARD_MEMORY_GB", "96")
+    by_name = {
+        one["name"]: one
+        for one in client.get(reverse("panel-status-lines")).json()["pieces"]
+    }
+    assert "the card has room for it" in by_name["fast-lane"]["says"]
+    assert "the card has room for the Local engine" in by_name["engine"]["says"]
+    monkeypatch.delenv("CARD_MEMORY_GB")
+    page = client.get(reverse("panel-installation")).content.decode()
+    assert "no card recorded" in page and "No card:" in page

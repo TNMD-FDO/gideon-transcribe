@@ -8,6 +8,8 @@
 #   ./transcribe install      ask what this server has and write both .env files
 #   ./transcribe status       what is running, and whether it is healthy
 #   ./transcribe check        the smoke checks, as a plain report
+#   ./transcribe bring-up     the steps after install, in order: the images, the
+#                             card's self-test, the models, start, the Local admin, check
 #   ./transcribe pieces       which pieces of the install are on, off or not installed
 #   ./transcribe add PIECE    add a piece: transcription, fast-lane, engine, directory,
 #                             mail or backup; each asks its own questions
@@ -53,6 +55,15 @@ CA_DIR="$HERE/ca"
 
 # The app's own account, which is what has to be able to read a secret file.
 APP_USER="${APP_USER:-transcribe}"
+
+# The card budgets in GB (ADR 0015, docs/research/graphics-cards.md): what the
+# install fits by and what the ladder prints. The app carries the same four
+# numbers in core/pieces.py, and a test keeps the two the same (v1.92.0).
+TRANSCRIPTION_GB=20
+DIARIZER_GB=4
+ENGINE_GB=20
+FAST_LANE_GB=8
+LEAST_CARD_GB=16
 
 green() { printf '\033[32m%s\033[0m\n' "$1"; }
 amber() { printf '\033[33m%s\033[0m\n' "$1"; }
@@ -121,7 +132,36 @@ ask() {
     printf '%s\n  : ' "$question" >&2
   fi
   read -r answer
+  # A carriage return from a Windows terminal or a pasted line is not an answer.
+  answer="${answer%$'\r'}"
   printf '%s' "${answer:-$now}"
+}
+
+ask_choice() {
+  # A question with a fixed set of answers, separated by | (v1.92.0): the
+  # first letters are enough, in any case; an answer that matches nothing is
+  # asked again rather than taken as the default. Prints the answer chosen.
+  local question="$1" now="$2" choices="$3" answer one
+  while true; do
+    answer="$(ask "$question ($(printf '%s' "$choices" | tr '|' '/'))" "$now")"
+    answer="$(printf '%s' "$answer" | tr '[:upper:]' '[:lower:]' | sed 's/^ *//; s/ *$//')"
+    if [ -n "$answer" ]; then
+      for one in $(printf '%s' "$choices" | tr '|' ' '); do
+        case "$one" in
+          "$answer"*)
+            printf '%s' "$one"
+            return 0
+            ;;
+        esac
+      done
+    fi
+    echo "  Please answer one of: $(printf '%s' "$choices" | tr '|' ' ')" >&2
+  done
+}
+
+ask_yes_no() {
+  # yes or no by the first letter, with the default for Enter; true for yes.
+  [ "$(ask_choice "$1" "$2" "yes|no")" = "yes" ]
 }
 
 compose() {
@@ -228,8 +268,80 @@ cmd_pieces() {
     piece_line backup off "./transcribe add backup"
   fi
   echo
+  this_server_line "$(largest_card_gb)"
+  echo
   echo "  The Panel's Status page shows the same list; each is added here, on the"
   echo "  server, with one command. The page runs nothing."
+}
+
+largest_card_gb() {
+  # The largest card's memory in whole gigabytes, or nothing without a card.
+  have_a_card || return 0
+  nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null \
+    | tr -dc '0-9\n' | grep . | sort -n | tail -1 | awk '{ printf "%d", $1 / 1024 }'
+}
+
+print_the_ladder() {
+  # What a server has and what that opens (v1.92.0): one table keyed on the
+  # card's memory, then this server's own line. Printed at the top of the
+  # install and by `pieces`; the install guide carries the same table.
+  local gb="${1:-}"
+  echo "What a server has, and what that opens:"
+  echo
+  printf '  %-22s %s\n' "no card" "cases, incidents, notes, clips, documents; uploads wait for a card"
+  printf '  %-22s %s\n' "16 to 23 GB card" "transcription of short recordings (batch size 4)"
+  printf '  %-22s %s\n' "24 to 31 GB card" "recordings up to about two hours (batch size 8)"
+  printf '  %-22s %s\n' "32 GB and up" "the measured speed (batch size 16), and room for the fast lane"
+  printf '  %-22s %s\n' "44 GB and up" "the AI assistant on the Local engine, beside transcription"
+  printf '  %-22s %s\n' "an engine on the LAN" "the AI assistant with no card here at all"
+  echo
+  echo "  Transcription takes $TRANSCRIPTION_GB GB of the card, the diarizer about $DIARIZER_GB GB, the Local"
+  echo "  engine about $ENGINE_GB GB, the fast lane about $FAST_LANE_GB GB. Every figure is an estimate"
+  echo "  until an office measures its card (docs/research/graphics-cards.md)."
+  echo
+  this_server_line "$gb"
+}
+
+this_server_line() {
+  # This server's row of the ladder, in words, from its largest card.
+  local gb="${1:-}" batch line
+  if [ -z "$gb" ]; then
+    echo "  This server: no card. Cases, incidents, notes, clips and documents run;"
+    echo "  recordings people upload wait. A card of 24 GB adds transcription and one"
+    echo "  of 44 GB the AI assistant; an engine on the LAN adds the assistant without a card."
+    return 0
+  fi
+  if [ "$gb" -lt "$LEAST_CARD_GB" ]; then
+    echo "  This server: a ${gb} GB card, under the $LEAST_CARD_GB GB the service and the diarizer"
+    echo "  need, so it runs as a server with no card. A 24 GB card adds transcription."
+    return 0
+  fi
+  batch="$(fit_the_card "$gb")"
+  line="  This server: a ${gb} GB card. Transcription at batch size $batch"
+  if [ "$gb" -lt 24 ]; then
+    line="$line, short recordings"
+  elif [ "$gb" -lt 32 ]; then
+    line="$line, recordings up to about two hours"
+  else
+    line="$line, the measured speed"
+  fi
+  echo "$line."
+  if [ $((gb - TRANSCRIPTION_GB - DIARIZER_GB)) -ge "$ENGINE_GB" ]; then
+    echo "  Room for the Local engine beside it: the AI assistant, vision included."
+    if [ $((gb - TRANSCRIPTION_GB - DIARIZER_GB - ENGINE_GB)) -ge "$FAST_LANE_GB" ]; then
+      echo "  Room for the fast lane too."
+    else
+      echo "  No room left for the fast lane beside the engine ($FAST_LANE_GB GB more)."
+    fi
+  else
+    echo "  The Local engine needs $((TRANSCRIPTION_GB + DIARIZER_GB + ENGINE_GB)) GB in all; a card of that size, or an"
+    echo "  engine on the LAN, adds the AI assistant."
+    if [ $((gb - TRANSCRIPTION_GB - DIARIZER_GB)) -ge "$FAST_LANE_GB" ]; then
+      echo "  Room for the fast lane ($FAST_LANE_GB GB)."
+    else
+      echo "  No room for the fast lane ($FAST_LANE_GB GB more)."
+    fi
+  fi
 }
 
 # status -----------------------------------------------------------------------
@@ -503,6 +615,18 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
   else
     fail "the service does not answer"
   fi
+  # A bigger card in place of the one the batch size was fitted to (v1.92.0).
+  if transcription_is_on && have_a_card; then
+    local gpu_now gb_now batch_now fit_now
+    gpu_now="$(service_env_value WHISPERX_GPU_UUID)"
+    gb_now="$(card_memory_gb "$gpu_now")"
+    batch_now="$(service_env_value WHISPERX_BATCH_SIZE)"
+    fit_now=""
+    [ -n "$gb_now" ] && fit_now="$(fit_the_card "$gb_now")"
+    if [ -n "$fit_now" ] && [ -n "$batch_now" ] && [ "$fit_now" -gt "$batch_now" ] 2>/dev/null; then
+      note "the card has ${gb_now} GB, room for batch size $fit_now (it is set to $batch_now): ./transcribe add transcription refits it"
+    fi
+  fi
   if ! transcription_is_on; then
     :
   elif fast_lane_is_on; then
@@ -618,6 +742,8 @@ cmd_install() {
   echo
 
   prerequisites || exit 1
+  print_the_ladder "$(largest_card_gb)"
+  echo
 
   [ -f "$ENV_FILE" ] || cp "$HERE/.env.example" "$ENV_FILE"
   [ -f "$SERVICE_ENV" ] || cp "$HERE/whisperx-service/.env.example" "$SERVICE_ENV"
@@ -627,8 +753,8 @@ cmd_install() {
   cmd_directory
   make_the_secrets
   ask_the_card
+  ask_the_engine
   if transcription_is_on; then
-    ask_the_engine
     ask_the_fast_lane
   fi
   ask_the_backup
@@ -638,6 +764,80 @@ cmd_install() {
   make_the_data_folders
 
   print_what_remains "$build"
+  echo
+  # The steps that remain are the script's to run (v1.92.0); only the page
+  # runs nothing (ADR 0009).
+  if ask_yes_no "Do the rest now, in that order?" yes; then
+    cmd_bring_up "$( [ "$build" = "yes" ] && echo --build || true)"
+  else
+    echo "  When you are ready:   ./transcribe bring-up"
+  fi
+}
+
+cmd_bring_up() {
+  # The steps after install, in order (v1.92.0): the images, the card's
+  # self-test and the models when transcription is on, the start, the Local
+  # admin, the checks. The first failure stops here with the line that says
+  # what to do; running again picks up where it stopped, since every step is
+  # safe to run twice.
+  need_env
+  local build="${1:-}" n=1
+  if [ ! -s "$HERE/tls/cert.pem" ] || [ ! -s "$HERE/tls/key.pem" ]; then
+    red "There is no certificate in tls/ yet. Put cert.pem and key.pem there, or make a self-signed one (./transcribe tls self-signed), then run: ./transcribe bring-up"
+    exit 1
+  fi
+  echo "Bringing the stack up, in order. The first failure stops here and says what to do."
+  echo
+  if [ "$build" = "--build" ]; then
+    echo "$n. Building the images here (twenty to forty minutes the first time)."
+    compose build || { red "The build failed; the message above says why, usually a host in the guide's appendix the server could not reach. When it is fixed: ./transcribe bring-up --build"; exit 1; }
+  else
+    echo "$n. Pulling the images."
+    if ! compose pull --quiet; then
+      amber "The images could not be pulled; building them here instead (twenty to forty minutes)."
+      compose build || { red "The build failed; the message above says why. When it is fixed: ./transcribe bring-up --build"; exit 1; }
+    fi
+  fi
+  n=$((n + 1))
+  if transcription_is_on; then
+    echo
+    echo "$n. Proving the card: the service's self-test."
+    compose run --rm whisperx selftest || { red "The self-test failed on this card; see above. Nothing was started. When it is fixed: ./transcribe bring-up"; exit 1; }
+    n=$((n + 1))
+    echo
+    echo "$n. Fetching the models (about 6.5 GB, once)."
+    compose run --rm whisperx pull || { red "The models could not be fetched; is huggingface.co reachable from this server? When it is: ./transcribe bring-up"; exit 1; }
+    n=$((n + 1))
+  fi
+  echo
+  echo "$n. Starting everything."
+  compose up -d || { red "The stack did not start; ./transcribe logs shows why. When it is fixed: ./transcribe bring-up"; exit 1; }
+  n=$((n + 1))
+  echo
+  echo "$n. The Local admin: an Admin kept inside the app, for the Panel when the directory is down."
+  if compose exec -T app python manage.py shell -c "from core.models import User; raise SystemExit(0 if User.objects.filter(is_local=True).exists() else 1)" >/dev/null 2>&1; then
+    pass "a Local admin exists already"
+  else
+    echo "  Give it a long password and keep that where the office keeps such things."
+    compose run --rm app create-local-admin || { red "The Local admin was not made. Make it with: docker compose run --rm app create-local-admin"; exit 1; }
+  fi
+  n=$((n + 1))
+  echo
+  echo "$n. The checks."
+  echo
+  FAILURES=0
+  cmd_check || true
+  echo
+  if certificate_is_self_signed; then
+    echo "  Every workstation must trust tls/self-signed-root.pem once, or the browser"
+    echo "  warns at every sign-in: ./transcribe tls self-signed prints how."
+  fi
+  if backup_on; then
+    echo "  The first Snapshot and the first proof that it restores:"
+    echo "    ./transcribe backup"
+    echo "    ./transcribe restore-drill"
+  fi
+  echo "  Then sign in at https://$(env_value APP_HOSTNAME):$(env_value HTTPS_PORT)/ as the Local admin."
 }
 
 print_what_remains() {
@@ -701,21 +901,15 @@ ask_the_card() {
     echo "and transcribed when the card arrives:   ./transcribe add transcription"
     return 0
   fi
-  echo "The cards on this server:"
-  nvidia-smi --query-gpu=index,name,memory.total,uuid --format=csv,noheader 2>/dev/null | sed 's/^/  /'
-  echo
-  echo "Transcription needs one card with 24 GB of memory to spare (20 GB for"
-  echo "the service and about 4 GB for the diarizer, for recordings up to two"
+  echo "Transcription needs one card with $((TRANSCRIPTION_GB + DIARIZER_GB)) GB of memory to spare ($TRANSCRIPTION_GB GB for"
+  echo "the service and about $DIARIZER_GB GB for the diarizer, for recordings up to two"
   echo "hours). Without it everything else works and recordings wait for it."
-  local answer
-  answer="$(ask "Use a card for transcription now? (yes or no)" "$( transcription_is_on && echo yes || echo yes)")"
-  case "$answer" in
-    y|Y|yes|YES|Yes) configure_transcription ;;
-    *)
-      echo "  Transcription is not installed now. When it should be:"
-      echo "  ./transcribe add transcription"
-      ;;
-  esac
+  if ask_yes_no "Use a card for transcription now?" yes; then
+    configure_transcription
+  else
+    echo "  Transcription is not installed now. When it should be:"
+    echo "  ./transcribe add transcription"
+  fi
 }
 
 fit_the_card() {
@@ -754,6 +948,8 @@ configure_transcription() {
       return 1
     fi
     set_service_env WHISPERX_BATCH_SIZE "$batch"
+    # The Installation page says what the card opens (v1.92.0).
+    set_env CARD_MEMORY_GB "$gb"
     if [ "$gb" -lt 24 ]; then
       amber "That card has ${gb} GB: under the 24 GB the service and the diarizer want to spare. Batch size $batch; short recordings will do, and a recording over an hour may run out of memory (docs/research/graphics-cards.md)."
     elif [ "$gb" -lt 32 ]; then
@@ -769,35 +965,42 @@ configure_transcription() {
 }
 
 ask_the_engine() {
-  # The AI assistant's engine, at install, once a card is named: the Local
-  # engine on that card when it has room, a shared one, or none.
+  # The AI assistant's engine, in every install (v1.92.0): the Local engine
+  # on the transcription card when it has room, a shared one on the LAN
+  # whether or not this server has a card, or none.
   echo
-  echo "The AI assistant (summaries, chat, proposed events, vision) needs a"
-  echo "language-model engine. This server can run a small one itself, the"
-  echo "Local engine, beside transcription on the same card, when the card has"
-  echo "about 20 GB more to give. An office that already runs an engine on the"
-  echo "LAN points the app at it instead. Or leave the assistant off for now:"
-  echo "everything else works, and ./transcribe add engine turns it on later."
-  local gpu gb room=no suggested=none
-  gpu="$(service_env_value WHISPERX_GPU_UUID)"
-  gb="$(card_memory_gb "$gpu")"
-  if [ -n "$gb" ] && [ $((gb - 24)) -ge 20 ]; then
-    room=yes
-    suggested=local
-    echo "  The card has ${gb} GB: room for the Local engine beside transcription."
-  elif [ -n "$gb" ]; then
-    echo "  The card has ${gb} GB: not enough for the Local engine beside transcription."
+  echo "The AI assistant (summaries, chat, proposed events, the memo, vision)"
+  echo "needs a language-model engine. An office that already runs one on the"
+  echo "LAN points the app at it (shared), and that needs no card here. This"
+  echo "server can run a small one itself (local), beside transcription on the"
+  echo "same card, when the card has about $ENGINE_GB GB more to give. Or leave the"
+  echo "assistant off for now (none): everything else works, and"
+  echo "./transcribe add engine turns it on later."
+  local gpu="" gb="" room=no suggested=none choices="shared|none"
+  if transcription_is_on; then
+    gpu="$(service_env_value WHISPERX_GPU_UUID)"
+    gb="$(card_memory_gb "$gpu")"
+    if [ -n "$gb" ] && [ $((gb - TRANSCRIPTION_GB - DIARIZER_GB)) -ge "$ENGINE_GB" ]; then
+      room=yes
+      suggested=local
+      echo "  The card has ${gb} GB: room for the Local engine beside transcription."
+    elif [ -n "$gb" ]; then
+      echo "  The card has ${gb} GB: not enough for the Local engine beside transcription"
+      echo "  ($((TRANSCRIPTION_GB + DIARIZER_GB + ENGINE_GB)) GB in all); a shared engine still opens the assistant."
+    fi
+    choices="local|shared|none"
+  else
+    echo "  This server has no card for transcription, so the Local engine is not on"
+    echo "  offer; a shared engine on the LAN opens the assistant without one."
   fi
-  local answer
-  answer="$(ask "The engine: local, shared, or none" "$suggested")"
-  case "$answer" in
-    local|Local|LOCAL)
+  case "$(ask_choice "The engine" "$suggested" "$choices")" in
+    local)
       if [ "$room" != "yes" ]; then
         amber "The card is short of room for the Local engine; it may still run with a smaller share. Continuing."
       fi
       configure_the_local_engine "$gpu" "$gb"
       ;;
-    shared|Shared|SHARED) cmd_engine || true ;;
+    shared) cmd_engine || true ;;
     *) echo "  No engine. The AI assistant is off; ./transcribe add engine later." ;;
   esac
 }
@@ -844,11 +1047,9 @@ ask_the_certificate() {
   echo "the request) and puts it in tls/. An office without one can have a"
   echo "self-signed certificate made now: workstations trust its root once,"
   echo "and the office's own certificate replaces it later without a reinstall."
-  local answer
-  answer="$(ask "The certificate: the office's own (yes), or make a self-signed one now (self-signed)" "$( certificate_is_self_signed && echo self-signed || echo yes)")"
-  case "$answer" in
-    self-signed|self|s|S) make_a_self_signed_certificate ;;
-    *) echo "  Put cert.pem and key.pem in tls/ before 'docker compose up -d'." ;;
+  case "$(ask_choice "The certificate: the office's own, or a self-signed one made now" "$( certificate_is_self_signed && echo self-signed || echo own)" "own|self-signed")" in
+    self-signed) make_a_self_signed_certificate ;;
+    *) echo "  Put cert.pem and key.pem in tls/ before the stack is started." ;;
   esac
 }
 
@@ -921,10 +1122,14 @@ cmd_add() {
       cmd_fast_lane_on
       ;;
     engine)
-      local answer
-      answer="$(ask "The engine: local (a small model on this server's card) or shared (an engine on the LAN)" "local")"
-      case "$answer" in
-        shared|Shared|SHARED) cmd_engine && compose up -d ;;
+      local choices="local|shared" suggested=local
+      if ! transcription_is_on; then
+        echo "  This server has no card for transcription, so the Local engine is not on offer."
+        choices="shared"
+        suggested=shared
+      fi
+      case "$(ask_choice "The engine: local (a small model on this server's card) or shared (an engine on the LAN)" "$suggested" "$choices")" in
+        shared) cmd_engine && compose up -d ;;
         *) cmd_engine_local_on ;;
       esac
       ;;
@@ -1038,6 +1243,13 @@ prerequisites() {
 
   if command -v nvidia-smi >/dev/null 2>&1; then
     pass "the nvidia driver $(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)"
+    # The container toolkit with CDI is what hands the card to a container;
+    # found here (v1.92.0) rather than at the self-test half an hour on.
+    if command -v nvidia-ctk >/dev/null 2>&1 && nvidia-ctk cdi list 2>/dev/null | grep -q '^nvidia.com/gpu='; then
+      pass "the container toolkit's CDI list names the card"
+    else
+      note "the container toolkit's CDI list is empty or nvidia-ctk is missing: Docker cannot hand the card to a container until it is (the install guide's Step 0 has the commands)"
+    fi
   else
     # Not a stop (v1.83.0): an office installs without a card and adds
     # transcription when the card and its driver arrive.
@@ -1155,15 +1367,35 @@ make_the_data_folders() {
 }
 
 ask_the_gpu() {
+  # The card, by its number in the list or its UUID (v1.92.0); with one
+  # card, Enter takes it. The service keeps the UUID, never the number, so
+  # that adding a card cannot move it onto somebody else's.
   echo
-  echo "The GPUs on this server:"
-  nvidia-smi -L | sed 's/^/  /'
+  echo "The cards on this server:"
+  local listed count now value picked
+  listed="$(nvidia-smi --query-gpu=index,name,memory.total,uuid --format=csv,noheader 2>/dev/null)"
+  count="$(printf '%s\n' "$listed" | grep -c .)"
+  printf '%s\n' "$listed" | awk -F', ' '{ printf "  %d. %s, %s (%s)\n", NR, $2, $3, $4 }'
   echo
-  echo "The WhisperX service reserves one card by its UUID, never by its"
-  echo "number, so that adding a card cannot move it onto somebody else's."
-  local value
-  value="$(ask "Paste the UUID of the card the service should use
-  (the GPU-... part above)" "$(service_env_value WHISPERX_GPU_UUID)")"
+  now="$(service_env_value WHISPERX_GPU_UUID)"
+  case "$now" in "<GPU UUID>") now="" ;; esac
+  if [ "$count" -eq 1 ] && [ -z "$now" ]; then
+    now="$(printf '%s\n' "$listed" | awk -F', ' 'NR == 1 { print $4 }')"
+  fi
+  while true; do
+    value="$(ask "The card for transcription: its number in the list, or its UUID" "$now")"
+    case "$value" in
+      GPU-*) break ;;
+      [0-9]*)
+        picked="$(printf '%s\n' "$listed" | awk -F', ' -v n="$value" 'NR == n { print $4 }')"
+        if [ -n "$picked" ]; then
+          value="$picked"
+          break
+        fi
+        ;;
+    esac
+    echo "  Please give a number from the list, or the GPU-... UUID." >&2
+  done
   set_service_env WHISPERX_GPU_UUID "$value"
 }
 
@@ -1595,14 +1827,23 @@ ask_the_fast_lane() {
   echo
   echo "The fast lane is a second copy of the transcription service, for what"
   echo "must not wait behind a long job: a recording made in the app, and later"
-  echo "the interpreter. It needs about eight gigabytes of the card's memory."
+  echo "the interpreter. It needs about $FAST_LANE_GB GB of the card's memory."
   echo "Without it those still work, at the front of the one service's line."
-  local answer
-  answer="$(ask "Turn on the fast lane? (yes or no)" "$( fast_lane_is_on && echo yes || echo no)")"
-  case "$answer" in
-    y|Y|yes|YES|Yes) turn_the_fast_lane_on quiet ;;
-    *) ;;
-  esac
+  # The room, said before the question (v1.92.0), as the engine's is.
+  local gb used suggested
+  gb="$(card_memory_gb "$(service_env_value WHISPERX_GPU_UUID)")"
+  used=$((TRANSCRIPTION_GB + DIARIZER_GB))
+  local_engine_is_on && used=$((used + ENGINE_GB))
+  suggested="$( fast_lane_is_on && echo yes || echo no)"
+  if [ -n "$gb" ] && [ $((gb - used)) -ge "$FAST_LANE_GB" ]; then
+    echo "  The card has ${gb} GB: room for the fast lane beside what is on it."
+  elif [ -n "$gb" ]; then
+    echo "  The card has ${gb} GB: not enough room for the fast lane beside what is on it."
+    suggested=no
+  fi
+  if ask_yes_no "Turn on the fast lane?" "$suggested"; then
+    turn_the_fast_lane_on quiet
+  fi
 }
 
 turn_the_fast_lane_on() {
@@ -2757,6 +2998,7 @@ finish_the_upgrade() {
   # which the app could then never write into.
   ensure_the_service_env
   migrate_the_profiles
+  migrate_the_card_memory
   make_the_data_folders
   ensure_the_token_file
 
@@ -2839,6 +3081,21 @@ migrate_the_profiles() {
   fi
 }
 
+migrate_the_card_memory() {
+  # v1.92.0: the Installation page says what the card opens, from its
+  # memory written to .env by the install; an install from before gets the
+  # value here, once, from the card the service reserved.
+  local gpu gb
+  gpu="$(service_env_value WHISPERX_GPU_UUID)"
+  if transcription_is_on && [ -z "$(env_value CARD_MEMORY_GB)" ] && [ -n "$gpu" ] && [ "$gpu" != "<GPU UUID>" ]; then
+    gb="$(card_memory_gb "$gpu")"
+    if [ -n "$gb" ]; then
+      set_env CARD_MEMORY_GB "$gb"
+      pass "recorded the card's memory (${gb} GB) for the Installation page"
+    fi
+  fi
+}
+
 models_changed() {
   git -C "$HERE" show "$1:CHANGELOG.md" 2>/dev/null |
     sed -n "/^## $1/,/^## /p" | grep -qE '^Models: *changed'
@@ -2903,13 +3160,14 @@ cmd_restore_dump() {
 # ------------------------------------------------------------------------------
 
 usage() {
-  sed -n '3,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '3,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in
 install) shift && cmd_install "$@" ;;
 status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
+bring-up) shift && cmd_bring_up "$@" ;;
 pieces) shift && cmd_pieces "$@" ;;
 add) shift && cmd_add "$@" ;;
 remove) shift && cmd_remove "$@" ;;

@@ -10,25 +10,34 @@ The app runs on one server in your office, on Docker, and nothing it does leaves
 
 The app is installed in pieces. The server alone runs the app; each piece is added when the office has what it needs, at install or later with one command. Nothing has to wait for everything: an office whose graphics card is still on order installs today and adds transcription when the card arrives.
 
-| What the server has | What it gives you | What it needs |
-|---|---|---|
-| **The server alone** | Cases, incidents synced by their clocks or by sound, notes, the chronology, clips, documents, sharing, the Panel. Recordings people upload are kept and wait for the card. | Ubuntu Server 24.04 or newer; Docker with the Compose plugin; a data drive; a name in your DNS; a certificate (the office's own, or a self-signed one the install makes). |
-| **A graphics card** (the Transcription piece) | Transcription, translation to English, speakers told apart, the Speakers page. | One NVIDIA card with **24 GB of video memory to spare**: 20 GB for the transcription service and about 4 GB for the diarizer beside it, enough for recordings up to two hours; the diarizer takes about 2.5 GB more for every further hour. A card with less runs short recordings (the install sets a smaller batch size: 8 from 24 GB, 4 from 16 GB); under 16 GB the install refuses. Any NVIDIA card of compute capability 7.5 or newer under a driver of 570 or newer is expected to run the stack; the self-test says whether yours has been verified. The NVIDIA driver (`nvidia-smi` prints the card) and the container toolkit with CDI (`nvidia-ctk cdi list` prints it). |
-| **Room on the card for an engine** (the Engine piece, Local) | The AI assistant: summaries, chat, proposed events, the incident memo, vision. | About **20 GB more** of the same card for the Local engine (`LLM_LOCAL_GPU_FRACTION` in the appendix is how the two share it); or an engine your office already runs on the LAN, which needs no room here. |
-| **The fast lane** (a piece) | A recording made in the app transcribed without waiting behind a long job. | About **8 GB more** of the card. |
-| **The office directory** (a piece) | Sign-in with office accounts and groups. | Active Directory: a sign-in group, a read-only account, the CA root. Without it, Local admins only. |
-| **A mail relay** (a piece) | Notifications, the retention digest, the Operator mail. | An SMTP relay that accepts the server's mail. |
-| **A backup store** (a piece) | Nightly encrypted Snapshots off the box and a monthly restore drill. | An SFTP account on an office file store. |
+**One number decides most of it: the graphics card's memory.** This is the ladder. `./transcribe install` prints it with your server's own row marked, `./transcribe pieces` prints your row, and the Panel's Installation page shows it as a bar.
 
-Those memory figures come from measuring the service on six hours of real recordings and adding room; they are in the service's own README under "GPU budget", and `docs/research/graphics-cards.md` keeps what offices report about their cards.
+| What the server has | What it opens | Card memory | What else it needs |
+|---|---|---|---|
+| **The server alone** | Cases, incidents, chronology, notes, clips, documents, sharing, the Panel. Recordings people upload are kept and wait for a card. | none | Ubuntu Server 24.04 or newer; Docker with the Compose plugin; a data drive; a name in your DNS; a certificate (the install makes a self-signed one). About 6 GB of images to fetch, once. |
+| **+ a small card** | Transcription, translation to English, speakers told apart, the Speakers page; short recordings. | 16 to 23 GB | The NVIDIA driver (570 or newer) and the container toolkit with CDI. Batch size 4; a recording over an hour may run out of memory. About 6.5 GB of models to fetch, once. |
+| **+ a card** | The same, for recordings up to about two hours. | 24 to 31 GB | Batch size 8. |
+| **+ a larger card** | The same, at the measured speed. | 32 GB and up | Batch size 16. |
+| **+ room for the engine** | The AI assistant: summaries, chats, proposed events, the incident memo and its facts sheet, the comparison, and vision (the Local engine's model reads pictures). | 44 GB and up | The Local engine takes about 20 GB beside transcription and fetches about 8 GB of model, once. **Or** an engine your office already runs on the LAN, which needs no card here at all. |
+| **+ the fast lane** | A recording made in the app transcribed without waiting behind a long job. | + 8 GB | 32 GB with transcription alone; 52 GB with the engine too. |
+| **The measured setup** | Everything at once, as the office that wrote the app runs it. | 96 GB | One card; the only configuration measured end to end. |
+
+![What a card opens, by its memory](install-ladder.svg)
+
+Any NVIDIA card of compute capability 7.5 or newer under a driver of 570 or newer is expected to run the stack; the self-test says whether yours has been verified, and `docs/research/graphics-cards.md` keeps what is verified, what is expected, example cards for each row, and what offices report. The memory figures come from measuring the service on six hours of real recordings and adding room (the service's own README, "GPU budget"): the transcription service holds 20 GB, the diarizer about 4 GB and about 2.5 GB more for every hour of a recording past the first, the Local engine about 20 GB, the fast lane about 8 GB. Every figure is an estimate until an office measures its card.
+
+The other pieces need no hardware: **the office directory** (sign-in with office accounts and groups; without it, Local admins only), **a mail relay** (notifications, the retention digest, the Operator mail) and **a backup store** (nightly encrypted Snapshots off the box and a monthly restore drill; an SFTP account on an office file store).
+
+**The quickest install**, to see it work: the server alone, a self-signed certificate, Local admins only, one recording through to "Waiting for the card". Step 0, Steps 1 and 2, then `./transcribe install` answering `self-signed`, `no` to the directory and Enter to the rest, and `yes` when it offers to do the rest. About thirty minutes after Ubuntu is prepared, most of it the downloads. Every other piece is added later with one command, and nothing done for the quick install is undone.
 
 **The server itself** needs:
 
-- **Ubuntu Server 24.04 or newer.**
+- **Ubuntu Server 24.04 or newer.** Step 0 below prepares it: Docker, and with a card the driver and the container toolkit.
 - **Docker with the Compose plugin.** `docker compose version` prints a version when it is right. The app needs Compose as a plugin (`docker compose`, with a space), not the older separate `docker-compose`.
+- **Memory, cores and disk.** The office that wrote the app runs it on a server with 8 cores and 64 GB of memory beside a 96 GB card; without a card, 16 GB of memory and 4 cores are enough for the app, its workers and the database, and the diarizer beside the transcription service wants about 4 GB more. The root disk holds Docker's images and build cache: keep 100 GB free there, and the upgrade refuses to build an image with under 40 GB.
 - **A data drive**, separate from the drive the operating system is on, and large. Recordings are big: a six-hour body-worn camera export is about 13 GB. The app keeps 200 GB free on this drive by default and pauses uploads when it cannot.
 - **An account on the server with `sudo` and in the `docker` group**, for the person installing. This guide calls it the compose admin. It is a separate thing from the `transcribe` account the app runs as, which is made in the server preparation step and is never in the docker group.
-- **For the transcription piece**, now or later: the NVIDIA driver and the NVIDIA container toolkit with CDI turned on, so Docker can hand the card to a container.
+- **For the transcription piece**, now or later: the NVIDIA driver and the NVIDIA container toolkit with CDI turned on, so Docker can hand the card to a container. Step 0 has the commands; `./transcribe install` checks both.
 
 **A name and a certificate.** The app answers on one hostname in your office's DNS, over HTTPS. The certificate comes from your office's own certificate authority (section 2 has the request), or the install makes a self-signed one now and the office's own replaces it later.
 
@@ -126,6 +135,65 @@ You will type the token once, into `./transcribe install`, or press Enter to giv
 
 ## 3. Install
 
+### Step 0: prepare Ubuntu
+
+Three things the app needs from the operating system, each with the command that installs it and the check that it worked. The commands are the ones the makers publish (`docs/research/ubuntu-preparation.md` has where each was read and when); run them as the compose admin.
+
+**Docker with the Compose plugin**, from Docker's own repository:
+
+```bash
+sudo apt update && sudo apt install -y ca-certificates curl && sudo install -m 0755 -d /etc/apt/keyrings && sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && sudo chmod a+r /etc/apt/keyrings/docker.asc
+```
+
+```bash
+sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+```
+
+```bash
+sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Sign out and in again so the group takes. Check: `docker compose version` prints a version, and `docker run --rm hello-world` prints a greeting.
+
+**The NVIDIA driver** (only with a card, now or when it arrives):
+
+```bash
+sudo ubuntu-drivers install --gpgpu
+```
+
+Then reboot. Check: `nvidia-smi` prints the card and a driver of 570 or newer. If it prints an older driver, `sudo ubuntu-drivers list --gpgpu` shows the ones on offer, and `sudo apt install nvidia-driver-<version>-server` picks a newer one.
+
+**The NVIDIA container toolkit with CDI** (only with a card), from NVIDIA's own repository:
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
+```
+
+```bash
+sudo apt update && sudo apt install -y nvidia-container-toolkit
+```
+
+```bash
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+```
+
+```bash
+sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+```
+
+Check: `nvidia-ctk cdi list` prints a line beginning `nvidia.com/gpu=` for the card. `./transcribe install` runs the same check and says so when it is missing. After a driver upgrade, run the `cdi generate` line again.
+
 ### Step 1: prepare the server
 
 One `sudo` session, as the compose admin. Replace `<App data folder>` with a folder on the data drive, for example `/data/transcribe`, and `<Install home>` with where the code will live, for example `/opt/gideon-transcribe`.
@@ -178,26 +246,33 @@ Check: `ls -l tls ca` shows the three files, the key readable only by you.
 ./transcribe install
 ```
 
-It first checks what the server has: Docker, the Compose plugin, the `transcribe` account, and the NVIDIA driver. Docker, Compose and the account are required and it stops without them; a missing driver is a note, and the install goes on without transcription.
+It first checks what the server has: Docker, the Compose plugin, the `transcribe` account, the NVIDIA driver and, with a driver, the container toolkit's CDI list. Docker, Compose and the account are required and it stops without them; a missing driver or an empty CDI list is a note, and the install goes on without transcription. Then it prints the ladder from section 1 with this server's row marked, so you see what this install will be before the questions start.
 
-Then it asks, in plain words, in this order, offering a sensible default where there is one:
+Then it asks, in plain words, in this order, offering a sensible default where there is one. For every question with fixed answers the first letter is enough, in any case, Enter takes the default in brackets, and an answer that matches nothing is asked again:
 
 - the address people will type, the port, the server's LAN address to listen on, which networks may connect, the App data folder and the time zone;
-- the certificate: the office's own already in `tls/` (yes), or a self-signed one made now (`self-signed`);
+- the certificate: the office's own already in `tls/` (`own`), or a self-signed one made now (`self-signed`);
 - whether directory sign-in is on, and if so the directory's address, the bind account and its password, the base DN, and the two groups; no means Local admins only;
-- the card: with a driver it lists the cards with their memory and asks whether to use one for transcription now, chosen by its UUID rather than its number, because numbers move between reboots, and then the Hugging Face token (Enter for none); without a driver, or with no for now, transcription is not installed and it says the one command that adds it later;
-- with a card: the AI assistant's engine, `local` (the Local engine on that card, offered when the card has about 20 GB to spare beyond transcription), `shared` (an engine your office already runs: the Docker network it listens on, its address, its model name and its token), or `none`; and then whether to turn on the fast lane;
+- the card: with a driver it lists the cards, numbered, with their memory, and asks whether to use one for transcription now; with one card, Enter takes it, and with several you give its number in the list (the service keeps the card's UUID, never its number, because numbers move between reboots); then the Hugging Face token (Enter for none). Without a driver, or with no for now, transcription is not installed and it says the one command that adds it later;
+- the AI assistant's engine, asked in every install: `local` (the Local engine on the transcription card, offered when the card has about 20 GB to spare beyond transcription), `shared` (an engine your office already runs on the LAN, which needs no card here: the Docker network it listens on, its address, its model name and its token), or `none`;
+- with a card: whether to turn on the fast lane, after it says whether the card has the 8 GB to spare;
 - the backup target and the mail relay, each with Enter for none.
 
 Nothing you type leaves the server, and none of it is ever committed to the repository. The random secrets the app needs, the database password and the like, it makes itself; nobody types them.
 
-It writes two environment files, `.env` here and `whisperx-service/.env`, and the secret files under `secrets/` and `whisperx-service/secrets/`. Then it prints what is left, in order, for the pieces this install has, which is Step 5.
+It writes two environment files, `.env` here and `whisperx-service/.env`, and the secret files under `secrets/` and `whisperx-service/secrets/`. Then it prints what is left, in order, for the pieces this install has, and asks **Do the rest now?** Yes runs Step 5 for you; no leaves it for `./transcribe bring-up` when you are ready.
 
 If you run it a second time it refuses to overwrite anything. `./transcribe install --reconfigure` is how you change the office facts later, and `./transcribe directory` changes only the directory ones.
 
 ### Step 5: bring it up
 
-The things install printed, in order. Each is one command, run from the install home.
+One command runs the whole of this step in order, stopping at the first thing that fails with a line saying what to do, and it is safe to run again from where it stopped:
+
+```bash
+./transcribe bring-up
+```
+
+(`./transcribe bring-up --build` builds the images on the server instead of pulling them.) It pulls the images, proves the card and fetches the models when transcription is on, starts everything, makes the Local admin when there is none (it asks you for the password), and ends with `./transcribe check`. The install offers to run it for you at the end of its questions. The same steps by hand, for a reader who wants to see each one:
 
 **Get the images.** Compose pulls the app's three images from the registry (the app, the transcription service, and the diarizer beside it), and the upstream ones (the database, the web server, the upload sidecar):
 
@@ -258,6 +333,17 @@ lists the pieces with their state (on, off, not installed) and the command for e
 ```
 
 when the card and its driver are in: it lists the cards, names one, takes the Hugging Face token if you have one, pulls the two images, runs the self-test, fetches the models, starts the service and the diarizer, and checks that the service answers. Recordings uploaded while there was no card are picked up within a minute. `./transcribe add engine` (below, the Local engine or a shared one), `./transcribe add fast-lane`, `./transcribe add directory`, `./transcribe add mail` and `./transcribe add backup` are the rest. `./transcribe remove transcription`, `fast-lane` or `engine` stop a piece and free its memory; the directory, mail and the backup are changed by running `add` again.
+
+**When the hardware changes**, the paths are these, one command each:
+
+| The change | What it opens | The command |
+|---|---|---|
+| A card goes into a server that had none | Transcription; the recordings that waited are picked up within a minute | Step 0's driver and toolkit, then `./transcribe add transcription` |
+| A card of 44 GB or more is in, or was there all along | The AI assistant on the Local engine, vision included | `./transcribe add engine`, answer `local` |
+| The office runs an engine on the LAN | The AI assistant, with no card here at all, or beside a small card | `./transcribe add engine`, answer `shared` |
+| 8 GB to spare on the card | The fast lane | `./transcribe add fast-lane` |
+| A bigger card replaces the one the install fitted | A larger batch size, and perhaps the engine or the fast lane | Step 0's `cdi generate` line, then `./transcribe add transcription` again; it refits the batch size. `./transcribe check` says when a card has room for a larger batch size than it is set to |
+| A card is taken out | Nothing fails: uploads wait again | `./transcribe remove transcription` |
 
 ### The fast lane
 
@@ -379,6 +465,9 @@ The last line is either `Everything checked passed.` or a count of what did not.
 |---|---|---|
 | `there is no transcribe account; the install guide's server preparation makes it` | Step 1 was skipped. | Run the `useradd` in Step 1, then `./transcribe install` again. |
 | `nvidia-smi is not on this server: no transcription until a card and its driver are added` | A note at install: the NVIDIA driver is not installed, there is no card, or the machine has not been rebooted since. The install goes on without transcription. | When the card is in: install the driver, reboot, check `nvidia-smi` prints the card, then `./transcribe add transcription`. |
+| `the container toolkit's CDI list is empty or nvidia-ctk is missing` | The driver is in but Docker cannot hand the card to a container yet. A note at install; the self-test would fail later without it. | Step 0's container toolkit commands, then `./transcribe add transcription` (or `./transcribe install --reconfigure`). |
+| `There is no certificate in tls/ yet` from `bring-up` | The stack cannot start without one. | Put the office's `cert.pem` and `key.pem` in `tls/`, or `./transcribe tls self-signed`, then `./transcribe bring-up` again. |
+| `bring-up` stops part way | One step failed; the line above says which and what to do. Everything before it is done. | Fix it, then `./transcribe bring-up` again: every step is safe to run twice. |
 | `Waiting for the card` on a recording's row | Transcription is not installed on this server, and the recording is kept until it is. | `./transcribe add transcription`; the recording is picked up within a minute. |
 | `not yet verified on this generation` from the self-test | The stack has been measured on one generation of card; yours is another, which it is expected to run on. A warning, not a failure. | Run it; when it works, add your card to `docs/research/graphics-cards.md` by a report or a pull request. |
 | `That card has N GB, which is not enough` | Under 16 GB the service and the diarizer do not fit. | A bigger card; CPU-only transcription is not offered. |
@@ -566,6 +655,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `SMTP_USER`, `SMTP_PASSWORD_FILE` | The relay's sign-in, only when it wants one; the password lives in `secrets/smtp_password`, written by the install. |
 | `MAIL_FROM` | The sender, shown as "Gideon Transcribe <address>". Required when `SMTP_HOST` is set. |
 | `COMPOSE_FILE` | Which compose files Compose reads. Left out entirely for most offices; uncommented only for a shared engine. Never set empty: Compose reads an empty value as a path and refuses to start. |
+| `CARD_MEMORY_GB` | The transcription card's memory in whole gigabytes, written by the install when a card is named (and once by the upgrade for an install from before v1.92.0). The Installation page reads it to say what the card opens and what the next size up would. Empty on a server with no card. |
 | `COMPOSE_PROFILES` | A comma-separated list of the pieces that start with the stack. `transcription` is the transcription service and the diarizer (written when the install names a card, or by `./transcribe add transcription`); `llm` starts the Local engine (`./transcribe add engine`, or `engine local on` and `off`); `fast` starts the fast lane (`./transcribe add fast-lane`, or `fast-lane on` and `off`). Empty means none: an install without a card. |
 | `LLM_LOCAL_MODEL` | The model the Local engine loads, as Hugging Face names it. Default `Qwen/Qwen3.5-4B`, which fits in 20 GB with its cache. |
 | `LLM_LOCAL_GPU_UUID` | Which card the Local engine uses, by UUID; `engine local on` asks and offers the least busy one. |

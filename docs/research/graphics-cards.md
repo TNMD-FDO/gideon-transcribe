@@ -18,6 +18,18 @@ From the sources the pinned stack rests on, not from running it:
 - **The diarizer** (NeMo at the pinned commit, torch 2.8.0 with CUDA 12.8) is documented by NVIDIA for Ampere through Blackwell; Turing is expected to work from PTX and is unverified.
 - **Memory, not generation, is the likely limit on a smaller card.** The service holds about 12 GB with the default model loaded and adds about a gigabyte of the card for every 8 of batch size; the diarizer holds 1.3 GB and grows with the recording, about 2.5 GB an hour of audio. A 24 GB card runs recordings up to about two hours at batch 8; a 16 GB card runs short recordings at batch 4 and will run out of memory on a long one; under 16 GB nothing fits and the install refuses. CPU-only transcription is not offered (hours per hour of audio, and a second unpinned stack to keep).
 
+## Expected, by example
+
+Cards an office might meet on each row of the install guide's ladder, with their memory and generation as their maker publishes them. Every row here is **expected** on the reasoning above, not verified; a card moves to the table at the top when the benchmark gate is run on it, and to the table below when an office reports it. Nothing here is a recommendation.
+
+| Row of the ladder | Example cards | Generation |
+|---|---|---|
+| 16 to 23 GB, short recordings | RTX 4080 (16 GB), RTX A4000 (16 GB), RTX 4060 Ti 16 GB | Ada (8.9), Ampere (8.6) |
+| 24 to 31 GB, recordings to about two hours | RTX 4090 (24 GB), RTX A5000 (24 GB), L4 (24 GB), RTX 3090 (24 GB) | Ada (8.9), Ampere (8.6) |
+| 32 GB and up, the measured speed | RTX 5090 (32 GB), RTX 5000 Ada (32 GB) | Blackwell (12.0), Ada (8.9) |
+| 44 GB and up, the Local engine beside transcription | RTX 6000 Ada (48 GB), RTX A6000 (48 GB), L40S (48 GB), A100 (40 or 80 GB) | Ada (8.9), Ampere (8.6, 8.0) |
+| 96 GB, the measured setup | RTX PRO 6000 Blackwell (96 GB) | Blackwell (12.0), verified above |
+
 ## Reported by offices
 
 Each row is one card an office ran the stack on, as they reported it. Add a row when you have one; the self-test's first lines give the card, the memory, the generation and the driver.

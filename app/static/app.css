@@ -74,6 +74,12 @@
    * about the same state look related. --warn is the working state. */
   --ok: #2f7d4f;
   --ok-soft: #e4f2e9;
+  /* The card's bar on the Installation page (v1.92.0). */
+  --fit-t: #2f6f8f;
+  --fit-d: #5b8fb3;
+  --fit-e: #b3652f;
+  --fit-f: #7a9a3a;
+  --fit-ink: #ffffff;
   --warn: #9a5b06;
   --warn-soft: #fbefd9;
   --danger: #b3261e;
@@ -135,6 +141,11 @@ html[data-theme="dark"] {
   --accent-ink: #0b141b;
   --ok: #6fc28a;
   --ok-soft: #1c3526;
+  --fit-t: #3f88ab;
+  --fit-d: #6ea3c6;
+  --fit-e: #c9793f;
+  --fit-f: #8fb050;
+  --fit-ink: #0b141b;
   --warn: #f0a850;
   --warn-soft: #3d2c12;
   --danger: #ff8078;
@@ -172,6 +183,11 @@ html[data-theme="dark"] {
     --accent-ink: #0b141b;
     --ok: #6fc28a;
     --ok-soft: #1c3526;
+    --fit-t: #3f88ab;
+    --fit-d: #6ea3c6;
+    --fit-e: #c9793f;
+    --fit-f: #8fb050;
+    --fit-ink: #0b141b;
     --warn: #f0a850;
     --warn-soft: #3d2c12;
     --danger: #ff8078;
@@ -451,6 +467,17 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
   padding: 14px 16px;
 }
 
+/* The card's bar on the Installation page (v1.92.0): each segment a share
+   of the card's memory, the room left in the soft colour. */
+.fit-bar { display: flex; height: 30px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin: 8px 0 6px; }
+.fit-seg { display: flex; align-items: center; justify-content: center; font-size: 0.74rem; font-weight: 600; color: var(--fit-ink); white-space: nowrap; overflow: hidden; min-width: 0; }
+.fit-t { background: var(--fit-t); }
+.fit-d { background: var(--fit-d); }
+.fit-e { background: var(--fit-e); }
+.fit-f { background: var(--fit-f); }
+.fit-room { background: var(--line); color: var(--muted); }
+.fit-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; }
+.fit-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .kv {
   display: grid;
   grid-template-columns: max-content 1fr;

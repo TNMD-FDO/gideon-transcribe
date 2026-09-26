@@ -173,6 +173,15 @@ jobs:
             exit 1
           fi
 
+          # One fixed line for an office that lands here first (v1.92.0):
+          # where the install guide and the card ladder are, at this tag.
+          {
+            echo
+            echo "---"
+            echo "New here? What to buy and how to install: the install guide at this release,"
+            echo "https://github.com/${{ github.repository }}/blob/$tag/docs/install.md, opens with what a graphics card opens."
+          } >> /tmp/notes.md
+
       - name: Sign in to ghcr.io
         if: needs.images.result == 'success'
         run: |

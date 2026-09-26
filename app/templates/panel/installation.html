@@ -18,6 +18,25 @@
     </div>
 
     <div class="card">
+      <h2>What the card opens</h2>
+      <p class="muted small">
+        Where this server sits on the ladder, from the card's memory the
+        install recorded. Every figure is an estimate until an office
+        measures its card; the install guide has the ladder in full.
+      </p>
+      {% if fit.segments %}
+        <div class="fit-bar" role="img" aria-label="The card's memory and what the app puts on it">
+          {% for one in fit.segments %}<span class="fit-seg fit-{{ one.kind }}" style="width: {{ one.share }}%" title="{{ one.name }}, {{ one.gb }} GB">{{ one.name }}</span>{% endfor %}
+        </div>
+        <p class="muted small fit-legend">
+          {% for one in fit.segments %}<span><i class="fit-{{ one.kind }}"></i>{{ one.name }} {{ one.gb }} GB</span>{% endfor %}
+        </p>
+      {% endif %}
+      <p>{{ fit.words }}</p>
+      <p class="muted small">{{ fit.next }}</p>
+    </div>
+
+    <div class="card">
       <h2>Secrets</h2>
       <p class="muted small">Shown as set or missing. No value is ever shown here.</p>
       <dl class="kv">

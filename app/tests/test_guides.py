@@ -116,6 +116,14 @@ def test_the_install_guide_has_the_chapter_s_fixed_parts():
         "self-signed",
         "Waiting for the card",
         "Add a piece later",
+        # The newcomer's walk (v1.92.0).
+        "Step 0",
+        "ubuntu-drivers",
+        "nvidia-ctk cdi list",
+        "./transcribe bring-up",
+        "install-ladder.svg",
+        "The quickest install",
+        "When the hardware changes",
     ):
         assert wanted in text, f"the install guide does not have {wanted!r}"
     admin = text_of("admin-guide.md")

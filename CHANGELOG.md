@@ -21,6 +21,61 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.92.0, 2026-09-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the maintainer's walk of the install as a newcomer at another office:
+what to buy, what a card opens, and how to get from one install to the
+next.
+
+**The ladder.** One table, keyed on the graphics card's memory, says what
+a server has and what that opens: no card (cases and documents; uploads
+wait), 16 GB (short recordings), 24 GB (recordings to about two hours),
+32 GB (the measured speed), 44 GB (the AI assistant on the Local engine,
+or an engine on the LAN with no card at all), the fast lane 8 GB more,
+96 GB the measured setup. It opens the README ("What to buy") and the
+install guide, drawn as a picture; `./transcribe install` prints it with
+this server's row marked before its first question, and
+`./transcribe pieces` prints the row. The guide now states memory, cores
+and disk for the host, and the sizes of what is fetched.
+
+**Step 0 prepares Ubuntu.** Docker with the Compose plugin, the NVIDIA
+driver and the container toolkit with CDI, each with the makers' own
+commands and the check after it; `./transcribe install` now checks the
+CDI list beside the driver, so a missing toolkit is found at the
+questions and not at the self-test.
+
+**The install does the rest itself.** After its questions it asks "Do
+the rest now?" and runs the images, the card's self-test, the models,
+the start, the Local admin and the checks, stopping at the first failure
+with the line that says what to do; `./transcribe bring-up` runs the
+same later, and is safe to run again from where it stopped.
+
+**Fewer things to get wrong at the questions.** One card is taken by
+Enter and several by their number in the list; the engine is asked in
+every install, since a shared engine on the LAN needs no card; the fast
+lane question says whether the card has the room; every fixed answer
+takes its first letter and asks again on no match.
+
+**What the card opens, in the app.** The Installation page draws the
+card as a bar with the transcription service, the diarizer, the Local
+engine and the fast lane on it, says what the card gives and what the
+next size up would open; the Status page's Pieces rows that are off say
+what it would take. The install records the card's memory
+(`CARD_MEMORY_GB`), and the upgrade records it once for an install from
+before.
+
+**A bigger card is noticed.** `./transcribe check` says when the card has
+room for a larger batch size than it is set to, and
+`./transcribe add transcription` run again refits it. The guide's "Add a
+piece later" lists every upgrade path with its one command, and the
+research note lists example cards for each row of the ladder, expected
+until an office reports.
+
 ## v1.91.1, 2026-09-26
 
 ```

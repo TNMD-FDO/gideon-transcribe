@@ -142,3 +142,116 @@ def test_adding_one_profile_never_removes_another(tmp_path):
     done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == "fast"
+
+
+def test_the_scripts_budgets_are_the_apps():
+    """v1.92.0: the four card budgets the install fits by are the four the
+    app draws the Installation page from."""
+    source = text()
+    for name, value in (
+        ("TRANSCRIPTION_GB", pieces.TRANSCRIPTION_GB),
+        ("DIARIZER_GB", pieces.DIARIZER_GB),
+        ("ENGINE_GB", pieces.ENGINE_GB),
+        ("FAST_LANE_GB", pieces.FAST_LANE_GB),
+        ("LEAST_CARD_GB", pieces.LEAST_CARD_GB),
+    ):
+        assert re.search(rf"^{name}={value}$", source, re.M), name
+
+
+def _sourced(names: list[str], extra: str = "") -> str:
+    source = text()
+    wanted = [extra] if extra else []
+    for name in names:
+        match = re.search(rf"^{name}\(\) \{{\n.*?^\}}\n", source, re.M | re.S)
+        assert match, name
+        wanted.append(match.group(0))
+    budgets = "\n".join(
+        re.findall(
+            r"^(?:TRANSCRIPTION|DIARIZER|ENGINE|FAST_LANE|LEAST_CARD)_GB=\d+$",
+            source,
+            re.M,
+        )
+    )
+    return "set -euo pipefail\n" + budgets + "\n" + "\n".join(wanted)
+
+
+@needs_bash
+def test_a_fixed_answer_takes_its_first_letter_and_asks_again_on_no_match():
+    """v1.92.0: one rule for every question with fixed answers."""
+    probe = _sourced(["ask", "ask_choice", "ask_yes_no"]) + (
+        '\nprintf "%s|" "$(ask_choice "The engine" none "local|shared|none")"'
+        '\nprintf "%s|" "$(ask_choice "The certificate" own "own|self-signed")"'
+        '\nask_yes_no "Go on?" yes && printf "yes|" || printf "no|"'
+        '\nask_yes_no "Go on?" yes && printf "yes|" || printf "no|"'
+        "\n"
+    )
+    # "S" is shared; "maybe" then "self" is asked again then taken; Enter is
+    # the default; "N" is no.
+    done = subprocess.run(
+        [BASH, "-c", probe],
+        input="S\nmaybe\nself\n\nN\n",
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == "shared|self-signed|yes|no|"
+    assert "Please answer one of: own self-signed" in done.stderr
+
+
+@needs_bash
+def test_the_ladder_says_where_this_server_sits():
+    """v1.92.0: the row for a server with no card, a small card, a card with
+    room for the engine, and a card with room for everything."""
+    probe = _sourced(["fit_the_card", "this_server_line", "print_the_ladder"]) + (
+        '\nfor gb in "" 12 24 48 96; do this_server_line "$gb"; echo ---; done'
+        "\nprint_the_ladder 24 | head -3\n"
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    out = done.stdout
+    rows = out.split("---\n")
+    assert "This server: no card." in rows[0] and "an engine on the LAN" in rows[0]
+    assert "a 12 GB card, under the 16 GB" in rows[1]
+    assert (
+        "a 24 GB card. Transcription at batch size 8, recordings up to about two hours."
+        in rows[2]
+    )
+    assert (
+        "The Local engine needs 44 GB in all" in rows[2]
+        and "No room for the fast lane" in rows[2]
+    )
+    assert (
+        "a 48 GB card. Transcription at batch size 16, the measured speed." in rows[3]
+    )
+    assert (
+        "Room for the Local engine" in rows[3]
+        and "No room left for the fast lane" in rows[3]
+    )
+    assert "Room for the fast lane too." in rows[4]
+    assert "What a server has, and what that opens:" in rows[5]
+
+
+def test_the_install_prints_the_ladder_checks_cdi_and_offers_the_rest():
+    body = text()
+    install = body.split("cmd_install() {", 1)[1].split("\n}\n", 1)[0]
+    assert 'print_the_ladder "$(largest_card_gb)"' in install
+    assert "ask_the_engine" in install and install.index(
+        "ask_the_card"
+    ) < install.index("ask_the_engine")
+    assert 'ask_yes_no "Do the rest now, in that order?" yes' in install
+    prerequisites = body.split("prerequisites() {", 1)[1].split("\n}\n", 1)[0]
+    assert "nvidia-ctk cdi list" in prerequisites
+    bring_up = body.split("cmd_bring_up() {", 1)[1].split("\n}\n", 1)[0]
+    for step in (
+        "compose pull --quiet",
+        "whisperx selftest",
+        "whisperx pull",
+        "compose up -d",
+        "create-local-admin",
+        "cmd_check",
+    ):
+        assert step in bring_up, step
+    check = body.split("cmd_check() {", 1)[1].split("\n}\n", 1)[0]
+    assert "refits it" in check
+    finish = body.split("finish_the_upgrade() {", 1)[1].split("\n}\n", 1)[0]
+    assert "migrate_the_card_memory" in finish

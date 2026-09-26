@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 418" width="900" height="418" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+<rect x="0" y="0" width="900" height="418" fill="#fffdf8"/>
+<text x="20" y="30" font-size="18" font-weight="600" fill="#1f2a2e">What a card opens, by its memory</text>
+<text x="20" y="48" fill="#4b5a60">Each bar is the card; the coloured parts are what the app puts on it, in the order the install fills it. Grey is room to spare.</text>
+<text x="20" y="89" font-weight="600" fill="#1f2a2e">No card</text>
+<rect x="170" y="70" width="640" height="30" rx="6" fill="#ebe6d9" stroke="#ddd7c8"/>
+<rect x="170.0" y="70" width="640.0" height="30" fill="#ffffff" fill-opacity="0.75"/>
+<line x1="170.0" y1="70" x2="170.0" y2="100" stroke="#4b5a60" stroke-width="2"/>
+<text x="170" y="114" font-size="11.5" fill="#4b5a60">cases, incidents, notes, clips, documents; uploads wait</text>
+<text x="20" y="139" font-weight="600" fill="#1f2a2e">16 GB card</text>
+<text x="20" y="155" font-size="11" fill="#7a878c">batch size 4</text>
+<rect x="170" y="120" width="640" height="30" rx="6" fill="#ebe6d9" stroke="#ddd7c8"/>
+<rect x="170.0" y="120" width="133.3" height="30" fill="#2f6f8f"/>
+<text x="236.7" y="139" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Transcription</text>
+<rect x="303.3" y="120" width="26.7" height="30" fill="#5b8fb3"/>
+<rect x="276.7" y="120" width="533.3" height="30" fill="#ffffff" fill-opacity="0.75"/>
+<line x1="276.7" y1="120" x2="276.7" y2="150" stroke="#4b5a60" stroke-width="2"/>
+<text x="170" y="164" font-size="11.5" fill="#4b5a60">transcription of short recordings</text>
+<text x="20" y="189" font-weight="600" fill="#1f2a2e">24 GB card</text>
+<text x="20" y="205" font-size="11" fill="#7a878c">batch size 8</text>
+<rect x="170" y="170" width="640" height="30" rx="6" fill="#ebe6d9" stroke="#ddd7c8"/>
+<rect x="170.0" y="170" width="133.3" height="30" fill="#2f6f8f"/>
+<text x="236.7" y="189" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Transcription</text>
+<rect x="303.3" y="170" width="26.7" height="30" fill="#5b8fb3"/>
+<rect x="330.0" y="170" width="480.0" height="30" fill="#ffffff" fill-opacity="0.75"/>
+<line x1="330.0" y1="170" x2="330.0" y2="200" stroke="#4b5a60" stroke-width="2"/>
+<text x="170" y="214" font-size="11.5" fill="#4b5a60">recordings up to about two hours</text>
+<text x="20" y="239" font-weight="600" fill="#1f2a2e">32 GB card</text>
+<text x="20" y="255" font-size="11" fill="#7a878c">batch size 16</text>
+<rect x="170" y="220" width="640" height="30" rx="6" fill="#ebe6d9" stroke="#ddd7c8"/>
+<rect x="170.0" y="220" width="133.3" height="30" fill="#2f6f8f"/>
+<text x="236.7" y="239" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Transcription</text>
+<rect x="303.3" y="220" width="26.7" height="30" fill="#5b8fb3"/>
+<rect x="330.0" y="220" width="53.3" height="30" fill="#7a9a3a"/>
+<text x="356.7" y="239" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Fast lane</text>
+<rect x="383.3" y="220" width="426.7" height="30" fill="#ffffff" fill-opacity="0.75"/>
+<line x1="383.3" y1="220" x2="383.3" y2="250" stroke="#4b5a60" stroke-width="2"/>
+<text x="170" y="264" font-size="11.5" fill="#4b5a60">the measured speed; room for the fast lane</text>
+<text x="20" y="289" font-weight="600" fill="#1f2a2e">48 GB card</text>
+<text x="20" y="305" font-size="11" fill="#7a878c">batch size 16</text>
+<rect x="170" y="270" width="640" height="30" rx="6" fill="#ebe6d9" stroke="#ddd7c8"/>
+<rect x="170.0" y="270" width="133.3" height="30" fill="#2f6f8f"/>
+<text x="236.7" y="289" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Transcription</text>
+<rect x="303.3" y="270" width="26.7" height="30" fill="#5b8fb3"/>
+<rect x="330.0" y="270" width="133.3" height="30" fill="#b3652f"/>
+<text x="396.7" y="289" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Local engine</text>
+<rect x="490.0" y="270" width="320.0" height="30" fill="#ffffff" fill-opacity="0.75"/>
+<line x1="490.0" y1="270" x2="490.0" y2="300" stroke="#4b5a60" stroke-width="2"/>
+<text x="170" y="314" font-size="11.5" fill="#4b5a60">the Local engine beside transcription: the AI assistant</text>
+<text x="20" y="339" font-weight="600" fill="#1f2a2e">96 GB card</text>
+<text x="20" y="355" font-size="11" fill="#7a878c">batch size 16</text>
+<rect x="170" y="320" width="640" height="30" rx="6" fill="#ebe6d9" stroke="#ddd7c8"/>
+<rect x="170.0" y="320" width="133.3" height="30" fill="#2f6f8f"/>
+<text x="236.7" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Transcription</text>
+<rect x="303.3" y="320" width="26.7" height="30" fill="#5b8fb3"/>
+<rect x="330.0" y="320" width="133.3" height="30" fill="#b3652f"/>
+<text x="396.7" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Local engine</text>
+<rect x="463.3" y="320" width="53.3" height="30" fill="#7a9a3a"/>
+<text x="490.0" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="#ffffff">Fast lane</text>
+<text x="170" y="364" font-size="11.5" fill="#4b5a60">everything at once, with room to spare: the measured setup</text>
+<rect x="170" y="376" width="12" height="12" rx="3" fill="#2f6f8f"/>
+<text x="187" y="387" font-size="12" fill="#4b5a60">Transcription 20 GB</text>
+<rect x="342" y="376" width="12" height="12" rx="3" fill="#5b8fb3"/>
+<text x="359" y="387" font-size="12" fill="#4b5a60">Diarizer 4 GB</text>
+<rect x="466" y="376" width="12" height="12" rx="3" fill="#b3652f"/>
+<text x="483" y="387" font-size="12" fill="#4b5a60">Local engine 20 GB</text>
+<rect x="630" y="376" width="12" height="12" rx="3" fill="#7a9a3a"/>
+<text x="647" y="387" font-size="12" fill="#4b5a60">Fast lane 8 GB</text>
+<rect x="762" y="376" width="12" height="12" rx="3" fill="#ebe6d9" stroke="#ddd7c8"/>
+<text x="779" y="387" font-size="12" fill="#4b5a60">Room</text>
+<text x="20" y="410" font-size="11.5" fill="#7a878c">Every figure is an estimate until an office measures its card (docs/research/graphics-cards.md).</text>
+</svg>
