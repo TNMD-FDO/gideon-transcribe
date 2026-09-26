@@ -2262,8 +2262,8 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sitting-mini.over .bar .blocks i { background: var(--accent); }
 .sitting-mini .bar .blocks i.words { background: repeating-linear-gradient(135deg, var(--danger) 0 3px, transparent 3px 6px) !important; }
 .inc-offer .sitting-mini { display: grid; margin-top: 6px; max-width: 420px; }
-.inc-cameras td { vertical-align: top; }
-.inc-cameras .acts { white-space: normal; }
+.inc-cameras td { vertical-align: top; overflow-wrap: anywhere; }
+.inc-cameras .acts, .inc-cameras td.acts { white-space: normal; }
 .inc-place summary { cursor: pointer; color: var(--accent); }
 .inc-place-box { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
 .inc-nudge { display: inline-flex; gap: 3px; }
@@ -2331,7 +2331,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-events td { padding: 9px 8px; }
 .inc-events .what { font-size: var(--t-body); }
 /* The row's line is a press that opens the Event card (Phase 8 chapter 11). */
-.inc-events .line { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: var(--t-body); color: inherit; text-align: left; cursor: pointer; }
+.inc-events .line { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: var(--t-body); color: inherit; text-align: left; cursor: pointer; white-space: normal; }
 .inc-events .line:hover, .inc-events .line:focus-visible { text-decoration: underline dotted; outline: none; }
 .inc-events .tell { margin-left: 6px; }
 .pill.src { font-size: 0.85em; font-weight: 400; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; line-height: 1.6; }
@@ -2367,7 +2367,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .tl-body { display: flex; flex-direction: column; gap: 3px; padding-bottom: 8px; flex-grow: 1; min-width: 0; }
 .tl-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .tl-top .cite { font-size: var(--t-small); }
-.tl-top .line { font-size: var(--t-body); }
+.tl-top .line { font-size: var(--t-body); white-space: normal; text-align: left; max-width: 100%; }
 .tl-under { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .inc-events .meta .clipmark { color: var(--accent); text-decoration: none; }
 .row-menu { position: relative; }
@@ -2457,7 +2457,10 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--accent-soft); font-size: var(--t-small); }
 .inc-cameras tr.unsynced td:first-child { box-shadow: inset 3px 0 0 0 var(--warn); }
 @media (min-width: 1900px) {
-  .inc-desk { grid-template-columns: minmax(0, 1fr) 560px; }
+  /* Three columns, the grip between: the two-column rule here was from
+     before the grip, and at 1900 px and wider it put the grip in the work
+     column and the work panel under the wall (v1.88.1). */
+  .inc-desk { grid-template-columns: minmax(0, 1fr) 12px var(--work, 560px); }
   .inc-desk[data-layout="side"] .inc-wall { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* Phase 8 chapter 1: columns follow the width up to the 49-inch screen. */

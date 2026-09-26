@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-25, at v1.88.1 (the incident desk on wide screens, wrapping event lines; nothing shared moves).** Pages alone. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.88.0 (the Timeline report; nothing shared moves).** A Phase 8 chapter: the chronology as a Word document with stills, made in the app container's request with ffmpeg frames cut a few at a time. No port, memory, card, timer, network or engine request moves; no engine call is made.
 - **2026-09-25, at v1.87.3 (the viewer's jump watch, the recording page's script, one reference a line; nothing shared moves).** Pages and prompt plumbing alone. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.87.2 (a timeline line from the picture begins with Camera:; nothing shared moves).** One sentence in the record rules. No port, memory, card, timer, network or engine request moves.

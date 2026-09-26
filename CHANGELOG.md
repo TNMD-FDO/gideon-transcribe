@@ -21,6 +21,30 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.88.1, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the walk of v1.88.0 in the maintainer's browser at 1,920 pixels wide.
+
+**The incident page's work panel is beside the wall again on wide screens.**
+At 1,900 pixels and wider a rule from before the drag grip gave the desk
+two columns, so the grip took the work column and the chronology, memo and
+cameras panel dropped under the wall, with the right third of the screen
+blank. This was the "layout at 100%" the maintainer saw on 24 September.
+Three columns there, as at every other width.
+
+**An event's line wraps.** On the Chronology tab's rows and on the Timeline
+view the line was set not to wrap, so a long event ran the table out to
+twice the panel's width and the panel scrolled sideways. The line wraps;
+the Cameras tab's table breaks a long file name the same way.
+
+**The rail's guide link says what it is.** "? beside" reads "? Guide
+beside".
+
 ## v1.88.0, 2026-09-25
 
 ```
