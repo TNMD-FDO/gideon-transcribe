@@ -1276,7 +1276,10 @@ def write_memo(memo_id, attempt: int = 1) -> None:
             # Cancelled while the engine wrote: nothing is kept.
             return
         memo.text = with_app_cameras(
-            incident, answer["text"].strip(), record, set(words_alone)
+            incident,
+            prompts.with_heading_colons(answer["text"].strip()),
+            record,
+            set(words_alone),
         )
         memo.citations = memo_citations(incident, memo.text)
         memo.event_numbers = numbers
@@ -1590,6 +1593,12 @@ def memo_word(memo: IncidentMemo, picture: bytes | None, exported_by: str) -> by
     chronology.pages(document, incident, picture, exported_by)
     import io
 
+    exports.stamp_pages(
+        document,
+        f"{incident.case.name}, {incident.name}",
+        "Incident memo",
+        incident.name,
+    )
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()

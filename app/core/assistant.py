@@ -943,7 +943,7 @@ def write_summary(summary_id) -> None:
             **SAMPLING,
         )
         usage = answer
-        summary.text = answer["text"].strip()
+        summary.text = prompts.with_heading_colons(answer["text"].strip())
         summary.citations = prompts.citations(summary.text, lines, seen)
         if thought_it_away(answer):
             raise ThoughtItAway()

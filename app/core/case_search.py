@@ -70,7 +70,7 @@ def _word_pattern(words: list[str]) -> re.Pattern:
 
 def _all(fields: list[str], words: list[str]) -> Q:
     """Every term found in one of the fields: a phrase as a substring, a word
-    as a whole word (PostgreSQL's \m and \M are its word edges)."""
+    as a whole word, between PostgreSQL's word edges."""
     whole = Q()
     for word in words:
         one = Q()

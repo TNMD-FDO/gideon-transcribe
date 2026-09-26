@@ -126,7 +126,10 @@ def test_the_wording_is_clean_and_the_templates_say_seen_but_not_said():
     for key in ("video", "body_camera"):
         text = prompts.SHIPPED_SUMMARIES[key]
         assert "Seen but not said" not in text and "the camera shows" not in text
-        assert "Unclear parts" in text
+    # The video memo keeps its Unclear parts; the body camera memo (v1.90.0)
+    # says confirm on video where the record does not settle a thing.
+    assert "Unclear parts" in prompts.SHIPPED_SUMMARIES["video"]
+    assert "confirm on video" in prompts.SHIPPED_SUMMARIES["body_camera"]
     assert "Summary:" in prompts.SHIPPED_SUMMARIES["video"]
     assert "one account" in prompts.SHIPPED_SUMMARIES["video"]
     assert "never given a name" in prompts.NARRATIVE_RULES

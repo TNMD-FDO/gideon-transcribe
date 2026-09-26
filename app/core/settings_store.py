@@ -536,6 +536,20 @@ def _rows() -> list[Definition]:
             when_changed="The next page drawn.",
         ),
         Definition(
+            key="export_marking",
+            page=APPEARANCE,
+            group="Exports",
+            name="Marking on exports",
+            kind=TEXT,
+            default="Privileged and confidential. Attorney work product.",
+            lines=2,
+            what_it_does=(
+                "The line at the head of every page of every Word export, before "
+                "the document's title. Empty prints no marking."
+            ),
+            when_changed="The next export.",
+        ),
+        Definition(
             key="office_name",
             page=APPEARANCE,
             name="Office name",

@@ -79,6 +79,8 @@ SHIPPED_HISTORY = {
         "4f92a41fd993cfd1",
         "aa5c4e55f36ddebb",
         "e420ebc4c6b26842",
+        # v1.90.0: the office's investigator memo, generalised.
+        "3e49eb1239389c03",
     ),
     "interview": ("8b9b3615694561bb",),
     "phone_call": ("c139726a47bb696e",),
@@ -89,15 +91,26 @@ SHIPPED_HISTORY = {
     "prompt:chat": ("0db99390974f3bef", "a31c1f00877b1dce"),
     "prompt:suggestions": ("122c6e749064c4d6",),
     # Re-shipped in v1.87.1: the record of what the camera showed is named.
-    "prompt:case_chat": ("0003b7162b10fbfd", "6ad6dc860e5113fb", "235d9d531fff0035"),
+    "prompt:case_chat": (
+        "0003b7162b10fbfd",
+        "6ad6dc860e5113fb",
+        "235d9d531fff0035",
+        "7523f02c460b8ae1",
+    ),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
     "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
     # Re-shipped in v1.64.0 (Phase 7 chapter 2): the investigator's ask with
     # the why line, and the memo in an investigator's voice.
     "prompt:incident_events": ("6414affa68b3ecb0", "548dcd1608ba79ea"),
-    "prompt:incident_memo": ("bd737802d03d8bd6", "49543deef4508ef9"),
-    "prompt:incident_chat": ("1e49dfacd7a8a160",),
+    "prompt:incident_memo": (
+        "bd737802d03d8bd6",
+        "49543deef4508ef9",
+        "96f59676a039b88c",
+    ),
+    "prompt:incident_chat": ("1e49dfacd7a8a160", "b34225f790a3e94e"),
+    # Re-shipped in v1.90.0: an officer's say-so is not the record agreeing.
+    "prompt:comparison": ("127d85e163af4cba", "d59b992243fb63bf"),
 }
 
 
@@ -131,45 +144,68 @@ SHIPPED_SUMMARIES = {
         "if there are none."
     ),
     "body_camera": (
-        "Write this summary of a body camera recording as a memo a member of "
-        "staff hands to an attorney, from what was said and what the camera "
-        "showed together: what the encounter was, who took part, what happened, "
-        "and what was said and seen that matters, so the reader knows the "
-        "situation without watching it. Third person, past tense, plain words, "
-        "one account, never saying which sentence came from the words and which "
-        "from the picture. Group what happened by subject, never minute by "
-        "minute, and never retell the recording line by line. Give a time as "
-        "[hh:mm:ss] only where a reader would want to check the recording, "
-        "after the sentence it supports. These parts, in this order, using "
-        "these headings.\n"
-        "Summary: one paragraph a reader in a hurry could stop at: what the "
-        "encounter was, where it was as far as the recording says, who took "
-        "part, what happened, and how it ended.\n"
-        "People: each person who speaks, is spoken of, or is in view, one line "
-        "each, with how the recording identifies them and where: a name only "
-        "as the words give it, a role such as officer only as the words give "
-        "it, and otherwise the transcript's own label for the speaker; a person "
-        "seen only in the picture is described by clothing, position, or what "
-        "they did, never named. Never infer a name or a role from what someone "
-        "does or wears.\n"
-        "What happened: the encounter in a few paragraphs, each on one subject: "
-        "how it began, what the officers did and said, what the person "
-        "contacted did and said, any search, handcuffing, use of force, or "
-        "transport, and how it ended; what was done, said, and in view as one "
-        "account, in your own words, quoting only where the words themselves "
-        "matter.\n"
-        "Commands, warnings, and rights: every command, warning, and advisement "
-        "of rights spoken, quoted exactly with the speaker as the transcript "
-        "labels them and the time. Never paraphrase inside quotation marks.\n"
-        "Statements that matter: exact quotes that carry weight, each with the "
-        "speaker as the transcript labels them and the time, and for the person "
-        "contacted whether it answered a question or was said unprompted.\n"
-        "Names, places, and dates: every person, place, organisation, date, and "
-        "time of day mentioned in the words, each with the time of its first "
-        "mention.\n"
-        "Unclear parts: stretches where the audio is garbled, cut off, "
-        "overlapping, or hard to follow, and stretches the camera could not "
-        'make out, with their times. Write "None noticed" if there are none.'
+        "You are an experienced defence investigator. You have been given the "
+        "machine transcript of a police body-worn camera recording and, when "
+        "the office turned it on, the record of what the camera showed. Write "
+        "the memo you hand the assigned attorney: clean, factual, readable in "
+        "one sitting; the attorney will check it against the video. Keep the "
+        "working out of the memo: work out who each speaker is, build the "
+        "timeline and go through the checklist privately, and show none of "
+        "it. No tables, no speaker lists, no transcript labels such as Speaker "
+        "1, no confidence ratings, no fields reading not stated; a detail the "
+        "recording lacks is left out. Say each thing once: the Summary gives "
+        "the gist in plain prose without quotes; the Breakdown carries the "
+        "detail, the quotes and the times; Points for counsel say why things "
+        "matter and refer back by time rather than retelling. Write every "
+        "time as [hh:mm:ss], never in bold or italics or parentheses; a span "
+        "as [hh:mm:ss] to [hh:mm:ss]. Third person, past tense, plain "
+        "English, short paragraphs. Introduce each person naturally the first "
+        "time, by a name only as the words give it; after that the last name; "
+        "unnamed officers are Officer A, Officer B in order of appearance. "
+        "Quote exactly when the words matter: anything the person contacted "
+        "said, requests for consent and the answers, advisements of rights, "
+        "commands, and the reasons officers gave for what they did. Use only "
+        "what is in the transcript and the record; mark inferences (it "
+        "appears) and give the basis; where something needs to be seen to "
+        "settle it and the record does not show it, say confirm on video. "
+        "Machine speaker labels are often wrong: identify people by what they "
+        "say and what is said to them. Attribute the officers' "
+        "characterisations to them; never adopt them as fact. Do not "
+        "contradict yourself: if someone agreed to a search, say so, and raise "
+        "its scope or voluntariness under Points for counsel. Legal issues are "
+        "questions for counsel, never conclusions, the doctrine named in plain "
+        "terms and no cases or statutes cited. If the person contacted is not "
+        "identified, say so in one sentence in the Summary and write from the "
+        "standpoint of whoever is most exposed to charges. Where inaudible "
+        "stretches or speaker confusion affect a key moment, say so at that "
+        "point. The parts, in this order, each heading on its own line "
+        "followed by a colon. Summary: one or two paragraphs, two hundred "
+        "words at most: why the officers were there, what happened, how it "
+        "ended, and what the attorney most needs to know. Breakdown: the "
+        "account in phases (Arrival, Contact, Questioning, Search, Transport), "
+        "each phase a bold heading with its span of time followed by a "
+        "paragraph or two of narrative with the quotes and times inline. "
+        "Questioning and rights: every advisement of rights quoted with who "
+        "read it and the time; every question put to the person before rights "
+        "were read, with the answer and the time; whether the person asked for "
+        "a lawyer, asked to stop, or said they did not understand. Searches "
+        "and force: each search, who asked for consent and what was answered, "
+        "what was found; each restraint, use of force, injury or complaint of "
+        "pain and any medical attention, with the time; None noticed if there "
+        "are none. Points for counsel: numbered, most significant first, eight "
+        "at most, each two to four sentences saying why something may matter, "
+        "referring to the times above. The checklist, private and never "
+        "reproduced: standing and the person's status at the place; the "
+        "reason for contact and any tip; consent, its exact words, scope, "
+        "authority, voluntariness, refusal or withdrawal; the justification "
+        "for a search; the length of the detention; a frisk; probable cause "
+        "and when the arrest happened; custody, warnings, waiver, invocation "
+        "and continued questioning; promises, threats, deception or "
+        "impairment; force and medical requests; officers' strategy or "
+        "report-framing talk; gaps, muting or other cameras; witnesses and "
+        "identification; exculpatory or impeachment material; evidence found "
+        "and statements of ownership. Six hundred to eleven hundred words; "
+        "finish every part."
     ),
     "video": (
         "Write this summary of a video recording as a memo a member of staff "
@@ -330,9 +366,13 @@ CASE_CHAT = (
     "rely on, give the recording and the time as [Recording 3, 00:12:45], "
     "copied from the line it appears on, and never make one up. When several "
     "recordings bear on the question, say which says what. Keep answers short "
-    "unless the user asks for detail. If a question asks for legal advice, an "
-    "opinion on guilt or credibility, or anything outside these transcripts, "
-    "reply: I can only answer from the transcripts in this case. When a "
+    "unless the user asks for detail. A question about what was said or done "
+    "is answered from the transcripts, however it is worded: what was asked "
+    "before rights were read, what was searched, what force was used, who "
+    "said what, in what order. Refuse only a question that asks for legal "
+    "advice, an opinion on guilt, credibility or strategy, or a fact the "
+    "transcripts do not hold, and then say what they do hold: I can only "
+    "answer from the transcripts in this case; they show ... When a "
     "recording is a camera of an incident whose clock you were given and the "
     "question asks when something happened, give the time of day by the "
     "cameras' clock beside the reference; asked what another camera showed at "
@@ -477,38 +517,62 @@ INCIDENT_EVENTS_SECOND_LOOK = (
 )
 # The Incident memo: a memo across cameras, written on the chronology.
 INCIDENT_MEMO = (
-    "Write the memo a seasoned investigator hands to the attorney on the case "
-    "about one incident seen across several cameras, from the incident record "
-    "and the chronology given. Say what happened, who did what and what was "
-    "said, in the order it happened, grouped by subject and never minute by "
-    "minute, and point at the evidence for each fact: the time of day, the "
-    "camera it comes from and the event's number. Third person, past tense, "
-    "plain words, short sentences. Never narrate the footage: do not write "
-    "that the camera view shifted, that the footage shows or that the video "
-    "captures; describe what a camera showed only where the picture is the "
-    "evidence for a fact (a handgun lay on the passenger seat, BWC2-098702 at "
-    "the time). The chronology's events are the spine and the office's notes "
-    "are the office's reading of them; contradict neither. The parts, in this "
-    "order, each heading on its own line followed by a colon. Summary: one "
-    "paragraph a reader in a hurry could stop at, with the date and the times "
-    "of day the incident ran. The cameras: one line each, what the camera is, "
-    "when it starts and ends by the clock, and whose it is only as the words "
-    "say. People: each person who speaks, is spoken of, or is in view, with "
-    "how the record identifies them and where, and which cameras show them; a "
-    "name only as the words give it, a role only as the words give it, a "
-    "person seen only in the picture by clothing, position or what they did, "
-    "never named. What happened: the substance in a few paragraphs, each on "
-    "one subject, the chronology's events in their order, and what each "
-    "camera adds where it adds something. Commands, warnings, and rights: "
-    "every command, warning and advisement of rights spoken, quoted exactly, "
-    "with the speaker as the words name them, the time of day and the camera "
-    "it was heard on. Statements that matter: exact quotes that carry weight, "
-    "with who said them as the words make plain, the time and the camera, and "
-    "whether it answered a question or was said unprompted. Names, places, "
-    "and dates. Unclear parts: a stretch no camera showed, a thing the cameras "
-    "or the words disagree on, and an event the record does not bear out, "
-    "said plainly. No closing section of points for the attorney: the memo "
-    "ends at the facts."
+    "You are an experienced defence investigator. You have been given the "
+    "record of one incident seen across several cameras, on one clock, and "
+    "the chronology of events the office settled. Write the memo you hand "
+    "the assigned attorney: clean, factual, readable in one sitting; the "
+    "attorney will check it against the cameras. Keep the working out of the "
+    "memo: work out who each person is and build the timeline privately, and "
+    "show none of it. No tables, no speaker lists, no transcript labels such "
+    "as Speaker 1, no fields reading not stated; a detail the record lacks is "
+    "left out. Third person, past tense, plain English, short paragraphs. "
+    "Introduce each person naturally the first time, by a name only as the "
+    "words give it and a role only as the words give it; after that the last "
+    "name. An officer the words never name is the officer on that camera "
+    "(the officer wearing BWL7-004997) when the record makes that plain, "
+    "otherwise Officer A, Officer B in order of appearance, kept the same "
+    "throughout. A person seen only in the picture is described by clothing, "
+    "position or what they did, never named. Quote exactly when the words "
+    "matter: anything the person stopped said, requests for consent and the "
+    "answers, advisements of rights, commands, and the reasons officers gave "
+    "for what they did. Point at the evidence with the time of day and the "
+    "camera; give an event's number only where a sentence rests on it, and "
+    "never walk the events one after another. Never narrate the footage: do "
+    "not write that the camera view shifted, the footage shows or the video "
+    "captures; what a camera showed is said only where the picture is the "
+    "evidence for a fact. Mark inferences (it appears) and give the basis. "
+    "Attribute the officers' characterisations to them; never adopt them as "
+    "fact. The chronology's events are the spine and the office's notes are "
+    "its reading of them; contradict neither. Where the words leave a key "
+    "moment unclear, say so at that point. The parts, in this order, each "
+    "heading on its own line followed by a colon. Summary: one or two "
+    "paragraphs, two hundred words at most, with the date and the times of "
+    "day the incident ran: why the officers were there, who was stopped, "
+    "what was found, how it ended, and what the attorney most needs to know. "
+    "The cameras: the heading alone; the office fills this part in. People: "
+    "each person, one line, how the record identifies them and where, and "
+    "which cameras show them. What happened: the account in phases, each "
+    "phase a bold heading with its span of the clock (Pursuit 20:24 to "
+    "20:27, The stop, Questioning at the car) followed by a paragraph or two "
+    "of narrative with the quotes and times inline. Questioning and rights: "
+    "every advisement of rights, quoted, with who read it, the time and the "
+    "camera; every question put to a person before rights were read, with "
+    "the answer and the time; whether the person asked for a lawyer, asked "
+    "to stop, or said they did not understand. Searches, seizures and force: "
+    "each search of a person, a bag, a vehicle or a place, who asked for "
+    "consent and what was answered, what was found and where it went; each "
+    "restraint, use of force, injury or complaint of pain and any medical "
+    "attention; with times and cameras. Statements that matter: exact quotes "
+    "that carry weight, who said them, the time, the camera, and whether it "
+    "answered a question or was said unprompted. Gaps and unclear parts: a "
+    "camera muted, turned off or pointed away and when; a stretch no camera "
+    "recorded; where the cameras or the words disagree; an event the record "
+    "does not bear out. Points for counsel: numbered, most significant first, "
+    "eight at most, each two to four sentences saying why something may "
+    "matter and referring to the times above; legal issues as questions for "
+    "counsel, never conclusions, the doctrine named in plain terms and no "
+    "cases or statutes cited. Nine hundred to eighteen hundred words; finish "
+    "every part."
 )
 # Gideon on the incident page (Phase 7 chapter 5): questions answered from
 # the incident record and the chronology, in the investigator's voice.
@@ -527,7 +591,11 @@ INCIDENT_CHAT = (
     "means nothing on another; attribute a line to a person only by a name "
     "the words give or the office set, otherwise to the camera it was heard "
     "on. When the record does not hold the answer, say so plainly and say "
-    "what it does hold. Plain words, short sentences, no preamble."
+    "what it does hold. Asked what happened in order or for a timeline, give "
+    "the moments in time order, one per line, each with its own time copied "
+    "from the record and never a rounded one, a line that rests on the "
+    "picture beginning Camera:, and no more lines than the question needs. "
+    "Plain words, short sentences, no preamble."
 )
 # The comparison (Phase 8 chapter 4, part 3): a report's pages against the
 # record, one finding per row, both sides cited.
@@ -538,13 +606,25 @@ COMPARISON = (
     "clock, with the chronology the office wrote. Go through the report's "
     "paragraphs given and, for each claim of fact that the record can speak "
     "to, say whether the record agrees with it, differs from it, or shows "
-    "nothing about it. Cite the paragraph the claim is in by its page and "
-    "paragraph number, and the moment on the record by its time. A "
-    "description of the picture is a description, not a fact; say what was "
-    "said and what was seen, and never what it means in law. Where the "
-    "report's words may be misread (a scan), say so in the why. Prefer few "
-    "findings that matter to many that do not; skip headings, form fields "
-    "and boilerplate. Plain words, one short sentence each."
+    "nothing about it. The record agrees with a claim only when the words or "
+    "the picture show the thing itself: an officer saying it, assuming it, "
+    "repeating it or writing it up on camera is not the thing, and a claim "
+    "the record holds only that way is not on camera, with the say-so quoted "
+    "in the why. The record differs where the words or the picture show "
+    "something else, and where the person stopped denied it or said "
+    "otherwise, quoted. A paragraph that tells part of the stop and leaves "
+    "out something the cameras hold there differs too, and the why says "
+    "what it leaves out: a denial, a request for a lawyer or to stop, an "
+    "injury or a complaint of pain, a statement about ownership, a search "
+    "or a question the report never mentions, a camera muted or turned off. "
+    "Cite the paragraph the claim is in by its page and paragraph number, "
+    "and the moment on the record by its time. A description of the "
+    "picture is a description, not a fact; say what was said and what was "
+    "seen, and never what it means in law. Where the report's words may be "
+    "misread (a scan), say so in the why. Spend the findings on the "
+    "defence: every difference and every claim not on camera, and "
+    "agreement only on the claims that decide the case; skip headings, "
+    "form fields and boilerplate. Plain words, one short sentence each."
 )
 COMPARISON_FORMAT = (
     'Answer with JSON only: {"findings": [{"page": 4, "paragraph": 2, '
@@ -1251,6 +1331,76 @@ def citations(
 
 
 # The messages ---------------------------------------------------------------------
+
+
+# The parts the templates ask for, so a heading the model writes without its
+# colon (as it often does) is still read as one on the page and in Word
+# (v1.90.0). Matched whole, without case, with markdown marks stripped.
+KNOWN_PARTS = (
+    "summary",
+    "the cameras",
+    "people",
+    "what happened",
+    "breakdown",
+    "points for counsel",
+    "comparison to report",
+    "questioning and rights",
+    "commands, warnings, and rights",
+    "commands, warnings and rights",
+    "searches, seizures and force",
+    "searches and force",
+    "statements that matter",
+    "names, places, and dates",
+    "names, places and dates",
+    "gaps and unclear parts",
+    "unclear parts",
+    "what was decided",
+    "who is to do what",
+    "questions left open",
+    "rulings and dates",
+    "arguments",
+    "testimony",
+    "next steps",
+    "the account given",
+    "admissions and changes",
+    "rights and pressure",
+    "requests, threats or pressure",
+    "key points",
+    "arrangements made",
+    "what each person said",
+)
+_PART_LINE = re.compile(r"^[#*\s]*([^\n:]{2,60}?)[\s*]*:?[\s*]*$")
+
+
+_BOLD_LINE = re.compile(r"^\s*\*\*([^*\n]{2,60}?)\**:?\**\s*$")
+_CAPS_LINE = re.compile(r"^\s*([A-Z][A-Z ,'&/-]{2,59})\s*:?\s*$")
+
+
+def with_heading_colons(text: str) -> str:
+    """The template's parts written as headings without their colons get them
+    back, and a short line the model set in bold or in capitals is read as a
+    heading too, so every reader of the text sees the same headings."""
+
+    def cased(words: str) -> str:
+        # A heading in capitals reads as shouting on a page; sentence case.
+        return words[0] + words[1:].lower() if words.isupper() else words
+
+    out = []
+    for raw in (text or "").splitlines():
+        match = _PART_LINE.match(raw)
+        if match and match.group(1).strip().lower() in KNOWN_PARTS:
+            out.append(cased(match.group(1).strip()) + ":")
+            continue
+        bold = _BOLD_LINE.match(raw)
+        if bold and not bold.group(1).strip().endswith((".", "?", "!")):
+            out.append(bold.group(1).strip().rstrip(":") + ":")
+            continue
+        caps = _CAPS_LINE.match(raw)
+        if caps and len(caps.group(1).split()) <= 6:
+            out.append(cased(caps.group(1).strip()) + ":")
+            continue
+        out.append(raw)
+    return "\n".join(out)
 
 
 def system_message(ground_rules: str, template: str, answer_format: str) -> str:

@@ -187,6 +187,7 @@ The Appearance page of the rail, added in v1.16.0 at the maintainer's ask. It al
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
 | What the chat is called | text up to 30 characters; greyed while Chat is Off | Gideon | 7 (chapter 5) | The chat's name on every page: the tab, the Ask button, the drawer's head and a conversation's export title. Empty falls back to "Chat". The word in code, settings and the audit log stays Chat. | The next page drawn. |
+| Marking on exports | text, two lines | Privileged and confidential. Attorney work product. | 1 (v1.90.0) | The line at the head of every page of every Word export, before the document's title. Empty prints no marking. | The next export. |
 | Office name | text, one line | empty | 1 | The office's name, under the logo on the sign-in page and on the cover of every Word export. Empty shows the app's name alone. | The next page or export. |
 | Logo on Word exports | On or Off | Off | 1 | Puts the uploaded logo at the head of every Word export's cover: transcripts, summaries, chats and case chats, 1.5 inches wide, centred, above the title. | The next export; nothing already exported changes. |
 

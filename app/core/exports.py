@@ -808,8 +808,24 @@ def _number_the_lines(section) -> None:
     section._sectPr.append(numbering)
 
 
+def marking() -> str:
+    """The office's marking for its exports (v1.90.0), or nothing."""
+    return str(settings_store.get("export_marking") or "").strip()
+
+
+def stamp_pages(document, title: str, kind: str, label: str) -> None:
+    """The running head and foot on a one-section export (v1.90.0): the
+    marking and the title above, the label, the page of pages and the date
+    below, as the transcript's pages have carried since Phase 1."""
+    from docx.shared import Pt, RGBColor
+
+    for section in document.sections:
+        _running_head(section, title, kind, label, Pt, RGBColor)
+
+
 def _running_head(section, title, kind, sha256, Pt, RGBColor) -> None:
-    """The title and kind above; the fingerprint, page, and date below.
+    """The marking, the title and kind above; the fingerprint (or the label),
+    page, and date below.
 
     The exporter's name is in the Processing record only, never on every page.
     """
@@ -819,7 +835,8 @@ def _running_head(section, title, kind, sha256, Pt, RGBColor) -> None:
     section.footer.is_linked_to_previous = False
 
     above = section.header.paragraphs[0]
-    above.text = f"{title} - {kind}"
+    marked = marking()
+    above.text = (f"{marked}    " if marked else "") + f"{title} - {kind}"
     above.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in above.runs:
         run.font.size = Pt(8)
@@ -1297,6 +1314,7 @@ def summary_word(summary, exported_by: str) -> bytes:
     document.add_paragraph()
     _summary_body(document, summary)
     _camera_section(document, transcript)
+    stamp_pages(document, title_of(recording), "Summary", recording.sha256)
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()
@@ -1359,6 +1377,7 @@ def chat_word(chat, exported_by: str) -> bytes:
         if turn.cut_short:
             note = document.add_paragraph("The answer was cut short.")
             note.runs[0].italic = True
+    stamp_pages(document, title_of(recording), "Chat", recording.sha256)
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()
@@ -1479,6 +1498,7 @@ def case_chat_word(chat, exported_by: str) -> bytes:
         if turn.cut_short:
             note = document.add_paragraph("The answer was cut short.")
             note.runs[0].italic = True
+    stamp_pages(document, case.name, "Case chat", case.name)
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()

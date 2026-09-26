@@ -359,6 +359,23 @@ def test_a_summary_is_written_whole_with_its_citations(
         'attachment; filename="Interview - summary (Standard summary)'
     )
     assert word.content[:2] == b"PK"
+    # The running head with the office's marking, and page numbers (v1.90.0);
+    # an empty marking prints none.
+    import io as _io
+
+    from docx import Document
+
+    head = " ".join(
+        p.text
+        for p in Document(_io.BytesIO(word.content)).sections[0].header.paragraphs
+    )
+    assert head.startswith("Privileged and confidential. Attorney work product.")
+    assert "Interview - Summary" in head
+    settings_store.set_to("export_marking", "")
+    again = Document(_io.BytesIO(client.get(f"/summary/{summary.pk}/export").content))
+    assert " ".join(p.text for p in again.sections[0].header.paragraphs).startswith(
+        "Interview - Summary"
+    )
 
 
 @pytest.mark.django_db

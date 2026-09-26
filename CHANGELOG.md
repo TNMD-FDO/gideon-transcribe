@@ -21,6 +21,56 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.90.0, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+From the maintainer's walk of the assistant's outputs as a defender would
+read them, on the office's copy.
+
+**The case chat no longer refuses a question of fact.** Asked what an
+officer put to the person before his rights were read, it had answered "I
+can only answer from the transcripts in this case." The template now says a
+question about what was said or done is answered however it is worded, and
+that a refusal, kept for advice, opinion and what the transcripts lack, says
+what they do hold.
+
+**The incident memo in the investigator's voice.** The shipped template
+takes the voice the office wrote for its own body camera summaries: the
+working kept out, no speaker lists or transcript labels, an unnamed officer
+named by the camera worn, What happened in phases with their spans of the
+clock, Questioning and rights, Searches, seizures and force, Gaps and
+unclear parts, and Points for counsel as questions with no cases cited. The
+memo that walked a hundred and twenty-seven events one after another is
+gone. The cameras part is written by the app.
+
+**The body camera summary shipped in that voice too**, generalised from the
+office's own template; an office with its own wording keeps it.
+
+**Headings the model writes without a colon, in bold or in capitals are
+headings** on the page and in Word.
+
+**Every Word export carries a running head and page numbers**: the office's
+marking (a new Appearance setting, shipped "Privileged and confidential.
+Attorney work product."), the title and kind above; the case or recording,
+Page X of Y and the date below. The chronology figure's spells are real
+headings, so Word's navigation pane lists them.
+
+**The incident chat gives a timeline in time order**, one moment a line with
+its own unrounded time, Camera: on a line from the picture.
+
+**The comparison no longer takes an officer's word for the record.** It had
+marked "agrees" on who was driving from an officer's "I'm assuming he's the
+driver", thirteen agreements to one difference. The record agrees only when
+the words or the picture show the thing; an officer's say-so is not on
+camera, with the say-so quoted; a denial by the person stopped is a
+difference; a paragraph that leaves out what the cameras hold at that point
+of the stop differs, the why saying what it leaves out; and agreement is
+spent only on the claims that decide the case.
+
 ## v1.89.0, 2026-09-25
 
 ```

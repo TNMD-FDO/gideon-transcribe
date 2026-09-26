@@ -948,6 +948,9 @@ def word(comparison: Comparison, exported_by: str) -> bytes:
         cells[3].text = clock_words(comparison, one.get("at"))
         cells[4].text = one.get("why", "")
         cells[5].text = one.get("note", "")
+    exports.stamp_pages(
+        doc, f"{document.title}, {home_name}", "Comparison", document.title
+    )
     holder = io.BytesIO()
     doc.save(holder)
     return holder.getvalue()

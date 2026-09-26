@@ -82,21 +82,34 @@ def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):
     assert SummaryTemplate.objects.count() == 9
     for one in SummaryTemplate.objects.exclude(key="standard"):
         assert one.text == prompts.SHIPPED_SUMMARIES[one.key]
-        if one.key != "dictation":
+        # The body camera memo (v1.90.0) notes an unclear moment where it
+        # falls, in the Breakdown, as the office's own template did.
+        if one.key not in ("dictation", "body_camera"):
             assert "Unclear parts" in one.text
     # The Standard, Video and Body camera summaries are memos to the attorney
     # (v1.53.0): a summary, the people as the words identify them, what
     # happened by subject, the statements that matter.
-    for key in ("standard", "video", "body_camera"):
+    for key in ("standard", "video"):
         text = SummaryTemplate.objects.get(key=key).text
         assert "memo a member of staff hands to an attorney" in text
         assert "Summary:" in text and "People:" in text
         assert "What happened:" in text and "Statements that matter:" in text
         assert "Never infer a name or a role" in text
         assert "never minute by minute" in text
-    assert "Commands, warnings, and rights:" in (
-        SummaryTemplate.objects.get(key="body_camera").text
-    )
+    # The body camera memo (v1.90.0) is the investigator's: the working kept
+    # out, phases, questioning and rights, searches and force, points for
+    # counsel as questions.
+    body = SummaryTemplate.objects.get(key="body_camera").text
+    assert "experienced defence investigator" in body
+    for part in (
+        "Summary:",
+        "Breakdown:",
+        "Questioning and rights:",
+        "Searches and force:",
+        "Points for counsel:",
+    ):
+        assert part in body, part
+    assert "no cases or statutes cited" in body and "Officer A" in body
 
 
 def test_an_unedited_built_in_follows_the_shipped_wording_on_upgrade(db):
@@ -148,6 +161,7 @@ def test_an_unedited_built_in_follows_the_shipped_wording_on_upgrade(db):
     assert chat.text == "Ours." and chat.behind
     history = prompts.SHIPPED_HISTORY
     assert prompts.text_hash(prompts.DIGEST) in history["prompt:digest"]
+    assert prompts.text_hash(prompts.COMPARISON) in history["prompt:comparison"]
     assert prompts.text_hash(prompts.STANDARD_SUMMARY) in history["standard"]
 
 

@@ -2184,6 +2184,7 @@ Viewing the Queue tab writes no row. Queued and started are never rows.
 
 ### Amendments applied
 
+- **2026-09-25, v1.90.0.** Every Word export carries the running head and foot the transcript has carried since Phase 1: a marking the Admin sets (Marking on exports, Appearance page, shipped "Privileged and confidential. Attorney work product."), the document's title and kind above; the case or recording, the page of pages and the date below. The summary, the chat, the case chat, the incident memo, the chronology, the Timeline report and the comparison gain them. From the maintainer's walk of the outputs as a defender would read them.
 - From the LLM features ticket to the queue ticket: no LLM step follows a Job; a call while the engine is down fails at once with `llm_unreachable`; the `llm-worker` service and its `llm` queue; the viewer polls every two seconds while an AI assistant call runs.
 - From the Word export ticket to the queue ticket: the Batch download is the only download on the Batch page; the zip and file naming; no bulk Word button.
 - From the settings catalogue ticket to the queue ticket: Django's own admin is not mounted; a wedged Procrastinate job is cleared with a `./transcribe` subcommand.

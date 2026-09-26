@@ -566,6 +566,21 @@ def test_the_windows_split_a_record_by_its_times():
     ]
 
 
+def test_a_heading_without_its_colon_is_still_a_heading():
+    """v1.90.0: the model drops the colon, sets a part in bold, or writes it
+    in capitals; the page and the Word export still read a heading."""
+    given = (
+        "Summary\nOne paragraph.\n\n**Breakdown**\n**Arrival 20:24 to 20:27**\n"
+        "Text here.\nPOINTS FOR COUNSEL\n1. A point.\nNone noticed.\n"
+        "**It was a long night.**\n"
+    )
+    assert prompts.with_heading_colons(given) == (
+        "Summary:\nOne paragraph.\n\nBreakdown:\nArrival 20:24 to 20:27:\n"
+        "Text here.\nPoints for counsel:\n1. A point.\nNone noticed.\n"
+        "**It was a long night.**"
+    )
+
+
 # The Incident memo ------------------------------------------------------------------
 
 
@@ -683,6 +698,17 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     assert answer["Content-Disposition"].endswith('"Incident memo - Stop.docx"')
     assert answer.content[:2] == b"PK"
     assert Row.objects.filter(event="incident memo exported").exists()
+    # Every page carries the marking, the title and the page of pages (v1.90.0).
+    import io as _io
+
+    from docx import Document
+
+    exported = Document(_io.BytesIO(answer.content))
+    head = " ".join(p.text for p in exported.sections[0].header.paragraphs)
+    foot = exported.sections[0].footer._element.xml
+    assert "Privileged and confidential. Attorney work product." in head
+    assert "Traffic stop, Stop - Incident memo" in head
+    assert "PAGE" in foot and "NUMPAGES" in foot
 
     # Regenerate resets the one row; a failed engine says so.
     def failing(messages, **options):

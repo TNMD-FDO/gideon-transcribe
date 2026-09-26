@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-25, at v1.90.0 (the outputs a defender reads; nothing shared moves).** Prompt templates re-shipped and Word exports styled; one Appearance setting. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.89.0 (the walk's decisions; nothing shared moves).** Pages, one search rule and one Templates setting. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.88.1 (the incident desk on wide screens, wrapping event lines; nothing shared moves).** Pages alone. No port, memory, card, timer, network or engine request moves.
 - **2026-09-25, at v1.88.0 (the Timeline report; nothing shared moves).** A Phase 8 chapter: the chronology as a Word document with stills, made in the app container's request with ffmpeg frames cut a few at a time. No port, memory, card, timer, network or engine request moves; no engine call is made.

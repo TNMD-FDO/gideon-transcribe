@@ -263,6 +263,12 @@ def word(incident, exported_by: str) -> bytes:
     if not rows:
         empty = document.add_paragraph("No events on the chronology yet.")
         empty.runs[0].italic = True
+        exports.stamp_pages(
+            document,
+            f"{incident.case.name}, {incident.name}",
+            "Timeline report",
+            incident.name,
+        )
         return _bytes(document)
 
     # The stills, cut before the entries are laid out.
@@ -331,6 +337,12 @@ def word(incident, exported_by: str) -> bytes:
     )
     line.runs[0].italic = True
     line.runs[0].font.size = Pt(9)
+    exports.stamp_pages(
+        document,
+        f"{incident.case.name}, {incident.name}",
+        "Timeline report",
+        incident.name,
+    )
     return _bytes(document)
 
 

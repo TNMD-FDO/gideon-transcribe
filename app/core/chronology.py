@@ -736,6 +736,9 @@ def word(incident, picture: bytes | None, exported_by: str) -> bytes:
     document = exports._open_record_document()
     exports._office_head(document)
     pages(document, incident, picture, exported_by)
+    exports.stamp_pages(
+        document, f"{incident.case.name}, {incident.name}", "Chronology", incident.name
+    )
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()
@@ -824,7 +827,8 @@ def _figure(document, incident, rows: list[dict]) -> None:
         empty.runs[0].italic = True
         return
     for group in spells(rows):
-        heading = document.add_paragraph()
+        # A real heading (v1.90.0), so Word's navigation pane lists the spells.
+        heading = document.add_heading(level=2)
         heading.paragraph_format.space_before = Pt(10)
         heading.paragraph_format.space_after = Pt(2)
         head = heading.add_run(spell_words(group))
