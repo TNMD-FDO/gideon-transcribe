@@ -769,11 +769,11 @@ Written 2026-09-23, the evening v1.78.0 went on the server, from the maintainer'
 
 ### Words
 
-No new word. The Sitting and Pinned are chapter 9's; the case page says "The assistant holds" as the column's head and "whole" or "by words alone" as chapter 9 does.
+No new word. The Sitting and Pinned are chapter 9's; the case page says "One sitting" as the column's head (from v1.89.0; "The assistant holds" until then) and "whole" or "by words alone" as chapter 9 does.
 
 ### The Incidents tab
 
-- **A column, The assistant holds**, after Cameras: the figure ("5½ of 7½ hours' worth"), a bar 8 pixels tall in the zone's colour with the words-alone part hatched as chapter 9 draws it, and on the bar's right a word: "all 12 whole" in the muted colour, or "3 by words alone" in the warn colour, or "does not fit" in the danger colour when even the words alone are too long. The row's hover carries the zone's sentence from chapter 9. The column is absent while the assistant is off or Incidents is off, and blank for an incident with no synced camera that has a transcript.
+- **A column, One sitting** ("The assistant holds" until v1.89.0), after Cameras: the figure ("5% used" from v1.89.0; "5½ of 7½ hours' worth" until then), a bar 8 pixels tall in the zone's colour with the words-alone part hatched as chapter 9 draws it, and on the bar's right a word: "all 12 whole" in the muted colour, or "3 by words alone" in the warn colour, or "does not fit" in the danger colour when even the words alone are too long. The row's hover carries the zone's sentence from chapter 9. The column is absent while the assistant is off or Incidents is off, and blank for an incident with no synced camera that has a transcript.
 - **The videos list under the tab** is unchanged.
 
 ### The offer
@@ -1048,7 +1048,7 @@ Added to `CONTEXT.md` with this chapter: **Home**, **Rail**, **Ready to download
 - **Folding My recordings into Home**: ruled out; the working page with its details pane, Rename, Process again, Move to case, Clear and the Admin's view of somebody's Workspace stays a page.
 - **A list of past batches beyond this session**: not chosen; a batch is the session's.
 - **A "downloaded" mark** to hide Ready to download: not chosen; the count stays until Done with these, and the guide says so.
-- **The case page's own Record and Add recordings** beside the rail's: kept this release; the walk decides.
+- **The case page's own Record and Add recordings** beside the rail's: kept this release; the walk decides. (Decided 2026-09-25, v1.89.0: the rail owns the two actions; Record and the Cases page's Upload recordings and My recordings' Upload files and New recording are gone; Add recordings stays on a case page, since it also moves recordings from My recordings.)
 
 ### Left to the build
 
@@ -1173,6 +1173,7 @@ The maintainer's list of 2026-09-19 and the asks of the same day; the mock-ups `
 
 ## Amendments applied
 
+- **2026-09-25, v1.89.0.** From the maintainer's answers to the walk of v1.88.0: chapter 13's rail owns the two actions and the pages' copies go (Add recordings stays on a case page); the storage line says what it counts and prints on Home and the upload page alone; chapter 10's column is headed One sitting with "n% used"; a case's recording rows carry a chevron saying a press opens the details; the guide and the beside pane gain a Find in the guide box; the Panel's audit settings page is "Audit settings" and the Clips page says Clips; the Details tab says "Add another report" when one is attached; the Export menu's Memo to Word is a link like the others. Left where the maintainer left them: a plain Open landing on Transcript, and the Summary tab folding its templates.
 - **2026-09-25, v1.88.0.** Chapter 14 (The Timeline report) written and built the same day from the maintainer's ask; Deferred and ruled out becomes chapter 15. Decisions left to the build: the still's width 2.4 inches and its caption "<camera> at <time>"; the window's default 20 seconds; eight spoken lines and three camera lines at most an entry; four stills cut at once; the limit's default 80; the reading paragraph and the provenance line as shipped.
 - **2026-09-25, v1.87.1.** Chapter 9's Sitting reaches the Case Chat: an Incident's synced cameras among the Recordings a question reads are one item of a Reading, the Incident's record with each line cited as its Recording and its own time, the longest unpinned camera's words going alone when the record would not fit, as on the incident page. Phase 2 chapter 7 carries the rule.
 - **2026-09-25, v1.86.2.** Proposed events waiting are in the warning tone, so a case with proposals waiting for accept or dismiss is under Needs you on its own: the maintainer's word after the server walk of v1.86.0, where a case with 115 proposals waiting sat under Needs you only for its stale memo. Phase 7 chapter 3's tone list is amended the same day.

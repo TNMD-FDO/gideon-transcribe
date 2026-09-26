@@ -581,6 +581,13 @@ MEMO = (
     "Unclear parts:\n"
     "None.\n"
 )
+# What the app keeps: the model's The cameras lines replaced by its own
+# (v1.89.0), each camera's kind, its span as citations, and how it was read.
+KEPT = MEMO.replace(
+    "BWC2-1 ran from [21:56:17] to [22:06:17]; BWC2-2 from [22:00:58].\n\n",
+    "BWC2-1: camera, [21:56:17] to [22:06:17].\n"
+    "BWC2-2: camera, [22:00:58] to [22:10:58]; no picture read.\n\n",
+)
 
 
 def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
@@ -606,7 +613,7 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
     assert memo is not None and memo.state == "queued"
     incident_assistant.write_memo(memo.pk)
     memo.refresh_from_db()
-    assert memo.state == "done" and memo.text == MEMO.strip()
+    assert memo.state == "done" and memo.text == KEPT.strip()
     # What the memo was given: the cameras, the chronology numbered, the
     # record on the clock, the fixed rules with the templates.
     system = asked[0]["messages"][0]["content"]
@@ -632,6 +639,8 @@ def test_the_memo_is_written_on_the_chronology_with_citations_and_marks(
         "[22:06:17]": 600.0,
         "[22:00:58]": 281.0,
         "[22:01:03]": 286.0,
+        # The app's cameras line ends BWC2-2 at its end (v1.89.0).
+        "[22:10:58]": 881.0,
     }
     assert memo.event_numbers == {"1": str(first.pk), "2": str(second.pk)}
     assert memo.cameras_used == ["BWC2-1"]

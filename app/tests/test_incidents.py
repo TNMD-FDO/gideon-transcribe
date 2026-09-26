@@ -255,7 +255,7 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     )
     incident = Incident.objects.get()
     assert answer.status_code == 302 and answer["Location"] == incident.url()
-    assert incident.name == "06/07/2025" and incident.how == "offer"
+    assert incident.name == "06/07/2025, BWC2-1" and incident.how == "offer"
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Open the incident" in page and "2 of 2 synced" in page
     assert "Make them an incident?" not in page

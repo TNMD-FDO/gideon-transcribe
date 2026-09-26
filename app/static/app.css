@@ -1638,6 +1638,18 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .tbl tr.goes:hover a.plain b { text-decoration: underline; }
 .tbl td.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .tbl td.acts { text-align: right; white-space: nowrap; }
+/* v1.89.0, from the walk: a Users row's buttons wrap rather than clip; a
+   case name on the Cases page underlines on hover, as Home's rows do; a
+   chevron on a case's recording rows says a press opens the details. */
+.tbl.users td.acts { white-space: normal; }
+.tbl a.plain:hover b { text-decoration: underline; }
+.tbl .chev { color: var(--muted); font-size: 1.1em; margin-right: 2px; }
+.tbl tr.pick.on .chev { color: var(--accent); }
+/* Find in the guide (v1.89.0): the box, its count, and the marks. */
+.guide-find-row, .help-find-row { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.help-find-row { padding: 8px 12px 0; }
+.guide-find { flex: 1 1 auto; min-width: 0; font: inherit; font-size: var(--t-small); padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
+mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; padding: 0 1px; }
 .tbl tr.detail-row > td { background: var(--surface-2); padding: 12px 14px; }
 .detail h2 { margin: 0 0 4px; font-size: 1.1em; }
 .detail .actions { margin-top: 12px; }

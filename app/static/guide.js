@@ -7,6 +7,11 @@
 
   var contents = document.querySelector(".guide .contents");
   var body = document.querySelector(".guide-body");
+  // Find in the guide (v1.89.0): the box above the contents.
+  var find = document.getElementById("guide-find");
+  if (find && body && window.GuideFind) {
+    window.GuideFind.attach(find, body, document.getElementById("guide-find-count"));
+  }
   if (!contents || !body || !window.IntersectionObserver) { return; }
 
   var links = {};

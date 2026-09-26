@@ -35,9 +35,14 @@ KINDS = (
 )
 
 
+class Phrase(list):
+    """The terms of a search typed in quotes: one phrase, matched exactly
+    wherever it falls. Plain words are whole words (v1.89.0)."""
+
+
 def terms(asked: str) -> list[str]:
-    """A phrase in quotes as one term; otherwise every word, all of which
-    must be present."""
+    """A phrase in quotes as one term, matched exactly; otherwise every word,
+    all of which must be present as whole words."""
     asked = " ".join(asked.split())
     if (
         len(asked) >= 2
@@ -45,34 +50,56 @@ def terms(asked: str) -> list[str]:
         and asked[0] in ('"', "\u201c", "\u201d")
     ):
         phrase = asked[1:-1].strip()
-        return [phrase] if phrase else []
+        return Phrase([phrase]) if phrase else Phrase()
     if len(asked) >= 2 and asked[0] == "\u201c" and asked[-1] == "\u201d":
         phrase = asked[1:-1].strip()
-        return [phrase] if phrase else []
+        return Phrase([phrase]) if phrase else Phrase()
     return [word for word in asked.split() if word]
 
 
+def _word_pattern(words: list[str]) -> re.Pattern:
+    """The terms as one pattern: a phrase anywhere, a word between word
+    boundaries, so "car" no longer lights the middle of "scared"."""
+    if isinstance(words, Phrase):
+        return re.compile("|".join(re.escape(word) for word in words), re.IGNORECASE)
+    return re.compile(
+        "|".join(r"(?<!\w)" + re.escape(word) + r"(?!\w)" for word in words),
+        re.IGNORECASE,
+    )
+
+
 def _all(fields: list[str], words: list[str]) -> Q:
-    """Every term found in one of the fields."""
+    """Every term found in one of the fields: a phrase as a substring, a word
+    as a whole word (PostgreSQL's \m and \M are its word edges)."""
     whole = Q()
     for word in words:
         one = Q()
         for field in fields:
-            one |= Q(**{f"{field}__icontains": word})
+            if isinstance(words, Phrase):
+                one |= Q(**{f"{field}__icontains": word})
+            else:
+                one |= Q(**{f"{field}__iregex": r"\m" + re.escape(word) + r"\M"})
         whole &= one
     return whole
 
 
 def matches(text: str, words: list[str]) -> bool:
-    low = text.lower()
-    return bool(words) and all(word.lower() in low for word in words)
+    if not words:
+        return False
+    if isinstance(words, Phrase):
+        low = text.lower()
+        return all(word.lower() in low for word in words)
+    return all(
+        re.search(r"(?<!\w)" + re.escape(word) + r"(?!\w)", text, re.IGNORECASE)
+        for word in words
+    )
 
 
 def mark(text: str, words: list[str]):
     """The text escaped, each term wrapped in a mark."""
     if not words:
         return mark_safe(escape(text))
-    pattern = re.compile("|".join(re.escape(word) for word in words), re.IGNORECASE)
+    pattern = _word_pattern(words)
     out: list[str] = []
     last = 0
     for found in pattern.finditer(text):
@@ -90,7 +117,8 @@ def sentence_with(text: str, words: list[str]) -> str:
     if not words or len(text) <= 240:
         return text
     pieces = re.split(r"(?<=[.!?])\s+", text)
-    kept = [one for one in pieces if any(word.lower() in one.lower() for word in words)]
+    pattern = _word_pattern(words)
+    kept = [one for one in pieces if pattern.search(one)]
     if not kept:
         return text[:240].rsplit(" ", 1)[0] + "..."
     return " ".join(kept[:3])

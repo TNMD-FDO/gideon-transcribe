@@ -72,11 +72,11 @@ def test_the_upload_page_greys_the_hint_under_nemotron(client, person, monkeypat
     LoginSession.objects.create(user=person, session_key=client.session.session_key)
     page = client.get(reverse("upload")).content.decode()
     assert 'id="hint" disabled' in page
-    assert "The Nemotron diarizer decides the count itself" in page
+    assert "The diarizer counts the speakers itself" in page
     settings_store.set_to("diarizer", "pyannote")
     page = client.get(reverse("upload")).content.decode()
     assert 'id="hint" disabled' not in page
-    assert "decides the count itself" not in page
+    assert "counts the speakers itself" not in page
     settings_store.set_to("diarizer", "nemotron")
 
 

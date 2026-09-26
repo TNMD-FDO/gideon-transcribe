@@ -1516,7 +1516,9 @@
       if (event.target.closest("#memo-export")) { exportWith(C.exportMemo); }
     });
   }
-  var exportMemoButton = document.getElementById("export-memo");
+  // The menu's Memo to Word is a plain link since v1.89.0 (the export is a
+  // GET); the Memo tab's own button still asks through exportWith.
+  var exportMemoButton = null;
   if (exportMemoButton) {
     exportMemoButton.addEventListener("click", function () {
       document.getElementById("export-menu").removeAttribute("open");
@@ -2259,7 +2261,8 @@
       } else {
         html += "<p class='muted small' style='margin: 0 0 6px'>No report yet for this incident. Add the police report as a PDF and it is kept beside the cameras.</p>";
       }
-      html += "<a class='btn small' href='" + escape(I.add_document_url) + "' id='add-document'>Add the report</a>";
+      html += "<a class='btn small' href='" + escape(I.add_document_url) + "' id='add-document'>" +
+        (I.documents && I.documents.length ? "Add another report" : "Add the report") + "</a>";
     }
     box.innerHTML = html;
   }

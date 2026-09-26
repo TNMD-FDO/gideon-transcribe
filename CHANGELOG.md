@@ -21,6 +21,54 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.89.0, 2026-09-25
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The maintainer's answers to the walk of v1.88.0, built as one release.
+
+**The rail owns the two actions.** Upload files and Record now are in the
+rail on every page; the Cases page's Upload recordings, My recordings' Upload
+files and New recording, and the case head's Record are gone. Add recordings
+stays on a case page, since it also moves recordings from My recordings.
+
+**The recording type is asked where the case is chosen.** On the upload page
+a type for the batch sits under the case, so the case page, the memo and the
+Timeline report stop printing blanks; the options' own type box is the same
+choice.
+
+**The storage line says what it counts**, on Home and the upload page alone:
+"Your recordings use 42 GB of your 50 GB, in cases and this session."
+
+**Search matches whole words.** "car" no longer lights the middle of
+"scared"; a phrase in quotes stays an exact match.
+
+**Naming speakers starts where it pays.** The case's Speakers tab lists the
+recordings with unnamed speakers longest talkers first, with their minutes
+of talk, each a link straight to the recording's Speakers panel.
+
+**The case page's sitting column reads as the Cameras tab does.** Headed One
+sitting, with "n% used" and the bar; the full sentence on hover.
+
+**Find in the guide.** A box above the contents, on the guide's page and in
+the pane beside a page, lights every match and brings the first into view.
+
+**A chevron on a case's recording rows** says a press opens the details, so a
+refused upload can be found and removed.
+
+**Smaller things.** Sizes under a gigabyte print in megabytes on the Cases
+page; a case name underlines on hover; the offer's suggested incident name
+carries the first camera's id beside the date; Memo to Word is a link flush
+with the other exports; an empty incident chat offers two starter questions,
+a Templates setting; the memo's The cameras section is written by the app
+from its own record of the cameras; the Details tab says Add another report
+when one is attached; the Clips page says Clips; the Panel's audit settings
+page is Audit settings; a Users row's buttons wrap; the greyed speaker hint
+on upload no longer names the diarizer.
+
 ## v1.88.1, 2026-09-25
 
 ```

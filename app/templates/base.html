@@ -125,6 +125,10 @@
             <a class="help-full small" href="{% help_url page %}">Open as a page</a>
             <button type="button" class="ghost tiny help-close" title="Close the guide">Close</button>
           </div>
+          <div class="help-find-row">
+            <input type="search" id="help-find" class="guide-find" placeholder="Find in the guide" aria-label="Find in the guide" autocomplete="off">
+            <span class="muted small" id="help-find-count"></span>
+          </div>
           <div class="help-body guide"></div>
         </aside>
       {% endif %}
@@ -133,6 +137,6 @@
 
   {% if user.is_authenticated and reports_on %}{% include "report-box.html" %}<script src="{% static 'report.js' %}"></script>{% endif %}
   <script src="{% static 'theme.js' %}"></script>
-  {% if user.is_authenticated %}<script src="{% static 'help-pane.js' %}"></script>{% endif %}
+  {% if user.is_authenticated %}<script src="{% static 'guide-find.js' %}"></script><script src="{% static 'help-pane.js' %}"></script>{% endif %}
 </body>
 </html>

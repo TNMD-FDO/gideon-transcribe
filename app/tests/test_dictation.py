@@ -144,7 +144,7 @@ def test_a_dictation_is_kept_on_its_own_outside_the_workspace(ana, client):
     recording.media_state = MediaState.READY
     recording.save()
     page = client.get(reverse("recordings") + f"?new={recording.pk}").content.decode()
-    assert recording.title in page and "New recording" in page
+    assert recording.title in page and "Record now" in page
     assert (
         page.index("Recorded here")
         < page.index(recording.title)

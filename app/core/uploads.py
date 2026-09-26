@@ -169,7 +169,12 @@ def storage_warning(user: User, adding_bytes: int = 0) -> str | None:
         return None
     if after > quota:
         return None  # The refusal says it instead.
-    return f"You are close to your storage space: {as_gb(after)} of {as_gb(quota)}"
+    # What is counted is said (v1.89.0): the figure is the person's
+    # recordings in cases and in this session, not the session alone.
+    return (
+        f"Your recordings use {as_gb(after)} of your {as_gb(quota)}, in cases "
+        "and this session."
+    )
 
 
 def in_flight() -> dict[str, tuple[int, float]]:

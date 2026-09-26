@@ -264,13 +264,13 @@ def test_the_offer_and_the_case_page_carry_the_bar(client, incident, person, a_c
     incidents.make(a_case, "Again", [cameras_of_case(a_case)["first"]], by=person)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
     body = page.content.decode()
-    assert "The assistant holds" in body
+    assert "One sitting" in body
     assert "sitting-mini" in body and "hours&#x27; worth" in body
     assert third.pk  # the offer still stands, its bar drawn
     # Off when the assistant is off.
     settings_store.set_to("assistant_available", False)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
-    assert "The assistant holds" not in page.content.decode()
+    assert "One sitting" not in page.content.decode()
     settings_store.set_to("assistant_available", True)
 
 

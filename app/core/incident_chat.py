@@ -113,7 +113,7 @@ def state_json(incident) -> dict:
         "busy": any(one["busy"] for one in chats),
         "readable": len(cameras),
         "left_out": left_out,
-        "starters": settings_store.lines_of("case_chat_starters"),
+        "starters": settings_store.lines_of("incident_chat_starters"),
         "chats": chats,
         "url": incident.url(),
     }

@@ -18,7 +18,7 @@ You have one login session at a time. Signing in from a second browser ends the 
 
 A batch is one upload of one or more recordings that are handled together. It is the ordinary way to use the app: put in everything you have, and come back for the transcripts. **Upload files** at the top of the rail opens the Upload page.
 
-When your office uses cases, the page starts with one question, **Where do they go?**: **This session only**, or **Into a case**, with the case chosen beside it. Nothing else is chosen for you: a plain transcript needs no settings at all.
+When your office uses cases, the page starts with one question, **Where do they go?**: **This session only**, or **Into a case**, with the case chosen beside it and, under it, the recording type for the batch (Body camera, Jail call, Interview, Phone call, Hearing), which the case page, the memo and the Timeline report print. Nothing else is chosen for you: a plain transcript needs no settings at all.
 
 Then the three steps. On a wide monitor they are on the page together, files on the left and the settings and the start button on the right; on a laptop they come one at a time, with **Next** between them.
 
@@ -197,7 +197,7 @@ Deleting a case asks first and names what it is taking. It cannot be undone.
 
 ### Recording in the app
 
-When your office has Live recording on, **Record** sits beside Upload recordings on the Cases page and beside Add recordings on a case's page. Choose the case, the recording type, a title if you want one (the type and the date otherwise), and the spoken language, then press **Record**. The browser asks once to use the microphone. While it records, the page shows the clock and a level meter; **Pause** and **Resume** cut the pause out of the recording; **Stop** ends it. The sound is sent to the office's server as it goes, so a computer that dies loses at most the last few seconds, and nothing leaves the building.
+When your office has Live recording on, **Record now** sits at the top of the rail on every page and, inside a case, records into that case; the pages carry no button of their own. Choose the case, the recording type, a title if you want one (the type and the date otherwise), and the spoken language, then press **Record**. The browser asks once to use the microphone. While it records, the page shows the clock and a level meter; **Pause** and **Resume** cut the pause out of the recording; **Stop** ends it. The sound is sent to the office's server as it goes, so a computer that dies loses at most the last few seconds, and nothing leaves the building.
 
 For a call or a meeting on the computer (Zoom, Teams, a softphone, a jail call played there), tick **Also record what this computer plays** before pressing Record. The browser asks which screen to share: choose the whole screen and tick **Share system audio** (Edge) or **Share audio** (Chrome). Only the sound is recorded, never the picture. The microphone becomes one side of the transcript and the computer the other, so who said what on a call comes out right, and the page shows a level meter for each. If you stop sharing from the browser's own bar, the microphone keeps recording alone and the recording's details say from when.
 
@@ -229,7 +229,7 @@ A case's page has a **Speakers** tab beside its recordings and clips. Inside a c
 
 Under each person's row: **Rename everywhere** changes the name in every recording of the case at once (the viewer's rename box changes one recording only); **Save** keeps a changed role or notes; **Merge into** joins two people who turned out to be one, renaming every segment of the first to the second's name and keeping the first's notes under their old name; **Delete person** puts their speakers back to Speaker 1, Speaker 2 and removes them from the list. Merge and Delete ask first.
 
-At the bottom, **Unnamed speakers** lists the recordings with speakers still unnamed, each a link. That list is the way to work through a case: open a recording, use Suggest names or type the names in its Speakers panel, and come back until the list is empty.
+At the bottom, **Unnamed speakers** lists the recordings with speakers still unnamed, the longest talkers first with their minutes of talk, each a link straight to the recording's Speakers panel. That list is the way to work through a case: open one, use Suggest names or type the names, and come back until the list is empty.
 
 ### Asking Gideon about a case
 
@@ -295,7 +295,7 @@ Days while the office has cases turned off do not count against any case.
 
 ## Recording at your desk
 
-When your office has it on, **Record now** is at the top of the rail on every page, and **New recording** is beside **Recorded here** on My recordings. Either opens the New recording page, which asks one question, what are you recording:
+When your office has it on, **Record now** is at the top of the rail on every page. It opens the New recording page, which asks one question, what are you recording:
 
 - **Dictation.** Just you. The product is the memo, written out as you dictated it.
 - **Meeting or interview in the room.** The microphone hears everyone; the people expected are buttons, and you tap who is talking so the transcript names them. The product is the transcript, with an Interview summary one click away.
@@ -326,6 +326,8 @@ If your session ends while a page is open (after the long wait, because you sign
 Your recordings count against a quota, fifty gigabytes unless your Admin has set it differently. The Upload page tells you when you are near it. **Done with these** and **Clear my recordings** are how you make room without signing out.
 
 ## The guide beside the page
+
+A **Find in the guide** box sits above the contents, on this page and in the pane beside a page: type a word and every match lights, the first brought into view; Escape clears it.
 
 On a wide monitor, the **?** at the top of every page opens this guide in a column on the right, at the part about the page you are on, and the page moves over to make room. It stays open as you move between pages, each time at that page's part, until you close it. On a laptop, **Help** opens the guide as a page instead.
 

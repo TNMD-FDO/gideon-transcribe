@@ -10,8 +10,15 @@
     safe here. See core/guides.py.
   {% endcomment %}
   <article class="page guide workbench">
-    <nav class="contents" aria-label="Contents">{{ guide.contents|safe }}</nav>
+    <nav class="contents" aria-label="Contents">
+      <div class="guide-find-row">
+        <input type="search" id="guide-find" class="guide-find" placeholder="Find in the guide" aria-label="Find in the guide" autocomplete="off">
+        <span class="muted small" id="guide-find-count"></span>
+      </div>
+      {{ guide.contents|safe }}
+    </nav>
     <div class="guide-body">{{ guide.body|safe }}</div>
   </article>
+  <script src="{% static 'guide-find.js' %}"></script>
   <script src="{% static 'guide.js' %}"></script>
 {% endblock %}

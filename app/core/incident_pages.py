@@ -615,11 +615,14 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
 
 
 def _suggested_name(recordings) -> str:
-    """The date of the first clock among them, else the first title."""
+    """The date of the first clock among them with its camera's id (v1.89.0),
+    else the first title."""
     for recording in recordings:
-        date = ((recording.stamp or {}).get("date") or "").strip()
+        stamp = recording.stamp or {}
+        date = (stamp.get("date") or "").strip()
         if date and incidents.stamp_checked(recording):
-            return date
+            camera = (stamp.get("camera") or "").strip()
+            return f"{date}, {camera}" if camera else date
     return recordings[0].title
 
 

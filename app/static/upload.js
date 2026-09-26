@@ -148,6 +148,19 @@
   var wheres = document.getElementById("wheres");
   var whichCase = document.getElementById("which-case");
   var hint = document.getElementById("hint");
+  // The type beside the case (v1.89.0) and the one in the options are one
+  // choice: either sets the other, and the batch reads the options' box.
+  var batchType = document.getElementById("batch-type");
+  var optionsType = document.getElementById("recording-type");
+  if (batchType && optionsType) {
+    batchType.addEventListener("change", function () {
+      optionsType.value = batchType.value;
+      optionsType.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    optionsType.addEventListener("change", function () {
+      if (batchType.value !== optionsType.value) { batchType.value = optionsType.value; }
+    });
+  }
 
   function applyWhere() {
     var intoCase = document.getElementById("add-to-case");

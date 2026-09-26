@@ -166,7 +166,7 @@ def _as_row(case: Case, viewer=None) -> dict:
         "shared_by": case.owner.shown_name if share is not None else "",
         "is_new": share is not None and share.last_opened is None,
         "recordings": case.recordings.count(),
-        "size": uploads.as_gb(case.disk_bytes()),
+        "size": uploads.as_size(case.disk_bytes()),
         "opens_at": opens_at(case),
         # The Retention warning: the amber mark and its line, computed at
         # every page load so the Warning setting takes effect at once, and
@@ -182,7 +182,7 @@ def _bin_row(case: Case) -> dict:
     return {
         "case": case,
         "recordings": case.recordings.count(),
-        "size": uploads.as_gb(case.disk_bytes()),
+        "size": uploads.as_size(case.disk_bytes()),
         "days_left": max(0, retention.bin_days_left(case)),
         "owner_deactivated": case.owner.deactivated_at is not None,
     }
@@ -312,7 +312,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # The dashboard line (Phase 7 chapter 3).
             "pills": dashboard.pills(case, role),
             "types": cases.recording_types(),
-            "size": uploads.as_gb(case.disk_bytes()),
+            "size": uploads.as_size(case.disk_bytes()),
             # Incidents (Phase 6 chapter 1): the strip under the case name,
             # the offers, and the videos New incident lists.
             **_incidents_context(case),
@@ -429,6 +429,21 @@ def _speakers_tab(case: Case) -> dict:
 
     shown = people_pages.tab_context(case)
     shown["people_count"] = len(shown["people"])
+    # The recordings with unnamed speakers, the longest talkers first, each
+    # with its minutes of talk (v1.89.0, from the walk): a person naming
+    # twelve cameras starts where the naming pays most.
+    ordered = []
+    for recording, count in shown["unnamed"]:
+        transcript = getattr(recording, "transcript", None)
+        seconds = 0.0
+        if transcript is not None:
+            seconds = sum(
+                float(one.end) - float(one.start)
+                for one in transcript.segments.only("start", "end")
+            )
+        ordered.append((recording, count, int(round(seconds / 60))))
+    ordered.sort(key=lambda one: (-one[2], -one[1]))
+    shown["unnamed"] = ordered
     return shown
 
 
@@ -613,7 +628,7 @@ def _counts_of(case: Case) -> dict:
         "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
         "clips": sum(one.clips.count() for one in recordings),
         "chats": case.chats.count(),
-        "size": uploads.as_gb(case.disk_bytes()),
+        "size": uploads.as_size(case.disk_bytes()),
     }
 
 

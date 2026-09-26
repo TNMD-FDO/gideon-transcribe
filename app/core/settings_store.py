@@ -135,7 +135,7 @@ PAGES = [
     (SPEAKERS, "Speakers"),
     (NOTICES, "Notices"),
     (SIGN_IN, "Sign-in and directory"),
-    (AUDIT, "Audit log"),
+    (AUDIT, "Audit settings"),
     (CASES, "Cases"),
     (DOCUMENTS, "Documents"),
     (APPEARANCE, "Appearance"),
@@ -1196,6 +1196,24 @@ def _rows() -> list[Definition]:
             ),
             when_changed=(
                 "The next Case Chat opened; applies at once, outside the tray."
+            ),
+        ),
+        Definition(
+            key="incident_chat_starters",
+            page=TEMPLATES,
+            name="Incident chat starter questions",
+            kind=TEXT,
+            default=(
+                "What happened, in order?\n"
+                "Where do the cameras disagree with the report?"
+            ),
+            lines=5,
+            what_it_does=(
+                "Questions an empty incident chat offers as one-click chips, one "
+                "per line. Empty means none are offered."
+            ),
+            when_changed=(
+                "The next incident chat opened; applies at once, outside the tray."
             ),
         ),
         Definition(

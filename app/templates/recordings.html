@@ -23,11 +23,9 @@
         {% if recordings %}
           <button type="button" class="btn ghost danger clear-recordings">Clear my recordings</button>
         {% endif %}
-        <a href="{% url 'upload' %}" class="btn primary">{% icon "upload" %} Upload files</a>
       {% endif %}
     </div>
     <p class="notice">{{ standing_line }}</p>
-    {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
     {% if recordings %}
       {% comment %}

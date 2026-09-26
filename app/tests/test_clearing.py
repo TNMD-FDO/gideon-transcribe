@@ -256,12 +256,14 @@ def test_the_upload_page_asks_where_and_chooses_nothing_else(client, monkeypatch
 
 
 def test_the_pages_carry_the_way_out():
-    # A batch user landing on Cases needs the upload from there, and somebody
-    # with recordings needs the way to be finished with them.
+    # A batch user landing on Cases needs the upload from there (the rail's
+    # Upload files, on every page, since v1.89.0), and somebody with
+    # recordings needs the way to be finished with them.
     from pathlib import Path
 
     here = Path(__file__).resolve().parent.parent / "templates"
-    assert "'upload'" in (here / "cases.html").read_text(encoding="utf-8")
+    assert "'upload'" in (here / "base.html").read_text(encoding="utf-8")
+    assert "'upload'" not in (here / "cases.html").read_text(encoding="utf-8")
     assert "clear-recordings" in (here / "recordings.html").read_text(encoding="utf-8")
     assert "clear-recordings" in (here / "batch.html").read_text(encoding="utf-8")
 

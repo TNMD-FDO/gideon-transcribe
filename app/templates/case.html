@@ -13,7 +13,6 @@
     <div class="row">
       <h1 class="grow" id="case-name">{{ case.name }}</h1>
       {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
-      {% if live_recording and role != "admin" %}<a href="{% url 'record-new' %}?case={{ case.pk }}" class="btn">{% icon "mic" %} Record</a>{% endif %}
       <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
     </div>
     {% include "dashboard-line.html" %}
@@ -123,7 +122,7 @@
               {% if search.more %}<p class="muted small">Only the first {{ search.most }} hits of a kind are shown; narrow the words.</p>{% endif %}
             {% endif %}
           {% else %}
-            <p class="muted">Words in every transcript, event, note, memo, summary and clip title of this case. Words in any order; a phrase in quotes for an exact match.</p>
+            <p class="muted">Words in every transcript, event, note, memo, summary and clip title of this case. Whole words, in any order; a phrase in quotes for an exact match.</p>
           {% endif %}
           <p class="muted small">Search terms are never written to the audit log.</p>
         {% endif %}
@@ -266,7 +265,7 @@
           {% if incident_rows %}
             <div class="tbl-wrap">
               <table class="tbl" id="incidents">
-                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th>{% if sitting_on %}<th>The assistant holds</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
+                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th>{% if sitting_on %}<th>One sitting</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
                 <tbody>
                   {% for row in incident_rows %}
                     <tr class="goes" tabindex="0" data-open="{{ row.url }}">
@@ -278,7 +277,7 @@
                         {% comment %}One sitting on the case page (Phase 8 chapter 10): the bar in small, from the kept shares.{% endcomment %}
                         <td>{% with T=row.sitting %}{% if T.on %}
                           <span class="sitting-mini {{ T.zone }}" title="{{ T.sentence }}">
-                            <span class="figure">{{ T.figure }}</span>
+                            <span class="figure">{{ T.percent|floatformat:0 }}% used</span>
                             <span class="bar"><span class="blocks">{% for cam in T.cameras %}<i class="{% if cam.read == 'words' %}words{% endif %}" style="width: {{ cam.percent }}%" title="{{ cam.name }}"></i>{% endfor %}</span></span>
                             <span class="word {{ T.tone }}">{{ T.word }}</span>
                           </span>
@@ -413,11 +412,11 @@
           <h2 style="margin-top: 22px">Unnamed speakers</h2>
           {% if unnamed %}
             <ul class="small">
-              {% for recording, count in unnamed %}
-                <li><a href="{% url 'viewer' recording.pk %}">{{ recording.title }}</a>: {{ count }} unnamed</li>
+              {% for recording, count, minutes in unnamed %}
+                <li><a href="{% url 'viewer' recording.pk %}#cast">{{ recording.title }}</a>: {{ count }} unnamed<span class="muted small"> · {{ minutes }} min of talk</span></li>
               {% endfor %}
             </ul>
-            <p class="muted small">Open a recording, use Suggest names or type the names in its Speakers panel, and come back.</p>
+            <p class="muted small">Longest talkers first. Open one, use Suggest names or type the names in its Speakers panel, and come back.</p>
           {% else %}
             <p class="muted small">Every speaker in this case has a name.</p>
           {% endif %}
@@ -543,7 +542,7 @@
               {% for recording in recordings %}
                 <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
                     {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
-                  <td><b>{{ recording.title }}</b></td>
+                  <td><span class="chev" aria-hidden="true">&#8250;</span> <b>{{ recording.title }}</b></td>
                   {% if any_type %}<td class="muted">{{ recording.recording_type }}</td>{% endif %}
                   <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>

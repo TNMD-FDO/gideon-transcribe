@@ -401,6 +401,42 @@ def _record_text(incident, record: dict, dropped: set[str]) -> str:
     return "\n".join(lines)
 
 
+CAMERAS_HEADING = re.compile(r"^\W*the cameras\W*$", re.IGNORECASE)
+SECTION_HEADING = re.compile(r"^[#* ]*[A-Z][^\n]{0,58}:\**\s*$")
+
+
+def with_app_cameras(incident, text: str, record: dict, words_alone: set) -> str:
+    """The memo's The cameras section written by the app (v1.89.0): the
+    cameras and their spans are known, and the model's version once wrote an
+    id with a space in it. The model's lines under that heading are replaced;
+    a memo without the heading is left as it is."""
+    lines = text.splitlines()
+    start = next(
+        (i for i, line in enumerate(lines) if CAMERAS_HEADING.match(line)), None
+    )
+    if start is None:
+        return text
+    end = start + 1
+    while end < len(lines) and not SECTION_HEADING.match(lines[end]):
+        end += 1
+    ours = []
+    for camera in synced_cameras(incident):
+        name = camera.camera_id()
+        kind = (camera.recording.recording_type or "camera").strip()
+        # The times as citations, so they play as the memo's other times do.
+        span = (
+            f"[{_clock(incident, camera.starts_at)}] to "
+            f"[{_clock(incident, camera.ends_at())}]"
+        )
+        how = ""
+        if name in words_alone:
+            how = "; read by its words alone"
+        elif name in record.get("transcript_only", []):
+            how = "; no picture read"
+        ours.append(f"{name}: {kind}, {span}{how}.")
+    return "\n".join(lines[: start + 1] + ours + [""] + lines[end:]).strip()
+
+
 def _cameras_line(incident) -> str:
     cameras = synced_cameras(incident)
     said = "; ".join(
@@ -1239,7 +1275,9 @@ def write_memo(memo_id, attempt: int = 1) -> None:
         if not IncidentMemo.objects.filter(pk=memo.pk).exists():
             # Cancelled while the engine wrote: nothing is kept.
             return
-        memo.text = answer["text"].strip()
+        memo.text = with_app_cameras(
+            incident, answer["text"].strip(), record, set(words_alone)
+        )
         memo.citations = memo_citations(incident, memo.text)
         memo.event_numbers = numbers
         memo.cut_short = answer.get("finish_reason") == "length"

@@ -14,6 +14,11 @@
 
   var ROOM = window.matchMedia("(min-width: 1500px)");
   var body = pane.querySelector(".help-body");
+  // Find in the guide (v1.89.0): the box under the pane's head.
+  var find = document.getElementById("help-find");
+  if (find && window.GuideFind) {
+    window.GuideFind.attach(find, body, document.getElementById("help-find-count"));
+  }
   var asPage = pane.querySelector(".help-full");
   var loadedFrom = null;
 

@@ -118,7 +118,8 @@ def test_the_report_prints_the_chronology_with_stills_and_words(
     # The band, then one still per event, cut at the setting's height from
     # each event's own camera at its moment.
     assert len(document.inline_shapes) == 3
-    assert cut == [("playback.mp4", 30.0, 360), ("playback.mp4", 5.0, 360)]
+    # Cut a few at a time, so in no fixed order.
+    assert sorted(cut) == [("playback.mp4", 5.0, 360), ("playback.mp4", 30.0, 360)]
     # The audit row is the chronology's, with the kind report.
     row = Row.objects.get(event="chronology exported")
     assert row.details["kind"] == "report" and row.object_label == "Stop"

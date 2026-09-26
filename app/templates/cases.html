@@ -14,10 +14,8 @@
         they never use with no way onward but a link named after somewhere
         else.
       {% endcomment %}
-      <a href="{% url 'upload' %}" class="btn primary">Upload recordings</a>
     </div>
 
-    {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
     {% include "cases-tabs.html" %}
 

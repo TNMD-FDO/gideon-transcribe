@@ -9,7 +9,6 @@
 <section class="dictations" id="dictations" data-send-words="{{ send_words|join:' ' }}">
   <div class="row" style="margin-top: 6px">
     <h2 class="grow" style="margin: 0">Recorded here</h2>
-    <a href="{% url 'record-new' %}" class="btn primary">{% icon "mic" %} New recording</a>
   </div>
   <p class="muted small" style="margin: 4px 0 12px">
     Kept for as long as the office keeps a case, counted from the last time each was opened, and yours until you send it to a colleague.
@@ -81,7 +80,7 @@
         </tbody>
       </table>
     {% else %}
-      <p class="muted">Nothing recorded here yet. <a href="{% url 'record-new' %}">New recording</a>: a dictation, a meeting, or a call, and the transcript comes back finished with the memo or summary one click away.</p>
+      <p class="muted">Nothing recorded here yet. Press <a href="{% url 'record-new' %}">Record now</a> in the rail: a dictation, a meeting, or a call, and the transcript comes back finished with the memo or summary one click away.</p>
     {% endif %}
 
     {% if received %}
