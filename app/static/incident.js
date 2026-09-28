@@ -216,6 +216,8 @@
   }
 
   var STILL_PROPOSING = "The assistant is still proposing; accept or dismiss once it has finished";
+  var PROPOSE_TITLE = "The assistant reads each synced camera in stretches, proposes the moments that matter and says why; the watch phrases are searched first. With something typed in Look for, it proposes only what bears on that, and the proposals already waiting stay. Nothing joins the chronology until you accept it";
+  var LOOK_FOR_TITLE = "Something to look for on this run alone, said or seen: a pill bottle, anything about the gun. The run then proposes only what bears on it";
 
   function keptEvents() {
     var kept = S.events.filter(function (one) { return !one.proposed; });
@@ -1408,10 +1410,15 @@
     var title = document.getElementById("proposals-title");
     if (title) { title.textContent = "Proposed events" + (proposed.length ? " (" + proposed.length + ")" : ""); }
     var html = "";
+    // What was typed in Look for outlives a redraw (v1.96.0), and with
+    // something typed the button says what the run will do.
+    var typedBox = document.getElementById("look-for");
+    var typed = typedBox && !P.busy ? typedBox.value : "";
+    var typing = typedBox && document.activeElement === typedBox;
     if (P.on) {
       html += "<div class='row inc-propose' style='gap: 8px; align-items: center; margin-bottom: 8px'>" +
-        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='The assistant reads each synced camera in stretches, proposes the moments that matter and says why; the watch phrases are searched first. Nothing joins the chronology until you accept it'>Propose again</button>" +
-        "<input type='text' id='look-for' class='small' maxlength='300' placeholder='Look for, this run only' aria-label='Look for, this run only' title='Something to look for on this run alone: anything about the gun and the ring camera'" + (P.possible && !P.busy ? "" : " disabled") + ">" +
+        "<button type='button' class='small' id='propose-events'" + (P.possible && !P.busy ? "" : " disabled") + " title='" + PROPOSE_TITLE + "'>" + (typed.trim() ? "Look for it" : "Propose again") + "</button>" +
+        "<input type='text' id='look-for' class='small' maxlength='300' value='" + quoted(typed) + "' placeholder='Look for, this run only' aria-label='Look for, this run only' title='" + LOOK_FOR_TITLE + "'" + (P.possible && !P.busy ? "" : " disabled") + ">" +
         "<div class='small muted grow' id='propose-said'>" +
         (P.busy && P.expectation && P.expectation.words
           ? window.Expectation.html({ step: (P.words || "").replace(/\.\.\.$/, ""), state: P.state, expectation: P.expectation, inline: true })
@@ -1435,15 +1442,23 @@
           (one.detail ? "<div class='muted small detail'>" + escape(one.detail) + "</div>" : "") +
           (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
           (one.rests_on ? "<div class='muted small rests'>Rests on: " + escape(one.rests_on) + "</div>" : "") + "</td>" +
-          "<td><span class='pill small " + (one.source === "watch" ? "watch" : "warn") + "'>" + escape(one.source_words) + "</span></td>" +
+          "<td><span class='pill small " + (one.source === "watch" ? "watch" : one.source === "looked" ? "looked" : "warn") + "'>" + escape(one.source_words) + "</span></td>" +
           "<td class='acts nowrap'><button type='button' class='tiny primary' data-accept='" + one.id + "'" + held + ">Accept</button> <button type='button' class='tiny ghost' data-dismiss='" + one.id + "'" + held + ">Dismiss</button></td></tr>";
       });
       html += "</tbody></table>";
     }
 
     box.innerHTML = html;
+    if (typing) {
+      var again = document.getElementById("look-for");
+      if (again && !again.disabled) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+    }
     if (acts) {
-      acts.innerHTML = proposed.length > 1 ? "<button type='button' class='small primary' id='accept-all'" + (P.busy ? " disabled title='" + STILL_PROPOSING + "'" : "") + ">Accept all</button>" : "";
+      var heldAll = P.busy ? " disabled title='" + STILL_PROPOSING + "'" : "";
+      acts.innerHTML = proposed.length > 1
+        ? "<button type='button' class='small ghost' id='dismiss-all'" + heldAll + ">Dismiss all</button> " +
+          "<button type='button' class='small primary' id='accept-all'" + heldAll + ">Accept all</button>"
+        : "";
     }
   }
 
@@ -1609,14 +1624,28 @@
     var dismiss = event.target.closest("[data-dismiss]");
     if (dismiss) { post({ action: "event_dismiss", event: dismiss.dataset.dismiss }); return; }
     if (event.target.closest("#accept-all")) { post({ action: "event_accept_all" }); return; }
+    if (event.target.closest("#dismiss-all")) {
+      var waiting = S.events.filter(function (one) { return one.proposed; }).length;
+      window.UI.confirm({ title: "Dismiss all " + waiting + " proposed events?", body: "A dismissed moment is not offered again by a later run.", ok: "Dismiss all" }).then(function (yes) { if (yes) { post({ action: "event_dismiss_all" }); } });
+      return;
+    }
     if (event.target.closest("#propose-events")) {
       var button = event.target.closest("#propose-events");
       button.disabled = true;
       document.getElementById("propose-said").textContent = "Reading the cameras...";
       var lookFor = document.getElementById("look-for");
-      post({ action: "propose", look_for: lookFor ? lookFor.value : "" });
+      var asked = lookFor ? lookFor.value : "";
+      // The Look for is this run's alone: the box is emptied as it is sent.
+      if (lookFor) { lookFor.value = ""; }
+      post({ action: "propose", look_for: asked });
     }
   }
+  // With something typed in Look for the button says what the run will do (v1.96.0).
+  document.getElementById("layer-proposals").addEventListener("input", function (event) {
+    if (!event.target.closest("#look-for")) { return; }
+    var button = document.getElementById("propose-events");
+    if (button) { button.textContent = event.target.value.trim() ? "Look for it" : "Propose again"; }
+  });
 
   document.getElementById("panel-chronology").addEventListener("submit", function (event) {
     var form = event.target.closest("#about-box");

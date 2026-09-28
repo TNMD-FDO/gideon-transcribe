@@ -21,6 +21,36 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.96.0, 2026-09-28
+
+```
+Models: unchanged
+Database: migrates (0066: the Look for run kept on the incident)
+```
+
+**Look for brings back only what was looked for.** On an incident's
+Proposed events, typing in the Look for box ("a pill bottle", "dreadlocks")
+turns the button into **Look for it**, and that run proposes only the
+moments that bear on what was typed: in what was said or what the picture
+showed, and under other words for the same thing, a few from each stretch
+at most. Until now a run with Look for filled in proposed everything it
+normally would, with the thing looked for somewhere among it. The proposals
+already waiting stay where they are, each one the run adds is marked
+**Looked for**, and the line by the button says "Looked on 12 cameras at
+14:02: 4 proposed" or "Nothing found on what you looked for". The run looks
+once at each stretch, so it takes about half the engine time of a full run,
+and it has its own time expectation. The words typed are, as before, never
+kept past the run and never logged. A Look for run is the assistant's
+judgement and not a search: it finds what the record wrote down, and a word
+the office wants found every time is still a watch phrase.
+
+A Look for run does not count as a reading of a camera: "Not yet read"
+goes by the last full run.
+
+**Dismiss all.** The Proposed events layer has **Dismiss all** beside
+Accept all. It asks once, and says that a dismissed moment is not offered
+again by a later run. One audit row, Events dismissed, records how many.
+
 ## v1.95.1, 2026-09-28
 
 ```

@@ -51,6 +51,8 @@ PROPOSALS_MOST = 30
 # Phase 7 chapter 2: proposals kept a window (the first and the second look
 # together), and how long a watch phrase heard again joins its first hit.
 WINDOW_MOST = 12
+# A Look for run (v1.96.0) keeps fewer from a stretch: few, good proposals.
+LOOK_MOST = 4
 WATCH_JOIN_SECONDS = 30.0
 STAMP = re.compile(r"\[(\d{1,2}):(\d\d):(\d\d)\]")
 
@@ -487,7 +489,7 @@ def _chronology_lines(incident) -> tuple[list[str], dict]:
             origin = f"from the words on {camera}"
         elif event.source == chronology.CAMERA:
             origin = f"from what {camera} showed"
-        elif event.source == chronology.ASSISTANT:
+        elif event.source in (chronology.ASSISTANT, chronology.LOOKED):
             origin = f"proposed from {camera} and accepted by a person"
         elif event.source == chronology.REPORT:
             origin = "from the report, which says: " + (event.rests_on or "")
@@ -571,7 +573,8 @@ def proposals_possible(incident) -> bool:
 
 def ask_for_proposals(incident, *, by, look_for: str = "") -> bool:
     """Propose events pressed: one run at a time per Incident. The Look for
-    is this run's alone, cleared when it ends."""
+    is this run's alone, cleared when it ends; a run given one is a Look for
+    run (v1.96.0), which proposes only what was looked for."""
     if not proposals_possible(incident):
         return False
     if incident.proposals_state in (QUEUED, RUNNING):
@@ -582,8 +585,10 @@ def ask_for_proposals(incident, *, by, look_for: str = "") -> bool:
     incident.proposals_look_for = " ".join(str(look_for or "").split())[:300]
     from core import sitting
 
+    looking = bool(incident.proposals_look_for) and proposals_on()
     incident.proposals_expectation = expectation.note(
-        "incident_events", sitting.record_tokens(incident)
+        "incident_look_for" if looking else "incident_events",
+        sitting.record_tokens(incident),
     )
     incident.save(
         update_fields=[
@@ -792,7 +797,12 @@ def propose(incident_id, attempt: int = 1) -> None:
     """The run (Phase 7 chapter 2): first the watch phrases, searched by the
     app itself on every synced camera; then the engine's judgement, each
     camera read in windows with a second look at each; the answers checked;
-    the pending proposals replaced with this run's."""
+    the pending proposals replaced with this run's.
+
+    A Look for run (v1.96.0), one given a Look for while the assistant is
+    on, proposes only what was looked for: the pending proposals stay, the
+    watch phrases are not searched again, each window has one look and at
+    most LOOK_MOST proposals, and what it makes carries the source looked."""
     incident = (
         incidents.Incident.objects.filter(pk=incident_id)
         .select_related("case", "proposals_by")
@@ -811,7 +821,8 @@ def propose(incident_id, attempt: int = 1) -> None:
     incident.proposals_state = RUNNING
     incident.proposals_expectation = expectation.started(incident.proposals_expectation)
     incident.save(update_fields=["proposals_state", "proposals_expectation"])
-    look_for = incident.proposals_look_for
+    looked = bool(incident.proposals_look_for) and proposals_on()
+    look_for = incident.proposals_look_for if looked else ""
     usage = {"input_tokens": 0, "output_tokens": 0}
     model = ""
     calls = 0
@@ -827,6 +838,9 @@ def propose(incident_id, attempt: int = 1) -> None:
         incident.proposals_state = state
         incident.proposals_reason = reason
         incident.proposals_at = timezone.now()
+        incident.proposals_looked = looked
+        if not looked:
+            incident.proposals_full_at = incident.proposals_at
         incident.proposals_found = len(made)
         incident.proposals_cameras = cameras_read
         incident.proposals_cut = cut
@@ -853,6 +867,7 @@ def propose(incident_id, attempt: int = 1) -> None:
                 watch_hits=watch_found,
                 **expectation.for_audit(incident.proposals_expectation),
                 look_for=bool(look_for),
+                looked=looked,
             )
 
     try:
@@ -866,14 +881,19 @@ def propose(incident_id, attempt: int = 1) -> None:
         if not proposals_on() and not phrases:
             raise engine.Problem(engine.ERROR, "proposals are off")
         # This run's proposals replace the pending ones; a dismissed one stays
-        # dismissed so it is not offered again.
-        incident.events.filter(proposed=True, dismissed=False).delete()
+        # dismissed so it is not offered again. A Look for run leaves the
+        # pending ones where they are and proposes nothing within a few
+        # seconds of one.
+        if not looked:
+            incident.events.filter(proposed=True, dismissed=False).delete()
         standing = list(incident.events.filter(proposed=False))
         dismissed = list(incident.events.filter(proposed=True, dismissed=True))
+        pending = list(incident.events.filter(proposed=True, dismissed=False))
+        most = LOOK_MOST if looked else WINDOW_MOST
 
         # The floor: the watch phrases, found by the app itself and saved as
         # they are found, so the page shows them before the engine answers.
-        for camera in cameras:
+        for camera in [] if looked else cameras:
             taken = _taken(camera, standing, dismissed, made)
             for fields in watch_hits(camera, phrases):
                 if any(abs(fields["at"] - other) < NEAR_SECONDS for other in taken):
@@ -929,17 +949,17 @@ def propose(incident_id, attempt: int = 1) -> None:
                 kept_here = 0
                 mine: list[str] = []
                 for look in ("first", "second"):
-                    if kept_here >= WINDOW_MOST:
+                    if kept_here >= most:
                         break
-                    if look == "second" and not second:
+                    if look == "second" and (not second or looked):
                         break
-                    taken = _taken(camera, standing, dismissed, made)
+                    taken = _taken(camera, standing, dismissed, pending, made)
                     head = prompts.incident_events_input(
                         camera.camera_id(),
                         _clock_words(incident, camera.starts_at),
                         _clock_words(incident, camera.ends_at()),
                         nature,
-                        _known(incident, standing, made),
+                        _known(incident, standing, [*pending, *made]),
                         context=context,
                         look_for=look_for,
                     )
@@ -986,14 +1006,18 @@ def propose(incident_id, attempt: int = 1) -> None:
                             )
                             continue
                         for item in raw:
-                            if kept_here >= WINDOW_MOST:
+                            if kept_here >= most:
                                 break
                             fields = _keep_proposal(item, camera, given, taken)
                             if fields is None:
                                 continue
                             event = chronology.Event.objects.create(
                                 incident=incident,
-                                source=chronology.ASSISTANT,
+                                source=(
+                                    chronology.LOOKED
+                                    if looked
+                                    else chronology.ASSISTANT
+                                ),
                                 camera=camera,
                                 cameras=chronology.running_cameras(
                                     incident, fields["at"]
@@ -1045,11 +1069,20 @@ def proposals_json(incident) -> dict:
             if incident.proposals_at
             else ""
         )
-        words = (
-            f"Proposed {found} event{'' if found == 1 else 's'} at {when}"
-            if found
-            else f"Nothing to propose ({when})"
-        )
+        if incident.proposals_looked:
+            # The Look for run (v1.96.0) says what it was and what it found.
+            read = incident.proposals_cameras
+            words = (
+                f"Looked on {_count_words(read, 'camera')} at {when}: {found} proposed"
+                if found
+                else f"Nothing found on what you looked for ({when})"
+            )
+        else:
+            words = (
+                f"Proposed {found} event{'' if found == 1 else 's'} at {when}"
+                if found
+                else f"Nothing to propose ({when})"
+            )
         if incident.proposals_watch:
             words += f", {incident.proposals_watch} from the watch phrases"
         if incident.proposals_cut:
@@ -1063,14 +1096,15 @@ def proposals_json(incident) -> dict:
     else:
         words = ""
     # One sitting (Phase 8 chapter 9): the cameras no run has read, so a
-    # person knows to run Propose events again after cameras joined.
+    # person knows to run Propose events again after cameras joined. A Look
+    # for run does not count: it proposes only what was looked for.
     never_read = [
         one.camera_id()
         for one in synced_cameras(incident)
         if hasattr(one.recording, "transcript")
         and (
-            incident.proposals_at is None
-            or max(one.added, one.placed_at or one.added) > incident.proposals_at
+            incident.proposals_full_at is None
+            or max(one.added, one.placed_at or one.added) > incident.proposals_full_at
         )
     ]
     if never_read and state not in (QUEUED, RUNNING):
@@ -1113,7 +1147,11 @@ def accept(event, *, by, request=None):
         object_id=event.incident_id,
         object_label=event.incident.name,
         request=request,
-        source=chronology.ASSISTANT,
+        source=(
+            chronology.LOOKED
+            if event.source == chronology.LOOKED
+            else chronology.ASSISTANT
+        ),
     )
     from core import cases
 
@@ -1144,6 +1182,28 @@ def accept_all(incident, *, by, request=None) -> int:
     for event in list(incident.events.filter(proposed=True, dismissed=False)):
         accept(event, by=by, request=request)
         count += 1
+    return count
+
+
+def dismiss_all(incident, *, by, request=None) -> int:
+    """Every pending proposal put away at once (v1.96.0): each kept as
+    dismissed, so a later run does not offer it again; one audit row with
+    how many."""
+    count = incident.events.filter(proposed=True, dismissed=False).update(
+        dismissed=True
+    )
+    if count:
+        audit.write(
+            incidents.CATEGORY,
+            "events dismissed",
+            actor=by,
+            affected_user=incident.case.owner,
+            object_type="incident",
+            object_id=incident.pk,
+            object_label=incident.name,
+            request=request,
+            count=count,
+        )
     return count
 
 

@@ -36,6 +36,7 @@ class Key:
     limit: str  # the time-limit setting's feature, "" for none
     kind: str  # the words' subject: memo, proposals, comparison, summary, chat
     from_sheet: bool | None = None  # memo rows: the rewrite's or the full write's
+    looked: bool | None = None  # proposals rows: a Look for run's or a full run's
 
 
 KEYS = {
@@ -47,7 +48,13 @@ KEYS = {
     "incident_memo_rewrite": Key(
         "incident_memo", 120, 3, "incident_memo", "memo", True
     ),
-    "incident_events": Key("incident_events", 180, 40, "incident_events", "proposals"),
+    "incident_events": Key(
+        "incident_events", 180, 40, "incident_events", "proposals", looked=False
+    ),
+    # The Look for run (v1.96.0): one look at each stretch, so about half.
+    "incident_look_for": Key(
+        "incident_events", 90, 20, "incident_events", "proposals", looked=True
+    ),
     "compare_report": Key("compare_report", 180, 12, "compare_report", "comparison"),
 }
 
@@ -115,6 +122,8 @@ def pace(key_name: str) -> float | None:
             key.from_sheet is not None
             and bool(details.get("from_sheet")) != key.from_sheet
         ):
+            continue
+        if key.looked is not None and bool(details.get("looked")) != key.looked:
             continue
         try:
             seconds = float(details.get("duration_seconds") or 0)

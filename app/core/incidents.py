@@ -158,6 +158,11 @@ class Incident(models.Model):
     proposals_look_for = models.CharField(max_length=300, blank=True, default="")
     # The run's time expectation, given at the ask (v1.95.0).
     proposals_expectation = models.JSONField(default=dict, blank=True)
+    # The Look for run (v1.96.0): whether the last run looked for one thing
+    # alone, and when the last full run ended, which "Not yet read" goes by
+    # since a Look for run proposes nothing else from a camera.
+    proposals_looked = models.BooleanField(default=False)
+    proposals_full_at = models.DateTimeField(null=True, blank=True)
     # About this chronology (Phase 7 chapter 1): the office's paragraph
     # before the events, printed on the export's cover and told to the memo.
     about = models.TextField(max_length=2000, blank=True, default="")

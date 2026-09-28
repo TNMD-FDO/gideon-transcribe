@@ -2480,6 +2480,7 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-find-hit .who .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--speaker, var(--muted)); margin-right: 4px; }
 .panel .lit, .answer .lit { background: color-mix(in srgb, var(--accent) 18%, transparent); transition: background 1.5s; }
 .pill.watch { color: var(--accent); border: 1px solid var(--accent); background: transparent; }
+.pill.looked { color: var(--accent); background: var(--accent-soft); }
 .inc-propose #look-for { flex: 1 1 14rem; min-width: 10rem; max-width: 26rem; }
 .inc-events tr.here td { background: var(--now); color: var(--now-ink); }
 .inc-events tr.here .muted { color: inherit; opacity: 0.8; }

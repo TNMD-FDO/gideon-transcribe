@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-28, at v1.96.0 (the Look for run and Dismiss all; nothing shared moves).** Two fields on the incident (migration 0066). A Look for run asks the engine once a window where a full run asks twice, at the same priority and with the same time limit; no port, memory, card, timer or network moves.
 - **2026-09-28, at v1.95.1 (a press on the clip track lands where it was pressed; nothing shared moves).** One rule in the style sheet; no port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.95.0 (a time expectation under every written output; nothing shared moves).** One JSON field on six models (migration 0065) and three figures more on each engine audit row; no port, memory, card, timer, network or engine request moves.
 - **2026-09-26, at v1.94.1 (the memo told, not listed; nothing shared moves).** Two prompt wordings; no port, memory, card, timer, network or engine request moves.

@@ -485,9 +485,12 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                 status=400,
             )
         said = "Reading the cameras; a minute or two."
-    elif action in ("event_accept", "event_dismiss", "event_accept_all") and (
-        incident.proposals_state in incident_assistant.PROPOSING
-    ):
+    elif action in (
+        "event_accept",
+        "event_dismiss",
+        "event_accept_all",
+        "event_dismiss_all",
+    ) and (incident.proposals_state in incident_assistant.PROPOSING):
         # The run replaces the pending proposals as it goes, camera by camera:
         # a proposal accepted while it runs is left out of what the later
         # cameras are told, so they propose it again (v1.63.2).
@@ -509,6 +512,10 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
     elif action == "event_accept_all":
         count = incident_assistant.accept_all(incident, by=user, request=request)
         said = f"{count} event{'' if count == 1 else 's'} added."
+    elif action == "event_dismiss_all":
+        # v1.96.0: every pending proposal put away at once.
+        count = incident_assistant.dismiss_all(incident, by=user, request=request)
+        said = f"{count} proposed event{'' if count == 1 else 's'} dismissed."
     elif action == "memo":
         if incident_assistant.ask_for_memo(incident, by=user) is None:
             _, why = incident_assistant.memo_possible(incident)

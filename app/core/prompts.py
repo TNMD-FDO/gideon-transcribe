@@ -533,6 +533,18 @@ INCIDENT_EVENTS_SECOND_LOOK = (
     "want on the chronology, and why? Propose only what is missing and "
     "matters; the same shape of answer; an empty list when nothing is missing."
 )
+# The Look for run (v1.96.0): a run with Look for filled in proposes only
+# what was looked for, in what was said or seen, under other words too.
+INCIDENT_EVENTS_LOOK_FOR = (
+    "This run looks for one thing alone: {look_for}. Propose only the moments "
+    "in this stretch that bear on it, in what was said or what was seen, and "
+    "under other words for the same thing (a pill bottle may be written as a "
+    "medicine container or a prescription bottle). For this run a description "
+    "of a person, of clothing or of a thing in view counts when it bears on "
+    "what is looked for. Leave out every other moment, however much it would "
+    "matter otherwise. At most four in a stretch. An empty list when this "
+    "stretch has nothing on it."
+)
 # The Incident memo: a memo across cameras, written on the chronology.
 INCIDENT_MEMO = (
     "You are an experienced defence investigator. The office's assistant has "
@@ -1427,7 +1439,8 @@ def incident_events_input(
     """One camera as the proposals read it: its place on the clock, the
     events that stand, the office's context and what this run looks for
     (Phase 7 chapter 2), and what follows is one stretch of its record or
-    its transcript."""
+    its transcript. A run given a Look for is a Look for run (v1.96.0) and
+    proposes nothing but what is looked for."""
     listed = "\n".join(known) if known else "none yet"
     parts = [
         f"Camera {camera} starts {starts} and ends {ends}. Times in the lines "
@@ -1437,7 +1450,7 @@ def incident_events_input(
     if context:
         parts.append(f"About the office and its cases: {context}")
     if look_for:
-        parts.append(f"For this run the office asks you to look for: {look_for}")
+        parts.append(INCIDENT_EVENTS_LOOK_FOR.replace("{look_for}", look_for))
     parts.append(f"What follows is one stretch of {nature}:")
     return "\n\n".join(parts)
 

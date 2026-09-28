@@ -35,7 +35,10 @@ REPORT = "report"
 # Made and unmade by the app as the note and the camera come and go; never
 # from a request.
 NOTE = "note"
-SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH, REPORT, NOTE)
+# v1.96.0: proposed by a Look for run, which proposes only what the person
+# asked it to look for.
+LOOKED = "looked"
+SOURCES = (PERSON, WORDS, CAMERA, ASSISTANT, WATCH, REPORT, NOTE, LOOKED)
 
 # The line under a proposal saying why it matters (Phase 7 chapter 2).
 WHY_MOST = 300
@@ -411,6 +414,8 @@ def source_words(event: Event, names: dict) -> str:
         return f"Proposed from {camera}" if event.proposed else f"Assistant, {camera}"
     if event.source == WATCH:
         return f"Watch phrase, {camera}"
+    if event.source == LOOKED:
+        return f"Looked for, {camera}"
     if event.source == REPORT:
         return "From the report"
     if event.source == NOTE:
@@ -653,7 +658,7 @@ def _rows(incident) -> list[dict]:
                 ),
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 "added": event.added,
-                "assistant": event.source == ASSISTANT,
+                "assistant": event.source in (ASSISTANT, LOOKED),
                 "is_note": event.is_note(),
                 "why": event.why,
                 "note": event.note,

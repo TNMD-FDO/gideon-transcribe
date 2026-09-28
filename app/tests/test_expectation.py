@@ -146,6 +146,28 @@ def test_the_glossary_and_the_guide_carry_the_words():
     assert "while it is written the row says how long that usually takes" in guide
 
 
+def test_a_look_for_run_has_its_own_figure(db):
+    """v1.96.0: a Look for run's rows and a full run's are read apart, as
+    the rewrite's are from the memo's."""
+    assert expectation.expect("incident_look_for", 10_000) == (90, False)
+    for _ in range(3):
+        a_run("incident_events", 50, 10_000, looked=True)
+    assert expectation.expect("incident_look_for", 10_000) == (60, True)
+    assert expectation.expect("incident_events", 10_000) == (180, False)
+
+
+def test_the_look_for_run_is_in_the_glossary_and_the_guide():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent.parent
+    glossary = (root / "CONTEXT.md").read_text(encoding="utf-8")
+    guide = (root / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    assert "**Look for**:" in glossary
+    assert "proposes only the moments that bear on what was typed" in glossary
+    assert "the button reads **Look for it**" in guide
+    assert "**Dismiss all** puts them all away after asking once" in guide
+
+
 def test_the_reassurance_names_what_the_engine_was_given(db):
     assert expectation.over_words(True, "memo").startswith(
         "Still writing, and working normally. A memo this size gives the engine "

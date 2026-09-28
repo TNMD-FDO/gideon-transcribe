@@ -516,11 +516,7 @@ def test_the_run_reads_in_windows_with_a_second_look_and_says_why(
         }
 
     monkeypatch.setattr(engine, "complete", complete)
-    assert incident_assistant.ask_for_proposals(
-        made, by=person, look_for="anything about the gun"
-    )
-    made.refresh_from_db()
-    assert made.proposals_look_for == "anything about the gun"
+    assert incident_assistant.ask_for_proposals(made, by=person)
     incident_assistant.propose(made.pk)
     made.refresh_from_db()
     # Three windows of ten minutes, two looks each.
@@ -530,7 +526,7 @@ def test_the_run_reads_in_windows_with_a_second_look_and_says_why(
         "About the office and its cases: A public defender's office." in one
         for one in asked
     )
-    assert all("look for: anything about the gun" in one for one in asked)
+    assert not any("looks for one thing alone" in one for one in asked)
     assert "one stretch of" in asked[0]
     # The second look is told what the first proposed.
     second = [one for one in asked if "You proposed" in one and "I got gun" in one][0]
@@ -545,8 +541,9 @@ def test_the_run_reads_in_windows_with_a_second_look_and_says_why(
     assert row["why"] == "A weapon changes the stop." and row["proposed"]
     call = Row.objects.filter(event="AI assistant call").order_by("-at").first()
     assert call.details.get("windows") == 3 and call.details.get("second_looks") == 3
-    assert call.details.get("look_for") is True and call.details.get("cut_short") == 1
-    assert "anything about the gun" not in json.dumps(call.details)
+    assert call.details.get("look_for") is False and call.details.get("cut_short") == 1
+    assert call.details.get("looked") is False
+    assert made.proposals_looked is False and made.proposals_full_at is not None
     # With the second look off, one look a window.
     settings_store.set_to("incidents_second_look", False)
     asked.clear()
@@ -555,6 +552,170 @@ def test_the_run_reads_in_windows_with_a_second_look_and_says_why(
     assert incident_assistant.ask_for_proposals(made, by=person)
     incident_assistant.propose(made.pk)
     assert len(asked) == 3 and not any("You proposed" in one for one in asked)
+
+
+def test_a_look_for_run_proposes_only_what_was_looked_for(person, a_case, monkeypatch):
+    """v1.96.0: a run given a Look for keeps the proposals already waiting,
+    does not search the watch phrases again, looks once at each stretch,
+    makes proposals with the source looked, and leaves the last full run's
+    time alone; the words looked for are never kept or logged."""
+    settings_store.set_to("incidents_propose", True)
+    settings_store.set_to("incidents_watch_phrases", "gun")
+    cam = video(
+        person,
+        a_case,
+        "long",
+        seconds=1500.0,
+        lines=(
+            (10.0, "Speaker 1", "Step out of the vehicle, please."),
+            (700.0, "Speaker 4", "I got, I got gun, I got gun."),
+            (1300.0, "Speaker 1", "There is a medicine container on the seat."),
+        ),
+    )
+    made = incidents.make(a_case, "Long", [cam], by=person)
+    camera = made.cameras.get()
+    incidents.place_by_hand(camera, 0.0, by=person)
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(engine, "address", lambda: "http://gideon-generator:8000/v1")
+    waiting = chronology.Event.objects.create(
+        incident=made,
+        at=10.0,
+        text="A man was told to step out.",
+        source="assistant",
+        camera=camera,
+        proposed=True,
+        rests_on="Step out of the vehicle",
+    )
+    asked = []
+
+    def complete(messages, **options):
+        user = messages[-1]["content"]
+        asked.append(user)
+        found = []
+        if "medicine container" in user:
+            found = [
+                {
+                    "time": "00:21:40",
+                    "end": "",
+                    "text": "An officer said a medicine container was on the seat.",
+                    "why": "It bears on the pill bottle looked for.",
+                    "rests_on": "There is a medicine container",
+                }
+            ]
+        if "Step out of the vehicle" in user:
+            # Within a few seconds of the one already waiting: dropped.
+            found = [
+                {
+                    "time": "00:00:12",
+                    "end": "",
+                    "text": "A man was told to get out.",
+                    "why": "Said again.",
+                    "rests_on": "Step out of the vehicle",
+                }
+            ]
+        return {
+            "text": json.dumps({"events": found}),
+            "finish_reason": "stop",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "model": "m",
+        }
+
+    monkeypatch.setattr(engine, "complete", complete)
+    assert incident_assistant.ask_for_proposals(made, by=person, look_for="pill bottle")
+    made.refresh_from_db()
+    assert made.proposals_look_for == "pill bottle"
+    assert made.proposals_expectation["key"] == "incident_look_for"
+    incident_assistant.propose(made.pk)
+    made.refresh_from_db()
+    # Three windows, one look each, every one told what the run looks for.
+    assert len(asked) == 3 and not any("You proposed" in one for one in asked)
+    assert all("looks for one thing alone: pill bottle." in one for one in asked)
+    assert all("A man was told to step out." in one for one in asked)
+    pending = list(made.events.filter(proposed=True).order_by("at"))
+    assert [(one.at, one.source) for one in pending] == [
+        (10.0, "assistant"),
+        (1300.0, "looked"),
+    ]
+    assert pending[0].pk == waiting.pk
+    names = {str(camera.pk): camera.camera_id()}
+    assert (
+        chronology.source_words(pending[1], names)
+        == f"Looked for, {camera.camera_id()}"
+    )
+    # The watch phrase was not searched, and the run says what it was.
+    assert made.proposals_watch == 0 and made.proposals_found == 1
+    assert made.proposals_looked is True and made.proposals_full_at is None
+    assert made.proposals_look_for == ""
+    told = incident_assistant.proposals_json(made)
+    assert told["words"].startswith("Looked on 1 camera at ")
+    assert ": 1 proposed" in told["words"]
+    assert "Not yet read: " in told["words"] and told["pending"] == 2
+    call = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert call.details.get("looked") is True and call.details.get("look_for") is True
+    assert call.details.get("second_looks") == 0 and call.details.get("windows") == 3
+    for row in Row.objects.all():
+        assert "pill bottle" not in json.dumps(row.details)
+    # Nothing found says so.
+    type(made).objects.filter(pk=made.pk).update(proposals_found=0)
+    made.refresh_from_db()
+    assert incident_assistant.proposals_json(made)["words"].startswith(
+        "Nothing found on what you looked for ("
+    )
+    # With the assistant off a Look for is not a Look for run: the watch
+    # phrases are searched as on any run.
+    settings_store.set_to("incidents_propose", False)
+    assert incident_assistant.ask_for_proposals(made, by=person, look_for="pill bottle")
+    made.refresh_from_db()
+    assert made.proposals_expectation["key"] == "incident_events"
+    incident_assistant.propose(made.pk)
+    made.refresh_from_db()
+    assert made.proposals_looked is False and made.proposals_watch == 1
+    assert made.proposals_full_at is not None
+
+
+def test_dismiss_all_puts_every_pending_proposal_away(person, a_case, client):
+    """v1.96.0: Dismiss all marks every pending proposal dismissed with one
+    audit row, is refused while a run is going, and a later run does not
+    offer a dismissed moment again."""
+    settings_store.set_to("incidents_propose", True)
+    cam = video(person, a_case, "one", lines=((10.0, "Speaker 1", "Step out."),))
+    made = incidents.make(a_case, "Stop", [cam], by=person)
+    camera = made.cameras.get()
+    incidents.place_by_hand(camera, 0.0, by=person)
+    for at, text in ((10.0, "One"), (20.0, "Two"), (30.0, "Three")):
+        chronology.Event.objects.create(
+            incident=made,
+            at=at,
+            text=text,
+            source="assistant",
+            camera=camera,
+            proposed=True,
+            rests_on="a line",
+        )
+    standing = chronology.Event.objects.create(incident=made, at=5.0, text="Stands")
+    signed_in(client, person)
+    url = made.url()
+    type(made).objects.filter(pk=made.pk).update(proposals_state="running")
+    held = client.post(url + "/act", {"action": "event_dismiss_all"})
+    assert held.status_code == 409
+    assert made.events.filter(proposed=True, dismissed=False).count() == 3
+    type(made).objects.filter(pk=made.pk).update(proposals_state="done")
+    got = client.post(url + "/act", {"action": "event_dismiss_all"}).json()
+    assert got["said"] == "3 proposed events dismissed."
+    assert [one["text"] for one in got["state"]["events"]] == ["Stands"]
+    assert made.events.filter(proposed=True, dismissed=True).count() == 3
+    standing.refresh_from_db()
+    assert not standing.dismissed
+    rows = Row.objects.filter(event="events dismissed")
+    assert rows.count() == 1 and rows.first().details.get("count") == 3
+    # Nothing waiting: nothing is written.
+    got = client.post(url + "/act", {"action": "event_dismiss_all"}).json()
+    assert got["said"] == "0 proposed events dismissed."
+    assert Row.objects.filter(event="events dismissed").count() == 1
+    # A later run is told nothing within a few seconds of a dismissed one.
+    dismissed = list(made.events.filter(proposed=True, dismissed=True))
+    assert 10.0 in incident_assistant._taken(camera, dismissed)
 
 
 def test_the_windows_split_a_record_by_its_times():
