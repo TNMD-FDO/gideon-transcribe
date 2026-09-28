@@ -1480,6 +1480,77 @@
     document.getElementById("matches").textContent = wanted === ""
       ? ""
       : matches.length + (matches.length === 1 ? " match" : " matches");
+    lookFurther(wanted);
+  }
+
+  // Close matches and what the camera showed (v1.97.0): the page finds the
+  // words typed in the lines it holds; the server answers, a moment later,
+  // the lines that carry a word's other form or near spelling, and the
+  // descriptions of the picture. Never logged.
+  var furtherTimer = null;
+  var findMore = document.getElementById("find-more");
+
+  function lookFurther(wanted) {
+    window.clearTimeout(furtherTimer);
+    if (findMore) { findMore.hidden = true; findMore.innerHTML = ""; }
+    Array.prototype.forEach.call(column ? column.querySelectorAll(".match-close") : [], function (row) {
+      row.classList.remove("match-close");
+    });
+    if (!findMore || wanted.length < 2) { return; }
+    furtherTimer = window.setTimeout(function () {
+      fetch("/recording/" + window.VIEWER.recording + "/find?q=" + encodeURIComponent(wanted), { credentials: "same-origin" })
+        .then(function (answer) { return answer.ok ? answer.json() : null; })
+        .then(function (got) {
+          if (!got || search.value.trim().toLowerCase() !== wanted) { return; }
+          drawFurther(got);
+        })
+        .catch(function () { /* the next keystroke asks again */ });
+    }, 300);
+  }
+
+  function drawFurther(got) {
+    var exact = matches.length;
+    var close = 0;
+    (got.close || []).forEach(function (one) {
+      var index = -1;
+      segments.some(function (segment, n) { if (segment.id === one.id) { index = n; return true; } return false; });
+      if (index === -1 || matches.indexOf(index) !== -1) { return; }
+      var row = column.children[index];
+      var said = row && row.querySelector(".txt");
+      if (!said) { return; }
+      row.hidden = false;
+      row.classList.add("match-close");
+      said.innerHTML = one.html;
+      matches.push(index);
+      close += 1;
+    });
+    matches.sort(function (a, b) { return a - b; });
+    var seen = got.seen || [];
+    var words = exact + (exact === 1 ? " match" : " matches");
+    if (close) { words += ", " + close + " close"; }
+    if (seen.length) { words += ", " + seen.length + " seen"; }
+    document.getElementById("matches").textContent = words;
+    var html = "";
+    if (close && got.also && got.also.length) {
+      html += "<p class='muted'>Close matches, also looked for: " + escape(got.also.join(", ")) + "</p>";
+    }
+    if (seen.length) {
+      html += "<p class='muted'>Seen on the picture:</p>";
+      seen.forEach(function (one) {
+        html += "<a href='#' class='find-seen" + (one.close ? " close" : "") + "' data-seen-at='" + one.at + "'><span class='mono'>" + escape(one.clock) + "</span> " + one.html + (one.close ? " <span class='pill small'>close</span>" : "") + "</a>";
+      });
+    }
+    findMore.innerHTML = html;
+    findMore.hidden = html === "";
+  }
+
+  if (findMore) {
+    findMore.addEventListener("click", function (event) {
+      var seen = event.target.closest("[data-seen-at]");
+      if (!seen) { return; }
+      event.preventDefault();
+      window.VIEWER.seek(parseFloat(seen.dataset.seenAt));
+    });
   }
 
   if (search) {

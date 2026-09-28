@@ -21,6 +21,41 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.97.0, 2026-09-28
+
+```
+Models: unchanged
+Database: migrates (0067: the trigram extension, for near spellings)
+```
+
+**Find and Search read what the cameras showed.** Search on the case
+page, Find on the incident page and Find in transcript on a recording's
+page now also look through the descriptions of the picture that the vision
+model wrote through each enriched recording. A thing that was never said
+and was seen is found: each hit is marked **Seen**, carries its time, and
+plays from there. On the case page Seen is a kind of its own beside Words.
+
+**Close matches, after the exact hits.** A plain word also finds its other
+forms (pill and pills, search and searched) and, for a word of four letters
+or more, a near spelling (dredlocks finds dreadlocks). Only forms that are
+written somewhere in what is searched are looked for. Close matches are
+marked **close**, come after the exact hits, and the page names the forms
+it also looked for, with the form lit on the line, so every hit explains
+itself. Every word typed must still be on the line; a phrase in quotes
+stays exact; there is no score.
+
+How strict to be was measured on the office's own lines before the build
+(`docs/research/close-matches.md`): the setting used added nothing wrong,
+a looser one brought "pillow" for "pill", and matching by sound brought
+dozens of wrong lines, so it is left out. A close match goes by the
+letters, not the meaning or the sound: "write" does not find "right". To
+look for a thing by what it means, use Look for on Proposed events
+(v1.96.0).
+
+The database gains the `pg_trgm` extension, which ships in its image. No
+index is added; a search of every line took under fifty milliseconds.
+Search terms are, as before, never written to the audit log.
+
 ## v1.96.0, 2026-09-28
 
 ```

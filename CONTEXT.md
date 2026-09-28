@@ -317,8 +317,12 @@ The line of pills under a case's name on the case page, one for everything in th
 _Avoid_: dashboard (the line has no heading), status bar, alerts
 
 **Find**:
-The box on the incident page's work panel that searches the synced cameras' words, the Chronology's events and the memo, and whose hits are moments: pressing one seeks every camera there and brings the camera it was heard on to the front with the sound. Never logged. Phase 7 chapter 3. The case page's own box is Search.
+The box on the incident page's work panel that searches the synced cameras' words, what they showed (v1.97.0), the Chronology's events and the memo, and whose hits are moments: pressing one seeks every camera there and brings the camera it was heard or seen on to the front with the sound. The exact hits first, then the Close matches. Never logged. Phase 7 chapter 3. The case page's own box is Search; a recording's page has Find in transcript, which reads the same way.
 _Avoid_: search (on the incident page), query, results
+
+**Close match**:
+A hit of Find or Search that carries a word typed only by a close form of it: the same word in another form ("pill" and "pills", "search" and "searched"), or a near spelling ("dredlocks" and "dreadlocks"), and only a form that is written somewhere in what is searched. Close matches come after the exact hits, marked **close**, with the forms that were looked for said on the page and the form lit on the line. A word under four letters has no near spelling, a phrase in quotes has no close match, and there is no score. It matches letters, not meaning or sound: "write" does not find "right", and a thing looked for by what it means is the Look for run's. Phase 7 chapter 3, amended in v1.97.0; the measurement is `docs/research/close-matches.md`.
+_Avoid_: fuzzy, approximate, similar, relevance, score, rank, suggestion, did you mean
 
 **Work panel**:
 The incident page's panel beside the wall: its tabs (Chronology, Memo, Cameras, Details), always there, and the layers that open over a tab for a job in hand. Phase 8 chapter 1.

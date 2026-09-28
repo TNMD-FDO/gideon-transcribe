@@ -800,29 +800,50 @@ def with_note(answer: str, note: str) -> str:
 # Search -------------------------------------------------------------------------------
 
 
-def paragraph_hits(case, words: list[str], most: int) -> list[dict]:
-    """One hit per paragraph whose text carries every word, in document order."""
-    from core.case_search import _all, matches
+def sources(case) -> list:
+    """The case's document pages, for the close forms of a search (v1.97.0)."""
+    return [
+        (
+            DocumentPage.objects.filter(document__case=case, document__state=READY),
+            "text",
+        )
+    ]
+
+
+def paragraph_hits(
+    case, words: list[str], most: int, also: dict | None = None
+) -> list[dict]:
+    """One hit per paragraph whose text carries every word, in document
+    order; then, with `also`, the paragraphs that carry them only by a close
+    form (v1.97.0), each marked close."""
+    from core.case_search import _all, is_close, matches
 
     hits = []
-    pages = (
-        DocumentPage.objects.filter(document__case=case, document__state=READY)
-        .filter(_all(["text"], words))
-        .select_related("document")
-        .order_by("document__created", "number")
-    )
-    for page in pages:
-        for paragraph in page.paragraphs:
-            if matches(paragraph["text"], words):
-                hits.append(
-                    {
-                        "document": page.document,
-                        "page": page.number,
-                        "n": paragraph["n"],
-                        "text": paragraph["text"],
-                        "ocr": page.ocr,
-                    }
+    for near in (False, True) if also else (False,):
+        pages = (
+            DocumentPage.objects.filter(document__case=case, document__state=READY)
+            .filter(_all(["text"], words, also if near else None))
+            .select_related("document")
+            .order_by("document__created", "number")
+        )
+        for page in pages:
+            for paragraph in page.paragraphs:
+                found = (
+                    is_close(paragraph["text"], words, also)
+                    if near
+                    else matches(paragraph["text"], words)
                 )
-                if len(hits) > most:
-                    return hits
+                if found:
+                    hits.append(
+                        {
+                            "document": page.document,
+                            "page": page.number,
+                            "n": paragraph["n"],
+                            "text": paragraph["text"],
+                            "ocr": page.ocr,
+                            "close": near,
+                        }
+                    )
+                    if len(hits) > most:
+                        return hits
     return hits

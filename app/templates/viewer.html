@@ -386,6 +386,8 @@
             The speakers are being matched over the whole recording. The
             labels change here by themselves in a moment.
           </p>
+          {% comment %}Find's close matches and what the camera showed (v1.97.0).{% endcomment %}
+          <div id="find-more" class="find-more small" hidden></div>
           <ol id="transcript" class="transcript"></ol>
         {% else %}
           <div class="jobstate" id="waiting">

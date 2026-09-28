@@ -105,13 +105,17 @@
                   {% endfor %}
                 </div>
               {% endif %}
+              {% if search.close %}
+                {% comment %}Close matches (v1.97.0): said plainly, with the forms that were looked for.{% endcomment %}
+                <p class="muted small" id="search-also">{{ search.close }} of them {{ search.close|pluralize:"is a close match,are close matches" }} marked <span class="pill small">close</span>: a line that has another form or a near spelling of a word you typed{% if search.also %} ({{ search.also|join:", " }}){% endif %}. They come after the exact hits.</p>
+              {% endif %}
               {% for group in search.groups %}
                 <h2 class="search-head"><a href="{{ group.url }}">{{ group.head }}</a></h2>
                 <table class="tbl search-hits"><tbody>
                   {% for hit in group.hits %}
-                    <tr>
+                    <tr{% if hit.close %} class="close"{% endif %}>
                       <td class="mono muted nowrap">{% if hit.paragraph %}<a href="{{ hit.url }}" data-para-card="1" data-doc-url="{{ hit.paragraph.url }}" data-page="{{ hit.paragraph.page }}" data-para="{{ hit.paragraph.n }}" data-title="{{ hit.paragraph.title }}">{{ hit.when }}</a>{% elif hit.url %}<a href="{{ hit.url }}">{{ hit.when }}</a>{% else %}{{ hit.when }}{% endif %}{% if hit.all_cameras %} <a class="cite all" href="{{ hit.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}</td>
-                      <td class="muted">{{ hit.who }}</td>
+                      <td class="muted">{{ hit.who }}{% if hit.close %} <span class="pill small">close</span>{% endif %}</td>
                       <td>{{ hit.text }}{% if hit.under %}<div class="small"><i>{{ hit.under }}</i></div>{% endif %}</td>
                     </tr>
                   {% endfor %}
@@ -122,7 +126,7 @@
               {% if search.more %}<p class="muted small">Only the first {{ search.most }} hits of a kind are shown; narrow the words.</p>{% endif %}
             {% endif %}
           {% else %}
-            <p class="muted">Words in every transcript, event, note, memo, summary and clip title of this case. Whole words, in any order; a phrase in quotes for an exact match.</p>
+            <p class="muted">Words in every transcript, in what the cameras showed, and in every event, note, memo, summary and clip title of this case. Whole words, in any order; close matches (another form of a word, a near spelling) come after the exact hits; a phrase in quotes for an exact match alone.</p>
           {% endif %}
           <p class="muted small">Search terms are never written to the audit log.</p>
         {% endif %}

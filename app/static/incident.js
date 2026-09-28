@@ -2669,14 +2669,27 @@
     var head = findList.length + " moment" + (findList.length === 1 ? "" : "s") + " for \u201c" + escape(findBox.value.trim()) + "\u201d" +
       (got.skipped ? " <span class='muted'>(" + got.skipped + " camera" + (got.skipped === 1 ? "" : "s") + " not synced " + (got.skipped === 1 ? "is" : "are") + " not searched)</span>" : "");
     var html = "<p class='small muted find-head'>" + head + "</p>";
+    // The exact hits come first; the close ones (v1.97.0), a word's other
+    // form or near spelling, follow under their own line.
+    var closeSaid = false;
     findList.forEach(function (one, n) {
+      if (one.close && !closeSaid) {
+        closeSaid = true;
+        html += "<p class='small muted inc-find-close'>Close matches" + (got.also && got.also.length ? ", also looked for: " + escape(got.also.join(", ")) : "") + "</p>";
+      }
       var cam = one.camera ? cameraById(one.camera) : null;
-      var who = one.kind === "words" ? "<span class='dot' style='--speaker: " + (cam ? cam.colour : "var(--muted)") + "'></span>" + escape(one.camera_id) : escape(one.who);
-      html += "<div class='inc-find-hit' data-n='" + n + "'>" +
+      var onCamera = one.kind === "words" || one.kind === "seen";
+      var who = onCamera ? "<span class='dot' style='--speaker: " + (cam ? cam.colour : "var(--muted)") + "'></span>" + escape(one.camera_id) : escape(one.who);
+      var where = one.kind === "words" ? "Said on " + escape(one.camera_id) + (one.who ? ", " + escape(one.who) : "")
+        : one.kind === "seen" ? "Seen on " + escape(one.camera_id)
+        : one.kind === "event" ? "An event on the chronology"
+        : one.kind === "note" ? "The office's note on a line of " + escape(one.camera_id)
+        : "The memo";
+      html += "<div class='inc-find-hit" + (one.close ? " close" : "") + "' data-n='" + n + "'>" +
         "<span class='t mono'>" + (one.at === null ? "" : timeOfDay(one.at)) + "</span>" +
         "<span class='who small'>" + who + (one.kind === "words" && one.who ? " <span class='muted'>" + escape(one.who) + "</span>" : "") + "</span>" +
-        "<span class='grow'>" + one.html + "<div class='muted small'>" + (one.kind === "words" ? "Said on " + escape(one.camera_id) + (one.who ? ", " + escape(one.who) : "") : (one.kind === "event" ? "An event on the chronology" : (one.kind === "note" ? "The office's note on a line of " + escape(one.camera_id) : "The memo"))) + "</div></span>" +
-        (one.kind === "words" ? "<button type='button' class='tiny ghost' data-find-event='" + n + "' title='An event at this moment, with the line filled'>E</button>" : "") +
+        "<span class='grow'>" + one.html + "<div class='muted small'>" + where + "</div></span>" +
+        (onCamera ? "<button type='button' class='tiny ghost' data-find-event='" + n + "' title='An event at this moment, with the line filled'>E</button>" : "") +
         "</div>";
     });
     findHits.innerHTML = html;
@@ -2690,7 +2703,7 @@
     findCurrent = n;
     Array.prototype.forEach.call(findHits.querySelectorAll(".inc-find-hit"), function (row) { row.classList.toggle("on", parseInt(row.dataset.n, 10) === n); });
     if (one.at !== null && one.at !== undefined) { seek(one.at); }
-    if ((one.kind === "words" || one.kind === "note") && one.camera && cameraById(one.camera)) {
+    if ((one.kind === "words" || one.kind === "note" || one.kind === "seen") && one.camera && cameraById(one.camera)) {
       if (layout === "focus") { setFocus(one.camera); }
       else {
         var entry = players[one.camera];
@@ -2732,7 +2745,7 @@
       var add = event.target.closest("[data-find-event]");
       if (add) {
         var one = findList[parseInt(add.dataset.findEvent, 10)];
-        if (one) { seek(one.at); openEventBox({ at: one.at, text: one.text, source: "words", camera: one.camera }); }
+        if (one) { seek(one.at); openEventBox({ at: one.at, text: one.text, source: one.kind === "seen" ? "camera" : "words", camera: one.camera }); }
         return;
       }
       var row = event.target.closest(".inc-find-hit");

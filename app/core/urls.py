@@ -60,6 +60,11 @@ urlpatterns = [
         name="segments",
     ),
     path(
+        "recording/<uuid:recording_id>/find",
+        viewer.find,
+        name="recording-find",
+    ),
+    path(
         "recording/<uuid:recording_id>/segment/<int:segment_id>",
         viewer.correct,
         name="correct",

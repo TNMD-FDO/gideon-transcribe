@@ -364,6 +364,19 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
     )
 
 
+@login_required
+def find(request: HttpRequest, recording_id) -> JsonResponse:
+    """Find on the recording's page (v1.97.0): the lines that carry a close
+    form of what was typed, and what the camera showed. The page finds the
+    exact words itself. The term is never logged."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    from core import case_search
+
+    return JsonResponse(case_search.find_in(recording, request.GET.get("q", "")[:200]))
+
+
 def being_replaced(recording) -> bool:
     """Whether a Process again is running against this Recording.
 

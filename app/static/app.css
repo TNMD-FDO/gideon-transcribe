@@ -1217,6 +1217,15 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   background: var(--clip-soft);
 }
 .seg.match-here { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Close matches and what the camera showed (v1.97.0): a softer mark, and the strip above the transcript. */
+.seg.match-close mark, .search-hits tr.close mark, .inc-find-hit.close mark, .find-more .close mark { background: transparent; color: inherit; border-bottom: 2px dotted var(--accent); border-radius: 0; }
+.find-more { flex: none; margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); max-height: 30vh; overflow: auto; }
+.find-more p { margin: 2px 0; }
+.find-more .find-seen { display: block; padding: 3px 0; color: inherit; text-decoration: none; border-top: 1px solid var(--line); }
+.find-more .find-seen:hover { background: var(--surface); }
+.find-more mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+.search-close, .inc-find-close { margin: 10px 0 2px; }
+.inc-find-hits .inc-find-close { margin: 8px 12px 2px; }
 
 /* Marking a clip from the transcript is two steps, and the button says which
    one it is on. One class on the list swaps every label at once, which a

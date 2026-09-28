@@ -25,3 +25,12 @@ trigram index on the segments' text only when a search takes more than a
 second on the largest case, and to record the figures here when it does.
 A case of a hundred hours would hold about a hundred thousand segments,
 where an `ILIKE` scan is still well under a second on this server.
+
+## Since
+
+- v1.89.0: a plain word is matched as a whole word (`iregex` between
+  PostgreSQL's word edges), no longer by `icontains`; a phrase in quotes
+  is still `icontains`.
+- v1.97.0: the extension is installed, for the near spellings of close
+  matches, and still no index; what the cameras showed is searched. The
+  measurement behind it is `close-matches.md`.
