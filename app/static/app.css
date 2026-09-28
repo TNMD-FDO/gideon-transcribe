@@ -2541,7 +2541,8 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .inc-tile-head .snd { flex: none; padding: 0 4px; color: var(--muted); }
 .inc-tile.sound .inc-tile-head .snd { color: var(--accent); }
 .inc-tile-head .pill { max-width: 6rem; }
-.inc-strip .ruler, .inc-strip .lane { grid-template-columns: 150px minmax(0, 1fr); }
+/* One rule for the three (v1.95.1): the clip track's row was 100px and a press on it played from ahead of the lanes. */
+.inc-strip .ruler, .inc-strip .lane, .inc-strip .clip-track-row { grid-template-columns: 150px minmax(0, 1fr); }
 .inc-strip .lane .head .swap { padding: 0 5px; font-size: 10px; flex: none; }
 .incident-page main.wide { position: relative; }
 .inc-sheets { position: absolute; right: 16px; top: 58px; z-index: 6; width: min(760px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); background: var(--bg); overflow: hidden; }
@@ -2602,7 +2603,7 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .transport .clip-mark.marking { background: var(--warn); border-color: var(--warn); color: var(--bg); font-weight: 600; }
 .transport #clip-mark-said.marking { color: var(--warn); }
 @media (max-width: 1599px) { .transport #clip-mark-said:not(.marking) { display: none; } }
-.clip-track-row { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; align-items: center; margin: 2px 0 4px; }
+.clip-track-row { display: grid; gap: 8px; align-items: center; margin: 2px 0 4px; }
 .clip-track { position: relative; height: 24px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 1px dashed color-mix(in srgb, var(--warn) 70%, transparent); border-radius: 5px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--warn) 12%, transparent) 0 6px, transparent 6px 12px); cursor: crosshair; user-select: none; font-size: var(--t-small); }
 .clip-track .words { display: inline-flex; align-items: center; gap: 5px; color: var(--warn); font-weight: 500; white-space: nowrap; }
 .clip-track .words .i { width: 13px; height: 13px; }

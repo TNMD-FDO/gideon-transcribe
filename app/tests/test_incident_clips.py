@@ -941,3 +941,17 @@ def test_the_page_carries_the_desks_new_parts(incident, person, client):
     # The lane's rows stay off the state when incident clips are off.
     settings_store.set_to("incidents_clips", False)
     assert client.get(f"{incident.url()}/state").json()["clips"] == []
+
+
+def test_the_clip_track_is_as_wide_as_the_lanes():
+    """v1.95.1: the clip track's row takes its columns from the lanes' own
+    rule and carries no width of its own, so a press on it plays from the
+    moment it sits over on the lanes."""
+    sheet = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    shared = re.search(r"^\.inc-strip \.ruler,[^{]*\{[^}]*\}", sheet, re.MULTILINE)
+    assert shared is not None
+    assert ".inc-strip .lane" in shared.group(0)
+    assert ".inc-strip .clip-track-row" in shared.group(0)
+    assert "grid-template-columns" in shared.group(0)
+    own = re.search(r"^\.clip-track-row \{[^}]*\}", sheet, re.MULTILINE)
+    assert own is not None and "grid-template-columns" not in own.group(0)

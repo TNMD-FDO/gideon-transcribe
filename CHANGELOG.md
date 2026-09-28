@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.95.1, 2026-09-28
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A press on the clip track lands where it was pressed.** On an incident,
+a press on the clip track played from a moment ahead of where the press sat
+over the lanes below, most at the left of the strip and not at all at its
+right edge, and a clip dragged there started and ended ahead the same way.
+The clip track's row kept a narrower names column than the ruler and the
+lanes, so the track began further left and ran wider than they did. The
+three now take their columns from one rule.
+
 ## v1.95.0, 2026-09-26
 
 ```
