@@ -341,6 +341,37 @@ def note_line(segment) -> str:
     return f"Note ({inside}): " if inside else "Note: "
 
 
+def moment_notes_of(recording, with_notes: bool) -> list:
+    """The notes where nothing was said (v1.99.0), for an export with notes;
+    none for a plain export, which never carries a note."""
+    if not with_notes:
+        return []
+    from core import notes
+
+    return list(notes.moments_of(recording))
+
+
+def moment_note_line(one) -> str:
+    """A note at a moment as the exports print it, at its own time:
+    "[00:03:30] Note (writer, date; nothing was said here): the words"."""
+    from core import notes
+
+    who = one.note_by.shown_name if one.note_by else ""
+    when = notes.date_of(one.note_changed)
+    inside = ", ".join(part for part in (who, when) if part)
+    inside = f"{inside}; {notes.NOTHING_SAID}" if inside else notes.NOTHING_SAID
+    return f"[{clock(one.at)}] Note ({inside}): "
+
+
+def _due(waiting: list, before: float | None) -> list:
+    """The notes at moments that fall before a line, taken off the list; all
+    that are left when there is no line to come."""
+    due = [one for one in waiting if before is None or one.at < before]
+    for one in due:
+        waiting.remove(one)
+    return due
+
+
 def plain_text(recording: Recording, with_notes: bool = False) -> str:
     """The four-line head, a blank line, then one line per Segment.
 
@@ -379,13 +410,18 @@ def plain_text(recording: Recording, with_notes: bool = False) -> str:
     shared = both_sides_legend(transcript)
     if shared:
         notice += " " + shared
-    if with_notes and any(segment.note for segment in segments):
+    waiting = moment_notes_of(recording, with_notes)
+    if with_notes and (waiting or any(segment.note for segment in segments)):
         notice += " " + NOTES_LEGEND_TEXT
     head.append(notice)
     head.append("")
 
     lines = []
     for segment in segments:
+        # A note where nothing was said prints at its own time, between the
+        # lines (v1.99.0).
+        for one in _due(waiting, segment.start):
+            lines.append("    " + moment_note_line(one) + one.note.replace("\n", " "))
         if not (segment.text or "").strip():
             # A Segment the model heard nothing on (v1.93.1): a stamp with no
             # words after it says nothing a reader can use.
@@ -401,6 +437,8 @@ def plain_text(recording: Recording, with_notes: bool = False) -> str:
         )
         if with_notes and segment.note:
             lines.append("    " + note_line(segment) + segment.note.replace("\n", " "))
+    for one in _due(waiting, None):
+        lines.append("    " + moment_note_line(one) + one.note.replace("\n", " "))
 
     # What the camera showed, after the talk (v1.51.0; among the lines before).
     lines.extend(camera_lines_text(transcript))
@@ -469,7 +507,12 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
             "side", "note_by"
         )
     )
-    noted = sum(1 for segment in segments if segment.note) if with_notes else 0
+    waiting = moment_notes_of(recording, with_notes)
+    noted = (
+        sum(1 for segment in segments if segment.note) + len(waiting)
+        if with_notes
+        else 0
+    )
     who = appearances(segments)
     # Inside a Case the Role column fills from the People; blank otherwise.
     if recording.case_id:
@@ -558,7 +601,17 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
     _number_the_lines(talk)
     _running_head(talk, title, kind, recording.sha256, Pt, RGBColor)
 
+    def moment_paragraph(one) -> None:
+        under = document.add_paragraph()
+        under.paragraph_format.left_indent = Inches(0.5)
+        under.paragraph_format.space_after = Pt(6)
+        told = under.add_run(moment_note_line(one) + one.note)
+        told.italic = True
+        told.font.size = Pt(10)
+
     for segment in segments:
+        for one in _due(waiting, segment.start):
+            moment_paragraph(one)
         if not (segment.text or "").strip():
             continue
         line = document.add_paragraph()
@@ -576,6 +629,8 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
             told = under.add_run(note_line(segment) + segment.note)
             told.italic = True
             told.font.size = Pt(10)
+    for one in _due(waiting, None):
+        moment_paragraph(one)
 
     if not segments:
         document.add_paragraph("This transcript has no segments.")

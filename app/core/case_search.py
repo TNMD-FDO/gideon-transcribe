@@ -23,6 +23,7 @@ from core.assistant import DONE, Moment, Summary
 from core.chronology import Event
 from core.clips import Clip
 from core.jobs import Segment, Transcript
+from core.notes import NOTHING_SAID, MomentNote
 
 # How many hits one kind shows. A person looking for a phrase wants the
 # first few; a thousand rows would be a worse answer, not a fuller one.
@@ -260,9 +261,14 @@ def search(case, asked: str, kind: str = "") -> dict:
 
     lines = Segment.objects.filter(transcript__recording__case=case)
     seen = _seen(Transcript.objects.filter(recording__case=case))
+    # A note event is found once, as its note (on a line, or at a moment).
     events_of = Event.objects.filter(
-        incident__case=case, proposed=False, segment__isnull=True
+        incident__case=case,
+        proposed=False,
+        segment__isnull=True,
+        moment_note__isnull=True,
     )
+    moment_notes = MomentNote.objects.filter(recording__case=case)
     memos = list(
         incident_assistant.IncidentMemo.objects.filter(
             incident__case=case, state=DONE
@@ -281,6 +287,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         sources=[
             (lines, "text"),
             (lines.exclude(note=""), "note"),
+            (moment_notes, "note"),
             (seen, "text"),
             (events_of, "text"),
             (events_of, "why"),
@@ -415,6 +422,42 @@ def search(case, asked: str, kind: str = "") -> dict:
                     at=one.start,
                     close=near,
                     preview=_plays(recording, one.start),
+                )
+            )
+
+    # Notes at moments where nothing was said (v1.99.0), with the notes on lines.
+    rows, over = _with_close(
+        moment_notes.select_related("recording", "note_by").order_by(
+            "recording__created", "at"
+        ),
+        ["note"],
+        words,
+        also,
+    )
+    counts["notes"] = min(counts["notes"] + len(rows), MOST)
+    more = more or over
+    if wanted("notes"):
+        for one, near in rows:
+            recording = one.recording
+            here = group(
+                ("recording", recording.pk),
+                recording.title,
+                reverse("viewer", args=[recording.pk]),
+            )
+            here["hits"].append(
+                _hit(
+                    exports.clock(one.at),
+                    mark_safe(escape(NOTHING_SAID)),
+                    url=(
+                        f"{reverse('viewer', args=[recording.pk])}"
+                        f"?t={one.at:.1f}&note=1"
+                    ),
+                    who="Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
+                    under=mark(one.note, words, also),
+                    all_cameras=incidents.all_cameras_url(recording, one.at),
+                    at=one.at,
+                    close=near,
+                    preview=_plays(recording, one.at),
                 )
             )
 
@@ -648,7 +691,11 @@ def find(incident, asked: str) -> dict:
         cameras.append(camera)
     transcripts = [camera.recording.transcript for camera in cameras]
     lines = Segment.objects.filter(transcript__in=transcripts)
-    events_of = incident.events.filter(proposed=False, segment__isnull=True)
+    events_of = incident.events.filter(
+        proposed=False, segment__isnull=True, moment_note__isnull=True
+    )
+    recordings = [camera.recording for camera in cameras]
+    moment_notes = MomentNote.objects.filter(recording__in=recordings)
     memo = incident_assistant.memo_of(incident)
     memo_text = memo.text if memo is not None and memo.state == DONE else ""
     also = close.forms(
@@ -656,6 +703,7 @@ def find(incident, asked: str) -> dict:
         sources=[
             (lines, "text"),
             (lines.exclude(note=""), "note"),
+            (moment_notes, "note"),
             (_seen(transcripts), "text"),
             (events_of, "text"),
             (events_of, "why"),
@@ -717,6 +765,24 @@ def find(incident, asked: str) -> dict:
                     near,
                 )
             )
+    # The notes where nothing was said on these cameras (v1.99.0).
+    by_recording = {camera.recording_id: camera for camera in cameras}
+    rows, _ = _with_close(
+        moment_notes.select_related("note_by").order_by("at"), ["note"], words, also
+    )
+    for one, near in rows:
+        hits.append(
+            _hit_of(
+                by_recording[one.recording_id],
+                one,
+                "note",
+                mark(one.note, words, also),
+                one.note,
+                "Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
+                near,
+                at=one.at,
+            )
+        )
     rows, _ = _with_close(events_of, ["text", "why", "note"], words, also)
     for event, near in rows:
         hits.append(

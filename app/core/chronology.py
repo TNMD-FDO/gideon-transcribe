@@ -112,6 +112,15 @@ class Event(models.Model):
         blank=True,
         related_name="events",
     )
+    # v1.99.0: the note at a moment whose note this Event is, where nothing
+    # was being said and so no line could take it; null on every other.
+    moment_note = models.ForeignKey(
+        "core.MomentNote",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="events",
+    )
     # The camera the words or the description came from, when one did.
     camera = models.ForeignKey(
         incidents.IncidentCamera,
@@ -157,14 +166,28 @@ class Event(models.Model):
                 fields=["incident", "segment"],
                 condition=models.Q(segment__isnull=False),
                 name="one_note_event_per_line",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["incident", "moment_note"],
+                condition=models.Q(moment_note__isnull=False),
+                name="one_note_event_per_moment",
+            ),
         ]
 
     def __str__(self) -> str:
         return self.text
 
     def is_note(self) -> bool:
-        return self.segment_id is not None
+        return self.segment_id is not None or self.moment_note_id is not None
+
+    def anchor(self):
+        """What a note event is the note of: its line, or its note at a moment
+        (v1.99.0). Both carry note, note_by, note_changed, start and text."""
+        if self.segment_id is not None:
+            return self.segment
+        if self.moment_note_id is not None:
+            return self.moment_note
+        return None
 
 
 def running_cameras(incident, at: float) -> list[str]:
@@ -345,21 +368,18 @@ def _change_note_event(event: Event, fields: dict, *, by, request=None) -> Event
     to them goes through the note (one Note changed row, every Incident's row
     follows); the cameras and To check are the Event's own. The time is the
     line's and cannot be moved from here."""
-    from core import notes
 
     cleaned = _cleaned(
         event.incident, {**fields, "at": event.at, "until": ""}, most=NOTE_TEXT_MOST
     )
-    words_changed = cleaned["text"] != event.segment.note
+    words_changed = cleaned["text"] != event.anchor().note
     event.cameras = cleaned["cameras"]
     event.to_check = cleaned["to_check"]
     event.changed_by = by
     event.changed = timezone.now()
     event.save(update_fields=["cameras", "to_check", "changed_by", "changed"])
     if words_changed:
-        notes.set_note(
-            event.segment, cleaned["text"], by=by, request=request, where="chronology"
-        )
+        _write_note(event, cleaned["text"], by=by, request=request)
         event.refresh_from_db()
         return event
     audit.write(
@@ -378,13 +398,23 @@ def _change_note_event(event: Event, fields: dict, *, by, request=None) -> Event
     return event
 
 
+def _write_note(event: Event, text: str, *, by, request=None) -> None:
+    """A note event's words written through its note, on a line or at a moment."""
+    from core import notes
+
+    if event.segment_id is not None:
+        notes.set_note(event.segment, text, by=by, request=request, where="chronology")
+    else:
+        notes.set_moment_note(
+            event.moment_note, text, by=by, request=request, where="chronology"
+        )
+
+
 def remove(event: Event, *, by, request=None) -> None:
     if event.is_note():
         # Removing a note event removes the note from its line (chapter 11):
         # one Note removed row, and every Incident's row goes with it.
-        from core import notes
-
-        notes.set_note(event.segment, "", by=by, request=request, where="chronology")
+        _write_note(event, "", by=by, request=request)
         return
     incident = event.incident
     event.delete()
@@ -425,9 +455,9 @@ def source_words(event: Event, names: dict) -> str:
 
 def note_writer(event: Event) -> str:
     """A note event's writer: the note's, else whoever the row was made for."""
-    segment = event.segment if event.segment_id else None
-    if segment is not None and segment.note_by is not None:
-        return segment.note_by.shown_name
+    anchor = event.anchor()
+    if anchor is not None and anchor.note_by is not None:
+        return anchor.note_by.shown_name
     return event.added_by.shown_name if event.added_by else "a person"
 
 
@@ -502,17 +532,21 @@ def events_json(incident) -> list[dict]:
     clips = clips_per_event(incident)
     rows = []
     for event in incident.events.filter(dismissed=False).select_related(
-        "added_by", "changed_by", "note_by", "segment__note_by", "segment__transcript"
+        "added_by",
+        "changed_by",
+        "note_by",
+        "segment__note_by",
+        "segment__transcript",
+        "moment_note__note_by",
     ):
         line, detail = line_and_detail(event.text)
         # Chapter 11: a note event's line, for the card and the row's link.
-        segment = event.segment if event.is_note() else None
+        segment = event.anchor()
+        moment = event.moment_note_id is not None
         line_url = ""
         if segment is not None:
-            line_url = (
-                reverse("viewer", args=[segment.transcript.recording_id])
-                + f"?t={segment.start:.1f}&note=1"
-            )
+            home = segment.recording_id if moment else segment.transcript.recording_id
+            line_url = reverse("viewer", args=[home]) + f"?t={segment.start:.1f}&note=1"
         rows.append(
             {
                 "id": str(event.pk),
@@ -548,16 +582,25 @@ def events_json(incident) -> list[dict]:
                 "clips_rendering": clips.get(str(event.pk), {}).get("rendering", 0),
                 "clips_words": clips_words(clips.get(str(event.pk), {})),
                 # Chapter 11: empty on every Event but a note event.
-                "segment_id": str(segment.pk) if segment is not None else "",
-                "recording_id": (
-                    str(segment.transcript.recording_id) if segment is not None else ""
+                "segment_id": (
+                    str(segment.pk) if segment is not None and not moment else ""
                 ),
+                "recording_id": str(home) if segment is not None else "",
+                # v1.99.0: a note at a moment where nothing was said.
+                "at_a_moment": moment,
                 "line_start": segment.start if segment is not None else None,
                 "line_url": line_url,
                 "line_words": (
-                    (segment.text[:140] + ("\u2026" if len(segment.text) > 140 else ""))
-                    if segment is not None
-                    else ""
+                    "nothing was said here"
+                    if moment
+                    else (
+                        (
+                            segment.text[:140]
+                            + ("\u2026" if len(segment.text) > 140 else "")
+                        )
+                        if segment is not None
+                        else ""
+                    )
                 ),
                 "note_on": (
                     notes.date_of(segment.note_changed) if segment is not None else ""

@@ -18,6 +18,9 @@
   var timeline = document.getElementById("timeline");
 
   var segments = [];
+  // The notes where nothing was said (v1.99.0): kept at a moment, shown
+  // between the lines and never one of them.
+  var momentNotes = [];
   var wordTiming = false;
   var here = -1;
   var colours = {};
@@ -269,6 +272,14 @@
       body.appendChild(said);
       // The office's note under the words, whole, with the writer and the date.
       if (segment.note) { body.appendChild(noteLine(segment)); }
+      // The notes kept at moments between this line and the next (v1.99.0);
+      // those before the first line sit over it.
+      var next = segments[index + 1];
+      momentNotes.forEach(function (one) {
+        var mine = one.at >= segment.start && (!next || one.at < next.start);
+        if (index === 0 && one.at < segment.start) { body.insertBefore(momentNote(one), body.firstChild); return; }
+        if (mine) { body.appendChild(momentNote(one)); }
+      });
 
       row.appendChild(when);
       row.appendChild(who);
@@ -287,6 +298,89 @@
 
   function noteHead(segment) {
     return "Note" + (segment.note_by ? ", " + segment.note_by : "") + (segment.note_on ? ", " + segment.note_on : "");
+  }
+
+  // A note where nothing was said: its own time, its writer, its words, and
+  // that nothing was said there. Its time plays from the moment.
+  function momentNote(one) {
+    var box = document.createElement("div");
+    box.className = "moment-note";
+    box.dataset.moment = one.id;
+    var when = document.createElement("a");
+    when.href = "#";
+    when.className = "t";
+    when.textContent = clock(one.at);
+    when.title = "Play from here";
+    var said = document.createElement("span");
+    var head = document.createElement("b");
+    head.textContent = "Note" + (one.note_by ? ", " + one.note_by : "") + (one.note_on ? ", " + one.note_on : "") + ": ";
+    said.appendChild(head);
+    said.appendChild(document.createTextNode(one.note));
+    var nothing = document.createElement("span");
+    nothing.className = "said-nothing";
+    nothing.textContent = "nothing was said here";
+    said.appendChild(nothing);
+    var acts = document.createElement("span");
+    acts.innerHTML = "<button type='button' class='ghost tiny' data-moment-act='edit'>edit</button> <button type='button' class='ghost tiny' data-moment-act='remove'>remove</button>";
+    box.appendChild(when);
+    box.appendChild(said);
+    box.appendChild(acts);
+    return box;
+  }
+
+  function momentById(id) {
+    var found = null;
+    momentNotes.some(function (one) { if (one.id === id) { found = one; return true; } return false; });
+    return found;
+  }
+
+  function sendMoment(one, words) {
+    return fetch("/recording/" + window.VIEWER.recording + "/note-at", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+      body: JSON.stringify({ id: one.id, note: words })
+    }).then(function (answer) { return answer.json().then(function (told) { return { ok: answer.ok, told: told }; }); })
+      .then(function (got) {
+        if (!got.ok || !got.told.saved) {
+          UI.toast(got.told.error || "That note was not saved.", { problem: true, icon: "warning" });
+          return false;
+        }
+        var kept = got.told.moment;
+        momentNotes = momentNotes.filter(function (other) { return other.id !== one.id; });
+        if (kept.id !== null && kept.note) { momentNotes.push(kept); momentNotes.sort(function (a, b) { return a.at - b.at; }); }
+        draw();
+        if (search && search.value.trim()) { look(); }
+        UI.toast(kept.note ? "Note saved." : "Note removed.", { icon: "ok" });
+        return true;
+      })
+      .catch(function () { UI.toast("That note was not saved. Try again.", { problem: true, icon: "warning" }); return false; });
+  }
+
+  function pressedMoment(event, box) {
+    var one = momentById(parseInt(box.dataset.moment, 10));
+    if (!one) { return; }
+    var act = event.target.closest("[data-moment-act]");
+    if (event.target.closest("a.t")) { event.preventDefault(); window.VIEWER.seek(one.at); return; }
+    if (!act) { return; }
+    if (act.dataset.momentAct === "remove") {
+      UI.confirm({ title: "Remove this note?", body: "The note's words are kept nowhere else.", ok: "Remove", danger: true })
+        .then(function (yes) { if (yes) { sendMoment(one, ""); } });
+      return;
+    }
+    if (act.dataset.momentAct === "edit") {
+      box.innerHTML = "<span class='t'>" + clock(one.at) + "</span><span><textarea rows='3' maxlength='2000' aria-label='The note'></textarea></span>" +
+        "<span><button type='button' class='tiny primary' data-moment-act='save'>save</button> <button type='button' class='ghost tiny' data-moment-act='cancel'>cancel</button></span>";
+      var area = box.querySelector("textarea");
+      area.value = one.note;
+      area.focus();
+      return;
+    }
+    if (act.dataset.momentAct === "cancel") { box.replaceWith(momentNote(one)); return; }
+    if (act.dataset.momentAct === "save") {
+      var typed = box.querySelector("textarea").value;
+      if (!typed.trim()) { UI.toast("An empty note is removed with remove.", { icon: "warning" }); return; }
+      sendMoment(one, typed);
+    }
   }
 
   function noteLine(segment) {
@@ -921,6 +1015,9 @@
     column.addEventListener("click", function (event) {
       var row = event.target.closest(".seg");
       if (!row) { return; }
+      // A note kept at a moment is not the line it sits under (v1.99.0).
+      var kept = event.target.closest(".moment-note");
+      if (kept) { pressedMoment(event, kept); return; }
       var index = parseInt(row.dataset.index, 10);
 
       if (event.target.closest(".edit-row")) { edit(index); return; }
@@ -932,6 +1029,7 @@
 
     column.addEventListener("dblclick", function (event) {
       var row = event.target.closest(".seg");
+      if (event.target.closest(".moment-note")) { return; }
       if (row) { edit(parseInt(row.dataset.index, 10)); }
     });
   }
@@ -1797,6 +1895,7 @@
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         segments = body.segments || [];
+        momentNotes = body.moment_notes || [];
         wordTiming = body.word_timestamps;
         draw();
         here = -1;
@@ -2095,8 +2194,11 @@
         row.scrollIntoView({ block: "center" });
         // Opened from the Notes tab or a Notes hit: the note lit under the line.
         if (asked.get("note") === "1") {
-          var noted = row.querySelector(".note-line");
-          if (noted) { noted.classList.add("lit"); }
+          // A note kept at that moment first, else the line's own.
+          var keptHere = null;
+          momentNotes.forEach(function (one) { if (Math.abs(one.at - when) <= 1) { keptHere = column.querySelector(".moment-note[data-moment='" + one.id + "']"); } });
+          var noted = keptHere || row.querySelector(".note-line");
+          if (noted) { noted.classList.add("lit"); if (keptHere) { keptHere.scrollIntoView({ block: "center" }); } }
         }
       }
     }
@@ -2137,6 +2239,7 @@
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         segments = body.segments || [];
+        momentNotes = body.moment_notes || [];
         wordTiming = body.word_timestamps;
         if (!duration && segments.length) {
           duration = segments[segments.length - 1].end;

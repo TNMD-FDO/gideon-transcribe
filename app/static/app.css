@@ -2476,6 +2476,15 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .preview-line.now { background: var(--now); color: var(--now-ink); }
 .preview-line.now .who, .preview-line.now .t { color: inherit; }
 .preview-line .noted { display: block; margin-top: 2px; font-style: italic; }
+/* A note where nothing was said (v1.99.0), in a colour no spoken line has; and the silence said among the lines. */
+.preview-line.quiet { color: var(--muted); font-style: italic; }
+.preview-line.kept, .seg .moment-note { background: var(--note-soft, color-mix(in srgb, var(--warn) 14%, transparent)); box-shadow: inset 3px 0 0 var(--warn); }
+.seg .moment-note { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: baseline; margin: 8px 0 0; padding: 6px 8px; border-radius: 4px; font-size: var(--t-small); }
+.seg .moment-note .t { font-family: var(--mono); }
+.seg .moment-note .said-nothing { display: inline-block; margin-left: 6px; padding: 0 7px; border: 1px solid currentColor; border-radius: 999px; font-size: 11px; opacity: 0.8; white-space: nowrap; }
+.seg .moment-note.lit { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg .moment-note textarea { width: 100%; box-sizing: border-box; }
+.moment-notes-first { list-style: none; margin: 0 0 6px; padding: 0; }
 .preview-foot { flex: none; display: flex; gap: 6px; padding: 8px 10px; flex-wrap: wrap; align-items: center; }
 .preview-note { flex: none; display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .preview-note textarea { width: 100%; box-sizing: border-box; resize: vertical; }

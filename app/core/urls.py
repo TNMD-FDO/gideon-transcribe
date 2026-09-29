@@ -70,6 +70,12 @@ urlpatterns = [
         viewer.around,
         name="recording-around",
     ),
+    # A note at a moment, on the line being spoken or where nothing is said (v1.99.0).
+    path(
+        "recording/<uuid:recording_id>/note-at",
+        viewer.note_at,
+        name="recording-note-at",
+    ),
     path(
         "recording/<uuid:recording_id>/segment/<int:segment_id>",
         viewer.correct,

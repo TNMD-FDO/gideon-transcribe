@@ -5,8 +5,11 @@
 // the camera showed in its place among the lines, a note on any line, Open
 // the recording and All cameras. The note is the line's own note, written
 // by the recording page's own action, so on a synced camera it is an event
-// on the chronology as it always was. Drag it by its head; Close or Escape
-// puts it away. Nothing of what was looked at is logged.
+// on the chronology as it always was. Where nothing is being said at the
+// moment, the note is kept at the moment itself (v1.99.0) and shown between
+// the lines, and a silence of half a minute or more is said among them.
+// Drag it by its head; Close or Escape puts it away. Nothing of what was
+// looked at is logged.
 
 (function () {
   "use strict";
@@ -14,7 +17,7 @@
   var card = null;       // the card on the page, or null
   var told = null;       // what the server answered for it
   var asked = null;      // { recording, seconds, from }
-  var noting = null;     // the line id the note box is open on
+  var noting = null;     // what the note box is open on: a line's id, or { moment: id or null }
   var asking = 0;        // the latest ask, so a slow answer never overwrites a later one
   var lastFetch = 0;
 
@@ -59,7 +62,10 @@
   // The rows under the picture: the lines and what was seen, by their times.
   function rows() {
     var all = (told.lines || []).map(function (one) { return { at: one.start, line: one }; })
-      .concat((told.seen || []).map(function (one) { return { at: one.at, seen: one }; }));
+      .concat((told.seen || []).map(function (one) { return { at: one.at, seen: one }; }))
+      // The notes where nothing was said, and the silence the moment is in (v1.99.0).
+      .concat((told.moment_notes || []).map(function (one) { return { at: one.at, kept: one }; }));
+    if (told.silence) { all.push({ at: told.silence.from + 0.001, quiet: told.silence }); }
     all.sort(function (a, b) { return a.at - b.at; });
     return all;
   }
@@ -72,6 +78,19 @@
         html += "<div class='preview-line seen" + (told.cited_seen === row.seen.id ? " cited" : "") + "' data-at='" + row.seen.at + "'>" +
           "<a href='#' class='t mono' data-preview-seek='" + row.seen.at + "'>" + escape(row.seen.clock) + "</a>" +
           "<span class='said'><span class='who'>Seen</span> " + escape(row.seen.text) + "</span><span></span></div>";
+        return;
+      }
+      if (row.quiet) {
+        html += "<div class='preview-line quiet' data-at='" + row.at + "'><span></span><span class='said'>" + escape(row.quiet.words) + "</span><span></span></div>";
+        return;
+      }
+      if (row.kept) {
+        html += "<div class='preview-line kept' data-at='" + row.kept.at + "'>" +
+          "<a href='#' class='t mono' data-preview-seek='" + row.kept.at + "'>" + escape(row.kept.clock) + "</a>" +
+          "<span class='said'><span class='who'>Note" + (row.kept.note_by ? ", " + escape(row.kept.note_by) : "") + "</span> " + escape(row.kept.note) +
+          "<span class='noted small'>nothing was said here</span></span>" +
+          "<button type='button' class='tiny ghost' data-preview-kept='" + row.kept.id + "'" +
+          (told.can_note ? " title='Change this note'" : " disabled title='" + escape(told.why_not) + "'") + ">edit note</button></div>";
         return;
       }
       var one = row.line;
@@ -92,25 +111,47 @@
     return found;
   }
 
+  function keptById(id) {
+    var found = null;
+    (told.moment_notes || []).some(function (one) { if (one.id === id) { found = one; return true; } return false; });
+    return found;
+  }
+  // The note already kept at the moment cited, within a second of it.
+  function keptAtTheMoment() {
+    var found = null;
+    (told.moment_notes || []).some(function (one) { if (Math.abs(one.at - told.seconds) <= 1) { found = one; return true; } return false; });
+    return found;
+  }
+
   function drawFoot() {
     var noteOn = told.note_on;
+    // On the line being spoken; at the moment itself where nothing is (v1.99.0).
     card.querySelector(".preview-foot").innerHTML =
-      "<button type='button' class='small primary' data-preview-note='" + (noteOn === null ? "" : noteOn) + "'" +
-      (told.can_note && noteOn !== null ? "" : " disabled title='" + escape(told.can_note ? "There is no line here to write a note on" : told.why_not) + "'") + ">Note</button>" +
+      "<button type='button' class='small primary' " + (noteOn === null ? "data-preview-moment='1'" : "data-preview-note='" + noteOn + "'") +
+      (told.can_note ? "" : " disabled title='" + escape(told.why_not) + "'") + ">Note</button>" +
       "<a class='btn small' href='" + escape(told.open) + "'>Open the recording</a>" +
       (told.all ? "<a class='btn small ghost' href='" + escape(told.all) + "'>All cameras</a>" : "");
   }
 
   function drawNote(said) {
     var box = card.querySelector(".preview-note");
-    var one = noting === null ? null : lineById(noting);
-    if (!one) { box.hidden = true; box.innerHTML = ""; return; }
-    var spoken = told.cited_seen !== null && told.cited === null && one.id === told.note_on;
+    var label = "", words = "";
+    if (noting !== null && typeof noting === "object") {
+      var kept = noting.moment === null ? null : keptById(noting.moment);
+      label = "A note at " + escape(kept ? kept.clock : told.clock) + ". Nothing is being said at this moment, so the note is kept at the moment itself.";
+      words = kept ? kept.note : "";
+    } else {
+      var one = noting === null ? null : lineById(noting);
+      if (!one) { box.hidden = true; box.innerHTML = ""; return; }
+      var spoken = told.cited_seen !== null && told.cited === null && one.id === told.note_on;
+      label = "A note on the line at " + escape(one.clock) + (spoken ? ", the line being spoken when this was seen" : "");
+      words = one.note || "";
+    }
+    if (said && said.words && said.keep !== undefined) { words = said.keep; }
     box.hidden = false;
     box.innerHTML =
-      "<label class='small muted' for='preview-note-text'>A note on the line at " + escape(one.clock) +
-      (spoken ? ", the line being spoken when this was seen" : "") + "</label>" +
-      "<textarea id='preview-note-text' maxlength='2000' rows='3'>" + escape(one.note || "") + "</textarea>" +
+      "<label class='small muted' for='preview-note-text'>" + label + "</label>" +
+      "<textarea id='preview-note-text' maxlength='2000' rows='3'>" + escape(words) + "</textarea>" +
       "<div class='row' style='gap: 6px; align-items: center; flex-wrap: wrap'>" +
       "<button type='button' class='small primary' data-preview-act='save'>Save note</button>" +
       "<button type='button' class='small ghost' data-preview-act='cancel'>Cancel</button>" +
@@ -150,7 +191,8 @@
     Array.prototype.forEach.call(card.querySelectorAll(".preview-line"), function (row) {
       var at = parseFloat(row.dataset.at);
       row.classList.remove("now");
-      if (at <= now + 0.05) { lit = row; }
+      // A note kept at a moment is the office's, not the recording's: never lit.
+      if (at <= now + 0.05 && !row.classList.contains("kept")) { lit = row; }
     });
     if (lit) {
       lit.classList.add("now");
@@ -180,6 +222,7 @@
           // The moment cited stays the moment cited while the lines move on.
           got.cited = told.cited; got.cited_seen = told.cited_seen; got.note_on = told.note_on;
           got.seconds = told.seconds; got.clock = told.clock; got.open = told.open; got.all = told.all;
+          got.silence = told.silence;
         }
         told = got;
         draw(first);
@@ -187,7 +230,48 @@
       .catch(function () { /* the lines stay as they were */ });
   }
 
+  // A note at the moment (v1.99.0): the app keeps it on the line being spoken
+  // when there is one after all, and at the moment itself when there is not.
+  function saveAtTheMoment() {
+    var box = card.querySelector("#preview-note-text");
+    if (!box) { return; }
+    var typed = box.value;
+    var sent = noting.moment === null ? { at: told.seconds, note: typed } : { id: noting.moment, note: typed };
+    fetch(told.note_at_url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+      body: JSON.stringify(sent)
+    }).then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, said: said }; }); })
+      .then(function (got) {
+        if (!card) { return; }
+        if (!got.ok || !got.said.saved) {
+          drawNote({ problem: true, words: got.said.error || "The note could not be saved.", keep: typed });
+          return;
+        }
+        var chronology = told.on_chronology ? ", and an event on the incident's chronology." : ".";
+        if (got.said.on === "line") {
+          var line = lineById(got.said.line);
+          if (line) { line.note = got.said.note; line.note_by = got.said.note_by; line.note_on = got.said.note_on; }
+          noting = got.said.line;
+          drawLines();
+          follow(media() ? media().currentTime : told.seconds);
+          drawNote({ words: got.said.note ? "Noted. It is on the line" + chronology : "The note is removed." });
+          return;
+        }
+        var kept = got.said.moment;
+        told.moment_notes = (told.moment_notes || []).filter(function (one) { return one.id !== sent.id && one.id !== kept.id; });
+        if (kept.id !== null && kept.note) { told.moment_notes.push(kept); }
+        noting = { moment: kept.id !== null && kept.note ? kept.id : null };
+        drawLines();
+        follow(media() ? media().currentTime : told.seconds);
+        drawNote({ words: kept.note ? "Noted at " + kept.clock + chronology : "The note is removed." });
+      })
+      .catch(function () { if (card) { drawNote({ problem: true, words: "The note could not be saved. Try again.", keep: typed }); } });
+  }
+
   function save() {
+    if (noting !== null && typeof noting === "object") { saveAtTheMoment(); return; }
     var one = lineById(noting);
     var box = card.querySelector("#preview-note-text");
     if (!one || !box) { return; }
@@ -220,6 +304,19 @@
       if (act.dataset.previewAct === "close") { close(); }
       else if (act.dataset.previewAct === "cancel") { noting = null; drawNote(null); }
       else if (act.dataset.previewAct === "save") { save(); }
+      return;
+    }
+    var atMoment = event.target.closest("[data-preview-moment]");
+    if (atMoment && !atMoment.disabled) {
+      var there = keptAtTheMoment();
+      noting = { moment: there ? there.id : null };
+      drawNote(null);
+      return;
+    }
+    var keptNote = event.target.closest("[data-preview-kept]");
+    if (keptNote && !keptNote.disabled) {
+      noting = { moment: parseInt(keptNote.dataset.previewKept, 10) };
+      drawNote(null);
       return;
     }
     var note = event.target.closest("[data-preview-note]");

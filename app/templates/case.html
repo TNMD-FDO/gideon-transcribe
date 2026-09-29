@@ -204,7 +204,7 @@
                   <div class="muted small note-meta">
                     <a href="{{ one.url }}" class="mono">{{ one.when }}</a>{% if one.all_cameras %} <a class="cite all" href="{{ one.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}
                     &middot; {{ one.where }}
-                    &middot; {% if one.kind == "event" %}on the event: {% elif one.who %}{{ one.who }}: {% endif %}<i>{{ one.rests_on|truncatechars:140 }}</i>
+                    &middot; {% if one.kind == "event" %}on the event: {% elif one.kind == "moment" %}<span class="pill small" title="This note is kept at the moment itself, because nothing was being said">at a moment</span> {% elif one.who %}{{ one.who }}: {% endif %}<i>{{ one.rests_on|truncatechars:140 }}</i>
                     {% if one.by or one.on %}&middot; {{ one.by }}{% if one.by and one.on %}, {% endif %}{{ one.on }}{% endif %}
                   </div>
                 </li>

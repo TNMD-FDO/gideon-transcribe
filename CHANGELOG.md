@@ -21,6 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.99.0, 2026-09-29
+
+```
+Models: unchanged
+Database: migrates (0068: a note kept at a moment)
+```
+
+**A note where nothing was said lands where it was meant.** A note
+written from the Preview on something the camera showed in a silence used
+to be put on the nearest line, which could be a minute or more from the
+moment, and the box called that line "the line being spoken". On the
+office's server a note on something seen at 3:30 landed on a line at 4:04.
+
+A note now goes on the line being spoken at the moment, and where nothing
+is being said it is **kept at the moment itself**. It is still a note, and
+the app picks where it sits. The Preview says which before you save, and a
+silence of half a minute or more is said among its lines ("Nothing is said
+for 1 minute 47 seconds"), so a jump in the times is no surprise.
+
+A note kept at a moment shows wherever notes show: on the recording's
+page between the lines at its own time, in its own colour and marked
+"nothing was said here", with edit and remove; on the Notes tab, marked
+"at a moment"; in Download notes and the exports with notes, at its time;
+in Search and Find; and, on a synced camera, as an event on the
+chronology at the exact moment, changed and removed from there as any
+note is.
+
+It is never a line of the transcript: a plain export, the captions and
+what the assistant reads as the transcript do not carry it. It belongs to
+the recording, so Process again leaves it where it is.
+
+A note already put on the wrong line by v1.98.0 stays where it is: remove
+it on the recording's page and write it again from the Preview.
+
 ## v1.98.0, 2026-09-29
 
 ```

@@ -338,6 +338,11 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
             # The speakers pass over a Live recording (v1.94.0): "", waiting,
             # running, done or failed; the page watches it while it runs.
             "speakers_pass": live.speakers_pass_state(recording),
+            # The notes where nothing was said (v1.99.0), shown between the
+            # lines at their moments and never as lines.
+            "moment_notes": [
+                notes.moment_json(one) for one in notes.moments_of(recording)
+            ],
             # What both Sides of a call said together: shown once, named for
             # both, and counted here so the page can say so plainly.
             "shared_segments": transcript.shared_segments,
@@ -423,7 +428,9 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
         )
     # The line the citation points to: the one that starts in that second,
     # as the pill's hover has it. When none does, the citation is of what
-    # was seen, and a note goes on the line being spoken then.
+    # was seen. A note goes on the line being spoken at the moment, and
+    # where nothing is being said it is kept at the moment itself (v1.99.0:
+    # it used to fall to the nearest line, which a silence put a minute off).
     cited = next((one for one in lines if int(one.start) == int(at)), None)
     shown = None
     if cited is None:
@@ -436,10 +443,8 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
             # a description's own span: the nearest one within half a minute.
             near = [one for one in seen if abs(one.at - at) <= 30.0]
             shown = min(near, key=lambda one: abs(one.at - at)) if near else None
-    spoken = cited
-    if spoken is None:
-        earlier = [one for one in lines if one.start <= at]
-        spoken = earlier[-1] if earlier else (lines[0] if lines else None)
+    spoken = cited if cited is not None else notes.spoken_at(transcript, at)
+    silence = notes.silence_at(transcript, at) if spoken is None else None
     playback = recording.playback_path() if recording.playback_ready else None
     replaced = being_replaced(recording)
     camera = incidents.incident_of(recording) if incidents.on() else None
@@ -467,6 +472,21 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
             "cited": cited.pk if cited is not None else None,
             "cited_seen": str(shown.pk) if shown is not None else None,
             "note_on": spoken.pk if spoken is not None else None,
+            # v1.99.0: where the Note button writes, and the silence it is in.
+            "note_at_url": f"/recording/{recording.pk}/note-at",
+            "silence": (
+                {
+                    **silence,
+                    "words": "Nothing is said for "
+                    + _span_words(silence["seconds"])
+                    + ".",
+                }
+                if silence
+                else None
+            ),
+            "moment_notes": [
+                notes.moment_json(one) for one in notes.moments_of(recording, low, high)
+            ],
             "lines": [
                 {
                     "id": one.pk,
@@ -490,6 +510,70 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
             ],
         }
     )
+
+
+def _span_words(seconds: float) -> str:
+    """ "47 seconds", "1 minute 47 seconds", "12 minutes"."""
+    whole = int(round(seconds))
+    minutes, rest = divmod(whole, 60)
+    parts = []
+    if minutes:
+        parts.append(f"{minutes} minute{'' if minutes == 1 else 's'}")
+    if rest or not minutes:
+        parts.append(f"{rest} second{'' if rest == 1 else 's'}")
+    return " ".join(parts)
+
+
+@login_required
+@require_POST
+def note_at(request: HttpRequest, recording_id) -> JsonResponse:
+    """A note written at a moment (v1.99.0), from the Preview. The app picks
+    where it is kept: on the line being spoken at that moment, as any note
+    on a line, or at the moment itself when nothing is being said. With an
+    id, the note at a moment of that id is changed, or removed when its
+    words are cleared. The audit row never holds the words."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+
+    cases.used(recording, by=request.user)
+
+    if being_replaced(recording):
+        return JsonResponse(
+            {
+                "error": "This transcript is being replaced, so a note cannot be "
+                "written until the new one lands."
+            },
+            status=409,
+        )
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "that could not be read"}, status=400)
+    words = wanted.get("note", "")
+    if wanted.get("id"):
+        one = notes.MomentNote.objects.filter(
+            pk=wanted["id"], recording=recording
+        ).first()
+        if one is None:
+            return JsonResponse({"error": "no such note"}, status=404)
+        saved = notes.set_moment_note(one, words, by=request.user, request=request)
+        return JsonResponse({"saved": True, "on": "moment", "moment": saved})
+    try:
+        at = float(wanted.get("at"))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "that is not a moment"}, status=400)
+    length = recording.duration_seconds
+    if at < 0 or (length and at > float(length) + 1):
+        return JsonResponse(
+            {"error": "that moment is not in the recording"}, status=400
+        )
+    spoken = notes.spoken_at(getattr(recording, "transcript", None), at)
+    if spoken is not None:
+        saved = notes.set_note(spoken, words, by=request.user, request=request)
+        return JsonResponse({"saved": True, "on": "line", "line": spoken.pk, **saved})
+    saved = notes.note_at(recording, at, words, by=request.user, request=request)
+    return JsonResponse({"saved": True, "on": "moment", "moment": saved})
 
 
 def being_replaced(recording) -> bool:

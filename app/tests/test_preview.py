@@ -141,7 +141,7 @@ def test_the_reading_gives_the_lines_and_the_picture_around_the_moment(
     assert Row.objects.count() == before
 
 
-def test_a_thing_only_seen_is_cited_and_its_note_goes_on_the_line_spoken(
+def test_a_thing_only_seen_is_cited_and_its_note_goes_where_it_belongs(
     camera, person, client
 ):
     signed_in(client, person)
@@ -152,7 +152,10 @@ def test_a_thing_only_seen_is_cited_and_its_note_goes_on_the_line_spoken(
     # The chat cites the Digest's time, which may fall outside the span.
     got = client.get(f"/recording/{camera.pk}/around", {"t": "780"}).json()
     assert got["cited"] is None and got["cited_seen"] == str(Moment.objects.get().pk)
-    assert got["note_on"] == line(camera, 769.0).pk
+    # Nothing is being said there, so no line takes the note (v1.99.0).
+    assert got["note_on"] is None
+    assert got["silence"]["from"] == 773.0 and got["silence"]["to"] == 1100.0
+    assert got["silence"]["words"] == "Nothing is said for 5 minutes 27 seconds."
     # Far from anything seen, and an odd moment, are answered all the same.
     got = client.get(f"/recording/{camera.pk}/around", {"t": "1102"}).json()
     assert got["cited_seen"] is None and got["note_on"] == line(camera, 1100.0).pk
