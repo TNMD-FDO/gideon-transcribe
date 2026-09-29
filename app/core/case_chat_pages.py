@@ -95,6 +95,8 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
             # copy at that moment, the same route the viewer plays.
             "seconds": where["seconds"],
             "media": _media_of(recording),
+            # The Preview (v1.98.0) reads the lines around the moment itself.
+            "recording": str(recording.pk),
             # The line it points to, for the pill's hover; never logged.
             "line": _line_at(recording, where["seconds"]),
             # All cameras (Phase 6 chapter 1): the incident page at that

@@ -2458,6 +2458,31 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
 .gideon-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .gideon-body { flex: 1 1 auto; overflow: auto; padding: 12px 16px; }
 @media (max-width: 899px) { .gideon-drawer { inset: 0; width: auto; max-width: none; border-radius: 0; border: 0; } body.gideon-open .gideon-button { display: none; } }
+/* The Preview (v1.98.0): a moment played over the page it was cited on. Beside the Gideon panel when that is open. */
+.preview-card { position: fixed; right: 20px; bottom: 76px; z-index: 45; width: 420px; max-width: calc(100vw - 24px); max-height: calc(100vh - 100px); display: flex; flex-direction: column; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); font-size: var(--t-small); overflow: hidden; }
+body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); bottom: 20px; }
+.preview-head { flex: none; display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: var(--surface-2); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; touch-action: none; }
+.preview-head .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-media { flex: none; }
+.preview-media video { display: block; width: 100%; max-height: 40vh; background: var(--well); }
+.preview-media audio { display: block; width: 100%; }
+.preview-none { margin: 0; padding: 10px; }
+.preview-lines { flex: 1 1 auto; min-height: 60px; max-height: 170px; overflow: auto; border-bottom: 1px solid var(--line); }
+.preview-line { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 4px 10px; border-top: 1px solid var(--line); }
+.preview-line:first-child { border-top: 0; }
+.preview-line .who { color: var(--muted); }
+.preview-line.seen { background: var(--accent-soft); }
+.preview-line.cited { box-shadow: inset 3px 0 0 var(--accent); }
+.preview-line.now { background: var(--now); color: var(--now-ink); }
+.preview-line.now .who, .preview-line.now .t { color: inherit; }
+.preview-line .noted { display: block; margin-top: 2px; font-style: italic; }
+.preview-foot { flex: none; display: flex; gap: 6px; padding: 8px 10px; flex-wrap: wrap; align-items: center; }
+.preview-note { flex: none; display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.preview-note textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+.preview-said.problem { color: var(--bad, var(--warn)); }
+.cite.play.previewing { background: var(--now); color: var(--now-ink); }
+.search-hits .hit-play { margin-left: 4px; }
+@media (max-width: 899px) { .preview-card, body.gideon-open .preview-card { left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto; max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 80vh; z-index: 46; } }
 .chat-preview { margin: 8px 0 4px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .chat-preview video { width: 100%; max-height: 240px; background: var(--well); border-radius: 4px; display: block; margin-bottom: 6px; }
 /* Sync, one control, and the clip from the strip (Phase 6 chapter 5). */

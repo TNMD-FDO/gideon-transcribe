@@ -166,6 +166,7 @@ def _hit(
     at: float = 0.0,
     paragraph: dict | None = None,
     close: bool = False,
+    preview: dict | None = None,
 ) -> dict:
     return {
         "when": when,
@@ -179,7 +180,18 @@ def _hit(
         "at": at,
         # A close match (v1.97.0): found by a word's form or near spelling.
         "close": close,
+        # The Preview (v1.98.0): the recording and the moment, for a hit
+        # that plays over the search without leaving it.
+        "preview": preview,
     }
+
+
+def _plays(recording, at: float) -> dict | None:
+    """What the Preview plays for a hit: the recording and the moment, when
+    the recording has a copy to play."""
+    if not recording.playback_ready:
+        return None
+    return {"recording": str(recording.pk), "at": round(float(at), 2)}
 
 
 def _seen(transcripts):
@@ -309,6 +321,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     all_cameras=incidents.all_cameras_url(recording, one.start),
                     at=one.start,
                     close=near,
+                    preview=_plays(recording, one.start),
                 )
             )
 
@@ -335,6 +348,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     all_cameras=incidents.all_cameras_url(recording, one.at),
                     at=one.at,
                     close=near,
+                    preview=_plays(recording, one.at),
                 )
             )
 
@@ -400,6 +414,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     all_cameras=incidents.all_cameras_url(recording, one.start),
                     at=one.start,
                     close=near,
+                    preview=_plays(recording, one.start),
                 )
             )
 

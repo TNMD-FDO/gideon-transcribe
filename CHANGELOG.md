@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.98.0, 2026-09-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A citation plays without leaving the chat.** On the case page, pressing
+a citation in one of the chat's answers used to open the recording's page
+and leave the chat behind. It now opens the **Preview** over the page, at
+the bottom right, and the chat stays where it was. The moment plays from
+ten seconds before; under the picture the transcript moves with it, the
+line being spoken lit and the cited line marked; and where the citation is
+of something that was seen, the description of the picture sits in its
+place among the lines. Press another citation and the same Preview goes
+there. Drag it by its head; Close or Escape puts it away.
+
+**A note from the Preview.** Note writes a note on the cited line, and the
+small note beside any line writes one on that line. It is the line's own
+note, written the way the recording's page writes it, so on a synced
+camera it is still an event on the incident's chronology, and the Preview
+says so when it is saved. A note on something only seen goes on the line
+being spoken at that moment, and the box says which.
+
+**A search hit plays in it too.** On the case page's Search, a hit on a
+line or on something seen has a small play button that opens the same
+Preview, so a list of hits can be worked through without leaving it.
+
+Leaving the chat was a fault: the small player under the answer, built in
+v1.67.0, was never handed the recording by the case chat's page. The
+Preview takes its place. On the recording's own page a citation still
+plays the page's player, and on the incident page every camera.
+
+Nothing of what was looked at is written to the audit log; a note leaves
+the row it always did, without its words.
+
 ## v1.97.0, 2026-09-28
 
 ```

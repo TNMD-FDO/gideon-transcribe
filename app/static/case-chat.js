@@ -1,7 +1,8 @@
 // The Chat tab of a case page: the shared Chat (chat-ui.js) grounded in every
 // transcript in the case. This page owns the state and the polling; the
-// component draws the conversation. A citation names the recording and opens
-// it in the viewer at that moment.
+// component draws the conversation. A citation names the recording and plays
+// the moment in the Preview over the chat (v1.98.0); Open the recording, on
+// the Preview, goes to the viewer at that moment.
 
 (function () {
   "use strict";
@@ -24,7 +25,10 @@
       if (!Object.prototype.hasOwnProperty.call(citations, whole)) { return null; }
       var where = citations[whole];
       if (where.removed) { return { removed: true }; }
-      return { name: where.title, clock: where.clock, href: where.href, line: where.line, all: where.all };
+      // The recording, the moment and the copy to play go with it (v1.98.0):
+      // without them the citation was a plain link and the chat was left.
+      return { name: where.title, clock: where.clock, href: where.href, line: where.line, all: where.all,
+        seconds: where.seconds, media: where.media, recording: where.recording };
     },
     grounding: function (now) {
       if (!now.readable) { return "No recording in this case has a transcript to read yet."; }

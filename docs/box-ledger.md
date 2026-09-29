@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-29, at v1.98.0 (the Preview: a cited moment plays over the chat and the search; nothing shared moves).** One read-only address and one page script; no engine request, no database change. No port, memory, card, timer or network moves.
 - **2026-09-28, at v1.97.0 (close matches and what was seen, in Find and Search; nothing shared moves).** The `pg_trgm` extension is added to this app's own database (migration 0067), from the database image this app already runs; no index. No engine request is made by a search. No port, memory, card, timer or network moves.
 - **2026-09-28, at v1.96.0 (the Look for run and Dismiss all; nothing shared moves).** Two fields on the incident (migration 0066). A Look for run asks the engine once a window where a full run asks twice, at the same priority and with the same time limit; no port, memory, card, timer or network moves.
 - **2026-09-28, at v1.95.1 (a press on the clip track lands where it was pressed; nothing shared moves).** One rule in the style sheet; no port, memory, card, timer, network or engine request moves.

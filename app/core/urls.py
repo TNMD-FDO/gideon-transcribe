@@ -64,6 +64,12 @@ urlpatterns = [
         viewer.find,
         name="recording-find",
     ),
+    # The Preview's reading around a moment (v1.98.0).
+    path(
+        "recording/<uuid:recording_id>/around",
+        viewer.around,
+        name="recording-around",
+    ),
     path(
         "recording/<uuid:recording_id>/segment/<int:segment_id>",
         viewer.correct,

@@ -167,6 +167,7 @@
             (where.seconds !== undefined ? " data-seconds='" + where.seconds + "'" : "") +
             // The preview under the answer (Phase 7 chapter 5): what it plays and where it opens.
             (where.media ? " data-media='" + escape(where.media) + "'" : "") +
+            (where.recording ? " data-recording='" + escape(where.recording) + "'" : "") +
             (where.name ? " data-title='" + escape(where.name) + "'" : "") +
             (where.line ? " data-line='" + escape(where.line) + "'" : "") +
             (where.all ? " data-all='" + escape(where.all) + "'" : "") + title + ">" +
@@ -397,6 +398,14 @@
       // with the line, the title, and Open for the full page.
       if (play && play.dataset.media && play.dataset.seconds !== undefined) {
         event.preventDefault();
+        // The Preview over the chat (v1.98.0) where its script is on the
+        // page and the recording is named; the small player otherwise.
+        if (window.Preview && play.dataset.recording) {
+          Array.prototype.forEach.call(root.querySelectorAll(".cite.play.previewing"), function (one) { one.classList.remove("previewing"); });
+          play.classList.add("previewing");
+          window.Preview.open({ recording: play.dataset.recording, seconds: parseFloat(play.dataset.seconds), from: play });
+          return;
+        }
         showPreview(play);
       }
     });

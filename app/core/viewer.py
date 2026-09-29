@@ -377,6 +377,121 @@ def find(request: HttpRequest, recording_id) -> JsonResponse:
     return JsonResponse(case_search.find_in(recording, request.GET.get("q", "")[:200]))
 
 
+# The Preview (v1.98.0): how far each side of the moment its lines reach.
+AROUND_BEFORE = 45.0
+AROUND_AFTER = 90.0
+
+
+@login_required
+def around(request: HttpRequest, recording_id) -> JsonResponse:
+    """The Preview's reading (v1.98.0): the recording's lines and what the
+    camera showed around one moment, with what the card needs to play it, to
+    open it and to write a note. Read by whoever may read the transcript;
+    nothing is written and the moment is never logged."""
+    from core import exports, incidents
+    from core.assistant import DONE, Moment
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    try:
+        at = max(0.0, float(request.GET.get("t", "0")))
+    except (TypeError, ValueError):
+        at = 0.0
+    low, high = max(0.0, at - AROUND_BEFORE), at + AROUND_AFTER
+    transcript = getattr(recording, "transcript", None)
+    lines = []
+    seen = []
+    if transcript is not None:
+        lines = list(
+            transcript.segments.filter(
+                same_as_other_side=False, end__gte=low, start__lte=high
+            )
+            .select_related("note_by")
+            .order_by("start")
+        )
+        seen = list(
+            Moment.objects.filter(
+                transcript=transcript,
+                state=DONE,
+                source=Moment.INTERVAL,
+                span_end__gte=low,
+                span_start__lte=high,
+            )
+            .exclude(text="")
+            .order_by("at")
+        )
+    # The line the citation points to: the one that starts in that second,
+    # as the pill's hover has it. When none does, the citation is of what
+    # was seen, and a note goes on the line being spoken then.
+    cited = next((one for one in lines if int(one.start) == int(at)), None)
+    shown = None
+    if cited is None:
+        shown = next(
+            (one for one in seen if one.span_start <= at <= max(one.span_end, one.at)),
+            None,
+        )
+        if shown is None:
+            # The chat cites the Digest's times, which need not fall inside
+            # a description's own span: the nearest one within half a minute.
+            near = [one for one in seen if abs(one.at - at) <= 30.0]
+            shown = min(near, key=lambda one: abs(one.at - at)) if near else None
+    spoken = cited
+    if spoken is None:
+        earlier = [one for one in lines if one.start <= at]
+        spoken = earlier[-1] if earlier else (lines[0] if lines else None)
+    playback = recording.playback_path() if recording.playback_ready else None
+    replaced = being_replaced(recording)
+    camera = incidents.incident_of(recording) if incidents.on() else None
+    return JsonResponse(
+        {
+            "title": exports.title_of(recording),
+            "seconds": at,
+            "clock": exports.clock(at),
+            "from": low,
+            "to": high,
+            "media": f"{media_root(recording)}/{playback.name}" if playback else "",
+            "is_video": bool(playback and playback.suffix == ".mp4"),
+            "open": f"{reverse('viewer', args=[recording.pk])}?t={at:.1f}",
+            "all": incidents.all_cameras_url(recording, at),
+            "note_url": f"/recording/{recording.pk}/segment/",
+            "can_note": not replaced,
+            "why_not": (
+                "This transcript is being replaced, so a note cannot be written "
+                "until the new one lands."
+                if replaced
+                else ""
+            ),
+            # A note on a synced camera's line is an event on the chronology.
+            "on_chronology": bool(camera is not None and camera.is_synced()),
+            "cited": cited.pk if cited is not None else None,
+            "cited_seen": str(shown.pk) if shown is not None else None,
+            "note_on": spoken.pk if spoken is not None else None,
+            "lines": [
+                {
+                    "id": one.pk,
+                    "start": one.start,
+                    "end": one.end,
+                    "clock": exports.clock(one.start),
+                    "speaker": one.speaker,
+                    "text": one.text,
+                    **notes.line_json(one),
+                }
+                for one in lines
+            ],
+            "seen": [
+                {
+                    "id": str(one.pk),
+                    "at": one.at,
+                    "clock": exports.clock(one.at),
+                    "text": one.text,
+                }
+                for one in seen
+            ],
+        }
+    )
+
+
 def being_replaced(recording) -> bool:
     """Whether a Process again is running against this Recording.
 

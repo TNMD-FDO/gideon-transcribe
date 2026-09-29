@@ -136,6 +136,7 @@
     if (label) { label.textContent = "Ask " + shell.dataset.name; }
     var playing = drawer.querySelector(".chat-preview video");
     if (playing) { playing.pause(); }
+    if (window.Preview) { window.Preview.close(); }
     giveBack();
     remember(false);
   }
