@@ -85,7 +85,7 @@
         return;
       }
       if (row.kept) {
-        html += "<div class='preview-line kept' data-at='" + row.kept.at + "'>" +
+        html += "<div class='preview-line kept' data-kept='" + row.kept.id + "' data-at='" + row.kept.at + "'>" +
           "<a href='#' class='t mono' data-preview-seek='" + row.kept.at + "'>" + escape(row.kept.clock) + "</a>" +
           "<span class='said'><span class='who'>Note" + (row.kept.note_by ? ", " + escape(row.kept.note_by) : "") + "</span> " + escape(row.kept.note) + "</span>" +
           "<button type='button' class='tiny ghost' data-preview-kept='" + row.kept.id + "'" +
@@ -132,8 +132,41 @@
       (told.all ? "<a class='btn small ghost' href='" + escape(told.all) + "'>All cameras</a>" : "");
   }
 
+  // A note saved (v1.99.2): the box closes, the note is lit where it now
+  // sits among the lines, and one line says so for a few seconds. The box
+  // used to stay open with the words in it, and it was hard to tell that
+  // anything had happened.
+  var doneTimer = null;
+  function saved(words, row) {
+    noting = null;
+    var box = card.querySelector(".preview-note");
+    box.hidden = false;
+    box.classList.add("done");
+    box.innerHTML = "<p class='small preview-done' role='status'>" + escape(words) + "</p>";
+    window.clearTimeout(doneTimer);
+    doneTimer = window.setTimeout(function () {
+      if (!card || noting !== null) { return; }
+      var still = card.querySelector(".preview-note");
+      if (still && still.classList.contains("done")) { still.hidden = true; still.innerHTML = ""; still.classList.remove("done"); }
+    }, 6000);
+    var lit = row ? card.querySelector(row) : null;
+    if (lit) {
+      var lines = card.querySelector(".preview-lines");
+      lines.scrollTop = Math.max(0, lit.offsetTop - lines.offsetTop - lines.clientHeight / 3);
+      lit.classList.add("just-noted");
+      window.setTimeout(function () { lit.classList.remove("just-noted"); }, 2600);
+    }
+  }
+
+  function saving() {
+    var button = card.querySelector("[data-preview-act='save']");
+    if (button) { button.disabled = true; button.textContent = "Saving..."; }
+  }
+
   function drawNote(said) {
     var box = card.querySelector(".preview-note");
+    window.clearTimeout(doneTimer);
+    box.classList.remove("done");
     var label = "", words = "";
     if (noting !== null && typeof noting === "object") {
       var kept = noting.moment === null ? null : keptById(noting.moment);
@@ -236,6 +269,7 @@
     if (!box) { return; }
     var typed = box.value;
     var sent = noting.moment === null ? { at: told.seconds, note: typed } : { id: noting.moment, note: typed };
+    saving();
     fetch(told.note_at_url, {
       method: "POST",
       credentials: "same-origin",
@@ -252,19 +286,19 @@
         if (got.said.on === "line") {
           var line = lineById(got.said.line);
           if (line) { line.note = got.said.note; line.note_by = got.said.note_by; line.note_on = got.said.note_on; }
-          noting = got.said.line;
           drawLines();
           follow(media() ? media().currentTime : told.seconds);
-          drawNote({ words: got.said.note ? "Noted. It is on the line" + chronology : "The note is removed." });
+          saved(got.said.note ? "Noted on the line at " + (line ? line.clock : told.clock) + chronology : "The note is removed.",
+            ".preview-line[data-line='" + got.said.line + "']");
           return;
         }
         var kept = got.said.moment;
         told.moment_notes = (told.moment_notes || []).filter(function (one) { return one.id !== sent.id && one.id !== kept.id; });
         if (kept.id !== null && kept.note) { told.moment_notes.push(kept); }
-        noting = { moment: kept.id !== null && kept.note ? kept.id : null };
         drawLines();
         follow(media() ? media().currentTime : told.seconds);
-        drawNote({ words: kept.note ? "Noted at " + kept.clock + chronology : "The note is removed." });
+        saved(kept.note ? "Noted at " + kept.clock + chronology : "The note is removed.",
+          kept.id !== null && kept.note ? ".preview-line.kept[data-kept='" + kept.id + "']" : "");
       })
       .catch(function () { if (card) { drawNote({ problem: true, words: "The note could not be saved. Try again.", keep: typed }); } });
   }
@@ -274,27 +308,29 @@
     var one = lineById(noting);
     var box = card.querySelector("#preview-note-text");
     if (!one || !box) { return; }
+    var typed = box.value;
+    saving();
     fetch(told.note_url + one.id + "/note", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
-      body: JSON.stringify({ note: box.value })
+      body: JSON.stringify({ note: typed })
     }).then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, said: said }; }); })
       .then(function (got) {
         if (!card) { return; }
         if (!got.ok || !got.said.saved) {
-          drawNote({ problem: true, words: got.said.error || "The note could not be saved." });
+          drawNote({ problem: true, words: got.said.error || "The note could not be saved.", keep: typed });
           return;
         }
         one.note = got.said.note; one.note_by = got.said.note_by; one.note_on = got.said.note_on;
         drawLines();
         follow(media() ? media().currentTime : told.seconds);
         var words = one.note
-          ? "Noted. It is on the line" + (told.on_chronology ? ", and an event on the incident's chronology." : ".")
+          ? "Noted on the line at " + one.clock + (told.on_chronology ? ", and an event on the incident's chronology." : ".")
           : "The note is removed.";
-        drawNote({ words: words });
+        saved(words, ".preview-line[data-line='" + one.id + "']");
       })
-      .catch(function () { if (card) { drawNote({ problem: true, words: "The note could not be saved. Try again." }); } });
+      .catch(function () { if (card) { drawNote({ problem: true, words: "The note could not be saved. Try again.", keep: typed }); } });
   }
 
   function pressed(event) {

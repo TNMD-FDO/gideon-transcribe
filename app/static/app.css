@@ -2499,7 +2499,12 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .preview-foot { flex: none; display: flex; gap: 6px; padding: 8px 10px; flex-wrap: wrap; align-items: center; }
 .preview-note { flex: none; display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .preview-note textarea { width: 100%; box-sizing: border-box; resize: vertical; }
-.preview-said.problem { color: var(--bad, var(--warn)); }
+.preview-said.problem { color: var(--danger); }
+/* A note saved (v1.99.2): the box gives way to one line saying so, and the note is lit where it now sits. */
+.preview-note.done { background: transparent; }
+.preview-done { margin: 0; font-weight: 600; color: var(--ok); }
+.preview-line.just-noted { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (prefers-reduced-motion: no-preference) { .preview-line.just-noted { transition: outline-color 1.2s ease; } }
 .cite.play.previewing { background: var(--now); color: var(--now-ink); }
 .search-hits .hit-play { margin-left: 4px; }
 @media (max-width: 899px) { .preview-card, body.gideon-open .preview-card { left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto; max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 80vh; z-index: 46; } }

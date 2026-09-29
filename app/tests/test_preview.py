@@ -239,6 +239,12 @@ def test_the_page_scripts_hand_the_recording_to_the_preview():
     script = (APP / "static" / "preview.js").read_text(encoding="utf-8")
     assert '"/around?t="' in script and 'told.note_url + one.id + "/note"' in script
     assert "and an event on the incident's chronology." in script
+    # A saved note closes its box and shows itself (v1.99.2); a save that
+    # fails keeps the box and the words typed.
+    assert "function saved(words, row)" in script and "just-noted" in script
+    assert 'button.textContent = "Saving..."' in script
+    assert script.count("keep: typed") == 4
+    assert "Noted on the line at " in script and "Noted at " in script
     assert "the line being spoken when this was seen" in script
     assert "—" not in script
 

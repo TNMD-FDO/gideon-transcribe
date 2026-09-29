@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.99.2, 2026-09-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A note saved from the Preview shows that it was saved.** After Save the
+note box stayed open with the words still in it, and the only sign was a
+line of small text under the buttons, so it was hard to tell that anything
+had happened. Now the button reads "Saving..." while it saves; once saved
+the box closes, the note is lit for a moment where it now sits among the
+lines under the picture, and one line says so where the box was: "Noted
+at 0:03:30, and an event on the incident's chronology." The line goes
+after a few seconds. To change the note, press edit note on its row.
+
+A save that fails keeps the box open with the words you typed and says
+why. A note on a line used to lose what was typed when its save failed;
+it keeps it now.
+
 ## v1.99.1, 2026-09-29
 
 ```
