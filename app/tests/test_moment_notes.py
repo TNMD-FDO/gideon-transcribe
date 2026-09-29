@@ -248,7 +248,7 @@ def test_it_is_an_event_at_the_exact_moment_on_a_synced_camera(
     row = chronology.events_json(incident)[0]
     assert row["at_a_moment"] is True and row["segment_id"] == ""
     assert row["recording_id"] == str(camera.pk)
-    assert row["line_words"] == "nothing was said here"
+    assert row["line_words"] == ""
     assert row["line_url"] == f"/recording/{camera.pk}?t=210.0&note=1"
     assert row["source_words"] == f"Note by {person.shown_name}, {placed.camera_id()}"
     # The camera moved, the event moves with it.
@@ -294,11 +294,13 @@ def test_it_shows_with_the_notes_and_never_as_a_line(camera, person, a_case, cli
     assert listed["total"] == 2 and listed["lines"] == 2 and listed["moments"] == 1
     assert notes.count(a_case) == 2
     kept = [one for one in listed["rows"] if one["kind"] == "moment"][0]
-    assert kept["when"] == "00:03:30" and kept["rests_on"] == "nothing was said here"
+    assert kept["when"] == "00:03:30" and kept["rests_on"] == ""
     assert kept["url"] == f"/recording/{camera.pk}?t=210.0&note=1"
     signed_in(client, person)
     page = client.get(f"/case/{a_case.pk}?tab=notes").content.decode()
-    assert "at a moment</span>" in page and "nothing was said here" in page
+    # A person is shown the note and no mark beside it (v1.99.1).
+    assert WORDS in page and "nothing was said here" not in page
+    assert "at a moment" not in page
     document = Document(io.BytesIO(notes.word(a_case, "asker")))
     told = "\n".join(one.text for one in document.paragraphs)
     assert (
@@ -309,14 +311,15 @@ def test_it_shows_with_the_notes_and_never_as_a_line(camera, person, a_case, cli
     got = case_search.search(a_case, "lifted")
     assert {one["key"]: one["count"] for one in got["kinds"]} == {"notes": 1}
     hit = got["groups"][0]["hits"][0]
-    assert hit["when"] == "00:03:30" and "<mark>lifted</mark>" in str(hit["under"])
+    assert hit["when"] == "00:03:30" and "<mark>lifted</mark>" in str(hit["text"])
+    assert hit["under"] is None
     assert hit["preview"] == {"recording": str(camera.pk), "at": 210.0}
     # The exports with notes print it at its own time, between the lines.
     text = exports.plain_text(camera, with_notes=True).splitlines()
-    at = [n for n, one in enumerate(text) if "nothing was said here" in one]
+    at = [n for n, one in enumerate(text) if one.strip().startswith("[00:03:30] Note")]
     assert len(at) == 1
-    assert text[at[0]].strip().startswith("[00:03:30] Note (")
-    assert text[at[0]].strip().endswith("; nothing was said here): " + WORDS)
+    assert text[at[0]].strip().endswith("): " + WORDS)
+    assert not any("nothing was said here" in one for one in text)
     assert "Stay where you are." in text[at[0] - 2] and "Bag it." in text[at[0] + 1]
     word = Document(io.BytesIO(exports.word(camera, "asker", with_notes=True)))
     paragraphs = [one.text for one in word.paragraphs]
@@ -354,15 +357,51 @@ def test_process_again_leaves_it_be(camera, person, a_case):
 
 def test_the_pages_and_the_words(camera, person, client):
     script = (APP / "static" / "preview.js").read_text(encoding="utf-8")
-    assert (
-        "Nothing is being said at this moment, so the note is kept at the moment"
-        in (script)
-    )
+    assert "nothing was said here" not in script
+    assert "Nothing is being said at this moment" not in script
     assert "told.note_at_url" in script and "data-preview-moment" in script
     page = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
-    assert "body.moment_notes" in page and "nothing was said here" in page
+    assert "body.moment_notes" in page and "nothing was said here" not in page
+    assert "data-note-act='remove'" in page and "function removeNote" in page
     assert "—" not in script + page
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
     guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
     assert "kept at the moment itself" in glossary
     assert "the note is kept at the moment itself" in guide
+
+
+def test_the_cases_list_under_the_video_shows_the_rest_in_place(person, a_case, client):
+    """v1.99.1: past the eighth the recordings are on the page and folded, and
+    "and N more" shows them there; it used to leave for the case's page."""
+    made = []
+    for number in range(11):
+        one = Recording.objects.create(
+            batch=Batch.objects.create(user=person),
+            user=person,
+            case=a_case,
+            title=f"Camera {number:02d}",
+            original_filename=f"camera-{number:02d}.mp4",
+            media_state=MediaState.READY,
+            duration_seconds=60.0,
+            playback_ready=True,
+            probe={},
+        )
+        one.folder.mkdir(parents=True, exist_ok=True)
+        (one.folder / "playback.mp4").write_bytes(b"not really media")
+        Transcript.objects.create(recording=one, language="en")
+        made.append(one)
+    signed_in(client, person)
+    # The newest is first in the list: the rest are folded.
+    page = client.get(f"/recording/{made[-1].pk}").content.decode()
+    assert page.count('<li class=" rest" hidden>') == 3
+    assert 'id="case-more" aria-expanded="false" data-more="and 3 more"' in page
+    assert ">and 3 more</button>" in page
+    for one in made:
+        assert one.title in page
+    assert f'<a href="/case/{a_case.pk}" class="muted small">and' not in page
+    # The oldest is past the eighth: the list opens unfolded, on it.
+    page = client.get(f"/recording/{made[0].pk}").content.decode()
+    assert '<li class="here rest">' in page and ' rest" hidden' not in page
+    assert 'aria-expanded="true"' in page and ">show fewer</button>" in page
+    script = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
+    assert 'getElementById("case-more")' in script and "li.rest" in script

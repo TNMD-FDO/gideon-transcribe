@@ -272,20 +272,27 @@
       body.appendChild(said);
       // The office's note under the words, whole, with the writer and the date.
       if (segment.note) { body.appendChild(noteLine(segment)); }
-      // The notes kept at moments between this line and the next (v1.99.0);
-      // those before the first line sit over it.
-      var next = segments[index + 1];
-      momentNotes.forEach(function (one) {
-        var mine = one.at >= segment.start && (!next || one.at < next.start);
-        if (index === 0 && one.at < segment.start) { body.insertBefore(momentNote(one), body.firstChild); return; }
-        if (mine) { body.appendChild(momentNote(one)); }
-      });
 
       row.appendChild(when);
       row.appendChild(who);
       row.appendChild(body);
       // Its own column, so the buttons never sit over the words.
       row.appendChild(actions);
+      // The notes kept at moments between this line and the next, each in a
+      // row of its own in the transcript's columns (v1.99.1: it sat under
+      // the line's words and read as that line's note). Those before the
+      // first line sit over it. They are drawn inside the line's row so
+      // the rows and the lines stay one to one.
+      var next = segments[index + 1];
+      momentNotes.forEach(function (one) {
+        if (index === 0 && one.at < segment.start) {
+          var over = momentNote(one);
+          over.classList.add("over");
+          row.insertBefore(over, row.firstChild);
+          return;
+        }
+        if (one.at >= segment.start && (!next || one.at < next.start)) { row.appendChild(momentNote(one)); }
+      });
       column.appendChild(row);
     });
     tintRange();
@@ -308,21 +315,22 @@
     box.dataset.moment = one.id;
     var when = document.createElement("a");
     when.href = "#";
-    when.className = "t";
+    when.className = "mt";
     when.textContent = clock(one.at);
     when.title = "Play from here";
+    // Where a speaker's name goes: that it is a note, and whose.
+    var head = document.createElement("span");
+    head.className = "mwho";
+    head.textContent = "Note" + (one.note_by ? ", " + one.note_by : "");
+    head.title = one.note_on ? "Written " + one.note_on : "";
     var said = document.createElement("span");
-    var head = document.createElement("b");
-    head.textContent = "Note" + (one.note_by ? ", " + one.note_by : "") + (one.note_on ? ", " + one.note_on : "") + ": ";
-    said.appendChild(head);
-    said.appendChild(document.createTextNode(one.note));
-    var nothing = document.createElement("span");
-    nothing.className = "said-nothing";
-    nothing.textContent = "nothing was said here";
-    said.appendChild(nothing);
+    said.className = "mtxt";
+    said.textContent = one.note;
     var acts = document.createElement("span");
+    acts.className = "macts";
     acts.innerHTML = "<button type='button' class='ghost tiny' data-moment-act='edit'>edit</button> <button type='button' class='ghost tiny' data-moment-act='remove'>remove</button>";
     box.appendChild(when);
+    box.appendChild(head);
     box.appendChild(said);
     box.appendChild(acts);
     return box;
@@ -360,7 +368,7 @@
     var one = momentById(parseInt(box.dataset.moment, 10));
     if (!one) { return; }
     var act = event.target.closest("[data-moment-act]");
-    if (event.target.closest("a.t")) { event.preventDefault(); window.VIEWER.seek(one.at); return; }
+    if (event.target.closest("a.mt")) { event.preventDefault(); window.VIEWER.seek(one.at); return; }
     if (!act) { return; }
     if (act.dataset.momentAct === "remove") {
       UI.confirm({ title: "Remove this note?", body: "The note's words are kept nowhere else.", ok: "Remove", danger: true })
@@ -368,8 +376,8 @@
       return;
     }
     if (act.dataset.momentAct === "edit") {
-      box.innerHTML = "<span class='t'>" + clock(one.at) + "</span><span><textarea rows='3' maxlength='2000' aria-label='The note'></textarea></span>" +
-        "<span><button type='button' class='tiny primary' data-moment-act='save'>save</button> <button type='button' class='ghost tiny' data-moment-act='cancel'>cancel</button></span>";
+      box.innerHTML = "<span class='mt'>" + clock(one.at) + "</span><span class='mwho'>Note</span><span class='mtxt'><textarea rows='3' maxlength='2000' aria-label='The note'></textarea></span>" +
+        "<span class='macts'><button type='button' class='tiny primary' data-moment-act='save'>save</button> <button type='button' class='ghost tiny' data-moment-act='cancel'>cancel</button></span>";
       var area = box.querySelector("textarea");
       area.value = one.note;
       area.focus();
@@ -391,6 +399,12 @@
     head.textContent = noteHead(segment) + ": ";
     line.appendChild(head);
     line.appendChild(document.createTextNode(segment.note));
+    // Edit and remove beside it, as a note at a moment has (v1.99.1: removing
+    // meant clearing the box and saving, which nothing on the page said).
+    var acts = document.createElement("span");
+    acts.className = "note-acts";
+    acts.innerHTML = " <button type='button' class='ghost tiny' data-note-act='edit'>edit</button> <button type='button' class='ghost tiny' data-note-act='remove'>remove</button>";
+    line.appendChild(acts);
     return line;
   }
 
@@ -1009,6 +1023,19 @@
     );
   }
 
+  // The case's recordings under the video (v1.99.1): "and 4 more" shows the
+  // rest in place; it used to leave the recording for the case's page.
+  var caseMore = document.getElementById("case-more");
+  if (caseMore) {
+    caseMore.addEventListener("click", function () {
+      var list = caseMore.closest("ul");
+      var opening = caseMore.getAttribute("aria-expanded") !== "true";
+      Array.prototype.forEach.call(list.querySelectorAll("li.rest"), function (row) { row.hidden = !opening; });
+      caseMore.setAttribute("aria-expanded", opening ? "true" : "false");
+      caseMore.textContent = opening ? "show fewer" : caseMore.dataset.more;
+    });
+  }
+
   // Rows ----------------------------------------------------------------------
 
   if (column) {
@@ -1022,6 +1049,7 @@
 
       if (event.target.closest(".edit-row")) { edit(index); return; }
       if (event.target.closest(".clip-row")) { markFrom(index); return; }
+      if (event.target.closest("[data-note-act='remove']")) { removeNote(index); return; }
       if (event.target.closest(".note-row") || event.target.closest(".note-line")) { noteOn(index); return; }
       if (row.querySelector("textarea")) { return; }
       window.VIEWER.seek(segments[index].start);
@@ -1255,6 +1283,39 @@
       title: "Remove this note?",
       body: "The note's words are kept nowhere else.",
       ok: "Remove"
+    });
+  }
+
+  // Remove beside a line's note (v1.99.1): asked once, then gone.
+  function removeNote(index) {
+    var segment = segments[index];
+    if (!segment || !segment.note) { return; }
+    askToRemove().then(function (yes) {
+      if (!yes) { return; }
+      fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id + "/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+        body: JSON.stringify({ note: "" })
+      }).then(function (answer) {
+        if (!answer.ok) { return Promise.reject(answer.status); }
+        return answer.json();
+      }).then(function (told) {
+        if (!told.saved) { return Promise.reject("refused"); }
+        segment.note = told.note || "";
+        segment.note_by = told.note_by || "";
+        segment.note_on = told.note_on || "";
+        draw();
+        here = -1;
+        follow();
+        if (search && search.value.trim()) { look(); }
+        drawTimeline();
+        UI.toast("Note removed.", { icon: "ok" });
+      }).catch(function () {
+        UI.alert({
+          title: "That note was not removed",
+          body: "You may have been signed out. Open the page again and try once more."
+        });
+      });
     });
   }
 

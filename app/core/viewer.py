@@ -271,7 +271,10 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         "case_chat_url": _case_chat_url(recording),
         # The rest of the case, so somebody working through a matter moves
         # between its recordings without going back to the case page.
-        "in_case": _the_rest_of_the_case(recording),
+        "in_case": (in_case := _the_rest_of_the_case(recording)),
+        # v1.99.1: the list under the video folds past the eighth, and opens
+        # unfolded when this recording is one of those.
+        "here_is_past_eight": any(one["here"] for one in in_case[8:]),
         "transcript": transcript,
         # The speakers pass over a Live recording still to land (v1.94.0).
         "speakers_pass_running": _speakers_pass_running(recording),

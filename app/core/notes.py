@@ -43,7 +43,9 @@ SPOKEN_WITHIN = 3.0
 SILENCE_SAID = 30.0
 # Two notes at a moment closer than this are one note.
 SAME_MOMENT = 1.0
-# What a note at a moment rests on, where a line's note names its line.
+# What the assistant is told of a note at a moment, so it looks for no line
+# to match it. A person is never shown it (v1.99.1): the note has a row, a
+# time and a colour of its own, and its words are enough.
 NOTHING_SAID = "nothing was said here"
 
 
@@ -523,7 +525,7 @@ def _moment_rows(case) -> list[dict]:
                 "when": exports.clock(one.at),
                 "url": f"{viewer}?t={one.at:.1f}&note=1",
                 "all_cameras": incidents.all_cameras_url(recording, one.at),
-                "rests_on": NOTHING_SAID,
+                "rests_on": "",
                 "who": "",
             }
         )

@@ -353,14 +353,14 @@ def moment_notes_of(recording, with_notes: bool) -> list:
 
 def moment_note_line(one) -> str:
     """A note at a moment as the exports print it, at its own time:
-    "[00:03:30] Note (writer, date; nothing was said here): the words"."""
+    "[00:03:30] Note (writer, date): the words"."""
     from core import notes
 
     who = one.note_by.shown_name if one.note_by else ""
     when = notes.date_of(one.note_changed)
     inside = ", ".join(part for part in (who, when) if part)
-    inside = f"{inside}; {notes.NOTHING_SAID}" if inside else notes.NOTHING_SAID
-    return f"[{clock(one.at)}] Note ({inside}): "
+    head = f"Note ({inside}): " if inside else "Note: "
+    return f"[{clock(one.at)}] {head}"
 
 
 def _due(waiting: list, before: float | None) -> list:

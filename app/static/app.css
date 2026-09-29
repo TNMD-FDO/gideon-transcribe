@@ -2478,10 +2478,21 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .preview-line .noted { display: block; margin-top: 2px; font-style: italic; }
 /* A note where nothing was said (v1.99.0), in a colour no spoken line has; and the silence said among the lines. */
 .preview-line.quiet { color: var(--muted); font-style: italic; }
-.preview-line.kept, .seg .moment-note { background: var(--note-soft, color-mix(in srgb, var(--warn) 14%, transparent)); box-shadow: inset 3px 0 0 var(--warn); }
-.seg .moment-note { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: baseline; margin: 8px 0 0; padding: 6px 8px; border-radius: 4px; font-size: var(--t-small); }
-.seg .moment-note .t { font-family: var(--mono); }
-.seg .moment-note .said-nothing { display: inline-block; margin-left: 6px; padding: 0 7px; border: 1px solid currentColor; border-radius: 999px; font-size: 11px; opacity: 0.8; white-space: nowrap; }
+.preview-line.kept { background: color-mix(in srgb, var(--warn) 14%, transparent); box-shadow: inset 3px 0 0 var(--warn); }
+/* On the recording's page (v1.99.1): a row of its own in the transcript's columns, the time under the times,
+   that it is a note and whose where a speaker's name goes, the words where words go. It is drawn inside the
+   row of the line before it, so it reaches over that row's edges and covers them. */
+.seg .moment-note { grid-column: 1 / -1; display: grid; grid-template-columns: 5.5em 9em minmax(0, 1fr) auto; gap: 4px 12px; align-items: start;
+  margin: 9px -10px -7px -14px; padding: 7px 10px; border-left: 4px solid var(--warn); border-radius: 6px;
+  background: color-mix(in srgb, var(--warn) 14%, var(--bg)); color: var(--text); cursor: default; }
+.seg .moment-note.over { margin: -7px -10px 9px -14px; }
+.seg .moment-note .mt { font-family: var(--mono); font-size: 0.82em; padding-top: 3px; color: inherit; }
+.seg .moment-note .mwho { font-weight: 600; font-size: 0.85em; padding-top: 3px; text-align: right; overflow-wrap: anywhere; }
+.seg .moment-note .mtxt { white-space: pre-wrap; }
+.seg .moment-note .macts { display: inline-flex; gap: 2px; }
+.seg .note-line .note-acts { font-style: normal; white-space: nowrap; visibility: hidden; }
+.seg:hover .note-line .note-acts, .seg.here .note-line .note-acts, .seg .note-line:focus-within .note-acts { visibility: visible; }
+.caselist .case-more { background: none; border: 0; padding: 6px 10px; cursor: pointer; color: var(--muted); font: inherit; font-size: var(--t-small); text-decoration: underline; }
 .seg .moment-note.lit { outline: 2px solid var(--accent); outline-offset: 1px; }
 .seg .moment-note textarea { width: 100%; box-sizing: border-box; }
 .moment-notes-first { list-style: none; margin: 0 0 6px; padding: 0; }

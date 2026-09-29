@@ -23,7 +23,7 @@ from core.assistant import DONE, Moment, Summary
 from core.chronology import Event
 from core.clips import Clip
 from core.jobs import Segment, Transcript
-from core.notes import NOTHING_SAID, MomentNote
+from core.notes import MomentNote
 
 # How many hits one kind shows. A person looking for a phrase wants the
 # first few; a thousand rows would be a worse answer, not a fuller one.
@@ -447,13 +447,13 @@ def search(case, asked: str, kind: str = "") -> dict:
             here["hits"].append(
                 _hit(
                     exports.clock(one.at),
-                    mark_safe(escape(NOTHING_SAID)),
+                    # The note itself: it rests on no line (v1.99.1).
+                    mark(one.note, words, also),
                     url=(
                         f"{reverse('viewer', args=[recording.pk])}"
                         f"?t={one.at:.1f}&note=1"
                     ),
                     who="Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
-                    under=mark(one.note, words, also),
                     all_cameras=incidents.all_cameras_url(recording, one.at),
                     at=one.at,
                     close=near,

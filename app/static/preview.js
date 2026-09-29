@@ -87,8 +87,7 @@
       if (row.kept) {
         html += "<div class='preview-line kept' data-at='" + row.kept.at + "'>" +
           "<a href='#' class='t mono' data-preview-seek='" + row.kept.at + "'>" + escape(row.kept.clock) + "</a>" +
-          "<span class='said'><span class='who'>Note" + (row.kept.note_by ? ", " + escape(row.kept.note_by) : "") + "</span> " + escape(row.kept.note) +
-          "<span class='noted small'>nothing was said here</span></span>" +
+          "<span class='said'><span class='who'>Note" + (row.kept.note_by ? ", " + escape(row.kept.note_by) : "") + "</span> " + escape(row.kept.note) + "</span>" +
           "<button type='button' class='tiny ghost' data-preview-kept='" + row.kept.id + "'" +
           (told.can_note ? " title='Change this note'" : " disabled title='" + escape(told.why_not) + "'") + ">edit note</button></div>";
         return;
@@ -138,7 +137,7 @@
     var label = "", words = "";
     if (noting !== null && typeof noting === "object") {
       var kept = noting.moment === null ? null : keptById(noting.moment);
-      label = "A note at " + escape(kept ? kept.clock : told.clock) + ". Nothing is being said at this moment, so the note is kept at the moment itself.";
+      label = "A note at " + escape(kept ? kept.clock : told.clock) + ".";
       words = kept ? kept.note : "";
     } else {
       var one = noting === null ? null : lineById(noting);

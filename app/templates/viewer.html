@@ -202,8 +202,8 @@
           </div>
           <ul class="caselist">
             {% for one in in_case %}
-              {% if forloop.counter <= 8 %}
-              <li{% if one.here %} class="here"{% endif %}>
+              {% comment %}v1.99.1: past the eighth they are on the page and folded, shown in place by "and N more"; open from the start when this recording is one of them.{% endcomment %}
+              <li class="{% if one.here %}here{% endif %}{% if forloop.counter > 8 %} rest{% endif %}"{% if forloop.counter > 8 and not here_is_past_eight %} hidden{% endif %}>
                 {% if one.ready %}
                   <a href="{% url 'viewer' one.recording.pk %}">
                     <b>{{ one.recording.title }}</b>
@@ -220,10 +220,9 @@
                   </span>
                 {% endif %}
               </li>
-              {% endif %}
             {% endfor %}
             {% if in_case|length > 8 %}
-              <li><a href="{% url 'case' recording.case_id %}" class="muted small">and {{ in_case|length|add:"-8" }} more</a></li>
+              <li><button type="button" class="case-more" id="case-more" aria-expanded="{% if here_is_past_eight %}true{% else %}false{% endif %}" data-more="and {{ in_case|length|add:"-8" }} more" title="Show the rest of this case's recordings here">{% if here_is_past_eight %}show fewer{% else %}and {{ in_case|length|add:"-8" }} more{% endif %}</button></li>
             {% endif %}
           </ul>
         </aside>

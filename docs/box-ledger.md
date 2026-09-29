@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-29, at v1.99.1 (the note's row, a line note's remove, the case's list under the video; nothing shared moves).** Page changes alone; no database change and no engine request. No port, memory, card, timer or network moves.
 - **2026-09-29, at v1.99.0 (a note where nothing was said is kept at the moment; nothing shared moves).** One new table and one column on the events (migration 0068); no engine request. No port, memory, card, timer or network moves.
 - **2026-09-29, at v1.98.0 (the Preview: a cited moment plays over the chat and the search; nothing shared moves).** One read-only address and one page script; no engine request, no database change. No port, memory, card, timer or network moves.
 - **2026-09-28, at v1.97.0 (close matches and what was seen, in Find and Search; nothing shared moves).** The `pg_trgm` extension is added to this app's own database (migration 0067), from the database image this app already runs; no index. No engine request is made by a search. No port, memory, card, timer or network moves.

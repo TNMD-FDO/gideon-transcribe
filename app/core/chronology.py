@@ -591,7 +591,7 @@ def events_json(incident) -> list[dict]:
                 "line_start": segment.start if segment is not None else None,
                 "line_url": line_url,
                 "line_words": (
-                    "nothing was said here"
+                    ""
                     if moment
                     else (
                         (

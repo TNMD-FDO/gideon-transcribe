@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.99.1, 2026-09-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A note where nothing was said has a row of its own.** On the
+recording's page the note was drawn under the words of the line before
+it, so it read as that line's note. It now sits in a row of its own in the
+transcript's columns: its time under the times, "Note" and the writer
+where a speaker's name goes, the words where words go, and edit and remove
+where a row's buttons go.
+
+**"nothing was said here" is gone.** The note's own words are enough. The
+mark is no longer shown on the recording's page, in the Preview, on the
+Notes tab, on a Search hit, on the event card or in an export with notes,
+and the Preview's note box reads simply "A note at 0:03:30." The line in
+the Preview that says how long nothing is said stays: it explains a jump
+in the times.
+
+**Edit and remove beside a note on a line.** Removing a line's note meant
+pressing it, clearing the box, pressing Save and then confirming, and
+nothing on the page said so. A note on a line now has edit and remove
+beside it when you point at the line. Remove asks once.
+
+**"and 4 more" shows the rest where you are.** Under the video, the list
+of the case's recordings stops at eight, and "and 4 more" left the
+recording for the case's page. It now shows the rest in the list, "show
+fewer" folds them again, and the list opens unfolded when the recording
+you are on is one of them.
+
 ## v1.99.0, 2026-09-29
 
 ```
