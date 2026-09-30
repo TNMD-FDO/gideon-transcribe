@@ -840,8 +840,11 @@ def grab_frames(
     *,
     height: int,
     timeout: int = DESCRIPTION_TIMEOUT,
+    up: bool = False,
 ) -> list[Path]:
-    """One JPEG per time from the Playback copy, scaled to `height` and never up.
+    """One JPEG per time from the Playback copy, scaled to `height` and never up
+    unless `up` (v1.101.1: the stamp's digits on a 480-line video are read
+    wrong at their own size and right scaled to 720).
 
     For a question about a moment: a few frames at the camera's own detail,
     where the small clip would lose a thing on a seat. The files are the
@@ -863,7 +866,7 @@ def grab_frames(
             "-frames:v",
             "1",
             "-vf",
-            f"scale=-2:'min({int(height)},ih)'",
+            f"scale=-2:{int(height)}" if up else f"scale=-2:'min({int(height)},ih)'",
             "-q:v",
             "3",
             str(target),

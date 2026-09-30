@@ -144,7 +144,20 @@ def read_stamp_again(recording_id: str, by_id: str = "") -> None:
     if recording is None:
         return
     by = User.objects.filter(pk=by_id).first() if by_id else None
-    assistant.read_stamp(recording, asked_by=by, again=True)
+    stamp = assistant.read_stamp(recording, asked_by=by, again=True)
+    # The camera placed again from what was read (v1.101.1), where its place
+    # was the clock's or a guess; a place set by hand or by the sound stands.
+    if stamp.get("time"):
+        from core import incidents
+
+        for camera in recording.incident_cameras.select_related("incident"):
+            if camera.placed in (
+                "",
+                incidents.GUESS,
+                incidents.CLOCK,
+                incidents.CLOCK_UNCHECKED,
+            ):
+                incidents.place_from_clock(camera, by=by)
 
 
 @app.task(queue="media", name="match_sound")

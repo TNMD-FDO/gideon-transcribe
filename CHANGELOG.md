@@ -21,6 +21,30 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.101.1, 2026-09-30
+
+```
+Models: unchanged
+Database: migrates (0070: whether the incident's clock was checked)
+```
+
+**Small video read at full size.** Four cameras at 640 by 480 came back
+with their clocks misread after v1.101.0, though the frames were right:
+the engine misreads burned digits at that size and reads them right
+scaled up to 720. A stamp's frame is now scaled up for a small video;
+nothing else is.
+
+**An unchecked clock sets the incident's clock.** With no checked reading
+among the cameras, every camera read once used to start at the beginning
+of the incident together. The first unchecked reading now sets the clock,
+the others place by theirs, and the incident's date line says "clock
+read once, unchecked".
+
+**Read the clock again places the camera.** When the read lands the
+camera is placed from it, where its place was the clock's or a guess (a
+place set by hand or by the sound stands), and the page says what was
+read: "clock read 2025-05-08 11:16:08, checked; from its clock, checked".
+
 ## v1.101.0, 2026-09-30
 
 ```

@@ -181,7 +181,20 @@
   function parkedCameras() { return placedCameras().filter(function (one) { return !one.on_wall; }); }
 
   // Taking a state: redraw everything but keep the clock where it is.
+  // A clock read that landed since the last state (v1.101.1): the page says
+  // what was read, since the read runs elsewhere and the row changes by itself.
+  var wasReading = {};
+  function sayClocksRead(state) {
+    (state.cameras || []).forEach(function (cam) {
+      if (wasReading[cam.id] && !cam.clock_reading) {
+        window.UI.toast(cam.camera_id + ": " + (cam.clock ? "clock read " + cam.clock : "no clock could be read") + (cam.synced ? "; " + cam.placed_words.toLowerCase() : ""), { icon: cam.clock ? "ok" : "warning" });
+      }
+      wasReading[cam.id] = !!cam.clock_reading;
+    });
+  }
+
   function take(state) {
+    sayClocksRead(state);
     S = state;
     S.events = S.events || [];
     S.proposals = S.proposals || {};
@@ -233,7 +246,7 @@
     var events = keptEvents().length;
     facts.textContent = count + " camera" + (count === 1 ? "" : "s") + " · " + S.incident.span_words +
       " · " + events + " event" + (events === 1 ? "" : "s");
-    dateBox.textContent = S.incident.has_clock ? S.incident.clock_date : "no camera clock; times are from the first camera";
+    dateBox.textContent = S.incident.has_clock ? S.incident.clock_date + (S.incident.clock_checked ? "" : " (clock read once, unchecked)") : "no camera clock; times are from the first camera";
   }
 
   // The Wall ----------------------------------------------------------------------------

@@ -1674,8 +1674,10 @@ def _read_stamp_frame(recording, transcript, at: float) -> tuple[dict, dict]:
     )
     folder = Path(tempfile.mkdtemp(prefix="stamp-"))
     try:
+        # Scaled up for a small video (v1.101.1): the burned digits of a
+        # 480-line file were misread at their own size and read right at 720.
         taken = media.grab_frames(
-            recording.playback_path(), folder, [at], height=height
+            recording.playback_path(), folder, [at], height=height, up=True
         )
         parts: list[dict] = [{"type": "text", "text": text}]
         for frame in taken:

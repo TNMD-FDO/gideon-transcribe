@@ -137,6 +137,10 @@ class Incident(models.Model):
     # which case the page counts from the first camera.
     clock_zero = models.FloatField(null=True, blank=True)
     clock_date = models.CharField(max_length=40, blank=True, default="")
+    # Whether the clock came from a checked stamp (v1.101.1: with no checked
+    # stamp among the cameras, the first unchecked one sets the clock, so the
+    # cameras line up by their readings instead of all starting together).
+    clock_checked = models.BooleanField(default=True)
     # The camera rows on the Wall, in order, once a person has swapped one;
     # empty means the clock's order.
     wall = models.JSONField(default=list, blank=True)
@@ -845,17 +849,21 @@ def place_from_clock(
     incident = camera.incident
     checked = stamp_checked(camera.recording)
     if incident.clock_zero is None:
-        if not checked:
-            # An unchecked clock places the camera but does not become the
-            # Incident's clock; with nothing else to go by it starts at zero.
-            _placed(
-                camera, CLOCK_UNCHECKED, 0.0, by=by, request=request, quietly=quietly
-            )
-            return True
+        # The first clock sets the Incident's, checked or not (v1.101.1): an
+        # unchecked one is said to be unchecked on the page, since a later
+        # camera's checked reading says nothing about this one's.
         incident.clock_zero = zero
         incident.clock_date = ((camera.recording.stamp or {}).get("date") or "").strip()
-        incident.save(update_fields=["clock_zero", "clock_date"])
-        _placed(camera, CLOCK, 0.0, by=by, request=request, quietly=quietly)
+        incident.clock_checked = checked
+        incident.save(update_fields=["clock_zero", "clock_date", "clock_checked"])
+        _placed(
+            camera,
+            CLOCK if checked else CLOCK_UNCHECKED,
+            0.0,
+            by=by,
+            request=request,
+            quietly=quietly,
+        )
         return True
     _placed(
         camera,

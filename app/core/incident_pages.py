@@ -236,6 +236,7 @@ def state_json(incident: Incident, user) -> dict:
             "has_clock": incident.has_clock(),
             "clock_zero": incident.clock_zero,
             "clock_date": incident.clock_date,
+            "clock_checked": incident.clock_checked,
             "span_low": low,
             "span_high": high,
             "span_words": incidents.span_words(incident),
@@ -417,7 +418,10 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                 },
                 status=400,
             )
-        said = "Reading the clock again; a few seconds. Then Sync."
+        said = (
+            "Reading the clock again; a few seconds. The camera is placed from "
+            "what is read."
+        )
     elif action == "sync_all":
         # Sync all, or Sync ticked (Phase 6 chapter 5): the rounds on every
         # camera not yet synced, or on the ticked ones whether synced or not.

@@ -563,8 +563,8 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
     transcript = ready.transcript
     grabbed = []
 
-    def grab(source, folder, times, *, height, timeout=120):
-        grabbed.append((times, height))
+    def grab(source, folder, times, *, height, timeout=120, up=False):
+        grabbed.append((times, height, up))
         frame = Path(folder) / "frame.jpg"
         frame.write_bytes(b"\xff\xd8jpeg")
         return [frame]
@@ -593,7 +593,8 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
     transcript.recording.refresh_from_db()
     assert transcript.recording.stamp == stamp
     # Two frames at the look-closer height, two seconds in and a minute on.
-    assert grabbed == [([2.0], 720), ([62.0], 720)]
+    # Scaled up to 720 for a small video (v1.101.1).
+    assert grabbed == [([2.0], 720, True), ([62.0], 720, True)]
     system = asked[0]["messages"][0]["content"]
     assert prompts.STAMP in system and asked[0]["schema"] == prompts.STAMP_SCHEMA
     assert asked[0]["thinking"] is False and asked[0]["temperature"] == 0.0
@@ -627,7 +628,7 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
     stamp = assistant.read_stamp(transcript.recording, asked_by=person)
     assert stamp["time"] == "21:56:19" and stamp["camera"] == "BWC2"
     assert stamp["checked"] is False and stamp["at"] == 2.0
-    assert [times for times, _ in grabbed] == [[2.0], [62.0], [122.0]]
+    assert [times for times, _, _ in grabbed] == [[2.0], [62.0], [122.0]]
     row = Row.objects.filter(category="llm").latest("at")
     assert row.details["frames"] == 3 and row.details["again"] is False
     # The third agrees with the second: the first frame was the misread one,
@@ -678,7 +679,7 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
     stamp = assistant.read_stamp(transcript.recording, asked_by=person)
     assert stamp["time"] == "21:57:17" and stamp["at"] == 60.0 and stamp["checked"]
     assert stamp["date"] == "06/07/2025" and stamp["camera"] == "BWC2"
-    assert [times for times, _ in grabbed] == [[2.0], [30.0], [60.0], [120.0]]
+    assert [times for times, _, _ in grabbed] == [[2.0], [30.0], [60.0], [120.0]]
     # No time on any of the three: the date and the camera are kept, unchecked.
     transcript.recording.stamp = None
     transcript.recording.save(update_fields=["stamp"])

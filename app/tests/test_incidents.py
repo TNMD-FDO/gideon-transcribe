@@ -441,7 +441,7 @@ def test_the_clock_is_read_again_on_request(person, a_case, client, monkeypatch)
     got = client.post(
         f"{incident.url()}/act", {"action": "read_clock", "camera": str(camera.pk)}
     ).json()
-    assert got["said"] == "Reading the clock again; a few seconds. Then Sync."
+    assert got["said"].startswith("Reading the clock again; a few seconds.")
     assert queued == [{"recording_id": str(read.pk), "by_id": str(person.pk)}]
     # While one waits, the page says so and a second press is refused.
     monkeypatch.setattr(incidents, "stamp_reading", lambda recording: True)
@@ -463,6 +463,64 @@ def test_the_clock_is_read_again_on_request(person, a_case, client, monkeypatch)
     ).read_text(encoding="utf-8")
     assert "Read the clock again" in script and 'action: "read_clock"' in script
     assert "cam.clock_reading" in script
+
+
+@pytest.mark.django_db
+def test_an_unchecked_clock_sets_the_incidents_clock_when_there_is_none(person, a_case):
+    """v1.101.1: cameras whose clocks were read once no longer all start
+    together; the first sets the clock, said to be unchecked."""
+    first = video(person, a_case, "first", stamp=stamp("21:56:19", checked=False))
+    second = video(person, a_case, "second", stamp=stamp("21:57:19", checked=False))
+    incident = incidents.make(a_case, "Stop", [first, second], by=person)
+    incident.refresh_from_db()
+    cams = {
+        one.recording.title: one for one in incident.cameras.select_related("recording")
+    }
+    assert incident.clock_zero is not None and incident.clock_checked is False
+    assert cams["first"].placed == "clock_unchecked" and cams["first"].starts_at == 0.0
+    assert (
+        cams["second"].placed == "clock_unchecked" and cams["second"].starts_at == 60.0
+    )
+    # A checked reading on another camera is placed by it and says nothing
+    # about the first camera's reading: the clock stays, unchecked.
+    third = video(person, a_case, "third", stamp=stamp("21:58:20", checked=True))
+    incidents.add_cameras(incident, [third], by=person)
+    incident.refresh_from_db()
+    assert incident.clock_checked is False
+    assert incident.cameras.get(recording=third).starts_at == pytest.approx(121.0)
+    assert incident.cameras.get(recording=third).placed == "clock"
+
+
+@pytest.mark.django_db
+def test_a_clock_read_again_places_the_camera_again(person, a_case, monkeypatch):
+    """v1.101.1: the task reads, then places the camera from what was read
+    where its place was the clock's or a guess; a hand's place stands."""
+    from core import assistant, tasks
+
+    read = video(person, a_case, "read", stamp={"date": "", "time": "", "camera": "AX"})
+    by_hand = video(
+        person, a_case, "hand", stamp={"date": "", "time": "", "camera": "BX"}
+    )
+    incident = incidents.make(a_case, "Stop", [read, by_hand], by=person)
+    incidents.place_by_hand(incident.cameras.get(recording=by_hand), 40.0, by=person)
+    monkeypatch.setattr(
+        assistant,
+        "read_stamp",
+        lambda recording, *, asked_by, again=False: (
+            setattr(recording, "stamp", stamp("21:56:19", checked=True))
+            or recording.save()
+            or recording.stamp
+        ),
+    )
+    tasks.read_stamp_again(recording_id=str(read.pk), by_id=str(person.pk))
+    tasks.read_stamp_again(recording_id=str(by_hand.pk), by_id=str(person.pk))
+    placed = incident.cameras.get(recording=read)
+    assert placed.placed == "clock" and placed.placed_by == person
+    assert incident.cameras.get(recording=by_hand).placed == "hand"
+    script = (
+        Path(__file__).resolve().parent.parent / "static" / "incident.js"
+    ).read_text(encoding="utf-8")
+    assert "sayClocksRead" in script and "clock read once, unchecked" in script
 
 
 # The sound match ----------------------------------------------------------------------
