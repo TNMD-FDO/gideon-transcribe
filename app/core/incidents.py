@@ -1114,6 +1114,35 @@ def after_playback(recording) -> None:
     tasks.read_stamp_early.defer(recording_id=str(recording.pk))
 
 
+def read_again(recording, *, by) -> bool:
+    """Read the clock again, on request (v1.101.0): queued for the engine
+    worker, whatever was read before. False while a read is already
+    waiting, or the recording has no picture."""
+    from core import engine, tasks
+
+    if not is_video(recording) or not engine.is_reachable() or stamp_reading(recording):
+        return False
+    tasks.read_stamp_again.defer(
+        recording_id=str(recording.pk), by_id=str(by.pk) if by else ""
+    )
+    return True
+
+
+def stamp_reading(recording) -> bool:
+    """Whether a read of this recording's clock is waiting or running, from
+    the queue's own table; no on a table that cannot be read."""
+    try:
+        from procrastinate.contrib.django.models import ProcrastinateJob
+
+        return ProcrastinateJob.objects.filter(
+            task_name="read_stamp_again",
+            status__in=("todo", "doing"),
+            args__recording_id=str(recording.pk),
+        ).exists()
+    except Exception:  # noqa: BLE001 - the table is the queue's, not the app's
+        return False
+
+
 def read_early(recording) -> None:
     """The task's side."""
     from core import assistant

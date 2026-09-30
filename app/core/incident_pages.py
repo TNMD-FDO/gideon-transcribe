@@ -194,6 +194,8 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
         "clock_tone": tone,
         "file_time": file_words,
         "has_clock": incidents.clock_zero_of(recording) is not None,
+        # A read of the clock waiting or running (v1.101.0).
+        "clock_reading": incidents.stamp_reading(recording),
         "synced": camera.is_synced(),
         "ends_at": camera.ends_at(),
         # Why the app could not sync it by itself (Phase 6 chapter 5).
@@ -403,6 +405,19 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                 return JsonResponse({"error": "No finished match to take."}, status=400)
         else:
             return JsonResponse({"error": "How?"}, status=400)
+    elif action == "read_clock":
+        # Read the clock again (v1.101.0): the engine reads the frames afresh;
+        # the place is the person's to set from it after.
+        camera = _camera_of(incident, request.POST.get("camera"))
+        if not incidents.read_again(camera.recording, by=user):
+            return JsonResponse(
+                {
+                    "error": "The clock cannot be read now: the engine is away, "
+                    "a read is already waiting, or this recording has no picture."
+                },
+                status=400,
+            )
+        said = "Reading the clock again; a few seconds. Then Sync."
     elif action == "sync_all":
         # Sync all, or Sync ticked (Phase 6 chapter 5): the rounds on every
         # camera not yet synced, or on the ticked ones whether synced or not.

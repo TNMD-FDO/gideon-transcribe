@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-30, at v1.101.0 (a camera's clock read with more patience, and again on request; nothing shared moves).** Up to two more small engine requests when a clock read is unclear, and one read on request; no port, memory, card, timer or network moves.
 - **2026-09-30, at v1.100.1 (the whole read's time limit; nothing shared moves).** The check's one call may now wait as long as the windows it replaced would have, together; no more engine requests. No port, memory, card, timer or network moves.
 - **2026-09-30, at v1.100.0 (the Speaker check reads the whole conversation first; nothing shared moves).** One more engine request per check, at the same priority and time limit, about the size of one window's; two columns on the check's row (migration 0069). No port, memory, card, timer or network moves.
 - **2026-09-29, at v1.99.2 (a note saved from the Preview shows that it was saved; nothing shared moves).** One page script; no database change and no engine request. No port, memory, card, timer or network moves.

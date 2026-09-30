@@ -609,20 +609,87 @@ def test_the_stamp_is_read_from_two_frames_checked_and_told_to_the_model(
     assert "camera BWC2-098679" in line
     assert "not checked" not in line
 
-    # A second frame whose clock did not move as the recording did: the
-    # time is dropped, the camera id kept, and the stamp says so.
+    # A second frame that does not agree, and a third that agrees with
+    # neither: the first time is kept, unchecked (v1.101.0: it used to be
+    # thrown away, and one misread digit lost a clock for good).
     transcript.recording.stamp = None
     transcript.recording.save(update_fields=["stamp"])
     asked.clear()
+    grabbed.clear()
     answering(
         monkeypatch,
         [
             json.dumps({"date": "", "time": "21:56:19", "camera": "BWC2", "other": ""}),
             json.dumps({"date": "", "time": "21:56:19", "camera": "BWC2", "other": ""}),
+            json.dumps({"date": "", "time": "21:59:59", "camera": "BWC2", "other": ""}),
         ],
     )
     stamp = assistant.read_stamp(transcript.recording, asked_by=person)
+    assert stamp["time"] == "21:56:19" and stamp["camera"] == "BWC2"
+    assert stamp["checked"] is False and stamp["at"] == 2.0
+    assert [times for times, _ in grabbed] == [[2.0], [62.0], [122.0]]
+    row = Row.objects.filter(category="llm").latest("at")
+    assert row.details["frames"] == 3 and row.details["again"] is False
+    # The third agrees with the second: the first frame was the misread one,
+    # and the second stands, checked, at its own moment.
+    transcript.recording.stamp = None
+    transcript.recording.save(update_fields=["stamp"])
+    grabbed.clear()
+    answering(
+        monkeypatch,
+        [
+            json.dumps({"date": "", "time": "21:58:19", "camera": "BWC2", "other": ""}),
+            json.dumps({"date": "", "time": "21:57:19", "camera": "BWC2", "other": ""}),
+            json.dumps({"date": "", "time": "21:58:19", "camera": "BWC2", "other": ""}),
+        ],
+    )
+    stamp = assistant.read_stamp(transcript.recording, asked_by=person)
+    assert stamp["time"] == "21:57:19" and stamp["at"] == 62.0 and stamp["checked"]
+    # The third agrees with the first: the second was the misread one.
+    transcript.recording.stamp = None
+    transcript.recording.save(update_fields=["stamp"])
+    answering(
+        monkeypatch,
+        [
+            json.dumps({"date": "", "time": "21:56:19", "camera": "BWC2", "other": ""}),
+            json.dumps({"date": "", "time": "21:57:29", "camera": "BWC2", "other": ""}),
+            json.dumps({"date": "", "time": "21:58:19", "camera": "BWC2", "other": ""}),
+        ],
+    )
+    stamp = assistant.read_stamp(transcript.recording, asked_by=person)
+    assert stamp["time"] == "21:56:19" and stamp["at"] == 2.0 and stamp["checked"]
+    # No time two seconds in (a blurred clock): thirty and sixty seconds in
+    # are tried, the date and the camera kept from the earlier frames, and
+    # the check runs from the frame that showed the time.
+    transcript.recording.stamp = None
+    transcript.recording.save(update_fields=["stamp"])
+    grabbed.clear()
+    answering(
+        monkeypatch,
+        [
+            json.dumps(
+                {"date": "06/07/2025", "time": "", "camera": "BWC2", "other": ""}
+            ),
+            json.dumps({"date": "", "time": "", "camera": "", "other": ""}),
+            json.dumps({"date": "", "time": "21:57:17", "camera": "", "other": ""}),
+            json.dumps({"date": "", "time": "21:58:17", "camera": "", "other": ""}),
+        ],
+    )
+    stamp = assistant.read_stamp(transcript.recording, asked_by=person)
+    assert stamp["time"] == "21:57:17" and stamp["at"] == 60.0 and stamp["checked"]
+    assert stamp["date"] == "06/07/2025" and stamp["camera"] == "BWC2"
+    assert [times for times, _ in grabbed] == [[2.0], [30.0], [60.0], [120.0]]
+    # No time on any of the three: the date and the camera are kept, unchecked.
+    transcript.recording.stamp = None
+    transcript.recording.save(update_fields=["stamp"])
+    answering(
+        monkeypatch,
+        [json.dumps({"date": "06/07/2025", "time": "", "camera": "BWC2", "other": ""})]
+        * 3,
+    )
+    stamp = assistant.read_stamp(transcript.recording, asked_by=person, again=True)
     assert stamp["time"] == "" and stamp["camera"] == "BWC2" and not stamp["checked"]
+    assert Row.objects.filter(category="llm").latest("at").details["again"] is True
     # Nothing read at all: an empty stamp, kept so it is not read again.
     transcript.recording.stamp = None
     transcript.recording.save(update_fields=["stamp"])

@@ -1649,6 +1649,9 @@ def describe_intervals(run_id) -> None:
 STAMP_AT = 2.0
 STAMP_CHECK_AFTER = 60.0
 STAMP_TOLERANCE = 3
+# Where the first frame is tried when the one before showed no time (v1.101.0:
+# a clock blurred two seconds in is clear a minute on).
+STAMP_TRIES = (2.0, 30.0, 60.0)
 
 
 def _read_stamp_frame(recording, transcript, at: float) -> tuple[dict, dict]:
@@ -1718,44 +1721,80 @@ def _stamp_nature(recording, transcript) -> str:
     return f"This is a frame from a {exports.length_of(recording)} video recording."
 
 
-def read_stamp(recording, *, asked_by) -> dict:
+def _agree(first: int | None, second: int | None, apart: float) -> bool:
+    """Whether two clock readings sit `apart` seconds from each other, within
+    the tolerance, across midnight too."""
+    if first is None or second is None:
+        return False
+    return abs(((second - first) % 86400) - apart) <= STAMP_TOLERANCE
+
+
+def read_stamp(recording, *, asked_by, again: bool = False) -> dict:
     """The stamp read and checked, kept on the Recording; empty when none.
 
     Read as the playback copy lands (Phase 6 chapter 1) or when the picture
-    record is first made, whichever comes first; never twice.
+    record is first made, whichever comes first; never twice by itself, and
+    again on request (v1.101.0, `again`).
+
+    The reading (v1.101.0): the first frame is tried two seconds in, then
+    thirty, then sixty, until one shows a time. A second frame a minute on
+    checks it. When the second disagrees, a third frame a minute later
+    settles it: two readings that agree are the clock, and when none agree
+    the first time is kept as unchecked rather than thrown away, since one
+    misread digit in a second frame used to lose a clock for good.
     """
     from core import media
 
     transcript = getattr(recording, "transcript", None)
     started = time.monotonic()
     length = float(recording.duration_seconds or 0.0)
-    at = min(STAMP_AT, length) if length > 0 else STAMP_AT
-    usage: dict = {}
+    usage: dict = {"input_tokens": 0, "output_tokens": 0, "model": ""}
     stamp: dict = {}
+    frames = 0
+
+    def read(at: float) -> dict:
+        nonlocal frames
+        first, told = _read_stamp_frame(recording, transcript, at)
+        frames += 1
+        usage["input_tokens"] += told.get("input_tokens") or 0
+        usage["output_tokens"] += told.get("output_tokens") or 0
+        usage["model"] = told.get("model", "") or usage["model"]
+        return first
+
     try:
-        first, usage = _read_stamp_frame(recording, transcript, at)
-        stamp = {**first, "at": at, "checked": False}
+        # The first frame: the earliest that shows a time, keeping what the
+        # earlier ones read of the date and the camera.
+        at = min(STAMP_AT, length) if length > 0 else STAMP_AT
+        first = read(at)
         seconds = prompts.clock_seconds(first.get("time", ""))
-        later = at + STAMP_CHECK_AFTER
-        if seconds is not None and length > later + 5:
-            second, more = _read_stamp_frame(recording, transcript, later)
-            usage = {
-                "input_tokens": (usage.get("input_tokens") or 0)
-                + (more.get("input_tokens") or 0),
-                "output_tokens": (usage.get("output_tokens") or 0)
-                + (more.get("output_tokens") or 0),
-                "model": usage.get("model", ""),
-            }
+        for later in STAMP_TRIES[1:]:
+            if seconds is not None or length <= later + 5:
+                break
+            more = read(later)
+            if prompts.clock_seconds(more.get("time", "")) is not None:
+                first = {key: more.get(key) or first.get(key, "") for key in first}
+                at = later
+                seconds = prompts.clock_seconds(first.get("time", ""))
+            else:
+                first = {key: first.get(key) or more.get(key, "") for key in first}
+        stamp = {**first, "at": at, "checked": False}
+        # The check: a second frame a minute on, and a third when they differ.
+        second_at = at + STAMP_CHECK_AFTER
+        if seconds is not None and length > second_at + 5:
+            second = read(second_at)
             then = prompts.clock_seconds(second.get("time", ""))
-            if (
-                then is not None
-                and abs(((then - seconds) % 86400) - STAMP_CHECK_AFTER)
-                <= STAMP_TOLERANCE
-            ):
+            if _agree(seconds, then, STAMP_CHECK_AFTER):
                 stamp["checked"] = True
-            elif then is not None:
-                # The clock did not move as the recording did: not a clock.
-                stamp["time"] = ""
+            elif then is not None and length > second_at + STAMP_CHECK_AFTER + 5:
+                third = read(second_at + STAMP_CHECK_AFTER)
+                again_then = prompts.clock_seconds(third.get("time", ""))
+                if _agree(seconds, again_then, 2 * STAMP_CHECK_AFTER):
+                    stamp["checked"] = True
+                elif _agree(then, again_then, STAMP_CHECK_AFTER):
+                    # The first frame was the misread one: the second stands.
+                    stamp["time"] = second.get("time", "")
+                    stamp["at"] = second_at
+                    stamp["checked"] = True
         if not any(stamp.get(key) for key in ("date", "time", "camera")):
             stamp = {}
         outcome = "ok"
@@ -1772,13 +1811,18 @@ def read_stamp(recording, *, asked_by) -> dict:
         recording,
         actor=asked_by,
         templates="ground-rules; Stamp (fixed)",
-        model=usage.get("model", "") if isinstance(usage, dict) else "",
-        usage=usage if isinstance(usage, dict) else {},
+        model=usage.get("model", ""),
+        usage={
+            "input_tokens": usage["input_tokens"],
+            "output_tokens": usage["output_tokens"],
+        },
         started=started,
         outcome=outcome,
         reason=reason,
         found=bool(stamp),
         checked=bool(stamp.get("checked")),
+        frames=frames,
+        again=again,
     )
     return stamp
 

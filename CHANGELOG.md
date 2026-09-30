@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.101.0, 2026-09-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A camera's clock is read with more patience.** On the office's server,
+four cameras of one incident came back with three clocks unread, though
+every frame was legible. The reads had run in the minute all four videos
+were being processed; the engine misread a digit in a second frame, and
+the app took the disagreement to mean the picture had no clock and threw
+the time away, for good. Three changes:
+
+- The first frame is tried two seconds in, then thirty, then sixty,
+  until one shows a time. A clock blurred as the camera starts is clear a
+  minute on.
+- When the second frame does not agree with the first, a third frame a
+  minute later settles it. Two readings that agree are the clock. When
+  none agree, the first time is kept as "read once" rather than lost.
+- **Read the clock again**, beside a camera's other controls on the
+  Cameras tab and the Sync sheet, has the assistant read the frames
+  afresh. Until now the only way was to process the recording again.
+
+The picture is read as before. Reading the top band of the frame
+enlarged was tried on the server and read no better.
+
 ## v1.100.1, 2026-09-30
 
 ```

@@ -207,9 +207,10 @@
     // page asks again until it lands, so the row's words change by themselves.
     var rendering = S.events.some(function (one) { return one.clips_rendering; });
     var matching = S.cameras.some(function (cam) { return cam.match && (cam.match.state === "queued" || cam.match.state === "running"); });
+    var readingClock = S.cameras.some(function (cam) { return cam.clock_reading; });
     if (layerOf("sync") && !layerOf("sync").hidden) { drawSync(); }
     drawProposals();
-    if (S.proposals.busy || S.memo.busy || rendering || matching) {
+    if (S.proposals.busy || S.memo.busy || rendering || matching || readingClock) {
       window.clearTimeout(pollTimer);
       pollTimer = window.setTimeout(refresh, 3000);
     }
@@ -2086,7 +2087,10 @@
       "<button type='button' class='tiny' data-act='nudge' data-by='-0.1' data-camera='" + cam.id + "'>−0.1</button>" +
       "<button type='button' class='tiny' data-act='nudge' data-by='0.1' data-camera='" + cam.id + "'>+0.1</button>" +
       "<button type='button' class='tiny' data-act='nudge' data-by='1' data-camera='" + cam.id + "'>+1 s</button></span> ";
-    html += "<button type='button' class='tiny' data-act='type' data-camera='" + cam.id + "'>Type a time</button>";
+    html += "<button type='button' class='tiny' data-act='type' data-camera='" + cam.id + "'>Type a time</button> ";
+    // Read the clock again (v1.101.0): the engine reads the frames afresh.
+    html += "<button type='button' class='tiny' data-act='read-clock' data-camera='" + cam.id + "'" + (cam.clock_reading ? " disabled" : "") +
+      " title='Ask the assistant to read the clock burned into the picture again'>" + (cam.clock_reading ? "Reading the clock..." : "Read the clock again") + "</button>";
     return html;
   }
 
@@ -2187,7 +2191,7 @@
       "<button type='button' class='small ghost' id='rename-incident'>Rename incident</button><span class='grow'></span>" +
       "<button type='button' class='small ghost danger' id='delete-incident'>Delete incident</button></div>";
     box.innerHTML = html;
-    var pending = S.cameras.some(function (cam) { return cam.match && (cam.match.state === "queued" || cam.match.state === "running"); });
+    var pending = S.cameras.some(function (cam) { return cam.clock_reading || (cam.match && (cam.match.state === "queued" || cam.match.state === "running")); });
     window.clearTimeout(pollTimer);
     if (pending) { pollTimer = window.setTimeout(refresh, 3000); }
   }
@@ -2215,6 +2219,7 @@
       var act = button.dataset.act;
       if (act === "sync-open") { openSync(cam.id); }
       else if (act === "place") { post({ action: "place", camera: cam.id, how: button.dataset.how }); }
+      else if (act === "read-clock") { post({ action: "read_clock", camera: cam.id }); }
       else if (act === "listen") { listen(cam); }
       else if (act === "nudge") {
         var from = cam.starts_at !== null && cam.placed ? cam.starts_at : (S.incident.span_low || 0);
@@ -2537,6 +2542,7 @@
     var act = button.dataset.act;
     if (act === "sync-open") { syncOpenRow = cam.id; drawSync(); }
     else if (act === "place") { post({ action: "place", camera: cam.id, how: button.dataset.how }); }
+    else if (act === "read-clock") { post({ action: "read_clock", camera: cam.id }); }
     else if (act === "listen") { listen(cam); }
     else if (act === "nudge") {
       var from = cam.starts_at !== null && cam.placed ? cam.starts_at : (S.incident.span_low || 0);

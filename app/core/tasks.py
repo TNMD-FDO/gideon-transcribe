@@ -133,6 +133,20 @@ def read_stamp_early(recording_id: str) -> None:
         incidents.read_early(recording)
 
 
+@app.task(queue="llm", name="read_stamp_again")
+def read_stamp_again(recording_id: str, by_id: str = "") -> None:
+    """The camera's clock read again on request (v1.101.0)."""
+    from core import assistant
+    from core.models import User
+    from core.recordings import Recording
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None:
+        return
+    by = User.objects.filter(pk=by_id).first() if by_id else None
+    assistant.read_stamp(recording, asked_by=by, again=True)
+
+
 @app.task(queue="media", name="match_sound")
 def match_sound(camera_id: str) -> None:
     """One camera's sound compared with a placed camera's (Phase 6 chapter 1)."""

@@ -423,6 +423,48 @@ def test_the_stamp_is_read_early_only_when_the_office_allows(
     assert queued == []
 
 
+@pytest.mark.django_db
+def test_the_clock_is_read_again_on_request(person, a_case, client, monkeypatch):
+    """v1.101.0: Read the clock again queues a fresh read for the engine
+    worker whatever was read before, once at a time, and the page says a
+    read is waiting until it lands."""
+    from core import engine, tasks
+
+    settings_store.set_to("assistant_available", True)
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    queued = []
+    monkeypatch.setattr(tasks.read_stamp_again, "defer", lambda **kw: queued.append(kw))
+    read = video(person, a_case, "read", stamp={"date": "", "time": "", "camera": "AX"})
+    incident = incidents.make(a_case, "Stop", [read], by=person)
+    camera = incident.cameras.get()
+    signed_in(client, person)
+    got = client.post(
+        f"{incident.url()}/act", {"action": "read_clock", "camera": str(camera.pk)}
+    ).json()
+    assert got["said"] == "Reading the clock again; a few seconds. Then Sync."
+    assert queued == [{"recording_id": str(read.pk), "by_id": str(person.pk)}]
+    # While one waits, the page says so and a second press is refused.
+    monkeypatch.setattr(incidents, "stamp_reading", lambda recording: True)
+    state = client.get(f"{incident.url()}/state").json()
+    assert state["cameras"][0]["clock_reading"] is True
+    refused = client.post(
+        f"{incident.url()}/act", {"action": "read_clock", "camera": str(camera.pk)}
+    )
+    assert refused.status_code == 400 and "already waiting" in refused.json()["error"]
+    monkeypatch.setattr(incidents, "stamp_reading", lambda recording: False)
+    # The engine away: refused too. A recording with no picture: refused.
+    monkeypatch.setattr(engine, "is_reachable", lambda: False)
+    assert incidents.read_again(read, by=person) is False
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    monkeypatch.setattr(incidents, "is_video", lambda recording: False)
+    assert incidents.read_again(read, by=person) is False
+    script = (
+        Path(__file__).resolve().parent.parent / "static" / "incident.js"
+    ).read_text(encoding="utf-8")
+    assert "Read the clock again" in script and 'action: "read_clock"' in script
+    assert "cam.clock_reading" in script
+
+
 # The sound match ----------------------------------------------------------------------
 
 
