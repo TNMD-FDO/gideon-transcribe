@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.103.0, 2026-09-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The comparison's rules are enforced by the app, not left to the
+engine.** Two runs of v1.102.0 on the same report on the office's copy
+showed the re-shipped wording bringing the trivia down but not holding
+from run to run: a difference on the colour and make of a car came back,
+and "differs" was still marked where the record simply showed nothing.
+Each finding the engine writes now says two more things, which the app
+acts on as it already does on the basis:
+
+- **`shown`**: whether the record shows or says something else in the
+  claim's place, or nothing. A difference on nothing is kept as Not on
+  camera, with the why saying "Nothing on the record shows otherwise".
+- **`kind`**: what the finding turns on (who, words, act, order, time,
+  place, thing, force, injury, rights, colour, size, make, count or
+  wording). A finding that turns on colour, size, make, count or wording
+  alone is dropped and counted; the comparison's foot says so ("2 findings
+  dropped: on colour alone 1, on wording alone 1").
+
+One difference per paragraph and moment: a second Differs on the same
+paragraph at the same second is the same finding told twice and is
+dropped as such. The Comparison template is re-shipped with the sentence
+the maintainer had pasted (absence is never a difference), so Reset and
+an edited copy say the same. Nothing names any incident, report or
+office: the rules are about the shape of a finding.
+
 ## v1.102.0, 2026-09-30
 
 ```

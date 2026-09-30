@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-09-30, at v1.103.0 (the comparison's rules enforced by the app; nothing shared moves).** Two fields in the engine's answer and three rules in the app; the template re-shipped; no migration. No port, memory, card, timer or network moves.
 - **2026-09-30, at v1.102.0 (the comparison keeps to what could matter; the clock's own camera corrects the clock; nothing shared moves).** A re-shipped template and a placing rule; no migration. No port, memory, card, timer or network moves.
 - **2026-09-30, at v1.101.1 (small video read at full size; an unchecked clock sets the incident's; nothing shared moves).** One column on the incident (migration 0070); the stamp's frame is scaled up before the engine reads it, a slightly larger request for small video only. No port, memory, card, timer or network moves.
 - **2026-09-30, at v1.101.0 (a camera's clock read with more patience, and again on request; nothing shared moves).** Up to two more small engine requests when a clock read is unclear, and one read on request; no port, memory, card, timer or network moves.

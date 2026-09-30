@@ -124,10 +124,12 @@ SHIPPED_HISTORY = {
     "prompt:incident_chat": ("1e49dfacd7a8a160", "b34225f790a3e94e"),
     # Re-shipped in v1.90.0: an officer's say-so is not the record agreeing.
     # v1.102.0: what could matter and what does not; every why on a line.
+    # v1.103.0: absence is never a difference.
     "prompt:comparison": (
         "127d85e163af4cba",
         "d59b992243fb63bf",
         "e11c5c7a9829cd13",
+        "573fcc2cb5fce707",
     ),
 }
 
@@ -977,7 +979,10 @@ COMPARISON = (
     "the record holds only that way is not on camera, with the say-so quoted "
     "in the why. The record differs where the words or the picture show "
     "something else, and where the person stopped denied it or said "
-    "otherwise, quoted. A paragraph that tells part of the stop and leaves "
+    "otherwise, quoted. Absence is never a difference: where the record "
+    "neither shows nor says what the report says, the mark is not on "
+    "camera, and it differs only where the record shows or says something "
+    "else in its place. A paragraph that tells part of the stop and leaves "
     "out something the cameras hold there differs too, and the why says "
     "what it leaves out: a denial, a request for a lawyer or to stop, an "
     "injury or a complaint of pain, a statement about ownership, a search "
@@ -1012,10 +1017,20 @@ COMPARISON_FORMAT = (
     '"claim": "the report says what, in a few words", "at": "hh:mm:ss", '
     '"mark": "agrees" or "differs" or "not_on_camera" or "not_in_report", '
     '"basis": "picture" or "person" or "officer" or "none", '
+    '"shown": "otherwise" or "nothing", "kind": "who" or "words" or "act" '
+    'or "order" or "time" or "place" or "thing" or "force" or "injury" or '
+    '"rights" or "colour" or "size" or "make" or "count" or "wording", '
     '"why": "one sentence"}]}. The basis is what the record holds the claim '
     "on: picture, the camera showing the thing; person, the words of the "
     "person stopped or another civilian; officer, an officer's words alone; "
-    "none, nothing. The page and paragraph copied from the line the claim "
+    "none, nothing. Shown is what the record does about the claim: "
+    "otherwise, the record shows or says something else in its place; "
+    "nothing, the record neither shows nor says it. The kind is what the "
+    "finding turns on: who did or said it; the words said; an act; the "
+    "order of things; the time; the place; a thing found or carried; force; "
+    "an injury; rights or consent; or, when it turns on that alone, colour, "
+    "size, make (a make or model), count, or wording (the same thing in "
+    "other words). The page and paragraph copied from the line the claim "
     "appears on; the time copied from the record or the chronology, left "
     "empty only for not_on_camera. For not_in_report the claim is the event "
     "or moment the report leaves out, with its time, and page and paragraph "

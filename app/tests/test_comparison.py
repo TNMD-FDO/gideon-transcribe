@@ -238,6 +238,106 @@ def test_an_agrees_on_an_officers_words_alone_is_not_on_camera(
     assert "7 at most" in asked[1]["messages"][-1]["content"]
 
 
+def test_a_differs_on_nothing_shown_or_on_colour_alone_is_not_a_difference(
+    stop, person, monkeypatch
+):
+    """v1.103.0: on the office's copy the comparison marked "differs" where
+    the record simply showed nothing (footage starting after a reported
+    time), and on the colour and make of a car from the picture. Each
+    finding now says what the record does (otherwise or nothing) and what
+    it turns on; the app keeps a differs on nothing as not on camera, drops
+    a finding that turns on colour, size, make, count or wording alone and
+    counts it, and keeps one difference per paragraph and moment."""
+    incident, report, first = stop
+    made = comparison.ask_for(report, incident, by=person)
+    base = {"page": 1, "paragraph": 2, "at": "21:56:17", "basis": "picture"}
+    engine_answering(
+        monkeypatch,
+        [
+            findings_json(
+                dict(
+                    base,
+                    claim="Officers arrived at 21:50",
+                    mark="differs",
+                    shown="nothing",
+                    kind="time",
+                    why="The footage starts at 21:56.",
+                ),
+                dict(
+                    base,
+                    claim="A gold SUV",
+                    mark="differs",
+                    shown="otherwise",
+                    kind="colour",
+                    why="The camera shows a silver SUV.",
+                ),
+                dict(
+                    base,
+                    claim="Officers said stop",
+                    mark="agrees",
+                    shown="otherwise",
+                    kind="wording",
+                    why="They said halt.",
+                ),
+                dict(
+                    base,
+                    claim="Taken into custody without force",
+                    mark="differs",
+                    shown="otherwise",
+                    kind="force",
+                    why="The camera shows the person forced to the ground.",
+                ),
+                dict(
+                    base,
+                    claim="Resisted by pulling away",
+                    mark="differs",
+                    shown="otherwise",
+                    kind="act",
+                    why="The camera shows the person forced to the ground.",
+                ),
+                dict(
+                    base,
+                    paragraph=3,
+                    at="21:57:17",
+                    claim="The driver said the bag was not his",
+                    mark="differs",
+                    shown="otherwise",
+                    kind="words",
+                    why="He said it was his.",
+                ),
+            ),
+            findings_json(),
+        ],
+    )
+    comparison.compare(made.pk)
+    made.refresh_from_db()
+    assert made.state == "done"
+    rows = {one["claim"]: one for one in made.findings}
+    arrived = rows["Officers arrived at 21:50"]
+    assert arrived["mark"] == "not_on_camera" and arrived["kind"] == "time"
+    assert arrived["why"].startswith("Nothing on the record shows otherwise: ")
+    assert rows["Taken into custody without force"]["mark"] == "differs"
+    assert rows["The driver said the bag was not his"]["mark"] == "differs"
+    assert "A gold SUV" not in rows and "Officers said stop" not in rows
+    assert "Resisted by pulling away" not in rows
+    assert made.dropped == {
+        "on colour alone": 1,
+        "on wording alone": 1,
+        "same moment told twice": 1,
+    }
+    said = comparison.as_json(made, report, incident)["words"]
+    assert "3 findings dropped: on colour alone 1, on wording alone 1" in said
+    assert made.counts() == {
+        "agrees": 0,
+        "differs": 2,
+        "not_on_camera": 1,
+        "not_in_report": 0,
+    }
+    assert '"shown": "otherwise" or "nothing"' in prompts.COMPARISON_FORMAT
+    assert '"kind": "who"' in prompts.COMPARISON_FORMAT
+    assert "Absence is never a difference" in prompts.COMPARISON
+
+
 def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     stop, person, monkeypatch
 ):

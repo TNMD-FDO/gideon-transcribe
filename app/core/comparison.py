@@ -313,6 +313,16 @@ PARAGRAPH_NOT_FOUND = "paragraph not found"
 NO_TIME = "no time on the clock"
 NO_CLAIM = "no claim"
 TWIN = "said twice"
+TWIN_MOMENT = "same moment told twice"
+# What the model says the record does about a claim (v1.103.0): shows or
+# says something else in its place, or nothing. A differs on nothing is not
+# on camera, whatever the why argues.
+SHOWN_OTHERWISE = "otherwise"
+SHOWN_NOTHING = "nothing"
+# What a finding turns on (v1.103.0). A finding that turns on one of these
+# alone is dropped and counted: a vision model's colours, makes and counts
+# are impressions, and wording is not a fact.
+TRIVIAL_KINDS = ("colour", "size", "make", "count", "wording")
 
 
 def _keep(comparison: Comparison, item: dict, known: dict, taken: set) -> dict | None:
@@ -344,6 +354,13 @@ def _keep_or_why(
             else "Nothing on the record: "
         )
         why = (said + why)[:WHY_MOST]
+    shown = str(item.get("shown", "")).strip().lower()
+    kind = str(item.get("kind", "")).strip().lower()
+    if kind in TRIVIAL_KINDS:
+        return None, f"on {kind} alone"
+    if mark == DIFFERS and shown == SHOWN_NOTHING:
+        mark = NOT_ON_CAMERA
+        why = ("Nothing on the record shows otherwise: " + why)[:WHY_MOST]
     page = item.get("page")
     n = item.get("paragraph")
     try:
@@ -364,6 +381,13 @@ def _keep_or_why(
     if key in taken:
         return None, TWIN
     taken.add(key)
+    if mark == DIFFERS:
+        # One difference per paragraph and moment (v1.103.0): a second on
+        # the same picture at the same second is the same finding told twice.
+        moment = (DIFFERS, page, n, at)
+        if moment in taken:
+            return None, TWIN_MOMENT
+        taken.add(moment)
     return {
         "id": uuid.uuid4().hex[:12],
         "mark": mark,
@@ -373,6 +397,7 @@ def _keep_or_why(
         "claim": claim,
         "at": at,
         "basis": basis,
+        "kind": kind,
         "why": why,
         "dismissed": False,
         "note": "",
