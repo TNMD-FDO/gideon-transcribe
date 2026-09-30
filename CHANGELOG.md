@@ -21,6 +21,36 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.100.0, 2026-09-30
+
+```
+Models: unchanged
+Database: migrates (0069: the Speaker check's sketch kept on the run)
+```
+
+**The Speaker check reads the whole conversation first.** The check used
+to cut a transcript into stretches of about ten minutes and judge each on
+its own, told only the speaker names and the stretch's lines, so a
+stretch at minute twenty did not know who had been asking the questions
+all along. It now reads the whole transcript once and writes a **sketch**
+of who is who: for each speaker, who they seem to be from the words alone
+(the officer asking the questions, the driver, a passenger), how they take
+part, and what tells them apart. Every stretch is then judged with the
+sketch in view, and a transcript that fits the engine is checked in one
+piece; the stretch setting applies only when it does not.
+
+The Speakers page shows the sketch under the check's line, folded, as
+**Who is who, as the check read it**, and says it is the assistant's
+reading of the words and not a finding. The check's line says whether the
+transcript was read whole or in how many stretches. A sketch the engine
+cannot write does not stop the check.
+
+One more engine call per check, about the size of one stretch. A short
+recording ends up with fewer calls than before.
+
+Whether it finds more of the wrong lines is to be measured against the
+recording checked by ear on 24 September before it is called better.
+
 ## v1.99.2, 2026-09-29
 
 ```

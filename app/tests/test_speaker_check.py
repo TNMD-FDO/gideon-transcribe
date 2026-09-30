@@ -59,6 +59,29 @@ def swallow(monkeypatch):
     return deferred
 
 
+SKETCH = (
+    "Speaker 1 asks the questions and gives the commands; the officer. "
+    "Speaker 2 answers and speaks of the car as his own; the driver."
+)
+
+
+def too_small_for_the_whole(monkeypatch, transcript):
+    """The engine's window set just under what the whole transcript needs,
+    so the check reads in windows and the sketch reads what fits."""
+    lines = prompts.lines_of(transcript)
+    speakers = speaker_check.speakers_of(transcript)
+    system = prompts.system_message(
+        PromptTemplate.named(PromptTemplate.GROUND_RULES).text,
+        PromptTemplate.named(PromptTemplate.SPEAKER_CHECK).text,
+        prompts.SPEAKER_CHECK_FORMAT,
+    )
+    whole = prompts.tokens(system) + prompts.tokens(
+        prompts.speaker_check_input(lines, speakers, SKETCH)
+    )
+    cap = settings_store.speaker_check_answer_cap()
+    monkeypatch.setattr(assistant, "window", lambda: whole + cap - 1)
+
+
 def moves(*items):
     return json.dumps(
         {
@@ -154,17 +177,30 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     asked = engine_answering(
         monkeypatch,
         [
+            SKETCH,
             moves(
                 (2, "Speaker 2", "Speaker 1", "the officer points"),
                 (1, "Speaker 1", "Nobody", "no such speaker"),
                 (3, "Speaker 2", "Speaker 1", "label not as shown"),
-            )
+            ),
         ],
     )
     speaker_check.run(check.pk)
     check.refresh_from_db()
     assert check.state == assistant.DONE and check.found == 1 and check.windows == 1
-    call = asked[0]
+    # The sketch first (v1.100.0): the whole transcript, plain text, kept on
+    # the run; then the check, given the sketch above its lines, whole in
+    # one window since it fits.
+    assert len(asked) == 2
+    sketching = asked[0]
+    assert "Read the whole transcript" in sketching["messages"][0]["content"]
+    assert "Speakers: Speaker 1, Speaker 2" in sketching["messages"][-1]["content"]
+    assert "schema" not in sketching
+    assert check.sketch == SKETCH and check.whole is True
+    call = asked[1]
+    assert prompts.SPEAKER_SKETCH_ABOVE in call["messages"][-1]["content"]
+    assert SKETCH in call["messages"][-1]["content"]
+    assert prompts.SPEAKER_SKETCH_USE in call["messages"][-1]["content"]
     assert call["temperature"] == 0.0 and call["thinking"] is False
     assert call["schema"]["properties"]["moves"]["items"]["properties"]["to"][
         "enum"
@@ -179,7 +215,10 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     )
     row = Row.objects.get(event="AI assistant call")
     assert row.details["feature"] == "speaker_check" and row.details["found"] == 1
+    assert row.details["sketch"] is True and row.details["whole"] is True
+    assert row.details["sketch_cut"] is False
     assert "Look at that" not in json.dumps(row.details)
+    assert "asks the questions" not in json.dumps(row.details)
 
     correction = SpeakerCorrection.objects.get()
     assert (correction.speaker_from, correction.speaker_to) == (
@@ -191,6 +230,7 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     signed_in(client, admin)
     state = client.get(f"/recording/{recording.pk}/assistant").json()["speaker_check"]
     assert state["offered"] is True and state["run"]["state"] == "done"
+    assert state["run"]["sketch"] == SKETCH and state["run"]["whole"] is True
     (pending,) = state["pending"]
     assert pending["clock"] == "00:00:12" and pending["to"] == "Speaker 1"
     assert pending["reason"] == "the officer points"
@@ -198,6 +238,7 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     # page the strip's pill.
     page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
     assert 'id="check-speakers"' in page and 'id="corrections"' in page
+    assert 'id="check-sketch"' in page and "Who is who, as the check read it" in page
     assert "speakerCheck: true" in page
     viewer_page = client.get(f"/recording/{recording.pk}").content.decode()
     assert 'id="corrections-pill"' in viewer_page
@@ -362,23 +403,32 @@ def test_an_unreadable_window_is_lost_and_a_problem_keeps_what_was_found(
     settings_store.set_to("speaker_check_window_seconds", 120)
     recording = a_recording(admin, tmp_path, settings)
     transcript = recording.transcript
-    # Two windows: the first answer unreadable, the second good.
+    # The engine's window made too small for the whole transcript, so the
+    # check reads in windows (v1.100.0), and the sketch reads what fits.
+    too_small_for_the_whole(monkeypatch, transcript)
+    # No lines carried over, or the second window of these three lines would
+    # be the whole transcript again.
+    monkeypatch.setattr(speaker_check, "OVERLAP_LINES", 0)
+    # Two windows: the first answer good, the second unreadable.
     engine_answering(
-        monkeypatch, ["not json", moves((2, "Speaker 2", "Speaker 1", "asks"))]
+        monkeypatch, [SKETCH, moves((2, "Speaker 2", "Speaker 1", "asks")), "not json"]
     )
     check = SpeakerCheck.objects.create(transcript=transcript)
     speaker_check.run(check.pk)
     check.refresh_from_db()
     assert check.state == assistant.DONE and check.windows == 2 and check.found == 1
-    # A problem on the second call: the run fails with its reason, and the
+    assert check.whole is False and check.sketch == SKETCH
+    row = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert row.details["whole"] is False and row.details["sketch_cut"] is False
+    # A problem on the second window: the run fails with its reason, and the
     # correction the first window found is kept.
     asked = engine_answering(
-        monkeypatch, [moves((2, "Speaker 2", "Speaker 1", "asks"))]
+        monkeypatch, [SKETCH, moves((2, "Speaker 2", "Speaker 1", "asks"))]
     )
     good = engine.complete
 
     def failing(messages, **options):
-        if asked:
+        if len(asked) >= 2:
             raise engine.Problem(engine.TIMEOUT, "too slow")
         return good(messages, **options)
 
@@ -461,13 +511,73 @@ def test_a_swap_between_times_moves_both_ways_and_undo_puts_both_back(
 
 
 @pytest.mark.django_db
+def test_the_sketch_reads_what_fits_and_a_failed_sketch_stops_nothing(
+    admin, tmp_path, settings, monkeypatch
+):
+    """v1.100.0: an engine too small for the whole transcript is given as much
+    as fits, told so; a sketch the engine refuses leaves the check to run
+    without one, and the page says nothing of a sketch."""
+    switched_on()
+    recording = a_recording(admin, tmp_path, settings)
+    transcript = recording.transcript
+    speakers = speaker_check.speakers_of(transcript)
+    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES).text
+    system = prompts.system_message(ground, prompts.SPEAKER_SKETCH, "")
+    one_line = prompts.tokens(
+        prompts.speaker_sketch_input(prompts.lines_of(transcript)[:1], speakers, True)
+    )
+    cap = prompts.sketch_cap(speakers)
+    monkeypatch.setattr(
+        assistant, "window", lambda: prompts.tokens(system) + one_line + cap + 5
+    )
+    asked = engine_answering(monkeypatch, [SKETCH])
+    words, cut, told = speaker_check.sketch_of(transcript, speakers, ground)
+    assert words == SKETCH and cut is True and told["model"] == "the-model"
+    assert (
+        "Only the first part of the transcript is given"
+        in asked[0]["messages"][-1]["content"]
+    )
+    assert asked[0]["max_completion_tokens"] == cap
+    assert asked[0]["messages"][-1]["content"].count("] [") == 1
+
+    def refusing(messages, **options):
+        raise engine.Problem(engine.TIMEOUT, "too slow")
+
+    monkeypatch.setattr(engine, "complete", refusing)
+    assert speaker_check.sketch_of(transcript, speakers, ground) == ("", True, {})
+    # The check itself, with the sketch refused: the windows run without it.
+    monkeypatch.setattr(assistant, "window", lambda: 100_000)
+    calls = []
+    good = engine_answering(monkeypatch, [moves((2, "Speaker 2", "Speaker 1", "asks"))])
+
+    def sketch_refused(messages, **options):
+        calls.append(messages)
+        if len(calls) == 1:
+            raise engine.Problem(engine.TIMEOUT, "too slow")
+        return engine_answering_good(messages, **options)
+
+    engine_answering_good = engine.complete
+    monkeypatch.setattr(engine, "complete", sketch_refused)
+    check = SpeakerCheck.objects.create(transcript=transcript)
+    speaker_check.run(check.pk)
+    check.refresh_from_db()
+    assert check.state == assistant.DONE and check.found == 1 and check.sketch == ""
+    assert prompts.SPEAKER_SKETCH_ABOVE not in good[-1]["messages"][-1]["content"]
+    row = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert row.details["sketch"] is False and row.details["whole"] is True
+    assert speaker_check.state_json(transcript)["run"]["sketch"] == ""
+
+
+@pytest.mark.django_db
 def test_a_window_cut_short_at_the_cap_is_counted_and_said(
     admin, tmp_path, settings, client, monkeypatch
 ):
     switched_on()
     settings_store.set_to("speaker_check_window_seconds", 1800)
     recording = a_recording(admin, tmp_path, settings)
-    engine_answering(monkeypatch, [moves((2, "Speaker 2", "Speaker 1", "asks"))])
+    engine_answering(
+        monkeypatch, [SKETCH, moves((2, "Speaker 2", "Speaker 1", "asks"))]
+    )
     good = engine.complete
 
     def cut(messages, **options):
@@ -567,3 +677,15 @@ def test_the_settings_page_the_templates_page_and_the_documents(admin, client):
     assert "## 3. The Speaker check" in spec
     for guide in ("user-guide.md", "admin-guide.md"):
         assert "Speaker check" in (DOCS / guide).read_text(encoding="utf-8"), guide
+
+
+def test_the_sketch_is_in_the_glossary_and_the_guide():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent.parent
+    glossary = (root / "CONTEXT.md").read_text(encoding="utf-8")
+    guide = (root / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    assert "**Sketch**:" in glossary
+    assert "writes a sketch of who is who" in guide
+    assert "**Who is who, as the check read it**" in guide
+    assert "—" not in prompts.SPEAKER_SKETCH + prompts.SPEAKER_SKETCH_USE

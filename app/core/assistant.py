@@ -543,6 +543,11 @@ class SpeakerCheck(models.Model):
     # Windows whose list was cut off at the answer cap (v1.56.0), so the
     # page can say the run did not see everything.
     cut_short = models.IntegerField(default=0)
+    # The sketch of who is who the run read first (v1.100.0), the engine's
+    # reading of the words and never a finding; and whether the Transcript
+    # was checked whole, in one window.
+    sketch = models.TextField(blank=True, default="")
+    whole = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 

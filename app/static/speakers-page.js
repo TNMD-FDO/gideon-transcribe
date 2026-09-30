@@ -790,11 +790,20 @@
     var said = document.getElementById("check-said");
     button.disabled = !body.reachable || !!busy;
     button.title = body.reachable ? "" : (body.unavailable_line || "");
-    if (busy) { said.textContent = "Reading the transcript, " + (run.windows ? run.windows + " windows so far..." : "window by window..."); }
+    // How it was read (v1.100.0): whole, or in windows, after the sketch.
+    var how = run && run.state === "done" ? (run.whole ? ", read whole" : (run.windows ? ", read in " + run.windows + " window" + (run.windows === 1 ? "" : "s") : "")) : "";
+    if (busy) { said.textContent = run.sketch ? "Reading the transcript, " + (run.windows ? run.windows + " windows so far..." : "window by window...") : "Reading the whole transcript for who is who..."; }
     else if (run && run.state === "failed") { said.textContent = run.said || ""; }
-    else if (run && run.state === "done" && !pending.length) { said.textContent = "Checked " + run.when + "; nothing to move."; }
-    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + "."; }
+    else if (run && run.state === "done" && !pending.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
+    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + "."; }
     else { said.textContent = ""; }
+    var sketchBox = document.getElementById("check-sketch");
+    if (sketchBox) {
+      var sketch = run && run.state === "done" ? (run.sketch || "") : "";
+      sketchBox.hidden = !sketch;
+      var words = document.getElementById("check-sketch-words");
+      if (words) { words.textContent = sketch; }
+    }
     if (run && run.cut_short) {
       // A window's list ran past the answer cap (v1.56.0): the run did not
       // see everything, and the page says so rather than looking finished.

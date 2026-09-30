@@ -2500,6 +2500,10 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .preview-note { flex: none; display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .preview-note textarea { width: 100%; box-sizing: border-box; resize: vertical; }
 .preview-said.problem { color: var(--danger); }
+/* The Speaker check's sketch of who is who (v1.100.0), folded under the check's line. */
+.check-sketch { flex-basis: 100%; margin: 4px 0 0; max-width: 70ch; }
+.check-sketch summary { cursor: pointer; color: var(--muted); }
+.check-sketch p { margin: 4px 0; }
 /* A note saved (v1.99.2): the box gives way to one line saying so, and the note is lit where it now sits. */
 .preview-note.done { background: transparent; }
 .preview-done { margin: 0; font-weight: 600; color: var(--ok); }

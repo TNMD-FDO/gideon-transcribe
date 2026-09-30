@@ -421,6 +421,31 @@ SPEAKER_CHECK = (
     "the line, leave it. Give a reason of a few words for each move."
 )
 
+# The sketch before the check (v1.100.0): who is who across the whole
+# recording, read once and given to every window. The app's own words,
+# as the Look for run's are, not an office template.
+SPEAKER_SKETCH = (
+    "Read the whole transcript. For each speaker in the list, write one or "
+    "two plain sentences: who they seem to be from the words alone (a role "
+    "such as the officer asking the questions, the driver, a passenger; a "
+    "name only when the words give one), how they take part (asks, answers, "
+    "gives commands, speaks rarely), and what tells them apart (addressed by "
+    "name, speaks of themselves, a turn of phrase). Say where you are unsure. "
+    "Never invent, never merge speakers, and never decide that two speakers "
+    "are one person. Answer in plain text, one paragraph per speaker "
+    "beginning with the speaker's label exactly as listed, and nothing else."
+)
+SPEAKER_SKETCH_ABOVE = (
+    "Who is who across the whole recording, as read before this stretch:"
+)
+SPEAKER_SKETCH_USE = (
+    "Use it to judge each line. Move a line only when its words show it "
+    "belongs to another speaker; the sketch says who they are, it does not "
+    "say a line is wrong."
+)
+# The sketch is capped by its length in words, about this many tokens a speaker.
+SKETCH_TOKENS_A_SPEAKER = 220
+
 # What the app adds after a feature's template: the answer's shape, which no
 # Admin edits. The chapter leaves the exact prose text to the build.
 SUMMARY_FORMAT = (
@@ -1523,10 +1548,32 @@ def incident_memo_input(
     )
 
 
-def speaker_check_input(lines: list, speakers: list[str]) -> str:
-    """One window as the engine reads it: the Speakers it may move a line to,
-    then the lines with their numbers, times and labels."""
-    return f"Speakers: {', '.join(speakers)}\n\nLines:\n{render(lines)}"
+def speaker_check_input(lines: list, speakers: list[str], sketch: str = "") -> str:
+    """One window as the engine reads it: the sketch of who is who when the
+    check has one (v1.100.0), the Speakers it may move a line to, then the
+    lines with their numbers, times and labels."""
+    head = (
+        f"{SPEAKER_SKETCH_ABOVE}\n{sketch.strip()}\n\n{SPEAKER_SKETCH_USE}\n\n"
+        if sketch.strip()
+        else ""
+    )
+    return f"{head}Speakers: {', '.join(speakers)}\n\nLines:\n{render(lines)}"
+
+
+def speaker_sketch_input(lines: list, speakers: list[str], cut: bool) -> str:
+    """The whole transcript as the sketch reads it, or as much of it as fits,
+    said so."""
+    note = (
+        "\n\nOnly the first part of the transcript is given; say that the rest "
+        "was not read."
+        if cut
+        else ""
+    )
+    return f"Speakers: {', '.join(speakers)}{note}\n\nLines:\n{render(lines)}"
+
+
+def sketch_cap(speakers: list[str]) -> int:
+    return SKETCH_TOKENS_A_SPEAKER * max(1, len(speakers)) + 100
 
 
 def plain_speaker(label: str) -> str:

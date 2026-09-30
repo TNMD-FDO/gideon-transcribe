@@ -1,8 +1,11 @@
 """The Speaker check (Phase 5 chapter 3, v1.55.0).
 
-After a Transcript lands with its Speakers told apart, the engine reads it in
-windows of a few minutes and names the lines whose words show they belong
-to a different Speaker than the one the voice split gave them. Every answer
+After a Transcript lands with its Speakers told apart, the engine first reads
+the whole of it once and writes a sketch of who is who (v1.100.0), then
+reads it in windows of a few minutes, each given the sketch, and names the
+lines whose words show they belong to a different Speaker than the one the
+voice split gave them; a Transcript that fits the engine is checked in one
+window. A sketch that cannot be written does not stop the check. Every answer
 is checked here before it is kept: a real line, a Speaker already in the
 Transcript, the label still what the engine was shown. What survives is a
 Speaker correction, proposed and never applied: a person accepts it on the
@@ -196,10 +199,53 @@ def task_waiting_for(check) -> bool:
         return True
 
 
+def sketch_of(
+    transcript, speakers: list[str], ground_text: str
+) -> tuple[str, bool, dict]:
+    """The sketch of who is who (v1.100.0): one call over the whole Transcript,
+    or as much as fits the engine. (sketch, cut, answer): the words, whether
+    the transcript had to be cut to fit, and the engine's answer for the
+    run's count of tokens. A problem gives an empty sketch and the check
+    goes on without one."""
+    lines = prompts.lines_of(transcript)
+    system = prompts.system_message(ground_text, prompts.SPEAKER_SKETCH, "")
+    cap = prompts.sketch_cap(speakers)
+    room = assistant.window()
+    kept = list(lines)
+    cut = False
+    while kept and not prompts.fits(
+        system,
+        prompts.speaker_sketch_input(kept, speakers, cut),
+        answer_cap=cap,
+        window=room,
+    ):
+        # Off the end, a tenth at a time, until it fits.
+        kept = kept[: max(1, len(kept) - max(1, len(kept) // 10))]
+        cut = True
+        if len(kept) == 1:
+            break
+    if not kept:
+        return "", cut, {}
+    user = prompts.speaker_sketch_input(kept, speakers, cut)
+    try:
+        answer = engine.complete(
+            assistant._messages(system, user),
+            max_completion_tokens=cap,
+            thinking=assistant.thinking(),
+            timeout=assistant.time_limit(FEATURE),
+            **assistant.SUGGESTION_SAMPLING,
+        )
+    except engine.Problem as problem:
+        log.warning("speaker sketch for %s: %s", transcript.pk, problem.reason)
+        return "", cut, {}
+    words = " ".join(str(answer.get("text", "") or "").split())
+    return words[: 400 * max(1, len(speakers)) + 400], cut, answer
+
+
 def run(check_id, attempt: int = 1) -> None:
-    """The check: one call per window, the answers checked, the corrections
-    kept in place of the pending ones. One audit row for the run, metadata
-    only."""
+    """The check: the sketch first, then one call per window, each given the
+    sketch, the answers checked, the corrections kept in place of the
+    pending ones. One audit row for the run, metadata only."""
     check = (
         SpeakerCheck.objects.filter(pk=check_id)
         .select_related("transcript", "transcript__recording")
@@ -233,6 +279,7 @@ def run(check_id, attempt: int = 1) -> None:
     kept: dict = {}
     calls = 0
     cut = 0
+    sketch, sketch_cut, whole = "", False, False
     try:
         problem = assistant._unreachable()
         if problem:
@@ -247,9 +294,29 @@ def run(check_id, attempt: int = 1) -> None:
             ground.text, template.text, prompts.SPEAKER_CHECK_FORMAT
         )
         answer_cap = settings_store.speaker_check_answer_cap()
-        for start, end in windows(lines, settings_store.speaker_check_window_seconds()):
+        # The sketch of who is who (v1.100.0), given to every window.
+        sketch, sketch_cut, told = sketch_of(transcript, speakers, ground.text)
+        model = told.get("model", "") or model
+        usage["input_tokens"] += told.get("input_tokens", 0) or 0
+        usage["output_tokens"] += told.get("output_tokens", 0) or 0
+        check.sketch = sketch
+        check.save(update_fields=["sketch"])
+        # The whole Transcript in one window when it fits the engine.
+        whole = prompts.fits(
+            system,
+            prompts.speaker_check_input(lines, speakers, sketch),
+            answer_cap=answer_cap,
+            window=assistant.window(),
+        )
+        check.whole = whole
+        spans = (
+            [(0, len(lines))]
+            if whole
+            else windows(lines, settings_store.speaker_check_window_seconds())
+        )
+        for start, end in spans:
             window = lines[start:end]
-            user = prompts.speaker_check_input(window, speakers)
+            user = prompts.speaker_check_input(window, speakers, sketch)
             if not prompts.fits(
                 system, user, answer_cap=answer_cap, window=assistant.window()
             ):
@@ -305,6 +372,9 @@ def run(check_id, attempt: int = 1) -> None:
             windows=calls,
             found=len(kept),
             cut_short=cut,
+            sketch=bool(sketch),
+            sketch_cut=sketch_cut,
+            whole=whole,
         )
     except engine.Problem as problem:
         # What was found before the problem is kept: every one passed the checks.
@@ -330,6 +400,9 @@ def run(check_id, attempt: int = 1) -> None:
             windows=calls,
             found=len(kept),
             cut_short=cut,
+            sketch=bool(sketch),
+            sketch_cut=sketch_cut,
+            whole=whole,
         )
 
 
@@ -388,6 +461,10 @@ def state_json(transcript) -> dict:
                 "found": last.found,
                 "windows": last.windows,
                 "cut_short": last.cut_short,
+                # The sketch of who is who and whether the Transcript was
+                # read whole (v1.100.0).
+                "sketch": last.sketch,
+                "whole": last.whole,
                 "said": assistant.what_to_say(last.reason_class)
                 if last.reason_class
                 else "",

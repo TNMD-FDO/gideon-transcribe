@@ -43,6 +43,12 @@
           <button type="button" class="small" id="check-speakers" title="Ask the AI assistant which lines the words show were given to the wrong speaker">Check the speakers</button>
           <span id="check-said" class="small muted"></span>
         </span>
+        {% comment %}The sketch of who is who (v1.100.0): the engine's reading of the words before the check, never a finding.{% endcomment %}
+        <details id="check-sketch" class="small check-sketch" hidden>
+          <summary>Who is who, as the check read it</summary>
+          <p class="muted">The assistant's reading of the words before it checked the lines. It is not a finding, and it names nobody the words do not name.</p>
+          <p id="check-sketch-words" style="white-space: pre-wrap"></p>
+        </details>
       {% endif %}
     {% endif %}
     <span class="small muted" id="win-state"></span>
