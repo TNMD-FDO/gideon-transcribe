@@ -21,6 +21,41 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.102.0, 2026-09-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The comparison keeps to what could matter.** On the office's copy the
+comparison had been filling rows with trivia: a house the report called
+white that the camera showed as beige, and the like. The Comparison
+template is re-shipped (an unedited copy takes the new wording at the
+upgrade; an edited one is told on the Templates page): a finding is
+worth a row only when it could matter to the case, such as who said what
+and to whom, what was done, in what order and when, where a person or a
+thing was, what was found, force, an injury, rights, consent, a command,
+a refusal or a denial. A colour or a shade, a make or a model, a size, a
+distance, a height, an age or a count judged by eye, a name spelt another
+way, wording that says the same thing, the order of two things when
+nothing turns on it, a scene described as anyone would, and a slip of the
+machine transcript are not findings, even where the record differs. The
+picture is a vision model's description, so on its colours, makes and
+counts alone the record never differs from the report. Every why has to
+rest on a line of the record a reader can check, and in doubt the
+assistant is told to leave a finding out. The four marks, the page order
+and the pass for what the report leaves out are unchanged.
+
+**The clock's own camera, read again, corrects the clock.** On the office's
+server the camera that had set the incident's clock from an unchecked
+reading was read again, checked and with its date read right, and the
+clock kept the old date and stayed "unchecked". When the camera that set
+the clock is read again, the clock takes its new reading, date and all;
+when the time moved, the cameras placed by their clocks or their files
+move with it, and a place set by hand or by the sound stands. A reading
+on any other camera still leaves the clock alone.
+
 ## v1.101.1, 2026-09-30
 
 ```

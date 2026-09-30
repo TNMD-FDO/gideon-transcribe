@@ -523,6 +523,49 @@ def test_a_clock_read_again_places_the_camera_again(person, a_case, monkeypatch)
     assert "sayClocksRead" in script and "clock read once, unchecked" in script
 
 
+@pytest.mark.django_db
+def test_the_clocks_own_camera_read_again_corrects_the_clock(person, a_case):
+    """v1.102.0: on the server the camera that set the clock was read again,
+    checked and with the right date, and the clock kept the unchecked
+    reading's date. The clock takes its own camera's new reading; the other
+    cameras placed by their clocks follow when the time moved, and a hand's
+    place stands."""
+    first = video(
+        person, a_case, "first", stamp=stamp("21:56:19", "05/09/2025", checked=False)
+    )
+    second = video(person, a_case, "second", stamp=stamp("21:57:19", checked=False))
+    blank = {"date": "", "time": "", "camera": "C"}
+    third = video(person, a_case, "third", stamp=blank)
+    incident = incidents.make(a_case, "Stop", [first, second, third], by=person)
+    incidents.place_by_hand(incident.cameras.get(recording=third), 30.0, by=person)
+    incident.refresh_from_db()
+    assert incident.clock_date == "05/09/2025" and incident.clock_checked is False
+    # The same time read again, checked, with the date read right.
+    first.stamp = stamp("21:56:19", "05/08/2025", checked=True)
+    first.save(update_fields=["stamp"])
+    incidents.place_from_clock(incident.cameras.get(recording=first), by=person)
+    incident.refresh_from_db()
+    assert incident.clock_date == "05/08/2025" and incident.clock_checked is True
+    assert incident.cameras.get(recording=first).placed == "clock"
+    assert incident.cameras.get(recording=second).starts_at == 60.0
+    # A time ten seconds on: the clock moves, the second camera follows by
+    # its own clock, and the hand's place stands.
+    first.stamp = stamp("21:56:29", "05/08/2025", checked=True)
+    first.save(update_fields=["stamp"])
+    incidents.place_from_clock(incident.cameras.get(recording=first), by=person)
+    incident.refresh_from_db()
+    assert incident.cameras.get(recording=first).starts_at == 0.0
+    assert incident.cameras.get(recording=second).starts_at == 50.0
+    assert incident.cameras.get(recording=third).starts_at == 30.0
+    assert incident.cameras.get(recording=third).placed == "hand"
+    # Another camera's checked reading still says nothing about the clock.
+    second.stamp = stamp("21:57:19", "05/06/2025", checked=True)
+    second.save(update_fields=["stamp"])
+    incidents.place_from_clock(incident.cameras.get(recording=second), by=person)
+    incident.refresh_from_db()
+    assert incident.clock_date == "05/08/2025"
+
+
 # The sound match ----------------------------------------------------------------------
 
 

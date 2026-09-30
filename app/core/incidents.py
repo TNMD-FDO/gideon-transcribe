@@ -865,6 +865,43 @@ def place_from_clock(
             quietly=quietly,
         )
         return True
+    if camera.placed in (CLOCK, CLOCK_UNCHECKED) and camera.starts_at == 0.0:
+        # The camera that set the clock, read again (v1.102.0): the clock
+        # takes its new reading, date and checked flag. When the time moved,
+        # the cameras placed by their clocks or their files follow it; a
+        # place by hand or by the sound is relative to this camera and stands.
+        moved = zero != incident.clock_zero
+        incident.clock_zero = zero
+        incident.clock_date = ((camera.recording.stamp or {}).get("date") or "").strip()
+        incident.clock_checked = checked
+        incident.save(update_fields=["clock_zero", "clock_date", "clock_checked"])
+        _placed(
+            camera,
+            CLOCK if checked else CLOCK_UNCHECKED,
+            0.0,
+            by=by,
+            request=request,
+            quietly=quietly,
+        )
+        if moved:
+            others = incident.cameras.exclude(pk=camera.pk).select_related("recording")
+            for other in others:
+                if other.placed in (CLOCK, CLOCK_UNCHECKED):
+                    theirs = clock_zero_of(other.recording)
+                elif other.placed == FILE:
+                    _, theirs = file_time_of(other.recording)
+                else:
+                    continue
+                if theirs is not None:
+                    _placed(
+                        other,
+                        other.placed,
+                        _wrapped(theirs - zero),
+                        by=by,
+                        request=request,
+                        quietly=True,
+                    )
+        return True
     _placed(
         camera,
         CLOCK if checked else CLOCK_UNCHECKED,

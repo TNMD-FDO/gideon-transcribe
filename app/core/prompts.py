@@ -123,7 +123,12 @@ SHIPPED_HISTORY = {
     "prompt:memo_sheet": ("437c424c772c9ea4", "2ecefcb6080f757d"),
     "prompt:incident_chat": ("1e49dfacd7a8a160", "b34225f790a3e94e"),
     # Re-shipped in v1.90.0: an officer's say-so is not the record agreeing.
-    "prompt:comparison": ("127d85e163af4cba", "d59b992243fb63bf"),
+    # v1.102.0: what could matter and what does not; every why on a line.
+    "prompt:comparison": (
+        "127d85e163af4cba",
+        "d59b992243fb63bf",
+        "e11c5c7a9829cd13",
+    ),
 }
 
 
@@ -982,9 +987,25 @@ COMPARISON = (
     "picture is a description, not a fact; say what was said and what was "
     "seen, and never what it means in law. Where the report's words may be "
     "misread (a scan), say so in the why. Spend the findings on the "
-    "defence: every difference and every claim not on camera, and "
-    "agreement only on the claims that decide the case; skip headings, "
-    "form fields and boilerplate. Plain words, one short sentence each."
+    "defence: every difference and every claim not on camera that could "
+    "matter to the case, and agreement only on the claims that decide it; "
+    "skip headings, form fields and boilerplate. What could matter: who "
+    "said what and to whom, what was done, in what order and when, where a "
+    "person or a thing was, what was found and where, force, an injury, "
+    "rights, consent, a command, a refusal, a denial. What does not: a "
+    "colour or a shade, a make or a model, a size, a distance, a height, an "
+    "age or a count judged by eye, a name or an address spelt another way, "
+    "wording that says the same thing in other words, the order of two "
+    "things when nothing turns on it, a scene described as anyone would "
+    "describe it, and a slip of the machine transcript. Leave those out "
+    "even where the record differs; they are not findings. The picture is "
+    "a vision model's description, and its colours, makes and counts are "
+    "impressions: on those alone the record never differs from the report. "
+    "Every why rests on the record: quote the words, or name the camera's "
+    "line and its time, so a reader can check it; a finding that cannot "
+    "point to a line of the record is not one. In doubt, leave it out: a "
+    "few findings a reader can trust are worth more than many to sift. "
+    "Plain words, one short sentence each."
 )
 COMPARISON_FORMAT = (
     'Answer with JSON only: {"findings": [{"page": 4, "paragraph": 2, '
@@ -1494,8 +1515,10 @@ def comparison_input(
             f"The report, pages {first} to {last} (each paragraph on its own line, "
             "with its page and paragraph number in front):\n" + paragraphs,
             "Compare these pages of the report with the record: for each claim of "
-            "fact, agrees, differs or not_on_camera, with the paragraph and the "
-            "moment. Do not report what the report leaves out here.",
+            "fact that could matter to the case, agrees, differs or not_on_camera, "
+            "with the paragraph and the moment; nothing on a colour, a make, a "
+            "size, a distance or the wording alone. Do not report what the report "
+            "leaves out here.",
         ]
     )
 

@@ -346,6 +346,12 @@ def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     assert "[Report, page 1, paragraph 3] A small bag was found" in user
     assert "Event 1, 21:56:47, Gun found" in user and "I got gun" in user
     assert "Do not report what the report leaves out here." in user
+    # v1.102.0: the ask keeps to what could matter, and the template says
+    # what does not.
+    assert "nothing on a colour, a make, a size, a distance" in user
+    everything = " ".join(str(m["content"]) for m in asked[0]["messages"])
+    assert "a colour or a shade, a make or a model" in everything
+    assert "cannot point to a line of the record is not one" in everything
     assert "15 at most" in asked[1]["messages"][-1]["content"]
     assert "Radio talk" in asked[1]["messages"][-1]["content"]
     assert (
