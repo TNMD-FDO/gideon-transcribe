@@ -158,8 +158,9 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     admin, tmp_path, settings, client, monkeypatch, django_capture_on_commit_callbacks
 ):
     switched_on()
-    # One window over the whole recording: its lines span twelve minutes.
-    settings_store.set_to("speaker_check_window_seconds", 1800)
+    # Ten-minute windows: these lines span twelve minutes, so two, which the
+    # whole read replaces (v1.100.0).
+    settings_store.set_to("speaker_check_window_seconds", 600)
     deferred = swallow(monkeypatch)
     recording = a_recording(admin, tmp_path, settings)
     transcript = recording.transcript
@@ -198,6 +199,10 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     assert "schema" not in sketching
     assert check.sketch == SKETCH and check.whole is True
     call = asked[1]
+    # Read whole, the one call has the time of the windows it replaced
+    # (v1.100.1): these lines span twelve minutes, two ten-minute windows.
+    assert sketching["timeout"] == assistant.time_limit("speaker_check")
+    assert call["timeout"] == assistant.time_limit("speaker_check") * 2
     assert prompts.SPEAKER_SKETCH_ABOVE in call["messages"][-1]["content"]
     assert SKETCH in call["messages"][-1]["content"]
     assert prompts.SPEAKER_SKETCH_USE in call["messages"][-1]["content"]

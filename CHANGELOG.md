@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.100.1, 2026-09-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**A transcript read whole gets the time its windows had.** The Speaker
+check's time limit is per call. Read whole, one call does the work of
+every window it replaced but had only one window's time, and on the
+office's server a busy engine timed the whole read out where three
+windows would each have had their own limit. The whole read is now given
+the limit times the number of windows it replaced. The sketch's call keeps
+the single limit.
+
 ## v1.100.0, 2026-09-30
 
 ```

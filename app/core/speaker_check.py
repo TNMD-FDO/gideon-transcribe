@@ -309,11 +309,12 @@ def run(check_id, attempt: int = 1) -> None:
             window=assistant.window(),
         )
         check.whole = whole
-        spans = (
-            [(0, len(lines))]
-            if whole
-            else windows(lines, settings_store.speaker_check_window_seconds())
-        )
+        sliced = windows(lines, settings_store.speaker_check_window_seconds())
+        spans = [(0, len(lines))] if whole else sliced
+        # Read whole, one call does the work of every window it replaced, so
+        # it is given their time (v1.100.1: a busy engine timed the whole
+        # read out at one window's limit).
+        limit = assistant.time_limit(FEATURE) * (max(1, len(sliced)) if whole else 1)
         for start, end in spans:
             window = lines[start:end]
             user = prompts.speaker_check_input(window, speakers, sketch)
@@ -325,7 +326,7 @@ def run(check_id, attempt: int = 1) -> None:
                 assistant._messages(system, user),
                 max_completion_tokens=answer_cap,
                 thinking=assistant.thinking(),
-                timeout=assistant.time_limit(FEATURE),
+                timeout=limit,
                 schema=prompts.speaker_check_schema(speakers),
                 **assistant.SUGGESTION_SAMPLING,
             )
