@@ -356,7 +356,9 @@ def _keep_or_why(
         why = (said + why)[:WHY_MOST]
     shown = str(item.get("shown", "")).strip().lower()
     kind = str(item.get("kind", "")).strip().lower()
-    if kind in TRIVIAL_KINDS:
+    # Differences alone are narrowed (v1.103.1): a claim not on camera, an
+    # agreement and an omission are findings whatever they turn on.
+    if mark == DIFFERS and kind in TRIVIAL_KINDS:
         return None, f"on {kind} alone"
     if mark == DIFFERS and shown == SHOWN_NOTHING:
         mark = NOT_ON_CAMERA
@@ -594,9 +596,17 @@ def compare(comparison_id, attempt: int = 1) -> None:
                 whole,
                 most=settings_store.compare_left_out_most(),
             )
-            if prompts.fits(system, user, answer_cap=cap, window=assistant.window()):
+            # The omissions answer in a format of their own (v1.103.1).
+            system_left = prompts.system_message(
+                ground.text,
+                template.text,
+                prompts.COMPARISON_LEFT_OUT_FORMAT + "\n\n" + prompts.INCIDENT_RULES,
+            )
+            if prompts.fits(
+                system_left, user, answer_cap=cap, window=assistant.window()
+            ):
                 answer = engine.complete(
-                    assistant._messages(system, user),
+                    assistant._messages(system_left, user),
                     max_completion_tokens=cap,
                     thinking=assistant.thinking(),
                     timeout=assistant.time_limit(FEATURE),
@@ -613,15 +623,26 @@ def compare(comparison_id, attempt: int = 1) -> None:
                     for item in _parse(answer["text"]):
                         if len(findings) >= FINDINGS_MOST:
                             break
+                        # Everything this pass names is an omission; a mark
+                        # left off is not a reason to lose it.
+                        if isinstance(item, dict) and not item.get("mark"):
+                            item = {**item, "mark": NOT_IN_REPORT}
                         one, why = _keep_or_why(comparison, item, known, taken)
                         if one is None:
                             drop(why)
                         elif one["mark"] == NOT_IN_REPORT:
                             findings.append(one)
                 except (ValueError, AttributeError):
+                    # The size and the first characters, never the words
+                    # (v1.103.1): the next unreadable answer can be told
+                    # from a cut one or a refusal.
                     log.warning(
-                        "comparison %s: the left-out answer was unreadable",
+                        "comparison %s: the left-out answer was unreadable "
+                        "(%d chars, starts %r, finish %s)",
                         comparison.pk,
+                        len(answer.get("text") or ""),
+                        (answer.get("text") or "")[:12],
+                        answer.get("finish_reason"),
                     )
                     unreadable += 1
             else:

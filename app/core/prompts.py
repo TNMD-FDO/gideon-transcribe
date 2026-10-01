@@ -130,6 +130,9 @@ SHIPPED_HISTORY = {
         "d59b992243fb63bf",
         "e11c5c7a9829cd13",
         "573fcc2cb5fce707",
+        # v1.103.1: the narrowing is of differences alone; "in doubt, leave
+        # it out" withdrawn.
+        "86ab67e902b32796",
     ),
 }
 
@@ -992,25 +995,24 @@ COMPARISON = (
     "picture is a description, not a fact; say what was said and what was "
     "seen, and never what it means in law. Where the report's words may be "
     "misread (a scan), say so in the why. Spend the findings on the "
-    "defence: every difference and every claim not on camera that could "
-    "matter to the case, and agreement only on the claims that decide it; "
-    "skip headings, form fields and boilerplate. What could matter: who "
-    "said what and to whom, what was done, in what order and when, where a "
-    "person or a thing was, what was found and where, force, an injury, "
-    "rights, consent, a command, a refusal, a denial. What does not: a "
-    "colour or a shade, a make or a model, a size, a distance, a height, an "
-    "age or a count judged by eye, a name or an address spelt another way, "
-    "wording that says the same thing in other words, the order of two "
-    "things when nothing turns on it, a scene described as anyone would "
-    "describe it, and a slip of the machine transcript. Leave those out "
-    "even where the record differs; they are not findings. The picture is "
-    "a vision model's description, and its colours, makes and counts are "
+    "defence: every difference and every claim not on camera, and "
+    "agreement only on the claims that decide the case; skip headings, "
+    "form fields and boilerplate. A difference has to be one that could "
+    "matter: who said what and to whom, what was done, in what order and "
+    "when, where a person or a thing was, what was found and where, force, "
+    "an injury, rights, consent, a command, a refusal, a denial. A "
+    "difference that turns only on a colour or a shade, a make or a model, "
+    "a size, a distance, a height, an age or a count judged by eye, a name "
+    "or an address spelt another way, wording that says the same thing in "
+    "other words, the order of two things when nothing turns on it, or a "
+    "slip of the machine transcript is not a finding. The picture is a "
+    "vision model's description, and its colours, makes and counts are "
     "impressions: on those alone the record never differs from the report. "
-    "Every why rests on the record: quote the words, or name the camera's "
-    "line and its time, so a reader can check it; a finding that cannot "
-    "point to a line of the record is not one. In doubt, leave it out: a "
-    "few findings a reader can trust are worth more than many to sift. "
-    "Plain words, one short sentence each."
+    "That narrows the differences and nothing else: a claim of fact the "
+    "record does not show is still not on camera and still a finding, "
+    "every one of them. The why of an agrees or a differs rests on the "
+    "record: quote the words, or name the camera's line and its time, so a "
+    "reader can check it. Plain words, one short sentence each."
 )
 COMPARISON_FORMAT = (
     'Answer with JSON only: {"findings": [{"page": 4, "paragraph": 2, '
@@ -1035,6 +1037,17 @@ COMPARISON_FORMAT = (
     "empty only for not_on_camera. For not_in_report the claim is the event "
     "or moment the report leaves out, with its time, and page and paragraph "
     "empty. No other text."
+)
+# The pass for what the report leaves out answers in a format of its own
+# (v1.103.1): an omission has no paragraph, no basis and nothing the record
+# shows otherwise, and asked for those fields the engine's answer could not
+# be read on the office's copy, losing every omission of a run.
+COMPARISON_LEFT_OUT_FORMAT = (
+    'Answer with JSON only: {"findings": [{"claim": "the event the report '
+    'leaves out, in a few words", "at": "hh:mm:ss", "mark": "not_in_report", '
+    '"why": "one sentence"}]}. The time copied from the event\'s line in '
+    "the chronology. An empty list when the report leaves nothing out. No "
+    "other text."
 )
 # A memo cut at the cap is continued (v1.90.1): the model is shown what it
 # wrote and told to go on from there.
@@ -1530,10 +1543,10 @@ def comparison_input(
             f"The report, pages {first} to {last} (each paragraph on its own line, "
             "with its page and paragraph number in front):\n" + paragraphs,
             "Compare these pages of the report with the record: for each claim of "
-            "fact that could matter to the case, agrees, differs or not_on_camera, "
-            "with the paragraph and the moment; nothing on a colour, a make, a "
-            "size, a distance or the wording alone. Do not report what the report "
-            "leaves out here.",
+            "fact, agrees, differs or not_on_camera, with the paragraph and the "
+            "moment; every claim the record does not show is not_on_camera, and "
+            "no difference on a colour, a make, a size, a distance or the wording "
+            "alone. Do not report what the report leaves out here.",
         ]
     )
 
@@ -1555,7 +1568,7 @@ def comparison_left_out_input(
             "or turned off. Radio talk, the scene described, pleasantries and "
             "an officer's remarks to another officer are not findings. Give "
             "each as not_in_report with the event's time as at and its line as "
-            f"the claim, page and paragraph empty; {most} at most, the ones that "
+            f"the claim; {most} at most, the ones that "
             "matter most. An event the report mentions anywhere, in any words, "
             "is not a finding. No other marks.",
         ]

@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.103.1, 2026-10-01
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The comparison's breadth restored, and the omissions pass repaired.** On
+a second incident on the office's copy, v1.103.0 came back with four
+differences and nothing else, where the same report had given agreements,
+claims not on camera and sixteen omissions the week before. Two causes,
+both from the last two releases:
+
+- **The pass for what the report leaves out could not be read.** It shared
+  the findings' answer format, and v1.103.0 added fields to it that an
+  omission does not have. The pass now answers in a short format of its
+  own (the event, its time, one sentence), an item with no mark is an
+  omission, nothing narrows an omission by what it turns on, and an
+  answer that cannot be read is logged with its size and first characters
+  so the next one can be diagnosed.
+- **The engine had stopped writing anything but differences.** The
+  v1.102.0 wording told it to leave a finding out when in doubt and that
+  a finding with no line of the record was not one, which is every claim
+  not on camera. Those sentences are gone. The narrowing (colour, size,
+  make, count, wording) now applies to differences alone, in the template
+  and in the app: every claim of fact the record does not show is Not on
+  camera again, and an agreement is kept whatever it turns on.
+
+Tried before shipping, from the engine worker and saving nothing, against
+two reports with the old wording beside the new: breadth is back on both
+(on the larger, 5 agree, 1 differs, 15 not on camera, 15 not in the
+report; the wording of v1.101 gave 7, 2, 12 and 15 the same hour), and
+the difference on a car's make was dropped by the app. The Comparison
+template is re-shipped; an office that edited or pasted its own copy
+presses Reset on the Templates page to take it.
+
 ## v1.103.0, 2026-09-30
 
 ```

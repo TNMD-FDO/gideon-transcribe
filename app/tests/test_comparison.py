@@ -318,17 +318,15 @@ def test_a_differs_on_nothing_shown_or_on_colour_alone_is_not_a_difference(
     assert arrived["why"].startswith("Nothing on the record shows otherwise: ")
     assert rows["Taken into custody without force"]["mark"] == "differs"
     assert rows["The driver said the bag was not his"]["mark"] == "differs"
-    assert "A gold SUV" not in rows and "Officers said stop" not in rows
-    assert "Resisted by pulling away" not in rows
-    assert made.dropped == {
-        "on colour alone": 1,
-        "on wording alone": 1,
-        "same moment told twice": 1,
-    }
+    assert "A gold SUV" not in rows and "Resisted by pulling away" not in rows
+    # v1.103.1: differences alone are narrowed; an agreement is a finding
+    # whatever it turns on.
+    assert rows["Officers said stop"]["mark"] == "agrees"
+    assert made.dropped == {"on colour alone": 1, "same moment told twice": 1}
     said = comparison.as_json(made, report, incident)["words"]
-    assert "3 findings dropped: on colour alone 1, on wording alone 1" in said
+    assert "2 findings dropped: on colour alone 1, same moment told twice 1" in said
     assert made.counts() == {
-        "agrees": 0,
+        "agrees": 1,
         "differs": 2,
         "not_on_camera": 1,
         "not_in_report": 0,
@@ -336,6 +334,49 @@ def test_a_differs_on_nothing_shown_or_on_colour_alone_is_not_a_difference(
     assert '"shown": "otherwise" or "nothing"' in prompts.COMPARISON_FORMAT
     assert '"kind": "who"' in prompts.COMPARISON_FORMAT
     assert "Absence is never a difference" in prompts.COMPARISON
+
+
+def test_the_omissions_pass_keeps_what_it_names_and_says_when_it_cannot_be_read(
+    stop, person, monkeypatch, caplog
+):
+    """v1.103.1: on the office's copy a run lost all sixteen omissions: the
+    pass shared the findings' format, was asked for fields an omission does
+    not have, and its answer could not be read. It answers in its own short
+    format; an item with no mark is an omission, never narrowed by what it
+    turns on; and an answer that cannot be read is logged with its size and
+    first characters."""
+    incident, report, first = stop
+    made = comparison.ask_for(report, incident, by=person)
+    engine_answering(
+        monkeypatch,
+        [
+            findings_json(),
+            findings_json(
+                {"claim": "Gun found", "at": "21:56:47", "why": "Never mentioned."},
+                {
+                    "claim": "He said it was not his",
+                    "at": "21:57:17",
+                    "mark": "not_in_report",
+                    "kind": "wording",
+                    "why": "Never mentioned.",
+                },
+            ),
+        ],
+    )
+    comparison.compare(made.pk)
+    made.refresh_from_db()
+    assert made.state == "done" and made.dropped == {}
+    assert [(one["mark"], one["claim"]) for one in made.findings] == [
+        ("not_in_report", "Gun found"),
+        ("not_in_report", "He said it was not his"),
+    ]
+    again = comparison.ask_for(report, incident, by=person)
+    engine_answering(monkeypatch, [findings_json(), '{"findings": [{"claim": oops'])
+    with caplog.at_level("WARNING", logger="transcribe.comparison"):
+        comparison.compare(again.pk)
+    again.refresh_from_db()
+    assert again.state == "done" and again.unreadable == 1
+    assert "the left-out answer was unreadable (28 chars, starts" in caplog.text
 
 
 def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
@@ -448,10 +489,20 @@ def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     assert "Do not report what the report leaves out here." in user
     # v1.102.0: the ask keeps to what could matter, and the template says
     # what does not.
-    assert "nothing on a colour, a make, a size, a distance" in user
+    assert "no difference on a colour, a make, a size, a distance" in user
+    # v1.103.1: the narrowing is of differences alone; a claim the record
+    # does not show is still asked for, every one.
+    assert "every claim the record does not show is not_on_camera" in user
     everything = " ".join(str(m["content"]) for m in asked[0]["messages"])
     assert "a colour or a shade, a make or a model" in everything
-    assert "cannot point to a line of the record is not one" in everything
+    assert "still not on camera and still a finding" in everything
+    assert "In doubt, leave it out" not in everything
+    # The omissions pass answers in a format of its own (v1.103.1): no
+    # paragraph, basis, shown or kind to fill in for a thing the report
+    # never says.
+    left = " ".join(str(m["content"]) for m in asked[1]["messages"])
+    assert prompts.COMPARISON_LEFT_OUT_FORMAT in left
+    assert '"shown"' not in left and '"basis"' not in left
     assert "15 at most" in asked[1]["messages"][-1]["content"]
     assert "Radio talk" in asked[1]["messages"][-1]["content"]
     assert (
