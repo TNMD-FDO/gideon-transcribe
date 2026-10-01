@@ -1049,6 +1049,44 @@ COMPARISON_LEFT_OUT_FORMAT = (
     "the chronology. An empty list when the report leaves nothing out. No "
     "other text."
 )
+# The check (v1.104.0): each Agrees and Differs row read again beside the
+# record's own lines at the moments it cites, by a call that sees nothing
+# else. The writer of a finding does not police it: on the office's copy it
+# marked an officer's assumption as a person's words, and differences where
+# the record only lacked the thing. Fixed wording, not an office's template:
+# the app acts on the answers, so the words and the rules go together. Tried
+# on two reports from the engine worker before it was built.
+COMPARISON_CHECK = (
+    "You check the findings of a comparison between a police report and the "
+    "record of what the cameras recorded, for the office that defends the "
+    "accused. For each finding you are given the report's claim, the mark it "
+    "was given (agrees or differs), the reason written for the mark, and the "
+    "lines of the record at the moments the finding cites: words said, each "
+    "with its time, and lines beginning Camera, which describe the picture. "
+    "Judge each finding on those lines alone; never suppose what is not in "
+    "them. For each finding answer three things. Record: shows, when the "
+    "lines show or say the thing the report's claim says; otherwise, when "
+    "the lines show or say something else in its place; lacks, when the "
+    "lines neither show nor say it (a thing not mentioned, not visible, not "
+    "named or not covered by the footage is lacking, not otherwise). Source: "
+    "what the finding rests on in those lines: picture, a Camera line; "
+    "civilian, the words of the person stopped or another member of the "
+    "public; officer, an officer's words (a command, radio talk, an officer "
+    "telling another what happened, what he assumes or what someone said); "
+    "unclear, when the lines do not tell. But for: when the claim and the "
+    "lines describe the same person, thing or event and part only over a "
+    "colour or a shade, a make or a model, a size or a distance, a count "
+    "judged by eye, the spelling of a name, or the wording, name which one "
+    "(colour, make, size, count, spelling, wording); none, when they part "
+    "over what happened, who did or said it, where, when or what was said."
+)
+COMPARISON_CHECK_FORMAT = (
+    'Answer with JSON only: {"checks": [{"n": 1, "record": "shows" or '
+    '"otherwise" or "lacks", "source": "picture" or "civilian" or "officer" '
+    'or "unclear", "but_for": "none" or "colour" or "make" or "size" or '
+    '"count" or "spelling" or "wording", "because": "a few words"}]}. '
+    "One entry for every finding given, by its number. No other text."
+)
 # A memo cut at the cap is continued (v1.90.1): the model is shown what it
 # wrote and told to go on from there.
 CONTINUE_MEMO = (
@@ -1573,6 +1611,26 @@ def comparison_left_out_input(
             "is not a finding. No other marks.",
         ]
     )
+
+
+def comparison_check_input(rows: list[dict]) -> str:
+    """The findings to check, each with the record's lines at its moments."""
+    blocks = []
+    for number, row in enumerate(rows, start=1):
+        lines = row["lines"]
+        blocks.append(
+            f"Finding {number}\n"
+            f"The report's claim: {row['claim']}\n"
+            f"Mark: {row['mark']}\n"
+            f"The reason written: {row['why']}\n"
+            "The record at the moments cited:\n"
+            + (
+                "\n".join(lines)
+                if lines
+                else "(no lines of the record at those moments)"
+            )
+        )
+    return "\n\n".join(blocks) + "\n\nCheck each finding on its lines alone."
 
 
 def incident_memo_input(

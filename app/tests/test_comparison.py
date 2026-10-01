@@ -379,6 +379,159 @@ def test_the_omissions_pass_keeps_what_it_names_and_says_when_it_cannot_be_read(
     assert "the left-out answer was unreadable (28 chars, starts" in caplog.text
 
 
+def checks_json(*items):
+    return json.dumps({"checks": list(items)})
+
+
+def test_the_check_reads_each_row_beside_the_records_lines_and_acts_where_two_agree(
+    stop, person, monkeypatch
+):
+    """v1.104.0: the writer of a finding does not police it. On the office's
+    copy it marked an officer's assumption as a person's words, differences
+    where the record only lacked the thing, and a car's colour. Each Agrees
+    and Differs row is read again, twice, beside the record's lines at the
+    moments it cites; where both readings say the same the app acts. From
+    the picture a colour or a count is an impression; said by a person a
+    number is a fact. A reading that fails changes nothing."""
+    incident, report, first = stop
+    made = comparison.ask_for(report, incident, by=person)
+    base = {"page": 1, "paragraph": 3, "basis": "person", "shown": "otherwise"}
+    first_reading = [
+        {"n": 1, "record": "shows", "source": "officer", "but_for": "none"},
+        {"n": 2, "record": "otherwise", "source": "picture", "but_for": "colour"},
+        {"n": 3, "record": "otherwise", "source": "officer", "but_for": "count"},
+        {"n": 4, "record": "lacks", "source": "picture", "but_for": "none"},
+        {"n": 5, "record": "otherwise", "source": "officer", "but_for": "none"},
+    ]
+    second_reading = [dict(one) for one in first_reading]
+    second_reading[4]["but_for"] = "wording"
+    asked = engine_answering(
+        monkeypatch,
+        [
+            findings_json(
+                dict(
+                    base,
+                    paragraph=2,
+                    claim="Aldridge was the driver",
+                    at="21:56:17",
+                    mark="agrees",
+                    kind="who",
+                    why="The record identifies him as the driver at 21:57:17.",
+                ),
+                dict(
+                    base,
+                    paragraph=2,
+                    claim="A gold SUV",
+                    at="21:56:47",
+                    mark="differs",
+                    basis="picture",
+                    kind="thing",
+                    why="The camera shows a silver SUV.",
+                ),
+                dict(
+                    base,
+                    claim="Three orders were given",
+                    at="21:56:17",
+                    mark="differs",
+                    basis="officer",
+                    kind="act",
+                    why="One order is heard.",
+                ),
+                dict(
+                    base,
+                    claim="The bag held a pistol",
+                    at="21:57:17",
+                    mark="differs",
+                    kind="thing",
+                    why="The record shows no pistol.",
+                ),
+                dict(
+                    base,
+                    claim="Unknown liquid",
+                    at="21:56:47",
+                    mark="differs",
+                    kind="words",
+                    why="An officer says it was water.",
+                ),
+            ),
+            findings_json(),
+            checks_json(*first_reading),
+            "```json\n" + checks_json(*second_reading) + "\n```",
+        ],
+    )
+    comparison.compare(made.pk)
+    made.refresh_from_db()
+    assert made.state == "done" and made.unreadable == 0
+    rows = {one["claim"]: one for one in made.findings}
+    driver = rows["Aldridge was the driver"]
+    assert driver["mark"] == "not_on_camera" and driver["basis"] == "officer"
+    assert driver["why"].startswith("An officer's words alone: The record identifies")
+    assert "A gold SUV" not in rows and made.dropped == {"on colour alone": 1}
+    assert rows["Three orders were given"]["mark"] == "differs"
+    pistol = rows["The bag held a pistol"]
+    assert pistol["mark"] == "not_on_camera"
+    assert pistol["why"].startswith("Nothing on the record shows otherwise: ")
+    assert rows["Unknown liquid"]["mark"] == "differs"
+    assert made.second_look == {
+        "rows": 5,
+        "moved": 2,
+        "dropped": 1,
+        "apart": 1,
+        "unread": 0,
+        "calls": 2,
+    }
+    said = comparison.as_json(made, report, incident)["words"]
+    assert (
+        "5 findings checked against the record's lines, 2 moved to not on camera, "
+        "1 dropped; 1 left as written where the two checks differed"
+    ) in said
+    # The check is given each row with the record's lines at its moments (its
+    # own, and a time its why names), the same words both times, and nothing
+    # of the report or the rest of the record.
+    assert len(asked) == 4
+    system, user = (str(m["content"]) for m in asked[2]["messages"][:2])
+    assert prompts.COMPARISON_CHECK in system
+    assert prompts.COMPARISON_CHECK_FORMAT in system
+    assert "Finding 1\nThe report's claim: Aldridge was the driver" in user
+    one = user.split("Finding 2")[0]
+    assert "Step out of the vehicle for me." in one and "That bag is not mine." in one
+    assert "I got gun" not in one and "[Report, page" not in user
+    assert asked[3]["messages"] == asked[2]["messages"]
+    row = Row.objects.filter(event="AI assistant call").order_by("-at").first()
+    assert row.details["calls"] == 4
+    assert row.details["checked"] == 5 and row.details["moved"] == 2
+    # A check that cannot be read changes nothing, and the page says so.
+    again = comparison.ask_for(report, incident, by=person)
+    engine_answering(
+        monkeypatch,
+        [
+            findings_json(
+                dict(
+                    base,
+                    claim="The bag held a pistol",
+                    at="21:57:17",
+                    mark="differs",
+                    kind="thing",
+                    why="The record shows no pistol.",
+                )
+            ),
+            findings_json(),
+            "not json",
+            "not json either",
+        ],
+    )
+    comparison.compare(again.pk)
+    again.refresh_from_db()
+    assert again.state == "done" and again.unreadable == 0
+    assert [one["mark"] for one in again.findings] == ["differs"]
+    assert again.second_look["unread"] == 1 and again.second_look["moved"] == 0
+    said = comparison.as_json(again, report, incident)["words"]
+    assert "the findings could not be checked against the record's lines" in said
+    # A comparison written before the check says nothing of it.
+    again.second_look = {}
+    assert comparison.second_look_words(again) == ""
+
+
 def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     stop, person, monkeypatch
 ):
@@ -510,10 +663,11 @@ def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
         in (asked[1]["messages"][-1]["content"])
     )
     assert "Answer with JSON only" in asked[0]["messages"][0]["content"]
-    # One assistant row for the run, counting its two calls; one row for the
-    # run's counts; never the words.
+    # One assistant row for the run, counting its calls (the window, the
+    # omissions, and since v1.104.0 the two readings of the check); one row
+    # for the run's counts; never the words.
     call = Row.objects.get(event="AI assistant call")
-    assert call.details["calls"] == 2 and call.details["feature"] == "compare_report"
+    assert call.details["calls"] == 4 and call.details["feature"] == "compare_report"
     run = Row.objects.get(event="Comparison run")
     assert run.details["findings"] == 4 and run.details["differs"] == 1
     assert "bag" not in json.dumps(run.details).lower()

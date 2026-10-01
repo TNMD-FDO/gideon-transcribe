@@ -337,6 +337,7 @@ One subsection per project, newest entry first, written only by that project in 
 
 ### Gideon Transcribe
 
+- **2026-10-01, at v1.104.0 (the comparison checks its findings against the record; nothing shared moves).** One column on the comparison (migration 0071). Each comparison now ends with two more requests to GIDEON's engine, small ones (about 8,000 tokens in, a few hundred out, some twelve seconds each on the day), at the app's usual priority; a report with more than twenty Agrees and Differs rows adds two more per twenty. Tried from the engine worker the same afternoon: eight such requests. No port, memory, card, timer or network moves.
 - **2026-10-01, at v1.103.1 (the comparison's breadth restored, its omissions pass repaired; nothing shared moves).** Wording and a format; no migration. The change was tried from the engine worker before shipping: four comparison-sized requests to GIDEON's engine in about seven minutes of a weekday morning, at the app's usual priority. No port, memory, card, timer or network moves.
 - **2026-09-30, at v1.103.0 (the comparison's rules enforced by the app; nothing shared moves).** Two fields in the engine's answer and three rules in the app; the template re-shipped; no migration. No port, memory, card, timer or network moves.
 - **2026-09-30, at v1.102.0 (the comparison keeps to what could matter; the clock's own camera corrects the clock; nothing shared moves).** A re-shipped template and a placing rule; no migration. No port, memory, card, timer or network moves.

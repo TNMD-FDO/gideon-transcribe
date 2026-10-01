@@ -21,6 +21,46 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.104.0, 2026-10-01
+
+```
+Models: unchanged
+Database: migrates (0071: what the check did to a comparison)
+```
+
+**The comparison checks its own findings against the record.** The
+assistant that writes a finding does not police it: on the office's copy
+it marked "the accused was the driver" as agreed on the strength of an
+officer's "I'm assuming he's the driver", labelled as a person's words;
+it marked differences where the record only lacked the thing; and it kept
+a difference on a car's colour whatever the wording told it. Each Agrees
+and Differs row is now read again by a short call that sees only the
+claim, the mark, the reason, and the record's own lines within fifteen
+seconds of every moment the row cites. It answers three things: whether
+those lines show the claim, show otherwise or lack it; whether the row
+rests on the picture, a civilian's words or an officer's; and whether the
+claim and the record part only over a colour, a make, a size, a count,
+a spelling or the wording.
+
+The check is read twice, and the app acts only where the two readings
+agree, as the clock's read does:
+
+- a difference that rests on spelling or wording alone, or on a colour, a
+  make, a size or a count from the picture alone, is dropped (a number a
+  person says is a fact: three orders against one stays a difference);
+- a difference whose lines only lack the thing becomes Not on camera;
+- an agreement whose lines lack the thing, or hold it only in an officer's
+  words, becomes Not on camera, the why saying which.
+
+Where the readings differ, or a check cannot be read, the row stands as
+written. The comparison's foot says what was done: "6 findings checked
+against the record's lines, 4 moved to not on camera, 1 dropped; 1 left as
+written where the two checks differed". It adds two short calls to a
+comparison, about twelve seconds each on the office's engine. Tried from
+the engine worker before it was built, on two reports, twice each: its
+verdicts matched a by-hand reading of every row. The check's wording is
+fixed, not an office template, since the app acts on its answers.
+
 ## v1.103.1, 2026-10-01
 
 ```

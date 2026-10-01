@@ -99,6 +99,11 @@ class Comparison(models.Model):
     # by reason, so an empty comparison says why.
     unreadable = models.IntegerField(default=0)
     dropped = models.JSONField(default=dict, blank=True)
+    # The check against the record's lines (v1.104.0): how many Agrees and
+    # Differs rows it read, how many it moved to not on camera or dropped,
+    # how many it left because its two readings differed or could not be
+    # read. {"rows", "moved", "dropped", "apart", "unread", "calls"}
+    second_look = models.JSONField(default=dict, blank=True)
     model = models.CharField(max_length=120, blank=True, default="")
     template_version = models.IntegerField(default=1)
     ground_rules_version = models.IntegerField(default=1)
@@ -255,6 +260,7 @@ def _record_for(comparison: Comparison) -> dict:
         return {
             "head": _cameras_line(incident),
             "events": event_lines,
+            "rows": record["rows"],
             "record": _record_text(incident, record, set()),
             "lines": len(record["rows"]),
             "cameras": record["used"] + record["transcript_only"],
@@ -405,6 +411,226 @@ def _keep_or_why(
         "note": "",
         "event": "",
     }, ""
+
+
+# The check against the record's lines (v1.104.0) -------------------------------
+# The lines within this many seconds of a moment a finding cites, the most
+# moments, lines a moment and lines a finding; the findings one call checks;
+# and the readings each finding gets. The app acts only where the readings
+# agree, as the clock's read does.
+CHECK_NEAR = 15.0
+CHECK_TIMES = 4
+CHECK_LINES_A_TIME = 12
+CHECK_LINES_A_FINDING = 30
+CHECK_BATCH = 20
+CHECK_READINGS = 2
+# What a difference may not rest on alone. From the picture, a colour, a
+# make, a size or a count is a vision model's impression; said by a person,
+# a number is a fact (three orders against one is a difference). Spelling
+# and wording are never a difference, whoever they come from.
+PICTURE_TRIVIA = ("colour", "make", "size", "count")
+ANY_TRIVIA = ("spelling", "wording")
+LACKS = "lacks"
+OFFICER = "officer"
+DROP = "drop:"
+
+
+def _record_rows(against: dict) -> list[tuple[float, str]]:
+    """The record as (seconds, line): an incident's rows on its clock, or a
+    recording's lines by the first time each carries."""
+    if against.get("rows") is not None:
+        return [(at, f"{name}: {line}") for at, name, line in against["rows"]]
+    rows: list[tuple[float, str]] = []
+    at = 0.0
+    for line in against["record"].splitlines():
+        found = STAMP.search(line)
+        if found:
+            hours, minutes, seconds = (int(part) for part in found.groups())
+            at = float(hours * 3600 + minutes * 60 + seconds)
+        if line.strip():
+            rows.append((at, line))
+    return rows
+
+
+def _check_lines(comparison: Comparison, rows: list, finding: dict) -> list[str]:
+    """The record's lines at the moments a finding cites: its own moment and
+    every time its why names."""
+    times: list[float] = []
+    if finding.get("at") is not None:
+        times.append(float(finding["at"]))
+    for stamp in STAMP.finditer(finding.get("why") or ""):
+        at = _seconds_of(comparison, stamp.group(0))
+        if at is not None and all(abs(at - other) > CHECK_NEAR for other in times):
+            times.append(at)
+    picked: list[tuple[float, str]] = []
+    for at in times[:CHECK_TIMES]:
+        near = [row for row in rows if abs(row[0] - at) <= CHECK_NEAR]
+        near.sort(key=lambda row, at=at: abs(row[0] - at))
+        picked.extend(near[:CHECK_LINES_A_TIME])
+    seen: set[str] = set()
+    lines: list[str] = []
+    for _, line in sorted(picked, key=lambda row: row[0]):
+        if line not in seen:
+            seen.add(line)
+            lines.append(line)
+    return lines[:CHECK_LINES_A_FINDING]
+
+
+def _verdict(mark: str, check: dict) -> str:
+    """What one reading says to do with one finding: DROP and the reason,
+    LACKS or OFFICER to move it to not on camera, or nothing."""
+    record = check.get("record", "")
+    source = check.get("source", "")
+    but_for = check.get("but_for", "")
+    if mark == DIFFERS:
+        if but_for in ANY_TRIVIA or (but_for in PICTURE_TRIVIA and source == "picture"):
+            return f"{DROP}on {but_for} alone"
+        return LACKS if record == LACKS else ""
+    if record == LACKS:
+        return LACKS
+    return OFFICER if source == OFFICER else ""
+
+
+def _parse_checks(text: str) -> dict[int, dict]:
+    text = _unfenced(text)
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        parsed = json.loads(prompts.salvage_json(text))
+    raw = parsed.get("checks", []) if isinstance(parsed, dict) else parsed
+    if not isinstance(raw, list):
+        raise ValueError("not a list")
+    checks: dict[int, dict] = {}
+    for one in raw:
+        if not isinstance(one, dict):
+            continue
+        try:
+            number = int(one.get("n"))
+        except (TypeError, ValueError):
+            continue
+        checks[number] = {
+            key: str(one.get(key, "")).strip().lower()
+            for key in ("record", "source", "but_for")
+        }
+    return checks
+
+
+def _check(
+    comparison: Comparison,
+    findings: list[dict],
+    against: dict,
+    ground_text: str,
+    cap: int,
+    usage: dict,
+    drop,
+) -> tuple[list[dict], dict]:
+    """The Agrees and Differs rows read again beside the record's lines, twice;
+    where both readings say the same, the app acts: a difference that rests
+    on trivia is dropped, a row whose lines lack the thing or hold it only
+    in an officer's words is not on camera. A reading that fails changes
+    nothing: the findings stand as written."""
+    judged = [one for one in findings if one["mark"] in (AGREES, DIFFERS)]
+    summary = {
+        "rows": len(judged),
+        "moved": 0,
+        "dropped": 0,
+        "apart": 0,
+        "unread": 0,
+        "calls": 0,
+    }
+    if not judged:
+        return findings, summary
+    rows = _record_rows(against)
+    system = prompts.system_message(
+        ground_text, prompts.COMPARISON_CHECK, prompts.COMPARISON_CHECK_FORMAT
+    )
+    said: dict[str, list[str]] = {}
+    for start in range(0, len(judged), CHECK_BATCH):
+        batch = judged[start : start + CHECK_BATCH]
+        user = prompts.comparison_check_input(
+            [
+                {
+                    "claim": one["claim"],
+                    "mark": one["mark"],
+                    "why": one["why"],
+                    "lines": _check_lines(comparison, rows, one),
+                }
+                for one in batch
+            ]
+        )
+        if not prompts.fits(system, user, answer_cap=cap, window=assistant.window()):
+            continue
+        for _ in range(CHECK_READINGS):
+            try:
+                answer = engine.complete(
+                    assistant._messages(system, user),
+                    max_completion_tokens=cap,
+                    thinking=assistant.thinking(),
+                    timeout=assistant.time_limit(FEATURE),
+                    **assistant.SAMPLING,
+                )
+            except engine.Problem as problem:
+                log.warning(
+                    "comparison %s: a check could not be asked (%s)",
+                    comparison.pk,
+                    problem.reason,
+                )
+                continue
+            summary["calls"] += 1
+            usage["input_tokens"] += answer.get("input_tokens", 0) or 0
+            usage["output_tokens"] += answer.get("output_tokens", 0) or 0
+            try:
+                checks = _parse_checks(answer.get("text") or "")
+            except (ValueError, AttributeError):
+                log.warning(
+                    "comparison %s: a check was unreadable (%d chars, finish %s)",
+                    comparison.pk,
+                    len(answer.get("text") or ""),
+                    answer.get("finish_reason"),
+                )
+                continue
+            for number, one in enumerate(batch, start=1):
+                if number in checks:
+                    said.setdefault(one["id"], []).append(
+                        _verdict(one["mark"], checks[number])
+                    )
+    kept: list[dict] = []
+    for one in findings:
+        if one["mark"] not in (AGREES, DIFFERS):
+            kept.append(one)
+            continue
+        verdicts = said.get(one["id"], [])
+        if len(verdicts) < CHECK_READINGS:
+            summary["unread"] += 1
+            kept.append(one)
+            continue
+        if len(set(verdicts)) > 1:
+            summary["apart"] += 1
+            kept.append(one)
+            continue
+        verdict = verdicts[0]
+        if verdict.startswith(DROP):
+            drop(verdict[len(DROP) :])
+            summary["dropped"] += 1
+            continue
+        if verdict == LACKS:
+            lead = (
+                "Nothing on the record shows otherwise: "
+                if one["mark"] == DIFFERS
+                else "Nothing on the record: "
+            )
+            one = {**one, "mark": NOT_ON_CAMERA, "why": (lead + one["why"])[:WHY_MOST]}
+            summary["moved"] += 1
+        elif verdict == OFFICER:
+            one = {
+                **one,
+                "mark": NOT_ON_CAMERA,
+                "basis": OFFICER,
+                "why": ("An officer's words alone: " + one["why"])[:WHY_MOST],
+            }
+            summary["moved"] += 1
+        kept.append(one)
+    return kept, summary
 
 
 FENCE = re.compile(r"^\s*```[a-zA-Z]*\s*\n|\n\s*```\s*$", re.MULTILINE)
@@ -647,6 +873,14 @@ def compare(comparison_id, attempt: int = 1) -> None:
                     unreadable += 1
             else:
                 left_out_check = True
+        # The check against the record's lines (v1.104.0), once everything
+        # is written: a reading that fails changes nothing.
+        comparison.stage = "Checking the findings against the record"
+        comparison.save(update_fields=["stage"])
+        findings, second_look = _check(
+            comparison, findings, against, ground.text, cap, usage, drop
+        )
+        calls += second_look["calls"]
         findings.sort(
             key=lambda one: (one["page"] or 9999, one["n"] or 9999, one["at"] or 0)
         )
@@ -657,6 +891,7 @@ def compare(comparison_id, attempt: int = 1) -> None:
         comparison.cut_short = cut
         comparison.unreadable = unreadable
         comparison.dropped = dropped
+        comparison.second_look = second_look
         comparison.left_out_check = left_out_check
         comparison.model = model
         comparison.cameras_used = against["cameras"]
@@ -679,6 +914,8 @@ def compare(comparison_id, attempt: int = 1) -> None:
             "ok",
             calls=calls,
             words_alone=len(comparison.cameras_words_alone),
+            checked=second_look["rows"],
+            moved=second_look["moved"],
             **expectation.for_audit(comparison.expectation),
         )
         counts = comparison.counts()
@@ -795,6 +1032,31 @@ def dropped_words(comparison: Comparison) -> str:
     return words
 
 
+def second_look_words(comparison: Comparison) -> str:
+    """ "; 6 findings checked against the record's lines, 4 moved to not on
+    camera, 1 dropped; 1 left as written where the two checks differed", or
+    nothing for a comparison written before the check (v1.104.0)."""
+    look = comparison.second_look or {}
+    rows = int(look.get("rows") or 0)
+    if not rows:
+        return ""
+    unread = int(look.get("unread") or 0)
+    if unread >= rows:
+        return "; the findings could not be checked against the record's lines"
+    words = (
+        f"; {rows} finding{'' if rows == 1 else 's'} checked against the record's lines"
+    )
+    if look.get("moved"):
+        words += f", {look['moved']} moved to not on camera"
+    if look.get("dropped"):
+        words += f", {look['dropped']} dropped"
+    if look.get("apart"):
+        words += f"; {look['apart']} left as written where the two checks differed"
+    if unread:
+        words += f"; {unread} could not be checked"
+    return words
+
+
 def stale_words(comparison: Comparison) -> str:
     if comparison.state != DONE or not comparison.incident_id:
         return ""
@@ -882,6 +1144,7 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
                 else ""
             )
             + dropped_words(comparison)
+            + second_look_words(comparison)
         )
     return {
         **base,
