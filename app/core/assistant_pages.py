@@ -278,6 +278,9 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
                 "name": one.name,
                 "kind": one.kind,
                 "confidence": one.confidence,
+                # How the transcript backs the name (v1.105.0): said of
+                # themselves, or called that by another speaker.
+                "basis": one.basis,
                 "quote": one.quote,
                 "start": one.start,
                 "clock": exports.clock(one.start),
@@ -661,7 +664,9 @@ def decide_correction(
 @login_required
 @require_POST
 def accept_corrections(request: HttpRequest, recording_id) -> JsonResponse:
-    """Accept all: every pending correction, each through the same move."""
+    """Accept all: every pending correction in front of the person, each
+    through the same move. The ones the second reading set aside are left
+    (v1.105.0): each of those is decided on its own."""
     from core.assistant import SpeakerCorrection
     from core.viewer import being_replaced, last_change_line
 
@@ -676,9 +681,9 @@ def accept_corrections(request: HttpRequest, recording_id) -> JsonResponse:
     cases.used(recording, by=request.user)
     changed = 0
     for one in list(
-        transcript.corrections.filter(state=SpeakerCorrection.PENDING).select_related(
-            "segment"
-        )
+        transcript.corrections.filter(state=SpeakerCorrection.PENDING)
+        .exclude(second=SpeakerCorrection.ASIDE)
+        .select_related("segment")
     ):
         changed += speaker_check.accept(one, by=request.user, request=request)
     return JsonResponse(

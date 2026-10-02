@@ -138,6 +138,18 @@
             </div>
             <p class="small muted" id="corrections-said" hidden></p>
             <ol id="corrections-list" class="corrections"></ol>
+            {% comment %}
+              Set aside (v1.105.0): the moves a second, blind reading did not
+              back, the lines too short for words to settle, and the long
+              lines the voice step was firm on. Still the person's to decide,
+              one at a time; Accept all leaves them.
+            {% endcomment %}
+            <details id="corrections-aside" class="small" hidden>
+              <summary id="corrections-aside-title">More the second reading did not back</summary>
+              <p class="muted">The check proposed these, and a second reading that was not told so did not give the line to the same speaker, or the line is too short for the words to settle, or the voice was firm on it. Play each and decide; Accept all leaves them.</p>
+              <ol id="corrections-aside-list" class="corrections"></ol>
+            </details>
+            <p class="small muted" id="corrections-score" hidden></p>
           </section>
         {% endif %}
         <p class="small muted keys">

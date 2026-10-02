@@ -89,7 +89,9 @@ SHIPPED_HISTORY = {
     "meeting": ("f6b5d89ac94a5842",),
     "prompt:ground_rules": ("7a65498ab25fbf63",),
     "prompt:chat": ("0db99390974f3bef", "a31c1f00877b1dce"),
-    "prompt:suggestions": ("122c6e749064c4d6",),
+    # Re-shipped in v1.105.0: a name a speaker calls someone by is the other
+    # person's.
+    "prompt:suggestions": ("122c6e749064c4d6", "8b85427f8089b5fc"),
     # Re-shipped in v1.87.1: the record of what the camera showed is named.
     "prompt:case_chat": (
         "0003b7162b10fbfd",
@@ -410,12 +412,14 @@ CASE_CHAT = (
 
 SUGGESTIONS = (
     "Some speakers in this transcript have no name yet. For each of them, work "
-    "out from what is said who they are: a name, if someone says it or is "
-    "addressed by it, or otherwise a role such as Interviewer, Interpreter, "
-    "Officer, or Caller. Use the known names below when the talk points to one "
-    "of them. Give the one line that best shows how you know, and say how sure "
-    "you are. Never suggest the same name for two speakers. If nothing shows "
-    "who a speaker is, say unknown."
+    "out from what is said who they are: a name, if they say it of themselves "
+    "or another speaker calls them by it, or otherwise a role such as "
+    "Interviewer, Interpreter, Officer, or Caller. A name a speaker calls "
+    'someone else by ("Hey Tony", "thanks, Maria") belongs to the person '
+    "spoken to, never to the speaker who says it. Use the known names below "
+    "when the talk points to one of them. Give the one line that best shows "
+    "how you know, and say how sure you are. Never suggest the same name for "
+    "two speakers. If nothing shows who a speaker is, say unknown."
 )
 
 SPEAKER_CHECK = (
@@ -430,6 +434,35 @@ SPEAKER_CHECK = (
     "only when the words make it clear; when either speaker could have said "
     "the line, leave it. Give a reason of a few words for each move."
 )
+
+# The second reading (v1.105.0): each line the check would move is read
+# again, twice, by a call that is not told what the first reading said, with
+# the lines around it and what the voice step heard on it. The app keeps a
+# move in front of the person only where both readings give the line to the
+# speaker the first one named; the rest are set aside, never lost. The app's
+# own words, not an office template: the app acts on the answers. From the
+# literature (docs/research/speaker-attribution.md): an untrained model
+# correcting speakers by the words alone moves lines to whoever reads more
+# plausibly, and the voice has to have a say.
+SPEAKER_SECOND = (
+    "The speakers of this transcript were told apart by their voices, and a "
+    "first reading named some lines as given to the wrong speaker. You are "
+    "the second reading, and you are not told what the first one said. For "
+    "each line marked >>> below, say who spoke it, from the words of the "
+    "line and of the lines around it: who asks and who answers, who is "
+    "addressed and who replies, who commands and who is commanded. The "
+    "marked line's label is left out; the labels of the lines around it are "
+    "as the voices gave them. Where a note says what the voice step heard on "
+    "the line, weigh it: a long line the voice gave firmly to one speaker is "
+    "seldom another's. Answer with a speaker from the list, or cannot tell "
+    "when either of two could have said it. Never guess."
+)
+SPEAKER_SECOND_FORMAT = (
+    "Answer with the JSON asked for: a list under readings, one item for "
+    "every marked line, each the line's number as shown in brackets and the "
+    "speaker who said it, exactly as in the list of speakers, or cannot tell."
+)
+CANNOT_TELL = "cannot tell"
 
 # The sketch before the check (v1.100.0): who is who across the whole
 # recording, read once and given to every window. The app's own words,
@@ -506,7 +539,8 @@ def part_line(part: int, parts: int, numbers: list[int], total: int) -> str:
 
 SUGGESTIONS_FORMAT = (
     "Answer with the JSON asked for. For every unnamed speaker, suggest a name "
-    "when somebody says it or addresses them by it; otherwise suggest a role, "
+    "when they say it of themselves or another speaker addresses them by it, "
+    "never the name they call someone else by; otherwise suggest a role, "
     "what the speaker does or is in this recording, such as Officer, Sergeant, "
     "Dispatcher, Caller, Interviewer, Interpreter, Suspect, Passenger, or "
     "Witness. A role is the expected answer when no name is spoken; say unknown "
@@ -1511,6 +1545,34 @@ def speaker_check_schema(speakers: list[str]) -> dict:
     }
 
 
+def speaker_second_schema(speakers: list[str]) -> dict:
+    """The second reading's answer: for each marked line a Speaker already on
+    the Transcript, or cannot tell."""
+    return {
+        "type": "object",
+        "properties": {
+            "readings": {
+                "type": "array",
+                "maxItems": 60,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line": {"type": "integer"},
+                        "speaker": {
+                            "type": "string",
+                            "enum": [*speakers, CANNOT_TELL],
+                        },
+                    },
+                    "required": ["line", "speaker"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["readings"],
+        "additionalProperties": False,
+    }
+
+
 def incident_events_schema() -> dict:
     """The proposals' answer: a list of events, each a time, an end, a line
     and the words it rests on."""
@@ -1667,6 +1729,30 @@ def speaker_check_input(lines: list, speakers: list[str], sketch: str = "") -> s
         else ""
     )
     return f"{head}Speakers: {', '.join(speakers)}\n\nLines:\n{render(lines)}"
+
+
+def speaker_second_input(sketch: str, speakers: list[str], blocks: list[dict]) -> str:
+    """The marked lines as the second reading sees them: the sketch when
+    there is one, the Speakers, then each marked line among the lines around
+    it, its own label left out, with the voice step's note when it has one.
+    Each block is {"line": Line, "around": [Line], "voice": str}."""
+    head = f"{SPEAKER_SKETCH_ABOVE}\n{sketch.strip()}\n\n" if sketch.strip() else ""
+    parts = []
+    for block in blocks:
+        marked = block["line"]
+        rows = []
+        for line in block["around"]:
+            if line.number == marked.number:
+                rows.append(f">>> [{line.number}] {clock(line.start)} {line.text}")
+            else:
+                rows.append(render([line]))
+        note = f"\n{block['voice']}" if block.get("voice") else ""
+        parts.append("\n".join(rows) + note)
+    return (
+        f"{head}Speakers: {', '.join(speakers)}\n\n"
+        + "\n\n".join(parts)
+        + "\n\nSay who spoke each marked line."
+    )
 
 
 def speaker_sketch_input(lines: list, speakers: list[str], cut: bool) -> str:
@@ -2278,7 +2364,72 @@ ADDRESSES = re.compile(
     r"(?:^|(?<=[,.!?] ))((?:[A-Z][\w'.-]+\s?){1,3}),\s"
     r"|,\s((?:[A-Z][\w'.-]+\s?){1,3})[.!?]?$"
 )
+# A greeting and a name with no comma between them (v1.105.0): "Hey Tony",
+# "thanks Maria". The commonest way a name is spoken, and it names the
+# person spoken to; without it the app held no evidence against giving the
+# name to the one who said it.
+GREETS = re.compile(
+    r"\b(?i:hey|hi|hello|yo|thanks|thank you|bye|goodbye|sorry|"
+    r"good morning|good afternoon|good evening|good night|morning),?\s+"
+    r"((?:[A-Z][\w'.-]+\s?){1,3})"
+)
+# How the evidence backs a name for a Speaker (v1.105.0).
+SAYS_SO, ADDRESSED = "introduces", "addressed"
 NOT_NAMES = {
+    "i'm",
+    "i'll",
+    "i've",
+    "i'd",
+    "it's",
+    "you",
+    "we",
+    "he",
+    "she",
+    "they",
+    "what",
+    "why",
+    "how",
+    "where",
+    "who",
+    "can",
+    "do",
+    "did",
+    "let",
+    "let's",
+    "come",
+    "go",
+    "get",
+    "stop",
+    "wait",
+    "look",
+    "listen",
+    "just",
+    "now",
+    "there",
+    "here",
+    "guys",
+    "everyone",
+    "everybody",
+    "buddy",
+    "bro",
+    "dude",
+    "yeah",
+    "yep",
+    "nope",
+    "nah",
+    "oh",
+    "uh",
+    "um",
+    "alright",
+    "sure",
+    "wow",
+    "god",
+    "boss",
+    "anyway",
+    "actually",
+    "really",
+    "maybe",
+    "honestly",
     "i",
     "the",
     "a",
@@ -2334,9 +2485,25 @@ def evidence(lines: list[Line]) -> list[dict]:
                         "name": name,
                     }
                 )
-        for match in ADDRESSES.finditer(line.text):
-            name = _clean(match.group(1) or match.group(2) or "")
-            if name:
+        addressed = [
+            _clean(match.group(1) or match.group(2) or "")
+            for match in ADDRESSES.finditer(line.text)
+        ] + [_clean(match.group(1)) for match in GREETS.finditer(line.text)]
+        # A name the line introduces is not also one it calls somebody by
+        # ("Hi, I'm Maria Lopez" greets nobody called Maria).
+        own = {
+            word.casefold()
+            for one in found
+            if one["line"] == line.number and one["kind"] == "introduces"
+            for word in one["name"].split()
+        }
+        said: set[str] = set()
+        for name in addressed:
+            if own & {word.casefold() for word in name.split()}:
+                continue
+            # One entry a name a line: "Hey Tony, ..." matches both patterns.
+            if name and name.casefold() not in said:
+                said.add(name.casefold())
                 found.append(
                     {
                         "kind": "addresses",
@@ -2362,9 +2529,12 @@ def evidence_lines(found: list[dict]) -> str:
                 f"- line {one['line']}: {who} introduces themselves as {one['name']}"
             )
         else:
+            # Which way it points is said outright (v1.105.0): the name is
+            # the other person's.
             who = one["speaker"] or "the speaker"
             out.append(
-                f"- line {one['line']}: {who} addresses someone as {one['name']}"
+                f"- line {one['line']}: {who} calls someone else {one['name']} "
+                f"(so {one['name']} is not {who})"
             )
     return "\n".join(out)
 
@@ -2385,6 +2555,34 @@ def backed_by_evidence(name: str, found: list[dict]) -> bool:
         if wanted & theirs:
             return True
     return False
+
+
+def name_basis(name: str, speaker: str, found: list[dict]) -> dict | None:
+    """The evidence line that backs this name for this Speaker, with how it
+    backs it, or nothing (v1.105.0). SAYS_SO when the Speaker says the name
+    of themselves; ADDRESSED when a different Speaker calls someone by it and
+    this one never does. A name a Speaker calls someone else by is the other
+    person's, whatever the engine says: on the office's copy three name
+    suggestions in nine were for the one who said "Hey ..."."""
+    wanted = {w.casefold() for w in name.split()}
+
+    def carries(one: dict) -> bool:
+        return bool(wanted & {w.casefold() for w in one["name"].split()})
+
+    own = [one for one in found if one["speaker"] == speaker and carries(one)]
+    for one in own:
+        if one["kind"] == "introduces":
+            return {**one, "basis": SAYS_SO}
+    if own:
+        return None
+    others = [one for one in found if carries(one)]
+    # Somebody else says the name of themselves: it is theirs.
+    if any(one["kind"] == "introduces" for one in others):
+        return None
+    for one in others:
+        if one["kind"] == "addresses":
+            return {**one, "basis": ADDRESSED}
+    return None
 
 
 # Suggestions the app keeps ---------------------------------------------------------
@@ -2412,6 +2610,7 @@ def keep_suggestions(
     evidence does not back is dropped, since a name from nowhere is a guess.
     """
     by_number = {line.number: line for line in lines}
+    voices = {plain_speaker(line.speaker) for line in lines if line.speaker.strip()}
     kept: dict[str, dict] = {}
     for one in raw:
         speaker = str(one.get("speaker", "")).strip()
@@ -2430,18 +2629,32 @@ def keep_suggestions(
         if name.casefold() in {held.casefold() for held in taken}:
             continue
         kind = str(one.get("kind", "name"))
-        if found is not None and kind != "role" and not backed_by_evidence(name, found):
-            continue
+        quote = str(one.get("quote", "")).strip()[:300]
+        basis = ""
+        if found is not None and kind != "role":
+            # The evidence has to point at this Speaker (v1.105.0), and the
+            # line shown is the app's own evidence, not the engine's pick.
+            backing = name_basis(name, speaker, found)
+            if backing is None:
+                continue
+            basis = backing["basis"]
+            if backing["line"] in by_number:
+                number = backing["line"]
+                quote = ""
+            # With three voices or more, who was spoken to is a guess.
+            if basis == ADDRESSED and len(voices) > 2:
+                confidence = "medium"
         line = by_number[number]
         candidate = {
             "speaker": speaker,
             "name": name,
             "kind": kind if found is not None else str(one.get("kind", "name")),
             "confidence": confidence,
+            "basis": basis,
             "line": number,
             "segment_id": line.segment_id,
             "start": line.start,
-            "quote": str(one.get("quote", "")).strip()[:300] or line.text[:300],
+            "quote": quote or line.text[:300],
         }
         # One suggestion per Speaker: the first, unless a later one is surer.
         already = kept.get(speaker)

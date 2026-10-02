@@ -768,8 +768,11 @@
       if (!card) { return; }
       var box = card.querySelector(".suggested");
       box.hidden = false;
+      // Which way the line points (v1.105.0): the app says whether the
+      // speaker gave the name themselves or was called by it.
+      var basis = one.basis === "introduces" ? ", who says so themselves at " : (one.basis === "addressed" ? ", called that by another speaker at " : ", from ");
       box.innerHTML = "Probably <b>" + escape(one.name) + "</b>" + (one.role ? " (" + escape(one.role) + ")" : "") +
-        ", from <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>: “" + escape(one.quote) + "” " +
+        basis + "<a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>: “" + escape(one.quote) + "” " +
         "<button type='button' class='tiny accept' data-suggestion='" + one.id + "' data-name='" + escape(one.name) + "'>Accept</button> " +
         "<button type='button' class='ghost tiny reject' data-suggestion='" + one.id + "'>Reject</button>";
     });
@@ -784,6 +787,9 @@
     var check = body.speaker_check || {};
     var run = check.run;
     var pending = check.pending || [];
+    // Set aside by the second reading (v1.105.0): still the person's to
+    // decide, shown apart under a fold, and left by Accept all.
+    var aside = check.aside || [];
     var busy = run && (run.state === "queued" || run.state === "running");
     checkLine.hidden = !check.offered;
     var button = document.getElementById("check-speakers");
@@ -794,8 +800,8 @@
     var how = run && run.state === "done" ? (run.whole ? ", read whole" : (run.windows ? ", read in " + run.windows + " window" + (run.windows === 1 ? "" : "s") : "")) : "";
     if (busy) { said.textContent = run.sketch ? "Reading the transcript, " + (run.windows ? run.windows + " windows so far..." : "window by window...") : "Reading the whole transcript for who is who..."; }
     else if (run && run.state === "failed") { said.textContent = run.said || ""; }
-    else if (run && run.state === "done" && !pending.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
-    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + "."; }
+    else if (run && run.state === "done" && !pending.length && !aside.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
+    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + secondWords(run.second_look) + "."; }
     else { said.textContent = ""; }
     var sketchBox = document.getElementById("check-sketch");
     if (sketchBox) {
@@ -812,21 +818,63 @@
           ? " cut short at the answer cap; raise the cap on the Panel's Speakers page or shorten the window, then check again."
           : " cut short at the answer cap; ask your Admin to raise it, then check again.");
     }
-    correctionsBox.hidden = !pending.length;
+    correctionsBox.hidden = !pending.length && !aside.length;
     document.getElementById("corrections-title").textContent =
       "Suggested corrections (" + pending.length + ")";
     document.getElementById("accept-corrections").hidden = pending.length < 2;
     drawSwapOffer(pending);
-    document.getElementById("corrections-list").innerHTML = pending.map(function (one) {
-      return "<li class='correction' data-correction='" + one.id + "' data-segment='" + one.segment + "' data-to='" + escape(one.to) + "'>" +
-        "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
-        "<span class='move'><b>" + escape(one.to) + "</b>, not " + escape(one.from) + "</span>" +
-        "<p class='q'>“" + escape(one.quote) + "”</p>" +
-        (one.reason ? "<p class='why small muted'>" + escape(one.reason) + "</p>" : "") +
-        "<span class='row acts'><button type='button' class='tiny accept-correction'>Accept</button> " +
-        "<button type='button' class='ghost tiny dismiss-correction'>Dismiss</button></span></li>";
-    }).join("");
+    document.getElementById("corrections-list").innerHTML = pending.map(correctionRow).join("");
+    var asideBox = document.getElementById("corrections-aside");
+    if (asideBox) {
+      asideBox.hidden = !aside.length;
+      document.getElementById("corrections-aside-title").textContent =
+        aside.length + " more the second reading did not back";
+      document.getElementById("corrections-aside-list").innerHTML = aside.map(correctionRow).join("");
+    }
+    var scoreLine = document.getElementById("corrections-score");
+    if (scoreLine) {
+      var decided = scoreWords(check.score);
+      scoreLine.hidden = !decided;
+      scoreLine.textContent = decided;
+    }
     return !!busy;
+  }
+
+  // One suggested correction: the time that plays it, the move, the words,
+  // the check's reason, what the voice step heard (v1.105.0), and, for one
+  // set aside, why the second reading did not back it.
+  function correctionRow(one) {
+    var voice = one.voice === "agrees" ? "<span class='pill small ok' title='Word by word, the voice step heard this other speaker within the line.'>the voice heard both</span> "
+      : (one.voice === "against" ? "<span class='pill small warn' title='The voice step gave every word of this long line to the speaker it is labelled with.'>the voice was firm</span> " : "");
+    return "<li class='correction' data-correction='" + one.id + "' data-segment='" + one.segment + "' data-to='" + escape(one.to) + "'>" +
+      "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
+      "<span class='move'><b>" + escape(one.to) + "</b>, not " + escape(one.from) + "</span> " + voice +
+      "<p class='q'>“" + escape(one.quote) + "”</p>" +
+      (one.reason ? "<p class='why small muted'>" + escape(one.reason) + "</p>" : "") +
+      (one.second === "aside" && one.why ? "<p class='why small muted'>Set aside: " + escape(one.why) + ".</p>" : "") +
+      "<span class='row acts'><button type='button' class='tiny accept-correction'>Accept</button> " +
+      "<button type='button' class='ghost tiny dismiss-correction'>Dismiss</button></span></li>";
+  }
+
+  // "; 61 proposed, 38 backed by a second reading, 23 set aside" (v1.105.0),
+  // or nothing for a run before the second reading or one it could not make.
+  function secondWords(look) {
+    if (!look || !look.rows) { return ""; }
+    if (!look.backed && !look.aside) { return "; " + look.rows + " proposed, and the second reading could not be made"; }
+    return "; " + look.rows + " proposed, " + look.backed + " backed by a second reading, " + look.aside + " set aside" +
+      (look.unread ? ", " + look.unread + " not read twice" : "");
+  }
+
+  // The office's own measure (v1.105.0): what a person has decided so far,
+  // among the backed and among the set aside.
+  function scoreWords(score) {
+    if (!score) { return ""; }
+    function part(counts, label) {
+      var decided = (counts.accepted || 0) + (counts.dismissed || 0);
+      return decided ? (counts.accepted || 0) + " of " + decided + " " + label + " accepted" : "";
+    }
+    var parts = [part(score.backed || {}, "backed"), part(score.aside || {}, "set aside"), part(score.unread || {}, "not read twice")].filter(Boolean);
+    return parts.length ? "Decided so far: " + parts.join("; ") + "." : "";
   }
 
   // A run of corrections between the same two speakers is a swapped

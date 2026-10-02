@@ -21,6 +21,51 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.105.0, 2026-10-02
+
+```
+Models: unchanged
+Database: migrates (0072: the second reading, the voice, and a name's basis)
+```
+
+**Suggest names no longer names the one who said it.** On the office's
+copy three name suggestions in nine were for the speaker who said "Hey
+..." to someone else. The app had found the evidence and ignored which
+way it pointed. A name is now kept only when the speaker says it of
+themselves, or a different speaker calls someone by it; a name a speaker
+calls someone else by is the other person's, whatever the assistant
+says. "Hey Tony" with no comma counts as addressing someone. The
+suggestion says which it rests on ("who says so themselves", "called
+that by another speaker") and shows the app's own evidence line; with
+three or more speakers a name someone was called by is offered as less
+sure. The Speaker suggestions template is re-shipped saying the same.
+
+**The Speaker check reads its proposals a second time.** Research and the
+office's own experience agree that an assistant correcting speakers by
+the words alone moves lines to whoever reads more plausibly. Every
+proposal is now read twice more before anyone sees it, blind: the line's
+label hidden, the first answer not given. Moves both readings agree on
+are listed as before. The rest are **set aside** under a fold, each with
+its reason, still yours to accept or dismiss one at a time; Accept all
+takes only the backed ones. Nothing is thrown away. A line of three
+words or fewer is always set aside: words cannot settle it.
+
+**The voice has a say.** The app already keeps, for every word, which
+voice the voice step heard. A move to a speaker the voice itself heard
+inside the line is marked "the voice heard both". A move off a long line
+the voice gave firmly to one speaker is marked "the voice was firm" and
+set aside. No change to the transcription service.
+
+**A measure, from your own decisions.** Under the corrections, "Decided
+so far" counts what has been accepted among the backed and among the set
+aside. On recordings judged by ear, those counts say whether the check
+is right and whether the second reading sets aside the right ones.
+
+The second reading adds two short calls for every twenty proposals. Its
+wording has not been tried against the office's engine before shipping,
+at the maintainer's word; the first runs on the server are the test.
+The research behind it is in `docs/research/speaker-attribution.md`.
+
 ## v1.104.0, 2026-10-01
 
 ```

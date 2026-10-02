@@ -379,6 +379,82 @@ def test_a_name_without_evidence_is_dropped_and_a_role_is_kept():
     assert [one["name"] for one in kept] == ["Detective Ruiz", "Interviewer"]
 
 
+def test_a_name_a_speaker_calls_someone_by_is_never_their_own():
+    """v1.105.0: on the office's copy three name suggestions in nine were for
+    the speaker who said "Hey ..." to someone else. The evidence was held
+    and its direction ignored. A name is kept only when the speaker says it
+    of themselves or a different speaker calls someone by it; the line shown
+    is the app's evidence; with three voices, who was spoken to is a guess,
+    so the app says medium. "Hey Tony" with no comma is evidence too."""
+    lines = [
+        prompts.Line(1, 1, 0.0, "Speaker 1", "Hey Tony come over here."),
+        prompts.Line(2, 2, 4.0, "Speaker 2", "What is it?"),
+        prompts.Line(3, 3, 8.0, "Speaker 3", "Hi, I'm Maria Lopez."),
+        prompts.Line(4, 4, 12.0, "Speaker 1", "Thanks Maria."),
+    ]
+    found = prompts.evidence(lines)
+    assert [(one["kind"], one["speaker"], one["name"]) for one in found] == [
+        ("addresses", "Speaker 1", "Tony"),
+        ("introduces", "Speaker 3", "Maria Lopez"),
+        ("addresses", "Speaker 1", "Maria"),
+    ]
+    told = prompts.evidence_lines(found)
+    assert "Speaker 1 calls someone else Tony (so Tony is not Speaker 1)" in told
+    assert "Speaker 3 introduces themselves as Maria Lopez" in told
+
+    def suggested(speaker, name, line):
+        return {
+            "speaker": speaker,
+            "name": name,
+            "kind": "name",
+            "confidence": "high",
+            "line": line,
+            "quote": "the engine's own pick",
+        }
+
+    unnamed = ["Speaker 1", "Speaker 2", "Speaker 3"]
+    kept = prompts.keep_suggestions(
+        [
+            suggested("Speaker 1", "Tony", 1),
+            suggested("Speaker 3", "Maria Lopez", 3),
+        ],
+        unnamed,
+        set(),
+        lines,
+        found,
+    )
+    assert [(one["speaker"], one["name"], one["basis"]) for one in kept] == [
+        ("Speaker 3", "Maria Lopez", "introduces")
+    ]
+    assert kept[0]["confidence"] == "high" and kept[0]["quote"] == lines[2].text
+    (tony,) = prompts.keep_suggestions(
+        [suggested("Speaker 2", "Tony", 2)], unnamed, set(), lines, found
+    )
+    assert (tony["basis"], tony["confidence"]) == ("addressed", "medium")
+    assert tony["line"] == 1 and tony["quote"] == "Hey Tony come over here."
+    # A name somebody else says of themselves is theirs, whoever is thanked.
+    assert not prompts.keep_suggestions(
+        [suggested("Speaker 2", "Maria", 4)], unnamed, set(), lines, found
+    )
+    # Two voices: the one spoken to can only be the other, and high stands.
+    pair = lines[:2]
+    (tony,) = prompts.keep_suggestions(
+        [suggested("Speaker 2", "Tony", 2)],
+        ["Speaker 1", "Speaker 2"],
+        set(),
+        pair,
+        prompts.evidence(pair),
+    )
+    assert (tony["basis"], tony["confidence"]) == ("addressed", "high")
+    # The wording says it, and the template is re-shipped.
+    assert "belongs to the person spoken to" in prompts.SUGGESTIONS
+    assert "never the name they call someone else by" in prompts.SUGGESTIONS_FORMAT
+    assert (
+        prompts.text_hash(prompts.SUGGESTIONS)
+        in prompts.SHIPPED_HISTORY["prompt:suggestions"]
+    )
+
+
 @pytest.mark.django_db
 def test_suggest_names_tells_the_engine_the_people_the_roles_and_the_evidence(
     owner, a_case, monkeypatch

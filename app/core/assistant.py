@@ -493,6 +493,10 @@ class Suggestion(models.Model):
     name = models.CharField(max_length=60)
     kind = models.CharField(max_length=10, default="name")
     confidence = models.CharField(max_length=10, default="medium")
+    # How the transcript backs a name (v1.105.0): "introduces" when the
+    # Speaker says it of themselves, "addressed" when another Speaker calls
+    # them by it; empty for a role, and for a suggestion made before this.
+    basis = models.CharField(max_length=12, blank=True, default="")
     line = models.IntegerField(default=0)
     segment = models.ForeignKey(
         "core.Segment", on_delete=models.SET_NULL, null=True, blank=True
@@ -548,6 +552,10 @@ class SpeakerCheck(models.Model):
     # was checked whole, in one window.
     sketch = models.TextField(blank=True, default="")
     whole = models.BooleanField(default=False)
+    # What the second reading did with the run's proposals (v1.105.0):
+    # {"rows", "backed", "aside", "short", "voice_against", "apart",
+    #  "unread", "calls"}. Empty on a run before it.
+    second_look = models.JSONField(default=dict, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
@@ -575,6 +583,18 @@ class SpeakerCorrection(models.Model):
     speaker_from = models.CharField(max_length=60)
     speaker_to = models.CharField(max_length=60)
     reason = models.CharField(max_length=120, blank=True, default="")
+    # The second reading and the voice (v1.105.0). `second` is BACKED when
+    # both blind readings gave the line to the same Speaker the check did,
+    # ASIDE when they did not (or the line is too short for words to settle,
+    # or the voice step was firm on it), empty when no second reading ran. A
+    # correction set aside is still pending and still the person's to
+    # decide; it is shown apart and Accept all leaves it. `voice` is what
+    # the voice step's own word-by-word labels say of the move.
+    BACKED, ASIDE = "backed", "aside"
+    VOICE_AGREES, VOICE_AGAINST = "agrees", "against"
+    second = models.CharField(max_length=10, blank=True, default="")
+    aside_why = models.CharField(max_length=120, blank=True, default="")
+    voice = models.CharField(max_length=10, blank=True, default="")
     state = models.CharField(max_length=10, default=PENDING)
     decided_by = models.ForeignKey(
         "core.User",
@@ -2566,6 +2586,7 @@ def suggest_names(run_id) -> None:
                 name=one["name"],
                 kind=one["kind"],
                 confidence=one["confidence"],
+                basis=one.get("basis", ""),
                 line=one["line"],
                 segment_id=one["segment_id"],
                 start=one["start"],
