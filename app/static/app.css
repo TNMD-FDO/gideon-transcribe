@@ -812,6 +812,15 @@ main.wide { max-width: none; }
 .home-sect .pill.small { font-size: var(--t-label); line-height: 18px; padding: 0 8px; }
 .home-sect.ready { border-color: var(--accent); }
 .home-sect .card { margin: 10px 14px 4px; }
+/* Home on a desk monitor (v1.113.0, the walk's item 11): from 1600 wide the
+   sections stand in two columns inside the 1400 cap, what needs you on the
+   left (Ready to download, Needs you, Running now) and the session, the cases
+   and the clips on the right; the order down the page is chapter 13's, and
+   under 1600 the two columns are the one list they were. */
+@media (min-width: 1600px) {
+  .home .home-cols { display: flex; gap: 20px; align-items: flex-start; }
+  .home .home-cols > .col { flex: 1 1 0; min-width: 0; }
+}
 .tbl tr.batch-head td { background: var(--surface-2); padding: 8px 10px; border-top: 2px solid var(--line); }
 .rail .item b .pill.small { font-size: var(--t-label); line-height: 16px; padding: 0 6px; }
 
@@ -2064,7 +2073,15 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
    rules, the document page with its pictures beside its words. */
 .document-rules li { margin: 0 0 6px; }
 .warn-ink { color: var(--warn); }
-.doc-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+/* The document page's widths (v1.113.0, the walk's item 11): the page picture
+   stands at the window's height (less the head, about 150 pixels, so one page
+   fits the window as the pictures scroll), its width from the first page's own
+   proportions (--doc-ratio, set on the page; a Letter page when unknown), and
+   the words beside it at a reading measure of 40rem; the page is exactly the
+   pair and is centred, never over 1600. It had been the 52rem of a plain page,
+   which left a desk monitor's right third empty. */
+.doc-page { --doc-picture: calc((100vh - 150px) * var(--doc-ratio, 0.7727)); max-width: min(1600px, calc(var(--doc-picture) + 16px + 40rem)); }
+.doc-body { display: grid; grid-template-columns: minmax(0, var(--doc-picture)) minmax(280px, 1fr); gap: 16px; align-items: start; }
 .doc-pictures { display: flex; flex-direction: column; gap: 14px; }
 .doc-sheet { position: relative; margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .doc-sheet img { display: block; width: 100%; height: auto; }

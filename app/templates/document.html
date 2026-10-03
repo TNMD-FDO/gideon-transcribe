@@ -11,9 +11,10 @@
     paragraph lit on the picture and in the words. The page is the truth; the
     words are a reading, and a page read by OCR says so.
   {% endcomment %}
+  {% comment %}--doc-ratio (v1.113.0): the first page's proportions, which size the picture column from the window's height; unset, the stylesheet assumes a Letter page.{% endcomment %}
   <div class="page doc-page" id="document"
        data-pages="{{ document.pages }}" data-open="{{ open_page }}" data-lit="{{ lit }}"
-       data-picture="{% url 'document-picture' case.pk document.pk 0 %}">
+       data-picture="{% url 'document-picture' case.pk document.pk 0 %}"{% if rows %} style="--doc-ratio: calc({{ rows.0.width }} / {{ rows.0.height }})"{% endif %}>
     <header class="welcome row" style="align-items: flex-start; gap: 12px">
       <div class="grow">
         {% comment %}The ways back (part 2): the case's Documents tab, and the incident or recording it is the report for.{% endcomment %}

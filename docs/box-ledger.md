@@ -344,6 +344,7 @@ One subsection per project, newest entry first, written only by that project in 
 - **2026-10-02, at v1.107.1 (four slips in the look, seen on the server; nothing shared moves).** Stylesheet and one template.
 - **2026-10-02, at v1.108.0 (the recording page's head on two lines; nothing shared moves).** Stylesheet and one template.
 - **2026-10-03, at v1.109.0 (the case page's actions in one place; nothing shared moves).** Stylesheet and one template.
+- **2026-10-03, at v1.113.0 (wide screens used: Home in two columns, the document page sized from the window; nothing shared moves).** Stylesheet and two templates.
 - **2026-10-03, at v1.112.0 (the last three placements from the walk; nothing shared moves).** Stylesheet only.
 - **2026-10-03, at v1.111.0 (four small placements from the walk; nothing shared moves).** Stylesheet, templates, one script and the guides.
 - **2026-10-03, at v1.110.0 (the Users page's row; a local run of the app for walks; nothing shared moves).** Stylesheet, one template, the Admin guide, a seed command for a workstation's own database (never an office's). No port, memory, card, timer or network moves.

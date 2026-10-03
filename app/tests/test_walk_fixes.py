@@ -314,3 +314,31 @@ def test_the_list_tables_card_class_matches_no_other_rule():
     for name in ("cases.html", "case.html", "clips.html", "recordings.html"):
         page = (APP / "templates" / name).read_text(encoding="utf-8")
         assert 'class="tbl as-cards"' in page and 'class="tbl cards"' not in page, name
+
+
+def test_wide_screens_are_used():
+    """v1.113.0, the walk's item 11: from 1600 wide Home stands its sections
+    in two columns (what needs you on the left, the rest on the right, the
+    chapter's order kept down the page); the document page is sized from the
+    window's height and the first page's proportions, with the words at a
+    reading measure, instead of a plain page's 52rem."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert "@media (min-width: 1600px) {\n  .home .home-cols { display: flex;" in css
+    assert ".home .home-cols > .col { flex: 1 1 0; min-width: 0; }" in css
+    picture = "--doc-picture: calc((100vh - 150px) * var(--doc-ratio, 0.7727));"
+    assert ".doc-page { " + picture in css
+    assert "max-width: min(1600px, calc(var(--doc-picture) + 16px + 40rem)); }" in css
+    columns = "minmax(0, var(--doc-picture)) minmax(280px, 1fr);"
+    assert "grid-template-columns: " + columns in css
+    home = (APP / "templates" / "home.html").read_text(encoding="utf-8")
+    assert '<div class="home-cols">' in home and home.count('<div class="col">') == 2
+    # The left column is not drawn when nothing needs the person.
+    assert "{% if ready or needs or running %}" in home
+    # The order down the page is chapter 13's: the left column's three, then
+    # the right's.
+    order = ["ready-to-download", "needs-you", "running-now"]
+    order += ["this-session", "recent-cases", "clips-line"]
+    places = [home.find(f'id="{one}"') for one in order]
+    assert places == sorted(places) and min(places) > 0
+    document = (APP / "templates" / "document.html").read_text(encoding="utf-8")
+    assert "--doc-ratio: calc({{ rows.0.width }} / {{ rows.0.height }})" in document

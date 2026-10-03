@@ -19,6 +19,14 @@
     {% endif %}
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
+    {% comment %}
+      Two columns from 1600 wide (v1.113.0): what needs you on the left, the
+      rest on the right; the order down the page is unchanged. An empty left
+      column is not drawn, so the right takes the width.
+    {% endcomment %}
+    <div class="home-cols">
+    {% if ready or needs or running %}
+    <div class="col">
     {% if ready %}
       <section class="home-sect ready" id="ready-to-download">
         <div class="head">
@@ -65,6 +73,9 @@
         </div>
       </section>
     {% endif %}
+    </div>
+    {% endif %}
+    <div class="col">
 
     <section class="home-sect" id="this-session">
       <div class="head">
@@ -130,6 +141,8 @@
         </div>
       </section>
     {% endif %}
+    </div>
+    </div>
   </div>
 
   <script src="{% static 'clearing.js' %}"></script>

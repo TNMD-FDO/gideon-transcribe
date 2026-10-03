@@ -74,8 +74,12 @@ box.
 
 The reading pages (Home, Cases, a case, Clips, My recordings) are capped at
 1400 pixels, so a desk monitor shows a wider list rather than a wider
-margin. The work pages (the recording, the Speakers page, an incident, a
-document) take the whole width.
+margin. From 1600 wide Home stands its sections in two columns inside that
+cap, what needs you on the left and the session, the cases and the clips on
+the right, in the same order down the page. The work pages (the recording,
+the Speakers page, an incident) take the whole width. The document page is
+the pair it shows: the page picture at the window's height, the words beside
+it at a reading measure (40rem), centred and never over 1600.
 
 ## Colour
 

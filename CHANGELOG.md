@@ -21,6 +21,30 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.113.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Wide screens are used.** The walk's item 11, the last of its layout
+findings. Stylesheet and two templates.
+
+- **Home on a desk monitor** stands its sections in two columns from 1600
+  wide: what needs you on the left (Ready to download, Needs you, Running
+  now) and the session, the cases and the clips on the right. The order
+  down the page is the one the chapter gives, and when nothing needs you
+  the right column takes the width. On a laptop or narrower nothing
+  changes. The walk's "recent cases as a short table" is not built; the
+  rows stay rows.
+- **The document page is sized from the window.** The page picture stands
+  at the window's height, its width from the document's own page
+  proportions, and the words beside it at a reading measure, the pair
+  centred and never over 1600 wide. It had been the width of a plain
+  reading page (780 pixels), which on a desk monitor left the right third
+  of the screen empty and the words at thirty characters a line.
+
 ## v1.112.0, 2026-10-03
 
 ```
