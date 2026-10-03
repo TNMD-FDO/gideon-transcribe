@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.107.1, 2026-10-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Four slips seen on the server at v1.107.0.** Stylesheet and one template.
+
+- **A case's Recordings table no longer crushes the name.** On a case with
+  the nine-column table the name was one letter a line at 768 and 1366
+  wide, because the rule that lets a file name break anywhere also let the
+  column shrink to a single letter. The name column keeps a floor.
+- **The Speakers page's words on a phone** take their own line under the
+  time and the name, as v1.107.0 said; its rule had named the wrong part.
+- **The reading pages' cap is 1400** on every width: an older rule had kept
+  the lists at 1600 from 1280 wide and won over the new one.
+- **Recorded here** says "nothing here" with the one empty-state pattern,
+  with Record now as its action.
+
 ## v1.107.0, 2026-10-02
 
 ```

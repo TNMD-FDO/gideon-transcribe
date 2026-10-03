@@ -187,5 +187,19 @@ def test_the_system_is_written_down_once_and_the_pages_keep_to_it():
         assert 'class="btn primary small">Open' not in page, name
         assert 'class="btn primary small">Download' not in page, name
     # The Speakers page on a phone: the words on their own line, the lanes uncapped.
-    assert ".sp-read .seg .txt { grid-column: 1 / -1; }" in css
+    assert ".sp-read .seg .words { grid-column: 1 / -1; }" in css
     assert ".sp-right { grid-row: 2; grid-column: 1; max-height: none; }" in css
+
+
+def test_the_four_slips_of_the_system_walk_are_held_in_the_files():
+    """v1.107.1: seen on the server at v1.107.0. A case's Recordings table
+    crushed the name to one letter a line; the Speakers page's phone rule
+    named .txt where the words sit in .words; the 1400 cap lost to an older
+    1600; Recorded here said "nothing" in a plain sentence."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert "#recordings td:first-child { min-width: 12rem; }" in css
+    assert ".sp-read .seg .txt { grid-column" not in css
+    assert ".page.workbench { max-width: 87.5rem; }" in css
+    assert ".page.workbench { max-width: 100rem; }" not in css
+    page = (APP / "templates" / "recorded_here.html").read_text(encoding="utf-8")
+    assert 'title="Nothing recorded here yet"' in page and 'action="Record now"' in page

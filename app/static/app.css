@@ -1660,8 +1660,12 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .tbl-wrap { overflow-x: auto; }
 .tbl td.prepared .pill { white-space: normal; }
 .tbl td.nowrap { white-space: nowrap; }
-/* A file name is one long word; let it break rather than widen the table. */
+/* A file name is one long word; let it break rather than widen the table.
+   v1.107.1: "anywhere" also lets the browser shrink the column to a single
+   letter when the other columns want the room (one letter a line at 768 and
+   1366 on a case with nine columns), so the name keeps a floor. */
 #recordings td:first-child b { overflow-wrap: anywhere; }
+#recordings td:first-child { min-width: 12rem; }
 .tbl tr.pick { cursor: pointer; }
 .tbl tr.pick:hover td { background: var(--surface-2); }
 .tbl tr.pick.on td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -1757,7 +1761,7 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 .jumplist a:hover { text-decoration: underline; }
 .guide .contents a.on { color: var(--accent); font-weight: 600; }
 @media (min-width: 1280px) {
-  .page.workbench { max-width: 100rem; }
+  .page.workbench { max-width: 87.5rem; } /* v1.107.1: the same 1400 cap as .page.roomy; this had kept 1600. */
   /* The case page (Phase 8 chapter 7): the list takes the width and About
      this case a measure, so a file name stays on one line. */
   .case-page .page.workbench { max-width: none; }
@@ -2838,7 +2842,7 @@ body.gideon-window .gideon-grip { display: none; }
 @media (max-width: 599px) {
   .sp-read .seg { grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; }
   .sp-read .seg .who { text-align: left; }
-  .sp-read .seg .txt { grid-column: 1 / -1; }
+  .sp-read .seg .words { grid-column: 1 / -1; }
   .sp-read .seg .actions { grid-column: 3; }
 }
 

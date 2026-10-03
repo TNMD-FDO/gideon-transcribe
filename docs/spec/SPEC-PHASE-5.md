@@ -325,6 +325,8 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- **2026-10-02, v1.107.1.** Chapter 1's Speakers page under 600 wide: v1.107.0's rule named the line's words by the wrong part and did nothing on the server; corrected, the words take their own line under the time and the name.
+
 - **2026-10-02, v1.107.0.** Chapter 1's Speakers page under 600 wide: a line's fixed time and name columns left the words one a line, so the time and the name share the first line and the words take the second at the full width; in one column the player's cap goes (the page scrolls since v1.106.1), since on a phone the wrapped transport left the lanes clipped under it.
 
 - **2026-10-02, v1.106.2.** Chapter 1's Speakers page in one column: v1.106.1's scrolling page grew to its content's width (2173 pixels at 768 wide), seen on the office's server; the page keeps the window's width and only the desk under it is kept from shrinking.

@@ -80,7 +80,8 @@
         </tbody>
       </table>
     {% else %}
-      <p class="muted">Nothing recorded here yet. Press <a href="{% url 'record-new' %}">Record now</a> in the rail: a dictation, a meeting, or a call, and the transcript comes back finished with the memo or summary one click away.</p>
+      {% url 'record-new' as record_url %}
+      {% include "empty.html" with icon="mic" title="Nothing recorded here yet" line="A dictation, a meeting, or a call, recorded in the browser; the transcript comes back finished with the memo or summary one click away." action="Record now" action_url=record_url %}
     {% endif %}
 
     {% if received %}
