@@ -21,6 +21,29 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.111.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Four small placements from the walk.**
+
+- **Report a problem is in the rail**, at its foot under Help, on every
+  page; it had been a link at the foot of each page, where it met the Ask
+  Gideon button on case pages, and a second link in the incident page's
+  work panel. On a narrow screen it is one more chip in the rail's row.
+- **The Cases list filters as you type.** The Filter button is gone; the
+  rows narrow to the names that hold what is typed, and Enter still asks
+  the server for an address that can be shared.
+- **A recording's name is a door.** On a case's Recordings and on My
+  recordings the name opens the recording, as the row's Open button does;
+  a press elsewhere on the row still folds its details open.
+- **The speakers line reads as parts.** On the recording page the tools
+  (Manage speakers, hide, fold) stand apart from the count by a rule,
+  where the line had read as one run-on sentence.
+
 ## v1.110.0, 2026-10-03
 
 ```

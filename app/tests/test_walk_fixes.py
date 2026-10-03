@@ -259,6 +259,36 @@ def test_the_users_pages_row_is_two_actions_and_more():
     assert "the rest are under **More**" in guide
 
 
+def test_the_small_placement_items_of_the_walk():
+    """v1.111.0, the walk's items 13, 14, 15 and 18: Report a problem at the
+    foot of the rail (no page foot, no second link on the incident page);
+    the Cases filter narrows as you type and the Filter button is gone; a
+    row's name is a link to the recording where the row folds open; the
+    cast's tools stand apart from the count."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    base = (APP / "templates" / "base.html").read_text(encoding="utf-8")
+    assert 'id="report-open" class="item report"' in base
+    assert "page-foot" not in base and "page-foot" not in css
+    assert ".rail .item.report { margin-top: auto; }" in css
+    incident = (APP / "templates" / "incident.html").read_text(encoding="utf-8")
+    assert 'id="report-open"' not in incident
+    cases = (APP / "templates" / "cases.html").read_text(encoding="utf-8")
+    assert 'id="case-filter"' in cases and ">Filter</button>" not in cases
+    script = (APP / "static" / "cases.js").read_text(encoding="utf-8")
+    assert 'getElementById("case-filter")' in script and "row.hidden" in script
+    for name in ("case.html", "recordings.html"):
+        page = (APP / "templates" / name).read_text(encoding="utf-8")
+        assert 'class="plain"><b>{{ recording.title }}</b></a>' in page, name
+    assert ".tbl tr.pick a.plain { color: inherit;" in css
+    viewer = (APP / "templates" / "viewer.html").read_text(encoding="utf-8")
+    assert '<span class="cast-tools">' in viewer
+    assert viewer.index('id="cast-count"') < viewer.index('<span class="cast-tools">')
+    assert ".cast .cast-tools {" in css
+    for name in ("user-guide.md", "admin-guide.md"):
+        guide = (APP.parent / "docs" / name).read_text(encoding="utf-8")
+        assert "at the foot of the rail" in guide, name
+
+
 def test_the_list_tables_card_class_matches_no_other_rule():
     """v1.110.0: the class that turns a list table into cards under 700 had
     matched the older `.cards` rule (a grid of cards on the document pages),

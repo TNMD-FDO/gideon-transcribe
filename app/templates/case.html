@@ -546,7 +546,7 @@
               {% for recording in recordings %}
                 <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
                     {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
-                  <td><span class="chev" aria-hidden="true">&#8250;</span> <b>{{ recording.title }}</b></td>
+                  <td><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                   {% if any_type %}<td class="muted">{{ recording.recording_type }}</td>{% endif %}
                   <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>

@@ -62,7 +62,7 @@
                 {% for recording in group.rows %}
                   <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
                       {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
-                    <td><b>{{ recording.title }}</b></td>
+                    <td>{% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                     <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span></td>
                     <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                     <td>{% if recording.clips.count %}{{ recording.clips.count }}{% endif %}</td>

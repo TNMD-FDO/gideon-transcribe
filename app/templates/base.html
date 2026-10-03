@@ -102,6 +102,17 @@
           <span class="words"><b>Help</b><span class="line">The guide, at this page</span></span>
         </a>
         <a href="{% help_url page %}" id="help-beside" class="help-beside" title="Open the guide beside this page" aria-expanded="false">? Guide beside</a>
+        {% comment %}
+          Report a problem (Phase 8 chapter 3) lives at the foot of the rail,
+          under Help (v1.111.0, the walk's item 13); it had been a link at the
+          foot of every page, where it met the Ask Gideon button.
+        {% endcomment %}
+        {% if reports_on %}
+          <a href="#" id="report-open" class="item report" title="Report a problem, or send an idea, to your Admins">
+            <span class="ico">{% icon "warning" %}</span>
+            <span class="words"><b>Report a problem</b><span class="line">Or send an idea, to your Admins</span></span>
+          </a>
+        {% endif %}
       </nav>
     {% endif %}
     <div class="shell">
@@ -111,12 +122,11 @@
         {% endif %}
         {% block content %}{% endblock %}
         {% comment %}
-          Report a problem (Phase 8 chapter 3): one small link at the right of
-          every page's foot, for a signed-in person, while Reports is on. The
-          incident page fills the window and carries the link in its panel's
-          head instead, so it empties this block.
+          The foot of a page: empty since v1.111.0, when Report a problem
+          moved into the rail; the block stays for a page with a foot of its
+          own.
         {% endcomment %}
-        {% block foot %}{% if user.is_authenticated and reports_on %}<footer class="page-foot"><a href="#" id="report-open" class="small muted">Report a problem</a></footer>{% endif %}{% endblock %}
+        {% block foot %}{% endblock %}
       </main>
       {% if user.is_authenticated %}
         <aside id="help-pane" class="help-pane" hidden aria-label="The guide">

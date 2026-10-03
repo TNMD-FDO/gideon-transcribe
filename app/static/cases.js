@@ -50,6 +50,22 @@
     });
   });
 
+  // The Cases page's filter box narrows the list as you type (v1.111.0, the
+  // walk's item 14): a row stays while its name holds the words. Enter still
+  // asks the server, which is what Clear and a shared address rely on.
+  var filterBox = document.getElementById("case-filter");
+  var caseRows = document.querySelectorAll("#recordings tbody tr.goes");
+  if (filterBox && caseRows.length) {
+    filterBox.addEventListener("input", function () {
+      var wanted = filterBox.value.trim().toLowerCase();
+      caseRows.forEach(function (row) {
+        var named = row.querySelector("td b");
+        var name = (named ? named.textContent : row.textContent).toLowerCase();
+        row.hidden = wanted !== "" && name.indexOf(wanted) === -1;
+      });
+    });
+  }
+
   // The Cases page's New case box -------------------------------------------
 
   var openNew = document.getElementById("open-new");

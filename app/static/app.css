@@ -1241,6 +1241,8 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .cast.folded #speakers-undo-line, .cast.folded #suggest-line { display: none; }
 .cast.folded { padding: 6px 20px; }
 .cast #cast-count:empty { display: none; }
+/* The cast's tools, set apart from the count by a rule (v1.111.0). */
+.cast .cast-tools { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; padding-left: 10px; border-left: 1px solid var(--line); }
 .cast .speakerchips { margin: 0; }
 .cast .hint { margin-top: 6px; }
 .cast .card { margin: 6px auto 0; }
@@ -1743,6 +1745,10 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .dockhead .crumb a { color: inherit; }
 /* A row that is itself a link: the name reads as one, quietly. */
 .tbl tr.goes a.plain { color: inherit; text-decoration: none; }
+/* v1.111.0 (the walk's item 15): a row's name is the door too, on the rows
+   that fold open on a press (a case's recordings, My recordings). */
+.tbl tr.pick a.plain { color: inherit; text-decoration: none; }
+.tbl tr.pick a.plain:hover b { text-decoration: underline; }
 .tbl tr.goes:hover a.plain b { text-decoration: underline; }
 .tbl td.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .tbl td.acts { text-align: right; white-space: nowrap; }
@@ -2034,10 +2040,11 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
   box-shadow: var(--shadow);
 }
 .ui-dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
-/* Report a problem (Phase 8 chapter 3): the link at the foot, the box. */
-.page-foot { margin-top: 28px; text-align: right; }
-.page-foot a { color: var(--muted); }
-.inc-report { margin-left: 8px; white-space: nowrap; align-self: center; }
+/* Report a problem (Phase 8 chapter 3): the rail's last item (v1.111.0, the
+   walk's item 13), pushed to the rail's foot on a wide window; on a narrow
+   one the rail is a row and it is one more chip. */
+.rail .item.report { margin-top: auto; }
+@media (max-width: 899px) { .rail .item.report { margin-top: 0; } }
 .report-dialog { width: min(600px, 92vw); }
 .report-kinds { gap: 16px; margin: 0 0 10px; }
 .report-kinds label { display: inline-flex; gap: 6px; align-items: center; }

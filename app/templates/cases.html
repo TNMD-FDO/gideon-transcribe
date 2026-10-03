@@ -20,9 +20,9 @@
     <div class="row" style="margin: 0 0 14px">
       <form method="get" class="row grow" style="gap: 6px">
         {% if who == "everyone" %}<input type="hidden" name="who" value="everyone">{% endif %}
-        <input type="search" name="name" value="{{ name_filter }}"
-               placeholder="Filter by name" style="max-width: 18rem">
-        <button type="submit" class="btn">Filter</button>
+        {% comment %}Narrows the list as you type (cases.js, v1.111.0); Enter asks the server, for an address that can be shared.{% endcomment %}
+        <input type="search" name="name" value="{{ name_filter }}" id="case-filter"
+               placeholder="Filter by name" style="max-width: 18rem" aria-label="Filter by name">
         {% if name_filter or expiring or owner_deactivated %}<a href="{% url 'cases' %}{% if who == 'everyone' %}?who=everyone{% endif %}" class="btn ghost">Clear</a>{% endif %}
       </form>
       {% comment %}
