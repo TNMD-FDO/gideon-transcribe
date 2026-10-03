@@ -215,7 +215,7 @@ def test_home_greets_and_the_rail_has_the_places(client):
     assert "Good morning" in page or "Good afternoon" in page or "Good evening" in page
     # The doors' question went with the Start page (Phase 8 chapter 13).
     assert "What do you want to do?" not in page
-    assert "Upload files" in page and "No cases yet." in page
+    assert "Upload files" in page and "No cases yet" in page
     # Record now waits on the Record now setting.
     assert 'href="/record/new"' not in page
     settings_store.set_to("folder_management", False)

@@ -69,7 +69,7 @@
                     <td class="muted">{{ recording.batch.created|date:"j M" }}, {{ recording.batch.created|time:"g:i a" }}</td>
                     <td class="acts">
                       {% if recording.transcript %}
-                        <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
+                        <a href="{% url 'viewer' recording.pk %}" class="btn small">Open</a>
                       {% endif %}
                     </td>
                   </tr>
@@ -94,7 +94,7 @@
                         </dl>
                         <div class="row actions">
                           {% if recording.transcript %}
-                            <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
+                            <a href="{% url 'viewer' recording.pk %}" class="btn">Open</a>
                           {% endif %}
                           {% if not someone_elses %}
                             <button type="button" class="small rename-recording"
@@ -142,7 +142,8 @@
       {% if someone_elses %}
         {% include "empty.html" with icon="upload" title="No recordings" line="This person has nothing in their workspace at the moment." %}
       {% else %}
-        <p class="muted">Nothing uploaded this session. <a href="{% url 'upload' %}">Upload files</a> and they are transcribed here.</p>
+        {% url 'upload' as upload_url %}
+        {% include "empty.html" with icon="upload" title="Nothing uploaded this session" line="Upload files and they are transcribed here, listed until you sign out or put them in a case." action="Upload files" action_url=upload_url %}
       {% endif %}
     {% endif %}
   </div>

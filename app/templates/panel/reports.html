@@ -11,10 +11,10 @@
   </p>
 
   <div class="row" style="margin: 0 0 8px; gap: 8px">
-    <a href="{% url 'panel-reports' %}" class="btn small{% if not state %} primary{% endif %}">All ({{ total }})</a>
-    <a href="{% url 'panel-reports' %}?state=new" class="btn small{% if state == 'new' %} primary{% endif %}">New ({{ counts.new }})</a>
-    <a href="{% url 'panel-reports' %}?state=seen" class="btn small{% if state == 'seen' %} primary{% endif %}">Seen ({{ counts.seen }})</a>
-    <a href="{% url 'panel-reports' %}?state=done" class="btn small{% if state == 'done' %} primary{% endif %}">Done ({{ counts.done }})</a>
+    <a href="{% url 'panel-reports' %}" class="btn small{% if not state %} on{% endif %}">All ({{ total }})</a>
+    <a href="{% url 'panel-reports' %}?state=new" class="btn small{% if state == 'new' %} on{% endif %}">New ({{ counts.new }})</a>
+    <a href="{% url 'panel-reports' %}?state=seen" class="btn small{% if state == 'seen' %} on{% endif %}">Seen ({{ counts.seen }})</a>
+    <a href="{% url 'panel-reports' %}?state=done" class="btn small{% if state == 'done' %} on{% endif %}">Done ({{ counts.done }})</a>
   </div>
 
   {% if rows %}

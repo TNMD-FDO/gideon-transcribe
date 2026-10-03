@@ -21,6 +21,49 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.107.0, 2026-10-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The look, written down once and applied everywhere.** The walk of 2
+October found no wrong style but an unfinished system: each page had been
+styled on its own day, so titles came in three sizes, there were 26 kinds
+of button on one page, ten primary buttons on another and three ways to say
+"nothing here". The system is now one page, `docs/the-look.md`, and the
+stylesheet's head repeats it in six lines; every page keeps to it.
+
+- **Type.** Five sizes: 22 for a page's title, 17 for a heading, 15 for
+  the text, 13 for secondary words, 11 uppercase for labels. The larger
+  centred titles of Upload files and New recording, and the stray sizes in
+  between, are gone.
+- **Buttons.** Four kinds (secondary, primary, ghost, danger) at two sizes
+  (regular and small); the player bar's Play is the one taller button.
+  **One primary a page**: the Cases list's ten blue Open buttons, the
+  Status page's three test buttons, the rows' Download and Open buttons on
+  the case, Clips and My recordings pages are secondary now; a filter in
+  force (Expiring, Owner deactivated, the Users and Reports filters) is lit
+  as a pressed button rather than as a primary.
+- **One head on every page.** An eyebrow for where you are (Cases over a
+  case, Home over Upload files, Panel over every Panel page), the title at
+  one size, the page's main action at the right on the same line: New case
+  on Cases, Add recordings on a case, Download all on Clips, Empty recycle
+  bin on the bin. On a phone the action drops under the title.
+- **Cards.** One radius for everything that holds content.
+- **Nothing here.** One pattern, the icon card with the one action that
+  fills the place, on Home's sections and My recordings too.
+- **Space.** The reading pages are capped at 1400 pixels instead of 1120,
+  so a desk monitor shows a wider list rather than a wider margin.
+- **The Speakers page on a phone** (folded in from the v1.106.2 check):
+  the words take their own line under the time and the name instead of one
+  word a line, and the player is no longer capped, so the lanes are not
+  clipped under the wrapped transport.
+
+Stylesheet, fourteen templates and a page of documentation; no script, no
+migration, no engine calls.
+
 ## v1.106.2, 2026-10-02
 
 ```

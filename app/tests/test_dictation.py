@@ -189,7 +189,7 @@ def test_a_failed_recording_says_why_and_is_not_watched(ana, client):
 def test_the_new_recording_page_asks_one_question(ana, client):
     signed_in(client, ana)
     page = client.get(reverse("record-new")).content.decode()
-    assert '<h1 class="grow">New recording</h1>' in page
+    assert "<h1>New recording</h1>" in page
     assert "What are you recording?" in page and "More options" in page
     # The microphone check: a chooser, a level bar, and the Remote Desktop line.
     assert 'id="mic-choice"' in page and 'id="meter-before"' in page

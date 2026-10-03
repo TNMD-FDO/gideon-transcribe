@@ -3,9 +3,10 @@
   The empty state of a list page: what this place is for, and the one thing
   to do. {% include "empty.html" with icon="case" title="No cases yet"
   line="A case keeps a matter's recordings together." action="New case"
-  action_url="/case/new" %}. Without an action it is the words alone.
+  action_url="/case/new" %}. Without an action it is the words alone. With
+  compact=True it sits inside a section that has its own border (Home).
 {% endcomment %}
-<div class="empty">
+<div class="empty{% if compact %} in-section{% endif %}">
   {% icon icon %}
   <h2>{{ title }}</h2>
   {% if line %}<p>{{ line }}</p>{% endif %}

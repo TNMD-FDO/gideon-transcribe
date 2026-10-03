@@ -1,11 +1,25 @@
 /* Gideon Transcribe: the whole look of the app, in one file.
  *
  * One visual language, applied everywhere (the finish approved on 5 September
- * 2026): tokens for colour, one typeface shipped with the app, four sizes of
- * type, four buttons, one shape of pill, one set of line icons. The tokens and
- * the widgets began as the planning prototypes' and were refined into this set;
+ * 2026, written down as a system on 2 October 2026, v1.107.0): tokens for
+ * colour, one typeface shipped with the app, five sizes of type, four buttons
+ * at two sizes, one shape of pill, one set of line icons. The tokens and the
+ * widgets began as the planning prototypes' and were refined into this set;
  * nothing here is borrowed from another application. Light and dark are two
  * palettes for the same roles, not an inversion.
+ *
+ * The system, in six lines (docs/the-look.md says the same at length):
+ *   Type:    22 titles, 17 headings, 15 text, 13 secondary, 11 uppercase labels.
+ *   Buttons: secondary (plain), primary (one a page, or one a form), ghost,
+ *            danger; regular (34) and small (28). Tabs and the player bar are
+ *            their own two things.
+ *   Cards:   one radius (8), one border, one padding (14 by 16).
+ *   Headers: .page-head on every page: an eyebrow for where you are, the title
+ *            at one size, the page's one main action at the right.
+ *   Space:   reading pages capped at 1400; the work pages (recording, speakers,
+ *            incident, document) take the width.
+ *   Colour:  the accent for the primary, links and the current item; state in
+ *            the green, amber, red and grey pills; "As an Admin" in orange.
  *
  * Everything is a token. A colour written into a rule below is a mistake.
  */
@@ -110,17 +124,23 @@
   --knob: #ffffff;
   /* Behind an uploaded logo: nothing on the light theme, white on the dark. */
   --logo-plate: transparent;
+  /* Two radii: 6 for buttons, inputs and pills' kin; 8 for cards, panels and
+   * anything that holds content (one radius for every card, v1.107.0). */
   --radius: 6px;
-  --radius-lg: 10px;
+  --radius-lg: 8px;
   --shadow: 0 8px 28px rgba(15, 30, 45, 0.14);
   --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Consolas, "Cascadia Mono", monospace;
-  /* The four sizes of type. Everything on a page is one of these. */
+  /* The five sizes of type. Everything a person reads is one of these:
+   * a page's title, a section's heading, the text, the secondary words, and
+   * the uppercase label over a group. The display size is for a figure (the
+   * incident's clock), never for a title. */
   --t-display: 28px;
   --t-title: 22px;
   --t-heading: 17px;
   --t-body: 15px;
   --t-small: 13px;
+  --t-label: 11px;
   /* How fast a hover or a focus ring arrives; nothing on the page is slower. */
   --quick: 120ms;
 
@@ -250,9 +270,12 @@ p { margin: 0 0 8px; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
 /* The four buttons. A plain <button> or .btn is the secondary; .primary is
- * the one thing to do on a page; .ghost is the quiet tool inside a panel;
- * .danger is red and stands last in any row. Three sizes: the default, .small
- * and .tiny, each a fixed height so a row of mixed buttons lines up. */
+ * the one thing to do on a page (or on a form, where a page is several); the
+ * row's own buttons are secondary. .ghost is the quiet tool inside a panel;
+ * .danger is red and stands last in any row. Two sizes: the default and
+ * .small, each a fixed height so a row of mixed buttons lines up (.tiny is
+ * .small, and .big is the default, since v1.107.0; the player bar's Play is
+ * the one taller button, and it is the bar's). */
 button, .btn {
   display: inline-flex;
   align-items: center;
@@ -282,7 +305,7 @@ button.primary, .btn.primary {
 button.primary:hover, .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 button.ghost, .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
 button.ghost:hover, .btn.ghost:hover { background: var(--accent-soft); border-color: transparent; }
-button.on {
+button.on, .btn.on {
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--accent);
@@ -290,9 +313,9 @@ button.on {
 button.danger, .btn.danger { color: var(--danger); }
 button.danger:hover, .btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
 button.danger.primary, .btn.danger.primary { background: var(--danger); color: var(--knob); border-color: var(--danger); }
-button.small, .btn.small { min-height: 28px; padding: 0 10px; font-size: var(--t-small); }
-button.tiny, .btn.tiny { min-height: 24px; padding: 0 8px; font-size: var(--t-small); }
-button.big, .btn.big { min-height: 40px; padding: 0 16px; font-size: var(--t-heading); }
+button.small, .btn.small, button.tiny, .btn.tiny { min-height: 28px; padding: 0 10px; font-size: var(--t-small); }
+button.big, .btn.big { min-height: 34px; padding: 0 14px; font-size: var(--t-body); }
+.transport button.big { min-height: 40px; padding: 0 16px; font-size: var(--t-heading); }
 /* A button that is only an icon. */
 button.icon, .btn.icon { padding: 0; width: 34px; }
 button.icon.small, .btn.icon.small { width: 28px; }
@@ -413,7 +436,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .grow { flex: 1; }
 /* A label over a group: small capitals with a little air. */
 .eyebrow {
-  font-size: 12px;
+  font-size: var(--t-label);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -450,7 +473,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .pill.translate { color: var(--warn); background: var(--warn-soft); }
 .pill.side { border: 1px dashed var(--line); background: transparent; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
-.pill.role { font-size: 0.72em; padding: 0 6px; margin-left: 4px; }
+.pill.role { font-size: var(--t-label); padding: 0 6px; margin-left: 4px; }
 
 /* The Case page's Shared with panel, under the facts about the case. */
 .shared-with { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -741,7 +764,10 @@ main.wide { max-width: none; }
  */
 .page { max-width: 52rem; margin: 0 auto; }
 .page.list { max-width: 60rem; }
-.page.roomy { max-width: 70rem; }
+/* The reading pages' cap (v1.107.0): 1400 pixels, so a desk monitor shows a
+   wider list rather than a wider margin; the work pages are main.wide and
+   take everything. */
+.page.roomy { max-width: 87.5rem; }
 
 .centre { text-align: center; }
 .dialog.centre { justify-content: center; }
@@ -765,21 +791,29 @@ main.wide { max-width: none; }
 .home-sect .row .plain { padding: 0; }
 .home-sect .row b { font-weight: 500; }
 .home-sect .empty-line { margin: 0; padding: 10px 14px; }
-.home-sect .pill.small { font-size: 11px; line-height: 18px; padding: 0 8px; }
+.home-sect .pill.small { font-size: var(--t-label); line-height: 18px; padding: 0 8px; }
 .home-sect.ready { border-color: var(--accent); }
 .home-sect .card { margin: 10px 14px 4px; }
 .tbl tr.batch-head td { background: var(--surface-2); padding: 8px 10px; border-top: 2px solid var(--line); }
-.rail .item b .pill.small { font-size: 10px; line-height: 16px; padding: 0 6px; }
+.rail .item b .pill.small { font-size: var(--t-label); line-height: 16px; padding: 0 6px; }
 
-/* The welcome head of the upload page ------------------------------------ */
-
-.welcome { text-align: center; margin: 8px 0 22px; }
-.welcome h1 { font-size: 1.9em; margin-bottom: 6px; }
-.welcome .lead {
-  color: var(--muted);
-  font-size: 1.05em;
-  max-width: 34rem;
-  margin: 0 auto;
+/* The head of every page (v1.107.0, sketch D of the walk): an eyebrow for
+   where you are (a link up, or the place's name), the title at the one title
+   size, the page's main action at the right on the same line, and a lead
+   under them when the page has one. Upload files and New recording had a
+   larger, centred title of their own; they take this one. On a phone the
+   action drops under the title. */
+.page-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; margin: 0 0 16px; }
+.page-head .eyebrow { grid-column: 1; }
+.page-head .eyebrow a { color: inherit; text-decoration: none; }
+.page-head .eyebrow a:hover { color: var(--accent); }
+.page-head .line { grid-column: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.page-head .line h1 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.page-head .acts { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.page-head .lead { grid-column: 1 / -1; margin: 6px 0 0; max-width: 60ch; }
+@media (max-width: 599px) {
+  .page-head { grid-template-columns: minmax(0, 1fr); }
+  .page-head .acts { grid-column: 1; grid-row: auto; justify-content: flex-start; }
 }
 
 /* The drop zone is the page, not a box inside step one of three. */
@@ -791,9 +825,8 @@ main.wide { max-width: none; }
  * the page and everything else is quieter and underneath it. */
 .done-hero { text-align: center; padding: 26px 18px 22px; }
 .done-hero .tick { font-size: 2.2em; line-height: 1; color: var(--ok); }
-.done-hero h1 { font-size: 1.55em; margin: 10px 0 4px; }
+.done-hero h1 { font-size: var(--t-title); margin: 10px 0 4px; }
 .done-hero .lead { color: var(--muted); margin-bottom: 16px; }
-.done-hero button.primary { font-size: 1.05em; padding: 10px 22px; }
 .quiet-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
 
 /* The guides, rendered from Markdown ---------------------------------------- */
@@ -1603,7 +1636,6 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .expect .expect-second { color: var(--muted); font-size: var(--t-small); max-width: 62ch; }
 .expect .expect-second.over { color: var(--text); }
 .expect.inline, .expect.inline p { display: inline; }
-.tiny { font-size: 0.78em; }
 /* The cited line in the transcript, lit for a moment when its pill is clicked. */
 .seg.lit { outline: 2px solid var(--accent); outline-offset: -2px; transition: outline-color 1.2s ease; }
 .suggestions { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -1641,7 +1673,6 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .record .meter { height: 8px; border-radius: 4px; background: var(--well); overflow: hidden; }
 .record .meter-bar { height: 100%; width: 0; background: var(--accent); transition: width 80ms linear; }
 .record .time.big { font-family: var(--mono); font-size: var(--t-title); font-variant-numeric: tabular-nums; }
-.record .btn.big { font-size: var(--t-heading); padding: 10px 18px; }
 /* The Record page's people buttons: one lit while that person talks. */
 .record .people-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .record .people-buttons .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -2064,11 +2095,15 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 /* A page with nothing in it says what it is for and offers the one thing to do. */
 .empty {
   text-align: center;
-  padding: 44px 24px;
+  padding: 36px 24px;
   border: 1px dashed var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
+/* The same pattern inside a section that already has a border (Home's
+   sections, v1.107.0): the words and the one action, without a second box. */
+.empty.in-section { border: 0; border-radius: 0; background: transparent; padding: 20px 16px 22px; }
+.empty.in-section h2 { font-size: var(--t-body); }
 .empty .i { width: 38px; height: 38px; stroke-width: 1.4; color: var(--muted); }
 .empty h2 { margin: 10px 0 6px; font-size: var(--t-heading); }
 .empty p { color: var(--muted); margin: 0 auto 16px; max-width: 44ch; }
@@ -2779,7 +2814,9 @@ body.gideon-window .gideon-grip { display: none; }
 @media (max-width: 899px) {
   .sp-desk { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
   .sp-cards { grid-row: 1; grid-column: 1; border-right: 0; max-height: 32vh; }
-  .sp-right { grid-row: 2; grid-column: 1; max-height: 34vh; }
+  /* v1.107.0: the player's cap went with the page scrolling (v1.106.1); on a
+     phone the transport wrapped to two rows and the cap clipped the lanes. */
+  .sp-right { grid-row: 2; grid-column: 1; max-height: none; }
   .sp-middle { grid-row: 3; grid-column: 1; }
   /* v1.106.1: fitted to the window, the cards' and the player's shares plus
      the head left the transcript 86 pixels at 768 by 1024 and nothing on a
@@ -2794,6 +2831,15 @@ body.gideon-window .gideon-grip { display: none; }
      to shrink. */
   .speakers-page .sp-desk { flex: none; }
   .sp-middle { min-height: 50vh; }
+}
+/* v1.107.0: under 600 wide the line's fixed time and name columns left the
+   words one a line; the time and the name share the first line, the words
+   take the second at the full width. */
+@media (max-width: 599px) {
+  .sp-read .seg { grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; }
+  .sp-read .seg .who { text-align: left; }
+  .sp-read .seg .txt { grid-column: 1 / -1; }
+  .sp-read .seg .actions { grid-column: 3; }
 }
 
 /* 4. Tables with a row for each thing (cases, recordings, incidents,

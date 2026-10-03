@@ -18,12 +18,12 @@
        data-longest="{{ longest_seconds }}"
        data-case="{{ chosen_case }}"
        data-csrf="{{ csrf_token }}">
-    <p class="muted small" style="margin: 0 0 4px">
-      {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'recordings' %}">My recordings</a>{% endif %}
-    </p>
-    <div class="row">
-      <h1 class="grow">New recording</h1>
-    </div>
+    <header class="page-head">
+      <span class="eyebrow">
+        {% if chosen_case %}<a href="{% url 'case' chosen_case %}">{{ case_name }}</a>{% else %}<a href="{% url 'recordings' %}">My recordings</a>{% endif %}
+      </span>
+      <div class="line"><h1>New recording</h1></div>
+    </header>
 
     <section id="before" class="stack" style="max-width: 44rem">
       <p class="muted" style="margin: 0">What are you recording?</p>

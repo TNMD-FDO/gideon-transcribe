@@ -5,28 +5,30 @@
 
 {% block content %}
   <div class="page roomy workbench">
-    <div class="row">
-      <h1 class="grow">Clips</h1>
-      {% if groups|length > 1 %}
-        <label class="row small" style="gap: 6px">
-          Where
-          <select id="clip-filter">
-            <option value="">Everywhere</option>
-            {% for group in groups %}
-              <option value="{{ group.key }}">{{ group.name }}</option>
-            {% endfor %}
-          </select>
-        </label>
-      {% endif %}
-      {% if any_ready %}
-        <a href="{% url 'download-clips' %}" class="btn primary">Download all</a>
-      {% endif %}
-    </div>
-    <p class="lead">
+    <header class="page-head">
+      <div class="line"><h1>Clips</h1></div>
+      <div class="acts">
+        {% if groups|length > 1 %}
+          <label class="row small" style="gap: 6px">
+            Where
+            <select id="clip-filter">
+              <option value="">Everywhere</option>
+              {% for group in groups %}
+                <option value="{{ group.key }}">{{ group.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% endif %}
+        {% if any_ready %}
+          <a href="{% url 'download-clips' %}" class="btn primary">Download all</a>
+        {% endif %}
+      </div>
+      <p class="lead">
       {% if total|slice:":3" != "0.0" %}{{ total }} in all. {% endif %}Every clip you have saved, under the case or the
       place it belongs to; a clip is a span of a recording, rendered as a
       file you can play outside the app.
-    </p>
+      </p>
+    </header>
 
     {% if clips %}
       {% comment %}
@@ -81,7 +83,7 @@
                   <td class="muted">{{ clip.created|date:"d M H:i" }}</td>
                   <td class="acts">
                     {% if clip.state == "ready" %}
-                      <a href="{% url 'download-clip' clip.pk %}" class="btn primary small">Download</a>
+                      <a href="{% url 'download-clip' clip.pk %}" class="btn small">Download</a>
                     {% endif %}
                   </td>
                 </tr>
@@ -117,7 +119,7 @@
                       </dl>
                       <div class="row actions">
                         {% if clip.state == "ready" %}
-                          <a href="{% url 'download-clip' clip.pk %}" class="btn primary">Download</a>
+                          <a href="{% url 'download-clip' clip.pk %}" class="btn">Download</a>
                         {% endif %}
                         {% if clip.picture %}
                           {% if clip.incident %}<a href="{{ clip.incident.url }}" class="btn">Open the incident</a>{% endif %}

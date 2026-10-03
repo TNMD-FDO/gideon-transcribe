@@ -196,7 +196,7 @@
         {% endfor %}
       </dl>
       <div class="dialog">
-        <button type="button" class="primary" id="test-directory">Test directory connection</button>
+        <button type="button" id="test-directory">Test directory connection</button>
         <button type="button" id="check-directory">Check directory now</button>
       </div>
       <div id="directory-said"></div>
@@ -247,7 +247,7 @@
       <form method="post" action="{% url 'panel-logo' %}" enctype="multipart/form-data" class="row" style="margin-top: 12px; gap: 8px">
         {% csrf_token %}
         <input type="file" name="logo" accept="image/png,image/jpeg" required>
-        <button type="submit" class="primary small">{% if appearance.logo %}Replace logo{% else %}Upload logo{% endif %}</button>
+        <button type="submit" class="small">{% if appearance.logo %}Replace logo{% else %}Upload logo{% endif %}</button>
       </form>
       {% if appearance.logo %}
         <form method="post" action="{% url 'panel-logo' %}" style="margin-top: 8px"

@@ -5,12 +5,13 @@
 
 {% block content %}
   <div class="page roomy workbench">
-    <div class="row">
-      <h1 class="grow">Recycle bin</h1>
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
+      <div class="line"><h1>Recycle bin</h1></div>
       {% if mine %}
-        <button type="button" class="btn ghost danger" id="empty-bin">Empty recycle bin</button>
+        <div class="acts"><button type="button" class="btn ghost danger" id="empty-bin">Empty recycle bin</button></div>
       {% endif %}
-    </div>
+    </header>
 
     {% include "cases-tabs.html" %}
 

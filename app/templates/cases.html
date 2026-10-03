@@ -5,17 +5,15 @@
 
 {% block content %}
   <div class="page roomy workbench">
-    <div class="row">
-      <h1 class="grow">Cases</h1>
-      {% comment %}
-        Not everybody who lands here is here for a Case. An office's larger
-        use is batches of recordings that belong to nobody's case, and until
-        this button existed those people arrived on a page about a feature
-        they never use with no way onward but a link named after somewhere
-        else.
-      {% endcomment %}
-    </div>
-
+    {% comment %}
+      The page's one main action, New case, sits in the head (v1.107.0). The
+      filters are a row of their own under the tabs; a filter in force is lit
+      the way a pressed button is, not as a primary.
+    {% endcomment %}
+    <header class="page-head">
+      <div class="line"><h1>Cases</h1></div>
+      <div class="acts"><button type="button" class="btn primary" id="open-new">New case</button></div>
+    </header>
 
     {% include "cases-tabs.html" %}
 
@@ -32,12 +30,11 @@
         may narrow to Expiring, since anybody may have a case in its last days.
       {% endcomment %}
       <a href="{% url 'cases' %}?expiring=1{% if who == 'everyone' %}&amp;who=everyone{% endif %}{% if name_filter %}&amp;name={{ name_filter|urlencode }}{% endif %}"
-         class="btn{% if expiring %} primary{% endif %}">Expiring</a>
+         class="btn{% if expiring %} on{% endif %}">Expiring</a>
       {% if who == "everyone" %}
         <a href="{% url 'cases' %}?who=everyone&amp;owner_deactivated=1{% if name_filter %}&amp;name={{ name_filter|urlencode }}{% endif %}"
-           class="btn{% if owner_deactivated %} primary{% endif %}">Owner deactivated</a>
+           class="btn{% if owner_deactivated %} on{% endif %}">Owner deactivated</a>
       {% endif %}
-      <button type="button" class="btn primary" id="open-new">New case</button>
     </div>
 
     {% include "new-case-box.html" %}
@@ -89,7 +86,7 @@
               </td>
               <td class="acts">
                 {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
-                <a href="{% url 'case' row.case.pk %}" class="btn primary small">Open</a>
+                <a href="{% url 'case' row.case.pk %}" class="btn small">Open</a>
               </td>
             </tr>
           {% endfor %}

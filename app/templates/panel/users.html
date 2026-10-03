@@ -18,8 +18,8 @@
   <div class="panes users">
     <div class="pane-list">
   <div class="row" style="margin: 0 0 8px; gap: 8px">
-    <a href="{% url 'panel-users' %}" class="btn small{% if not no_email %} primary{% endif %}">Everyone</a>
-    <a href="{% url 'panel-users' %}?no_email=1" class="btn small{% if no_email %} primary{% endif %}">No email address{% if without_email %} ({{ without_email }}){% endif %}</a>
+    <a href="{% url 'panel-users' %}" class="btn small{% if not no_email %} on{% endif %}">Everyone</a>
+    <a href="{% url 'panel-users' %}?no_email=1" class="btn small{% if no_email %} on{% endif %}">No email address{% if without_email %} ({{ without_email }}){% endif %}</a>
     <span class="muted small">A missing address is fixed in the directory, never here; the next sign-in or directory check brings it in.</span>
   </div>
   <div class="card" style="overflow-x: auto">

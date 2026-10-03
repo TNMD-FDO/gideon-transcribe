@@ -21,6 +21,8 @@
     </nav>
 
     <section class="panel-page{% block page_class %}{% endblock %}">
+      {% comment %}The eyebrow of every Panel page (v1.107.0): where you are, over the page's own title.{% endcomment %}
+      <span class="eyebrow">Panel</span>
       {% block panel %}{% endblock %}
 
       {% if tray %}

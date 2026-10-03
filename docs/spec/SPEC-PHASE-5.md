@@ -325,6 +325,8 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- **2026-10-02, v1.107.0.** Chapter 1's Speakers page under 600 wide: a line's fixed time and name columns left the words one a line, so the time and the name share the first line and the words take the second at the full width; in one column the player's cap goes (the page scrolls since v1.106.1), since on a phone the wrapped transport left the lanes clipped under it.
+
 - **2026-10-02, v1.106.2.** Chapter 1's Speakers page in one column: v1.106.1's scrolling page grew to its content's width (2173 pixels at 768 wide), seen on the office's server; the page keeps the window's width and only the desk under it is kept from shrinking.
 
 - **2026-10-02, v1.106.1.** Chapter 1's Speakers page in one column (under 900 wide): fitted to the window, the cards' and the player's shares and the head left the transcript 86 pixels on a tablet and nothing on a phone, seen on the office's server at v1.106.0. In one column the page scrolls as a whole, the cards and the player at their caps and the transcript at its full length under them.

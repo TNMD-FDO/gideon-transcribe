@@ -83,7 +83,8 @@
           </div>
         {% endfor %}
       {% else %}
-        <p class="muted small empty-line">Nothing uploaded this session.</p>
+        {% url 'upload' as upload_url %}
+        {% include "empty.html" with compact=True icon="upload" title="Nothing uploaded this session" line="Upload files or record here; they are listed until you sign out or put them in a case." action="Upload files" action_url=upload_url %}
       {% endif %}
       {% if recorded_here %}
         <p class="muted small empty-line"><a href="{% url 'recordings' %}#recorded-here">{{ recorded_here }} recorded here</a></p>
@@ -112,9 +113,10 @@
             </div>
           {% endfor %}
         {% elif cases_line and "in the office" in cases_line %}
-          <p class="muted small empty-line">{{ cases_line }}. <a href="{% url 'cases' %}?who=everyone">Everyone's cases</a></p>
+          {% url 'cases' as cases_url %}
+          {% include "empty.html" with compact=True icon="case" title="None of yours yet" line=cases_line action="Everyone's cases" action_url=cases_url|add:"?who=everyone" %}
         {% else %}
-          <p class="muted small empty-line">No cases yet.</p>
+          {% include "empty.html" with compact=True icon="case" title="No cases yet" line="A case keeps a matter's recordings together, and keeps them after you sign out." action="New case" action_id="open-new-empty" %}
         {% endif %}
       </section>
     {% endif %}

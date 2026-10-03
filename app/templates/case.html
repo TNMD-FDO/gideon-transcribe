@@ -6,15 +6,14 @@
 
 {% block content %}
   <div class="page roomy workbench" data-case="{{ case.pk }}">
-    <p class="muted small" style="margin: 0 0 4px">
-      <a href="{% url 'cases' %}">Cases</a>
-    </p>
-
-    <div class="row">
-      <h1 class="grow" id="case-name">{{ case.name }}</h1>
-      {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
-      <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
-    </div>
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
+      <div class="line">
+        <h1 id="case-name">{{ case.name }}</h1>
+        {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
+      </div>
+      <div class="acts"><a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a></div>
+    </header>
     {% include "dashboard-line.html" %}
 
     {% if incidents_on %}
@@ -144,7 +143,7 @@
               {% if documents %}{{ documents|length }} document{{ documents|length|pluralize }} in this case, each the report for an incident or a camera.{% else %}None yet.{% endif %}
               A report is added here or from the incident's or the recording's <b>Details</b> tab, and is read beside the cameras it is about.
             </p>
-            <a class="btn small primary" id="add-document" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
+            <a class="btn small" id="add-document" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
           </div>
           {% if documents %}
             <div class="card" style="overflow-x: auto">
@@ -290,7 +289,7 @@
                       {% endif %}
                       <td>{{ row.events }}{% if row.memo %}<div class="muted small nowrap">{{ row.memo }}</div>{% endif %}</td>
                       <td class="muted nowrap">{{ row.incident.created|date:"d M Y" }}{% if row.incident.created_by %} by {{ row.incident.created_by.shown_name }}{% endif %}</td>
-                      <td class="acts"><a href="{{ row.url }}" class="btn primary small">Open the incident</a></td>
+                      <td class="acts"><a href="{{ row.url }}" class="btn small">Open the incident</a></td>
                     </tr>
                   {% endfor %}
                 </tbody>
@@ -472,7 +471,7 @@
                       <td>
                         <span class="row">
                           {% if clip.state == "ready" %}
-                            <a href="/clip/{{ clip.id }}/download" class="btn primary small">Download</a>
+                            <a href="/clip/{{ clip.id }}/download" class="btn small">Download</a>
                           {% endif %}
                           {% if clip.picture %}
                             {% if clip.incident_url %}<a href="{{ clip.incident_url }}" class="btn small">Open the incident</a>{% endif %}
@@ -562,7 +561,7 @@
                   </td>
                   <td class="acts">
                     {% if recording.transcript %}
-                      <a href="{% url 'viewer' recording.pk %}" class="btn primary small">Open</a>
+                      <a href="{% url 'viewer' recording.pk %}" class="btn small">Open</a>
                     {% endif %}
                   </td>
                 </tr>
@@ -588,7 +587,7 @@
                       </div>
                       <div class="row actions">
                         {% if recording.transcript %}
-                          <a href="{% url 'viewer' recording.pk %}" class="btn primary">Open</a>
+                          <a href="{% url 'viewer' recording.pk %}" class="btn">Open</a>
                         {% endif %}
                         {% if recording.vision_offered and recording.vision_state != "done" and recording.vision_state != "queued" and recording.vision_state != "running" %}
                           <form method="post" action="{% url 'vision-case' case.pk %}" class="row" style="display: inline-flex; gap: 6px">

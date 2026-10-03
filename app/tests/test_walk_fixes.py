@@ -128,3 +128,64 @@ def test_the_three_slips_of_the_server_check_are_held_in_the_stylesheet():
     # it shrinking sideways. Only the desk, in the page's column, is held.
     assert ".speakers-page .sp-desk { flex: none; }" in css
     assert "main.wide, .speakers-page .sp-desk" not in css
+
+
+def test_the_system_is_written_down_once_and_the_pages_keep_to_it():
+    """v1.107.0, the system release of the walk: five sizes of type, four
+    buttons at two sizes, one card radius, one page head, the reading pages
+    capped, one empty-state pattern, one primary a page; and the Speakers
+    page's two phone items folded in."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    # Type: the label size joins the tokens; the stray sizes are gone.
+    assert "--t-label: 11px;" in css
+    assert ".eyebrow {\n  font-size: var(--t-label);" in css
+    assert ".tiny { font-size: 0.78em; }" not in css
+    assert ".welcome h1" not in css
+    # Buttons: two sizes, tiny is small, big is the default but on the player bar.
+    assert "button.small, .btn.small, button.tiny, .btn.tiny { min-height: 28px;" in css
+    assert "button.big, .btn.big { min-height: 34px;" in css
+    assert ".transport button.big { min-height: 40px;" in css
+    assert ".record .btn.big" not in css
+    assert ".done-hero button.primary" not in css
+    assert "button.on, .btn.on {" in css
+    # Cards: one radius.
+    assert "--radius-lg: 8px;" in css
+    # The page head, and the pages that take it.
+    assert ".page-head { display: grid;" in css
+    for name in (
+        "upload.html",
+        "record.html",
+        "cases.html",
+        "case.html",
+        "clips.html",
+        "recycle-bin.html",
+    ):
+        page = (APP / "templates" / name).read_text(encoding="utf-8")
+        assert '<header class="page-head">' in page, name
+        assert 'class="welcome"' not in page, name
+    panel = (APP / "templates" / "panel" / "base.html").read_text(encoding="utf-8")
+    assert '<span class="eyebrow">Panel</span>' in panel
+    # Space: the reading pages' cap.
+    assert ".page.roomy { max-width: 87.5rem; }" in css
+    # One empty-state pattern, inside Home's sections too.
+    assert ".empty.in-section {" in css
+    home = (APP / "templates" / "home.html").read_text(encoding="utf-8")
+    assert home.count('{% include "empty.html" with compact=True') == 3
+    assert 'empty-line">Nothing uploaded' not in home
+    recordings = (APP / "templates" / "recordings.html").read_text(encoding="utf-8")
+    assert 'title="Nothing uploaded this session"' in recordings
+    # One primary a page: the rows' buttons are secondary, the filters are lit.
+    cases = (APP / "templates" / "cases.html").read_text(encoding="utf-8")
+    assert cases.count('class="btn primary"') == 1 and "primary small" not in cases
+    assert "{% if expiring %} on{% endif %}" in cases
+    status = (APP / "templates" / "panel" / "status.html").read_text(encoding="utf-8")
+    assert "primary" not in status
+    reports = (APP / "templates" / "panel" / "reports.html").read_text(encoding="utf-8")
+    assert "primary" not in reports.split("<table")[0]
+    for name in ("case.html", "clips.html", "recordings.html"):
+        page = (APP / "templates" / name).read_text(encoding="utf-8")
+        assert 'class="btn primary small">Open' not in page, name
+        assert 'class="btn primary small">Download' not in page, name
+    # The Speakers page on a phone: the words on their own line, the lanes uncapped.
+    assert ".sp-read .seg .txt { grid-column: 1 / -1; }" in css
+    assert ".sp-right { grid-row: 2; grid-column: 1; max-height: none; }" in css
