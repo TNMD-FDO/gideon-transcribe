@@ -59,20 +59,33 @@
                 <br><span class="muted">{{ row.in_cases }} in cases, {{ row.cases_gigabytes }} GB</span>
               {% endif %}
             </td>
-            <td class="muted">{{ row.quota }}</td>
+            <td>
+              {% comment %}
+                The quota is set where it is read (v1.110.0): a form of its
+                own, so that pressing Enter in the box sets a quota rather
+                than firing the row's first button.
+              {% endcomment %}
+              <form method="post" action="{% url 'panel-user' row.user.username %}"
+                    class="row small quota-form">
+                {% csrf_token %}
+                <input type="number" id="quota-{{ row.user.username }}" name="quota_gb"
+                       min="1" max="5000" aria-label="Quota in GB"
+                       value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="{{ row.quota }}">
+                <button type="submit" name="action" value="quota" class="small ghost">Set</button>
+              </form>
+            </td>
             <td class="muted">{{ row.user.last_sign_in|default:"never" }}</td>
           </tr>
           <tr>
             <td colspan="8" style="padding-bottom: 14px">
-              <form method="post" action="{% url 'panel-user' row.user.username %}" class="row">
+              {% comment %}
+                The row's actions (v1.110.0, the walk's item 16): Block and
+                Reassign in view, the rest under More, which opens them in
+                place on a line of their own. Six buttons and a box had stood
+                in a row for every person down the page.
+              {% endcomment %}
+              <form method="post" action="{% url 'panel-user' row.user.username %}" class="row user-acts">
                 {% csrf_token %}
-                <a href="{% url 'panel-workspace' row.user.username %}" class="btn small">Open their Workspace</a>
-                <a href="{% url 'panel-audit' %}?actor={{ row.user.username }}" class="btn small">Activity</a>
-                <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}" class="btn small">Access to their material</a>
-
-                <button type="submit" name="action" value="end-sessions" class="small"
-                        data-confirm-title="End {{ row.user.username }}'s sessions?" data-confirm="This signs them out and removes {{ row.counts.recordings }} recordings and their transcripts from their workspace." data-confirm-ok="End sessions" data-danger>End sessions</button>
-
                 {% if row.status == "Blocked" %}
                   <button type="submit" name="action" value="unblock" class="small">Unblock</button>
                 {% else %}
@@ -80,45 +93,43 @@
                           data-confirm-title="Block {{ row.user.username }}?" data-confirm="They cannot sign in until an Admin lifts it." data-confirm-ok="Block" data-danger>Block</button>
                 {% endif %}
 
-                <button type="submit" name="action" value="admin-flag" class="small"
-                        {% if row.admin_source == "Admin group" %}disabled title="Held through the directory group, so it cannot be changed here"{% elif row.admin_source == "Local" %}disabled title="Every Local admin is an Admin, so this cannot be changed here"{% endif %}>
-                  {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
-                </button>
-
                 {% comment %}
-                  Both act on Cases, so both are greyed while Folder
-                  management is off: there is nothing in a Workspace for
-                  either of them to act on, and End sessions is how an Admin
-                  frees somebody's space.
+                  Reassign and Delete data act on Cases, so both are greyed
+                  while Folder management is off: there is nothing in a
+                  Workspace for either of them to act on, and End sessions is
+                  how an Admin frees somebody's space.
                 {% endcomment %}
                 {% if folder_management %}
                   <input type="text" name="to" class="small" style="max-width: 10rem"
-                         placeholder="username">
+                         placeholder="username" aria-label="Reassign their cases to this username">
                   <button type="submit" name="action" value="reassign" class="small"
-                          data-confirm-title="Give every case {{ row.user.username }} owns to the named person?" data-confirm="The days left on each case are kept." data-confirm-ok="Reassign">Reassign to a named user</button>
-                  <button type="submit" name="action" value="delete-data" class="small ghost danger"
-                          data-confirm-title="Delete everything in {{ row.user.username }}'s cases?" data-confirm="All {{ row.in_cases }} recording{{ row.in_cases|pluralize }}, {{ row.cases_gigabytes }} GB. This is final." data-confirm-ok="Delete data" data-danger>Delete data</button>
+                          data-confirm-title="Give every case {{ row.user.username }} owns to the named person?" data-confirm="The days left on each case are kept." data-confirm-ok="Reassign">Reassign</button>
                 {% else %}
                   <button type="button" class="small" disabled
-                          title="Reassign acts on cases. Turn Folder management on to use it.">Reassign to a named user</button>
-                  <button type="button" class="small" disabled
-                          title="Delete data acts on cases. Turn Folder management on to use it. To free this person's space now, use End sessions: their recordings go within the minute.">Delete data</button>
+                          title="Reassign acts on cases. Turn Folder management on to use it.">Reassign</button>
                 {% endif %}
-              </form>
 
-              {% comment %}
-                The quota has a form of its own, so that pressing Enter in the
-                box sets a quota rather than firing this row's first button,
-                which signs the person out and discards their recordings.
-              {% endcomment %}
-              <form method="post" action="{% url 'panel-user' row.user.username %}"
-                    class="row small" style="margin-top: 6px">
-                {% csrf_token %}
-                <label class="muted" for="quota-{{ row.user.username }}">Quota</label>
-                <input type="number" id="quota-{{ row.user.username }}" name="quota_gb"
-                       min="1" max="5000" style="width: 6rem"
-                       value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="default">
-                <button type="submit" name="action" value="quota" class="small">Set</button>
+                <details class="more-acts">
+                  <summary class="btn small ghost" title="Open their Workspace, Activity, Access to their material, the admin flag, End sessions, Delete data">More</summary>
+                  <div class="menu">
+                    <a href="{% url 'panel-workspace' row.user.username %}" class="btn small">Open their Workspace</a>
+                    <a href="{% url 'panel-audit' %}?actor={{ row.user.username }}" class="btn small">Activity</a>
+                    <a href="{% url 'panel-audit' %}?affected={{ row.user.username }}" class="btn small">Access to their material</a>
+                    <button type="submit" name="action" value="admin-flag" class="small"
+                            {% if row.admin_source == "Admin group" %}disabled title="Held through the directory group, so it cannot be changed here"{% elif row.admin_source == "Local" %}disabled title="Every Local admin is an Admin, so this cannot be changed here"{% endif %}>
+                      {% if row.user.admin_flag %}Take the admin flag off{% else %}Make an Admin{% endif %}
+                    </button>
+                    <button type="submit" name="action" value="end-sessions" class="small ghost danger"
+                            data-confirm-title="End {{ row.user.username }}'s sessions?" data-confirm="This signs them out and removes {{ row.counts.recordings }} recordings and their transcripts from their workspace." data-confirm-ok="End sessions" data-danger>End sessions</button>
+                    {% if folder_management %}
+                      <button type="submit" name="action" value="delete-data" class="small ghost danger"
+                              data-confirm-title="Delete everything in {{ row.user.username }}'s cases?" data-confirm="All {{ row.in_cases }} recording{{ row.in_cases|pluralize }}, {{ row.cases_gigabytes }} GB. This is final." data-confirm-ok="Delete data" data-danger>Delete data</button>
+                    {% else %}
+                      <button type="button" class="small ghost" disabled
+                              title="Delete data acts on cases. Turn Folder management on to use it. To free this person's space now, use End sessions: their recordings go within the minute.">Delete data</button>
+                    {% endif %}
+                  </div>
+                </details>
               </form>
 
               {% if row.user.is_local %}

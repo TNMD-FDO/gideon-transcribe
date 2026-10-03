@@ -1,6 +1,6 @@
 """Fill an empty database with a fictional office, for a walk of the pages.
 
-    python manage.py seed_demo --password <the admin's password>
+    python manage.py seed_demo --password-file <a file holding the admin's password>
 
 A developer's tool, never run on an office's server: it makes a Local admin
 and a second person, cases, recordings with transcripts and speakers, an
@@ -15,7 +15,7 @@ database that is in use.
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -109,10 +109,12 @@ class Command(BaseCommand):
     help = "Fill an empty database with a fictional office, for a walk of the pages."
 
     def add_arguments(self, parser) -> None:
+        parser.add_argument("--password", default="", help="the Local admin's password")
         parser.add_argument(
-            "--password",
-            default=os.environ.get("SEED_PASSWORD", ""),
-            help="the Local admin's password (or the SEED_PASSWORD environment key)",
+            "--password-file",
+            default="",
+            help="a file holding the Local admin's password, so that it is in no "
+            "command line",
         )
 
     def handle(self, *args, **options) -> None:
@@ -120,8 +122,13 @@ class Command(BaseCommand):
             self.stdout.write("Somebody already exists here; nothing seeded.")
             return
         password = options["password"]
+        if not password and options["password_file"]:
+            kept = Path(options["password_file"])
+            password = kept.read_text(encoding="utf-8").strip()
         if not password:
-            raise CommandError("Give the Local admin's password with --password.")
+            raise CommandError(
+                "Give the Local admin's password with --password or --password-file."
+            )
         # All or nothing, so a slip leaves an empty database rather than half
         # an office that the next run then refuses to touch.
         with transaction.atomic():

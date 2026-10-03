@@ -475,6 +475,19 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
 .pill.role { font-size: var(--t-label); padding: 0 6px; margin-left: 4px; }
 
+/* The Users page's row (v1.110.0, the walk's item 16): Block and Reassign in
+   view, the rest under More, which opens them in place on a line of their
+   own (a floating menu would be clipped by the card that scrolls sideways
+   on a narrow window). The quota is set in its own column. */
+.tbl.users .user-acts { gap: 6px; align-items: center; }
+.tbl.users .user-acts .more-acts { display: contents; }
+.tbl.users .user-acts .more-acts summary { list-style: none; cursor: pointer; }
+.tbl.users .user-acts .more-acts summary::-webkit-details-marker { display: none; }
+.tbl.users .user-acts .more-acts[open] summary { background: var(--surface-2); }
+.tbl.users .user-acts .more-acts:not([open]) .menu { display: none; }
+.tbl.users .user-acts .more-acts .menu { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
+.tbl.users .quota-form { gap: 4px; flex-wrap: nowrap; }
+.tbl.users .quota-form input { width: 5.5rem; min-height: 28px; }
 /* The Case page's side column (v1.109.0, the walk's item 10): the facts,
    then one row of the case's actions (Rename, Share, Download), then Shared
    with, and Delete alone at the foot in red. */
@@ -2863,25 +2876,25 @@ body.gideon-window .gideon-grip { display: none; }
    facts in a muted line under it, the row's button at the top right. The
    tab rows scroll sideways under 900 instead of running off the edge. */
 @media (max-width: 699px) {
-  .tbl.cards thead { display: none; }
-  .tbl.cards, .tbl.cards tbody, .tbl.cards tr, .tbl.cards td { display: block; }
-  .tbl.cards tr {
+  .tbl.as-cards thead { display: none; }
+  .tbl.as-cards, .tbl.as-cards tbody, .tbl.as-cards tr, .tbl.as-cards td { display: block; }
+  .tbl.as-cards tr {
     position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg);
     background: var(--surface); padding: 10px 12px; margin: 0 0 8px; padding-right: 86px;
   }
-  .tbl.cards tr.pick:hover td, .tbl.cards tr.pick.on td { background: transparent; }
-  .tbl.cards tr.pick.on { border-color: var(--accent); }
-  .tbl.cards td { border: 0; padding: 0; display: inline; }
-  .tbl.cards td:first-child { display: block; font-size: var(--t-body); margin: 0 0 4px; overflow-wrap: anywhere; }
-  .tbl.cards td:not(:first-child):not(.acts) { color: var(--muted); font-size: var(--t-small); }
+  .tbl.as-cards tr.pick:hover td, .tbl.as-cards tr.pick.on td { background: transparent; }
+  .tbl.as-cards tr.pick.on { border-color: var(--accent); }
+  .tbl.as-cards td { border: 0; padding: 0; display: inline; }
+  .tbl.as-cards td:first-child { display: block; font-size: var(--t-body); margin: 0 0 4px; overflow-wrap: anywhere; }
+  .tbl.as-cards td:not(:first-child):not(.acts) { color: var(--muted); font-size: var(--t-small); }
   /* v1.106.1: a fact gets a separator only when another fact follows it; the
      last cell of a row is the button cell, so "last-of-type" never matched
      and the separator trailed the last fact. */
-  .tbl.cards td:not(:first-child):not(.acts):not(:empty):has(~ td:not(.acts):not(:empty))::after { content: " · "; }
-  .tbl.cards td.acts { position: absolute; top: 9px; right: 10px; padding: 0; white-space: nowrap; }
-  .tbl.cards tr.detail-row { padding: 10px 12px; }
-  .tbl.cards tr.detail-row > td { display: block; padding: 0; }
-  .tbl.cards td.nowrap { white-space: normal; }
+  .tbl.as-cards td:not(:first-child):not(.acts):not(:empty):has(~ td:not(.acts):not(:empty))::after { content: " · "; }
+  .tbl.as-cards td.acts { position: absolute; top: 9px; right: 10px; padding: 0; white-space: nowrap; }
+  .tbl.as-cards tr.detail-row { padding: 10px 12px; }
+  .tbl.as-cards tr.detail-row > td { display: block; padding: 0; }
+  .tbl.as-cards td.nowrap { white-space: normal; }
 }
 @media (max-width: 899px) {
   .tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: thin; padding-bottom: 1px; }

@@ -97,13 +97,13 @@ def test_the_five_breaks_of_the_october_walk_are_held_in_the_files():
     assert "@media (max-width: 1499px) {" in css
     assert ".sp-middle { grid-row: 3; grid-column: 1; }" in css
     # 4. Row-per-thing tables are cards under 700; tab rows scroll.
-    assert ".tbl.cards thead { display: none; }" in css
+    assert ".tbl.as-cards thead { display: none; }" in css
     for name in ("cases.html", "case.html", "clips.html", "recordings.html"):
         page = (APP / "templates" / name).read_text(encoding="utf-8")
-        assert 'class="tbl cards" id="recordings"' in page, name
+        assert 'class="tbl as-cards" id="recordings"' in page, name
     case = (APP / "templates" / "case.html").read_text(encoding="utf-8")
-    assert 'class="tbl cards" id="incidents"' in case
-    assert 'class="tbl cards" id="documents"' in case
+    assert 'class="tbl as-cards" id="incidents"' in case
+    assert 'class="tbl as-cards" id="documents"' in case
     assert ".tabs { overflow-x: auto; flex-wrap: nowrap;" in css
     # 5. The sign-in card fits the page's own width.
     assert ".gate .card.with-logo { width: min(32rem, 100%); }" in css
@@ -236,3 +236,37 @@ def test_the_case_pages_actions_are_gathered():
     assert page.index('class="case-foot"') < page.index('id="delete-case"')
     assert ".about-case .case-foot {" in css
     assert 'class="row relink"' in page
+
+
+def test_the_users_pages_row_is_two_actions_and_more():
+    """v1.110.0, the walk's item 16: Block and Reassign on the row, the rest
+    under More (opened in place, since the card scrolls sideways), the quota
+    set in its own column. The actions keep their names, so the Admin guide's
+    words hold."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    page = (APP / "templates" / "panel" / "users.html").read_text(encoding="utf-8")
+    more = page.index('<details class="more-acts">')
+    assert page.index('value="block"') < more < page.index('value="end-sessions"')
+    assert page.index('value="reassign"') < more
+    for name in ("Open their Workspace", "Activity", "Access to their material"):
+        assert more < page.index(f">{name}</a>")
+    assert more < page.index('value="admin-flag"')
+    assert more < page.index('value="delete-data"')
+    assert page.index('class="row small quota-form"') < page.index('"row user-acts"')
+    assert ".more-acts .menu { flex-basis: 100%;" in css
+    assert ".more-acts:not([open]) .menu { display: none; }" in css
+    guide = (APP.parent / "docs" / "admin-guide.md").read_text(encoding="utf-8")
+    assert "the rest are under **More**" in guide
+
+
+def test_the_list_tables_card_class_matches_no_other_rule():
+    """v1.110.0: the class that turns a list table into cards under 700 had
+    matched the older `.cards` rule (a grid of cards on the document pages),
+    which laid the whole table out as a grid above 700 and left the header's
+    names beside the wrong columns. Found by the maintainer."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".tbl.as-cards thead { display: none; }" in css
+    assert ".tbl.cards" not in css
+    for name in ("cases.html", "case.html", "clips.html", "recordings.html"):
+        page = (APP / "templates" / name).read_text(encoding="utf-8")
+        assert 'class="tbl as-cards"' in page and 'class="tbl cards"' not in page, name

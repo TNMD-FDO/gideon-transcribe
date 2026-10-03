@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.110.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Users page's row is two actions and More.** The walk's item 16:
+each person's row on the Panel's Users page carried six buttons, a
+username box and a quota form, repeated down the page. The row now shows
+Block (or Unblock) and Reassign with its username box, and a More control
+that opens the rest under the row: Open their Workspace, Activity, Access
+to their material, the admin flag, End sessions and Delete data. The
+quota is set in the Quota column itself, the figure with Set beside it. A
+Local admin's password, email and Delete forms stay under the row.
+Nothing changes in what any action does or in its name; the Admin guide
+says where each one sits.
+
+**The list tables' header lines up with the columns again.** Since
+v1.106.0 the name of the class that turns a list table into cards under
+700 wide had also matched an older rule for another kind of card, which
+laid the whole table out as a grid above 700: the column names in the
+header sat to the left of the cells they named. The class is renamed, the
+tables are tables again, and the header shares their columns. Found by
+the maintainer.
+
+Also in this release, for the people who build the app: **a local run
+for a walk of the pages** (`docs/local-walk.md`). `manage.py seed_demo`
+fills an empty database with a fictional office so every page can be
+looked at on a workstation at every screen size before a push; it
+refuses a database with anybody in it, and nothing in it is anybody's.
+
 ## v1.109.0, 2026-10-03
 
 ```

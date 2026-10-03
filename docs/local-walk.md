@@ -21,14 +21,15 @@ its own, filled with a fictional office.
 
 ## The fictional office
 
-`python manage.py seed_demo --password <a password>` fills an empty
-database: a Local admin and a colleague, three cases, body-camera videos
+`python manage.py seed_demo --password-file <a file holding a password>`
+fills an empty database: a Local admin and a colleague, three cases, body-camera videos
 with transcripts and speakers, an incident with three cameras on one
 clock, a phone call, a dictation, clips, and names waiting to be accepted.
 Every name and every word is made up, and the recordings' files are
 stand-ins. The command refuses to run where anybody already exists, so it
-cannot touch a database in use; the password is given on the command line
-or in the `SEED_PASSWORD` environment key, never kept in the repository.
+cannot touch a database in use; the password comes from a file the
+workstation keeps outside the repository (or `--password` on the command
+line), never from an environment key, which the app's own tests forbid.
 
 ## The walk
 

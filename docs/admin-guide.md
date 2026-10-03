@@ -82,7 +82,7 @@ Every transcription job in the office, whoever started it: the user, the recordi
 
 Everybody who has ever signed in, with their role, where their admin status comes from if they have one, whether they are signed in now, how many recordings they are holding, their quota, and their last sign-in.
 
-For each person:
+For each person, **Block** and **Reassign** sit on the row, the quota is set in its own column, and the rest are under **More**, which opens them under the row:
 
 - **End sessions** signs them out everywhere, now. Their recordings are then discarded as they would be at any sign-out.
 - **Block** stops them signing in until an Admin lifts it. It is yours to lift; the directory check never does. **Unblock** lifts it.

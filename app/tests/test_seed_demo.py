@@ -37,7 +37,15 @@ def test_the_seed_fills_an_empty_database_once(settings, tmp_path):
 
 
 @pytest.mark.django_db
-def test_the_seed_needs_a_password():
+def test_the_seed_needs_a_password(settings, tmp_path):
     with pytest.raises(Exception, match="password"):
         call_command("seed_demo", password="")
     assert not User.objects.exists()
+    # From a file, so that it sits in no command line.
+    settings.DATA_DIR = tmp_path
+    settings.SCRATCH_DIR = tmp_path / "scratch"
+    settings.UPLOADS_DIR = tmp_path / "uploads"
+    kept = tmp_path / "seed-password"
+    kept.write_text("from-a-file\n", encoding="utf-8")
+    call_command("seed_demo", password_file=str(kept))
+    assert User.objects.get(username="test").check_password("from-a-file")
