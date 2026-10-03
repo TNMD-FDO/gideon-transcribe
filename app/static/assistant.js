@@ -368,6 +368,43 @@
 
   // Speaker suggestions -------------------------------------------------------------
 
+  // A speaker's colour, from their chip in the cast, for the card's edge and names.
+  function speakerColour(name) {
+    var chips = document.querySelectorAll(".speakerchip");
+    for (var i = 0; i < chips.length; i += 1) {
+      if (chips[i].dataset.name === name) { return chips[i].style.getPropertyValue("--speaker"); }
+    }
+    return "";
+  }
+
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+
+  // One name's card (v1.114.0): the speaker and the name; how sure, in plain
+  // words; why, from the direction the app read (v1.105.0); the line with
+  // who said it; Hear it, which plays from just before the line; and the
+  // case's own knowledge of the name.
+  function suggestionCard(one) {
+    var isRole = one.kind === "role";
+    var sure = one.confidence === "high" ? "Sure" : "Fairly sure";
+    var sureTitle = one.confidence === "high" ? "The assistant rates this high" : "The assistant rates this medium: who was spoken to is a judgement";
+    var why = one.basis === "introduces" ? "Named themselves." : (one.basis === "addressed" ? "Named by another." : (isRole ? "From what they do." : "From the words."));
+    var saidBy = one.said_by && one.said_by !== one.speaker
+      ? "<span class='speaker' style='--speaker: " + escape(speakerColour(one.said_by)) + "'>" + escape(one.said_by) + "</span> to them: "
+      : "";
+    var known = one.known_in > 0 ? " In this case already, in " + plural(one.known_in, "recording") + "." : "";
+    return "<li class='suggestion-card' style='--speaker: " + escape(speakerColour(one.speaker)) + "'>" +
+      "<div class='who'><span class='speaker'>" + escape(one.speaker) + "</span> " + window.VIEWER.icon("forward") +
+        " <b>" + escape(one.name) + "</b>" + (one.role ? " <span class='pill role'>" + escape(one.role) + "</span>" : "") +
+        (isRole ? " <span class='muted'>a role, no name said</span>" : "") +
+        "<span class='pill " + (one.confidence === "high" ? "ok" : "warn") + " sure' title='" + sureTitle + "'>" + sure + "</span></div>" +
+      "<p class='why'>" + why + " " + saidBy + "<q>" + escape(one.quote) + "</q> at " + escape(one.clock) + "." + escape(known) + "</p>" +
+      "<div class='acts'>" +
+        "<button type='button' class='ghost small hear' data-seconds='" + one.start + "' title='Play from a few seconds before this line'>" + window.VIEWER.icon("play") + " Hear it</button>" +
+        "<button type='button' class='small accept' data-suggestion='" + one.id + "'>Accept</button>" +
+        "<button type='button' class='small ghost reject' data-suggestion='" + one.id + "'>Reject</button>" +
+      "</div></li>";
+  }
+
   function drawSuggestions() {
     if (!suggestLine || !state) { return; }
     var show = features.suggestions && state.unnamed && state.unnamed.length >= 2;
@@ -389,20 +426,27 @@
       }
     }
 
-    // The pending suggestions, each with its reason, and the dashed pill on
-    // the speaker's first segment.
+    // The pending suggestions (v1.114.0): a count in place of the question,
+    // then one card a name with everything a reader weighs before Accept:
+    // how sure, why (named themselves, named by another, from what they
+    // do), the line it rests on and who said it, Hear it, and whether the
+    // case has met the name. The dashed pill on the speaker's first segment
+    // stays as it was.
     Array.prototype.forEach.call(document.querySelectorAll(".pill.suggested"), function (pill) {
       pill.remove();
     });
+    var pending = state.pending || [];
+    var ask = document.getElementById("suggest-ask");
+    var count = document.getElementById("suggest-count");
+    var countWords = document.getElementById("suggest-count-words");
+    if (ask) { ask.hidden = pending.length > 0; }
+    if (count) {
+      count.hidden = !pending.length;
+      count.textContent = pending.length + (pending.length === 1 ? " name suggested" : " names suggested");
+    }
+    if (countWords) { countWords.hidden = !pending.length; }
     if (!suggestionList) { return; }
-    suggestionList.innerHTML = state.pending.map(function (one) {
-      return "<li class='suggestion' title='" + escape(one.quote) + " at " + escape(one.clock) + "'>" +
-        "<span class='grow'><b>" + escape(one.speaker) + "</b> " + window.VIEWER.icon("forward") + " " + escape(one.name) + (one.role ? " (" + escape(one.role) + ")" : "") +
-        " <span class='muted small'>(" + escape(one.confidence) + ", " + escape(one.kind) + ")</span>" +
-        "<br><span class='muted small'>“" + escape(one.quote) + "” <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a></span></span>" +
-        "<button type='button' class='small accept' data-suggestion='" + one.id + "'>Accept</button>" +
-        "<button type='button' class='small ghost reject' data-suggestion='" + one.id + "'>Reject</button></li>";
-    }).join("");
+    suggestionList.innerHTML = pending.map(suggestionCard).join("");
     state.pending.forEach(function (one) {
       var rows = document.querySelectorAll("#transcript .seg");
       for (var i = 0; i < rows.length; i += 1) {
@@ -425,6 +469,16 @@
       post("/recording/" + recording + "/suggest").then(refresh);
     });
     suggestionList.addEventListener("click", function (event) {
+      // Hear it (v1.114.0): from three seconds before the line, so the words
+      // that name the speaker are heard in their run.
+      var hear = event.target.closest(".hear");
+      if (hear) {
+        var at = parseFloat(hear.dataset.seconds);
+        window.VIEWER.seek(Math.max(0, at - 3));
+        window.VIEWER.play();
+        if (window.VIEWER.showSegment) { window.VIEWER.showSegment(at); }
+        return;
+      }
       var accept = event.target.closest(".accept");
       var reject = event.target.closest(".reject");
       var button = accept || reject;

@@ -380,10 +380,20 @@
                 transcript; nothing changes until a suggestion is accepted.
               {% endcomment %}
               <div id="suggest-line" hidden>
-                <p class="small muted" style="margin: 8px 0 4px">Want name suggestions from what people say?</p>
-                <button type="button" class="small" id="suggest-names">Suggest names</button>
+                {% comment %}
+                  The names waiting (v1.114.0): a count in place of the
+                  question while any wait, then one card a name with the
+                  reason beside it, so a reader decides without leaving the
+                  page. The script fills the cards.
+                {% endcomment %}
+                <div class="suggest-head">
+                  <p class="small muted" id="suggest-ask">Want name suggestions from what people say?</p>
+                  <span class="pill warn" id="suggest-count" hidden></span>
+                  <span class="small muted" id="suggest-count-words" hidden>from what people say. Nothing changes until you accept one.</span>
+                  <button type="button" class="small" id="suggest-names">Suggest names</button>
+                </div>
                 <p id="suggest-said" class="small muted" style="margin: 4px 0 0"></p>
-                <ul id="suggestions" class="suggestions"></ul>
+                <ul id="suggestions" class="suggestion-cards"></ul>
               </div>
             {% endif %}
           </div>

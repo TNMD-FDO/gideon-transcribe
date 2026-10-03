@@ -488,6 +488,10 @@ def test_suggest_names_keeps_what_the_checks_allow_and_accept_renames(
         ("Speaker 1", "Detective Ruiz")
     ]
     assert state["pending"][0]["clock"] == "00:00:00"
+    # The card's facts (v1.114.0): who said the line, and whether the case
+    # has met the name (it has not: Detective Ruiz is nobody's Person yet).
+    assert state["pending"][0]["said_by"] == "Speaker 1"
+    assert state["pending"][0]["known_in"] == 0
 
     suggestion = Suggestion.objects.get(state=Suggestion.PENDING)
     accepted = client.post(f"/suggestion/{suggestion.pk}/accept")

@@ -1681,8 +1681,24 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .expect.inline, .expect.inline p { display: inline; }
 /* The cited line in the transcript, lit for a moment when its pill is clicked. */
 .seg.lit { outline: 2px solid var(--accent); outline-offset: -2px; transition: outline-color 1.2s ease; }
-.suggestions { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.suggestion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9em; }
+/* The names waiting (v1.114.0): a count in place of the question, then one
+   card a name, two across where there is room, each with the reason beside
+   the name so a reader decides without leaving the page. The list had been
+   two lines a name down the box, 400 pixels for four names. */
+.suggest-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.suggest-head p { margin: 0; }
+.suggest-head #suggest-names { margin-left: auto; }
+.suggestion-cards { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.suggestion-cards:empty { display: none; }
+.suggestion-card { border: 1px solid var(--line); border-left: 3px solid var(--speaker, var(--accent)); border-radius: var(--radius); padding: 8px 10px; font-size: var(--t-small); }
+.suggestion-card .who { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.suggestion-card .speaker { color: var(--speaker, inherit); }
+.suggestion-card .who b { font-size: var(--t-body); font-weight: 600; }
+.suggestion-card .who .sure { margin-left: auto; }
+.suggestion-card .why { margin: 6px 0 0; line-height: 1.5; color: var(--muted); }
+.suggestion-card .why q { color: var(--text); }
+.suggestion-card .acts { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.suggestion-card .acts .accept { margin-left: auto; }
 .pill.suggested { margin-right: 6px; }
 .moment .answer { font-style: italic; }
 .moment .question { margin: 4px 0 2px; }
@@ -1690,7 +1706,6 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
    its result line; a suggestion's quoted transcript line. */
 .whole { margin: 6px 0 10px; }
 .whole p { margin: 4px 0 0; }
-.suggestion .quote { display: block; margin-top: 2px; }
 
 /* The Workbench pages ---------------------------------------------------------
    A list beside its detail from 1280 pixels, stacked below that. The viewer's
@@ -2081,6 +2096,10 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
    pair and is centred, never over 1600. It had been the 52rem of a plain page,
    which left a desk monitor's right third empty. */
 .doc-page { --doc-picture: calc((100vh - 150px) * var(--doc-ratio, 0.7727)); max-width: min(1600px, calc(var(--doc-picture) + 16px + 40rem)); }
+/* The document page's head is every page's (v1.114.0); its eyebrow holds the
+   ways back beside the case's name, as plain small buttons. */
+.doc-ways { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.doc-ways .btn { text-transform: none; letter-spacing: normal; }
 .doc-body { display: grid; grid-template-columns: minmax(0, var(--doc-picture)) minmax(280px, 1fr); gap: 16px; align-items: start; }
 .doc-pictures { display: flex; flex-direction: column; gap: 14px; }
 .doc-sheet { position: relative; margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }

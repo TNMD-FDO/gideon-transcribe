@@ -344,6 +344,7 @@ One subsection per project, newest entry first, written only by that project in 
 - **2026-10-02, at v1.107.1 (four slips in the look, seen on the server; nothing shared moves).** Stylesheet and one template.
 - **2026-10-02, at v1.108.0 (the recording page's head on two lines; nothing shared moves).** Stylesheet and one template.
 - **2026-10-03, at v1.109.0 (the case page's actions in one place; nothing shared moves).** Stylesheet and one template.
+- **2026-10-03, at v1.114.0 (the names waiting as cards on the recording page; the document page's head; nothing shared moves).** Stylesheet, two templates, one script, two fields in one JSON answer. No port, memory, card, timer or network moves.
 - **2026-10-03, at v1.113.0 (wide screens used: Home in two columns, the document page sized from the window; nothing shared moves).** Stylesheet and two templates.
 - **2026-10-03, at v1.112.0 (the last three placements from the walk; nothing shared moves).** Stylesheet only.
 - **2026-10-03, at v1.111.0 (four small placements from the walk; nothing shared moves).** Stylesheet, templates, one script and the guides.

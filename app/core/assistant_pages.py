@@ -64,6 +64,12 @@ def _role_of(recording, name: str) -> str:
     return people.role_of(recording, name)
 
 
+def _known_in(recording, name: str) -> int:
+    from core import people
+
+    return people.known_in(recording, name)
+
+
 def _affected(request, recording):
     return cases.affected_by(recording, request.user)
 
@@ -284,10 +290,17 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
                 "quote": one.quote,
                 "start": one.start,
                 "clock": exports.clock(one.start),
-                # The Role, when the suggested name is one of the Case's People.
+                # Who said the quoted line (v1.114.0, the name's card): the
+                # speaker themselves, or the one who called them by the name.
+                "said_by": one.segment.speaker if one.segment is not None else "",
+                # The Role, when the suggested name is one of the Case's People,
+                # and how many of the Case's recordings that person speaks in.
                 "role": _role_of(recording, one.name),
+                "known_in": _known_in(recording, one.name),
             }
-            for one in transcript.suggestions.filter(state=Suggestion.PENDING)
+            for one in transcript.suggestions.filter(
+                state=Suggestion.PENDING
+            ).select_related("segment")
         ]
         last = transcript.suggestion_runs.first()
         if last is not None:

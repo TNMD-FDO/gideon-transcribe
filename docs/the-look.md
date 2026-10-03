@@ -56,7 +56,9 @@ Every page opens the same way (`.page-head`): an eyebrow for where you are
 title size, and the page's one main action at the right on the same line. A
 lead sentence sits under them when the page has one. On a phone the action
 drops under the title. Upload files and New recording had a larger, centred
-title of their own; they take this one.
+title of their own; they take this one, and so does the document page
+(v1.114.0), whose eyebrow holds the case's name and the ways back to the
+incident or recording the report is for.
 
 The recording page, a work page whose head sits beside the picture, keeps
 the same order on two lines: the title line (back, the case, the title and

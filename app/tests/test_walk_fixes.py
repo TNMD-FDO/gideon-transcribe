@@ -342,3 +342,27 @@ def test_wide_screens_are_used():
     assert places == sorted(places) and min(places) > 0
     document = (APP / "templates" / "document.html").read_text(encoding="utf-8")
     assert "--doc-ratio: calc({{ rows.0.width }} / {{ rows.0.height }})" in document
+
+
+def test_the_names_waiting_are_cards_and_the_document_head_is_the_pattern():
+    """v1.114.0: the recording page's pending name suggestions are a count
+    and one card a name (how sure, why, the line and who said it, Hear it,
+    the case's knowledge of the name) in place of a two-line list; the
+    document page's head is every page's head."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    viewer = (APP / "templates" / "viewer.html").read_text(encoding="utf-8")
+    script = (APP / "static" / "assistant.js").read_text(encoding="utf-8")
+    assert '<span class="pill warn" id="suggest-count" hidden></span>' in viewer
+    assert '<ul id="suggestions" class="suggestion-cards"></ul>' in viewer
+    assert ".suggestion-card {" in css and ".suggest-head {" in css
+    assert ".suggestions {" not in css and ".suggestion {" not in css
+    for words in ("Named themselves.", "Named by another.", "From what they do."):
+        assert words in script
+    assert "Hear it" in script and 'closest(".hear")' in script
+    assert "In this case already, in " in script
+    # The fold still puts the whole box away, names and all.
+    assert ".cast.folded #suggest-line { display: none; }" in css
+    document = (APP / "templates" / "document.html").read_text(encoding="utf-8")
+    assert '<header class="page-head">' in document
+    assert 'class="eyebrow doc-ways"' in document and "welcome row" not in document
+    assert ".doc-ways {" in css

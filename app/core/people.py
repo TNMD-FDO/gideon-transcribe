@@ -325,3 +325,15 @@ def role_of(recording, name: str) -> str:
         return ""
     person = find(recording.case, name)
     return person.role if person else ""
+
+
+def known_in(recording, name: str) -> int:
+    """How many of the Case's Recordings the Person a suggested name matches
+    speaks in (v1.114.0, the name's card: "In this case already, in 2
+    recordings"); 0 outside a Case, and for a name the Case has not met."""
+    if not _in_a_case(recording) or not name:
+        return 0
+    person = find(recording.case, name)
+    if person is None:
+        return 0
+    return person.segments().values("transcript__recording_id").distinct().count()

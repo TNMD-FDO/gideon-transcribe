@@ -15,24 +15,28 @@
   <div class="page doc-page" id="document"
        data-pages="{{ document.pages }}" data-open="{{ open_page }}" data-lit="{{ lit }}"
        data-picture="{% url 'document-picture' case.pk document.pk 0 %}"{% if rows %} style="--doc-ratio: calc({{ rows.0.width }} / {{ rows.0.height }})"{% endif %}>
-    <header class="welcome row" style="align-items: flex-start; gap: 12px">
-      <div class="grow">
-        {% comment %}The ways back (part 2): the case's Documents tab, and the incident or recording it is the report for.{% endcomment %}
-        <div class="row small" style="gap: 10px; align-items: center; flex-wrap: wrap">
-          <a class="back" href="{% url 'case' case.pk %}?tab=documents" title="Back to the case's Documents tab">&lsaquo; {{ case.name }}</a>
-          {% if back_incident %}<a class="btn small ghost" href="{{ back_incident.url }}">{% icon "camera" %} Back to the incident</a>{% endif %}
-          {% if back_recording %}<a class="btn small ghost" href="{% url 'viewer' back_recording.pk %}?panel=details">{% icon "play" %} Back to the recording</a>{% endif %}
-        </div>
-        <h1 style="margin: 4px 0 0">{{ document.title }}</h1>
-        <p class="muted small" style="margin: 4px 0 0">
-          {{ document.pages_line }}{% if document.home_name %} &middot; the report for <a href="{{ document.home_url }}">{{ document.home_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}
-        </p>
-      </div>
-      <div class="row" style="gap: 6px">
+    {% comment %}
+      The head is every page's (docs/the-look.md, v1.114.0): the eyebrow says
+      where you are (the case, back to its Documents tab) and holds the ways
+      back (part 2: the incident or recording the report is for); the title at
+      the title size; the tools in the acts; the facts as the lead. It had a
+      head of its own with a larger title.
+    {% endcomment %}
+    <header class="page-head">
+      <span class="eyebrow doc-ways">
+        <a href="{% url 'case' case.pk %}?tab=documents" title="Back to the case's Documents tab">{{ case.name }}</a>
+        {% if back_incident %}<a class="btn small ghost" href="{{ back_incident.url }}">{% icon "camera" %} Back to the incident</a>{% endif %}
+        {% if back_recording %}<a class="btn small ghost" href="{% url 'viewer' back_recording.pk %}?panel=details">{% icon "play" %} Back to the recording</a>{% endif %}
+      </span>
+      <div class="line"><h1>{{ document.title }}</h1></div>
+      <div class="acts">
         <label class="row small" style="gap: 4px">Page <input type="number" id="doc-page-box" class="small" min="1" max="{{ document.pages }}" value="{{ open_page }}" style="width: 4.5em"> of {{ document.pages }}</label>
         <input type="search" id="doc-find" class="small" maxlength="200" placeholder="Find in this document" value="{{ asked }}" aria-label="Find in this document">
         <a class="btn small" href="{% url 'document-download' case.pk document.pk %}">{% icon "download" %} Download</a>
       </div>
+      <p class="lead muted small">
+        {{ document.pages_line }}{% if document.home_name %} &middot; the report for <a href="{{ document.home_url }}">{{ document.home_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}
+      </p>
     </header>
 
     {% if document.state != "ready" %}

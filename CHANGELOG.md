@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.114.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The names waiting are cards, and the document page's head is every
+page's.** The last pieces of the October walk: its item 1's Speakers box,
+and a head the walk's log noted.
+
+- **Name suggestions on the recording page are cards.** When Suggest names
+  has found names, the Speakers box says how many wait ("4 names
+  suggested") and shows one card a name, two across where there is room:
+  the speaker and the name; how sure the assistant is, in plain words
+  (Sure, Fairly sure); why, in a few words (Named themselves, Named by
+  another, From what they do); the line it rests on, with who said it when
+  it was another speaker; **Hear it**, which plays from three seconds
+  before that line; and "In this case already, in 2 recordings" when the
+  case has met the name. Accept and Reject are where they were. The list
+  had been two lines a name down the box with only the quote beside each;
+  the cards take about the same room on a laptop (three across at 1366
+  wide, so three names are one row) and give the reason with it, which is
+  what lets a reader decide at once. The fold still puts the whole box
+  away, and an accepted or rejected name takes its card with it.
+- **The document page's head is the pattern every other page took** in
+  v1.107.0: the case's name and the ways back as the eyebrow, the title at
+  the title size, the page box, Find and Download beside it, the pages line
+  under. It had a larger title of its own.
+- The sign-in card on a phone, the walk's item 5, was seen at 390 wide on a
+  local run of the app: it holds. Nothing changed.
+
 ## v1.113.0, 2026-10-03
 
 ```

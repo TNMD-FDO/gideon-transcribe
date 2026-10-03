@@ -328,6 +328,23 @@ def test_known_names_lists_the_people_first_then_the_vocabularies(owner, a_case)
     ]
 
 
+def test_known_in_counts_the_recordings_a_person_speaks_in(owner, a_case):
+    """v1.114.0: a suggested name's card says "In this case already, in 2
+    recordings" from this count; a name the case has not met, and a
+    recording outside a case, count nothing."""
+    first = a_recording(owner, a_case)
+    second = a_recording(owner, a_case)
+    people.join_or_create(a_case, "Detective Ruiz", by=owner, how="test")
+    assert people.known_in(first, "Detective Ruiz") == 0
+    for recording in (first, second):
+        recording.transcript.segments.filter(speaker="Speaker 1").update(
+            speaker="Detective Ruiz"
+        )
+    assert people.known_in(first, "detective ruiz") == 2
+    assert people.known_in(first, "Nobody Yet") == 0
+    assert people.known_in(first, "") == 0
+
+
 def test_the_evidence_finds_introductions_and_addresses():
     lines = [
         prompts.Line(1, 1, 0.0, "Speaker 1", "This is Detective Ruiz, good morning."),

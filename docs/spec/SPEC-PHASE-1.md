@@ -3205,6 +3205,7 @@ Phase 1 LLM features: Chat, Summary, Speaker suggestions; LLM handler capabiliti
 
 ### Amendments applied
 
+- **2026-10-03, v1.114.0.** Speaker suggestions, "Results appear in the Speakers panel with Accept and Reject": the panel shows the count of names waiting and one card a suggestion, with how sure the assistant is in plain words (Sure for high, Fairly sure for medium), why in a few words (named themselves, named by another, from what they do, from the direction the app read at v1.105.0), the line it rests on with who said it, Hear it (plays from three seconds before the line), and whether the Case already has a Person of that name and in how many Recordings; the dashed pill on the first Segment, Accept, Reject and the rest are unchanged. The list had been two lines a suggestion, which on a laptop screen left the Transcript two lines of room (the October walk's item 1).
 - From the Workspace lifecycle ticket to the LLM features question's "Chats survive the session": Summaries and Chats live only for the Login session (Principle 5).
 - From the deployment-topology ticket to "The engine" and "The engine settings": the Local engine as Compose profile `llm`, the provider defaults `http://vllm:8000/v1` and `local-engine`, the AI assistant toggle starting Off until Test connection succeeds, the switch to the Shared engine as a panel change plus the copied token.
 - From the settings catalogue ticket to "The AI notice" and "The engine settings": the Model display name; provider settings and toggles applied through the tray, templates applied at once.
