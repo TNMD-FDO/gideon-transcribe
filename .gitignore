@@ -36,3 +36,6 @@ Thumbs.db
 # The guides rendered by manage.py render_guides on a workstation. In the
 # image they are made at build time and never committed (ADR 0012).
 docs/*.rendered.json
+
+# Django's collected static files, made by a local run of the app for a walk.
+app/static-collected/
