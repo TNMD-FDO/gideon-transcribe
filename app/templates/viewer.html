@@ -191,6 +191,8 @@
             <div class="row">
               <a href="{% url 'case' recording.case_id %}" class="grow"
                  title="Back to the case">This case: {{ recording.case.name }}</a>
+              {% comment %}v1.106.0: the list folds to this strip, so the transcript keeps the height; folded by itself on a short or narrow window.{% endcomment %}
+              <button type="button" class="ghost small case-fold" id="case-fold" aria-expanded="true" aria-controls="caserail" title="Fold the list to one line">Fold</button>
             </div>
             <p class="muted small" style="margin: 2px 0 0">
               {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case

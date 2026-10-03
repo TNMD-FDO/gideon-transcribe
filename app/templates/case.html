@@ -148,7 +148,7 @@
           </div>
           {% if documents %}
             <div class="card" style="overflow-x: auto">
-              <table class="tbl" id="documents">
+              <table class="tbl cards" id="documents">
                 <thead><tr><th>Document</th><th>Pages</th><th>The report for</th><th>Added</th><th></th></tr></thead>
                 <tbody>
                   {% for one in documents %}
@@ -269,7 +269,7 @@
           {% endfor %}
           {% if incident_rows %}
             <div class="tbl-wrap">
-              <table class="tbl" id="incidents">
+              <table class="tbl cards" id="incidents">
                 <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th>{% if sitting_on %}<th>One sitting</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
                 <tbody>
                   {% for row in incident_rows %}
@@ -539,7 +539,7 @@
             a video is being prepared.
           {% endcomment %}
           <div class="tbl-wrap">
-          <table class="tbl" id="recordings">
+          <table class="tbl cards" id="recordings">
             <thead>
               <tr><th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
             </thead>

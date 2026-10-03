@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.106.0, 2026-10-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The five layouts the walk found broken.** The app was walked at six
+screen shapes, from a phone to a desk monitor, in light and dark. These
+are the breaks; the rest of the walk's findings wait for the maintainer's
+pick.
+
+- **The transcript takes the height.** On a laptop (1366 by 768, or a
+  smaller window, or 125% zoom) the recording page showed no transcript
+  lines at all: the case's other recordings under it kept their full
+  height. That list now folds to one strip with **Fold** and **Show**,
+  folded by itself on a short or narrow window, and the browser remembers
+  your choice. The transcript gets everything that is left.
+- **The Panel's menu on a narrow screen** is a row of chips that scrolls
+  sideways, and the page takes the whole width; it had scattered into a
+  half-empty column.
+- **The Speakers page at a laptop width** uses the band layout (cards
+  beside the player, the transcript at full width under them); the
+  three-column layout, which left the reading pane one word a line at
+  1366, starts at 1500. Under 900 it is one column.
+- **Lists are cards on a phone.** The Cases page, a case's Recordings,
+  Incidents and Documents, and the Recordings and Clips pages: under 700
+  wide each row is a card with the name on its own line, instead of a
+  table that wrapped names letter by letter. The case page's tabs scroll
+  sideways instead of running off the edge.
+- **The sign-in card fits a phone.**
+
 ## v1.105.0, 2026-10-02
 
 ```

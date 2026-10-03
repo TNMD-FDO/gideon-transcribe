@@ -1036,6 +1036,30 @@
     });
   }
 
+  // The list folds to a strip (v1.106.0): on a laptop the case's recordings
+  // kept 40vh under the transcript and the transcript had no lines in view.
+  // Folded by itself on a window under 900 tall or 1280 wide, unless this
+  // browser remembers a choice.
+  var caseFold = document.getElementById("case-fold");
+  var caseRail = document.getElementById("caserail");
+  if (caseFold && caseRail) {
+    var remembered = null;
+    try { remembered = window.localStorage.getItem("caserail-fold"); } catch (error) { remembered = null; }
+    var folded = remembered ? remembered === "folded" : (window.innerHeight < 900 || window.innerWidth < 1280);
+    var showFold = function () {
+      caseRail.classList.toggle("folded", folded);
+      caseFold.setAttribute("aria-expanded", folded ? "false" : "true");
+      caseFold.textContent = folded ? "Show" : "Fold";
+      caseFold.title = folded ? "Show the case's recordings" : "Fold the list to one line";
+    };
+    showFold();
+    caseFold.addEventListener("click", function () {
+      folded = !folded;
+      try { window.localStorage.setItem("caserail-fold", folded ? "folded" : "open"); } catch (error) { /* a private window keeps nothing */ }
+      showFold();
+    });
+  }
+
   // Rows ----------------------------------------------------------------------
 
   if (column) {
