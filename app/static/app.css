@@ -812,15 +812,27 @@ main.wide { max-width: none; }
 .home-sect .pill.small { font-size: var(--t-label); line-height: 18px; padding: 0 8px; }
 .home-sect.ready { border-color: var(--accent); }
 .home-sect .card { margin: 10px 14px 4px; }
-/* Home on a desk monitor (v1.113.0, the walk's item 11): from 1600 wide the
-   sections stand in two columns inside the 1400 cap, what needs you on the
-   left (Ready to download, Needs you, Running now) and the session, the cases
-   and the clips on the right; the order down the page is chapter 13's, and
-   under 1600 the two columns are the one list they were. */
+/* Home on a desk monitor (v1.115.0, the maintainer's pick after the walk;
+   v1.113.0 had what needs you on the left and the rest on the right, which
+   left the room under Needs you empty): from 1600 wide Cases stands on the
+   left (three fifths) and This session on the right, two lists of a like
+   length, stretched to the same height; under 1600 they are one list. */
 @media (min-width: 1600px) {
-  .home .home-cols { display: flex; gap: 20px; align-items: flex-start; }
-  .home .home-cols > .col { flex: 1 1 0; min-width: 0; }
+  .home .home-cols { display: flex; gap: 20px; align-items: stretch; }
+  .home .home-cols > .col { flex: 3 1 0; min-width: 0; display: flex; flex-direction: column; }
+  .home .home-cols > .col.side { flex: 2 1 0; }
+  .home .home-cols > .col > #cases, .home .home-cols > .col.side > #this-session { flex: 1; }
 }
+/* The groups inside Cases (Needs you, then the rest), a case that needs the
+   person, and the line of its incidents under a case's row. */
+.home-sect .group { padding: 8px 14px 2px; font-size: var(--t-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--line); }
+.home-sect .group.warn { color: var(--warn); }
+.home-sect .group + .row { border-top: 0; }
+.home-sect .row.need { background: color-mix(in srgb, var(--warn-soft) 55%, transparent); }
+.home-sect .row.sub { border-top: 0; padding-top: 0; padding-left: 28px; gap: 16px; }
+.home-sect .inc { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--t-small); }
+.home-sect .inc .i { width: 14px; height: 14px; color: var(--muted); }
+.home-sect .inc > a:first-of-type { font-weight: 500; }
 .tbl tr.batch-head td { background: var(--surface-2); padding: 8px 10px; border-top: 2px solid var(--line); }
 .rail .item b .pill.small { font-size: var(--t-label); line-height: 16px; padding: 0 6px; }
 

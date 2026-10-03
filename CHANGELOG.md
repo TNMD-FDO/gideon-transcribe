@@ -21,6 +21,32 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.115.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Home is one cases list beside the session, with incidents under each
+case.** The maintainer's pick from three drawings, after v1.113.0's two
+columns left the room under Needs you empty on a desk monitor.
+
+- **One cases list.** Needs you is no longer a box of its own: the cases
+  with something to settle are the first group of the Cases list, under a
+  Needs you heading in the warning tone and tinted, and the rest follow by
+  last activity. Running now is the first line of This session. On a
+  window 1600 wide or more, Cases stands on the left (three fifths) and
+  This session on the right, two lists of a like length; on a narrower
+  window they are one list in that order.
+- **An incident is one press away.** Under every case that has incidents,
+  one line lists them: each a link to the incident's page, with its
+  cameras, where they stand on the clock ("3 of 3 synced"), and its own
+  pills (not synced, events to check, proposed events waiting, a memo with
+  newer events), each pill a link to the incident. The case's row keeps
+  the pills that are the case's. A case needs you when the case or one of
+  its incidents carries a pill in the warning tone, as before.
+
 ## v1.114.0, 2026-10-03
 
 ```

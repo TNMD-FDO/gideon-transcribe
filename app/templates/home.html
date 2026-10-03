@@ -19,14 +19,6 @@
     {% endif %}
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
-    {% comment %}
-      Two columns from 1600 wide (v1.113.0): what needs you on the left, the
-      rest on the right; the order down the page is unchanged. An empty left
-      column is not drawn, so the right takes the width.
-    {% endcomment %}
-    <div class="home-cols">
-    {% if ready or needs or running %}
-    <div class="col">
     {% if ready %}
       <section class="home-sect ready" id="ready-to-download">
         <div class="head">
@@ -46,36 +38,42 @@
       </section>
     {% endif %}
 
-    {% if needs %}
-      <section class="home-sect" id="needs-you">
+    {% comment %}
+      Two columns from 1600 wide (v1.115.0, the maintainer's pick after the
+      October walk): Cases on the left, the ones with something to settle
+      first under Needs you and each case's incidents on a line under its
+      row; This session on the right with Running now as its first line and
+      the clips line last. Under 1600 the two are one list in that order.
+      Without Cases the right column alone takes the width.
+    {% endcomment %}
+    <div class="home-cols">
+    {% if cases_on %}
+    <div class="col">
+      <section class="home-sect" id="cases">
         <div class="head">
-          <span class="ico">{% icon "warning" %}</span>
-          <div><b>Needs you</b><span class="cap">Cases with something to settle.</span></div>
+          <span class="ico">{% icon "case" %}</span>
+          <div><b>Cases</b><span class="cap">The ones with something to settle first, then every case you can open, by last activity. An incident sits under its case.</span></div>
+          <button type="button" class="btn small" id="open-new">New case</button>
+          <a href="{% url 'cases' %}" class="btn ghost small">All cases</a>
         </div>
-        {% for row in needs %}
-          <div class="row">
-            <a href="{% url 'case' row.case.pk %}" class="plain"><b>{{ row.case.name }}</b></a>
-            {% for pill in row.pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
-            {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
-            <span class="grow"></span>
-            <span class="muted small">{{ row.case.last_activity|date:"j M" }}</span>
-          </div>
-        {% endfor %}
+        {% include "new-case-box.html" %}
+        {% if cases_rows %}
+          {% if needs %}
+            <div class="group warn" id="needs-you">Needs you</div>
+            {% for row in needs %}{% include "home-case-row.html" with row=row need=True %}{% endfor %}
+            {% if cases_rest %}<div class="group">The rest, by last activity</div>{% endif %}
+          {% endif %}
+          {% for row in cases_rest %}{% include "home-case-row.html" with row=row %}{% endfor %}
+        {% elif cases_line and "in the office" in cases_line %}
+          {% url 'cases' as cases_url %}
+          {% include "empty.html" with compact=True icon="case" title="None of yours yet" line=cases_line action="Everyone's cases" action_url=cases_url|add:"?who=everyone" %}
+        {% else %}
+          {% include "empty.html" with compact=True icon="case" title="No cases yet" line="A case keeps a matter's recordings together, and keeps them after you sign out." action="New case" action_id="open-new-empty" %}
+        {% endif %}
       </section>
-    {% endif %}
-
-    {% if running %}
-      <section class="home-sect" id="running-now">
-        <div class="head">
-          <span class="ico">{% icon "again" %}</span>
-          <div><b>Running now</b></div>
-          <div class="pills">{% for pill in running %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}</div>
-        </div>
-      </section>
-    {% endif %}
     </div>
     {% endif %}
-    <div class="col">
+    <div class="col side">
 
     <section class="home-sect" id="this-session">
       <div class="head">
@@ -83,6 +81,12 @@
         <div><b>This session</b><span class="cap">{{ keep_line }}</span></div>
         <a href="{% url 'recordings' %}" class="btn ghost small">My recordings</a>
       </div>
+      {% if running %}
+        <div class="row" id="running-now">
+          <span class="muted small">Running now</span>
+          {% for pill in running %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
+        </div>
+      {% endif %}
       {% if session %}
         {% for recording in session %}
           <div class="row">
@@ -101,36 +105,6 @@
         <p class="muted small empty-line"><a href="{% url 'recordings' %}#recorded-here">{{ recorded_here }} recorded here</a></p>
       {% endif %}
     </section>
-
-    {% if cases_on %}
-      <section class="home-sect" id="recent-cases">
-        <div class="head">
-          <span class="ico">{% icon "case" %}</span>
-          <div><b>Recent cases</b><span class="cap">A case keeps a matter's recordings together, and keeps them after you sign out.</span></div>
-          <button type="button" class="btn small" id="open-new">New case</button>
-          <a href="{% url 'cases' %}" class="btn ghost small">All cases</a>
-        </div>
-        {% include "new-case-box.html" %}
-        {% if cases_rows %}
-          {% for row in cases_rows %}
-            <div class="row">
-              <a href="{% url 'case' row.case.pk %}" class="plain"><b>{{ row.case.name }}</b></a>
-              {% if row.shared_by %}<span class="pill small">Shared by {{ row.shared_by }}</span>{% if row.is_new %}<span class="pill small ok">New</span>{% endif %}{% endif %}
-              {% for pill in row.pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
-              {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
-              <span class="grow"></span>
-              <span class="muted small">{{ row.recordings }} recording{{ row.recordings|pluralize }} &middot; {{ row.case.last_activity|date:"j M" }}</span>
-              <a href="{% url 'case' row.case.pk %}" class="btn small">Open</a>
-            </div>
-          {% endfor %}
-        {% elif cases_line and "in the office" in cases_line %}
-          {% url 'cases' as cases_url %}
-          {% include "empty.html" with compact=True icon="case" title="None of yours yet" line=cases_line action="Everyone's cases" action_url=cases_url|add:"?who=everyone" %}
-        {% else %}
-          {% include "empty.html" with compact=True icon="case" title="No cases yet" line="A case keeps a matter's recordings together, and keeps them after you sign out." action="New case" action_id="open-new-empty" %}
-        {% endif %}
-      </section>
-    {% endif %}
 
     {% if clips_count %}
       <section class="home-sect" id="clips-line">

@@ -324,22 +324,28 @@ def test_wide_screens_are_used():
     reading measure, instead of a plain page's 52rem."""
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     assert "@media (min-width: 1600px) {\n  .home .home-cols { display: flex;" in css
-    assert ".home .home-cols > .col { flex: 1 1 0; min-width: 0; }" in css
+    assert ".home .home-cols > .col { flex: 3 1 0; min-width: 0;" in css
     picture = "--doc-picture: calc((100vh - 150px) * var(--doc-ratio, 0.7727));"
     assert ".doc-page { " + picture in css
     assert "max-width: min(1600px, calc(var(--doc-picture) + 16px + 40rem)); }" in css
     columns = "minmax(0, var(--doc-picture)) minmax(280px, 1fr);"
     assert "grid-template-columns: " + columns in css
     home = (APP / "templates" / "home.html").read_text(encoding="utf-8")
-    assert '<div class="home-cols">' in home and home.count('<div class="col">') == 2
-    # The left column is not drawn when nothing needs the person.
-    assert "{% if ready or needs or running %}" in home
-    # The order down the page is chapter 13's: the left column's three, then
-    # the right's.
-    order = ["ready-to-download", "needs-you", "running-now"]
-    order += ["this-session", "recent-cases", "clips-line"]
+    # v1.115.0, the maintainer's pick: Cases on the left (Needs you first,
+    # each case's incidents under its row), This session on the right with
+    # Running now as its first line; the left column only with Cases on.
+    assert '<div class="home-cols">' in home
+    assert '<div class="col">' in home and '<div class="col side">' in home
+    assert '<section class="home-sect" id="cases">' in home
+    assert '{% include "home-case-row.html" with row=row need=True %}' in home
+    order = ["ready-to-download", "cases", "needs-you", "this-session"]
+    order += ["running-now", "clips-line"]
     places = [home.find(f'id="{one}"') for one in order]
     assert places == sorted(places) and min(places) > 0
+    assert ".home .home-cols > .col.side { flex: 2 1 0; }" in css
+    assert ".home-sect .row.sub {" in css and ".home-sect .group.warn {" in css
+    row = (APP / "templates" / "home-case-row.html").read_text(encoding="utf-8")
+    assert '<div class="row sub' in row and "{{ line.incident.name }}" in row
     document = (APP / "templates" / "document.html").read_text(encoding="utf-8")
     assert "--doc-ratio: calc({{ rows.0.width }} / {{ rows.0.height }})" in document
 

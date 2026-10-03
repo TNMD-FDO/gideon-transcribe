@@ -1,0 +1,29 @@
+{% load icons %}
+{% comment %}
+  One case on Home (v1.115.0): the row as Recent cases drew it, and under it
+  one line with the case's incidents, each a link to its page with its
+  cameras, where they stand on the clock, and its own pills, so an incident
+  is one press away. A case without incidents has no second line.
+{% endcomment %}
+<div class="row{% if need %} need{% endif %}">
+  <a href="{% url 'case' row.case.pk %}" class="plain"><b>{{ row.case.name }}</b></a>
+  {% if row.shared_by %}<span class="pill small">Shared by {{ row.shared_by }}</span>{% if row.is_new %}<span class="pill small ok">New</span>{% endif %}{% endif %}
+  {% for pill in row.pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
+  {% if row.warned %}<button type="button" class="small keep" data-case="{{ row.case.pk }}">Keep</button>{% endif %}
+  <span class="grow"></span>
+  <span class="muted small">{{ row.recordings }} recording{{ row.recordings|pluralize }} &middot; {{ row.case.last_activity|date:"j M" }}</span>
+  <a href="{% url 'case' row.case.pk %}" class="btn small">Open</a>
+</div>
+{% if row.incidents %}
+  <div class="row sub{% if need %} need{% endif %}">
+    {% for line in row.incidents %}
+      <span class="inc">
+        {% icon "camera" %}
+        <a href="{{ line.url }}">{{ line.incident.name }}</a>
+        <span class="muted small">{{ line.cameras }} camera{{ line.cameras|pluralize }}</span>
+        <span class="pill small {{ line.tone }}">{{ line.placed }}</span>
+        {% for pill in line.pills %}<a class="pill small {{ pill.tone }}" href="{{ pill.href }}">{{ pill.words }}</a>{% endfor %}
+      </span>
+    {% endfor %}
+  </div>
+{% endif %}

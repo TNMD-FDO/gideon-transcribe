@@ -2,9 +2,12 @@
 
 One page in a fixed order: the greeting; the notices; Ready to download (a
 batch of this session that has finished, with its download, so the
-transcripts are never only on the batch page); Needs you (the cases with
-something to settle); Running now; This session (the recordings not in a
-case, with the keep-or-lose line said once); Recent cases (every case). A
+transcripts are never only on the batch page); then, side by side on a wide
+window (v1.115.0, the maintainer's pick after the October walk), Cases (the
+ones with something to settle first under Needs you, then every case by last
+activity, each case's incidents on a line under its row with their own
+pills) and This session (Running now as its first line, the recordings not
+in a case with the keep-or-lose line said once, the clips line last). A
 section with nothing in it is not drawn. Nothing here is only a door: the
 rail's two actions are the doors, on every page.
 """
@@ -149,21 +152,58 @@ def running_now(user) -> list[dict]:
     return out
 
 
+def incident_lines(case) -> list[dict]:
+    """The case's incidents for the line under its row on Home (v1.115.0):
+    each a link to its page with its cameras, where its cameras stand on
+    the clock, and its own pills."""
+    from core import incidents
+
+    if not incidents.on():
+        return []
+    out = []
+    for incident in case.incidents.all():
+        placed, tone = incidents.placed_words(incident)
+        out.append(
+            {
+                "incident": incident,
+                "url": incident.url(),
+                "cameras": incident.cameras.count(),
+                "placed": placed,
+                "tone": tone,
+                "pills": dashboard.incident_pills(incident),
+            }
+        )
+    return out
+
+
 def case_rows(user) -> tuple[list[dict], list[dict]]:
     """Every case the person can open, newest activity first, each with its
-    dashboard pills; and, apart, the ones with something to settle (a pill
-    in the warning tone)."""
+    dashboard pills and its incidents; and, apart, the ones with something
+    to settle (a pill in the warning tone on the case or on one of its
+    incidents). The incidents' own pills sit on the incident's line, so the
+    case's row keeps only the pills that are the case's."""
     from core import case_pages
 
     rows, needs = [], []
     mine = cases.cases_for(user).select_related("owner").order_by("-last_activity")
     for case in mine:
         row = case_pages._as_row(case, user)
-        row["pills"] = dashboard.pills(case, case.role_of(user))
+        incidents_tab = reverse("case", args=[case.pk]) + "?tab=incidents"
+        row["incidents"] = incident_lines(case)
+        row["pills"] = [
+            one
+            for one in dashboard.pills(case, case.role_of(user))
+            if not (row["incidents"] and one["href"] == incidents_tab)
+        ]
         rows.append(row)
-        warns = [one for one in row["pills"] if one["tone"] == dashboard.WARN]
+        warns = [one for one in row["pills"] if one["tone"] == dashboard.WARN] + [
+            one
+            for line in row["incidents"]
+            for one in line["pills"]
+            if one["tone"] == dashboard.WARN
+        ]
         if warns:
-            needs.append({**row, "pills": warns})
+            needs.append(row)
     return rows, needs
 
 
@@ -202,6 +242,8 @@ def home(request: HttpRequest) -> HttpResponse:
             "recorded_here": recorded_here,
             "cases_on": cases_on,
             "cases_rows": rows,
+            # The rest, by last activity: the cases not under Needs you.
+            "cases_rest": [row for row in rows if row not in needs],
             "cases_line": pages._cases_line(user) if cases_on else "",
             "clips_count": len(clips),
             "clips_rendering": rendering,

@@ -209,10 +209,17 @@ def test_needs_you_and_recent_cases(client, ana, cases_on):
         incident, {"at": "10", "text": "Step out", "to_check": "yes"}, by=ana
     )
     page = client.get(reverse("home")).content.decode()
-    assert "Needs you" in page
-    needs = page.split("Needs you", 1)[1].split("Recent cases", 1)[0]
+    # One cases list (v1.115.0): the ones that need the person first, under
+    # a Needs you heading, then the rest; each case's incidents on a line
+    # under its row with their own pills, so the case's row keeps only its
+    # own, and the incident's pill links to the incident.
+    assert 'id="needs-you"' in page
+    needs = page.split('id="needs-you"', 1)[1].split("The rest, by last activity", 1)[0]
     assert "Busy matter" in needs and "1 event to check" in needs
     assert "Quiet matter" not in needs
+    assert f'href="{incident.url()}">Stop</a>' in needs and "1 camera" in needs
+    pill = f'<a class="pill small warn" href="{incident.url()}">1 event to check'
+    assert pill in needs
     # A proposal waiting for accept or dismiss is enough on its own (v1.86.2).
     waiting = Case.objects.create(owner=ana, name="Waiting matter")
     second = a_recording(ana, batch, "second", case=waiting)
@@ -226,20 +233,20 @@ def test_needs_you_and_recent_cases(client, ana, cases_on):
     needs = (
         client.get(reverse("home"))
         .content.decode()
-        .split("Needs you", 1)[1]
-        .split("Recent cases", 1)[0]
+        .split('id="needs-you"', 1)[1]
+        .split("The rest, by last activity", 1)[0]
     )
     assert "Waiting matter" in needs and "1 proposed event waiting" in needs
-    recent = page.split("Recent cases", 1)[1]
-    assert "Busy matter" in recent and "Quiet matter" in recent
+    rest = page.split("The rest, by last activity", 1)[1]
+    assert "Quiet matter" in rest and "Busy matter" not in rest
     assert 'id="open-new"' in page and 'id="new-box"' in page
     # Every case is listed, not a capped few.
     for n in range(12):
         Case.objects.create(owner=ana, name=f"Matter {n}")
     page = client.get(reverse("home")).content.decode()
-    recent = page.split("Recent cases", 1)[1]
-    assert recent.count("Matter ") == 12
-    assert "Quiet matter" in recent and "Busy matter" in recent
+    rest = page.split("The rest, by last activity", 1)[1]
+    assert rest.count("Matter ") == 12
+    assert "Quiet matter" in rest and "Busy matter" in page
 
 
 def test_this_session_says_the_rule_once_and_leaves_cased_recordings_out(
@@ -253,13 +260,15 @@ def test_this_session_says_the_rule_once_and_leaves_cased_recordings_out(
         ana, batch, "session-only", transcript=False, state=MediaState.PREPARING
     )
     page = client.get(reverse("home")).content.decode()
-    section = page.split("This session", 1)[1].split("Recent cases", 1)[0]
+    section = page.split('id="this-session"', 1)[1]
     assert "session-only" in section and "kept-here" not in section
     assert page.count(home.keep_line()) == 1
     assert "Put a recording in a case to keep it." in page
+    # Cases stand before This session (v1.115.0: the left column).
+    assert page.index('id="cases"') < page.index('id="this-session"')
     settings_store.set_to("folder_management", False)
     page = client.get(reverse("home")).content.decode()
-    assert "Recent cases" not in page and "Needs you" not in page
+    assert 'id="cases"' not in page and "Needs you" not in page
     assert "Export anything you want to keep." in page
 
 

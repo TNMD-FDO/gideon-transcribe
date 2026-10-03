@@ -32,6 +32,72 @@ def _count(n: int, one: str, many: str | None = None) -> str:
     return f"{n} {one if n == 1 else (many or one + 's')}"
 
 
+def _incident_pills(where: dict, href: str, add) -> None:
+    """The incident pills, for a case's incidents together (the dashboard
+    line) or for one incident alone (Home's line under its case, v1.115.0):
+    `where` narrows the cameras, events and memos to the case or the
+    incident, and every pill links to `href`."""
+    # Not synced: an incident with a camera still at the app's guess.
+    unsynced = (
+        IncidentCamera.objects.filter(
+            placed__in=(incidents.GUESS, incidents.NOT_PLACED), **where
+        )
+        .values("incident")
+        .distinct()
+        .count()
+    )
+    if unsynced:
+        add(
+            _count(unsynced, "incident not synced", "incidents not synced")
+            if "incident__case" in where
+            else "not synced",
+            href,
+            WARN,
+        )
+    to_check = Event.objects.filter(proposed=False, to_check=True, **where).count()
+    if to_check:
+        add(_count(to_check, "event to check", "events to check"), href, WARN)
+    proposals = Event.objects.filter(proposed=True, dismissed=False, **where).count()
+    # Proposals wait for a person's accept or dismiss: warm, so the case
+    # sits under Needs you on Home (v1.86.2, at the maintainer's word).
+    if proposals:
+        add(
+            _count(proposals, "proposed event waiting", "proposed events waiting"),
+            href,
+            WARN,
+        )
+    # Memos being written, and memos with newer events.
+    writing = incident_assistant.IncidentMemo.objects.filter(
+        state__in=(incident_assistant.QUEUED, incident_assistant.RUNNING), **where
+    ).count()
+    if writing:
+        add(_count(writing, "memo writing", "memos writing"), href)
+    stale = 0
+    for memo in incident_assistant.IncidentMemo.objects.filter(
+        state=incident_assistant.DONE, **where
+    ).select_related("incident"):
+        newer = memo.incident.events.filter(proposed=False).count() - memo.events_count
+        if newer > 0 or incident_assistant.stale_words(memo, memo.incident):
+            stale += 1
+    if stale:
+        add(
+            _count(stale, "memo has newer events", "memos have newer events"),
+            href,
+            WARN,
+        )
+
+
+def incident_pills(incident) -> list[dict]:
+    """One incident's own pills, each a link to its page (Home, v1.115.0)."""
+    out: list[dict] = []
+
+    def add(words: str, href: str, tone: str = PLAIN) -> None:
+        out.append({"words": words, "href": href, "tone": tone})
+
+    _incident_pills({"incident": incident}, incident.url(), add)
+    return out
+
+
 def pills(case, role: str = "owner") -> list[dict]:
     """The line's pills in their order; each has words, a tone and a link."""
     here = reverse("case", args=[case.pk])
@@ -64,64 +130,7 @@ def pills(case, role: str = "owner") -> list[dict]:
         add(f"{_count(tonight, 'video')} enriched tonight from {start}", here)
 
     if incidents.on():
-        incidents_tab = f"{here}?tab=incidents"
-        # Not synced: an incident with a camera still at the app's guess.
-        unsynced = (
-            IncidentCamera.objects.filter(
-                incident__case=case, placed__in=(incidents.GUESS, incidents.NOT_PLACED)
-            )
-            .values("incident")
-            .distinct()
-            .count()
-        )
-        if unsynced:
-            add(
-                _count(unsynced, "incident not synced", "incidents not synced"),
-                incidents_tab,
-                WARN,
-            )
-        to_check = Event.objects.filter(
-            incident__case=case, proposed=False, to_check=True
-        ).count()
-        if to_check:
-            add(
-                _count(to_check, "event to check", "events to check"),
-                incidents_tab,
-                WARN,
-            )
-        proposals = Event.objects.filter(
-            incident__case=case, proposed=True, dismissed=False
-        ).count()
-        # Proposals wait for a person's accept or dismiss: warm, so the case
-        # sits under Needs you on Home (v1.86.2, at the maintainer's word).
-        if proposals:
-            add(
-                _count(proposals, "proposed event waiting", "proposed events waiting"),
-                incidents_tab,
-                WARN,
-            )
-        # Memos being written, and memos with newer events.
-        writing = incident_assistant.IncidentMemo.objects.filter(
-            incident__case=case,
-            state__in=(incident_assistant.QUEUED, incident_assistant.RUNNING),
-        ).count()
-        if writing:
-            add(_count(writing, "memo writing", "memos writing"), incidents_tab)
-        stale = 0
-        for memo in incident_assistant.IncidentMemo.objects.filter(
-            incident__case=case, state=incident_assistant.DONE
-        ).select_related("incident"):
-            newer = (
-                memo.incident.events.filter(proposed=False).count() - memo.events_count
-            )
-            if newer > 0 or incident_assistant.stale_words(memo, memo.incident):
-                stale += 1
-        if stale:
-            add(
-                _count(stale, "memo has newer events", "memos have newer events"),
-                incidents_tab,
-                WARN,
-            )
+        _incident_pills({"incident__case": case}, f"{here}?tab=incidents", add)
 
     # Clips rendering, and failed.
     if settings_store.get("clips_available"):
