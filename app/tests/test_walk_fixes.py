@@ -166,7 +166,7 @@ def test_the_system_is_written_down_once_and_the_pages_keep_to_it():
     panel = (APP / "templates" / "panel" / "base.html").read_text(encoding="utf-8")
     assert '<span class="eyebrow">Panel</span>' in panel
     # Space: the reading pages' cap.
-    assert ".page.roomy { max-width: 87.5rem; }" in css
+    assert ".page.roomy { max-width: 1400px; }" in css
     # One empty-state pattern, inside Home's sections too.
     assert ".empty.in-section {" in css
     home = (APP / "templates" / "home.html").read_text(encoding="utf-8")
@@ -199,7 +199,24 @@ def test_the_four_slips_of_the_system_walk_are_held_in_the_files():
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     assert "#recordings td:first-child { min-width: 12rem; }" in css
     assert ".sp-read .seg .txt { grid-column" not in css
-    assert ".page.workbench { max-width: 87.5rem; }" in css
+    assert ".page.workbench { max-width: 1400px; }" in css
     assert ".page.workbench { max-width: 100rem; }" not in css
     page = (APP / "templates" / "recorded_here.html").read_text(encoding="utf-8")
     assert 'title="Nothing recorded here yet"' in page and 'action="Record now"' in page
+
+
+def test_the_recording_pages_head_is_two_lines():
+    """v1.108.0, the walk's item 12: the title line and the action line,
+    where one line had held eleven controls at 1366; Export shrinks to its
+    icon under 1200. The cap is written in pixels, since the root is 15px."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    viewer = (APP / "templates" / "viewer.html").read_text(encoding="utf-8")
+    assert '<div class="head-title">' in viewer and '<div class="head-acts">' in viewer
+    title_line = viewer.index('<div class="head-title">')
+    assert title_line < viewer.index('id="recording-title"')
+    assert viewer.index('<div class="head-acts">') < viewer.index('class="search-box"')
+    assert '<span class="lbl">Export</span>' in viewer
+    assert ".desk .head .head-title, .desk .head .head-acts { display: flex;" in css
+    assert ".desk .head h1 { font-size: var(--t-title);" in css
+    assert ".desk .head .head-acts summary .lbl { display: none; }" in css
+    assert "max-width: 87.5rem" not in css

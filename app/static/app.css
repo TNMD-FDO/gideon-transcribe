@@ -767,7 +767,7 @@ main.wide { max-width: none; }
 /* The reading pages' cap (v1.107.0): 1400 pixels, so a desk monitor shows a
    wider list rather than a wider margin; the work pages are main.wide and
    take everything. */
-.page.roomy { max-width: 87.5rem; }
+.page.roomy { max-width: 1400px; }
 
 .centre { text-align: center; }
 .dialog.centre { justify-content: center; }
@@ -959,11 +959,18 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   padding: 8px 14px 0;
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
 }
-.desk .head h1 { font-size: 1.1em; margin: 0; }
+/* v1.108.0 (the walk's item 12): the head is two lines, the title line and
+   the action line, where one line had held eleven controls at 1366. The
+   title is the page's, at the title size; the actions sit at the right.
+   Under 1200 wide Export shrinks to its icon. */
+.desk .head .head-title, .desk .head .head-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.desk .head .head-acts { justify-content: flex-end; }
+.desk .head .head-acts .search-box { margin-right: auto; }
+.desk .head h1 { font-size: var(--t-title); margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 1199px) { .desk .head .head-acts summary .lbl { display: none; } }
 /* The search box in the header, with its count beside it. */
 .desk .head .search-box { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .desk .head .search-box input { width: 190px; min-height: 28px; font-size: var(--t-small); }
@@ -1761,7 +1768,7 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 .jumplist a:hover { text-decoration: underline; }
 .guide .contents a.on { color: var(--accent); font-weight: 600; }
 @media (min-width: 1280px) {
-  .page.workbench { max-width: 87.5rem; } /* v1.107.1: the same 1400 cap as .page.roomy; this had kept 1600. */
+  .page.workbench { max-width: 1400px; } /* v1.107.1: the same 1400 cap as .page.roomy; this had kept 1600. In pixels (v1.108.0): the root is 15px, so 87.5rem was 1313. */
   /* The case page (Phase 8 chapter 7): the list takes the width and About
      this case a measure, so a file name stays on one line. */
   .case-page .page.workbench { max-width: none; }

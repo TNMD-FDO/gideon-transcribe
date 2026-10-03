@@ -20,6 +20,12 @@
       it. A sound recording has no picture and no stage at any width.
     {% endcomment %}
     <div class="head">
+      {% comment %}
+        Two lines (v1.108.0, the walk's item 12): the title line (back, the
+        case, the title, its pills) and the action line (find, New clip,
+        Export, More). One line had held eleven controls at 1366.
+      {% endcomment %}
+      <div class="head-title">
           {% if recording.case_id and in_case %}
             <a href="{% url 'case' recording.case_id %}" title="Back to the case {{ recording.case.name }}" class="btn ghost icon">{% icon "back" %}</a>
             <span class="crumb muted small"><a href="{% url 'case' recording.case_id %}">{{ recording.case.name }}</a></span>
@@ -44,7 +50,8 @@
             <span class="pill" id="both-sides"
                   title="A phone system plays its recorded announcement to both parties, so both sides transcribe it. Those passages are shown once and named Side 1 and Side 2. Both copies are kept and both are in the record.">{{ transcript.shared_segments }} passage{{ transcript.shared_segments|pluralize }} on both sides</span>
           {% endif %}
-          <span class="grow"></span>
+      </div>
+      <div class="head-acts">
           {% comment %}
             The search, the case, the one primary, and two menus: Export for
             the transcript's three exports and More for the housekeeping (the
@@ -71,7 +78,7 @@
           {% endif %}
           {% if transcript %}
             <details class="menu" id="export-menu">
-              <summary class="btn small" title="Export the transcript">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
+              <summary class="btn small" title="Export the transcript">{% icon "download" %} <span class="lbl">Export</span> {% icon "chevron-down" %}</summary>
               <ul>
                 <li><a href="{% url 'export' recording.pk 'word' %}">{% icon "word" %} Export to Word</a></li>
                 <li><a href="{% url 'export' recording.pk 'text' %}">{% icon "text" %} Export as text (.txt)</a></li>
@@ -104,6 +111,7 @@
                           data-clips="{{ recording.clips.count }}">{% icon "delete" %} Delete this recording</button></li>
             </ul>
           </details>
+      </div>
     </div>
 
     <div class="stage">

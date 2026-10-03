@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.108.0, 2026-10-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The recording page's head on two lines.** The walk's item 12: at 1366
+wide one line held eleven controls (back, the case, the title, three
+pills, the find box, New clip, Export and More). The head is now the title
+line (back, the case, the title at the one title size, its pills) over the
+action line (find at the left, then New clip, Export and More at the
+right). Under 1200 wide Export shrinks to its icon. Nothing moves in what
+the controls do.
+
+Also: the reading pages' cap is written as 1400 pixels; the app's root
+font size is 15 pixels, so the 87.5rem of v1.107.1 had been 1313.
+
 ## v1.107.1, 2026-10-02
 
 ```

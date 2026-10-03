@@ -58,6 +58,11 @@ lead sentence sits under them when the page has one. On a phone the action
 drops under the title. Upload files and New recording had a larger, centred
 title of their own; they take this one.
 
+The recording page, a work page whose head sits beside the picture, keeps
+the same order on two lines: the title line (back, the case, the title and
+its pills) and the action line (find, New clip, Export, More), with Export
+shrinking to its icon under 1200 wide.
+
 ## Nothing here
 
 One pattern for an empty place: the icon, a heading that says what the place
