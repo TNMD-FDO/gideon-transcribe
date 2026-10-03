@@ -2765,7 +2765,10 @@ body.gideon-window .gideon-grip { display: none; }
     flex: none; white-space: nowrap; padding: 5px 12px; font-size: 13px;
     border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
   }
-  .panel-shell .rail a.on { border-color: var(--accent); }
+  /* v1.106.1: the chip's surface background came after the rail's rule had
+     set the current item's text to the accent's ink, which left the current
+     chip with no visible label; it is filled like the rail's current item. */
+  .panel-shell .rail a.on { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
   .panel-shell .rail a .cnt { float: none; margin-left: 6px; }
   .panel-page { padding: 16px 16px 120px; }
 }
@@ -2778,6 +2781,14 @@ body.gideon-window .gideon-grip { display: none; }
   .sp-cards { grid-row: 1; grid-column: 1; border-right: 0; max-height: 32vh; }
   .sp-right { grid-row: 2; grid-column: 1; max-height: 34vh; }
   .sp-middle { grid-row: 3; grid-column: 1; }
+  /* v1.106.1: fitted to the window, the cards' and the player's shares plus
+     the head left the transcript 86 pixels at 768 by 1024 and nothing on a
+     phone. In one column the page scrolls instead, with the cards and the
+     player at their caps and the transcript at its full length under them. */
+  body.viewer.speakers-page { overflow: auto; }
+  body.viewer.speakers-page .frame, body.viewer.speakers-page .shell { flex: none; height: auto; }
+  .speakers-page main.wide, .speakers-page .sp-desk { flex: none; }
+  .sp-middle { min-height: 50vh; }
 }
 
 /* 4. Tables with a row for each thing (cases, recordings, incidents,
@@ -2796,8 +2807,10 @@ body.gideon-window .gideon-grip { display: none; }
   .tbl.cards td { border: 0; padding: 0; display: inline; }
   .tbl.cards td:first-child { display: block; font-size: var(--t-body); margin: 0 0 4px; overflow-wrap: anywhere; }
   .tbl.cards td:not(:first-child):not(.acts) { color: var(--muted); font-size: var(--t-small); }
-  .tbl.cards td:not(:first-child):not(.acts):not(:empty)::after { content: " · "; }
-  .tbl.cards td:not(:first-child):not(.acts):not(:empty):last-of-type::after { content: ""; }
+  /* v1.106.1: a fact gets a separator only when another fact follows it; the
+     last cell of a row is the button cell, so "last-of-type" never matched
+     and the separator trailed the last fact. */
+  .tbl.cards td:not(:first-child):not(.acts):not(:empty):has(~ td:not(.acts):not(:empty))::after { content: " · "; }
   .tbl.cards td.acts { position: absolute; top: 9px; right: 10px; padding: 0; white-space: nowrap; }
   .tbl.cards tr.detail-row { padding: 10px 12px; }
   .tbl.cards tr.detail-row > td { display: block; padding: 0; }

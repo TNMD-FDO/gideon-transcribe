@@ -325,6 +325,8 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- **2026-10-02, v1.106.1.** Chapter 1's Speakers page in one column (under 900 wide): fitted to the window, the cards' and the player's shares and the head left the transcript 86 pixels on a tablet and nothing on a phone, seen on the office's server at v1.106.0. In one column the page scrolls as a whole, the cards and the player at their caps and the transcript at its full length under them.
+
 - **2026-10-02, v1.106.0.** Chapter 1's Speakers page, from the walk at six shapes: at 1366 wide the three columns left the reading pane one word a line, and at 390 the three sat side by side in 130 pixels each. The band layout (the cards beside the player and the lanes, the transcript at full width under them) now applies up to 1499 wide, where it had applied up to 1279; under 900 the page is one column, the cards, then the player and the lanes, then the transcript with the rest of the height.
 
 - **2026-10-02, v1.105.0.** Chapters 1, 3 and 4, at the maintainer's word to make Check the speakers and Suggest names more accurate ("build the whole thing and then we will test"), from their finding that a name was suggested for the speaker who said "Hey Tony", and from the literature read the same day (`docs/research/speaker-attribution.md`). Four things, decided by the build where the chapters left it open.

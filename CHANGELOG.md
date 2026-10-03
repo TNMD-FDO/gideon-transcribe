@@ -21,6 +21,29 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.106.1, 2026-10-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Three slips in the walk's fixes, seen on the server.** Stylesheet only.
+
+- **The Panel's current chip has its label back.** Under 900 wide the
+  current page's chip showed as an empty outlined pill: the chip's surface
+  background was painted after the rail's rule had set the current item's
+  text to the accent's ink, dark on dark. The current chip is now filled
+  with the accent, like the rail's current item.
+- **No trailing dot on a card.** On the card lists under 700 wide the
+  " · " between facts also followed the last fact. A fact now gets a
+  separator only when another fact follows it.
+- **The Speakers page in one column scrolls.** Under 900 wide the page was
+  fitted to the window, and the cards' share, the player's share and the
+  head left the transcript 86 pixels on a tablet and nothing on a phone.
+  The page now scrolls as a whole, with the cards and the player at their
+  caps and the transcript at its full length under them.
+
 ## v1.106.0, 2026-10-02
 
 ```

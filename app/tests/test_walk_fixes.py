@@ -107,3 +107,20 @@ def test_the_five_breaks_of_the_october_walk_are_held_in_the_files():
     assert ".tabs { overflow-x: auto; flex-wrap: nowrap;" in css
     # 5. The sign-in card fits the page's own width.
     assert ".gate .card.with-logo { width: min(32rem, 100%); }" in css
+
+
+def test_the_three_slips_of_the_server_check_are_held_in_the_stylesheet():
+    """v1.106.1: seen on the server at v1.106.0. The Panel's current chip had
+    no visible label (the chip's surface background came after the rail had
+    set accent-ink text); the cards' separator trailed the last fact (the
+    last cell is the button cell); the Speakers page in one column fitted
+    the window and starved the transcript."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert (
+        ".panel-shell .rail a.on { border-color: var(--accent); "
+        "background: var(--accent); color: var(--accent-ink); }"
+    ) in css
+    assert ':has(~ td:not(.acts):not(:empty))::after { content: " · "; }' in css
+    assert "last-of-type::after" not in css
+    assert "body.viewer.speakers-page { overflow: auto; }" in css
+    assert ".sp-middle { min-height: 50vh; }" in css
