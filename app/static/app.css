@@ -475,6 +475,11 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 /* A Person's Role, after the name, in the viewer's Speakers panel. */
 .pill.role { font-size: var(--t-label); padding: 0 6px; margin-left: 4px; }
 
+/* The Case page's side column (v1.109.0, the walk's item 10): the facts,
+   then one row of the case's actions (Rename, Share, Download), then Shared
+   with, and Delete alone at the foot in red. */
+.about-case .case-acts { margin-top: 10px; }
+.about-case .case-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 /* The Case page's Shared with panel, under the facts about the case. */
 .shared-with { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 .shared-with h3 { margin: 0 0 8px; font-size: var(--t-body); }

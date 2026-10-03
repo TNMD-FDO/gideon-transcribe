@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.109.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The case page's actions in one place.** The walk's item 10: the case's
+actions were scattered (Download all transcripts, Rename and Delete in a
+row under the facts; Share in the Shared with block). The side column is
+now the facts, then one row of the case's actions (Rename, Share,
+Download all transcripts, and Keep while the case is in its last days),
+then Shared with, and Delete case alone at the foot of the column, in
+red. Transfer stays with the people the case is shared with. Add
+recordings stays in the head as the page's main action.
+
+The document row keeps Open, Comparison to Word, Remove and the Re-link
+choices on the row, as Phase 8 chapter 4 says ("a plain choice on the
+row, no pop-up"); the walk's "..." menu for it is not built.
+
 ## v1.108.0, 2026-10-02
 
 ```

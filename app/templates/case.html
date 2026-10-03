@@ -653,14 +653,21 @@
           <dt>Retention</dt>
           <dd>{% if warned %}<span class="deletes">{{ deletes_line }}</span>{% else %}{{ deletes_line }}{% endif %}</dd>
         </dl>
-        <div class="row actions">
-          <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
-          {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
+        {% comment %}
+          The case's own actions in one row under its facts (v1.109.0, the
+          walk's item 10): Rename, Share, Download; Keep while the case is in
+          its last days. Delete stands alone at the foot of the column, in
+          red, after everything else about the case.
+        {% endcomment %}
+        <div class="row actions case-acts">
           {% if role != "collaborator" %}
             <button type="button" class="btn" id="rename">Rename</button>
-            <span class="grow"></span>
-            <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
           {% endif %}
+          {% if sharing_on and may_share %}
+            <button type="button" class="btn" id="share">Share</button>
+          {% endif %}
+          <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
+          {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
         </div>
 
         {% if sharing_on %}
@@ -687,11 +694,12 @@
                   {% endfor %}
                 </tbody>
               </table>
-              <p class="muted small" id="nobody-yet"{% if shares %} hidden{% endif %}>Nobody yet. Whoever you share this case with can work in it as you do.</p>
-              <div class="row actions" style="margin-top: 8px">
-                <button type="button" class="btn" id="share">Share</button>
-                {% if may_transfer %}<button type="button" class="btn ghost" id="transfer">Transfer</button>{% endif %}
-              </div>
+              <p class="muted small" id="nobody-yet"{% if shares %} hidden{% endif %}>Nobody yet. Whoever you share this case with can work in it as you do; Share is above.</p>
+              {% if may_transfer %}
+                <div class="row actions" style="margin-top: 8px">
+                  <button type="button" class="btn ghost small" id="transfer">Transfer</button>
+                </div>
+              {% endif %}
             {% else %}
               <ul class="plain" id="colleagues">
                 {% for share in colleagues %}
@@ -702,6 +710,12 @@
                 <button type="button" class="btn ghost small unshare" data-share="{{ share.pk }}" data-name="you" data-leave="1">Leave this case</button>
               {% endif %}{% endfor %}
             {% endif %}
+          </div>
+        {% endif %}
+
+        {% if role != "collaborator" %}
+          <div class="case-foot">
+            <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
           </div>
         {% endif %}
 

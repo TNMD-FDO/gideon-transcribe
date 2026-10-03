@@ -220,3 +220,19 @@ def test_the_recording_pages_head_is_two_lines():
     assert ".desk .head h1 { font-size: var(--t-title);" in css
     assert ".desk .head .head-acts summary .lbl { display: none; }" in css
     assert "max-width: 87.5rem" not in css
+
+
+def test_the_case_pages_actions_are_gathered():
+    """v1.109.0, the walk's item 10: the side column is the facts, one row of
+    the case's actions (Rename, Share, Download), Shared with, then Delete
+    alone at the foot. The document row keeps Re-link as a plain choice, as
+    Phase 8 chapter 4 says."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    page = (APP / "templates" / "case.html").read_text(encoding="utf-8")
+    acts = page.index('class="row actions case-acts"')
+    assert acts < page.index('id="share"') < page.index("Download all transcripts")
+    assert page.index('id="rename"') < page.index('id="share"')
+    assert page.index('id="shared-with"') < page.index('class="case-foot"')
+    assert page.index('class="case-foot"') < page.index('id="delete-case"')
+    assert ".about-case .case-foot {" in css
+    assert 'class="row relink"' in page
