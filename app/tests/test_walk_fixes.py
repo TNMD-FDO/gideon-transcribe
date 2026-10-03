@@ -124,3 +124,7 @@ def test_the_three_slips_of_the_server_check_are_held_in_the_stylesheet():
     assert "last-of-type::after" not in css
     assert "body.viewer.speakers-page { overflow: auto; }" in css
     assert ".sp-middle { min-height: 50vh; }" in css
+    # v1.106.2: the page sits in the shell's row; "flex: none" on it stopped
+    # it shrinking sideways. Only the desk, in the page's column, is held.
+    assert ".speakers-page .sp-desk { flex: none; }" in css
+    assert "main.wide, .speakers-page .sp-desk" not in css

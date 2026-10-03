@@ -2786,8 +2786,13 @@ body.gideon-window .gideon-grip { display: none; }
      phone. In one column the page scrolls instead, with the cards and the
      player at their caps and the transcript at its full length under them. */
   body.viewer.speakers-page { overflow: auto; }
-  body.viewer.speakers-page .frame, body.viewer.speakers-page .shell { flex: none; height: auto; }
-  .speakers-page main.wide, .speakers-page .sp-desk { flex: none; }
+  body.viewer.speakers-page .frame { flex: none; height: auto; }
+  body.viewer.speakers-page .shell { height: auto; }
+  /* v1.106.2: the page sits in the shell's row, so "flex: none" on it had
+     stopped it shrinking sideways and the page grew to its content's width
+     (2173 pixels at 768). Only the desk, in the page's column, is told not
+     to shrink. */
+  .speakers-page .sp-desk { flex: none; }
   .sp-middle { min-height: 50vh; }
 }
 

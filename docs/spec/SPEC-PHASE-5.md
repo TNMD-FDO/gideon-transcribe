@@ -325,6 +325,8 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- **2026-10-02, v1.106.2.** Chapter 1's Speakers page in one column: v1.106.1's scrolling page grew to its content's width (2173 pixels at 768 wide), seen on the office's server; the page keeps the window's width and only the desk under it is kept from shrinking.
+
 - **2026-10-02, v1.106.1.** Chapter 1's Speakers page in one column (under 900 wide): fitted to the window, the cards' and the player's shares and the head left the transcript 86 pixels on a tablet and nothing on a phone, seen on the office's server at v1.106.0. In one column the page scrolls as a whole, the cards and the player at their caps and the transcript at its full length under them.
 
 - **2026-10-02, v1.106.0.** Chapter 1's Speakers page, from the walk at six shapes: at 1366 wide the three columns left the reading pane one word a line, and at 390 the three sat side by side in 130 pixels each. The band layout (the cards beside the player and the lanes, the transcript at full width under them) now applies up to 1499 wide, where it had applied up to 1279; under 900 the page is one column, the cards, then the player and the lanes, then the transcript with the rest of the height.

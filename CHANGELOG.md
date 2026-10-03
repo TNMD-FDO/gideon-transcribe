@@ -21,6 +21,19 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.106.2, 2026-10-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Speakers page in one column no longer grows sideways.** v1.106.1's
+scrolling page had told the page itself not to shrink, and the page sits in
+a row, so it grew to its content's width (2173 pixels at 768 wide, with a
+sideways scrollbar). Only the desk, which sits in a column, is told not to
+shrink. Stylesheet only; seen on the server at v1.106.1.
+
 ## v1.106.1, 2026-10-02
 
 ```
