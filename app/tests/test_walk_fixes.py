@@ -289,6 +289,20 @@ def test_the_small_placement_items_of_the_walk():
         assert "at the foot of the rail" in guide, name
 
 
+def test_the_three_larger_placement_items_of_the_walk():
+    """v1.112.0, the walk's items 17, 19 and 20: the incident panel's tab bar
+    wraps and its Find box gives way; on a phone the Upload page's drop zone
+    is shorter and a step's button stays in view; on a wide window the open
+    chat drawer docks as a column the page makes room for."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".inc-work .tabbar { flex-wrap: wrap; }" in css
+    assert ".inc-find { margin-left: auto; align-self: center; flex: 1 1 7rem;" in css
+    assert ".steps > li > .dialog { position: sticky; bottom: 0;" in css
+    assert "body.gideon-open .shell > main { padding-right: calc(var(--gideon" in css
+    script = (APP / "static" / "gideon.js").read_text(encoding="utf-8")
+    assert 'document.body.classList.add("gideon-open")' in script
+
+
 def test_the_list_tables_card_class_matches_no_other_rule():
     """v1.110.0: the class that turns a list table into cards under 700 had
     matched the older `.cards` rule (a grid of cards on the document pages),

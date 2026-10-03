@@ -836,6 +836,13 @@ main.wide { max-width: none; }
 
 /* The drop zone is the page, not a box inside step one of three. */
 .drop.hero { padding: 46px 24px; }
+/* v1.112.0 (the walk's item 19): on a phone the drop zone is shorter and a
+   step's Next or start button stays in view at the foot of the screen while
+   the step is taller than it, instead of waiting below the fold. */
+@media (max-width: 699px) {
+  .drop.hero { padding: 24px 14px; }
+  .steps > li > .dialog { position: sticky; bottom: 0; z-index: 2; background: var(--surface); padding: 10px 0; margin-bottom: -8px; }
+}
 .drop.hero .big { font-size: 1.25em; margin-bottom: 8px; }
 .drop.hero .or { margin-bottom: 14px; }
 
@@ -2528,6 +2535,13 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 body.gideon-open .gideon-button { z-index: 31; }
 body.gideon-window .gideon-drawer { top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; border: 0; border-radius: 0; }
 body.gideon-window main, body.gideon-window header, body.gideon-window nav, body.gideon-window .gideon-button { display: none; }
+/* v1.112.0 (the walk's item 20): on a wide window the open drawer docks as a
+   column, the page beside it keeping its room, so a case's page stays usable
+   with the chat open across its tabs; on a narrow one it is the sheet it
+   was, closed when done. The width follows the drawer's own (--gideon). */
+@media (min-width: 1280px) {
+  body.gideon-open .shell > main { padding-right: calc(var(--gideon, 420px) + 36px); }
+}
 .gideon-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .gideon-body { flex: 1 1 auto; overflow: auto; padding: 12px 16px; }
 @media (max-width: 899px) { .gideon-drawer { inset: 0; width: auto; max-width: none; border-radius: 0; border: 0; } body.gideon-open .gideon-button { display: none; } }
@@ -2605,7 +2619,11 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .search-kinds .pill.on { outline: 2px solid var(--accent); outline-offset: 1px; }
 .search-head { font-size: var(--t-heading); margin: 18px 0 6px; }
 .search-hits td mark, .inc-find-hit mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
-.inc-work .tabbar .inc-find { margin-left: auto; align-self: center; max-width: 14rem; min-width: 8rem; }
+/* v1.112.0 (the walk's item 17): the bar wraps and the box gives way, where
+   the box had run past the panel's edge (14 px at 1912, almost wholly at
+   1366) because the tabs would not shrink and the box would not drop. */
+.inc-work .tabbar { flex-wrap: wrap; }
+.inc-work .tabbar .inc-find { margin-left: auto; align-self: center; flex: 1 1 7rem; min-width: 0; max-width: 14rem; }
 .inc-find-hits { max-height: 32vh; overflow: auto; border-bottom: 1px solid var(--line); background: var(--surface-2); font-size: var(--t-small); }
 .inc-find-hits .find-head { margin: 6px 12px 2px; }
 .inc-find-hit { display: flex; gap: 8px; align-items: baseline; padding: 4px 12px; cursor: pointer; border-top: 1px solid var(--line); }

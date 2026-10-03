@@ -344,6 +344,7 @@ One subsection per project, newest entry first, written only by that project in 
 - **2026-10-02, at v1.107.1 (four slips in the look, seen on the server; nothing shared moves).** Stylesheet and one template.
 - **2026-10-02, at v1.108.0 (the recording page's head on two lines; nothing shared moves).** Stylesheet and one template.
 - **2026-10-03, at v1.109.0 (the case page's actions in one place; nothing shared moves).** Stylesheet and one template.
+- **2026-10-03, at v1.112.0 (the last three placements from the walk; nothing shared moves).** Stylesheet only.
 - **2026-10-03, at v1.111.0 (four small placements from the walk; nothing shared moves).** Stylesheet, templates, one script and the guides.
 - **2026-10-03, at v1.110.0 (the Users page's row; a local run of the app for walks; nothing shared moves).** Stylesheet, one template, the Admin guide, a seed command for a workstation's own database (never an office's). No port, memory, card, timer or network moves.
 - **2026-10-02, at v1.105.0 (the Speaker check's second reading, the voice's say, the name's direction; nothing shared moves).** Five columns (migration 0072). Each Speaker check now ends with two more requests to GIDEON's engine for every twenty lines it proposes to move, small ones (the marked lines with four lines either side), at the app's usual priority and in the check's own position (as a transcript lands, or overnight). No change to the transcription service or its pins: the voice evidence is the word labels the service already returns. No port, memory, card, timer or network moves.

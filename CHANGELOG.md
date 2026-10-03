@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.112.0, 2026-10-03
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The last three placements from the walk.** Stylesheet only.
+
+- **The incident page's Find box stays inside its panel.** The work
+  panel's tab bar held the tabs and the box on one line that never
+  wrapped, so the box ran past the panel's edge (by 14 pixels on a desk
+  monitor, almost wholly on a laptop). The bar wraps and the box gives
+  way.
+- **Upload on a phone.** The drop zone is shorter, and a step's Next or
+  start button stays in view at the foot of the screen while the step is
+  taller than it, instead of waiting below the fold.
+- **The chat docks on a wide window.** With Ask Gideon open on a case, an
+  incident or a recording, the page beside it keeps its room on a window
+  1280 wide or more, so the tabs stay usable with the chat open; on a
+  narrower window it is the sheet it was.
+
 ## v1.111.0, 2026-10-03
 
 ```
