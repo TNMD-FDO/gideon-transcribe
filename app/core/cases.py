@@ -61,6 +61,17 @@ class Case(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
+    # A voice named across the case (Phase 9 chapter 2): on every two-channel
+    # call in this Case, Side 1 or 2 is this Person. Empty when no rule.
+    side_number = models.SmallIntegerField(null=True, blank=True)
+    side_person = models.ForeignKey(
+        "core.Person",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
     # The Retention policy's clock. Moved by note_activity() for the acts the
     # specification counts, never by an Admin looking in.
     last_activity = models.DateTimeField(default=timezone.now)

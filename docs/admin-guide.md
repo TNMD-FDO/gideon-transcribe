@@ -101,7 +101,7 @@ On a wide monitor the filters sit in a pane on the left and stay put while you s
 
 The log records what happened, who did it, and to whose material: sign-ins and sign-outs, uploads, downloads, corrections, deletions, every settings change with its note, every action on the Users page, every cancelled job, and every time an Admin opens somebody else's recordings.
 
-It never records any of these, whatever the page and whoever is signed in: transcript text, either side of a correction, chat questions or answers, summaries, vocabulary, search terms, file contents, passwords, tokens, speaker names, recording titles (a rename writes a row without either title), clip titles, or clip notes. A recording's original file name is kept, because it is the only way to recognise a recording after it has been discarded.
+It never records any of these, whatever the page and whoever is signed in: transcript text, either side of a correction, chat questions or answers, summaries, vocabulary (a case's names and their spellings included: the rows say how many entries, never which), search terms, file contents, passwords, tokens, speaker names, recording titles (a rename writes a row without either title), clip titles, or clip notes. A recording's original file name is kept, because it is the only way to recognise a recording after it has been discarded.
 
 The Audit log page shows the rows newest first and filters them by date, person, category, and outcome. Each row names the actor, what happened, whether it succeeded, the affected person where that is not the actor, the object, and the client it came from.
 

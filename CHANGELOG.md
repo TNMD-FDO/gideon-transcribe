@@ -21,6 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.117.0, 2026-10-04
+
+```
+Models: unchanged
+Database: migrates
+```
+
+**Names across many recordings** (Phase 9 chapter 2). The engine mishears
+names, and across 800 calls one person is spelt three ways. The case now
+keeps what it has learned and uses it wherever it reads; no transcript is
+ever rewritten.
+
+- **The Case vocabulary.** A block in the case's right pane: names and
+  places, each with the spellings the engine has been heard to give it
+  ("also heard as"). The case's People are entries by themselves. Anyone
+  with the case adds a name or a spelling; the owner removes one. Audit
+  rows carry the count of entries, never a name.
+- **Into recognition.** Every recording added to the case, and every
+  Process again, carries the case's names between the office's list and
+  the batch's own; the Upload page says how many go with the recordings.
+- **Into Search.** A search for a listed name also lights its spellings,
+  marked "also heard as" after the exact hits and the close matches; a
+  name of two words is also tried joined, and a joined name split.
+- **Into Gideon.** The People line that opens every case chat call
+  carries the spellings and the places, and the Case chat template says
+  that a listed spelling is the same person or place (the shipped wording
+  changes; an unedited template follows it).
+- **One voice on every call.** The Speakers tab's one sentence, "On every
+  call in this case, Side 1 is ...", names that side on every two-channel
+  call that has a transcript, and on each new one as it lands; a side
+  named by hand keeps its name. A call with both voices in one track has
+  no sides and is not covered: the tab says how many such calls the case
+  holds, to be named with Suggest names or by hand.
+
 ## v1.116.0, 2026-10-04
 
 ```

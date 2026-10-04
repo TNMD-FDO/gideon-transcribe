@@ -25,6 +25,7 @@ from core import (
     uploads,
     viewer,
     views,
+    vocabulary_pages,
 )
 
 urlpatterns = [
@@ -433,6 +434,16 @@ urlpatterns = [
         name="export-case-chat",
     ),
     path("person/<uuid:person_id>", people_pages.person_action, name="person-action"),
+    path(
+        "case/<uuid:case_id>/vocabulary",
+        vocabulary_pages.term_action,
+        name="case-vocabulary",
+    ),
+    path(
+        "case/<uuid:case_id>/side-rule",
+        vocabulary_pages.side_rule,
+        name="case-side-rule",
+    ),
     path("case/<uuid:case_id>/delete", case_pages.delete_case, name="delete-case"),
     path(
         "case/<uuid:case_id>/what-would-go",

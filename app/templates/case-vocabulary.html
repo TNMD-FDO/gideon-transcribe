@@ -1,0 +1,48 @@
+{% comment %}
+  The Case vocabulary (Phase 9 chapter 2): the names and places the case has
+  learned, each with the spellings the engine has been heard to give it. The
+  People from the Speakers tab are here by themselves. Plain forms, each
+  going back to the case page, as the Speakers tab's are.
+{% endcomment %}
+<div class="case-vocabulary" id="case-vocabulary">
+  <h3>Case vocabulary <span class="muted small">{{ vocabulary|length }} name{{ vocabulary|length|pluralize }} and place{{ vocabulary|length|pluralize }}</span></h3>
+  <p class="muted small">They go with every recording added here and with Process again. Search and Gideon read the spellings too. The people from the Speakers tab are here by themselves.</p>
+  {% if vocabulary %}
+    <ul class="plain vocabulary-list">
+      {% for one in vocabulary %}
+        <li data-kind="{{ one.kind }}" data-id="{{ one.id }}">
+          <details>
+            <summary>
+              <b>{{ one.name }}</b>{% if one.role %} <span class="muted small">({{ one.role }})</span>{% endif %}{% if one.kind == "person" %} <span class="muted small">from the Speakers tab</span>{% endif %}
+              <div class="muted small">{% if one.spellings %}also heard as {{ one.spellings|join:", " }}{% else %}no other spelling yet{% endif %}</div>
+            </summary>
+            <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="spellings">
+              <input type="hidden" name="kind" value="{{ one.kind }}">
+              <input type="hidden" name="id" value="{{ one.id }}">
+              <input type="text" name="spellings" value="{{ one.spellings|join:", " }}" maxlength="2500" class="grow" placeholder="Also heard as, with commas" aria-label="Also heard as">
+              <button type="submit" class="small">Save</button>
+            </form>
+            {% if one.kind == "term" and may_remove_terms %}
+              <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="margin-top: 4px"
+                    data-confirm-title="Remove {{ one.name }} from the case vocabulary?" data-confirm="Nothing in the recordings changes; the name stops going with new uploads and its spellings stop standing for it in Search." data-confirm-ok="Remove">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove">
+                <input type="hidden" name="id" value="{{ one.id }}">
+                <button type="submit" class="small ghost danger">Remove</button>
+              </form>
+            {% endif %}
+          </details>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="vocabulary-add" style="margin-top: 8px">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <input type="text" name="term" maxlength="120" placeholder="A name or a place" required aria-label="A name or a place">
+    <input type="text" name="spellings" maxlength="2500" placeholder="Also heard as, with commas" aria-label="Also heard as">
+    <button type="submit" class="small">Add</button>
+  </form>
+</div>

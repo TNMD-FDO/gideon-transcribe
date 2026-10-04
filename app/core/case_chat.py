@@ -217,11 +217,26 @@ def not_read_line(skipped: list[dict]) -> str:
 
 
 def people_line(case) -> str:
-    """The People with their Roles, never their notes; "none yet" when none."""
-    if not case.people.exists():
-        return "People in this case: none yet"
-    shown = [one.shown() for one in case.people.all()]
-    return "People in this case: " + ", ".join(shown)
+    """The People with their Roles, never their notes; "none yet" when none.
+    With the Case vocabulary (Phase 9 chapter 2): each name's Also heard as
+    spellings, and the places and other names after the people."""
+    from core.people import CaseTerm
+
+    def with_spellings(name: str, spellings) -> str:
+        heard = [one for one in (spellings or []) if one]
+        return f"{name}, also heard as {', '.join(heard)}" if heard else name
+
+    people = [
+        with_spellings(one.shown(), one.also_heard_as) for one in case.people.all()
+    ]
+    line = "People in this case: " + (", ".join(people) if people else "none yet")
+    terms = [
+        with_spellings(one.term, one.also_heard_as)
+        for one in CaseTerm.objects.filter(case=case)
+    ]
+    if terms:
+        line += "; places and other names: " + "; ".join(terms)
+    return line
 
 
 def header_line(number: int, total: int, recording, transcript) -> str:

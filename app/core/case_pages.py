@@ -41,6 +41,7 @@ from core import (
     sitting,
     uploads,
     vision,
+    vocabulary,
 )
 from core.cases import Case
 from core.jobs import Segment
@@ -296,6 +297,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "add_document_url": documents.add_url(case),
             "is_owner": role == "owner",
             "role": role,
+            # The Case vocabulary block (Phase 9 chapter 2).
+            "vocabulary": vocabulary.entries(case),
+            "may_remove_terms": role != "collaborator",
             **_sharing_context(case, role),
             "recordings": rows,
             # The Type column only when a row has a type (v1.75.1).
@@ -430,6 +434,16 @@ def _speakers_tab(case: Case) -> dict:
 
     shown = people_pages.tab_context(case)
     shown["people_count"] = len(shown["people"])
+    # A voice named across the case (Phase 9 chapter 2).
+    shown["side_rule"] = vocabulary.side_rule(case)
+    shown["two_channel_count"] = case.recordings.filter(
+        is_two_channel_call=True
+    ).count()
+    # The calls the rule cannot reach: a single track with both voices in it
+    # has no Sides, and which voice is which is not fixed by position.
+    shown["single_channel_calls"] = case.recordings.filter(
+        is_two_channel_call=False, recording_type__iexact="Jail call"
+    ).count()
     # The recordings with unnamed speakers, the longest talkers first, each
     # with its minutes of talk (v1.89.0, from the walk): a person naming
     # twelve cameras starts where the naming pays most.

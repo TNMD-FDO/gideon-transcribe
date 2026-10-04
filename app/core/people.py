@@ -33,6 +33,9 @@ class Person(models.Model):
     name = models.CharField(max_length=60)
     role = models.CharField(max_length=40, blank=True, default="")
     notes = models.TextField(max_length=NOTES_LENGTH, blank=True, default="")
+    # The spellings the engine has been heard to give this name (Phase 9
+    # chapter 2, Also heard as): a list of strings, never sent to recognition.
+    also_heard_as = models.JSONField(default=list, blank=True)
     added_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -89,6 +92,35 @@ class Person(models.Model):
 
 
 # Finding and making --------------------------------------------------------------
+
+
+class CaseTerm(models.Model):
+    """A name or a place in the Case vocabulary (Phase 9 chapter 2) that is
+    not a Person: a place, an organisation, a person who never speaks. Its
+    name goes to recognition with every recording added to the Case; its
+    spellings stand for it in Search and are told to Gideon."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    case = models.ForeignKey(
+        "core.Case", on_delete=models.CASCADE, related_name="terms"
+    )
+    term = models.CharField(max_length=120)
+    also_heard_as = models.JSONField(default=list, blank=True)
+    added_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["term"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("term"), "case", name="one_term_per_name_in_a_case"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return self.term
 
 
 def roles() -> list[str]:
@@ -312,6 +344,9 @@ def known_names(recording) -> list[str]:
             # Shown as "Name (Role)", but the name alone is what a Vocabulary
             # entry would repeat, so the name is the key.
             take(person.shown(), key=person.name)
+        # The Case vocabulary's places and other names (Phase 9 chapter 2).
+        for term in CaseTerm.objects.filter(case=recording.case):
+            take(term.term)
     for word in recording.vocabulary or []:
         take(str(word))
     for line in str(settings_store.get("office_vocabulary") or "").splitlines():

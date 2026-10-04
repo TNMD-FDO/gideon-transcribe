@@ -30,6 +30,7 @@ from core import (
     tasks,
     uploads,
     vision,
+    vocabulary,
     whisperx,
 )
 from core.jobs import JobState
@@ -243,6 +244,8 @@ def upload(request: HttpRequest) -> HttpResponse:
                     if one.owner_id != request.user.pk
                     else ""
                 ),
+                # The Case vocabulary's names (Phase 9 chapter 2).
+                "names": vocabulary.count_in(one),
             }
             for one in cases.cases_for(request.user)
         ]

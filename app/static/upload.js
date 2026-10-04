@@ -188,6 +188,18 @@
       lightUp(wheres, "case");
       applyWhere();
     });
+    // The case's names go with the recordings (Phase 9 chapter 2): one line
+    // under the select says how many.
+    var namesLine = document.getElementById("case-names-line");
+    function sayNames() {
+      if (!namesLine) { return; }
+      var chosen = whichCase.options[whichCase.selectedIndex];
+      var count = chosen ? Number(chosen.dataset.names || 0) : 0;
+      namesLine.hidden = !(count > 0);
+      namesLine.textContent = "This case's " + count + " name" + (count === 1 ? "" : "s") + " and place" + (count === 1 ? "" : "s") + " go with these recordings, for recognition.";
+    }
+    whichCase.addEventListener("change", sayNames);
+    sayNames();
     // Clicking into the select chooses Into a case, since that is what it is for.
     whichCase.addEventListener("focus", function () {
       wheres.querySelector('input[value="case"]').checked = true;

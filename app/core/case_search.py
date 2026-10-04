@@ -18,7 +18,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from core import close, documents, exports, incident_assistant, incidents
+from core import close, documents, exports, incident_assistant, incidents, vocabulary
 from core.assistant import DONE, Moment, Summary
 from core.chronology import Event
 from core.clips import Clip
@@ -180,7 +180,10 @@ def _hit(
         "all_cameras": all_cameras,
         "at": at,
         # A close match (v1.97.0): found by a word's form or near spelling.
-        "close": close,
+        "close": close is True,
+        # Found by a spelling the case lists for the name (Phase 9 chapter 2).
+        "heard": close == HEARD,
+        "rank": 2 if close == HEARD else (1 if close else 0),
         # The Preview (v1.98.0): the recording and the moment, for a hit
         # that plays over the search without leaving it.
         "preview": preview,
@@ -207,14 +210,54 @@ def _seen(transcripts):
     )
 
 
-def _with_close(queryset, fields, words, also, most=MOST):
-    """The exact rows, then the close ones, as (row, close) pairs, and
-    whether there were more than are shown."""
+HEARD = "heard"
+
+
+def _any_phrase(fields: list[str], phrases: list[str]) -> Q:
+    """Any of the phrases, anywhere in one of the fields."""
+    whole = Q()
+    for phrase in phrases:
+        for field in fields:
+            whole |= Q(**{f"{field}__icontains": phrase})
+    return whole
+
+
+def heard_only(queryset, fields: list[str], words, also, heard: list[str]):
+    """The rows that carry a listed spelling of the name typed (Phase 9
+    chapter 2), and neither the words nor a close form of them."""
+    if not heard:
+        return queryset.none()
+    rows = queryset.filter(_any_phrase(fields, heard)).exclude(_all(fields, words))
+    if also:
+        rows = rows.exclude(_all(fields, words, also))
+    return rows
+
+
+def is_heard(text: str, words, also, heard: list[str]) -> bool:
+    return (
+        bool(heard) and not matches(text, words, also) and matches(text, Phrase(heard))
+    )
+
+
+def marked(text: str, words, also, near, heard: list[str] | None = None):
+    """The text with its hit lit: the spelling for an also-heard-as hit, the
+    words or their close forms for the rest."""
+    if near == HEARD and heard:
+        return mark(text, Phrase(heard))
+    return mark(text, words, also)
+
+
+def _with_close(queryset, fields, words, also, most=MOST, heard=None):
+    """The exact rows, then the close ones, then the ones found by a listed
+    spelling (Phase 9 chapter 2), as (row, kind) pairs where kind is False,
+    True (close) or "heard"; and whether there were more than are shown."""
     exact = list(queryset.filter(_all(fields, words))[: most + 1])
     near = list(close_only(queryset, fields, words, also)[: most + 1])
-    more = len(exact) > most or len(near) > most
+    spelt = list(heard_only(queryset, fields, words, also, heard or [])[: most + 1])
+    more = len(exact) > most or len(near) > most or len(spelt) > most
     pairs = [(one, False) for one in exact[:most]]
     pairs += [(one, True) for one in near[: max(0, most - len(pairs))]]
+    pairs += [(one, HEARD) for one in spelt[: max(0, most - len(pairs))]]
     return pairs, more
 
 
@@ -261,6 +304,8 @@ def search(case, asked: str, kind: str = "") -> dict:
 
     lines = Segment.objects.filter(transcript__recording__case=case)
     seen = _seen(Transcript.objects.filter(recording__case=case))
+    # The spellings the case lists for a name typed (Phase 9 chapter 2).
+    heard = vocabulary.heard_as(case, words)
     # A note event is found once, as its note (on a line, or at a moment).
     events_of = Event.objects.filter(
         incident__case=case,
@@ -308,6 +353,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         ["text", "speaker"],
         words,
         also,
+        heard=heard,
     )
     counts["words"] = len(rows)
     more = more or over
@@ -322,7 +368,7 @@ def search(case, asked: str, kind: str = "") -> dict:
             here["hits"].append(
                 _hit(
                     exports.clock(one.start),
-                    mark(one.text, words, also),
+                    marked(one.text, words, also, near, heard),
                     url=f"{reverse('viewer', args=[recording.pk])}?t={one.start:.1f}",
                     who=one.speaker,
                     all_cameras=incidents.all_cameras_url(recording, one.start),
@@ -334,7 +380,11 @@ def search(case, asked: str, kind: str = "") -> dict:
 
     # Seen (v1.97.0): what the cameras showed, by the vision model's words.
     rows, over = _with_close(
-        seen.order_by("transcript__recording__created", "at"), ["text"], words, also
+        seen.order_by("transcript__recording__created", "at"),
+        ["text"],
+        words,
+        also,
+        heard=heard,
     )
     counts["seen"] = len(rows)
     more = more or over
@@ -349,7 +399,9 @@ def search(case, asked: str, kind: str = "") -> dict:
             here["hits"].append(
                 _hit(
                     exports.clock(one.at),
-                    mark(sentence_with(one.text, words, also), words, also),
+                    marked(
+                        sentence_with(one.text, words, also), words, also, near, heard
+                    ),
                     url=f"{reverse('viewer', args=[recording.pk])}?t={one.at:.1f}",
                     who="Seen",
                     all_cameras=incidents.all_cameras_url(recording, one.at),
@@ -395,6 +447,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         ["note"],
         words,
         also,
+        heard=heard,
     )
     counts["notes"] = len(line_notes)
     more = more or over
@@ -417,7 +470,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                         f"?t={one.start:.1f}&note=1"
                     ),
                     who="Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
-                    under=mark(one.note, words, also),
+                    under=marked(one.note, words, also, near, heard),
                     all_cameras=incidents.all_cameras_url(recording, one.start),
                     at=one.start,
                     close=near,
@@ -433,6 +486,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         ["note"],
         words,
         also,
+        heard=heard,
     )
     counts["notes"] = min(counts["notes"] + len(rows), MOST)
     more = more or over
@@ -448,7 +502,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                 _hit(
                     exports.clock(one.at),
                     # The note itself: it rests on no line (v1.99.1).
-                    mark(one.note, words, also),
+                    marked(one.note, words, also, near, heard),
                     url=(
                         f"{reverse('viewer', args=[recording.pk])}"
                         f"?t={one.at:.1f}&note=1"
@@ -605,6 +659,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         ["title"],
         words,
         also,
+        heard=heard,
     )
     counts["clips"] = len(clips)
     more = more or over
@@ -626,7 +681,7 @@ def search(case, asked: str, kind: str = "") -> dict:
             here["hits"].append(
                 _hit(
                     "Clip",
-                    mark(clip.title, words, also),
+                    marked(clip.title, words, also, near, heard),
                     url=f"{clips_tab}#clip-{clip.pk}",
                     who=clip.span_label,
                     at=10**9 + 10**6,
@@ -638,13 +693,17 @@ def search(case, asked: str, kind: str = "") -> dict:
     for one in ordered:
         # The exact hits in time order, then the close ones in theirs: there
         # is no score (Phase 7 chapter 3).
-        one["hits"].sort(key=lambda hit: (hit["close"], hit["at"]))
+        one["hits"].sort(key=lambda hit: (hit["rank"], hit["at"]))
     return {
         "asked": asked,
         "kind": kind,
         "short": False,
         "total": sum(counts.values()),
         "close": sum(1 for one in ordered for hit in one["hits"] if hit["close"]),
+        # Found by a spelling the case lists (Phase 9 chapter 2), and the
+        # spellings that were looked for.
+        "heard": sum(1 for one in ordered for hit in one["hits"] if hit["heard"]),
+        "heard_forms": heard,
         # What else was looked for, said on the page so a close match
         # explains itself.
         "also": close.every_form(also),

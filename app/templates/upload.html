@@ -53,9 +53,11 @@
               <span class="muted small">Kept with the case, shared with its people.</span>
               <select id="which-case" aria-label="Which case" style="margin-top: 6px">
                 {% for one in to_a_case %}
-                  <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
+                  <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
                 {% endfor %}
               </select>
+              {% comment %}The case's names go with the recordings (Phase 9 chapter 2).{% endcomment %}
+              <span class="muted small" id="case-names-line" style="margin-top: 4px" hidden></span>
               {% comment %}The type for the batch, asked here where the case is chosen (v1.89.0, from the walk): the case page, the memo and the Timeline report print it, and buried in the options it was mostly left blank.{% endcomment %}
               <select id="batch-type" aria-label="Recording type for the batch" style="margin-top: 6px">
                 <option value="">No recording type</option>
@@ -147,13 +149,14 @@
                   <select id="add-to-case">
                     <option value="">This session only</option>
                     {% for one in to_a_case %}
-                      <option value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
+                      <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
                     {% endfor %}
                   </select>
                   <p class="muted small" style="margin: 4px 0 0">
                     A recording added to a case stays after you sign out. One
                     left in this session does not.
                   </p>
+
                 </div>
 
                 <div class="field" id="type-field" hidden>

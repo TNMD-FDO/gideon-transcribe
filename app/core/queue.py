@@ -51,6 +51,16 @@ def _office_vocabulary() -> list[str]:
     ]
 
 
+def _case_vocabulary(recording) -> list[str]:
+    """The Case vocabulary's names, for a recording in a Case (Phase 9
+    chapter 2): the People and the terms, never a spelling."""
+    if recording.case_id is None:
+        return []
+    from core import vocabulary
+
+    return vocabulary.names_in(recording.case)
+
+
 def request_for(run: Run) -> dict:
     """What the service is asked for this Side.
 
@@ -83,10 +93,13 @@ def request_for(run: Run) -> dict:
         "language": recording.spoken_language or "",
         "model": recording.model or settings_store.get("model"),
         "diarize": recording.diarize,
-        # The office's own list goes ahead of the Batch's, and the service
-        # cuts from the end of a prompt that is too long, so the Batch's own
-        # terms are the ones that survive.
-        "vocabulary": _office_vocabulary() + list(recording.vocabulary or []),
+        # The office's own list goes ahead of the Case's (Phase 9 chapter 2)
+        # and the Case's ahead of the Batch's, and the service cuts from the
+        # end of a prompt that is too long, so the Batch's own terms are the
+        # ones that survive.
+        "vocabulary": _office_vocabulary()
+        + _case_vocabulary(recording)
+        + list(recording.vocabulary or []),
         "context": recording.context or "",
         "return_speaker_embeddings": False,
         # Which model tells voices apart (Phase 5 chapter 4); the service
@@ -280,6 +293,10 @@ def merge(job: Job) -> Job:
     from core import speaker_check
 
     speaker_check.on_transcript(job.recording)
+    # A voice named across the case (Phase 9 chapter 2).
+    from core import vocabulary
+
+    vocabulary.on_transcript(job.recording)
     # A Live recording transcribed in stretches whose speakers could not be
     # matched by voice gets one pass over the whole recording (v1.94.0).
     if job.recording.is_live and any(run.stretch for run in job.runs.all()):

@@ -2978,3 +2978,14 @@ body.gideon-window .gideon-grip { display: none; }
 .gate { padding-inline: 16px; }
 .gate .card { width: min(26rem, 100%); }
 .gate .card.with-logo { width: min(32rem, 100%); }
+
+/* The Case vocabulary block (Phase 9 chapter 2): the right pane's list of
+ * names and places with their spellings, and the one-line add form. */
+.case-vocabulary { margin-top: 18px; }
+.case-vocabulary h3 { margin: 0 0 4px; font-size: var(--t-heading); }
+.vocabulary-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.vocabulary-list li { padding: 6px 0; border-top: 1px solid var(--line); }
+.vocabulary-list summary { cursor: pointer; list-style: none; }
+.vocabulary-list summary::-webkit-details-marker { display: none; }
+.vocabulary-add { display: flex; gap: 6px; flex-wrap: wrap; }
+.vocabulary-add input { flex: 1 1 10rem; min-width: 0; }

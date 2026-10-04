@@ -102,6 +102,8 @@ SHIPPED_HISTORY = {
         "9e7372a38751ccab",
         # v1.90.2: the time of day copied from the line, never worked out.
         "734fc73038b5e895",
+        # v1.117.0 (Phase 9 chapter 2): a listed spelling is the same person.
+        "67add4e32513325c",
     ),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
@@ -407,7 +409,10 @@ CASE_CHAT = (
     "cameras' clock beside the reference, copied from the front of the line "
     "and never worked out from a camera's start; asked what another camera showed at "
     "that moment, read that camera at the same time of day, and say when it "
-    "had not started or had stopped."
+    "had not started or had stopped. Names and places may be misheard by the "
+    "transcription: a spelling the case lists as also heard as is the same "
+    "person or place as the name it is listed under, and a name spelt a "
+    "little differently from one recording to the next is one person."
 )
 
 SUGGESTIONS = (
