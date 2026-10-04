@@ -207,6 +207,9 @@ def test_the_list_is_a_spreadsheet_of_the_rows_with_one_audit_row(
         "Speakers",
         "Notes",
         "Note writers",
+        "Assigned to",
+        "Reviewed by",
+        "Reviewed on",
         "Description",
     ]
     # Oldest added first, so the sheet reads as the case was filled.
@@ -217,7 +220,7 @@ def test_the_list_is_a_spreadsheet_of_the_rows_with_one_audit_row(
     assert rows[2][6] == "1 named, 1 unnamed"
     assert rows[2][7] == "1"
     assert rows[2][8] == "D. Chen"
-    assert rows[2][9] == "the second caller"
+    assert rows[2][12] == "the second caller"
     assert rows[1][7] == "0"
 
     written = audit.Row.objects.order_by("-at").first()

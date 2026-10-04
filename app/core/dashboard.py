@@ -98,8 +98,11 @@ def incident_pills(incident) -> list[dict]:
     return out
 
 
-def pills(case, role: str = "owner") -> list[dict]:
-    """The line's pills in their order; each has words, a tone and a link."""
+def pills(case, role: str = "owner", user=None) -> list[dict]:
+    """The line's pills in their order; each has words, a tone and a link.
+    With the person looking, their own "left for you" (Phase 9 chapter 3)."""
+    from core import assignments
+
     here = reverse("case", args=[case.pk])
     out: list[dict] = []
 
@@ -145,6 +148,22 @@ def pills(case, role: str = "owner") -> list[dict]:
             add(_count(rendering, "clip rendering", "clips rendering"), clips_tab)
         if failed:
             add(_count(failed, "clip failed", "clips failed"), clips_tab, WARN)
+
+    # Assigned to and Reviewed (Phase 9 chapter 3): plain, never a warning,
+    # since work waiting is not overdue.
+    counts = assignments.case_counts(case)
+    if counts["assigned"]:
+        add(
+            f"{counts['reviewed']} of {counts['recordings']} reviewed",
+            f"{here}?state=reviewed",
+        )
+    if user is not None:
+        mine = assignments.yours(case, user)
+        if mine["total"]:
+            add(
+                f"{mine['left']} of {mine['total']} left for you",
+                f"{here}?who=me&state=unreviewed",
+            )
 
     # Shared with.
     if sharing.on() and role in ("owner", "admin"):

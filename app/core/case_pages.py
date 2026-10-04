@@ -24,6 +24,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import (
+    assignments,
     audit,
     case_search,
     cases,
@@ -252,6 +253,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     left = retention.days_left(case)
     # The rows once, from a handful of queries (Phase 9 chapter 1).
     rows = _rows_for(case)
+    # The pills over the Recordings tab (Phase 9 chapter 3): All, Mine,
+    # Mine not reviewed, Reviewed, Unassigned, and one person by username.
+    may_direct = case.may_direct(request.user)
+    who = request.GET.get("who", "")
+    state = request.GET.get("state", "")
+    shown_rows = assignments.filtered(rows, who, state, request.user)
+    assignment_pills = _assignment_pills(case, rows, who, state, request.user)
 
     return render(
         request,
@@ -300,11 +308,26 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # The Case vocabulary block (Phase 9 chapter 2).
             "vocabulary": vocabulary.entries(case),
             "may_remove_terms": role != "collaborator",
-            **_sharing_context(case, role),
-            "recordings": rows,
+            **_sharing_context(case, role, request.user),
+            "recordings": shown_rows,
             # The Type column only when a row has a type (v1.75.1).
             "any_type": any(getattr(one, "recording_type", "") for one in rows),
             "list_url": reverse("case-list", args=[case.pk]),
+            # Assigned to and Reviewed (Phase 9 chapter 3): the pills over
+            # the table, the tick column for those who may assign, the team
+            # for the Assign to prompt and the fold's select.
+            "may_direct": may_direct,
+            "who": who,
+            "state": state,
+            "assignment_pills": assignment_pills,
+            "team_members": (
+                [
+                    {"username": one.username, "name": one.shown_name}
+                    for one in assignments.team_members(case)
+                ]
+                if may_direct
+                else []
+            ),
             "vision_line": vision.line(case),
             "vision_pending": vision.pending(case),
             "vision_offers": vision.offers(case, user=request.user),
@@ -315,7 +338,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 else None
             ),
             # The dashboard line (Phase 7 chapter 3).
-            "pills": dashboard.pills(case, role),
+            "pills": dashboard.pills(case, role, request.user),
             "types": cases.recording_types(),
             "size": uploads.as_size(case.disk_bytes()),
             # Incidents (Phase 6 chapter 1): the strip under the case name,
@@ -380,22 +403,23 @@ def _incidents_context(case: Case) -> dict:
     }
 
 
-def _sharing_context(case: Case, role: str) -> dict:
-    """What the Case page says about Shares, by who is looking.
-
-    The owner and Admins get the "Shared with" panel and the Share button; a
-    Collaborator reads who shared the Case and who else is on it. Nothing
-    while Sharing is off: the Shares are kept and not shown.
-    """
+def _sharing_context(case: Case, role: str, viewer=None) -> dict:
+    """What the Case page says about its Team (Phase 9 chapter 3), by who is
+    looking: everyone with the case sees the list; the owner, an Admin and an
+    also-owner may add people; the owner and an Admin may mark an also-owner.
+    Nothing while Sharing is off: the Shares are kept and not shown."""
     if not sharing.on():
-        return {"sharing_on": False, "shares": [], "colleagues": []}
+        return {"sharing_on": False, "shares": [], "colleagues": [], "team": []}
     shares = list(sharing.collaborators(case))
+    may_direct = viewer is not None and case.may_direct(viewer)
     return {
         "sharing_on": True,
-        "may_share": role in ("owner", "admin"),
+        "may_share": may_direct,
+        "may_mark_owner": role in ("owner", "admin"),
         "may_transfer": role == "owner",
         "shares": shares,
         "colleagues": [one for one in shares],
+        "team": assignments.team(case, viewer),
         "share_words": sharing.WORDS,
         "transfer_words": sharing.TRANSFER_WORDS,
     }
@@ -462,6 +486,69 @@ def _speakers_tab(case: Case) -> dict:
     return shown
 
 
+def _assignment_pills(case, rows, who, state, viewer) -> list[dict]:
+    """The filter pills and their counts, shown once the case has a single
+    assignment or the person may make one."""
+    if not rows:
+        return []
+    any_assigned = any(one.assigned_to_id for one in rows)
+    if not any_assigned and not case.may_direct(viewer):
+        return []
+    here = reverse("case", args=[case.pk])
+    mine = [one for one in rows if one.assigned_to_id == viewer.pk]
+    mine_left = len([one for one in mine if one.reviewed_on is None])
+    reviewed = len([one for one in rows if one.reviewed_on is not None])
+    nobody = len([one for one in rows if one.assigned_to_id is None])
+    pills = [
+        {"words": f"All {len(rows)}", "href": here, "on": not who and not state},
+        {
+            "words": f"Mine {len(mine)}",
+            "href": f"{here}?who=me",
+            "on": who == "me" and not state,
+        },
+        {
+            "words": f"Mine, not reviewed {mine_left}",
+            "href": f"{here}?who=me&state=unreviewed",
+            "on": who == "me" and state == "unreviewed",
+        },
+        {
+            "words": f"Reviewed {reviewed}",
+            "href": f"{here}?state=reviewed",
+            "on": state == "reviewed" and not who,
+        },
+        {
+            "words": f"Unassigned {nobody}",
+            "href": f"{here}?who=nobody",
+            "on": who == "nobody",
+        },
+    ]
+    if who and who not in ("me", "nobody"):
+        theirs = [
+            one
+            for one in rows
+            if one.assigned_to_id is not None and one.assigned_to.username == who
+        ]
+        name = theirs[0].assigned_to.shown_name if theirs else who
+        pills.append(
+            {
+                "words": f"{name} {len(theirs)}",
+                "href": f"{here}?who={who}",
+                "on": not state,
+            }
+        )
+        pills.append(
+            {
+                "words": (
+                    f"{name}, not reviewed "
+                    f"{len([one for one in theirs if one.reviewed_on is None])}"
+                ),
+                "href": f"{here}?who={who}&state=unreviewed",
+                "on": state == "unreviewed",
+            }
+        )
+    return pills
+
+
 def _rows_for(case: Case) -> list:
     """Each Recording with the words its row shows about its Speakers, its
     state and its notes.
@@ -483,7 +570,9 @@ def _rows_for(case: Case) -> list:
     incidents_on = incidents.on()
     vision_on = assistant.record_on()
     recordings = list(
-        case.recordings.select_related("transcript", "user").order_by("-created")
+        case.recordings.select_related(
+            "transcript", "user", "assigned_to", "reviewed_by"
+        ).order_by("-created")
     )
     ids = [one.pk for one in recordings]
     newest: dict = {}
@@ -531,6 +620,11 @@ def _rows_for(case: Case) -> list:
         one.speakers_in_words = _speakers_in_words(labels.get(one.pk, set()))
         one.notes_words = notes.count_words(note_counts.get(one.pk))
         one.clips_count = clip_counts.get(one.pk, 0)
+        # Assigned to and Reviewed (Phase 9 chapter 3), in words.
+        one.assigned_words = one.assigned_to.shown_name if one.assigned_to_id else ""
+        one.reviewed_words = (
+            f"Reviewed {one.reviewed_on:%d %b}" if one.reviewed_on else ""
+        )
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
         # The Vision column (Phase 4 chapter 5), for a video.
@@ -586,6 +680,9 @@ def recordings_csv(request: HttpRequest, case_id) -> HttpResponse:
             "Speakers",
             "Notes",
             "Note writers",
+            "Assigned to",
+            "Reviewed by",
+            "Reviewed on",
             "Description",
         ]
     )
@@ -603,6 +700,11 @@ def recordings_csv(request: HttpRequest, case_id) -> HttpResponse:
                 one.speakers_in_words,
                 found["count"],
                 ", ".join(found["writers"]),
+                one.assigned_to.shown_name if one.assigned_to_id else "",
+                one.reviewed_by.shown_name if one.reviewed_by_id else "",
+                f"{timezone.localtime(one.reviewed_on):%Y-%m-%d}"
+                if one.reviewed_on
+                else "",
                 one.description,
             ]
         )
@@ -947,6 +1049,7 @@ def move_to_case(request: HttpRequest, recording_id) -> JsonResponse:
         if held:
             return JsonResponse({"ok": False, "why": held}, status=400)
 
+    was_in = recording.case_id
     cases.move_recording(
         recording,
         case,
@@ -954,6 +1057,9 @@ def move_to_case(request: HttpRequest, recording_id) -> JsonResponse:
         description=request.POST.get("description", "").strip(),
         request=request,
     )
+    if was_in and was_in != case.pk and recording.assigned_to_id:
+        # The assignment was the old case's (Phase 9 chapter 3).
+        assignments.unassign(recording, by=request.user, request=request, cause="moved")
 
     wanted_type = request.POST.get("recording_type", "").strip()
     if wanted_type:
@@ -1043,11 +1149,132 @@ def download_case_clips(request: HttpRequest, case_id) -> HttpResponse:
 # Sharing: who may be shared with, Share, Remove, Transfer ---------------------------
 
 
+def _case_they_direct(request, case_id) -> Case:
+    """The Case, if this person may add people to it and assign (Phase 9
+    chapter 3): the owner, an Admin, and an also-owner."""
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=True)
+    if not case.may_direct(request.user):
+        raise Http404("not this person's case")
+    return case
+
+
+@login_required
+@require_POST
+def assign_recordings(request: HttpRequest, case_id) -> JsonResponse:
+    """Assigned to (Phase 9 chapter 3): the recordings named go to the team
+    member named, or to nobody."""
+    _on_or_404()
+    case = _case_they_direct(request, case_id)
+    ids = [one for one in request.POST.get("recordings", "").split(",") if one]
+    rows = list(case.recordings.filter(pk__in=ids))
+    typed = request.POST.get("who", "").strip()
+    person = None
+    if typed:
+        person = assignments.find_member(case, typed)
+        if person is None:
+            return JsonResponse(
+                {"ok": False, "why": "That person is not on this case's team."},
+                status=400,
+            )
+    cause = assignments.TICKED if len(rows) > 1 else assignments.ONE
+    changed = 0
+    for one in rows:
+        if assignments.assign(
+            one, person, by=request.user, request=request, cause=cause
+        ):
+            changed += 1
+    cases.note_activity(case, by=request.user)
+    return JsonResponse(
+        {"ok": True, "changed": changed, "who": person.shown_name if person else ""}
+    )
+
+
+@login_required
+@require_POST
+def divide_recordings(request: HttpRequest, case_id) -> JsonResponse:
+    """Divide among (Phase 9 chapter 3): the unassigned recordings dealt
+    evenly, oldest first, among the people ticked."""
+    _on_or_404()
+    case = _case_they_direct(request, case_id)
+    people = []
+    for username in request.POST.get("who", "").split(","):
+        person = assignments.find_member(case, username)
+        if person is not None and person not in people:
+            people.append(person)
+    if not people:
+        return JsonResponse(
+            {"ok": False, "why": "Tick at least one person."}, status=400
+        )
+    counts = assignments.divide(case, people, by=request.user, request=request)
+    cases.note_activity(case, by=request.user)
+    return JsonResponse({"ok": True, "counts": counts})
+
+
+@login_required
+@require_POST
+def mark_owner(request: HttpRequest, case_id) -> JsonResponse:
+    """Also an owner (Phase 9 chapter 3): the one mark on a Share, the
+    owner's and an Admin's to set."""
+    _on_or_404()
+    case = _case_they_run(request, case_id)
+    if not sharing.on():
+        raise Http404("Sharing is off")
+    share = get_object_or_404(
+        sharing.Share, pk=request.POST.get("share", ""), case=case
+    )
+    wanted = request.POST.get("also_owner", "") in ("1", "yes", "true", "on")
+    assignments.set_also_owner(share, wanted, by=request.user, request=request)
+    cases.note_activity(case, by=request.user)
+    return JsonResponse({"ok": True, "also_owner": share.also_owner})
+
+
+@login_required
+@require_POST
+def mark_reviewed(request: HttpRequest, recording_id) -> JsonResponse:
+    """Reviewed (Phase 9 chapter 3): the assignee's mark, made after the
+    page's question, or taken back; and the person's next recording to do."""
+    _on_or_404()
+    recording = get_object_or_404(
+        Recording.objects.select_related("case", "assigned_to"), pk=recording_id
+    )
+    if recording.case is None or not recording.case.may_be_opened_by(request.user):
+        raise Http404("not this person's recording")
+    if not assignments.may_mark(recording, request.user):
+        raise Http404("not this person's to mark")
+    if request.POST.get("action", "mark") == "unmark":
+        assignments.unmark_reviewed(recording, by=request.user, request=request)
+    else:
+        assignments.mark_reviewed(
+            recording,
+            by=request.user,
+            request=request,
+            nothing_to_note=request.POST.get("nothing", "") in ("1", "yes", "true"),
+        )
+    cases.note_activity(recording.case, by=request.user)
+    recording.refresh_from_db()
+    following = assignments.next_for(request.user, recording)
+    return JsonResponse(
+        {
+            "ok": True,
+            "reviewed": recording.reviewed_on is not None,
+            "words": assignments.reviewed_words(recording, request.user),
+            "next": (
+                {
+                    "title": following.title,
+                    "url": reverse("viewer", args=[following.pk]),
+                }
+                if following is not None
+                else None
+            ),
+        }
+    )
+
+
 @login_required
 def share_who(request: HttpRequest, case_id) -> JsonResponse:
     """The colleagues this Case may be shared with, for the dialog's list."""
     _on_or_404()
-    case = _case_they_run(request, case_id)
+    case = _case_they_direct(request, case_id)
     if not sharing.on():
         raise Http404("Sharing is off")
     return JsonResponse(
@@ -1065,7 +1292,7 @@ def share_who(request: HttpRequest, case_id) -> JsonResponse:
 def share_case(request: HttpRequest, case_id) -> JsonResponse:
     """Share the Case with the person named. The dialog said what that means."""
     _on_or_404()
-    case = _case_they_run(request, case_id)
+    case = _case_they_direct(request, case_id)
     if not sharing.on():
         raise Http404("Sharing is off")
     try:
@@ -1091,7 +1318,7 @@ def unshare_case(request: HttpRequest, case_id) -> JsonResponse:
     share = get_object_or_404(
         sharing.Share, pk=request.POST.get("share", ""), case=case
     )
-    if not case.may_be_run_by(request.user) and share.person_id != request.user.pk:
+    if not case.may_direct(request.user) and share.person_id != request.user.pk:
         raise Http404("not this person's share")
     sharing.revoke(share, actor=request.user, request=request)
     return JsonResponse(
@@ -1127,6 +1354,7 @@ def _share_json(share) -> dict:
         "last_opened": (
             share.last_opened.strftime("%d %b %Y %H:%M") if share.last_opened else ""
         ),
+        "also_owner": share.also_owner,
     }
 
 

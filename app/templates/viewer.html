@@ -43,6 +43,10 @@
           {% if recording.is_two_channel_call %}
             <span class="pill side">Two-channel call: {{ sides|length }} sides</span>
           {% endif %}
+          {% if assignment.assigned %}
+            {% comment %}Assigned to and Reviewed (Phase 9 chapter 3).{% endcomment %}
+            <span class="pill{% if assignment.reviewed %} ok{% elif assignment.mine %} on{% endif %}" id="assignment-pill">{% if assignment.reviewed %}{{ assignment.reviewed_words }}{% else %}Assigned to {{ assignment.to }}{% endif %}</span>
+          {% endif %}
           {% if transcript.task_run == "translate" %}
             <span class="pill translate" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ language_name }}</span>
           {% endif %}
@@ -93,6 +97,19 @@
                 <li><span class="muted" id="export-comparison-off" title="Compare with the report first" hidden>{% icon "word" %} Comparison to Word: compare with the report first</span></li>
               </ul>
             </details>
+          {% endif %}
+          {% if assignment.assigned and assignment.may_mark %}
+            {% comment %}
+              Mark reviewed (Phase 9 chapter 3): a plain button, one question
+              first, Not reviewed after all to take it back. The facts the
+              question carries sit on the button.
+            {% endcomment %}
+            <button type="button" class="btn small" id="mark-reviewed"
+                    data-recording="{{ recording.pk }}" data-title="{{ recording.title }}"
+                    data-notes="{{ assignment.my_notes }}"{% if assignment.reviewed %} hidden{% endif %}>Mark reviewed</button>
+            <button type="button" class="btn small ghost" id="unmark-reviewed"
+                    data-recording="{{ recording.pk }}"{% if not assignment.reviewed %} hidden{% endif %}>Not reviewed after all</button>
+            <a class="btn small ghost" id="next-assigned" href="#" hidden></a>
           {% endif %}
           <details class="menu" id="more-menu">
             <summary class="btn small" title="Keyboard shortcuts, Process again, Delete">More {% icon "chevron-down" %}</summary>
@@ -459,6 +476,7 @@
         <div><span>Follow mode</span><kbd>F</kbd></div>
         <div><span>Correct the current segment</span><kbd>E</kbd></div>
         <div><span>A note on the current segment</span><kbd>N</kbd></div>
+        <div><span>Mark reviewed (asks first)</span><kbd>R</kbd></div>
         <div><span>Save the correction</span><kbd>Ctrl + Enter</kbd></div>
         <div><span>Cancel, or close what is open</span><kbd>Esc</kbd></div>
         <div><span>Search</span><kbd>/</kbd></div>

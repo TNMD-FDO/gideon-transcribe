@@ -64,6 +64,9 @@ class Share(models.Model):
     # "who has seen this" outlives Audit retention. Empty until the first
     # opening, which is what the New mark on their Cases page reads.
     last_opened = models.DateTimeField(null=True, blank=True)
+    # The one mark an Owner may put on a Share (Phase 9 chapter 3): this
+    # Collaborator may add people and assign as the Owner does.
+    also_owner = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -242,9 +245,15 @@ def grant(case, person, actor, request=None, cause: str = "") -> Share:
 
 
 def revoke(share: Share, actor, request=None) -> None:
-    """Take a Share back. Whatever the Collaborator added stays in the Case."""
+    """Take a Share back. Whatever the Collaborator added stays in the Case;
+    their assignments clear (Phase 9 chapter 3)."""
+    from core import assignments
+
     case = share.case
     person = share.person
+    assignments.clear_for(
+        case, person, by=actor, request=request, cause="share revoked"
+    )
     share.delete()
     audit.write(
         CATEGORY,

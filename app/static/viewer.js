@@ -2077,6 +2077,72 @@
     window.addEventListener("beforeunload", function () { tell({ kind: "page-closed" }); });
   }
 
+  // Mark reviewed, and Not reviewed after all (Phase 9 chapter 3) -------------
+  //
+  // One question first, with what the app knows (how many notes this person
+  // left here); then the pill and the buttons change in place, and the toast
+  // names the person's next recording to do.
+
+  (function () {
+    var mark = document.getElementById("mark-reviewed");
+    var unmark = document.getElementById("unmark-reviewed");
+    var pill = document.getElementById("assignment-pill");
+    var next = document.getElementById("next-assigned");
+    if (!mark || !unmark) { return; }
+
+    function send(fields) {
+      var body = new URLSearchParams();
+      Object.keys(fields).forEach(function (key) { body.append(key, fields[key]); });
+      return fetch("/recording/" + mark.dataset.recording + "/reviewed", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": cookie("csrftoken") },
+        body: body.toString()
+      }).then(function (answer) { return answer.json(); });
+    }
+
+    function settle(told) {
+      mark.hidden = told.reviewed;
+      unmark.hidden = !told.reviewed;
+      if (pill) {
+        pill.textContent = told.reviewed ? told.words : "Assigned to you";
+        pill.classList.toggle("ok", told.reviewed);
+        pill.classList.toggle("on", !told.reviewed);
+      }
+      if (next) {
+        next.hidden = !(told.reviewed && told.next);
+        if (told.next) { next.href = told.next.url; next.textContent = "Next: " + told.next.title; }
+      }
+    }
+
+    mark.addEventListener("click", function () {
+      var notes = Number(mark.dataset.notes || 0);
+      var none = notes === 0;
+      UI.confirm({
+        title: "Mark " + mark.dataset.title + " as reviewed?",
+        body: none
+          ? "You have left no note on it. Mark it reviewed with nothing to note?"
+          : "You have left " + notes + " note" + (notes === 1 ? "" : "s") + " on it. The team will see it as reviewed by you, today.",
+        ok: none ? "Nothing to note, mark it" : "Mark reviewed",
+        cancel: "Not yet"
+      }).then(function (yes) {
+        if (!yes) { return; }
+        send({ action: "mark", nothing: none ? "1" : "" }).then(function (told) {
+          if (!told.ok) { UI.toast("That could not be marked.", { problem: true, icon: "warning" }); return; }
+          settle(told);
+          UI.toast("Marked reviewed." + (told.next ? " Next: " + told.next.title : ""), { icon: "ok" });
+        });
+      });
+    });
+
+    unmark.addEventListener("click", function () {
+      send({ action: "unmark" }).then(function (told) {
+        if (!told.ok) { UI.toast("That could not be taken back.", { problem: true, icon: "warning" }); return; }
+        settle(told);
+        UI.toast("Not reviewed after all.", { icon: "ok" });
+      });
+    });
+  })();
+
   // The shortcuts overlay and the pop-out --------------------------------------
   //
   // Both were lost in v1.46.0, when the sheet's code around them was replaced;
@@ -2154,6 +2220,13 @@
     }
     if (event.key === "n" || event.key === "N") {
       if (here >= 0) { event.preventDefault(); noteOn(here); }
+      return;
+    }
+    // Mark reviewed (Phase 9 chapter 3): the key opens the question, never
+    // marks without it.
+    if (event.key === "r" || event.key === "R") {
+      var markButton = document.getElementById("mark-reviewed");
+      if (markButton && !markButton.hidden) { event.preventDefault(); markButton.click(); }
       return;
     }
 

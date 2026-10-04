@@ -21,6 +21,51 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.118.0, 2026-10-04
+
+```
+Models: unchanged
+Database: migrates
+```
+
+**The Team, Assigned to and Reviewed** (Phase 9 chapter 3). Who is on a
+case and who owns it is plain to everyone; an owner divides the
+recordings among the team; the assignee marks each one reviewed on
+purpose and takes it back when wrong. No other states.
+
+- **The Team.** The owner's "Shared with" panel is the Team block every
+  member sees: the owner first, each person with when they last opened
+  the case and how many recordings are assigned to them, reviewed by them
+  and noted by them. Add people is the share flow under its new name on
+  the page; the dialog and the mail keep saying shared.
+- **Also an owner.** One tick an owner may put beside a person, so they
+  may add people and assign as the owner does; rename, transfer, delete
+  and the tick itself stay the owner's. Not a level: nothing is narrower
+  than a Collaborator.
+- **Assigned to.** One team member per recording: in the row's details,
+  on ticked rows (Assign to, Unassign), or by Divide among, which deals
+  the unassigned recordings evenly, oldest first. An Assigned to column,
+  the pills Mine, Mine not reviewed, Reviewed and Unassigned (combining
+  with a person's name from the Team block, for handing a colleague's
+  recordings over), a pill in the recording page's head, "6 of 80 left
+  for you" on Home and the case's line in the plain tone, and three
+  columns in Download the list. Removing a person clears their
+  assignments and the confirm says so; a move to another case clears the
+  moved recording's.
+- **Reviewed.** Mark reviewed in the recording page's action line, or the
+  key R, asks one question with what the app knows ("You have left 2
+  notes on it", or "You have left no note on it. Mark it reviewed with
+  nothing to note?"), then shows the green pill, Not reviewed after all,
+  and the person's next recording to do. The assignee and owners may
+  mark; a new assignee clears the mark.
+- **Audit rows**: recording assigned, recording unassigned, recording
+  marked reviewed, recording marked not reviewed, case owner added, case
+  owner removed; a username and a cause, never a title or a note. The
+  Audit log page does not yet group a Divide's rows under one line; that
+  follows in a slip.
+
+Migration 0074: the Share's mark, the Recording's assignee and review.
+
 ## v1.117.0, 2026-10-04
 
 ```

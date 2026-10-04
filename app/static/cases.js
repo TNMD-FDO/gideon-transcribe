@@ -327,15 +327,27 @@
       });
     }
 
+    // Also an owner (Phase 9 chapter 3): the one mark on a Share.
+    sharedWith.addEventListener("change", function (event) {
+      var tick = event.target.closest(".also-owner");
+      if (!tick) { return; }
+      post("/case/" + caseId + "/share/owner", { share: tick.dataset.share, also_owner: tick.checked ? "1" : "" }).then(function (answer) {
+        if (!answer.ok) { tick.checked = !tick.checked; UI.toast("That could not be changed.", { problem: true, icon: "warning" }); return; }
+        window.location.reload();
+      });
+    });
+
     sharedWith.addEventListener("click", function (event) {
       var remove = event.target.closest(".unshare");
       if (!remove) { return; }
       var leaving = !!remove.dataset.leave;
+      var assigned = Number(remove.dataset.assigned || 0);
       UI.confirm({
         title: leaving ? "Leave this case?" : "Remove " + remove.dataset.name + "?",
         body: leaving
           ? "You will no longer see this case. Anything you added stays in it."
-          : remove.dataset.name + " will no longer see this case. Anything they added stays in it.",
+          : remove.dataset.name + " will no longer see this case. Anything they added stays in it." +
+            (assigned ? " Their " + plural(assigned, "assigned recording") + " become unassigned." : ""),
         ok: leaving ? "Leave" : "Remove",
         cancel: "Keep it",
         danger: true
@@ -347,15 +359,110 @@
             return;
           }
           if (answer.said.left) { window.location = answer.said.where; return; }
-          var row = sharedWith.querySelector("tr[data-share='" + remove.dataset.share + "']");
-          if (row) { row.remove(); }
-          var table = document.getElementById("shares");
-          if (table && !table.querySelector("tbody tr")) {
-            show(table, false);
-            show(document.getElementById("nobody-yet"), true);
-          }
+          window.location.reload();
         });
       });
+    });
+  }
+
+  // Assigned to (Phase 9 chapter 3): the ticks, the bar, Divide among, the fold.
+  //
+  // Every change asks the server and reloads the page, so the columns, the
+  // pills and the Team's counts are the server's truth and not a guess.
+
+  var tickBar = document.getElementById("tick-bar");
+  var recordingsTable = document.getElementById("recordings");
+  if (tickBar && recordingsTable) {
+    var team = [];
+    var teamJson = document.getElementById("team-members");
+    try { team = teamJson ? JSON.parse(teamJson.textContent) : []; } catch (error) { team = []; }
+    var teamList = document.createElement("datalist");
+    teamList.id = "team-list";
+    team.forEach(function (one) {
+      var option = document.createElement("option");
+      option.value = one.username;
+      option.label = one.name === one.username ? one.name : one.name + " (" + one.username + ")";
+      teamList.appendChild(option);
+    });
+    document.body.appendChild(teamList);
+
+    function ticked() {
+      return Array.prototype.slice.call(recordingsTable.querySelectorAll("input.tick:checked"))
+        .filter(function (box) { return !box.closest("tr").hidden; })
+        .map(function (box) { return box.value; });
+    }
+    function sayTicked() {
+      var count = ticked().length;
+      document.getElementById("tick-count").textContent = count + " ticked:";
+      document.getElementById("assign-ticked").disabled = count === 0;
+      document.getElementById("unassign-ticked").disabled = count === 0;
+    }
+    recordingsTable.addEventListener("change", function (event) {
+      if (event.target.classList.contains("tick")) { sayTicked(); }
+    });
+    var tickAll = document.getElementById("tick-all");
+    if (tickAll) {
+      tickAll.addEventListener("change", function () {
+        recordingsTable.querySelectorAll("tbody tr.pick").forEach(function (row) {
+          var box = row.querySelector("input.tick");
+          if (box && !row.hidden) { box.checked = tickAll.checked; }
+        });
+        sayTicked();
+      });
+    }
+
+    function assignThese(ids, who) {
+      return post("/case/" + caseId + "/assign", { recordings: ids.join(","), who: who || "" }).then(function (answer) {
+        if (!answer.ok) {
+          UI.toast(answer.said.why || "That could not be assigned.", { problem: true, icon: "warning" });
+          return false;
+        }
+        window.location.reload();
+        return true;
+      });
+    }
+
+    document.getElementById("assign-ticked").addEventListener("click", function () {
+      var ids = ticked();
+      if (!ids.length) { return; }
+      UI.prompt({
+        title: "Assign " + plural(ids.length, "recording") + " to",
+        body: ["They see them under Mine and on Home; nothing else changes."],
+        placeholder: "A team member's name or username",
+        list: "team-list",
+        ok: "Assign"
+      }).then(function (who) {
+        if (!who) { return; }
+        assignThese(ids, who);
+      });
+    });
+    document.getElementById("unassign-ticked").addEventListener("click", function () {
+      var ids = ticked();
+      if (ids.length) { assignThese(ids, ""); }
+    });
+
+    var divideCard = document.getElementById("divide-card");
+    document.getElementById("divide-among").addEventListener("click", function () {
+      divideCard.hidden = !divideCard.hidden;
+    });
+    document.getElementById("divide-cancel").addEventListener("click", function () {
+      divideCard.hidden = true;
+    });
+    document.getElementById("divide-go").addEventListener("click", function () {
+      var who = Array.prototype.slice.call(divideCard.querySelectorAll(".divide-tick:checked"))
+        .map(function (box) { return box.value; });
+      if (!who.length) { UI.toast("Tick at least one person.", { problem: true, icon: "warning" }); return; }
+      post("/case/" + caseId + "/divide", { who: who.join(",") }).then(function (answer) {
+        if (!answer.ok) { UI.toast(answer.said.why || "That could not be divided.", { problem: true, icon: "warning" }); return; }
+        window.location.reload();
+      });
+    });
+
+    // The fold's select: one recording to one person, or to nobody.
+    document.addEventListener("change", function (event) {
+      var select = event.target.closest(".a-assigned");
+      if (!select) { return; }
+      assignThese([select.dataset.recording], select.value);
     });
   }
 

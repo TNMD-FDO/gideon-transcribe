@@ -88,7 +88,7 @@
   rows.forEach(function (row) {
     row.addEventListener("click", function (event) {
       // A click on Open is Open, not a choice.
-      if (event.target.closest("a, button")) { return; }
+      if (event.target.closest("a, button, input, label, select")) { return; }
       choose(row === chosenRow && !onTheBench() ? null : row);
     });
   });

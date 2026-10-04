@@ -227,6 +227,25 @@ class Recording(models.Model):
     # into one, and either may be skipped.
     recording_type = models.CharField(max_length=60, blank=True, default="")
     description = models.TextField(blank=True, default="")
+    # Assigned to and Reviewed (Phase 9 chapter 3): one team member the
+    # recording was given to, and the assignee's one mark of completion.
+    # Empty outside a Case, like the type.
+    assigned_to = models.ForeignKey(
+        "core.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_recordings",
+    )
+    assigned_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    assigned_on = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reviewed_on = models.DateTimeField(null=True, blank=True)
+    reviewed_nothing_to_note = models.BooleanField(default=False)
 
     # The title starts as the file name without its extension and can be
     # changed. The original name stays, because it is the only way to

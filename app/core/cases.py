@@ -148,8 +148,21 @@ class Case(models.Model):
         return bool(self.role_of(user))
 
     def may_be_run_by(self, user) -> bool:
-        """Who may rename, share, transfer, or delete the Case: the owner and Admins."""
+        """Who may rename, transfer, delete the Case, and mark an also-owner:
+        the owner and Admins."""
         return self.owner_id == user.pk or bool(getattr(user, "is_admin", False))
+
+    def may_direct(self, user) -> bool:
+        """Who may add and remove people and assign recordings (Phase 9
+        chapter 3): the owner, an Admin, and a Collaborator marked also an
+        owner while Sharing is on."""
+        if self.may_be_run_by(user):
+            return True
+        from core import sharing
+
+        return bool(
+            sharing.on() and self.shares.filter(person=user, also_owner=True).exists()
+        )
 
 
 def reachable(recording) -> bool:

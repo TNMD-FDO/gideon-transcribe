@@ -435,6 +435,26 @@ urlpatterns = [
     ),
     path("person/<uuid:person_id>", people_pages.person_action, name="person-action"),
     path(
+        "case/<uuid:case_id>/assign",
+        case_pages.assign_recordings,
+        name="assign-recordings",
+    ),
+    path(
+        "case/<uuid:case_id>/divide",
+        case_pages.divide_recordings,
+        name="divide-recordings",
+    ),
+    path(
+        "case/<uuid:case_id>/share/owner",
+        case_pages.mark_owner,
+        name="share-owner",
+    ),
+    path(
+        "recording/<uuid:recording_id>/reviewed",
+        case_pages.mark_reviewed,
+        name="mark-reviewed",
+    ),
+    path(
         "case/<uuid:case_id>/vocabulary",
         vocabulary_pages.term_action,
         name="case-vocabulary",

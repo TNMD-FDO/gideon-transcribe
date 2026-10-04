@@ -195,6 +195,25 @@ def _speakers_pass_running(recording) -> bool:
     return live.speakers_pass_state(recording) in ("waiting", "running")
 
 
+def _assignment_context(recording, user) -> dict:
+    """The head's pill and the action line's button (Phase 9 chapter 3)."""
+    from core import assignments
+
+    if recording.case_id is None or recording.assigned_to_id is None:
+        return {"assigned": False}
+    mine = recording.assigned_to_id == user.pk
+    reviewed = recording.reviewed_on is not None
+    return {
+        "assigned": True,
+        "mine": mine,
+        "to": "you" if mine else recording.assigned_to.shown_name,
+        "reviewed": reviewed,
+        "reviewed_words": assignments.reviewed_words(recording, user),
+        "may_mark": assignments.may_mark(recording, user),
+        "my_notes": assignments.my_notes_on(recording, user),
+    }
+
+
 def _page_context(request: HttpRequest, recording: Recording) -> dict:
     """What the viewer's page and its windows are drawn from."""
     from core import exports
@@ -285,6 +304,8 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         "sides": list(recording.sides.all()),
         "job": job,
         "is_someone_elses": cases.standing(recording, request.user) == "admin",
+        # Assigned to and Reviewed (Phase 9 chapter 3).
+        "assignment": _assignment_context(recording, request.user),
         # What Undo in the Speakers panel would undo, in words.
         "last_change": last_change_line(transcript) if transcript else "",
         "being_replaced": being_replaced(recording),

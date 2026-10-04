@@ -192,7 +192,7 @@ def case_rows(user) -> tuple[list[dict], list[dict]]:
         row["incidents"] = incident_lines(case)
         row["pills"] = [
             one
-            for one in dashboard.pills(case, case.role_of(user))
+            for one in dashboard.pills(case, case.role_of(user), user)
             if not (row["incidents"] and one["href"] == incidents_tab)
         ]
         rows.append(row)
