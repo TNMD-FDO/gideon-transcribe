@@ -20,13 +20,13 @@ import io
 import logging
 import re
 import zipfile
-from datetime import datetime
 from urllib.parse import quote
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import timezone
 
 from core import settings_store
 from core.jobs import Transcript
@@ -124,6 +124,15 @@ def both_sides_legend(transcript) -> str:
 # Dates read the same way everywhere an export prints one.
 DAY = "%d %B %Y"
 DAY_AND_TIME = "%d %B %Y %H:%M"
+
+
+def local(when):
+    """A stored time in the office's zone, for a cover or a file name
+    (v1.121.3): the database keeps UTC, and a cover printed it raw beside an
+    Exported line in local time, five hours apart in one table."""
+    if when is None:
+        return None
+    return timezone.localtime(when) if timezone.is_aware(when) else when
 
 
 # The words --------------------------------------------------------------------
@@ -391,8 +400,8 @@ def plain_text(recording: Recording, with_notes: bool = False) -> str:
         title_of(recording),
         (
             f"{kind_line(transcript)}. {recording.original_filename}, "
-            f"{length_of(recording)}, uploaded {recording.created:{DAY}} by "
-            f"{recording.user.username}. Processed {transcript.created:{DAY}} "
+            f"{length_of(recording)}, uploaded {local(recording.created):{DAY}} by "
+            f"{recording.user.username}. Processed {local(transcript.created):{DAY}} "
             f"with Whisper {model_of(transcript)}."
         ),
     ]
@@ -567,7 +576,8 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
             ("Language", language_name(transcript.language)),
             (
                 "Processed",
-                f"{transcript.created:{DAY}} with Whisper {model_of(transcript)}",
+                f"{local(transcript.created):{DAY}} with Whisper "
+                f"{model_of(transcript)}",
             ),
             ("SHA-256", recording.sha256),
         ],
@@ -751,7 +761,7 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
         ("SHA-256", recording.sha256),
         (
             "Uploaded by",
-            f"{recording.user.username} on {recording.created:{DAY_AND_TIME}}",
+            f"{recording.user.username} on {local(recording.created):{DAY_AND_TIME}}",
         ),
         ("Sides", ", ".join(str(one) for one in sides) if sides else "1"),
         (
@@ -812,12 +822,12 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
                 for name, value in sorted((service.get("pins") or {}).items())
             ),
         ),
-        ("Processed", f"{transcript.created:{DAY_AND_TIME}}"),
+        ("Processed", f"{local(transcript.created):{DAY_AND_TIME}}"),
         ("Segments", str(len(segments))),
         ("Corrections", str(corrections)),
         ("Camera moments", camera_moments_row(transcript, for_transcript=True)),
         ("Camera stamp", stamp_row(transcript)),
-        ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+        ("Exported", f"{timezone.localtime():{DAY_AND_TIME}} by {exported_by}"),
     ]
     return [(label, value) for label, value in rows if str(value).strip()]
 
@@ -939,7 +949,11 @@ def _page_of_pages(paragraph, sha256, Pt, RGBColor) -> None:
     field("PAGE")
     quiet(paragraph.add_run(" of "))
     field("NUMPAGES")
-    quiet(paragraph.add_run(f"    Gideon Transcribe, exported {datetime.now():{DAY}}"))
+    quiet(
+        paragraph.add_run(
+            f"    Gideon Transcribe, exported {timezone.localtime():{DAY}}"
+        )
+    )
 
 
 # File names -------------------------------------------------------------------
@@ -972,7 +986,7 @@ def export_name(recording: Recording, ending: str) -> str:
 
 
 def zip_name(kind: str = "Transcripts") -> str:
-    return f"{kind} {datetime.now():%Y-%m-%d %H%M}.zip"
+    return f"{kind} {timezone.localtime():%Y-%m-%d %H%M}.zip"
 
 
 def without_clashes(taken: set[str], name: str) -> str:
@@ -1290,7 +1304,8 @@ def _cover(document, recording, transcript, kind: str) -> None:
             ("Language", language_name(transcript.language)),
             (
                 "Processed",
-                f"{transcript.created:{DAY}} with Whisper {model_of(transcript)}",
+                f"{local(transcript.created):{DAY}} with Whisper "
+                f"{model_of(transcript)}",
             ),
             ("SHA-256", recording.sha256),
         ],
@@ -1364,9 +1379,10 @@ def summary_word(summary, exported_by: str) -> bytes:
             ("Length", summary.length.capitalize()),
             (
                 "Written",
-                f"{written:{DAY_AND_TIME}} by {summary.model or 'the AI assistant'}",
+                f"{local(written):{DAY_AND_TIME}} by "
+                f"{summary.model or 'the AI assistant'}",
             ),
-            ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+            ("Exported", f"{timezone.localtime():{DAY_AND_TIME}} by {exported_by}"),
         ],
         Inches,
     )
@@ -1418,10 +1434,10 @@ def chat_word(chat, exported_by: str) -> bytes:
     _facts(
         document,
         [
-            ("Started", f"{chat.created:{DAY_AND_TIME}}"),
+            ("Started", f"{local(chat.created):{DAY_AND_TIME}}"),
             ("Questions", str(len(turns))),
             ("Model", first_model or "the AI assistant"),
-            ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+            ("Exported", f"{timezone.localtime():{DAY_AND_TIME}} by {exported_by}"),
         ],
         Inches,
     )
@@ -1491,10 +1507,10 @@ def case_chat_word(chat, exported_by: str) -> bytes:
             ("Case", case.name),
             ("Owner", case.owner.username),
             ("Recordings read", str(len(read))),
-            ("Started", f"{chat.created:{DAY_AND_TIME}}"),
+            ("Started", f"{local(chat.created):{DAY_AND_TIME}}"),
             ("Questions", str(len(turns))),
             ("Model", first_model or "the AI assistant"),
-            ("Exported", f"{datetime.now():{DAY_AND_TIME}} by {exported_by}"),
+            ("Exported", f"{timezone.localtime():{DAY_AND_TIME}} by {exported_by}"),
         ],
         Inches,
     )
@@ -1574,19 +1590,22 @@ def case_chat_word(chat, exported_by: str) -> bytes:
 
 
 def case_chat_name(chat) -> str:
-    return f"{safe_name(chat.case.name)} - case chat {chat.created:%Y-%m-%d %H%M}.docx"
+    return (
+        f"{safe_name(chat.case.name)} - case chat "
+        f"{local(chat.created):%Y-%m-%d %H%M}.docx"
+    )
 
 
 def summary_name(summary) -> str:
     when = summary.written_at or summary.created
     return (
         f"{safe_name(title_of(summary.recording))} - summary "
-        f"({safe_name(summary.template_name)}) {when:%Y-%m-%d %H%M}.docx"
+        f"({safe_name(summary.template_name)}) {local(when):%Y-%m-%d %H%M}.docx"
     )
 
 
 def chat_name(chat) -> str:
     return (
         f"{safe_name(title_of(chat.recording))} - chat "
-        f"{chat.created:%Y-%m-%d %H%M}.docx"
+        f"{local(chat.created):%Y-%m-%d %H%M}.docx"
     )

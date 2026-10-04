@@ -337,6 +337,36 @@ def test_the_exports_and_the_assistant_read_a_note_event_as_the_offices_own(
     )
     assert numbers["2"] == str(note_event(incident, gun_line(first)).pk)
     assert notes.any_on_chronology(incident)
+    # A long note, or one on two lines, is whole in the Event column and the
+    # line it rests on is the Detail (v1.121.3); the sentence split is for
+    # typed events alone.
+    import csv
+    import io
+
+    long_note = (
+        "The report says a warrant was displayed at the door. No warrant is "
+        "visible on any camera, and the officer says nothing of one.\nCheck "
+        "the other cameras' audio here."
+    )
+    notes.set_note(gun_line(first), long_note, by=person)
+    rows = list(
+        csv.reader(io.StringIO(chronology.spreadsheet(incident).decode("utf-8-sig")))
+    )
+    head = rows[0]
+    note_row = next(
+        dict(zip(head, row, strict=True))
+        for row in rows[1:]
+        if "warrant" in row[head.index("Event")]
+    )
+    assert note_row["Event"] == " ".join(long_note.split())
+    assert note_row["Detail"].endswith(gun_line(first).text)
+    typed_row = next(
+        dict(zip(head, row, strict=True))
+        for row in rows[1:]
+        if row[head.index("Event")] == "Typed."
+    )
+    assert typed_row["Detail"] == ""
+    assert note_row["Event"] in docx_text(chronology.word(incident, None, "asker"))
 
 
 @pytest.mark.django_db

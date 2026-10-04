@@ -3013,6 +3013,7 @@ body.gideon-window .gideon-grip { display: none; }
 .np-recs .np-rec { padding: 8px 6px; border-top: 1px solid var(--line); }
 .np-recs .np-rec:first-child { border-top: 0; }
 .np-recs .np-rec .row { gap: 8px; align-items: center; }
+.np-work .inc-find-hit.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .np-event-note { margin: 2px 10px 8px 4.6rem; padding: 6px 10px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: var(--radius); font-size: var(--t-small); }
 .preview-card.mounted .preview-head { display: none; }
 .preview-card.mounted .preview-lines { max-height: none; flex: 1 1 auto; }

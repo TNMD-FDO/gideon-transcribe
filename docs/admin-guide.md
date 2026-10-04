@@ -362,4 +362,4 @@ Upgrades come as Releases on GitHub, and the app never checks for them. Subscrib
 ./transcribe upgrade <tag>
 ```
 
-reads them out before it does anything. When it pulls the images rather than building them, it checks that what arrived is what the Release was built as, and stops if not. The install guide has the whole procedure, and the roll-back. **Nothing is ever pushed from a workstation to the server or copied over the install folder**: code reaches the server only through that command.
+reads them out before it does anything. After an upgrade, ask people to reload any page of the app they have kept open: a page left open from before the upgrade still runs the old scripts and looks broken until it is reloaded. When it pulls the images rather than building them, it checks that what arrived is what the Release was built as, and stops if not. The install guide has the whole procedure, and the roll-back. **Nothing is ever pushed from a workstation to the server or copied over the install folder**: code reaches the server only through that command.

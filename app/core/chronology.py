@@ -15,7 +15,6 @@ import contextlib
 import csv
 import io
 import uuid
-from datetime import datetime
 
 from django.db import models
 from django.utils import timezone
@@ -233,6 +232,19 @@ def line_and_detail(text: str) -> tuple[str, str]:
         line = line[: cut if cut > 40 else LINE_CUT].rstrip(" ,;:") + "\u2026"
         detail = " ".join(text.split())
     return line, detail
+
+
+def note_line_and_detail(event) -> tuple[str, str]:
+    """A note event read for the table (v1.121.3): the note whole as the
+    line, never cut at a sentence end, and the transcript line it rests on
+    as the detail. The heading-and-explanation split is for typed events."""
+    line = " ".join((event.text or "").split())
+    anchor = event.anchor()
+    said = " ".join((getattr(anchor, "text", "") or "").split()) if anchor else ""
+    if said and said != line:
+        speaker = getattr(anchor, "speaker", "") or ""
+        return line, f"{speaker}: {said}" if speaker else said
+    return line, ""
 
 
 def _cleaned(incident, fields: dict, *, most: int = TEXT_MOST) -> dict:
@@ -675,7 +687,11 @@ def _rows(incident) -> list[dict]:
     colours = camera_colours(incident)
     rows = []
     for number, event in enumerate(incident.events.filter(proposed=False), 1):
-        line, detail = line_and_detail(event.text)
+        line, detail = (
+            note_line_and_detail(event)
+            if event.is_note()
+            else line_and_detail(event.text)
+        )
         # The colour the figure prints the number in: the event's camera's,
         # else the first of the cameras it is seen on, else none.
         colour = colours.get(str(event.camera_id), "")
@@ -969,7 +985,10 @@ def pages(document, incident, picture: bytes | None, exported_by: str) -> None:
             ("Span", incidents.span_words(incident)),
             ("Cameras", f"{len(cameras)}, {placed_words}"),
             ("Events", str(len(rows))),
-            ("Exported", f"{datetime.now():{exports.DAY_AND_TIME}} by {exported_by}"),
+            (
+                "Exported",
+                f"{timezone.localtime():{exports.DAY_AND_TIME}} by {exported_by}",
+            ),
         ],
         Inches,
     )

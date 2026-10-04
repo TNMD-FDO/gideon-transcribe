@@ -257,6 +257,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # The pills over the Recordings tab (Phase 9 chapter 3): All, Mine,
     # Mine not reviewed, Reviewed, Unassigned, and one person by username.
     may_direct = case.may_direct(request.user)
+    names = assignments.names_for(case)
     who = request.GET.get("who", "")
     state = request.GET.get("state", "")
     shown_rows = assignments.filtered(rows, who, state, request.user)
@@ -327,7 +328,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "assignment_pills": assignment_pills,
             "team_members": (
                 [
-                    {"username": one.username, "name": one.shown_name}
+                    {"username": one.username, "name": names[one.pk]}
                     for one in assignments.team_members(case)
                 ]
                 if may_direct
@@ -607,6 +608,7 @@ def _rows_for(case: Case) -> list:
         ).select_related("incident"):
             cameras.setdefault(camera.recording_id, camera)
     note_counts = notes.counts_in(case)
+    names = assignments.names_for(case)
     # Summaries waiting for tonight (Phase 9 chapter 5), one query.
     tonight = {
         one.recording_id: one
@@ -636,7 +638,11 @@ def _rows_for(case: Case) -> list:
         one.notes_words = notes.count_words(note_counts.get(one.pk))
         one.clips_count = clip_counts.get(one.pk, 0)
         # Assigned to and Reviewed (Phase 9 chapter 3), in words.
-        one.assigned_words = one.assigned_to.shown_name if one.assigned_to_id else ""
+        one.assigned_words = (
+            names.get(one.assigned_to_id, one.assigned_to.shown_name)
+            if one.assigned_to_id
+            else ""
+        )
         one.reviewed_words = (
             f"Reviewed {one.reviewed_on:%d %b}" if one.reviewed_on else ""
         )

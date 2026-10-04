@@ -105,7 +105,7 @@
             <ul class="plain team-list" style="margin-bottom: 10px">
               {% for row in team %}
                 <li{% if row.status %} class="muted"{% endif %}>
-                  <span><b>{{ row.person.shown_name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
+                  <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
                   {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" %}<span class="pill small">Also an owner</span>{% endif %}
                   {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
                   <div class="muted small">{{ row.assigned }} assigned &middot; {{ row.reviewed }} reviewed &middot; {{ row.noted }} noted</div>

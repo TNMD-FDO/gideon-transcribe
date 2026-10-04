@@ -12,12 +12,12 @@ import json
 import logging
 import shutil
 import zipfile
-from datetime import datetime
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core import audit, cases, clip_work, exports, settings_store
@@ -453,7 +453,7 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
 
     return _hand_over(
         holder.getvalue(),
-        f"{stem} clips {datetime.now():%Y-%m-%d %H%M}.zip",
+        f"{stem} clips {timezone.localtime():%Y-%m-%d %H%M}.zip",
         "application/zip",
     )
 

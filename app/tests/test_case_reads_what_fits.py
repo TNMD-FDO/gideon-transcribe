@@ -249,6 +249,77 @@ def test_a_narrowed_question_reads_those_recordings_alone_and_says_so(
     assert "Who" not in json.dumps(row.details)
 
 
+@pytest.mark.django_db
+def test_a_narrowed_question_says_how_many_it_read_when_one_had_no_transcript(
+    owner, a_case, monkeypatch
+):
+    """v1.121.3: "Read 1 of the 2 recordings narrowed to", then the not-read line."""
+    first = a_recording(owner, a_case, "Call 1")
+    waiting = a_recording(owner, a_case, "Call 2", transcript=False)
+    engine_answering(monkeypatch, ["Nothing [Recording 1, 00:00:00]."])
+    turn = a_turn(
+        a_case,
+        owner,
+        "Who?",
+        scope={"kind": "filter", "recordings": [str(first.pk), str(waiting.pk)]},
+    )
+    case_chat.answer_case_turn(turn.pk)
+    turn.refresh_from_db()
+    assert turn.state == "done", turn.reason_detail
+    assert turn.answer.startswith(
+        "Read 1 of the 2 recordings narrowed to on the page.\n"
+        "1 recording was not read: still transcribing."
+    )
+
+
+def test_the_apps_opening_lines_are_stripped_from_an_answer():
+    """v1.121.3: what the app wrote at an answer's head is not the engine's
+    to repeat from the history."""
+    answer = (
+        "Read the overviews of 12 recordings, then 5 whole.\n"
+        "Recording 4 and Recording 6 were read from the transcript alone.\n"
+        "1 recording was not read: failed.\n\n"
+        "The real answer.\nRead the paper again."
+    )
+    assert case_scope.without_openings(answer) == (
+        "The real answer.\nRead the paper again."
+    )
+    assert (
+        case_scope.without_openings(
+            "Read 3 of the 4 recordings narrowed to on the page.\n\nYes."
+        )
+        == "Yes."
+    )
+    assert (
+        case_scope.without_openings(
+            "Read the 2 recordings narrowed to on the page.\nYes."
+        )
+        == "Yes."
+    )
+    assert case_scope.without_openings("") == ""
+
+
+@pytest.mark.django_db
+def test_the_history_handed_over_lacks_the_apps_opening_lines(
+    owner, a_case, monkeypatch
+):
+    a_recording(owner, a_case, "Call 1")
+    asked = engine_answering(monkeypatch, ["Second answer [Recording 1, 00:00:00]."])
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    CaseChatTurn.objects.create(
+        chat=chat,
+        number=1,
+        question="First?",
+        answer="Read the 1 recording narrowed to on the page.\n\nThe first answer.",
+        state="done",
+        route=case_scope.NARROWED,
+    )
+    turn = CaseChatTurn.objects.create(chat=chat, number=2, question="Second?")
+    case_chat.answer_case_turn(turn.pk)
+    history = [m["content"] for m in asked[0]["messages"] if m["role"] == "assistant"]
+    assert history == ["The first answer."]
+
+
 # Over the ceiling: the two passes --------------------------------------------------
 
 

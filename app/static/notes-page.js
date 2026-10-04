@@ -495,17 +495,29 @@
   Array.prototype.forEach.call(document.querySelectorAll("#np-work .tab"), function (tab) {
     tab.addEventListener("click", function () { showTab(tab.dataset.panel); });
   });
+  var findHits = document.getElementById("np-find-hits");
+  // A hit pressed, or stepped to with Enter (v1.121.3): lit, played on the
+  // left, and the foot says which of the hits it is.
+  function goHit(index) {
+    var hits = findHits.querySelectorAll(".inc-find-hit");
+    if (!hits.length) { return; }
+    state.hitAt = (index + hits.length) % hits.length;
+    Array.prototype.forEach.call(hits, function (one, n) { one.classList.toggle("on", n === state.hitAt); });
+    var hit = hits[state.hitAt];
+    var recording = state.byId[hit.dataset.recording];
+    if (recording) { openAt(recording, parseFloat(hit.dataset.at)); }
+    if (hit.scrollIntoView) { hit.scrollIntoView({ block: "nearest" }); }
+    document.getElementById("np-position").textContent =
+      "Hit " + (state.hitAt + 1) + " of " + hits.length + " for \u201c" + findBox.value.trim() + "\u201d";
+  }
   findLayer.addEventListener("click", function (event) {
     if (event.target.closest("[data-back]")) { closeFind(); return; }
     var hit = event.target.closest(".inc-find-hit");
-    if (hit) {
-      var recording = state.byId[hit.dataset.recording];
-      if (recording) { openAt(recording, parseFloat(hit.dataset.at)); }
-    }
+    if (hit) { goHit(Array.prototype.indexOf.call(findHits.querySelectorAll(".inc-find-hit"), hit)); }
   });
   var findBox = document.getElementById("np-find");
   var findTimer = null;
-  function closeFind() { findBox.value = ""; findLayer.hidden = true; panels.hidden = false; }
+  function closeFind() { findBox.value = ""; findLayer.hidden = true; panels.hidden = false; state.hitAt = -1; sayPosition(); }
   function drawFind(got) {
     var hits = got.hits || [];
     document.getElementById("np-find-title").textContent = plural(hits.length, "moment") + " for “" + findBox.value.trim() + "”";
@@ -521,7 +533,8 @@
         "<span class='grow'>" + one.html + "<div class='muted small'>" + escape(recording ? recording.title : "") + "</div></span></div>";
     });
     if (!html) { html = "<p class='small muted' style='padding: 10px 14px'>Nothing in the notes or the recordings' words says that.</p>"; }
-    document.getElementById("np-find-hits").innerHTML = html;
+    findHits.innerHTML = html;
+    state.hitAt = -1;
     panels.hidden = true; findLayer.hidden = false;
   }
   findBox.addEventListener("input", function () {
@@ -536,7 +549,8 @@
     }, 300);
   });
   findBox.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") { closeFind(); findBox.blur(); }
+    if (event.key === "Escape") { closeFind(); findBox.blur(); return; }
+    if (event.key === "Enter") { event.preventDefault(); goHit(state.hitAt + 1); }
   });
 
   // The grip, as the incident page has it: the panel's width, kept in the browser.

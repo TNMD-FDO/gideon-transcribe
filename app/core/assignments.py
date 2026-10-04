@@ -101,10 +101,12 @@ def team(case, viewer=None) -> list[dict]:
     from core import sharing
 
     counts = person_counts(case)
+    names = names_for(case)
     empty = {"assigned": 0, "reviewed": 0, "noted": 0}
     rows = [
         {
             "person": case.owner,
+            "name": names.get(case.owner.pk, case.owner.shown_name),
             "share": None,
             "role": "owner",
             "status": "" if case.owner.status == "active" else case.owner.status,
@@ -118,6 +120,7 @@ def team(case, viewer=None) -> list[dict]:
             rows.append(
                 {
                     "person": share.person,
+                    "name": names.get(share.person_id, share.person.shown_name),
                     "share": share,
                     "role": "also-owner" if share.also_owner else "collaborator",
                     "status": share.status,
@@ -373,6 +376,24 @@ def team_members(case) -> list:
     if sharing.on():
         people += [share.person for share in sharing.collaborators(case)]
     return people
+
+
+def names_for(case) -> dict:
+    """Each team member's name as the pages show it (v1.121.3): the shown
+    name, with the username beside it when another member shares that name,
+    so an Assigned to column never reads the same name twice for two people."""
+    people = team_members(case)
+    counts: dict = {}
+    for one in people:
+        counts[one.shown_name] = counts.get(one.shown_name, 0) + 1
+    return {
+        one.pk: (
+            f"{one.shown_name} ({one.username})"
+            if counts[one.shown_name] > 1
+            else one.shown_name
+        )
+        for one in people
+    }
 
 
 def find_member(case, typed: str):

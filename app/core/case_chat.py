@@ -638,8 +638,9 @@ def answer_case_turn(turn_id) -> None:
         placements = incident_assistant.placements_block(case, read)
         if placements:
             people = people + "\n\n" + placements
+        # The app's own opening lines are not the engine's to repeat (v1.121.3).
         earlier = [
-            (one.question, one.answer)
+            (one.question, case_scope.without_openings(one.answer))
             for one in chat.turns.filter(state=DONE, number__lt=turn.number)
         ]
         history = prompts.history_that_fits(

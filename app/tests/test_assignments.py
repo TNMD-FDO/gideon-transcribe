@@ -308,6 +308,33 @@ def test_the_question_counts_the_persons_own_notes(a_case, owner, friend, client
 # The page, Home and the list ----------------------------------------------------------
 
 
+def test_two_members_with_one_name_are_told_apart_by_the_username(
+    a_case, owner, friend, client
+):
+    """v1.121.3: the username beside the shown name wherever assignment names
+    people, when two team members share a name."""
+    sharing.grant(a_case, friend, actor=owner)
+    friend.display_name = owner.shown_name
+    friend.save()
+    call = a_call(owner, a_case, "Call 0001")
+    assignments.assign(call, friend, by=owner)
+    names = assignments.names_for(a_case)
+    assert names[friend.pk] == f"{owner.shown_name} ({friend.username})"
+    assert names[owner.pk] == f"{owner.shown_name} ({owner.username})"
+    signed_in(client, owner)
+    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    assert f"{owner.shown_name} ({friend.username})" in page
+    import json
+    import re
+
+    team = json.loads(
+        re.search(r'id="team-members"[^>]*>(.*?)</script>', page, re.S).group(1)
+    )
+    assert any(one["name"].endswith(f"({friend.username})") for one in team)
+    listed = client.get(reverse("notes-page-list", args=[a_case.pk])).json()
+    assert listed["recordings"][0]["assigned"].endswith(f"({friend.username})")
+
+
 def test_the_tools_fold_away_until_the_case_uses_assignment(
     a_case, owner, friend, client
 ):

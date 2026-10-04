@@ -1887,7 +1887,6 @@ def memo_line(incident) -> str:
 
 def memo_word(memo: IncidentMemo, picture: bytes | None, exported_by: str) -> bytes:
     """The memo in the app's export shape, with the Chronology as its last pages."""
-    from datetime import datetime
 
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt, RGBColor
@@ -1935,10 +1934,13 @@ def memo_word(memo: IncidentMemo, picture: bytes | None, exported_by: str) -> by
             ("Template", f"Incident memo v{memo.template_version}"),
             (
                 "Written",
-                f"{written:{exports.DAY_AND_TIME}} by "
+                f"{exports.local(written):{exports.DAY_AND_TIME}} by "
                 f"{memo.model or 'the AI assistant'}",
             ),
-            ("Exported", f"{datetime.now():{exports.DAY_AND_TIME}} by {exported_by}"),
+            (
+                "Exported",
+                f"{timezone.localtime():{exports.DAY_AND_TIME}} by {exported_by}",
+            ),
         ],
         Inches,
     )

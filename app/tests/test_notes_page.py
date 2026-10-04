@@ -138,9 +138,8 @@ def test_the_notes_tab_offers_the_page_and_a_row_opens_on_its_note(
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=notes").content.decode()
     # The door is the head's button (v1.121.1), on every tab.
     assert f'href="/case/{a_case.pk}/notes-page" class="btn"' in page
-    # The Notes tab's toolbar no longer carries the door; the help pane's own
-    # "Open as a page" link is another thing.
-    assert f'class="btn small" href="/case/{a_case.pk}/notes-page"' not in page
+    # And the Notes tab's toolbar keeps a link to it (v1.121.3).
+    assert f'class="btn small" href="/case/{a_case.pk}/notes-page"' in page
     assert f"?note=line:{line.pk}" in page
     page = client.get(
         reverse("notes-page", args=[a_case.pk]) + f"?note=line:{line.pk}"
@@ -267,6 +266,54 @@ def test_a_note_on_an_event_is_listed_under_its_camera(owner, a_case, client):
     assert first["event_url"].endswith("?t=177.00") and first["event_clock"]
     assert got["kinds"] == {"event": 2} and got["noted"] == 1
     assert got["recordings"][0]["notes"] == 2
+
+
+def test_the_notes_export_stamps_its_pages(owner, a_case):
+    """v1.121.3: the running head and the page marking, as every other Word
+    export has them."""
+    from io import BytesIO
+
+    from core import notes
+    from docx import Document
+
+    call = a_call(owner, a_case, "Call 0409")
+    note_on(call, 1, "worth a look", owner)
+    document = Document(BytesIO(notes.word(a_case, owner.username)))
+    heads = " ".join(
+        p.text for section in document.sections for p in section.header.paragraphs
+    )
+    feet = " ".join(
+        p.text for section in document.sections for p in section.footer.paragraphs
+    )
+    assert "Pike matter" in heads and "Notes" in heads
+    assert "Page" in feet
+
+
+def test_exports_tell_the_offices_time(owner, a_case, settings):
+    """v1.121.3: a stored time is printed in the server's zone on a cover and
+    in a file name, never in UTC beside a local Exported line."""
+    import datetime as dt
+    from io import BytesIO
+
+    from core import exports
+    from docx import Document
+
+    settings.TIME_ZONE = "America/Chicago"
+    call = a_call(owner, a_case, "Call 0409")
+    when = dt.datetime(2026, 10, 4, 19, 21, tzinfo=dt.UTC)
+    summary = Summary.objects.create(
+        recording=call,
+        state=DONE,
+        template_name="Jail call summary",
+        text="Overview:\nShort.",
+        written_at=when,
+    )
+    assert exports.summary_name(summary).endswith("2026-10-04 1421.docx")
+    document = Document(BytesIO(exports.summary_word(summary, "walk")))
+    cells = [c.text for t in document.tables for r in t.rows for c in r.cells]
+    written = cells[cells.index("Written") + 1]
+    assert "04 October 2026 14:21" in written
+    assert exports.local(when).hour == 14 and exports.local(None) is None
 
 
 # The Overview and the whole recording ------------------------------------------------

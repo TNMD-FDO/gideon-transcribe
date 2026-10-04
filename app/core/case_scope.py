@@ -324,6 +324,33 @@ def fitting(picks: list, size_of, reading_tokens: int, readings: int) -> list:
     return kept
 
 
+# The history --------------------------------------------------------------------------
+
+
+def without_openings(answer: str) -> str:
+    """An earlier answer without the lines the app put at its head (what was
+    read, what was not, the videos read from the transcript alone), for the
+    history handed to the engine: left in, the engine copied them into later
+    answers, once with the earlier question's figures (the probe of
+    2026-10-04)."""
+    lines = (answer or "").split("\n")
+    while lines:
+        head = lines[0].strip()
+        if not head:
+            lines.pop(0)
+            continue
+        app_line = (
+            head.startswith("Read the overviews of ")
+            or (head.startswith("Read ") and "narrowed to on the page" in head)
+            or head.endswith("read from the transcript alone.")
+            or " not read: " in head
+        )
+        if not app_line:
+            break
+        lines.pop(0)
+    return "\n".join(lines).strip()
+
+
 # What was read, in words -------------------------------------------------------------
 
 
@@ -355,7 +382,11 @@ def opening_line(turn) -> str:
         return said
     if turn.route == NARROWED:
         count = len(scope.get("recordings") or [])
+        read = len(turn.readings or [])
         word = "recording" if count == 1 else "recordings"
+        if read and read < count:
+            # Some of the narrowed recordings had no transcript to read.
+            return f"Read {read} of the {count} {word} narrowed to on the page."
         return f"Read the {count} {word} narrowed to on the page."
     return ""
 

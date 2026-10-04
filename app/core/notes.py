@@ -744,6 +744,8 @@ def word(case, exported_by: str) -> bytes:
         )
         cells[2].text = f"{one['by']}, {one['on']}" if one["by"] else one["on"]
         cells[3].text = one["text"]
+    # The running head and the page marking every Word export carries (v1.121.3).
+    exports.stamp_pages(document, case.name, "Notes", case.name)
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()

@@ -117,6 +117,7 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
             "created", "title"
         )
     )
+    names = assignments.names_for(case)
     ids = [one.pk for one in recordings]
     summarised = set(
         Summary.objects.filter(recording_id__in=ids, state=DONE).values_list(
@@ -210,7 +211,11 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
                 "seconds": float(one.duration_seconds or 0),
                 "summarised": one.pk in summarised,
                 "words": one.pk in with_words,
-                "assigned": one.assigned_to.shown_name if one.assigned_to_id else "",
+                "assigned": (
+                    names.get(one.assigned_to_id, one.assigned_to.shown_name)
+                    if one.assigned_to_id
+                    else ""
+                ),
                 "assigned_id": one.assigned_to_id,
                 "reviewed": assignments.reviewed_words(one, request.user),
                 "notes": found["count"],

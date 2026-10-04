@@ -193,6 +193,8 @@
             </p>
             {% if notes.total %}
               {% comment %}The Notes page (Phase 9 chapter 4): the notes as a work page.{% endcomment %}
+              {# The page's link here too (v1.121.3): the eye goes to the tab for it. #}
+              <a class="btn small" href="{% url 'notes-page' case.pk %}" title="One page: the recording on the left, every note on the right, stepping through them">{% icon "note" %} Notes page</a>
               <a class="btn small" href="{% url 'case' case.pk %}?tab=search&kind=notes" title="The Search tab, notes only">{% icon "search" %} Search notes</a>
               <a class="btn small" href="{% url 'case-notes' case.pk %}" title="Every note in the case as a Word document, for the office's own reading">{% icon "word" %} Download notes</a>
             {% endif %}
@@ -813,7 +815,7 @@
               {% for row in team %}
                 <li{% if row.share %} data-share="{{ row.share.pk }}"{% endif %}{% if row.status %} class="muted"{% endif %}>
                   <div class="row" style="gap: 6px; flex-wrap: wrap">
-                    <span><b>{{ row.person.shown_name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
+                    <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
                     {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" %}<span class="pill small">Also an owner</span>{% endif %}
                     {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
                     <span class="grow"></span>

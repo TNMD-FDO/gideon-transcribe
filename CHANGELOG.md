@@ -21,6 +21,50 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.121.3, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The two walks' findings** (the feature walk and the export walk of 4
+October on the office's server), with the probe of Gideon reads what fits
+written up.
+
+- **A note on a chronology event is whole in the spreadsheet and the Word
+  table.** A note longer than 120 characters, or on two lines, was split at
+  its first sentence into the Event and Detail columns by the rule made for
+  typed events; the Note column beside it sat empty. The note is now the
+  Event whole, and the Detail is the transcript line it rests on.
+- **Every export tells the office's time.** Stored times on the covers
+  (Uploaded, Processed, Started, Written) and in the file names of summary,
+  chat and case chat exports were printed in UTC, five hours from the
+  Exported line beside them; all now print in the server's zone.
+- **The notes export** carries the running head and the page marking every
+  other Word export has.
+- **Find on the Notes page steps with Enter**, lights the hit it is on and
+  says "Hit 3 of 15" in the foot, as its box promised; a pressed hit is lit
+  too.
+- **The Notes tab keeps a link to the Notes page** beside Search notes, with
+  the head's button kept.
+- **Gideon's earlier answers reach the engine without the app's own opening
+  lines** (what was read, what was not, the videos read from the transcript
+  alone): the probe found the engine copying them into later answers, once
+  with an earlier question's figures.
+- **A narrowed question says how many it read**: "Read 3 of the 4 recordings
+  narrowed to on the page" when one had no transcript.
+- **Two team members with one name** are told apart by the username beside
+  it, in the Assigned to column, the Team block, the Divide card and the
+  fold's select.
+- **The admin guide** says to reload open pages after an upgrade: a page
+  left open from before still runs the old scripts.
+- **The research note** `docs/research/case-reads-what-fits-probe.md`
+  records the probe of 4 October: five questions over twelve recordings,
+  the overviews first and the picks read whole, counts only. The selection
+  template's wording holds as shipped. The box ledger's log carries the
+  first run of Summaries tonight.
+
 ## v1.121.2, 2026-10-04
 
 ```
