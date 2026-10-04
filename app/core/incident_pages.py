@@ -484,6 +484,19 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
         event = get_object_or_404(
             chronology.Event, pk=request.POST.get("event"), incident=incident
         )
+        note_was = request.POST.get("note_was")
+        if note_was is not None and note_was != (event.note or ""):
+            # The note changed while the card was open (v1.123.0).
+            writer = event.note_by.shown_name if event.note_by else "somebody"
+            return JsonResponse(
+                {
+                    "error": (
+                        f"This event's note was changed by {writer} since you "
+                        "opened it. Read it again before replacing it."
+                    )
+                },
+                status=409,
+            )
         try:
             chronology.change(event, _event_fields(request), by=user, request=request)
         except ValueError as why:

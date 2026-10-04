@@ -243,7 +243,9 @@ def test_the_page_scripts_hand_the_recording_to_the_preview():
     # fails keeps the box and the words typed.
     assert "function saved(words, row)" in script and "just-noted" in script
     assert 'button.textContent = "Saving..."' in script
-    assert script.count("keep: typed") == 4
+    # Four saves that fail keep the words, and the fifth is the note that
+    # changed under the box (v1.123.0).
+    assert script.count("keep: typed") == 5
     assert "Noted on the line at " in script and "Noted at " in script
     assert "the line being spoken when this was seen" in script
     assert "—" not in script

@@ -280,7 +280,7 @@
           {% if incident_rows %}
             <div class="tbl-wrap">
               <table class="tbl as-cards" id="incidents">
-                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th>{% if sitting_on %}<th>One sitting</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
+                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th title="How many cameras sit on the clock, and whether whole or cut">Placed</th>{% if sitting_on %}<th title="How much of one reading of the engine the incident's cameras fill">One sitting</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
                 <tbody>
                   {% for row in incident_rows %}
                     <tr class="goes" tabindex="0" data-open="{{ row.url }}">
@@ -816,7 +816,7 @@
                 <li{% if row.share %} data-share="{{ row.share.pk }}"{% endif %}{% if row.status %} class="muted"{% endif %}>
                   <div class="row" style="gap: 6px; flex-wrap: wrap">
                     <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
-                    {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" %}<span class="pill small">Also an owner</span>{% endif %}
+                    {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" and not may_direct %}<span class="pill small">Also an owner</span>{% endif %}
                     {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
                     <span class="grow"></span>
                     {% if row.share %}

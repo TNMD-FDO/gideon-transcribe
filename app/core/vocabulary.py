@@ -123,7 +123,16 @@ def heard_as(case, words) -> list[str]:
         forms = [entry["name"], *entry["spellings"]]
         keys = {" ".join(one.split()).casefold() for one in forms}
         squeezed = {_squeezed(one) for one in forms}
-        if typed not in keys and joined not in squeezed:
+        # One word of a name of several (v1.123.0): a reviewer types the
+        # surname, and the spellings are the whole name's.
+        parts = {
+            part.casefold()
+            for one in forms
+            if len(one.split()) > 1
+            for part in one.split()
+            if len(part) >= 3
+        }
+        if typed not in keys and joined not in squeezed and typed not in parts:
             continue
         for one in forms:
             take(one)

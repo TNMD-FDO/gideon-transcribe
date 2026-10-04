@@ -158,8 +158,10 @@ def counts(user) -> dict:
         "summaries": 0,
         "chats": 0,
         "clips": clips.count(),
+        # Only the clips that go with the session (v1.123.0): a clip of a
+        # recording in a case stays with the case.
         "clips_not_downloaded": clips.filter(
-            first_downloaded__isnull=True, state="ready"
+            first_downloaded__isnull=True, state="ready", recording__case__isnull=True
         ).count(),
         "running": Job.objects.filter(
             recording__user=user, state__in=JobState.LIVE

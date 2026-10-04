@@ -158,7 +158,9 @@ def synced_cameras(incident) -> list:
     return sorted(
         (
             one
-            for one in incident.cameras.select_related("recording")
+            for one in incident.cameras.select_related(
+                "recording", "recording__transcript"
+            )
             if one.is_synced()
         ),
         key=lambda one: (one.starts_at, one.added),
@@ -476,7 +478,10 @@ def _cameras_line(incident) -> str:
 def _chronology_lines(incident) -> tuple[list[str], dict]:
     """The Chronology as the office wrote it, numbered in time order, and the
     numbering as Event ids for the memo's marks."""
-    names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
+    names = {
+        str(one.pk): one.camera_id()
+        for one in incident.cameras.select_related("recording")
+    }
     lines = []
     numbers: dict[str, str] = {}
     for number, event in enumerate(

@@ -319,7 +319,8 @@ def test_send_to_gives_one_colleague_that_dictation(
     assert not DictationShare.objects.filter(pk=share.pk).exists()
     assert rows("Dictation taken back").get().details["recipient"] == "ben"
     signed_in(client, ben)
-    assert client.get(reverse("viewer", args=[recording.pk])).status_code == 302
+    # "No page here" (v1.123.0), as a case somebody is not on answers.
+    assert client.get(reverse("viewer", args=[recording.pk])).status_code == 404
 
 
 def test_the_memo_rides_with_the_mail_only_when_the_office_says_so(

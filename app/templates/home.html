@@ -15,7 +15,7 @@
     {% if not transcription_installed %}
       <p class="notice warn">Transcription is not installed on this server yet. Recordings you upload are kept and transcribed when the card arrives.</p>
     {% elif not service_is_up %}
-      <p class="notice danger">Transcription is not available right now. Try again later; uploads and recordings will wait.</p>
+      <p class="notice danger">Transcription is not available right now. Uploading is paused until it is back; anything already in the line waits there.</p>
     {% endif %}
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 

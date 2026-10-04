@@ -389,11 +389,17 @@ def _incidents_context(case: Case) -> dict:
     if not incidents.on():
         return {"incidents_on": False}
     videos = []
+    # One camera lookup for the case (v1.123.0), not one per video.
+    cameras: dict = {}
+    for camera in incidents.IncidentCamera.objects.filter(
+        incident__case=case
+    ).select_related("incident"):
+        cameras.setdefault(camera.recording_id, camera)
     for recording in case.recordings.order_by("created"):
         if not incidents.is_video(recording):
             continue
         words, tone = incidents.stamp_words(recording)
-        elsewhere = incidents.incident_of(recording)
+        elsewhere = cameras.get(recording.pk)
         videos.append(
             {
                 "recording": recording,
@@ -747,7 +753,7 @@ def recordings_csv(request: HttpRequest, case_id) -> HttpResponse:
     cases.note_activity(case, by=request.user)
     return exports.hand_over(
         holder.getvalue().encode("utf-8-sig"),
-        f"{case.name} recordings.csv",
+        f"{case.name} recordings {timezone.localtime():%Y-%m-%d %H%M}.csv",
         "text/csv; charset=utf-8",
     )
 
@@ -1317,11 +1323,16 @@ def share_who(request: HttpRequest, case_id) -> JsonResponse:
     case = _case_they_direct(request, case_id)
     if not sharing.on():
         raise Http404("Sharing is off")
+    for_transfer = request.GET.get("for") == "transfer"
+    people = list(sharing.candidates(case, with_team=for_transfer))
+    if for_transfer:
+        # The team first (v1.123.0).
+        team = {share.person_id for share in sharing.collaborators(case)}
+        people.sort(key=lambda one: (one.pk not in team, one.shown_name.casefold()))
     return JsonResponse(
         {
             "people": [
-                {"username": one.username, "name": one.shown_name}
-                for one in sharing.candidates(case)
+                {"username": one.username, "name": one.shown_name} for one in people
             ]
         }
     )
@@ -1377,7 +1388,9 @@ def transfer_case(request: HttpRequest, case_id) -> JsonResponse:
     if not sharing.on():
         raise Http404("Sharing is off")
     try:
-        person = sharing.find(case, request.POST.get("who", ""))
+        # The team is offered too (v1.123.0): a case is handed to the people
+        # on it far more often than to a stranger.
+        person = sharing.find(case, request.POST.get("who", ""), with_team=True)
     except sharing.NotFound as why:
         return JsonResponse({"ok": False, "why": str(why)}, status=400)
     sharing.transfer(case, person, actor=request.user, request=request)

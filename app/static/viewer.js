@@ -1398,9 +1398,12 @@
       fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id + "/note", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
-        body: JSON.stringify({ note: text })
+        body: JSON.stringify({ note: text, was: segment.note || "" })
       }).then(function (answer) {
-        if (!answer.ok) { return Promise.reject(answer.status); }
+        if (!answer.ok) {
+          // A 409 says whose words changed (v1.123.0); the rest is a number.
+          return answer.json().then(function (said) { return Promise.reject(said.error || answer.status); }, function () { return Promise.reject(answer.status); });
+        }
         return answer.json();
       }).then(function (told) {
         if (!told.saved) { return Promise.reject("refused"); }
@@ -1413,9 +1416,13 @@
         follow();
         if (search && search.value.trim()) { look(); }
         drawTimeline();
-      }).catch(function () {
+      }).catch(function (why) {
         box.disabled = false;
         save.disabled = false;
+        if (typeof why === "string" && why.length > 12) {
+          UI.toast(why, { problem: true, icon: "warning" });
+          return;
+        }
         UI.alert({
           title: "That note was not saved",
           body: "You may have been signed out. Open the page again and check before retyping it."

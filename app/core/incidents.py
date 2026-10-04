@@ -287,6 +287,17 @@ def stamp_checked(recording) -> bool:
     return bool((recording.stamp or {}).get("checked"))
 
 
+def plain_date(text: str) -> str:
+    """A date as the camera burned it, in the form the rest of the page uses
+    (v1.123.0): "11/06/2025" reads "06 Nov 2025"; anything else stays as read."""
+    for form in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
+        try:
+            return dt.datetime.strptime(text, form).strftime("%d %b %Y")
+        except ValueError:
+            continue
+    return text
+
+
 def stamp_words(recording) -> tuple[str, str]:
     """The case page's Clock in the picture cell: the words and the pill's tone."""
     if not is_video(recording):
@@ -297,7 +308,7 @@ def stamp_words(recording) -> tuple[str, str]:
     if not stamp.get("time"):
         # Many videos carry no clock; that is not a fault, so nothing shows.
         return "", ""
-    date = (stamp.get("date") or "").strip()
+    date = plain_date((stamp.get("date") or "").strip())
     when = f"{date} {stamp['time']}".strip()
     return (
         (f"{when}, checked", "ok")
@@ -695,7 +706,7 @@ def rounds_line(got: dict) -> str:
 def guess_the_unplaced(incident: Incident) -> None:
     """Cameras added before v1.60.0 with no place yet get the guess when the
     page next draws them."""
-    for camera in incident.cameras.all():
+    for camera in incident.cameras.select_related("recording"):
         if not camera.is_placed():
             guess(camera)
 
@@ -1033,8 +1044,16 @@ def _first_side_audio(recording):
 
 def span_of(incident: Incident) -> tuple[float | None, float | None]:
     """Where the placed cameras start and end on the Incident clock."""
-    starts = [one.starts_at for one in incident.cameras.all() if one.is_placed()]
-    ends = [one.ends_at() for one in incident.cameras.all() if one.is_placed()]
+    starts = [
+        one.starts_at
+        for one in incident.cameras.select_related("recording")
+        if one.is_placed()
+    ]
+    ends = [
+        one.ends_at()
+        for one in incident.cameras.select_related("recording")
+        if one.is_placed()
+    ]
     if not starts:
         return None, None
     return min(starts), max(ends)
@@ -1051,7 +1070,7 @@ def span_words(incident: Incident) -> str:
 
 
 def placed_words(incident: Incident) -> tuple[str, str]:
-    cameras = list(incident.cameras.all())
+    cameras = list(incident.cameras.select_related("recording"))
     synced = sum(1 for one in cameras if one.is_synced())
     if not cameras:
         return "no cameras", "warn"
@@ -1145,7 +1164,11 @@ def links_in(case) -> dict:
 def wall_of(incident: Incident) -> list[IncidentCamera]:
     """The cameras on the Wall, in the person's order or the clock's."""
     placed = sorted(
-        (one for one in incident.cameras.all() if one.is_placed()),
+        (
+            one
+            for one in incident.cameras.select_related("recording")
+            if one.is_placed()
+        ),
         key=lambda one: (one.starts_at, one.added),
     )
     by_id = {str(one.pk): one for one in placed}

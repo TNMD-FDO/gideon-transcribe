@@ -193,7 +193,7 @@ def running_cameras(incident, at: float) -> list[str]:
     """The placed cameras that cover the moment, as row ids."""
     return [
         str(one.pk)
-        for one in incident.cameras.all()
+        for one in incident.cameras.select_related("recording")
         if one.is_placed() and one.starts_at <= at <= one.ends_at()
     ]
 
@@ -287,7 +287,7 @@ def _cleaned(incident, fields: dict, *, most: int = TEXT_MOST) -> dict:
         "true",
         "on",
     )
-    known = {str(one.pk) for one in incident.cameras.all()}
+    known = {str(one.pk) for one in incident.cameras.select_related("recording")}
     wanted = fields.get("cameras")
     if wanted is None:
         cameras = running_cameras(incident, at)
@@ -540,7 +540,10 @@ def events_json(incident) -> list[dict]:
 
     from core import notes
 
-    names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
+    names = {
+        str(one.pk): one.camera_id()
+        for one in incident.cameras.select_related("recording")
+    }
     clips = clips_per_event(incident)
     rows = []
     for event in incident.events.filter(dismissed=False).select_related(
@@ -651,7 +654,7 @@ FIGURE_COLOURS = [
 
 def camera_colours(incident) -> dict:
     """Camera id -> the hex colour the page gives it, by the page's order."""
-    cameras = list(incident.cameras.all())
+    cameras = list(incident.cameras.select_related("recording"))
     placed = sorted(
         (one for one in cameras if one.is_placed()),
         key=lambda one: (one.starts_at, one.added),
@@ -683,7 +686,10 @@ def spell_words(group: list[dict]) -> str:
 
 def _rows(incident) -> list[dict]:
     """The table every export prints, numbered in time order."""
-    names = {str(one.pk): one.camera_id() for one in incident.cameras.all()}
+    names = {
+        str(one.pk): one.camera_id()
+        for one in incident.cameras.select_related("recording")
+    }
     colours = camera_colours(incident)
     rows = []
     for number, event in enumerate(incident.events.filter(proposed=False), 1):
@@ -820,7 +826,9 @@ def band_png(incident, width: int = 1300) -> bytes | None:
     if low is None or high is None or high <= low:
         return None
     colours = camera_colours(incident)
-    cameras = [one for one in incident.cameras.all() if one.is_placed()]
+    cameras = [
+        one for one in incident.cameras.select_related("recording") if one.is_placed()
+    ]
     if not cameras:
         return None
     cameras.sort(key=lambda one: (one.starts_at, one.added))
@@ -873,7 +881,11 @@ def _figure(document, incident, rows: list[dict]) -> None:
         legend = document.add_paragraph()
         colours = camera_colours(incident)
         cameras = sorted(
-            (one for one in incident.cameras.all() if one.is_placed()),
+            (
+                one
+                for one in incident.cameras.select_related("recording")
+                if one.is_placed()
+            ),
             key=lambda one: (one.starts_at, one.added),
         )
         for index, camera in enumerate(cameras):

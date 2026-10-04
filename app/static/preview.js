@@ -194,12 +194,16 @@
         var spoken = told.cited_seen !== null && told.cited === null && one.id === told.note_on;
         label = "A note on the line at " + escape(one.clock) + (spoken ? ", the line being spoken when this was seen" : "");
         words = one.note || "";
+        // Whose words these are (v1.123.0): saving replaces them, and the
+        // save is refused if they changed while the box was open.
+        if (one.note_by) { label += " Written by " + escape(one.note_by) + (one.note_on ? " on " + escape(one.note_on) : "") + "; saving replaces their words."; }
       }
+      var opened = (said && said.was !== undefined) ? said.was : words;
       if (said && said.words && said.keep !== undefined) { words = said.keep; }
       box.hidden = false;
       box.innerHTML =
         "<label class='small muted' for='preview-note-text'>" + label + "</label>" +
-        "<textarea id='preview-note-text' maxlength='2000' rows='3'>" + escape(words) + "</textarea>" +
+        "<textarea id='preview-note-text' maxlength='2000' rows='3' data-was='" + escape(opened) + "'>" + escape(words) + "</textarea>" +
         "<div class='row' style='gap: 6px; align-items: center; flex-wrap: wrap'>" +
         "<button type='button' class='small primary' data-preview-act='save'>Save note</button>" +
         "<button type='button' class='small ghost' data-preview-act='cancel'>Cancel</button>" +
@@ -336,10 +340,18 @@
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
-        body: JSON.stringify({ note: typed })
-      }).then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, said: said }; }); })
+        body: JSON.stringify({ note: typed, was: box.dataset.was || "" })
+      }).then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, status: answer.status, said: said }; }); })
         .then(function (got) {
           if (!card) { return; }
+          if (got.status === 409 && got.said.note !== undefined) {
+            // Changed under us (v1.123.0): the line shows the new words, the
+            // box keeps the typed ones, and the next save opens on the new.
+            one.note = got.said.note; one.note_by = got.said.note_by; one.note_on = got.said.note_on;
+            drawLines();
+            drawNote({ problem: true, words: got.said.error, keep: typed, was: one.note });
+            return;
+          }
           if (!got.ok || !got.said.saved) {
             drawNote({ problem: true, words: got.said.error || "The note could not be saved.", keep: typed });
             return;

@@ -306,6 +306,8 @@ def search(case, asked: str, kind: str = "") -> dict:
     seen = _seen(Transcript.objects.filter(recording__case=case))
     # The spellings the case lists for a name typed (Phase 9 chapter 2).
     heard = vocabulary.heard_as(case, words)
+    # Every camera's All cameras link in one query (v1.123.0), not one per hit.
+    links = incidents.links_in(case)
     # A note event is found once, as its note (on a line, or at a moment).
     events_of = Event.objects.filter(
         incident__case=case,
@@ -371,7 +373,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     marked(one.text, words, also, near, heard),
                     url=f"{reverse('viewer', args=[recording.pk])}?t={one.start:.1f}",
                     who=one.speaker,
-                    all_cameras=incidents.all_cameras_url(recording, one.start),
+                    all_cameras=incidents.url_at(links.get(recording.pk), one.start),
                     at=one.start,
                     close=near,
                     preview=_plays(recording, one.start),
@@ -404,7 +406,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     ),
                     url=f"{reverse('viewer', args=[recording.pk])}?t={one.at:.1f}",
                     who="Seen",
-                    all_cameras=incidents.all_cameras_url(recording, one.at),
+                    all_cameras=incidents.url_at(links.get(recording.pk), one.at),
                     at=one.at,
                     close=near,
                     preview=_plays(recording, one.at),
@@ -471,7 +473,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     ),
                     who="Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
                     under=marked(one.note, words, also, near, heard),
-                    all_cameras=incidents.all_cameras_url(recording, one.start),
+                    all_cameras=incidents.url_at(links.get(recording.pk), one.start),
                     at=one.start,
                     close=near,
                     preview=_plays(recording, one.start),
@@ -508,7 +510,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                         f"?t={one.at:.1f}&note=1"
                     ),
                     who="Note" + (f", {one.note_by.shown_name}" if one.note_by else ""),
-                    all_cameras=incidents.all_cameras_url(recording, one.at),
+                    all_cameras=incidents.url_at(links.get(recording.pk), one.at),
                     at=one.at,
                     close=near,
                     preview=_plays(recording, one.at),
@@ -973,7 +975,15 @@ def find_notes(case, asked: str) -> dict:
             one.speaker,
             near,
         )
-    hits.sort(key=lambda hit: (hit["rank"], hit["recording"], hit["at"]))
+    # In call order, as the page lists everything (v1.123.0): the ids sorted
+    # as text had put the recordings in no order a person could follow.
+    order = {
+        str(pk): index
+        for index, pk in enumerate(
+            case.recordings.order_by("created").values_list("pk", flat=True)
+        )
+    }
+    hits.sort(key=lambda hit: (hit["rank"], order.get(hit["recording"], 0), hit["at"]))
     return {
         "asked": asked,
         "hits": hits[:MOST],

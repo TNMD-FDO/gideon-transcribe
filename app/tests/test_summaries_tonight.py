@@ -197,7 +197,8 @@ def test_the_case_page_counts_the_missing_and_writes_them_tonight_with_a_row(
     assert "without a summary" not in page
     assert "summary tonight" in page
     assert dashboard.pills(a_case)[0]["words"] == "Summaries tonight: 2"
-    assert any(
+    # The case's pill alone (v1.123.0): the session block said it too.
+    assert not any(
         one["words"] == "Summaries tonight: 2" for one in home.running_now(admin)
     )
     # Pressing again marks nothing and writes no row.

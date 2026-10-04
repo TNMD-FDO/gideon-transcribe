@@ -194,7 +194,8 @@ def test_the_list_is_a_spreadsheet_of_the_rows_with_one_audit_row(
 
     assert answer.status_code == 200
     assert answer["Content-Type"].startswith("text/csv")
-    assert "recordings.csv" in answer["Content-Disposition"]
+    assert "recordings%20" in answer["Content-Disposition"]
+    assert ".csv" in answer["Content-Disposition"]
     body = answer.content
     assert body.startswith(b"\xef\xbb\xbf"), "a byte order mark for the spreadsheet"
     rows = list(csv.reader(io.StringIO(body.decode("utf-8-sig"))))

@@ -212,3 +212,20 @@ class NoStoreMiddleware:
         if not answer.has_header("Cache-Control"):
             answer["Cache-Control"] = NO_STORE
         return answer
+
+
+class SettingsCacheMiddleware:
+    """Each setting read once per request (v1.123.0): see settings_store.get.
+    The kept copies live for one request in one thread and go with it."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from core import settings_store
+
+        settings_store.start_request_cache()
+        try:
+            return self.get_response(request)
+        finally:
+            settings_store.end_request_cache()

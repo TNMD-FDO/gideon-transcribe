@@ -476,7 +476,7 @@
         <div><span>Follow mode</span><kbd>F</kbd></div>
         <div><span>Correct the current segment</span><kbd>E</kbd></div>
         <div><span>A note on the current segment</span><kbd>N</kbd></div>
-        <div><span>Mark reviewed (asks first)</span><kbd>R</kbd></div>
+        {% if assignment.may_mark %}<div><span>Mark reviewed (asks first)</span><kbd>R</kbd></div>{% endif %}
         <div><span>Save the correction</span><kbd>Ctrl + Enter</kbd></div>
         <div><span>Cancel, or close what is open</span><kbd>Esc</kbd></div>
         <div><span>Search</span><kbd>/</kbd></div>

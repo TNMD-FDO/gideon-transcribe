@@ -5,7 +5,7 @@
   going back to the case page, as the Speakers tab's are.
 {% endcomment %}
 <div class="case-vocabulary" id="case-vocabulary">
-  <h3>Case vocabulary <span class="muted small">{{ vocabulary|length }} name{{ vocabulary|length|pluralize }} and place{{ vocabulary|length|pluralize }}</span></h3>
+  <h3>Case vocabulary <span class="muted small">{% if vocabulary|length == 1 %}1 name or place{% else %}{{ vocabulary|length }} names and places{% endif %}</span></h3>
   <p class="muted small">They go with every recording added here and with Process again. Search and Gideon read the spellings too. The people from the Speakers tab are here by themselves.</p>
   {% if vocabulary %}
     <ul class="plain vocabulary-list">

@@ -829,7 +829,10 @@ def retry(request: HttpRequest, recording_id) -> JsonResponse:
                 "error": (
                     pieces.NEEDS_THE_PIECE
                     if not pieces.transcription_installed()
-                    else "Transcription is not available right now. Try again later."
+                    else (
+                        "Transcription is not available right now. Uploading is "
+                        "paused until it is back."
+                    )
                 ),
                 "reason_class": Refusal.SERVICE_UNREACHABLE,
             },
@@ -901,7 +904,10 @@ def process_again(request: HttpRequest, recording_id) -> JsonResponse:
                 "error": (
                     pieces.NEEDS_THE_PIECE
                     if not pieces.transcription_installed()
-                    else "Transcription is not available right now. Try again later."
+                    else (
+                        "Transcription is not available right now. Uploading is "
+                        "paused until it is back."
+                    )
                 ),
                 "reason_class": Refusal.SERVICE_UNREACHABLE,
             },

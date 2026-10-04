@@ -21,6 +21,69 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.123.0, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The thorough walk's fixes.** Forty items were found on 4 October walking
+every page as a user, with a second user on every shared feature, on the
+local app and on the office's server; the ones that blocked, misled or
+slowed are fixed here, with the polish.
+
+- **Transfer reaches the team.** Hand this case to a colleague offers the
+  people on the case first, then any colleague who has signed in, and the
+  transfer accepts a collaborator; it had used the Add people list, which
+  leaves out everyone already on the case, so a shared case could not be
+  handed to its own team.
+- **Each setting is read once per request.** A page that drew hundreds of
+  rows asked the same toggles hundreds of times, one query each: the largest
+  case page on the office's server ran 412 queries, its Search tab 1,472
+  for one common word, the incident page's state 220 at every poll. A
+  request now keeps each setting it reads, and the case page, the Search
+  tab and the incident page look their cameras up once instead of once per
+  row, hit or camera.
+- **Nobody's note is replaced unseen.** The note box on the Notes page and
+  in the Preview says whose words it holds ("Written by Ana Ruiz on 04 Oct;
+  saving replaces their words"), the save carries what the box opened on,
+  and a note that changed while the box was open is refused with who
+  changed it; the recording page's box and an event's note on the
+  chronology carry the same check.
+- **Search finds what it promises.** One word of a listed name reaches the
+  name's spellings (type the surname and the lines heard as "jordan" light
+  up as also heard as); a short word one letter off is a close match
+  ("knive" finds "knife"): the floor steps with the length and a form under
+  it counts only when it is the word a letter off, so "pillow" is not near
+  "pills". A name typed as a term and then given to a speaker is one entry,
+  the spellings on the Person.
+- **The case page fits the room it has.** With the Gideon drawer docked on a
+  laptop, the two columns had squeezed the list to a third of the width and
+  About this case sat beside a crushed tab row; the columns now follow the
+  width main has, not the window's, and go to one when there is no room.
+  The floating Ask Gideon button no longer covers a page's last row.
+- **Words.** Home and the Upload page say the same thing while transcription
+  is away (uploading is paused; what is in the line waits). The sign-out
+  page counts only the clips that go with the session. The Delete case
+  dialog says the case does not go to the Recycle bin. The Add people dialog
+  says what a collaborator can do in Phase 9's terms. The incident page's
+  Done is Back to the case. The Notes page says "recording" unless every
+  recording in the case is a call. A camera's date on the Incidents tab
+  reads as the rest of the page does. The Users page says a person who has
+  never signed in cannot yet be added to a case. The vocabulary head reads
+  "1 name or place". Find on the Notes page lists its hits in call order.
+  The audit row of a note names the recording and the time. Home's session
+  block no longer repeats the case's Summaries tonight pill. The Also an
+  owner tick stands alone. The keyboard list shows R only where Mark
+  reviewed is offered. A colleague's session recording opened by URL
+  answers "No page here", as a case does. The Incidents tab's columns carry
+  titles. A case's downloads carry the date and time in their names.
+- Not changed: the incident page's state poll still asks for the whole
+  state, now in far fewer queries; a poll for what changed is a later
+  release. The two-channel head pill already carries its explanation as a
+  title.
+
 ## v1.122.0, 2026-10-04
 
 ```

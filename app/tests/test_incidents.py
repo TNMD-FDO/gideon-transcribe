@@ -243,7 +243,7 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert "Make them an incident?" not in page and "Clock in the picture" not in page
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     assert "Make them an incident?" in page and "New incident" in page
-    assert "06/07/2025 21:56:19, checked" in page
+    assert "07 Jun 2025 21:56:19, checked" in page
     # A video with no clock shows nothing for it: not a fault.
     mute = video(person, a_case, "mute", stamp={})
     assert incidents.stamp_words(mute) == ("", "")

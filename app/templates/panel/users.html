@@ -74,7 +74,7 @@
                 <button type="submit" name="action" value="quota" class="small ghost">Set</button>
               </form>
             </td>
-            <td class="muted">{{ row.user.last_sign_in|default:"never" }}</td>
+            <td class="muted">{% if row.user.last_sign_in %}{{ row.user.last_sign_in }}{% else %}never <span class="small">(cannot be added to a case until they sign in)</span>{% endif %}</td>
           </tr>
           <tr>
             <td colspan="8" style="padding-bottom: 14px">

@@ -168,6 +168,13 @@ def join_or_create(
     person = Person.objects.create(
         case=case, name=wanted, role=role[:40], notes=notes[:NOTES_LENGTH], added_by=by
     )
+    # A term typed before the name was given to a speaker (v1.123.0): its
+    # spellings move to the Person and the term goes, so the name is one entry.
+    term = CaseTerm.objects.filter(case=case, term__iexact=wanted).first()
+    if term is not None:
+        person.also_heard_as = list(term.also_heard_as or [])
+        person.save(update_fields=["also_heard_as"])
+        term.delete()
     _row("Person added", person, by, request, how=how)
     return person, True
 

@@ -307,12 +307,13 @@ def test_nobody_opens_a_recording_in_a_binned_case(a_case, person, admin, client
     assert not cases.reachable(recording)
 
     signed_in(client, person)
-    assert client.get(reverse("viewer", args=[recording.pk])).status_code == 302
+    # "No page here" (v1.123.0), as a case somebody is not on answers.
+    assert client.get(reverse("viewer", args=[recording.pk])).status_code == 404
     assert client.get(reverse("export", args=[recording.pk, "text"])).status_code == 404
     assert client.get(reverse("case", args=[a_case.pk])).status_code == 404
 
     signed_in(client, admin)
-    assert client.get(reverse("viewer", args=[recording.pk])).status_code == 302
+    assert client.get(reverse("viewer", args=[recording.pk])).status_code == 404
 
 
 def test_a_binned_case_is_not_offered_as_somewhere_to_move_to(a_case, person, client):

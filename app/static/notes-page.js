@@ -66,6 +66,7 @@
     document.getElementById("np-call-facts").textContent =
       recording.date + " · " + plural(recording.notes, "note") + (recording.writers.length ? ", " + recording.writers.join(", ") : "");
     document.getElementById("np-open-call").hidden = false;
+    document.getElementById("np-open-call").textContent = "Open the " + callWord();
     document.getElementById("np-bar").hidden = false;
     drawMark(recording);
   }
@@ -192,8 +193,8 @@
   function setOrder(mode) {
     state.mode = mode;
     state.order = mode === "notes" ? listedNotes() : listedRecordings();
-    document.getElementById("np-prev-word").textContent = mode === "notes" ? "Previous note" : "Previous call";
-    document.getElementById("np-next-word").textContent = mode === "notes" ? "Next note" : "Next call";
+    document.getElementById("np-prev-word").textContent = mode === "notes" ? "Previous note" : "Previous " + callWord();
+    document.getElementById("np-next-word").textContent = mode === "notes" ? "Next note" : "Next " + callWord();
     sayPosition();
   }
 
@@ -221,14 +222,21 @@
     var narrowed = state.mode === "notes"
       ? (state.writer !== null || state.type !== null)
       : (state.recWho !== "" || state.recFilter.trim() !== "" || state.type !== null);
-    var word = state.mode === "notes" ? "Note" : "Call";
+    var word = state.mode === "notes" ? "Note" : (callWord() === "call" ? "Call" : "Recording");
     var tail = state.mode === "calls" && state.recWho === "me-left" ? " left for you" : (narrowed ? " shown" : "");
     if (state.current < 0) {
       // Nothing opened from this list yet: say how many there are.
       box.textContent = plural(state.order.length, word.toLowerCase()) + tail + ". Press one, or Next.";
       return;
     }
-    box.textContent = word + " " + (state.current + 1) + " of " + state.order.length + tail + (state.mode === "notes" ? ", by call date" : "");
+    box.textContent = word + " " + (state.current + 1) + " of " + state.order.length + tail + (state.mode === "notes" ? ", by " + callWord() + " date" : "");
+  }
+
+  // "Call" only when every recording in the case is one (v1.123.0): a
+  // body-camera case reads "recording", the glossary's word.
+  function callWord() {
+    var all = state.recordings.length > 0 && state.recordings.every(function (one) { return /call/i.test(one.type || ""); });
+    return all ? "call" : "recording";
   }
 
   function go(index) {

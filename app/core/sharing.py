@@ -32,9 +32,11 @@ CATEGORY = audit.Category.CASES
 # The words the owner reads before confirming, and the "case shared with you"
 # mail repeats. Fixed wording in the app and the user guide, not a setting.
 WORDS = (
-    "They will be able to do everything in this case except share, rename, "
-    "or delete it: add recordings, correct transcripts, name speakers, ask "
-    "for summaries and chats, and save clips.",
+    "They can do everything in the case that is not the owner's alone: add "
+    "recordings, correct transcripts, write notes, name speakers, add names to "
+    "the vocabulary, ask Gideon, save clips, and mark the recordings assigned "
+    "to them reviewed. Adding people, assigning, renaming, handing over and "
+    "deleting stay yours, unless you mark them Also an owner.",
     "Recordings they add count against your storage space.",
 )
 
@@ -140,33 +142,33 @@ def note_opened(case, user) -> None:
 # Who may be shared with -------------------------------------------------------------
 
 
-def candidates(case):
+def candidates(case, *, with_team: bool = False):
     """The people a Case may be shared with.
 
     Accounts that have signed in at least once and are Active, minus the owner
     and the existing Collaborators. Local admins are not offered: they are
-    the break-glass accounts, not colleagues.
+    the break-glass accounts, not colleagues. With `with_team` (v1.123.0) the
+    Collaborators stay in, for a Transfer, which goes to the team far more
+    often than to a stranger.
     """
     from core.models import User
 
-    return (
-        User.objects.filter(
-            last_sign_in__isnull=False,
-            deactivated_at__isnull=True,
-            blocked_at__isnull=True,
-            is_local=False,
-        )
-        .exclude(pk=case.owner_id)
-        .exclude(shares__case=case)
-        .order_by("display_name", "username")
-    )
+    people = User.objects.filter(
+        last_sign_in__isnull=False,
+        deactivated_at__isnull=True,
+        blocked_at__isnull=True,
+        is_local=False,
+    ).exclude(pk=case.owner_id)
+    if not with_team:
+        people = people.exclude(shares__case=case)
+    return people.order_by("display_name", "username")
 
 
 class NotFound(Exception):
     """No one, or more than one person, answers to what was typed."""
 
 
-def find(case, typed: str):
+def find(case, typed: str, *, with_team: bool = False):
     """The one candidate a typed name or username means.
 
     The username exactly, else the display name exactly, else one person
@@ -176,7 +178,7 @@ def find(case, typed: str):
     typed = typed.strip()
     if not typed:
         raise NotFound("Type a colleague's name.")
-    people = candidates(case)
+    people = candidates(case, with_team=with_team)
     exact = people.filter(username__iexact=typed).first()
     if exact is None:
         named = list(people.filter(display_name__iexact=typed)[:2])

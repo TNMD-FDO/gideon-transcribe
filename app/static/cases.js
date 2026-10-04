@@ -231,7 +231,7 @@
             ", " + counts.size + " in all.";
           UI.confirm({
             title: "Delete the case " + counts.name + "?",
-            body: [taking, "This is final. There is no way to get it back."],
+            body: [taking, "This is final. It does not go to the Recycle bin, which is for what the retention clock takes; there is no way to get it back."],
             ok: "Delete case",
             cancel: "Keep it",
             danger: true
@@ -263,8 +263,9 @@
     colleagueList.id = "colleague-list";
     document.body.appendChild(colleagueList);
 
-    function loadColleagues() {
-      return fetch("/case/" + caseId + "/share/who")
+    function loadColleagues(kind) {
+      // A Transfer lists the team first (v1.123.0).
+      return fetch("/case/" + caseId + "/share/who" + (kind === "transfer" ? "?for=transfer" : ""))
         .then(function (answer) { return answer.json(); })
         .then(function (said) {
           colleagueList.innerHTML = "";
@@ -279,11 +280,11 @@
     }
 
     function askWho(options) {
-      return loadColleagues().then(function (people) {
+      return loadColleagues(options.kind).then(function (people) {
         if (!people.length) {
           return UI.alert({
             title: options.title,
-            body: "Nobody can be added yet. A colleague appears here once they have signed in to the app."
+            body: (options.kind === "transfer" ? "Nobody can take the case yet." : "Nobody can be added yet.") + " A colleague appears here once they have signed in to the app."
           }).then(function () { return null; });
         }
         return UI.prompt({
@@ -315,7 +316,7 @@
     if (share) {
       share.addEventListener("click", function () {
         askWho({
-          title: "Share this case",
+          title: "Add people to this case",
           body: sharedWith.dataset.shareWords.split(". ").map(function (line, i, all) {
             return i < all.length - 1 ? line + "." : line;
           }),
@@ -339,6 +340,7 @@
       transfer.addEventListener("click", function () {
         askWho({
           title: "Hand this case to a colleague",
+          kind: "transfer",
           body: sharedWith.dataset.transferWords.split(". ").map(function (line, i, all) {
             return i < all.length - 1 ? line + "." : line;
           }),

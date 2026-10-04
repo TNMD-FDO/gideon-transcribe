@@ -36,6 +36,18 @@ Nothing matched at 0.7 that did not match at 0.6.
 A search of every line said for one word, by similarity or by stem, with
 no index, took 45 to 49 milliseconds.
 
+## Amended on 2026-10-04 (v1.123.0)
+
+The 0.6 floor cannot be reached by a short word one letter off: "knive" and
+"knife" share three trigrams of nine (0.33), "licence" and "license" five of
+eleven (0.45); only a word of eleven letters or more clears 0.6 with one
+letter changed. The floor now steps with the typed word's length (0.3 up to
+five letters, 0.4 up to seven, 0.5 up to ten, 0.6 beyond), and a form found
+under 0.6 is kept only when it is the word one letter changed, added or
+dropped (two letters from eight letters up), measured in Python after the
+query, so that trigrams alone never call "pillow" near "pills". The forms
+by stem are untouched.
+
 ## What was decided from it
 
 - **What was seen is searched.** "dreadlocks" is never said and is

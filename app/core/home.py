@@ -26,7 +26,6 @@ from core import (
     lifecycle,
     pieces,
     settings_store,
-    summaries_tonight,
     uploads,
     vision,
     whisperx,
@@ -146,15 +145,6 @@ def running_now(user) -> list[dict]:
                         dashboard._count(tonight, "video")
                         + f" enriched tonight from {start}"
                     ),
-                    "href": reverse("cases"),
-                    "tone": dashboard.PLAIN,
-                }
-            )
-        summaries = summaries_tonight.waiting().filter(recording__case__in=mine).count()
-        if summaries:
-            out.append(
-                {
-                    "words": f"Summaries tonight: {summaries}",
                     "href": reverse("cases"),
                     "tone": dashboard.PLAIN,
                 }

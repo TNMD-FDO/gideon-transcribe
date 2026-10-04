@@ -1684,6 +1684,8 @@
     eventBox.elements.text.value = given.text || "";
     eventBox.elements.text.rows = (given.text || "").indexOf("\n") === -1 ? 2 : 4;
     eventBox.elements.note.value = given.note || "";
+    // What the note was when the card opened (v1.123.0): the save says so.
+    eventBox.dataset.noteWas = given.note || "";
     eventBox.elements.to_check.checked = !!given.to_check;
     // The note folds closed until pressed, or open when the event has one.
     eventBox.elements.note.hidden = !given.note;
@@ -1793,6 +1795,7 @@
       source: eventBox.elements.source.value,
       camera: eventBox.elements.camera.value,
       note: eventBox.elements.note.value,
+      note_was: eventBox.dataset.noteWas || "",
       to_check: eventBox.elements.to_check.checked ? "yes" : "",
       cameras_given: "yes",
       cameras: Array.prototype.map.call(eventBox.querySelectorAll("input[name=cameras]:checked"), function (one) { return one.value; })

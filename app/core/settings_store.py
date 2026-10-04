@@ -13,6 +13,7 @@ cannot drift apart. Phase 2 rows are absent rather than greyed.
 from __future__ import annotations
 
 import re
+import threading
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -2854,17 +2855,52 @@ def definition(key: str) -> Definition:
 
 
 def get(key: str):
-    """What this setting is now, which is its default until somebody moves it."""
+    """What this setting is now, which is its default until somebody moves it.
+
+    Inside one request (v1.123.0) each key is read from the database once: a
+    page that draws hundreds of rows asked the same toggles hundreds of times,
+    one query each. Outside a request, and after a change, it is read afresh.
+    """
+    kept = getattr(_request, "values", None)
+    if kept is not None and key in kept:
+        return kept[key]
     known = definition(key)
     stored = Setting.objects.filter(key=key).first()
     if stored is None:
-        return known.default
+        value = known.default
+    elif known.kind == NUMBER:
+        value = known.default if stored.value is None else stored.value
+    elif known.kind == TOGGLE:
+        value = known.default if stored.value is None else bool(stored.value)
+    else:
+        value = stored.text
+    if kept is not None:
+        kept[key] = value
+    return value
 
-    if known.kind == NUMBER:
-        return known.default if stored.value is None else stored.value
-    if known.kind == TOGGLE:
-        return known.default if stored.value is None else bool(stored.value)
-    return stored.text
+
+_request = threading.local()
+
+
+def start_request_cache() -> None:
+    """The middleware's call at the start of a request: from here the settings
+    read in this thread are kept until end_request_cache."""
+    _request.values = {}
+
+
+def end_request_cache() -> None:
+    _request.values = None
+
+
+def forget(key: str | None = None) -> None:
+    """A setting moved: the request's kept copy goes, so the next read sees it."""
+    kept = getattr(_request, "values", None)
+    if kept is None:
+        return
+    if key is None:
+        kept.clear()
+    else:
+        kept.pop(key, None)
 
 
 def check(key: str, value):
@@ -2987,6 +3023,8 @@ def set_to(key: str, value) -> None:
         Setting.objects.update_or_create(
             key=key, defaults={"value": None, "text": wanted}
         )
+
+    forget(key)
 
     if key == "folder_management":
         # The days nobody could reach a Case are recorded as they pass,

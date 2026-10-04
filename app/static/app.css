@@ -3054,3 +3054,14 @@ body.gideon-window .gideon-grip { display: none; }
   .np-left .np-bar, .np-left .np-call-head { position: sticky; top: 0; background: var(--surface); z-index: 1; }
 }
 @media (max-width: 899px) { .np-popout-card { inset: 0; border-radius: 0; } }
+
+/* v1.123.0: the case page's two columns fit the room main has, not the
+   window. With the Gideon drawer docked, a laptop's main is too narrow for
+   the list beside About this case, and the About card sat over the tabs. */
+.shell > main { container-type: inline-size; }
+@container (max-width: 1000px) {
+  .case-page .panes { grid-template-columns: minmax(0, 1fr); }
+  .case-page .pane-detail { position: static; border-left: 0; padding-left: 0; }
+}
+/* The floating Ask Gideon button never covers a page's last row (v1.123.0). */
+body:has(.gideon-button) .shell > main { padding-bottom: 84px; }

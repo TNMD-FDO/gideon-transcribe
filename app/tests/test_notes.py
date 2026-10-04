@@ -186,7 +186,8 @@ def test_a_note_is_written_changed_and_removed_without_a_word_logged(
     rows = list(Row.objects.filter(category="edits").order_by("at"))
     assert [row.event for row in rows] == ["Note added", "Note changed", "Note removed"]
     for row in rows:
-        assert row.object_label == "30.0-34.0"
+        # The recording and the time (v1.123.0), never the words.
+        assert row.object_label == "first at 00:00:30"
         blob = json.dumps(row.details).lower()
         assert "footage" not in blob and "page 4" not in blob
     # The same words again write nothing.
@@ -298,7 +299,8 @@ def test_the_notes_tab_lists_every_note_in_the_case_newest_first(
     assert "Page 4" in only and "Check the footage." not in only
     # Download notes: both, for the office's own reading; one row, no words.
     got = client.get(f"/case/{a_case.pk}/notes.docx")
-    assert got.status_code == 200 and "notes.docx" in got["Content-Disposition"]
+    assert got.status_code == 200 and "notes%20" in got["Content-Disposition"]
+    assert ".docx" in got["Content-Disposition"]
     text = docx_text(got.content)
     assert "Notes: Traffic stop" in text and "2 notes" in text
     assert "Check the footage." in text and "Page 4 of the report." in text

@@ -12,7 +12,7 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -118,7 +118,8 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
     """The page itself."""
     recording = open_recording(request, recording_id)
     if recording is None:
-        return redirect(reverse("recordings"))
+        # The same answer as a case somebody is not on (v1.123.0).
+        raise Http404("not this person's recording")
 
     # Opening a Recording in a Case is use of that Case, so its Retention
     # clock moves. An Admin looking into somebody else's does not count.
@@ -153,7 +154,7 @@ def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
         .first()
     )
     if recording is None or not cases.standing(recording, request.user):
-        return redirect(reverse("recordings"))
+        raise Http404("not this person's recording")
     context = _page_context(request, recording)
     transcript = context["transcript"]
     features = context["assistant"]
@@ -736,6 +737,21 @@ def note(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
     except json.JSONDecodeError:
         return JsonResponse({"error": "that could not be read"}, status=400)
 
+    was = wanted.get("was")
+    if was is not None and str(was) != segment.note:
+        # The note changed while the box was open (v1.123.0): nobody's words
+        # are replaced unseen.
+        writer = segment.note_by.shown_name if segment.note_by else "somebody"
+        return JsonResponse(
+            {
+                "error": (
+                    f"This note was changed by {writer} since you opened it. "
+                    "Read it again before replacing it."
+                ),
+                **notes.line_json(segment),
+            },
+            status=409,
+        )
     saved = notes.set_note(
         segment, wanted.get("note", ""), by=request.user, request=request
     )

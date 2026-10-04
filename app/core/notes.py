@@ -129,7 +129,11 @@ def set_note(segment, text, *, by, request=None, where: str = "") -> dict:
         affected_user=cases.affected_by(recording, by),
         object_type="segment",
         object_id=segment.pk,
-        object_label=f"{segment.start:.1f}-{segment.end:.1f}",
+        # The recording and the time (v1.123.0), as every other row reads.
+        object_label=(
+            f"{recording.title or recording.original_filename} "
+            f"at {exports.clock(segment.start)}"
+        )[:400],
         **({"where": where} if where else {}),
     )
     if recording.case_id:
@@ -752,7 +756,11 @@ def word(case, exported_by: str) -> bytes:
 
 
 def export_name(case) -> str:
-    return exports.without_clashes(set(), f"{exports.safe_name(case.name)} notes.docx")
+    # The name, the kind and the time (v1.123.0), as the transcripts zip is named.
+    when = timezone.localtime().strftime("%Y-%m-%d %H%M")
+    return exports.without_clashes(
+        set(), f"{exports.safe_name(case.name)} notes {when}.docx"
+    )
 
 
 # Told to Gideon ------------------------------------------------------------------
