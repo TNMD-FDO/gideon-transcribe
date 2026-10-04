@@ -606,9 +606,15 @@
               <input type="search" id="recording-filter" placeholder="Filter these recordings"
                      aria-label="Filter these recordings" style="max-width: 18rem">
               <span class="muted small" id="recording-filter-count" hidden></span>
-              {% for pill in assignment_pills %}
-                <a class="pill small{% if pill.on %} on{% endif %}" href="{{ pill.href }}">{{ pill.words }}</a>
-              {% endfor %}
+              <span class="row" style="gap: 6px" id="assignment-pills"{% if may_direct and not tools_open %} hidden{% endif %}>
+                {% for pill in assignment_pills %}
+                  <a class="pill small{% if pill.on %} on{% endif %}" href="{{ pill.href }}">{{ pill.words }}</a>
+                {% endfor %}
+              </span>
+              {% if may_direct and not tools_open %}
+                {# Divide the work (v1.121.2): the one door to the assignment tools while nothing is assigned. #}
+                <button type="button" class="btn small" id="divide-the-work" title="Give the recordings to the people on the team: tick rows and assign them, or divide them evenly">Divide the work</button>
+              {% endif %}
               <span class="grow"></span>
               <a class="btn small" href="{{ list_url }}" title="Every recording in the case as a spreadsheet, with its type, length, state, speakers, notes and assignments">{% icon "download" %} Download the list</a>
             </div>
@@ -618,7 +624,7 @@
                 Divide among with its card.
               {% endcomment %}
               {{ team_members|json_script:"team-members" }}
-              <div class="row" style="gap: 8px; margin: 0 0 8px; flex-wrap: wrap" id="tick-bar">
+              <div class="row" style="gap: 8px; margin: 0 0 8px; flex-wrap: wrap" id="tick-bar"{% if not tools_open %} hidden{% endif %}>
                 <span class="small" id="tick-count">0 ticked:</span>
                 <button type="button" class="btn small" id="assign-ticked" disabled>Assign to&hellip;</button>
                 <button type="button" class="btn small" id="unassign-ticked" disabled>Unassign</button>
@@ -642,21 +648,21 @@
             {% endif %}
           {% endif %}
           <div class="tbl-wrap">
-          <table class="tbl as-cards" id="recordings">
+          <table class="tbl as-cards{% if may_direct and not tools_open %} tools-folded{% endif %}" id="recordings">
             <thead>
-              <tr>{% if may_direct %}<th style="width: 28px"><input type="checkbox" id="tick-all" aria-label="Tick every recording shown"></th>{% endif %}<th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th>{% if assignment_pills %}<th>Assigned to</th>{% endif %}<th>Notes</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
+              <tr>{% if may_direct %}<th style="width: 28px" class="col-tick"><input type="checkbox" id="tick-all" aria-label="Tick every recording shown"></th>{% endif %}<th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th>{% if assignment_pills %}<th class="col-assigned">Assigned to</th>{% endif %}<th>Notes</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
                 <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}" data-filter="{{ recording.filter_words }}"
                     {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
-                  {% if may_direct %}<td><input type="checkbox" class="tick" value="{{ recording.pk }}" aria-label="Tick {{ recording.title }}"></td>{% endif %}
+                  {% if may_direct %}<td class="col-tick"><input type="checkbox" class="tick" value="{{ recording.pk }}" aria-label="Tick {{ recording.title }}"></td>{% endif %}
                   <td><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                   {% if any_type %}<td class="muted">{{ recording.recording_type }}</td>{% endif %}
                   <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}{% if recording.summary_tonight_word %} <span class="muted small">{{ recording.summary_tonight_word|lower }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
-                  {% if assignment_pills %}<td class="assigned">{% if recording.assigned_words %}{{ recording.assigned_words }}{% if recording.reviewed_words %} <span class="pill ok small">{{ recording.reviewed_words }}</span>{% endif %}{% else %}<span class="muted">nobody</span>{% endif %}</td>{% endif %}
+                  {% if assignment_pills %}<td class="assigned col-assigned">{% if recording.assigned_words %}{{ recording.assigned_words }}{% if recording.reviewed_words %} <span class="pill ok small">{{ recording.reviewed_words }}</span>{% endif %}{% else %}<span class="muted">nobody</span>{% endif %}</td>{% endif %}
                   <td class="muted notes">{% if recording.notes_words %}<a href="{% url 'case' case.pk %}?tab=notes" class="plain">{{ recording.notes_words }}</a>{% else %}none{% endif %}</td>
                   <td class="prepared">{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>
                   {% if incidents_on %}
@@ -693,7 +699,7 @@
                         <button type="button" class="btn small save-details">Save</button>
                       </div>
                       {% if may_direct %}
-                        <div class="row" style="gap: 6px; margin-top: 6px">
+                        <div class="row assign-tools" style="gap: 6px; margin-top: 6px">
                           <label class="muted small" for="assigned-{{ recording.pk }}">Assigned to</label>
                           <select class="a-assigned" id="assigned-{{ recording.pk }}" data-recording="{{ recording.pk }}" style="max-width: 14rem">
                             <option value="">nobody</option>

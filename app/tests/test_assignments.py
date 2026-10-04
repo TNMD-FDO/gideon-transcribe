@@ -308,6 +308,38 @@ def test_the_question_counts_the_persons_own_notes(a_case, owner, friend, client
 # The page, Home and the list ----------------------------------------------------------
 
 
+def test_the_tools_fold_away_until_the_case_uses_assignment(
+    a_case, owner, friend, client
+):
+    """v1.121.2: an owner sees one button, Divide the work, and no ticks,
+    bar or pills while nothing is assigned; the tools open with the button
+    and stay open once a recording is assigned. A collaborator never sees
+    the button."""
+    sharing.grant(a_case, friend, actor=owner)
+    calls = [a_call(owner, a_case, f"Call {n:04d}") for n in range(2)]
+    signed_in(client, owner)
+    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    assert 'id="divide-the-work"' in page
+    assert 'class="tbl as-cards tools-folded"' in page
+    assert 'id="tick-bar" hidden' in page and 'id="assignment-pills" hidden' in page
+    # The tools are there for the button to unfold.
+    assert 'id="divide-among"' in page and 'class="tick"' in page
+
+    assignments.assign(calls[0], friend, by=owner)
+    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    assert 'id="divide-the-work"' not in page
+    assert "tools-folded" not in page
+    assert (
+        'id="tick-bar" hidden' not in page
+        and 'id="assignment-pills" hidden' not in page
+    )
+
+    signed_in(client, friend)
+    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    assert 'id="divide-the-work"' not in page and "tools-folded" not in page
+    assert "Mine 1" in page
+
+
 def test_the_team_the_pills_and_the_columns(a_case, owner, friend, third, client):
     share = sharing.grant(a_case, friend, actor=owner)
     sharing.grant(a_case, third, actor=owner)
@@ -323,7 +355,7 @@ def test_the_team_the_pills_and_the_columns(a_case, owner, friend, third, client
     assert "Also an owner" in page and ">Owner<" in page
     assert "2 assigned</a> &middot; 1 reviewed" in page
     assert "Mine, not reviewed 1" in page and "Unassigned 1" in page
-    assert "<th>Assigned to</th>" in page
+    assert '<th class="col-assigned">Assigned to</th>' in page
     assert "Reviewed " in page and 'class="tick"' in page
 
     narrowed = client.get(

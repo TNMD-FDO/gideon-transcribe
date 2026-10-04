@@ -399,6 +399,22 @@
   // Every change asks the server and reloads the page, so the columns, the
   // pills and the Team's counts are the server's truth and not a guess.
 
+  // Divide the work (v1.121.2): the tools are on the page but folded while
+  // nothing is assigned; the button unfolds them without a reload.
+  var divideTheWork = document.getElementById("divide-the-work");
+  if (divideTheWork) {
+    divideTheWork.addEventListener("click", function () {
+      var table = document.getElementById("recordings");
+      if (table) { table.classList.remove("tools-folded"); }
+      var bar = document.getElementById("tick-bar");
+      if (bar) { bar.hidden = false; }
+      var pills = document.getElementById("assignment-pills");
+      if (pills) { pills.hidden = false; }
+      divideTheWork.hidden = true;
+      var divide = document.getElementById("divide-among");
+      if (divide) { divide.focus(); }
+    });
+  }
   var tickBar = document.getElementById("tick-bar");
   var recordingsTable = document.getElementById("recordings");
   if (tickBar && recordingsTable) {

@@ -100,7 +100,8 @@ def test_the_five_breaks_of_the_october_walk_are_held_in_the_files():
     assert ".tbl.as-cards thead { display: none; }" in css
     for name in ("cases.html", "case.html", "clips.html", "recordings.html"):
         page = (APP / "templates" / name).read_text(encoding="utf-8")
-        assert 'class="tbl as-cards" id="recordings"' in page, name
+        # The assignment tools' fold adds a class (v1.121.2); the cards stay.
+        assert 'class="tbl as-cards' in page and 'id="recordings"' in page, name
     case = (APP / "templates" / "case.html").read_text(encoding="utf-8")
     assert 'class="tbl as-cards" id="incidents"' in case
     assert 'class="tbl as-cards" id="documents"' in case

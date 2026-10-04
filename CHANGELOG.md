@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.121.2, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The assignment tools fold away until a case uses them** (Phase 9
+chapter 3, at the maintainer's word after the first walk). An incident
+reviewed by one person was wearing the whole apparatus: a tick column on
+every row, the bar "0 ticked: Assign to, Unassign, Divide among", five
+pills and an Assigned to column reading "nobody". Now, while nothing in
+the case is assigned, an owner sees one secondary button on the
+Recordings tab, **Divide the work**, and pressing it opens the tools on the
+page without a reload. Once any recording is assigned, or the list is
+narrowed by a pill, the tools are open for everyone with the case, as
+before. A collaborator never sees the button. Nothing else changes: the
+Team block, the vocabulary block, the summaries line and the Notes page
+button stay as they were.
+
 ## v1.121.1, 2026-10-04
 
 ```

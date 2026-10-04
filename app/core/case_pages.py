@@ -261,6 +261,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     state = request.GET.get("state", "")
     shown_rows = assignments.filtered(rows, who, state, request.user)
     assignment_pills = _assignment_pills(case, rows, who, state, request.user)
+    # The tools fold away until the case uses assignment (v1.121.2): an
+    # incident reviewed by one person never sees ticks, a bar and five pills.
+    tools_open = any(one.assigned_to_id for one in rows) or bool(who or state)
 
     return render(
         request,
@@ -318,6 +321,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # the table, the tick column for those who may assign, the team
             # for the Assign to prompt and the fold's select.
             "may_direct": may_direct,
+            "tools_open": tools_open,
             "who": who,
             "state": state,
             "assignment_pills": assignment_pills,
