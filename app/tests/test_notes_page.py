@@ -362,6 +362,17 @@ def test_around_reads_the_whole_recording_and_the_pages_facts(owner, a_case, cli
         reverse("recording-around", args=[call.pk]) + "?t=100&whole=1"
     ).json()
     assert len(whole["lines"]) == 30 and whole["whole"] is True
+    # The bar's sides control (v1.122.0): nothing for a one-side recording,
+    # the two Sides' names on a two-channel call.
+    assert told["two_channel"] is False and told["sides"] == []
+    from core.recordings import Side
+
+    call.is_two_channel_call = True
+    call.save(update_fields=["is_two_channel_call"])
+    Side.objects.create(recording=call, number=1, kind=Side.CHANNEL, name="Pike")
+    Side.objects.create(recording=call, number=2, kind=Side.CHANNEL)
+    told = client.get(reverse("recording-around", args=[call.pk]) + "?t=100").json()
+    assert told["two_channel"] is True and told["sides"] == ["Pike", "side 2"]
 
 
 # Find --------------------------------------------------------------------------------

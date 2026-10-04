@@ -99,6 +99,18 @@ def test_the_clips_page_is_one_table_with_a_player():
     assert 'new Event("rows-changed")' in js
 
 
+def test_the_notes_page_bar_has_boost_and_the_sides():
+    """v1.122.0: the recording page's two controls on the Notes page's bar,
+    the audio graph built again for each player the left side makes."""
+    bar = page("notes-page.html")
+    assert 'id="np-boost"' in bar and 'id="np-balance"' in bar
+    assert 'id="np-balance-label" hidden' in bar
+    js = script("notes-page.js")
+    assert "createMediaElementSource(player)" in js
+    assert "sound.source.disconnect()" in js
+    assert "told.two_channel" in js
+
+
 def test_the_panel_pages_spread_out_and_the_guides_have_their_rail():
     for name in (
         "panel/audit.html",

@@ -1993,6 +1993,13 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
   font-size: 0.85em;
   white-space: pre-wrap;
 }
+/* One Divide's rows under one line (v1.122.0): the fold sits under the line
+   and its inner table keeps the page's look at a smaller size. */
+.audit-group td { font-weight: 600; }
+.audit-group-rows > td { padding: 0 10px 8px; }
+.audit-group-rows summary { cursor: pointer; color: var(--muted); }
+.audit-group-rows .tbl { margin-top: 6px; font-size: 0.9em; }
+.audit-group-rows .tbl td { font-weight: 400; }
 
 .grid2 {
   display: grid;

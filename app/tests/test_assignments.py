@@ -209,6 +209,33 @@ def test_divide_deals_the_unassigned_evenly_oldest_first(
     assert len({row.details["divide"] for row in divided}) == 1
 
 
+def test_the_audit_log_page_groups_a_divides_rows_under_one_line(
+    a_case, owner, friend, third, client
+):
+    """v1.122.0: one line, "Recordings divided among 2 people: 6", opened to
+    the six rows; a recording assigned by hand stays a row of its own."""
+    from core.panel_pages import group_divides
+
+    sharing.grant(a_case, friend, actor=owner)
+    sharing.grant(a_case, third, actor=owner)
+    for n in range(6):
+        a_call(owner, a_case, f"Call {n:04d}")
+    assignments.divide(a_case, [friend, third], by=owner)
+    assignments.assign(a_call(owner, a_case, "Call 0099"), friend, by=owner)
+    entries = group_divides(list(audit.Row.objects.order_by("-at", "-id")))
+    groups = [one for one in entries if "divide" in one]
+    assert len(groups) == 1 and len(groups[0]["rows"]) == 6
+    assert groups[0]["line"] == "Recordings divided among 2 people: 6"
+    assert sum(1 for one in entries if "row" in one) == audit.Row.objects.count() - 6
+    admin = User.objects.create_local_admin("transcribe-admin", PASSWORD)
+    signed_in(client, admin)
+    page = client.get(reverse("panel-audit")).content.decode()
+    assert "Recordings divided among 2 people: 6" in page
+    assert "<details>" in page and "The 6 rows" in page
+    assert page.count("cause: divided") == 6
+    assert page.count("cause: one") == 1
+
+
 def test_removing_a_person_clears_their_assignments_and_transfer_keeps_them(
     a_case, owner, friend, third
 ):

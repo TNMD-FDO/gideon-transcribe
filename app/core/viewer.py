@@ -489,6 +489,14 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
             "length": exports.clock(length) if length else "",
             "length_seconds": length,
             "type": recording.recording_type,
+            # The bar's sides control (v1.122.0): the two Sides' names on a
+            # two-channel call, as the recording page's Balance has them.
+            "two_channel": recording.is_two_channel_call,
+            "sides": (
+                [str(side) for side in recording.sides.all()]
+                if recording.is_two_channel_call
+                else []
+            ),
             "summarised": assistant.Summary.objects.filter(
                 recording=recording, state=assistant.DONE
             ).exists(),

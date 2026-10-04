@@ -1013,6 +1013,41 @@ def _tell(request, message: str) -> None:
 A_PAGE = 100
 
 
+def group_divides(rows) -> list[dict]:
+    """The page's rows as entries, a Divide's rows folded under one line
+    (Phase 9 chapter 3, v1.122.0): "recording assigned" rows that follow one
+    another and carry the same divide key become one entry, "Recordings
+    divided among 4 people: 240", opened to the rows. Every other row is an
+    entry of its own. Nothing is dropped and nothing is rewritten: the rows
+    are the record, the line is how the page reads them."""
+    entries: list[dict] = []
+    for row in rows:
+        details = row.details or {}
+        key = details.get("divide") if row.event == "recording assigned" else None
+        last = entries[-1] if entries else None
+        if key and last is not None and last.get("divide") == key:
+            last["rows"].append(row)
+            last["people"].add(details.get("to", ""))
+            continue
+        if key:
+            entries.append(
+                {
+                    "divide": key,
+                    "first": row,
+                    "rows": [row],
+                    "people": {details.get("to", "")},
+                }
+            )
+        else:
+            entries.append({"row": row})
+    for entry in entries:
+        if "divide" in entry:
+            count, people = len(entry["rows"]), len(entry["people"])
+            who = "1 person" if people == 1 else f"{people} people"
+            entry["line"] = f"Recordings divided among {who}: {count}"
+    return entries
+
+
 @admins_only
 def audit_log(request: HttpRequest) -> HttpResponse:
     """The audit viewer. Opening or filtering it is not itself logged."""
@@ -1071,7 +1106,7 @@ def audit_log(request: HttpRequest) -> HttpResponse:
         "panel/audit.html",
         {
             **furniture(request, "panel-audit"),
-            "rows": rows[start : start + A_PAGE],
+            "entries": group_divides(rows[start : start + A_PAGE]),
             "found": found,
             # Not "page": the nav uses that word for which page of the app
             # this is.

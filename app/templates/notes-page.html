@@ -51,6 +51,16 @@
         <label class="small">Speed
           <select id="np-speed"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select>
         </label>
+        {# Boost and the sides (v1.122.0): the recording page's two controls, kept from call to call. #}
+        <label class="small" title="Volume above normal, for a quiet call; stays as you step to the next">Boost
+          <input type="range" id="np-boost" min="100" max="400" step="25" value="100">
+          <span id="np-boost-figure" class="mono">100%</span>
+        </label>
+        <label class="small" id="np-balance-label" hidden title="Shift the sound towards one side of the call">
+          <span id="np-side-1"></span>
+          <input type="range" id="np-balance" min="-100" max="100" step="10" value="0">
+          <span id="np-side-2"></span>
+        </label>
         <span class="muted small" id="np-bar-said">The player's own controls are under the picture.</span>
       </div>
       <canvas id="np-wave" class="np-wave" height="44" aria-hidden="true"></canvas>

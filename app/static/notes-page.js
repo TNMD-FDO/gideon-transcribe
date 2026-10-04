@@ -93,6 +93,8 @@
     document.getElementById("np-bar-said").textContent = player && player.tagName === "VIDEO"
       ? "The player's own controls are under the picture."
       : "The player's own controls are above the lines.";
+    showSides(told);
+    if (first) { applySound(player); }
     showEventNote();
   }
 
@@ -469,6 +471,64 @@
     var asked = left.asked();
     if (asked) { popOut(state.byId[asked.recording]); }
   });
+
+  // Boost and the sides (v1.122.0) -----------------------------------------------------
+  //
+  // The recording page's audio graph, made again for every player the left
+  // side builds: a media element is handed to Web Audio once, and the Preview
+  // makes a new element for every recording it opens. The slider's setting
+  // carries from call to call, so a reviewer who turns a quiet batch up
+  // turns it up once. Nothing is built until a slider leaves its rest, so a
+  // player nobody has touched plays as the browser plays it.
+
+  var sound = { context: null, source: null, gain: null, panner: null, player: null };
+  var boost = document.getElementById("np-boost");
+  var balance = document.getElementById("np-balance");
+
+  function soundFor(player) {
+    if (!player) { return false; }
+    if (sound.player === player && sound.source) { return true; }
+    try {
+      if (!sound.context) { sound.context = new (window.AudioContext || window.webkitAudioContext)(); }
+      if (sound.source) { sound.source.disconnect(); }
+      sound.gain = sound.context.createGain();
+      sound.panner = sound.context.createStereoPanner ? sound.context.createStereoPanner() : null;
+      sound.source = sound.context.createMediaElementSource(player);
+      if (sound.panner) { sound.source.connect(sound.panner); sound.panner.connect(sound.gain); } else { sound.source.connect(sound.gain); }
+      sound.gain.connect(sound.context.destination);
+      sound.player = player;
+      if (sound.context.state === "suspended") { sound.context.resume(); }
+      return true;
+    } catch (error) {
+      sound.source = null; sound.player = null;
+      return false;
+    }
+  }
+
+  function applySound(player) {
+    var per = parseInt(boost.value, 10) || 100;
+    var pan = parseInt(balance.value, 10) || 0;
+    if (per === 100 && pan === 0 && sound.player !== player) { return; }
+    if (!soundFor(player)) { return; }
+    sound.gain.gain.value = per / 100;
+    if (sound.panner) { sound.panner.pan.value = pan / 100; }
+  }
+
+  function showSides(told) {
+    var label = document.getElementById("np-balance-label");
+    var shown = !!(told && told.two_channel && told.sides && told.sides.length >= 2);
+    label.hidden = !shown;
+    if (shown) {
+      document.getElementById("np-side-1").textContent = told.sides[0];
+      document.getElementById("np-side-2").textContent = told.sides[1];
+    }
+  }
+
+  boost.addEventListener("input", function () {
+    document.getElementById("np-boost-figure").textContent = boost.value + "%";
+    applySound(left.media());
+  });
+  balance.addEventListener("input", function () { applySound(left.media()); });
 
   // The player bar --------------------------------------------------------------------
 

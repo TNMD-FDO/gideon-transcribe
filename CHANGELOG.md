@@ -21,6 +21,35 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.122.0, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Three small things left from Phase 9.**
+
+- **The Audit log page groups a Divide.** Divide among writes one Recording
+  assigned row per recording, as the specification asks, so a Divide of 240
+  calls among four people was 240 rows on the page. The page now folds the
+  rows of one Divide under one line, "Recordings divided among 4 people:
+  240", with the rows beneath it behind "The 240 rows". The rows themselves
+  are unchanged: the line is how the page reads them.
+- **Boost and the sides on the Notes page.** The bar over the waveform
+  gains the recording page's Boost, and on a two-channel call the control
+  that shifts the sound towards one side, named for the call's two Sides.
+  The setting stays as you step from call to call, so a quiet batch is
+  turned up once. The audio graph is built again for each recording the
+  page opens, since a player is handed to the browser's audio once.
+- **The disk question answered, nothing built.** Measured on the office's
+  server across 64 recordings and 21.6 hours: the ASR audio the
+  transcription service reads is 115 MB an hour per Side, under a tenth of
+  what a recording keeps; the uploaded bytes and the Playback copy are the
+  rest, and for a sound file both are small. No sweep of the ASR audio is
+  planned. The figures are in `docs/research/disk-per-hour.md` and the admin
+  guide.
+
 ## v1.121.4, 2026-10-04
 
 ```
