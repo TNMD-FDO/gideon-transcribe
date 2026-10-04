@@ -283,6 +283,11 @@ urlpatterns = [
     ),
     # Download notes (Phase 8 chapter 2): every note in the case, as Word.
     path("case/<uuid:case_id>/notes.docx", case_pages.notes_export, name="case-notes"),
+    path(
+        "case/<uuid:case_id>/recordings.csv",
+        case_pages.recordings_csv,
+        name="case-list",
+    ),
     path("case/<uuid:case_id>/restore", case_pages.restore_case, name="restore-case"),
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     # The case's videos prepared for summaries and chat, on purpose (Phase 4 ch. 7).

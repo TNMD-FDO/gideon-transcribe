@@ -285,6 +285,10 @@ def unenriched(case, recording=None) -> list:
     not waiting for tonight."""
     from core.jobs import Transcript
 
+    # The settings once for the case, not once per transcript (Phase 9
+    # chapter 1): each read is a query, and a case may hold 800 recordings.
+    if not assistant.record_on():
+        return []
     rows = Transcript.objects.filter(recording__case=case).select_related("recording")
     if recording is not None:
         rows = rows.filter(recording=recording)
@@ -299,7 +303,7 @@ def unenriched(case, recording=None) -> list:
             TONIGHT,
         ):
             continue
-        if eligible(transcript.recording):
+        if assistant.has_picture(transcript.recording):
             found.append(transcript)
     return found
 
@@ -431,13 +435,17 @@ def requests_waiting():
 # What the pages say ---------------------------------------------------------------
 
 
-def words(transcript) -> tuple[str, str]:
+def words(transcript, is_eligible: bool | None = None) -> tuple[str, str]:
     """The Vision column's words and the pill's tone, in the one family the
-    chapter fixes; nothing for sound alone."""
+    chapter fixes; nothing for sound alone. A page drawing hundreds of rows
+    says whether the recording is eligible itself, having read the settings
+    once (Phase 9 chapter 1)."""
     if transcript is None:
         return "", ""
     recording = transcript.recording
-    if not eligible(recording):
+    if is_eligible is None:
+        is_eligible = eligible(recording)
+    if not is_eligible:
         return "", ""
     state = transcript.prepare_state
     if state == assistant.DONE:

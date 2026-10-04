@@ -475,7 +475,10 @@ def carry(kept: list[dict], transcript) -> int:
 # The case's notes ---------------------------------------------------------------------
 
 
-def _line_rows(case) -> list[dict]:
+def _line_rows(case, links: dict | None = None) -> list[dict]:
+    # The All cameras links come from one query for the case (Phase 9
+    # chapter 1), not one per row.
+    links = incidents.links_in(case) if links is None else links
     rows = []
     found = (
         Segment.objects.filter(transcript__recording__case=case)
@@ -489,14 +492,20 @@ def _line_rows(case) -> list[dict]:
         rows.append(
             {
                 "kind": "line",
+                "id": one.pk,
                 "text": one.note,
                 "by": one.note_by.shown_name if one.note_by else "",
+                "by_id": one.note_by_id,
                 "on": date_of(one.note_changed),
                 "changed": one.note_changed,
                 "where": recording.title,
+                "recording_id": recording.pk,
+                "type": recording.recording_type,
+                "created": recording.created,
+                "at": one.start,
                 "when": exports.clock(one.start),
                 "url": f"{viewer}?t={one.start:.1f}&note=1",
-                "all_cameras": incidents.all_cameras_url(recording, one.start),
+                "all_cameras": incidents.url_at(links.get(recording.pk), one.start),
                 "rests_on": one.text,
                 "who": one.speaker,
             }
@@ -504,9 +513,10 @@ def _line_rows(case) -> list[dict]:
     return rows
 
 
-def _moment_rows(case) -> list[dict]:
+def _moment_rows(case, links: dict | None = None) -> list[dict]:
     """The notes at moments where nothing was said (v1.99.0), listed with the
     notes on lines."""
+    links = incidents.links_in(case) if links is None else links
     rows = []
     found = MomentNote.objects.filter(recording__case=case).select_related(
         "recording", "note_by"
@@ -517,19 +527,86 @@ def _moment_rows(case) -> list[dict]:
         rows.append(
             {
                 "kind": "moment",
+                "id": one.pk,
                 "text": one.note,
                 "by": one.note_by.shown_name if one.note_by else "",
+                "by_id": one.note_by_id,
                 "on": date_of(one.note_changed),
                 "changed": one.note_changed,
                 "where": recording.title,
+                "recording_id": recording.pk,
+                "type": recording.recording_type,
+                "created": recording.created,
+                "at": one.at,
                 "when": exports.clock(one.at),
                 "url": f"{viewer}?t={one.at:.1f}&note=1",
-                "all_cameras": incidents.all_cameras_url(recording, one.at),
+                "all_cameras": incidents.url_at(links.get(recording.pk), one.at),
                 "rests_on": "",
                 "who": "",
             }
         )
     return rows
+
+
+def counts_in(case) -> dict:
+    """How many notes each recording in a Case has and who wrote them, for the
+    Recordings tab's Notes column (Phase 9 chapter 1): by recording id,
+    {"count": n, "writers": [names, the busiest first]}. Three queries for the
+    whole case, whatever its size."""
+    from core.models import User
+
+    tally: dict = {}
+
+    def add(recording_id, writer_id):
+        one = tally.setdefault(recording_id, {"count": 0, "by": {}})
+        one["count"] += 1
+        if writer_id is not None:
+            one["by"][writer_id] = one["by"].get(writer_id, 0) + 1
+
+    lines = (
+        Segment.objects.filter(transcript__recording__case=case)
+        .exclude(note="")
+        .filter(same_as_other_side=False)
+        .values_list("transcript__recording_id", "note_by_id")
+    )
+    for recording_id, writer_id in lines:
+        add(recording_id, writer_id)
+    for recording_id, writer_id in MomentNote.objects.filter(
+        recording__case=case
+    ).values_list("recording_id", "note_by_id"):
+        add(recording_id, writer_id)
+    writer_ids = {w for one in tally.values() for w in one["by"]}
+    names = {}
+    if writer_ids:
+        for person in User.objects.filter(pk__in=writer_ids):
+            names[person.pk] = person.shown_name
+    counts = {}
+    for recording_id, one in tally.items():
+        ordered = sorted(
+            one["by"].items(), key=lambda item: (-item[1], names.get(item[0], ""))
+        )
+        counts[recording_id] = {
+            "count": one["count"],
+            "writers": [names.get(w, "") for w, _ in ordered if names.get(w)],
+        }
+    return counts
+
+
+def count_words(found: dict | None) -> str:
+    """The Notes column's words: "3 notes, A. Okafor and D. Chen", two writers
+    named and then "and N more"; nothing when there is no note."""
+    if not found or not found["count"]:
+        return ""
+    count = found["count"]
+    said = f"{count} note{'s' if count != 1 else ''}"
+    writers = found["writers"]
+    if len(writers) == 1:
+        said += f", {writers[0]}"
+    elif len(writers) == 2:
+        said += f", {writers[0]} and {writers[1]}"
+    elif len(writers) > 2:
+        said += f", {writers[0]}, {writers[1]} and {len(writers) - 2} more"
+    return said
 
 
 def _event_rows(case) -> list[dict]:
@@ -572,8 +649,9 @@ def _event_rows(case) -> list[dict]:
 def of_case(case, kind: str = "") -> dict:
     """Every note in the case, newest first, for the Notes tab and its export."""
     # The notes at moments are listed with the notes on lines (v1.99.0).
-    moments = _moment_rows(case)
-    lines = _line_rows(case) + moments
+    links = incidents.links_in(case)
+    moments = _moment_rows(case, links)
+    lines = _line_rows(case, links) + moments
     events = _event_rows(case)
     rows = {"lines": lines, "events": events}.get(kind, lines + events)
     # Newest first; a note without a date (none is written that way) goes last.

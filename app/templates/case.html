@@ -537,20 +537,35 @@
             prepared cells are named for cases.js, which refreshes them while
             a video is being prepared.
           {% endcomment %}
+          {% comment %}
+            Fit for 800 (Phase 9 chapter 1): the box narrows the rows as you
+            type, by title, type and who added them (cases.js); Download the
+            list is the rows as a spreadsheet.
+          {% endcomment %}
+          {% if recordings %}
+            <div class="row" style="gap: 8px; margin: 10px 0 8px; flex-wrap: wrap">
+              <input type="search" id="recording-filter" placeholder="Filter these recordings"
+                     aria-label="Filter these recordings" style="max-width: 18rem">
+              <span class="muted small" id="recording-filter-count" hidden></span>
+              <span class="grow"></span>
+              <a class="btn small" href="{{ list_url }}" title="Every recording in the case as a spreadsheet, with its type, length, state, speakers and notes">{% icon "download" %} Download the list</a>
+            </div>
+          {% endif %}
           <div class="tbl-wrap">
           <table class="tbl as-cards" id="recordings">
             <thead>
-              <tr><th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
+              <tr><th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th><th>Notes</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
-                <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
+                <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}" data-filter="{{ recording.filter_words }}"
                     {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
                   <td><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                   {% if any_type %}<td class="muted">{{ recording.recording_type }}</td>{% endif %}
                   <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
+                  <td class="muted notes">{% if recording.notes_words %}<a href="{% url 'case' case.pk %}?tab=notes" class="plain">{{ recording.notes_words }}</a>{% else %}none{% endif %}</td>
                   <td class="prepared">{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>
                   {% if incidents_on %}
                     <td class="incident">{% if recording.incident_name %}<a href="{{ recording.incident_url }}">{{ recording.incident_name }}</a>{% elif recording.is_video_for_incidents %}<span class="muted">none</span>{% endif %}</td>
@@ -566,7 +581,7 @@
                   </td>
                 </tr>
                 <tr class="detail-row" hidden>
-                  <td colspan="{% if incidents_on %}8{% else %}7{% endif %}">
+                  <td colspan="{% if incidents_on %}9{% else %}8{% endif %}">
                     <div class="detail" id="detail-{{ recording.pk }}" data-recording="{{ recording.pk }}">
                       {% if recording.description %}
                         <p class="small" style="margin: 0 0 8px">{{ recording.description }}</p>
@@ -621,7 +636,7 @@
                         <button type="button" class="ghost small danger delete"
                                 data-recording="{{ recording.pk }}"
                                 data-title="{{ recording.title }}"
-                                data-clips="{{ recording.clips.count }}">Delete</button>
+                                data-clips="{{ recording.clips_count }}">Delete</button>
                       </div>
                     </div>
                   </td>

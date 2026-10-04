@@ -66,6 +66,31 @@
     });
   }
 
+  // The case page's filter box (Phase 9 chapter 1, Fit for 800): the rows
+  // narrow as you type, by the title, the type and who added them, which the
+  // server put on each row. The detail folds follow (recordings.js listens
+  // for rows-changed), and the count says how many are left.
+  var recordingFilter = document.getElementById("recording-filter");
+  var recordingTable = document.getElementById("recordings");
+  if (recordingFilter && recordingTable) {
+    var pickRows = Array.prototype.slice.call(recordingTable.querySelectorAll("tbody tr.pick"));
+    var filterCount = document.getElementById("recording-filter-count");
+    recordingFilter.addEventListener("input", function () {
+      var wanted = recordingFilter.value.trim().toLowerCase();
+      var shown = 0;
+      pickRows.forEach(function (row) {
+        var words = row.dataset.filter || row.textContent.toLowerCase();
+        row.hidden = wanted !== "" && words.indexOf(wanted) === -1;
+        if (!row.hidden) { shown += 1; }
+      });
+      if (filterCount) {
+        filterCount.hidden = wanted === "";
+        filterCount.textContent = shown + " of " + pickRows.length + " shown";
+      }
+      recordingTable.dispatchEvent(new Event("rows-changed"));
+    });
+  }
+
   // The Cases page's New case box -------------------------------------------
 
   var openNew = document.getElementById("open-new");

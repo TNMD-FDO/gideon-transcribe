@@ -191,6 +191,8 @@ Your office may have Cases turned on. A case is a named page of recordings for o
 
 The Cases page lists your cases. **New case** makes one; there is nothing to type but its name. Clicking a case opens its page, which is where **Add recordings**, the search over its transcripts, and **Download all transcripts** for the whole case are.
 
+A case of hundreds of recordings opens as fast as a case of ten. **Filter these recordings**, the box over the table, narrows the rows as you type, by title, type or who added them, and says how many are left. The **Notes** column says how many notes each recording carries and who wrote them. **Download the list** gives the whole table as a spreadsheet file (a CSV, which Excel opens with one click): title, type, when and by whom it was added, length, state, speakers, notes and their writers, and the description.
+
 A recording goes into a case either at upload, with **Add to case**, or afterwards with **Move to case**, from the Recordings page, from the viewer's Details, or from the sign-out dialog. Moving is instant whatever the size, and it takes the transcript, the clips and the corrections along. Nothing ever moves back out of a case; the only way a recording leaves one is **Delete**.
 
 Deleting a case asks first and names what it is taking. It cannot be undone.

@@ -19,6 +19,36 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.116.0, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Fit for 800** (Phase 9 chapter 1): the case page made for a case of
+hundreds of recordings.
+
+- **The rows from a handful of queries.** The case page built every row
+  with its own questions to the database (its newest job, its speakers,
+  its incident, its clip count), and twice over. It now asks a handful of
+  questions for the whole case and joins them, so a case of 800 calls
+  draws in a moment.
+- **Filter these recordings.** A box over the Recordings tab narrows the
+  rows as you type, by title, type or who added them, with "12 of 812
+  shown" beside it; the details fold follows the rows left.
+- **A Notes column** on the Recordings tab: "3 notes, A. Okafor and
+  D. Chen", two writers named and then "and N more".
+- **Download the list.** The case's recordings as a spreadsheet file (a
+  CSV, UTF-8 with a byte order mark so Excel keeps the accents): title,
+  type, added on and by, length, state, speakers, notes, note writers and
+  description. One audit row, "case list downloaded", with the count.
+- **The Notes tab's rows** carry the recording, its type, the moment and
+  the writer for the Notes page to come, and the one incident lookup per
+  row is one per case.
+
 **The Phase 9 specification is published**, `docs/spec/SPEC-PHASE-9.md`,
 "The review of many recordings": six chapters, each a release to come,
 for a Case of hundreds of recordings reviewed by a team: the case page

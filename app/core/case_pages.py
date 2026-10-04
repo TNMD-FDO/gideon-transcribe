@@ -249,6 +249,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # The pane about the case says where its clock stands, as its row on the
     # Cases page does.
     left = retention.days_left(case)
+    # The rows once, from a handful of queries (Phase 9 chapter 1).
+    rows = _rows_for(case)
 
     return render(
         request,
@@ -295,11 +297,10 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "is_owner": role == "owner",
             "role": role,
             **_sharing_context(case, role),
-            "recordings": _rows_for(case),
+            "recordings": rows,
             # The Type column only when a row has a type (v1.75.1).
-            "any_type": any(
-                getattr(one, "recording_type", "") for one in _rows_for(case)
-            ),
+            "any_type": any(getattr(one, "recording_type", "") for one in rows),
+            "list_url": reverse("case-list", args=[case.pk]),
             "vision_line": vision.line(case),
             "vision_pending": vision.pending(case),
             "vision_offers": vision.offers(case, user=request.user),
@@ -448,10 +449,61 @@ def _speakers_tab(case: Case) -> dict:
 
 
 def _rows_for(case: Case) -> list:
-    """Each Recording with the words its row shows about its Speakers and state."""
+    """Each Recording with the words its row shows about its Speakers, its
+    state and its notes.
+
+    A handful of queries for the whole case, not a few per row (Phase 9
+    chapter 1, for a case of 800 calls): the recordings with their transcript
+    and uploader, the newest job each, the speakers, the cameras, the notes
+    and the clip counts, each in one query and joined here.
+    """
+    from collections import defaultdict
+
+    from django.db.models import Count
+
+    from core import assistant, incidents
+    from core.clips import Clip
+    from core.jobs import Job
+
+    # The settings once, not once per row: each read is a query.
+    incidents_on = incidents.on()
+    vision_on = assistant.record_on()
+    recordings = list(
+        case.recordings.select_related("transcript", "user").order_by("-created")
+    )
+    ids = [one.pk for one in recordings]
+    newest: dict = {}
+    for job in (
+        Job.objects.filter(recording_id__in=ids)
+        .select_related("batch")
+        .order_by("recording_id", "-created")
+    ):
+        newest.setdefault(job.recording_id, job)
+    labels = defaultdict(set)
+    for recording_id, speaker in (
+        Segment.objects.filter(transcript__recording_id__in=ids)
+        .exclude(speaker="")
+        .values_list("transcript__recording_id", "speaker")
+        .distinct()
+    ):
+        labels[recording_id].add(speaker)
+    cameras: dict = {}
+    if incidents_on:
+        for camera in incidents.IncidentCamera.objects.filter(
+            recording_id__in=ids
+        ).select_related("incident"):
+            cameras.setdefault(camera.recording_id, camera)
+    note_counts = notes.counts_in(case)
+    clip_counts = dict(
+        Clip.objects.filter(recording_id__in=ids)
+        .values_list("recording_id")
+        .annotate(n=Count("id"))
+        .values_list("recording_id", "n")
+    )
+
     rows = []
-    for one in case.recordings.order_by("-created"):
-        job = one.jobs.order_by("-created").first()
+    for one in recordings:
+        job = newest.get(one.pk)
         one.being_replaced = bool(
             job is not None and job.is_live and job.batch.is_reprocessing
         )
@@ -462,25 +514,100 @@ def _rows_for(case: Case) -> list:
             if one.is_live and not hasattr(one, "transcript")
             else ""
         )
-        one.speakers_in_words = _speakers_in_words(one)
+        one.speakers_in_words = _speakers_in_words(labels.get(one.pk, set()))
+        one.notes_words = notes.count_words(note_counts.get(one.pk))
+        one.clips_count = clip_counts.get(one.pk, 0)
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
         # The Vision column (Phase 4 chapter 5), for a video.
-        one.prepare_word, one.prepare_tone = vision.words(
-            getattr(one, "transcript", None)
-        )
         transcript = getattr(one, "transcript", None)
+        if transcript is not None:
+            # The transcript came with the recording; spare its way back.
+            transcript.recording = one
+        is_eligible = bool(
+            vision_on and transcript is not None and assistant.has_picture(one)
+        )
+        one.prepare_word, one.prepare_tone = vision.words(transcript, is_eligible)
         one.vision_state = getattr(transcript, "prepare_state", "")
-        one.vision_offered = bool(transcript is not None and vision.eligible(one))
+        one.vision_offered = is_eligible
         # The Clock in the picture and Incident columns (Phase 6 chapter 1).
-        from core import incidents
-
-        one.is_video_for_incidents = incidents.on() and incidents.is_video(one)
-        camera = incidents.incident_of(one) if incidents.on() else None
+        one.is_video_for_incidents = incidents_on and incidents.is_video(one)
+        camera = cameras.get(one.pk)
         one.incident_name = camera.incident.name if camera else ""
         one.incident_url = camera.incident.url() if camera else ""
+        # What the filter box matches (Phase 9 chapter 1): the title, the type
+        # and who added it.
+        one.filter_words = " ".join(
+            part
+            for part in (one.title, one.recording_type, one.user.shown_name)
+            if part
+        ).lower()
         rows.append(one)
     return rows
+
+
+@login_required
+def recordings_csv(request: HttpRequest, case_id) -> HttpResponse:
+    """Download the list (Phase 9 chapter 1): the case's recordings as a CSV
+    for the office's own spreadsheet, oldest added first, UTF-8 with a byte
+    order mark so a desktop spreadsheet keeps the accents. One audit row with
+    the count, never a title."""
+    import csv
+
+    from django.utils import timezone
+
+    _on_or_404()
+    case = _their_case(request, case_id)
+    rows = list(reversed(_rows_for(case)))
+    holder = io.StringIO()
+    writer = csv.writer(holder)
+    writer.writerow(
+        [
+            "Title",
+            "Type",
+            "Added on",
+            "Added by",
+            "Length",
+            "State",
+            "Speakers",
+            "Notes",
+            "Note writers",
+            "Description",
+        ]
+    )
+    counts = notes.counts_in(case)
+    for one in rows:
+        found = counts.get(one.pk) or {"count": 0, "writers": []}
+        writer.writerow(
+            [
+                one.title,
+                one.recording_type,
+                f"{timezone.localtime(one.created):%Y-%m-%d %H:%M}",
+                one.user.shown_name,
+                one.length if one.duration_seconds else "",
+                one.state_word,
+                one.speakers_in_words,
+                found["count"],
+                ", ".join(found["writers"]),
+                one.description,
+            ]
+        )
+    audit.write(
+        audit.Category.EXPORTS,
+        "case list downloaded",
+        actor=request.user,
+        request=request,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        count=len(rows),
+    )
+    cases.note_activity(case, by=request.user)
+    return exports.hand_over(
+        holder.getvalue().encode("utf-8-sig"),
+        f"{case.name} recordings.csv",
+        "text/csv; charset=utf-8",
+    )
 
 
 @login_required
@@ -512,18 +639,9 @@ def vision_case(request: HttpRequest, case_id) -> HttpResponse:
     return redirect(reverse("case", args=[case.pk]))
 
 
-def _speakers_in_words(recording: Recording) -> str:
-    """Reads "2 named, 1 unnamed", and says nothing at all when there are none."""
-    transcript = getattr(recording, "transcript", None)
-    if transcript is None:
-        return ""
-    labels = set(
-        Segment.objects.filter(transcript=transcript)
-        .exclude(speaker="")
-        .order_by("speaker")
-        .values_list("speaker", flat=True)
-        .distinct()
-    )
+def _speakers_in_words(labels: set) -> str:
+    """Reads "2 named, 1 unnamed" from a transcript's speaker labels, and says
+    nothing at all when there are none."""
     if not labels:
         return ""
     # The app's own labels are Speaker 1 and Side 1 Speaker 1; the rest are names.

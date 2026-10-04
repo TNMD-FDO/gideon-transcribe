@@ -1110,10 +1110,36 @@ def link_for(recording) -> dict | None:
 
 def all_cameras_url(recording, seconds: float) -> str:
     """The Incident page at this recording's moment, or ""."""
-    link = link_for(recording)
+    return url_at(link_for(recording), seconds)
+
+
+def url_at(link: dict | None, seconds: float) -> str:
+    """All cameras at a moment, from a link link_for or links_in gave; or ""."""
     if link is None:
         return ""
     return f"{link['url']}?t={link['starts_at'] + float(seconds):.2f}"
+
+
+def links_in(case) -> dict:
+    """Every synced camera's All cameras link in one Case, by recording id, in
+    one query (Phase 9 chapter 1): what link_for gives, for a page that draws
+    hundreds of rows."""
+    if not on():
+        return {}
+    links = {}
+    for camera in IncidentCamera.objects.filter(incident__case=case).select_related(
+        "incident"
+    ):
+        if camera.recording_id in links or not camera.is_placed():
+            continue
+        if not camera.is_synced():
+            continue
+        links[camera.recording_id] = {
+            "url": camera.incident.url(),
+            "starts_at": camera.starts_at,
+            "name": camera.incident.name,
+        }
+    return links
 
 
 def wall_of(incident: Incident) -> list[IncidentCamera]:
