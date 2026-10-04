@@ -228,7 +228,7 @@ Written 2026-10-04 from the maintainer's question of 2026-10-03, "how do we have
 
 ### Reached
 
-- A secondary button **Open as a page** beside Download notes on the case page's Notes tab, and each row's link may carry the note so the page opens on it; else the page opens on the first note in call order. The rail folds to icons on the page, as on the incident page, and the page takes the whole width.
+- A secondary button **Notes page** in the case page's head beside Add recordings, on every case (since v1.121.1, from the walk of 2026-10-04; until then Open as a page beside Download notes on the Notes tab, which read as an export and was absent on a case with no notes), and each Notes tab row's link may carry the note so the page opens on it; else the page opens on the first note in call order. The rail folds to icons on the page, as on the incident page, and the page takes the whole width.
 
 ### The left: the recording in hand
 
@@ -243,6 +243,10 @@ Written 2026-10-04 from the maintainer's question of 2026-10-03, "how do we have
 - **Open the call**, in the head or on a group head's Open, opens the whole call over the Notes page, which stays behind, dimmed, exactly as it was: the Preview grown to the whole recording. The pop-out carries the head's facts and pills, **Mark reviewed**, **Export** and **Open the full call** in its head with Close; the player bar with Follow; the waveform with the notes marked; the full transcript, the current line lit with its note editable under it and a **note** mark on every noted line; beside the transcript, the recording's summary in its parts and the Speakers with their sides.
 - **Playback moves with it.** The pop-out takes the sound from the left at the same moment and hands it back on Close, so nothing plays twice.
 - **Two ways out.** Esc or Close returns to the notes exactly where they were, the layers' rule. **Open the full call** leaves for the recording page, for its clips, its Speakers page and its chat, the one door out.
+
+### Notes on events
+
+Since v1.121.1: a note on an incident's event is on the page too, listed under the camera the event sits on (its own camera, else the placed camera running at that moment), at the event's moment on that camera's clock, marked "on the event" with the event's time of day; pressing it plays the camera there and the note is shown under the nearest line read-only, since the chronology owns it, with a link to the event. The lead counts them apart ("7 notes on 3 of 4 recordings: 4 on lines, 3 on events").
 
 ### The right: the work panel
 

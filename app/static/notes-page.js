@@ -88,6 +88,34 @@
     if (player && first) {
       player.playbackRate = parseFloat(document.getElementById("np-speed").value) || 1;
     }
+    // The bar's sentence by the kind of recording (v1.121.1): a video's
+    // controls sit under the picture, a sound recording's above the lines.
+    document.getElementById("np-bar-said").textContent = player && player.tagName === "VIDEO"
+      ? "The player's own controls are under the picture."
+      : "The player's own controls are above the lines.";
+    showEventNote();
+  }
+
+  // A note on an event (v1.121.1): shown under the line nearest its moment,
+  // read-only, since the chronology owns it, with the event's time of day
+  // and a link to the event.
+  function showEventNote() {
+    var host = document.getElementById("moment");
+    Array.prototype.forEach.call(host.querySelectorAll(".np-event-note"), function (one) { one.remove(); });
+    var note = current();
+    var asked = left.asked();
+    if (!note || note.kind !== "event" || !asked || asked.recording !== note.recording) { return; }
+    var after = null;
+    Array.prototype.forEach.call(host.querySelectorAll(".preview-line[data-at]"), function (row) {
+      if (parseFloat(row.dataset.at) <= note.at + 0.05) { after = row; }
+    });
+    var box = document.createElement("div");
+    box.className = "np-event-note";
+    box.innerHTML = "<span class='muted'>On the event &ldquo;" + escape(note.said) + "&rdquo; at " + escape(note.event_clock) +
+      (note.by ? ", by " + escape(note.by) : "") + ":</span> " + escape(note.text) +
+      " <a href='" + escape(note.event_url) + "'>Open the event</a>";
+    if (after && after.parentNode) { after.parentNode.insertBefore(box, after.nextSibling); }
+    else { var lines = host.querySelector(".preview-lines"); if (lines) { lines.insertBefore(box, lines.firstChild); } }
   }
 
   function drawWave() {
@@ -262,7 +290,8 @@
       }
       html += "<div class='np-row' data-key='" + note.key + "'>" +
         "<span class='t mono'>" + escape(note.clock) + "</span>" +
-        "<span class='np-text'>" + escape(note.text) + "</span>" +
+        "<span class='np-text'>" + escape(note.text) +
+        (note.kind === "event" ? " <span class='pill small' title='A note on an event of the chronology, read there'>on the event &middot; " + escape(note.event_clock) + "</span>" : "") + "</span>" +
         (note.said ? "<span class='np-said muted small'>" + (note.who ? escape(note.who) + ": " : "") + "&ldquo;" + escape(note.said) + "&rdquo;</span>" : "<span class='np-said muted small'>a note at the moment, where nothing was said</span>") +
         "<span class='np-by muted small'>" + escape(note.by) + (note.when ? ", " + escape(note.when) : "") + "</span></div>";
     });
@@ -308,14 +337,16 @@
 
   function drawRecordings() {
     var listed = listedRecordings();
-    var body = document.querySelector("#np-recordings tbody");
+    var body = document.getElementById("np-recordings");
+    // Cards (v1.121.1): the title and Listen on the first line, the facts
+    // on the second, so nothing is off to the right at the panel's width.
     body.innerHTML = listed.map(function (one) {
-      return "<tr data-recording='" + one.id + "'>" +
-        "<td><div>" + escape(one.title) + "</div><div class='muted small'>" + escape(one.date) + (one.type ? " · " + escape(one.type) : "") + "</div></td>" +
-        "<td class='mono'>" + escape(one.length) + "</td>" +
-        "<td>" + (one.assigned ? escape(one.assigned_id === state.me ? "you" : one.assigned) + (one.reviewed ? " <span class='pill small ok'>" + escape(one.reviewed) + "</span>" : "") : "<span class='muted'>nobody</span>") + "</td>" +
-        "<td>" + (one.notes ? plural(one.notes, "note") + (one.writers.length ? ", " + escape(one.writers.join(", ")) : "") : "<span class='muted'>none yet</span>") + "</td>" +
-        "<td class='acts'><button type='button' class='small' data-listen='" + one.id + "'" + (one.words ? "" : " disabled title='No transcript yet'") + ">Listen</button></td></tr>";
+      return "<div class='np-rec' data-recording='" + one.id + "'>" +
+        "<div class='row'><b class='grow'>" + escape(one.title) + "</b><span class='mono muted small'>" + escape(one.length) + "</span>" +
+        "<button type='button' class='small' data-listen='" + one.id + "'" + (one.words ? "" : " disabled title='No transcript yet'") + ">Listen</button></div>" +
+        "<div class='muted small'>" + escape(one.date) + (one.type ? " &middot; " + escape(one.type) : "") +
+        " &middot; " + (one.assigned ? escape(one.assigned_id === state.me ? "assigned to you" : one.assigned) + (one.reviewed ? " <span class='pill small ok'>" + escape(one.reviewed) + "</span>" : "") : "nobody") +
+        " &middot; " + (one.notes ? plural(one.notes, "note") + (one.writers.length ? ", " + escape(one.writers.join(", ")) : "") : "no note yet") + "</div></div>";
     }).join("");
     document.getElementById("np-count-recordings").textContent = state.recordings.length;
     var mine = state.recordings.filter(function (one) { return one.assigned_id === state.me; });
@@ -345,7 +376,7 @@
     state.recFilter = event.target.value;
     drawRecordings(); if (state.mode === "calls") { setOrder("calls"); state.current = -1; sayPosition(); }
   });
-  document.querySelector("#np-recordings tbody").addEventListener("click", function (event) {
+  document.getElementById("np-recordings").addEventListener("click", function (event) {
     var listen = event.target.closest("[data-listen]");
     if (!listen) { return; }
     setOrder("calls");
@@ -596,9 +627,14 @@
         state.me = got.me; state.mayDirect = got.may_direct;
         state.byId = {};
         state.recordings.forEach(function (one) { state.byId[one.id] = one; });
+        // The lead (v1.121.1): the notes on how many of the recordings, and
+        // how many sit on an incident's events.
+        var kinds = got.kinds || {};
+        var onEvents = kinds.event || 0;
         document.getElementById("np-lead").textContent =
-          plural(state.notes.length, "note") + " on " + plural(state.recordings.length, "recording") +
+          plural(state.notes.length, "note") + " on " + (got.noted || 0) + " of " + plural(state.recordings.length, "recording") +
           (state.writers.length ? ", by " + plural(state.writers.length, "person").replace("persons", "people") : "") +
+          (onEvents ? ": " + (state.notes.length - onEvents) + " on lines, " + plural(onEvents, "event").replace(/^(\d+) event/, "$1 on event") : "") +
           ". Press a note to hear its moment here.";
         drawPills(); drawList(); drawRecordings();
         setOrder("notes");

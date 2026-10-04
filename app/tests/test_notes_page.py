@@ -136,7 +136,11 @@ def test_the_notes_tab_offers_the_page_and_a_row_opens_on_its_note(
     line = note_on(call, 1, "worth a look", owner)
     signed_in(client, owner)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=notes").content.decode()
-    assert "Open as a page" in page
+    # The door is the head's button (v1.121.1), on every tab.
+    assert f'href="/case/{a_case.pk}/notes-page" class="btn"' in page
+    # The Notes tab's toolbar no longer carries the door; the help pane's own
+    # "Open as a page" link is another thing.
+    assert f'class="btn small" href="/case/{a_case.pk}/notes-page"' not in page
     assert f"?note=line:{line.pk}" in page
     page = client.get(
         reverse("notes-page", args=[a_case.pk]) + f"?note=line:{line.pk}"
@@ -212,6 +216,57 @@ def test_the_list_asks_a_handful_of_questions(
     with django_assert_max_num_queries(20):
         got = client.get(reverse("notes-page-list", args=[a_case.pk])).json()
     assert len(got["recordings"]) == 40 and len(got["notes"]) == 20
+
+
+def test_a_note_on_an_event_is_listed_under_its_camera(owner, a_case, client):
+    """v1.121.1: the chronology's notes on events are on the page too, at the
+    event's moment on the camera's own clock, read-only, with the event's
+    time of day and a link to the event."""
+    from core.chronology import Event
+    from core.incidents import Incident, IncidentCamera
+    from django.utils import timezone
+
+    settings_store.set_to("incidents", True)
+    camera_recording = a_call(owner, a_case, "Cam 2")
+    camera_recording.duration_seconds = 1200
+    camera_recording.save(update_fields=["duration_seconds"])
+    incident = Incident.objects.create(
+        case=a_case, name="Harbour car park", created_by=owner
+    )
+    camera = IncidentCamera.objects.create(
+        incident=incident, recording=camera_recording, starts_at=100.0, placed="hand"
+    )
+    event = Event.objects.create(
+        incident=incident,
+        at=177.0,
+        text="Warrant demanded",
+        note="Report says a warrant was displayed; none is visible.",
+        note_by=owner,
+        note_changed=timezone.now(),
+        camera=camera,
+    )
+    # One without a camera of its own falls to the camera running then.
+    Event.objects.create(
+        incident=incident,
+        at=190.0,
+        text="Dispersal order",
+        note="Only one warning is heard.",
+        note_by=owner,
+        note_changed=timezone.now(),
+    )
+    signed_in(client, owner)
+    got = client.get(reverse("notes-page-list", args=[a_case.pk])).json()
+    rows = [one for one in got["notes"] if one["kind"] == "event"]
+    assert [one["at"] for one in rows] == [77.0, 90.0]
+    first = rows[0]
+    assert first["key"] == f"event:{event.pk}" and first["readonly"] is True
+    assert (
+        first["recording"] == str(camera_recording.pk) and first["clock"] == "00:01:17"
+    )
+    assert first["said"] == "Warrant demanded" and first["by"] == "Ana Ruiz"
+    assert first["event_url"].endswith("?t=177.00") and first["event_clock"]
+    assert got["kinds"] == {"event": 2} and got["noted"] == 1
+    assert got["recordings"][0]["notes"] == 2
 
 
 # The Overview and the whole recording ------------------------------------------------

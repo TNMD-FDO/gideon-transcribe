@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.121.1, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Notes page after its first walk on the server** (Phase 9 chapter 4;
+the maintainer's picks from the mock-ups of 4 October).
+
+- **The door.** A secondary button **Notes page** in the case page's head
+  beside Add recordings, on every case and seen from every tab; the Notes
+  tab's "Open as a page" is gone from its toolbar (it read as an export and
+  was absent on a case with no notes yet). Each note's "on the page" link
+  stays.
+- **Notes on events.** A note on an incident's chronology event is on the
+  page too: under the camera it sits on, at the event's moment by that
+  camera's clock, marked "on the event" with the time of day; pressing it
+  plays the camera there and shows the note under the nearest line,
+  read-only with a link to the event, since the chronology owns it. The
+  lead counts them apart.
+- **The pop-out** was drawn under the page's own player on the server: the
+  mounted player kept the floating Preview's stacking order. Fixed.
+- **The lead line** reads "21 notes on 7 of 21 recordings", not "on 21
+  recordings".
+- **The Recordings tab** is cards, with Listen on the first line, so
+  nothing is off to the right at the panel's width.
+- **One Ask Gideon** on the page, the floating one; the head's is gone.
+- **Open the call** is a plain button, not a faint link.
+- **The player bar's sentence** says "above the lines" for a sound
+  recording and "under the picture" for a video.
+
 ## v1.121.0, 2026-10-04
 
 ```

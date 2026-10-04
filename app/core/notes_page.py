@@ -29,6 +29,7 @@ from core import (
     engine,
     exports,
     home,
+    incidents,
     notes,
     sharing,
     vocabulary,
@@ -176,6 +177,7 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
                 "changed": one.note_changed.isoformat() if one.note_changed else "",
             }
         )
+    note_rows.extend(_event_rows(case, recordings))
     order = {str(one.pk): index for index, one in enumerate(recordings)}
     note_rows.sort(key=lambda row: (order.get(row["recording"], 0), row["at"]))
     counts: dict = {}
@@ -216,10 +218,17 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
                 "open": reverse("viewer", args=[one.pk]),
             }
         )
+    kinds: dict = {}
+    for row in note_rows:
+        kinds[row["kind"]] = kinds.get(row["kind"], 0) + 1
     return JsonResponse(
         {
             "recordings": rows,
             "notes": note_rows,
+            # How many of each kind, and how many recordings carry a note,
+            # for the lead line (v1.121.1).
+            "kinds": kinds,
+            "noted": len([one for one in rows if one["notes"]]),
             "writers": sorted(
                 writers.values(), key=lambda one: (-one["count"], one["name"])
             ),
@@ -229,6 +238,77 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
             "may_direct": case.may_direct(request.user),
         }
     )
+
+
+def _event_rows(case, recordings) -> list[dict]:
+    """The notes on an incident's events (v1.121.1, from the walk): each
+    listed under the camera the event sits on, at the event's moment by that
+    camera's own clock, read-only on the page since the chronology owns it,
+    with the event's time of day and a link to the event. A note event that
+    is a line's or a moment's note is already listed as that."""
+    if not incidents.on():
+        return []
+    from core.chronology import Event
+    from core.incidents import IncidentCamera
+
+    known = {str(one.pk) for one in recordings}
+    found = (
+        Event.objects.filter(
+            incident__case=case,
+            proposed=False,
+            segment__isnull=True,
+            moment_note__isnull=True,
+        )
+        .exclude(note="")
+        .select_related("incident", "camera", "note_by")
+    )
+    cameras: dict = {}
+    rows = []
+    for event in found:
+        incident = event.incident
+        if incident.pk not in cameras:
+            cameras[incident.pk] = [
+                one
+                for one in IncidentCamera.objects.filter(
+                    incident=incident, starts_at__isnull=False
+                ).select_related("recording")
+            ]
+        camera = (
+            event.camera
+            if event.camera and event.camera.starts_at is not None
+            else None
+        )
+        if camera is None:
+            # The first placed camera that was running at the event's moment.
+            for one in cameras[incident.pk]:
+                length = float(one.recording.duration_seconds or 0)
+                if one.starts_at <= event.at <= one.starts_at + length:
+                    camera = one
+                    break
+        if camera is None or str(camera.recording_id) not in known:
+            continue
+        seconds = max(0.0, float(event.at) - float(camera.starts_at))
+        rows.append(
+            {
+                "key": f"event:{event.pk}",
+                "kind": "event",
+                "id": str(event.pk),
+                "recording": str(camera.recording_id),
+                "at": seconds,
+                "clock": exports.clock(seconds),
+                "text": event.note,
+                "said": event.text,
+                "who": "",
+                "by": event.note_by.shown_name if event.note_by else "",
+                "by_id": event.note_by_id,
+                "when": notes.date_of(event.note_changed),
+                "changed": event.note_changed.isoformat() if event.note_changed else "",
+                "event_clock": incidents.time_of_day(incident, event.at),
+                "event_url": f"{incident.url()}?t={event.at:.2f}",
+                "readonly": True,
+            }
+        )
+    return rows
 
 
 @login_required

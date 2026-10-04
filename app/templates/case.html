@@ -12,7 +12,11 @@
         <h1 id="case-name">{{ case.name }}</h1>
         {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
       </div>
-      <div class="acts"><a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a></div>
+      <div class="acts">
+        {# The Notes page's door (v1.121.1, from the walk): on every case, seen from every tab. #}
+        <a href="{% url 'notes-page' case.pk %}" class="btn" title="One page: the recording on the left, every note on the right, stepping through them; Listen through the recordings and mark them reviewed without leaving it">{% icon "note" %} Notes page</a>
+        <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
+      </div>
     </header>
     {% include "dashboard-line.html" %}
 
@@ -189,7 +193,6 @@
             </p>
             {% if notes.total %}
               {% comment %}The Notes page (Phase 9 chapter 4): the notes as a work page.{% endcomment %}
-              <a class="btn small" href="{% url 'notes-page' case.pk %}" title="One page: the recording on the left, every note on the right, stepping through them">{% icon "note" %} Open as a page</a>
               <a class="btn small" href="{% url 'case' case.pk %}?tab=search&kind=notes" title="The Search tab, notes only">{% icon "search" %} Search notes</a>
               <a class="btn small" href="{% url 'case-notes' case.pk %}" title="Every note in the case as a Word document, for the office's own reading">{% icon "word" %} Download notes</a>
             {% endif %}

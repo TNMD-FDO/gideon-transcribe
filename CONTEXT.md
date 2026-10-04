@@ -469,11 +469,12 @@ The tab on the Case page that lists every Note in the Case, on lines and on even
 _Avoid_: comments, annotations, notebook
 
 **Notes page**:
-The Case's work page for its notes, reached by Open as a page on the Notes tab: the recording in hand on the left (its player bar, the waveform with the notes marked, the lines around the moment with the note under its line, Previous and Next note or Previous and Next call, Mark reviewed), and the work panel on the right (Notes grouped by recording in call order with pills by writer and type, Recordings, Details, a Find box). Open the call opens the whole call in a pop-out over the page, never a jump away; Open the full call inside it is the one door to the recording page. Phase 9 chapter 4.
+The Case's work page for its notes, reached by the **Notes page** button in the case page's head (on every case; until v1.121.1, Open as a page on the Notes tab): the recording in hand on the left (its player bar, the waveform with the notes marked, the lines around the moment with the note under its line, Previous and Next note or Previous and Next call, Mark reviewed), and the work panel on the right (Notes grouped by recording in call order with pills by writer and type, Recordings, Details, a Find box). Open the call opens the whole call in a pop-out over the page, never a jump away; Open the full call inside it is the one door to the recording page. Phase 9 chapter 4.
 _Avoid_: notes pane (the pane is the case page's right column), notebook, review page, desk
 
 **Open as a page**:
-The Notes tab's button that opens the Notes page. Phase 9 chapter 4.
+The former name (v1.119.0 to v1.121.0) of the door to the Notes page, a button on the Notes tab; since v1.121.1 the door is the **Notes page** button in the case page's head, seen from every tab and there on a case with no notes yet. Phase 9 chapter 4.
+_Avoid_: Open as a page, on any new page
 
 **To check**:
 A person's mark on an Event that something needs looking at, shown as a pill on the Chronology tab, counted in its head line, printed in the exports, and told to the memo, which says where a point is unsettled. Cleared only by a person. Phase 7 chapter 1.
