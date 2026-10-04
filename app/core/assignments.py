@@ -96,12 +96,13 @@ def person_counts(case) -> dict:
     return counts
 
 
-def team(case, viewer=None) -> list[dict]:
+def team(case, viewer=None, names: dict | None = None) -> list[dict]:
     """The Team block's rows: the Owner first, then each Collaborator."""
     from core import sharing
 
     counts = person_counts(case)
-    names = names_for(case)
+    if names is None:
+        names = names_for(case)
     empty = {"assigned": 0, "reviewed": 0, "noted": 0}
     rows = [
         {

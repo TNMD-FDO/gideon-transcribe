@@ -104,8 +104,9 @@ def test_the_case_page_asks_a_handful_of_questions_whatever_the_count(
     # About a hundred questions draw the page whatever the count: the rows
     # themselves take six (the recordings, the newest jobs, the speakers, the
     # cameras, the notes twice, the clip counts); the rest are the page's own
-    # settings and panes. Before Phase 9 this was seven per row.
-    with django_assert_max_num_queries(110):
+    # settings and panes. Before Phase 9 this was seven per row. The team's
+    # names (v1.121.3) added two, fixed, which took the page to 112.
+    with django_assert_max_num_queries(120):
         answer = client.get(reverse("case", args=[a_case.pk]))
     assert answer.status_code == 200
     assert answer.content.count(b'<tr class="pick"') == 80

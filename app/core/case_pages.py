@@ -253,11 +253,11 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # Cases page does.
     left = retention.days_left(case)
     # The rows once, from a handful of queries (Phase 9 chapter 1).
-    rows = _rows_for(case)
+    names = assignments.names_for(case)
+    rows = _rows_for(case, names)
     # The pills over the Recordings tab (Phase 9 chapter 3): All, Mine,
     # Mine not reviewed, Reviewed, Unassigned, and one person by username.
     may_direct = case.may_direct(request.user)
-    names = assignments.names_for(case)
     who = request.GET.get("who", "")
     state = request.GET.get("state", "")
     shown_rows = assignments.filtered(rows, who, state, request.user)
@@ -313,7 +313,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # The Case vocabulary block (Phase 9 chapter 2).
             "vocabulary": vocabulary.entries(case),
             "may_remove_terms": role != "collaborator",
-            **_sharing_context(case, role, request.user),
+            **_sharing_context(case, role, request.user, names),
             "recordings": shown_rows,
             # The Type column only when a row has a type (v1.75.1).
             "any_type": any(getattr(one, "recording_type", "") for one in rows),
@@ -414,7 +414,9 @@ def _incidents_context(case: Case) -> dict:
     }
 
 
-def _sharing_context(case: Case, role: str, viewer=None) -> dict:
+def _sharing_context(
+    case: Case, role: str, viewer=None, names: dict | None = None
+) -> dict:
     """What the Case page says about its Team (Phase 9 chapter 3), by who is
     looking: everyone with the case sees the list; the owner, an Admin and an
     also-owner may add people; the owner and an Admin may mark an also-owner.
@@ -430,7 +432,7 @@ def _sharing_context(case: Case, role: str, viewer=None) -> dict:
         "may_transfer": role == "owner",
         "shares": shares,
         "colleagues": [one for one in shares],
-        "team": assignments.team(case, viewer),
+        "team": assignments.team(case, viewer, names),
         "share_words": sharing.WORDS,
         "transfer_words": sharing.TRANSFER_WORDS,
     }
@@ -560,7 +562,7 @@ def _assignment_pills(case, rows, who, state, viewer) -> list[dict]:
     return pills
 
 
-def _rows_for(case: Case) -> list:
+def _rows_for(case: Case, names: dict | None = None) -> list:
     """Each Recording with the words its row shows about its Speakers, its
     state and its notes.
 
@@ -608,7 +610,9 @@ def _rows_for(case: Case) -> list:
         ).select_related("incident"):
             cameras.setdefault(camera.recording_id, camera)
     note_counts = notes.counts_in(case)
-    names = assignments.names_for(case)
+    # The team's names once per page (v1.121.4): the view hands them in.
+    if names is None:
+        names = assignments.names_for(case)
     # Summaries waiting for tonight (Phase 9 chapter 5), one query.
     tonight = {
         one.recording_id: one

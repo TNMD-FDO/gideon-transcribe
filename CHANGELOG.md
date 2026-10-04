@@ -21,6 +21,20 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.121.4, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The case page's query count.** v1.121.3's CI was red: the team's names
+were worked out three times a page (the rows, the Team block and the
+Assign to list), and the case page's fixed query budget, measured at 80
+recordings, went two over its cap. The names are now worked out once per
+page and handed to the rows and the Team block, and the cap records the
+new count. Nothing a person sees changes.
+
 ## v1.121.3, 2026-10-04
 
 ```
