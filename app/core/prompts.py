@@ -105,6 +105,8 @@ SHIPPED_HISTORY = {
         # v1.117.0 (Phase 9 chapter 2): a listed spelling is the same person.
         "67add4e32513325c",
     ),
+    # v1.121.0 (Phase 9 chapter 6): the overviews read once, into picks.
+    "prompt:case_chat_select": (),
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
     "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
@@ -415,6 +417,24 @@ CASE_CHAT = (
     "little differently from one recording to the next is one person."
 )
 
+# Pass one of a question over the ceiling (Phase 9 chapter 6, ADR 0018): the
+# overviews read once, into data.
+CASE_CHAT_SELECT = (
+    "You are given one short line for each recording in a case and, under "
+    "it, the overview from that recording's summary, then a question. Name "
+    "the recordings that bear on the question, most relevant first, each "
+    "with one line saying why its overview points to it, so that the "
+    "recordings you name can be read whole and the question answered from "
+    "their words. Be generous: a recording whose overview might hold part of "
+    "the answer is named, since nothing you leave out is read. A recording "
+    "marked as having no summary yet cannot be judged; name it only when its "
+    "title or type plainly bears on the question. Names and places may be "
+    "misheard by the transcription: a spelling the case lists as also heard "
+    "as is the same person or place as the name it is listed under, and a "
+    "name spelt a little differently from one overview to the next is one "
+    "person. When no overview bears on the question, say so and name none."
+)
+
 SUGGESTIONS = (
     "Some speakers in this transcript have no name yet. For each of them, work "
     "out from what is said who they are: a name, if they say it of themselves "
@@ -513,6 +533,14 @@ CASE_CHAT_FORMAT = (
     "and the time copied from the transcript line it appears on. Every line "
     "of a list carries the reference of the line it rests on, copied from "
     "that line; a list never repeats one reference for several lines."
+)
+# The selection's shape (Phase 9 chapter 6): data, under a schema.
+CASE_CHAT_SELECT_FORMAT = (
+    'Answer as JSON only: {"picks": [{"recording": n, "why": "..."}, ...], '
+    '"none": false, "note": "..."}, the n being the number at the front of '
+    "the recording's line, the picks in order of relevance, most relevant "
+    'first. With no recording to name, "picks" is empty, "none" is true and '
+    '"note" says in one sentence why. Nothing outside the JSON.'
 )
 # The combining call, when a Case was read in parts: plumbing, not a template.
 COMBINING = (

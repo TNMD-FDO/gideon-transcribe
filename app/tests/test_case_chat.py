@@ -552,9 +552,12 @@ def test_the_hours_ceiling_refuses_with_its_figures(owner, a_case, monkeypatch):
     case_chat.answer_case_turn(turn.pk)
     turn.refresh_from_db()
     assert turn.state == "failed" and turn.reason_class == "llm_case_too_large"
+    # Over the ceiling with no summary (Phase 9 chapter 6): the one refusal
+    # that survives, and it says what to do.
     assert case_chat.what_to_say(turn) == (
         "This case is too large for one question (8 hours of recordings; the "
-        "limit is 6)."
+        "limit is 6) and no recording in it has a summary yet; write the "
+        "summaries tonight on the case page, and a question reads them first."
     )
     assert asked == []
     row = Row.objects.get(category="llm", event="AI assistant call")

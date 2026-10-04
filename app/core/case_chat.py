@@ -119,6 +119,13 @@ class CaseChatTurn(models.Model):
     # The time expectation given at the ask (v1.95.0): the size measured,
     # the office's figure, when it was asked for and when the worker began.
     expectation = models.JSONField(default=dict, blank=True)
+    # Gideon reads what fits (Phase 9 chapter 6): the route the question took
+    # (whole, narrowed, overviews, digest), the scope the page posted (its
+    # kind and the recordings' ids, nothing typed), and the overview pass's
+    # picks with their reasons and counts.
+    route = models.CharField(max_length=20, blank=True, default="")
+    scope = models.JSONField(default=dict, blank=True)
+    selection = models.JSONField(default=dict, blank=True)
     model = models.CharField(max_length=120, blank=True, default="")
     asked_at = models.DateTimeField(auto_now_add=True)
     answered_at = models.DateTimeField(null=True, blank=True)
@@ -145,10 +152,14 @@ def hours_allowed() -> int:
     return int(settings_store.get("case_chat_hours") or 120)
 
 
-def readable(case) -> tuple[list, list[dict]]:
-    """The Recordings a question would read, in upload order, and those skipped."""
+def readable(case, only: list | None = None) -> tuple[list, list[dict]]:
+    """The Recordings a question would read, in upload order, and those
+    skipped; `only` narrows to the scope's ids (Phase 9 chapter 6)."""
     read, skipped = [], []
-    for recording in case.recordings.order_by("created"):
+    rows = case.recordings.order_by("created")
+    if only:
+        rows = rows.filter(pk__in=only)
+    for recording in rows:
         if getattr(recording, "transcript", None) is not None:
             read.append(recording)
             continue
@@ -393,17 +404,27 @@ def answer_case_turn(turn_id) -> None:
     turn.save(update_fields=["state", "expectation"])
 
     usage = {"input_tokens": 0, "output_tokens": 0}
-    calls = {"readings": 0, "read": 0, "model": ""}
+    calls = {"readings": 0, "read": 0, "model": "", "selections": 0}
+    from core import case_scope
 
-    def one_call(messages, answer_cap: int) -> dict:
+    def one_call(
+        messages,
+        answer_cap: int,
+        *,
+        schema: dict | None = None,
+        think: bool | None = None,
+        sampling: dict | None = None,
+        timeout: int | None = None,
+    ) -> dict:
         if time.monotonic() - started > time_limit_for_the_question():
             raise engine.Problem(engine.TIMEOUT, "the question ran out of time")
         answer = engine.complete(
             messages,
             max_completion_tokens=cap(answer_cap),
-            thinking=thinking(),
-            timeout=time_limit("chat_turn"),
-            **SAMPLING,
+            thinking=thinking() if think is None else think,
+            timeout=timeout or time_limit("chat_turn"),
+            schema=schema,
+            **(sampling or SAMPLING),
         )
         usage["input_tokens"] += answer.get("input_tokens", 0) or 0
         usage["output_tokens"] += answer.get("output_tokens", 0) or 0
@@ -417,13 +438,100 @@ def answer_case_turn(turn_id) -> None:
             raise engine.Problem(
                 engine.UNREACHABLE, "the engine is failing the minute check"
             )
-        read, skipped = readable(case)
+        # The scope (Phase 9 chapter 6): the recordings the page narrowed to,
+        # or the whole case; and the route, decided by the one rule.
+        scope = turn.scope or {}
+        read, skipped = readable(
+            case, scope.get("recordings") if case_scope.narrowed(scope) else None
+        )
+        from core import assistant
+
+        overviews = assistant.overviews_for(read)
+        turn.route = case_scope.route_for(read, overviews, scope)
+        turn.save(update_fields=["route"])
+        if turn.route == case_scope.OVERVIEWS:
+            # Pass one: the overviews read once, into the recordings pointed to.
+            turn.parts = 0
+            found = case_scope.select(
+                read=read,
+                overviews=overviews,
+                people=people_line(case),
+                question=turn.question,
+                earlier_questions=[
+                    one.question
+                    for one in chat.turns.filter(state=DONE, number__lt=turn.number)
+                ],
+                ground_text=ground.text,
+                one_call=one_call,
+            )
+            calls["selections"] = found["calls"]
+            templates_line += f"; case-chat-select v{found['template_version']}"
+
+            def size_of(recording) -> int:
+                body = prompts.render(prompts.lines_of(recording.transcript))
+                return prompts.tokens(body) + prompts.tokens(
+                    notes.recording_block(recording) or ""
+                )
+
+            kept = case_scope.fitting(
+                found["picks"],
+                size_of,
+                settings_store.reading_tokens(),
+                case_scope.readings_after(),
+            )
+            turn.selection = {
+                "picks": [
+                    {
+                        "recording": str(one["recording"].pk),
+                        "title": _title(one["recording"]),
+                        "why": one["why"],
+                    }
+                    for one in found["picks"]
+                ],
+                "note": found["note"],
+                "overviews_read": found["overviews_read"],
+                "no_summary": found["no_summary"],
+                "pointed_to": len(found["picks"]),
+                "read_whole": len(kept),
+            }
+            turn.save(update_fields=["selection", "parts"])
+            if not kept:
+                # Nothing pointed to: the answer is that, and the note.
+                turn.skipped = skipped
+                turn.readings = []
+                turn.answer = (
+                    case_scope.opening_line(turn)
+                    + " The overviews do not point to any recording for this "
+                    "question." + (f" {found['note']}" if found["note"] else "")
+                ).strip()
+                turn.model = calls["model"]
+                turn.state = DONE
+                turn.reason_class = ""
+                turn.answered_at = timezone.now()
+                turn.save()
+                _record(
+                    case,
+                    actor=chat.asked_by,
+                    templates=templates_line,
+                    model=turn.model,
+                    usage=usage,
+                    calls=calls,
+                    started=started,
+                    outcome="ok",
+                    feature="case_chat_two_pass",
+                    **_scope_fields(turn),
+                    **expectation.for_audit(turn.expectation),
+                )
+                return
+            ordered = sorted(
+                (one["recording"] for one in kept), key=lambda one: one.created
+            )
+            read = ordered
         # A Recording with a Digest (Phase 4 chapter 6) contributes its
         # Digest alone when the Case would exceed the hours ceiling, which is
         # how a case of many videos fits a question; the hours counted are
-        # those read in full.
-        from core import assistant
-
+        # those read in full. Over the ceiling the overviews route above has
+        # already chosen what is read whole.
         digests = {
             recording.pk: (
                 assistant.digest_text(recording.transcript)
@@ -434,6 +542,8 @@ def answer_case_turn(turn_id) -> None:
         }
         digest_only: set = set()
         hours = sum((one.duration_seconds or 0) for one in read) / 3600
+        if turn.route == case_scope.OVERVIEWS:
+            hours = 0
         if hours > hours_allowed():
             for recording in sorted(read, key=lambda one: -(one.duration_seconds or 0)):
                 if not digests[recording.pk]:
@@ -450,9 +560,13 @@ def answer_case_turn(turn_id) -> None:
                 if hours <= hours_allowed():
                     break
         if hours > hours_allowed():
+            # The one place the refusal survives (Phase 9 chapter 6): over the
+            # ceiling with no summary to read first.
             turn.reason_detail = (
                 f"This case is too large for one question ({hours:.0f} hours of "
-                f"recordings; the limit is {hours_allowed()})."
+                f"recordings; the limit is {hours_allowed()}) and no recording "
+                "in it has a summary yet; write the summaries tonight on the "
+                "case page, and a question reads them first."
             )
             raise engine.Problem(CASE_TOO_LARGE, "over the hours ceiling")
         turn.skipped = skipped
@@ -642,7 +756,11 @@ def answer_case_turn(turn_id) -> None:
 
         opening = "\n".join(
             line
-            for line in (not_read_line(skipped), transcript_alone_line(readings_kept))
+            for line in (
+                case_scope.opening_line(turn),
+                not_read_line(skipped),
+                transcript_alone_line(readings_kept),
+            )
             if line
         )
         turn.answer = f"{opening}\n\n{text}".strip() if opening else text
@@ -670,6 +788,8 @@ def answer_case_turn(turn_id) -> None:
             started=started,
             outcome="ok",
             cut_short=turn.cut_short,
+            feature=_feature_of(turn),
+            **_scope_fields(turn),
             **expectation.for_audit(turn.expectation),
         )
     except engine.Problem as problem:
@@ -688,8 +808,36 @@ def answer_case_turn(turn_id) -> None:
             started=started,
             outcome=problem.reason,
             reason=problem.reason,
+            feature=_feature_of(turn),
+            **_scope_fields(turn),
             **expectation.for_audit(turn.expectation),
         )
+
+
+def _feature_of(turn) -> str:
+    """The audit row's feature: the two-pass route has its own, so the time
+    expectation learns its pace apart (Phase 9 chapter 6)."""
+    from core import case_scope
+
+    return (
+        "case_chat_two_pass" if turn.route == case_scope.OVERVIEWS else "case_chat_turn"
+    )
+
+
+def _scope_fields(turn) -> dict:
+    """The audit row's counts (Phase 9 chapter 6): the route, the scope's kind
+    and count, and the overview pass's counts; never a word of anything."""
+    selection = turn.selection or {}
+    scope = turn.scope or {}
+    return {
+        "route": turn.route or "",
+        "scope_kind": scope.get("kind", "all"),
+        "scope_count": len(scope.get("recordings") or []),
+        "overviews_read": selection.get("overviews_read", 0),
+        "pointed_to": selection.get("pointed_to", 0),
+        "read_whole": selection.get("read_whole", 0),
+        "no_summary": selection.get("no_summary", 0),
+    }
 
 
 def time_limit_for_the_question() -> int:
@@ -813,6 +961,7 @@ def _record(
     outcome: str,
     reason: str = "",
     cut_short: bool = False,
+    feature: str = "case_chat_turn",
     **more,
 ) -> None:
     """The case_chat_turn row: the Case as the object, metadata only."""
@@ -830,9 +979,10 @@ def _record(
         object_type="case",
         object_id=case.pk,
         object_label=case.name,
-        feature="case_chat_turn",
+        feature=feature,
         transcripts_read=calls["read"],
         readings=calls["readings"],
+        selections=calls.get("selections", 0),
         model=model or engine.model_name(),
         endpoint_host=urlparse(engine.address()).hostname or "",
         templates=templates,

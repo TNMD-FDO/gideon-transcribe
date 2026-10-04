@@ -859,6 +859,7 @@
 
   {% if case_chat_available %}{% include "gideon-drawer.html" with gideon_kind="case" gideon_on=gideon_on gideon_why=gideon_why %}{% endif %}
   <script src="{% static 'again.js' %}"></script>
+  <script src="{% static 'case-scope.js' %}"></script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}

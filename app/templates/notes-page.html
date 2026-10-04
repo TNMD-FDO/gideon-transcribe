@@ -163,6 +163,7 @@
   </div>
 
   {% if case_chat_available %}{% include "gideon-drawer.html" with gideon_kind="case" gideon_on=gideon_on gideon_why=gideon_why %}{% endif %}
+  <script src="{% static 'case-scope.js' %}"></script>
   <script src="{% static 'preview.js' %}"></script>
   <script src="{% static 'waveform.js' %}"></script>
   <script src="{% static 'notes-page.js' %}"></script>

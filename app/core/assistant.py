@@ -69,6 +69,7 @@ class PromptTemplate(models.Model):
 
     GROUND_RULES, CHAT, SUGGESTIONS = "ground_rules", "chat", "suggestions"
     CASE_CHAT = "case_chat"
+    CASE_CHAT_SELECT = "case_chat_select"
     MOMENT = "moment"
     DIGEST = "digest"
     SPEAKER_CHECK = "speaker_check"
@@ -82,6 +83,7 @@ class PromptTemplate(models.Model):
         CHAT: ("Chat", prompts.CHAT),
         SUGGESTIONS: ("Speaker suggestions", prompts.SUGGESTIONS),
         CASE_CHAT: ("Case chat", prompts.CASE_CHAT),
+        CASE_CHAT_SELECT: ("Case chat: which recordings", prompts.CASE_CHAT_SELECT),
         MOMENT: ("Moment", prompts.MOMENT),
         DIGEST: ("Digest", prompts.DIGEST),
         SPEAKER_CHECK: ("Speaker check", prompts.SPEAKER_CHECK),
@@ -2484,6 +2486,28 @@ OVERVIEW_MOST = 600
 KNOWN_PARTS_LOWER = frozenset(one.lower() for one in prompts.KNOWN_PARTS)
 
 
+def overviews_for(recordings) -> dict:
+    """Every recording's Overview in one reading of the Summaries (Phase 9
+    chapter 6): the newest finished Summary of its current Transcript, else
+    its newest finished Summary; "" for a recording with none."""
+    by_recording: dict = {}
+    ids = [one.pk for one in recordings]
+    if not ids:
+        return {}
+    transcripts = {one.pk: getattr(one, "transcript", None) for one in recordings}
+    for summary in Summary.objects.filter(recording_id__in=ids, state=DONE).order_by(
+        "-created"
+    ):
+        transcript = transcripts.get(summary.recording_id)
+        current = (
+            transcript is not None and summary.transcript_created == transcript.created
+        )
+        held = by_recording.get(summary.recording_id)
+        if held is None or (current and not held[0]):
+            by_recording[summary.recording_id] = (current, summary.text or "")
+    return {pk: overview_text(text) for pk, (_, text) in by_recording.items()}
+
+
 def overview_of(recording) -> str:
     """The Overview of a recording's newest finished Summary (Phase 9
     chapters 4 and 6): the lines after its Overview or Summary heading up to
@@ -2491,7 +2515,6 @@ def overview_of(recording) -> str:
     heading, its first 600 characters cut at a sentence end. Nothing when
     the recording has no Summary. The Summary's own text, kept for its own
     sake; nothing is indexed."""
-    import re
 
     transcript = getattr(recording, "transcript", None)
     summaries = Summary.objects.filter(recording=recording, state=DONE).order_by(
@@ -2504,7 +2527,16 @@ def overview_of(recording) -> str:
         chosen = summaries.first()
     if chosen is None or not (chosen.text or "").strip():
         return ""
-    lines = [one.rstrip() for one in chosen.text.splitlines()]
+    return overview_text(chosen.text)
+
+
+def overview_text(text: str) -> str:
+    """The Overview inside a Summary's text: the rule overview_of states."""
+    import re
+
+    if not (text or "").strip():
+        return ""
+    lines = [one.rstrip() for one in text.splitlines()]
 
     def heading_of(line: str) -> str:
         bare = re.sub(r"^[#*\s]+|[*\s]+$", "", line).strip()

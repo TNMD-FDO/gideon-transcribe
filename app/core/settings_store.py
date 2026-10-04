@@ -1019,16 +1019,48 @@ def _rows() -> list[Definition]:
         Definition(
             key="case_chat_hours",
             page=LIMITS,
-            name="Case chat: most hours of talk per question",
+            name="Case chat: hours of talk read whole per question",
             kind=NUMBER,
             default=120,
             least=6,
             most=600,
             unit="hours",
             what_it_does=(
-                "The most talk one Case Chat question may read, as the summed "
-                "length of the recordings it would read. A question over more "
-                "refuses and says so."
+                "The most talk one Case Chat question reads whole, as the summed "
+                "length of the recordings it would read. Over it (Phase 9 "
+                "chapter 6) the question reads every recording's overview first "
+                "and then the recordings they point to, whole; it refuses only "
+                "when no recording has a summary."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="case_chat_picks_most",
+            page=LIMITS,
+            name="Case chat: most recordings the overviews may point to",
+            kind=NUMBER,
+            default=30,
+            least=5,
+            most=60,
+            what_it_does=(
+                "Over the ceiling above, the most recordings the overview pass "
+                "may name as bearing on a question (Phase 9 chapter 6). Generous "
+                "by default, since nothing it leaves out is read."
+            ),
+            when_changed="The next question.",
+        ),
+        Definition(
+            key="case_chat_readings_after",
+            page=LIMITS,
+            name="Case chat: Readings after the overviews",
+            kind=NUMBER,
+            default=1,
+            least=1,
+            most=4,
+            what_it_does=(
+                "How many Readings the recordings pointed to may fill, read "
+                "whole, after the overviews (Phase 9 chapter 6); past it the "
+                "answer says how many of those pointed to it read."
             ),
             when_changed="The next question.",
         ),

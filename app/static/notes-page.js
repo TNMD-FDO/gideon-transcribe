@@ -167,7 +167,25 @@
     sayPosition();
   }
 
+  // The Scope (Phase 9 chapter 6): the recordings in view by the pills and
+  // the filters, for Gideon; the whole case when nothing narrows.
+  function tellScope() {
+    if (!window.CaseScope) { return; }
+    var narrowedNotes = state.writer !== null || state.type !== null;
+    var narrowedCalls = state.recWho !== "" || state.recFilter.trim() !== "" || state.type !== null;
+    if (state.mode === "calls" && narrowedCalls) {
+      window.CaseScope.set("notes", listedRecordings().map(function (one) { return one.id; }));
+    } else if (state.mode !== "calls" && narrowedNotes) {
+      var ids = [];
+      listedNotes().forEach(function (note) { if (ids.indexOf(note.recording) === -1) { ids.push(note.recording); } });
+      window.CaseScope.set("notes", ids);
+    } else {
+      window.CaseScope.clear();
+    }
+  }
+
   function sayPosition() {
+    tellScope();
     var box = document.getElementById("np-position");
     if (!state.order.length) { box.textContent = state.mode === "notes" ? "No notes to step through." : "No recordings listed."; return; }
     var narrowed = state.mode === "notes"

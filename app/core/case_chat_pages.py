@@ -21,11 +21,13 @@ from core import (
     assistant,
     audit,
     case_chat,
+    case_scope,
     cases,
     engine,
     expectation,
     exports,
     incidents,
+    prompts,
     settings_store,
     tasks,
 )
@@ -61,14 +63,25 @@ def _body(request) -> dict:
         return {}
 
 
-def _expected(chat, case) -> dict:
+def _expected(chat, case, scope: dict | None = None) -> dict:
     """The turn's time expectation at the ask (v1.95.0): an incident chat is
-    given the incident's record, a case chat every readable transcript."""
-    from core import sitting
+    given the incident's record, a case chat every readable transcript in its
+    scope; over the ceiling (Phase 9 chapter 6) the two-pass figure, sized by
+    the overviews and the Readings the picks may fill."""
+    from core import case_scope, sitting
 
     if chat.incident_id:
         return expectation.note("incident_chat", sitting.record_tokens(chat.incident))
-    readable = case_chat.readable(case)[0]
+    scope = scope or {}
+    readable = case_chat.readable(
+        case, scope.get("recordings") if case_scope.narrowed(scope) else None
+    )[0]
+    overviews = assistant.overviews_for(readable)
+    if case_scope.route_for(readable, overviews, scope) == case_scope.OVERVIEWS:
+        size = sum(prompts.tokens(one) for one in overviews.values()) + (
+            settings_store.reading_tokens() * case_scope.readings_after()
+        )
+        return expectation.note("case_chat_two_pass", size)
     size = sum(
         assistant.reading_size(getattr(one, "transcript", None)) for one in readable
     )
@@ -105,7 +118,18 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
         }
     running = turn.state in (assistant.QUEUED, assistant.RUNNING)
     count = len(turn.readings or [])
-    if running and turn.parts:
+    if running and turn.route == case_scope.OVERVIEWS and not count:
+        overviews = (turn.selection or {}).get("overviews_read") or len(
+            (turn.scope or {}).get("recordings") or []
+        )
+        reading = (
+            f"Reading the overviews of {overviews} recordings..."
+            if overviews
+            else "Reading the overviews..."
+        )
+    elif running and turn.route == case_scope.OVERVIEWS:
+        reading = f"Reading {count} recording{'' if count == 1 else 's'} whole..."
+    elif running and turn.parts:
         reading = (
             f"Reading {count} transcripts in {turn.parts} parts. "
             "This takes a few minutes."
@@ -126,6 +150,9 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
         "cut_short": turn.cut_short,
         "parts": turn.parts,
         "parts_done": turn.parts_done,
+        # What the question read (Phase 9 chapter 6), for the page's line.
+        "route": turn.route or "",
+        "read_words": case_scope.read_words(turn) if turn.route else "",
         "expectation": expectation.json_of(turn.expectation, turn.state, "chat"),
         "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
         "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
@@ -234,6 +261,12 @@ def state(request: HttpRequest, case_id) -> JsonResponse:
         _chat_json(one, still_here) for one in case.chats.filter(incident__isnull=True)
     ]
     read, skipped = case_chat.readable(case)
+    # What a whole-case question would do (Phase 9 chapter 6), for the
+    # drawer's head and its grounding line.
+    hours = case_scope.hours_of(read)
+    allowed = case_chat.hours_allowed()
+    overviews = assistant.overviews_for(read) if hours > allowed else {}
+    summarised = sum(1 for one in read if overviews.get(one.pk))
     return JsonResponse(
         {
             "reachable": engine.is_reachable(),
@@ -241,6 +274,12 @@ def state(request: HttpRequest, case_id) -> JsonResponse:
             "busy": any(one["busy"] for one in chats),
             "readable": len(read),
             "skipped": len(skipped),
+            "hours": round(hours, 1),
+            "hours_allowed": allowed,
+            "over": hours > allowed,
+            "summarised": summarised,
+            "no_summary": len(read) - summarised if hours > allowed else 0,
+            "head": case_scope.head_line(hours, allowed, summarised),
             "starters": settings_store.lines_of("case_chat_starters"),
             "chats": chats,
         }
@@ -261,9 +300,12 @@ def new_chat(request: HttpRequest, case_id) -> JsonResponse:
 def ask(request: HttpRequest, chat_id) -> JsonResponse:
     chat = get_object_or_404(CaseChat, pk=chat_id)
     case = _the_case(request, chat.case_id, opening=True)
-    question = str(_body(request).get("question", "")).strip()
+    body = _body(request)
+    question = str(body.get("question", "")).strip()
     if not question:
         return JsonResponse({"error": "ask something"}, status=400)
+    # The scope the page posted (Phase 9 chapter 6), kept honest.
+    scope = case_scope.scope_of(case, body.get("scope"))
     if chat.turns.filter(state__in=(assistant.QUEUED, assistant.RUNNING)).exists():
         return JsonResponse(
             {"error": "the last question is still being answered"}, status=409
@@ -294,7 +336,8 @@ def ask(request: HttpRequest, chat_id) -> JsonResponse:
         chat=chat,
         number=chat.turns.count() + 1,
         question=question[:4000],
-        expectation=_expected(chat, case),
+        scope=scope if not chat.incident_id else {},
+        expectation=_expected(chat, case, scope),
     )
     if chat.incident_id:
         tasks.answer_incident_turn.defer(turn_id=str(turn.pk))

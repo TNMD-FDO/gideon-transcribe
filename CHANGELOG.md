@@ -21,6 +21,71 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.121.0, 2026-10-04
+
+```
+Models: unchanged
+Database: migrates (0076: the case chat turn's route, scope and selection)
+```
+
+**Gideon reads what fits** (Phase 9 chapter 6, ADR 0018): a question to
+Gideon about a case is never refused for size. The person's narrowing on
+the page is the question's scope, and over the ceiling Gideon reads every
+recording's overview first and then the recordings they point to, whole.
+
+- **The scope.** What is in view is what Gideon reads: the Recordings tab
+  narrowed by its filter box or its pills, a search's hits while the Search
+  tab is in view, the Notes page narrowed by its pills and filters. The
+  drawer's head says so before the question ("Reads the 14 recordings you
+  have narrowed to"), the question is posted with the scope's kind and the
+  recordings' ids and nothing typed, the server keeps only the recordings
+  in the case, and the scope is kept on the turn so the export says under
+  each question what it read. No picker.
+- **The routes**, by one rule the page's expectation and the task share:
+  within the ceiling the words are read whole, as before, narrowed or not;
+  over it, when any recording has a summary, two passes; over it with no
+  summary at all, today's Digest fallback and then the one refusal that
+  survives, which now says to write the summaries tonight.
+- **Pass one.** One short line per recording and its overview, the summary's
+  first part cut at a sentence end to a budget so that every recording fits
+  one Reading, the People line with the case's spellings, the chat's
+  earlier questions and the question, under a schema, without thinking:
+  the recordings that bear on the question in order of relevance with one
+  line of why each, at most the new Limits setting "Case chat: most
+  recordings the overviews may point to" (30). Under 60 tokens a recording,
+  pass one is split in two and the picks merged by rank. Its wording is the
+  new template "Case chat: which recordings", with Reset to default.
+- **Pass two.** The picks in relevance order until they fill the new Limits
+  setting "Case chat: Readings after the overviews" (one), put back in
+  upload order and read exactly as before: the same header lines, notes
+  blocks, incident blocks, combining call and citation checks, so citations
+  are to real lines. The answer's first line says what was read and what
+  was not: "Read the overviews of 812 recordings, then 11 whole; read 11 of
+  the 31 they pointed to, so narrow the question for the rest. 17
+  recordings have no summary yet and were not read; the case page offers to
+  write the missing summaries tonight." A selection that names nothing is
+  the answer, with the engine's note.
+- **Renamed.** The Limits row "Case chat: most hours of talk per question"
+  is "Case chat: hours of talk read whole per question", the same key and
+  range.
+- **Said and kept.** The drawer's grounding line explains a large case and
+  the narrowing; the panel says "Reading the overviews of 812 recordings..."
+  and then "Reading 11 recordings whole..."; the time expectation for a
+  two-pass question is learnt apart from a whole reading's. The audit row
+  gains the route, the scope's kind and count, and the counts of overviews
+  read, pointed to, read whole and without a summary, never the question,
+  a reason or a word of an overview.
+
+Before it is relied on: the chapter's probe from the server's `llm-worker`
+on the office's largest case (the overview lengths the Jail call template
+gives, pass one's seconds and picks for five questions the maintainer
+judges, pass two's seconds), recorded as counts in
+`docs/research/case-reads-what-fits-probe.md`, and the selection template's
+wording settled there.
+
+Server note: `./transcribe upgrade v1.121.0` migrates (0076). Nothing shared
+moves; the load's shape at the engine changed and the ledger's log says so.
+
 ## v1.120.0, 2026-10-04
 
 ```

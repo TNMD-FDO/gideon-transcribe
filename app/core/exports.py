@@ -1538,6 +1538,14 @@ def case_chat_word(chat, exported_by: str) -> bytes:
         document.add_heading(f"Question {turn.number}.", level=2)
         asked = document.add_paragraph(turn.question)
         asked.runs[0].italic = True
+        # What the question read (Phase 9 chapter 6), under it.
+        from core import case_scope
+
+        read_words = case_scope.read_words(turn) if getattr(turn, "route", "") else ""
+        if read_words:
+            scope_line = document.add_paragraph(read_words)
+            scope_line.runs[0].italic = True
+            scope_line.runs[0].font.color.rgb = RGBColor(0x77, 0x77, 0x77)
         for paragraph in turn.answer.split("\n"):
             if not paragraph.strip():
                 continue

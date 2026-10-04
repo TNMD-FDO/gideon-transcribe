@@ -413,9 +413,9 @@ No wording ships untried, the repository's rule. From `llm-worker` on the office
 
 ### Left to the build
 
-- The per-recording budget's exact arithmetic and the threshold for splitting pass one.
-- The schema's field lengths and the selection answer's cap.
-- The words of the drawer's head line while a question is in flight ("Reading the overviews of 812 calls...").
+- The per-recording budget's exact arithmetic and the threshold for splitting pass one. Decided in v1.121.0: the budget is the Reading size less the fixed parts (the system message, the People line, the earlier questions, the question, the selection cap and a margin) divided by the recordings, never under 24 tokens; under 60 tokens pass one is split into two halves and the picks merged by rank (the first pick of each half, then the second); an Overview is cut at the last sentence end inside about three characters a token.
+- The schema's field lengths and the selection answer's cap. Decided in v1.121.0: a why of 160 characters, a note of 240, the picks capped by the setting, the answer capped at 4,000 tokens.
+- The words of the drawer's head line while a question is in flight ("Reading the overviews of 812 calls..."). Decided in v1.121.0: "Reading the overviews of 812 recordings..." while pass one runs, "Reading 11 recordings whole..." while pass two does.
 
 ## 7. Deferred and ruled out
 

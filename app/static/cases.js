@@ -72,6 +72,20 @@
   // for rows-changed), and the count says how many are left.
   var recordingFilter = document.getElementById("recording-filter");
   var recordingTable = document.getElementById("recordings");
+  // The Scope (Phase 9 chapter 6): what is in view is what Gideon reads. The
+  // rows narrow by the filter box here and by the pills on the server (the
+  // who and state parameters), so a narrowed list is either.
+  function tellScope() {
+    if (!window.CaseScope || !recordingTable) { return; }
+    var params = new URLSearchParams(window.location.search);
+    var byPill = params.has("who") || params.has("state");
+    var byBox = !!(recordingFilter && recordingFilter.value.trim() !== "");
+    if (!byPill && !byBox) { window.CaseScope.clear(); return; }
+    var ids = Array.prototype.slice.call(recordingTable.querySelectorAll("tbody tr.pick"))
+      .filter(function (row) { return !row.hidden; })
+      .map(function (row) { return row.dataset.recording; });
+    window.CaseScope.set("filter", ids);
+  }
   if (recordingFilter && recordingTable) {
     var pickRows = Array.prototype.slice.call(recordingTable.querySelectorAll("tbody tr.pick"));
     var filterCount = document.getElementById("recording-filter-count");
@@ -88,7 +102,22 @@
         filterCount.textContent = shown + " of " + pickRows.length + " shown";
       }
       recordingTable.dispatchEvent(new Event("rows-changed"));
+      tellScope();
     });
+  }
+  // A Search's hits narrow the scope to their recordings while the Search
+  // tab is the one in view.
+  var searchHits = document.querySelectorAll(".search-hits [data-preview-recording], .search-hits a[href^='/recording/']");
+  var searching = new URLSearchParams(window.location.search).get("tab") === "search";
+  if (searching && searchHits.length && window.CaseScope) {
+    var hitIds = [];
+    Array.prototype.forEach.call(searchHits, function (one) {
+      var id = one.dataset.previewRecording || ((one.getAttribute("href") || "").match(/^\/recording\/([0-9a-f-]{36})/) || [])[1];
+      if (id && hitIds.indexOf(id) === -1) { hitIds.push(id); }
+    });
+    window.CaseScope.set("search", hitIds);
+  } else {
+    tellScope();
   }
 
   // The Cases page's New case box -------------------------------------------

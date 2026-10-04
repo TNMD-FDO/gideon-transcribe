@@ -43,6 +43,8 @@ KEYS = {
     "chat_turn": Key("chat_turn", 20, 1, "chat_turn", "chat"),
     "incident_chat": Key("incident_chat", 60, 1, "incident_chat", "chat"),
     "case_chat_turn": Key("case_chat_turn", 60, 4, "", "chat"),
+    # Over the ceiling (Phase 9 chapter 6): the overviews, then the picks whole.
+    "case_chat_two_pass": Key("case_chat_two_pass", 180, 4, "", "chat"),
     "summary": Key("summary", 90, 1, "summary", "summary"),
     "incident_memo": Key("incident_memo", 300, 4, "incident_memo", "memo", False),
     "incident_memo_rewrite": Key(
@@ -86,7 +88,7 @@ def _limit_seconds(key: Key) -> int | None:
     limit (doubled while the model may think) times the calls it can make."""
     from core import assistant, settings_store
 
-    if key.feature == "case_chat_turn":
+    if key.feature in ("case_chat_turn", "case_chat_two_pass"):
         return settings_store.case_chat_question_seconds() * (2 if _thinking() else 1)
     if not key.limit:
         return None
