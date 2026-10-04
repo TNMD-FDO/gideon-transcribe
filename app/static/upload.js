@@ -172,11 +172,14 @@
     // case chosen, and This session only gets the one line saying why.
     var tick = document.getElementById("vision-tick");
     var sessionLine = document.getElementById("vision-session-line");
+    var toCase = !!(chosenWhere && chosenWhere.value === "case");
     if (tick && tick.dataset.needsCase === "yes") {
-      var toCase = !!(chosenWhere && chosenWhere.value === "case");
       tick.hidden = !toCase;
       if (sessionLine) { sessionLine.hidden = toCase; }
     }
+    // Summaries tonight (Phase 9 chapter 5) always needs a case.
+    var summariesTick = document.getElementById("summaries-tick");
+    if (summariesTick) { summariesTick.hidden = !toCase; }
     fire(intoCase);
   }
 
@@ -267,7 +270,12 @@
     var mailMe = document.getElementById("email-when-done");
     var enrich = document.getElementById("enrich-with-vision");
     var tick = document.getElementById("vision-tick");
+    var summaries = document.getElementById("summaries-tonight");
+    var summariesTick = document.getElementById("summaries-tick");
     return {
+      // Write each recording's summary tonight (Phase 9 chapter 5): only
+      // while its tick is shown, which is only for a batch into a case.
+      summaries: !!(summaries && summariesTick && !summariesTick.hidden && summaries.checked),
       // Absent while the Admin's switch is off or mail is not configured.
       email_when_done: !!(mailMe && !mailMe.disabled && mailMe.checked),
       // Enrich with vision (Phase 4 chapter 5): only while its tick is shown.

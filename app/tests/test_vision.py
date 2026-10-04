@@ -105,7 +105,9 @@ def test_the_vision_page_holds_the_picture_settings_under_their_groups():
     assert known["moments_available"].name == "Vision"
     assert known["moments_answer_tokens"].name == "Description answer cap"
     assert known["vision_runs"].default == "lands"
-    assert known["vision_window_start"].needs_value == ("vision_runs", "overnight")
+    # The window is shared with Summaries tonight (Phase 9 chapter 5), so it
+    # is never greyed behind the vision position.
+    assert known["vision_window_start"].needs_value == ()
     assert known["exports_camera_section"].default is True
     assert dict(settings_store.PAGES)[settings_store.VISION] == "Vision"
 

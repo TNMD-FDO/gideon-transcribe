@@ -17,6 +17,7 @@ from core import (
     retention,
     settings_store,
     sharing,
+    summaries_tonight,
     vision,
 )
 from core.chronology import Event
@@ -131,6 +132,10 @@ def pills(case, role: str = "owner", user=None) -> list[dict]:
     if tonight:
         start, _ = settings_store.vision_window()
         add(f"{_count(tonight, 'video')} enriched tonight from {start}", here)
+    # Tonight's summaries (Phase 9 chapter 5), in the plain tone.
+    summaries = summaries_tonight.count_tonight(case)
+    if summaries:
+        add(f"Summaries tonight: {summaries}", here)
 
     if incidents.on():
         _incident_pills({"incident__case": case}, f"{here}?tab=incidents", add)

@@ -21,6 +21,61 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.120.0, 2026-10-04
+
+```
+Models: unchanged
+Database: migrates (0075: the batch's and the recording's marks, the
+Summary's overnight flag and its tonight state)
+```
+
+**Summaries tonight** (Phase 9 chapter 5, ADR 0017): a summary for every
+recording, written in the overnight window. Phase 1 chapter 17's "no
+Summarise all" is reversed for the night alone; New summary by day is as it
+was.
+
+- **The tick.** On the Upload page, under Enrich with vision, "Write each
+  recording's summary tonight", offered when the Summary is on and the
+  batch goes into a case (a session's recordings are gone by night). Its
+  starting position is the AI assistant page's new setting "Summaries
+  tonight starts ticked", Off as shipped. The batch keeps the tick and each
+  recording the mark.
+- **The mark.** When a transcript lands with the mark, one Summary is made
+  in the new state "tonight": the template chosen for the recording's type,
+  Standard length, no Focus, the same Summary a press of New summary gives.
+  Never a second one for a recording that has, or is getting, a summary of
+  its current transcript. The recording page's card says when it is due.
+- **The case page.** The line above the list says how many recordings have
+  no summary and how many are tonight, and offers "Write the 388 missing
+  summaries tonight" to anyone with the case; one press marks them all and
+  writes one audit row, "Summaries scheduled", with the count. The rows say
+  "summary tonight" in the muted tone, or "summary not reached last night;
+  tonight again". The case's line and Home carry "Summaries tonight: 198"
+  in the plain tone, never under Needs you.
+- **The night.** The minute tick that runs the night's vision work now runs
+  the summaries after it: inside the Vision page's window, on a minute when
+  no video is queued or being enriched, the oldest summary marked tonight
+  is handed to the summary worker, one at a time, or two when the Vision
+  page's new setting "Summaries at once overnight" says so. A recording
+  whose own vision is tonight keeps its summary until its picture is done,
+  so the summary reads the words and the picture together. While the engine
+  fails the minute check nothing is handed over and nothing fails. As the
+  window closes, what it did not reach is marked not reached and written
+  the next night. The window's two settings are no longer greyed behind the
+  vision position, since the summaries use them whatever it is.
+- **The mail.** The Batch finished message gains one line, "Each
+  recording's summary will be written tonight", when the batch carried the
+  tick. No new mail.
+- **How heavy.** A 15-minute call is about 3,000 to 4,000 tokens read and
+  up to 1,600 written, about 90 seconds at the app's starting figure, so
+  800 calls are two nights one at a time or one night two at a time; the
+  real figure comes from the office's expectation rows after the first
+  night and goes in the box ledger's log.
+
+Server note: `./transcribe upgrade v1.120.0` migrates (0075). Nothing
+shared moves; the night's load on the engine is new and the ledger's log
+says so.
+
 ## v1.119.0, 2026-10-04
 
 ```

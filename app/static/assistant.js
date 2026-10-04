@@ -210,6 +210,9 @@
         }
       } else if (one.state === "failed") {
         body = "<p class='problem'>" + escape(one.said) + "</p>";
+      } else if (one.state === "tonight") {
+        // Summaries tonight (Phase 9 chapter 5): waiting for the window.
+        body = "<p class='muted'>" + escape(one.due || "Written tonight.") + "</p>";
       } else {
         body = (one.notice ? "<p class='notice small'>" + escape(one.notice) + "</p>" : "") +
           (one.earlier ? "<p class='muted small'>" + escape(one.earlier) + "</p>" : "") +

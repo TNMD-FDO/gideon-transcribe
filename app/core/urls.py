@@ -294,6 +294,11 @@ urlpatterns = [
     path("case/<uuid:case_id>/wipe", case_pages.wipe_case, name="wipe-case"),
     # The case's videos prepared for summaries and chat, on purpose (Phase 4 ch. 7).
     path("case/<uuid:case_id>/vision", case_pages.vision_case, name="vision-case"),
+    path(
+        "case/<uuid:case_id>/summaries-tonight",
+        case_pages.summaries_tonight_case,
+        name="summaries-tonight-case",
+    ),
     # Incidents (Phase 6 chapter 1): the page of its own, its state and its
     # one act endpoint; and, from the case page, New incident and the offer.
     path(

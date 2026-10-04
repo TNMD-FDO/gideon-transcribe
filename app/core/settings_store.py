@@ -1274,6 +1274,21 @@ def _rows() -> list[Definition]:
             ),
         ),
         Definition(
+            key="summaries_tonight_tick_default",
+            page=ASSISTANT,
+            name="Summaries tonight starts ticked",
+            kind=TOGGLE,
+            default=False,
+            needs="summary_available",
+            what_it_does=(
+                "Whether the upload page's tick \"Write each recording's summary "
+                'tonight" starts ticked for an upload into a case (Phase 9 '
+                "chapter 5). The summaries are written in the overnight window "
+                "on the Vision page."
+            ),
+            when_changed="The next upload page.",
+        ),
+        Definition(
             key="suggestions_available",
             page=ASSISTANT,
             name="Speaker suggestions",
@@ -2201,11 +2216,10 @@ def _rows() -> list[Definition]:
             kind=TEXT,
             lines=1,
             default="20:00",
-            needs="moments_available",
-            needs_value=("vision_runs", "overnight"),
             what_it_does=(
-                "When the night's vision work may start, as a clock time in the "
-                "server's time zone (hh:mm)."
+                "When the night's work may start, as a clock time in the server's "
+                "time zone (hh:mm): the overnight window, vision first, then the "
+                "summaries marked for tonight (Phase 9 chapter 5)."
             ),
             when_changed="The next window.",
         ),
@@ -2217,12 +2231,10 @@ def _rows() -> list[Definition]:
             kind=TEXT,
             lines=1,
             default="06:00",
-            needs="moments_available",
-            needs_value=("vision_runs", "overnight"),
             what_it_does=(
-                "When the night's vision work stops taking new videos, as a "
-                "clock time in the server's time zone (hh:mm); a video part-way "
-                "finishes."
+                "When the night's work stops taking new videos and summaries, as "
+                "a clock time in the server's time zone (hh:mm); one part-way "
+                "finishes, and a summary not reached waits for the next night."
             ),
             when_changed="The next window.",
         ),
@@ -2239,6 +2251,25 @@ def _rows() -> list[Definition]:
                 "for a video. An office that wants transcripts alone turns this Off."
             ),
             when_changed="The next upload page.",
+        ),
+        Definition(
+            key="summaries_at_once_overnight",
+            page=VISION,
+            group="Vision",
+            name="Summaries at once overnight",
+            kind=NUMBER,
+            default=1,
+            least=1,
+            most=2,
+            needs="summary_available",
+            what_it_does=(
+                "How many of the night's summaries are written at the same time "
+                "(Summaries tonight, Phase 9 chapter 5, ADR 0017), inside the "
+                "window above. The vision work runs first, and a summary waits "
+                "for its recording's picture. At one, 800 calls take about two "
+                "nights; at two, about one."
+            ),
+            when_changed="The next window.",
         ),
         Definition(
             key="moments_in_answers",

@@ -27,6 +27,7 @@ from core import (
     incidents,
     settings_store,
     speaker_check,
+    summaries_tonight,
     tasks,
 )
 from core.assistant import (
@@ -83,6 +84,12 @@ def _summary_json(summary: Summary, transcript) -> dict:
     return {
         "id": str(summary.pk),
         "state": summary.state,
+        # Waiting for the overnight window (Phase 9 chapter 5): when.
+        "due": (
+            summaries_tonight.when_written(summary)
+            if summary.state == assistant.TONIGHT
+            else ""
+        ),
         "reason": summary.reason_class,
         "said": assistant.what_to_say(summary.reason_class)
         if summary.reason_class

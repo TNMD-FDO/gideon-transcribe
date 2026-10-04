@@ -155,6 +155,9 @@ class Batch(models.Model):
     # when the second message, Vision done, went.
     vision = models.BooleanField(default=False)
     vision_mail_sent_at = models.DateTimeField(null=True, blank=True)
+    # Write each recording's summary tonight, ticked as one for the batch
+    # (Phase 9 chapter 5).
+    summaries = models.BooleanField(default=False)
 
     # A Live recording's own Batch (Phase 3): one Recording, made on the
     # Record page, which never holds up the person's uploads.
@@ -255,6 +258,9 @@ class Recording(models.Model):
     # Enrich with vision (Phase 4 chapter 5): the upload page's tick, or a
     # press on the case page; means nothing for a sound recording.
     vision_wanted = models.BooleanField(default=False)
+    # Summaries tonight (Phase 9 chapter 5): the upload page's tick, or the
+    # case page's offer; the Summary is written in the overnight window.
+    summary_wanted = models.BooleanField(default=False)
 
     size_bytes = models.BigIntegerField(default=0)
     sha256 = models.CharField(max_length=64, blank=True, default="", db_index=True)

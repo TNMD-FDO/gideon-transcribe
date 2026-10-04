@@ -188,6 +188,22 @@
                 {% endif %}
               {% endif %}
 
+              {% if summaries.offered %}
+                {% comment %}
+                  Summaries tonight (Phase 9 chapter 5): each recording's
+                  summary written in the overnight window; only for a batch
+                  going into a case, so upload.js hides it with This session
+                  only chosen.
+                {% endcomment %}
+                <div id="summaries-tick" data-needs-case="yes">
+                  <label class="row">
+                    <input type="checkbox" id="summaries-tonight"{% if summaries.ticked %} checked{% endif %}>
+                    <b>Write each recording's summary tonight</b>
+                  </label>
+                  <p class="muted small">{{ summaries.caption }}</p>
+                </div>
+              {% endif %}
+
               {% if batch_mail.offered %}
                 <label class="row">
                   <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>

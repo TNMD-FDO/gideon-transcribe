@@ -1042,7 +1042,7 @@ def batch_finished(batch) -> bool:
         done=done,
         failed=failed,
         failed_list="\n".join(failed_lines),
-        prepared=_prepared_line(recordings),
+        prepared=_prepared_and_summaries_line(recordings),
         where=where,
         time=_when(timezone.now()),
         link=link,
@@ -1065,6 +1065,15 @@ def batch_finished(batch) -> bool:
 def _still_preparing(recording) -> bool:
     transcript = getattr(recording, "transcript", None)
     return transcript is not None and transcript.prepare_state in ("queued", "running")
+
+
+def _prepared_and_summaries_line(recordings) -> str:
+    """The {prepared} line, and under it the one line about the summaries
+    scheduled for tonight (Phase 9 chapter 5), when there are any."""
+    from core import summaries_tonight
+
+    lines = [_prepared_line(recordings), summaries_tonight.mail_line(recordings)]
+    return "\n".join(one for one in lines if one)
 
 
 def _prepared_line(recordings) -> str:

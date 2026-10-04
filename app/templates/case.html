@@ -572,6 +572,21 @@
               {% endif %}
             </form>
           {% endif %}
+          {% if summaries_line %}
+            {% comment %}
+              Summaries tonight (Phase 9 chapter 5): the recordings without a
+              summary, and the offer to write them in the overnight window,
+              for anyone with the case.
+            {% endcomment %}
+            <form method="post" action="{% url 'summaries-tonight-case' case.pk %}" class="row vision-line" id="summaries-line" style="margin: 0 0 8px; flex-wrap: wrap">
+              {% csrf_token %}
+              <span class="muted small">{{ summaries_line }}.</span>
+              {% if summaries_missing %}
+                <button type="submit" class="small"
+                        data-confirm-title="Write them tonight?" data-confirm="Each recording's summary is written in the overnight window, oldest first, with the template for its type. The rows say when one is done." data-confirm-ok="Write tonight">Write the {{ summaries_missing }} missing summar{{ summaries_missing|pluralize:"y,ies" }} tonight</button>
+              {% endif %}
+            </form>
+          {% endif %}
           {% comment %}
             The wrap scrolls sideways when the table is wider than the pane,
             so it never runs under About this case (v1.53.2). The state and
@@ -635,7 +650,7 @@
                   {% if may_direct %}<td><input type="checkbox" class="tick" value="{{ recording.pk }}" aria-label="Tick {{ recording.title }}"></td>{% endif %}
                   <td><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                   {% if any_type %}<td class="muted">{{ recording.recording_type }}</td>{% endif %}
-                  <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}</td>
+                  <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}{% if recording.summary_tonight_word %} <span class="muted small">{{ recording.summary_tonight_word|lower }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
                   {% if assignment_pills %}<td class="assigned">{% if recording.assigned_words %}{{ recording.assigned_words }}{% if recording.reviewed_words %} <span class="pill ok small">{{ recording.reviewed_words }}</span>{% endif %}{% else %}<span class="muted">nobody</span>{% endif %}</td>{% endif %}

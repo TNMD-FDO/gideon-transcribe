@@ -27,6 +27,7 @@ from core import (
     pieces,
     pipeline,
     settings_store,
+    summaries_tonight,
     tasks,
     uploads,
     vision,
@@ -277,6 +278,9 @@ def upload(request: HttpRequest) -> HttpResponse:
             # Enrich with vision (Phase 4 chapter 5): the tick, its start and
             # its caption, from the office's position.
             "vision": vision.tick(request.user),
+            # Summaries tonight (Phase 9 chapter 5): the tick under it, for a
+            # batch going into a case.
+            "summaries": summaries_tonight.tick() if to_a_case else {"offered": False},
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "service_is_up": whisperx.is_alive(),
@@ -358,6 +362,9 @@ def submit(request: HttpRequest) -> JsonResponse:
             and (wanted.get("batch") or {}).get("email_when_done")
         ),
         vision=bool(offered and (wanted.get("batch") or {}).get("enrich")),
+        summaries=bool(
+            summaries_tonight.on() and (wanted.get("batch") or {}).get("summaries")
+        ),
     )
     made = []
     for one in files:
@@ -375,6 +382,7 @@ def submit(request: HttpRequest) -> JsonResponse:
             size_bytes=int(one.get("size") or 0),
             media_state=MediaState.UPLOADING,
             vision_wanted=batch.vision,
+            summary_wanted=batch.summaries,
             **settings_for_file,
         )
         made.append({"id": str(recording.pk), "name": one.get("name", "")})

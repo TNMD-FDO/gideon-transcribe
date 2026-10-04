@@ -381,10 +381,13 @@ def mind_the_workspaces(timestamp: int) -> None:
 def mind_the_night(timestamp: int) -> None:
     """Every minute: inside the office's overnight window the oldest video
     marked tonight is queued for vision when none is being enriched; outside
-    it the ones still waiting are marked not reached (Phase 4 chapter 5)."""
-    from core import vision
+    it the ones still waiting are marked not reached (Phase 4 chapter 5).
+    Then the night's summaries, while no video is being enriched (Phase 9
+    chapter 5)."""
+    from core import summaries_tonight, vision
 
-    vision.mind_the_night()
+    did = vision.mind_the_night()
+    summaries_tonight.mind_the_night(did)
 
 
 @app.periodic(cron="* * * * *")

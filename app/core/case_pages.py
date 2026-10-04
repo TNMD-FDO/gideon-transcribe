@@ -40,6 +40,7 @@ from core import (
     settings_store,
     sharing,
     sitting,
+    summaries_tonight,
     uploads,
     vision,
     vocabulary,
@@ -331,6 +332,11 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "vision_line": vision.line(case),
             "vision_pending": vision.pending(case),
             "vision_offers": vision.offers(case, user=request.user),
+            # Summaries tonight (Phase 9 chapter 5): the line and the offer.
+            "summaries_line": summaries_tonight.line(case),
+            "summaries_missing": (
+                len(summaries_tonight.missing_in(case)) if summaries_tonight.on() else 0
+            ),
             "asked": asked,
             "search": (
                 case_search.search(case, asked, request.GET.get("kind", ""))
@@ -597,6 +603,11 @@ def _rows_for(case: Case) -> list:
         ).select_related("incident"):
             cameras.setdefault(camera.recording_id, camera)
     note_counts = notes.counts_in(case)
+    # Summaries waiting for tonight (Phase 9 chapter 5), one query.
+    tonight = {
+        one.recording_id: one
+        for one in summaries_tonight.waiting().filter(recording_id__in=ids)
+    }
     clip_counts = dict(
         Clip.objects.filter(recording_id__in=ids)
         .values_list("recording_id")
@@ -627,6 +638,7 @@ def _rows_for(case: Case) -> list:
         )
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
+        one.summary_tonight_word = summaries_tonight.words(tonight.get(one.pk))
         # The Vision column (Phase 4 chapter 5), for a video.
         transcript = getattr(one, "transcript", None)
         if transcript is not None:
@@ -752,6 +764,20 @@ def vision_case(request: HttpRequest, case_id) -> HttpResponse:
         vision.enrich_now(case, by=request.user, recording=recording)
     else:
         return HttpResponseForbidden("not offered")
+    return redirect(reverse("case", args=[case.pk]))
+
+
+@login_required
+@require_POST
+def summaries_tonight_case(request: HttpRequest, case_id) -> HttpResponse:
+    """Write the missing summaries tonight (Phase 9 chapter 5): anyone with
+    the case marks every recording without a summary of its transcript."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    if not summaries_tonight.on():
+        return HttpResponseForbidden("not offered")
+    cases.note_activity(case, by=request.user)
+    summaries_tonight.schedule_missing(case, by=request.user, request=request)
     return redirect(reverse("case", args=[case.pk]))
 
 

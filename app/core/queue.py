@@ -289,6 +289,10 @@ def merge(job: Job) -> Job:
     from core import vision
 
     vision.on_transcript(job.recording)
+    # Its summary tonight, when the upload carried the tick (Phase 9 chapter 5).
+    from core import summaries_tonight
+
+    summaries_tonight.on_transcript(job.recording)
     # The Speaker check, when the office has it on (Phase 5 chapter 3).
     from core import speaker_check
 

@@ -331,12 +331,12 @@ Category AI: **Summaries scheduled** (the count, the case), and the summary rows
 
 ### Settings
 
-- **Summaries tonight tick** (Upload page defaults): ticked or unticked, default unticked.
+- **Summaries tonight starts ticked** (AI assistant page): On or Off, default Off.
 - **Summaries at once overnight** (Vision page): 1 or 2, default 1.
 
 ### Left to the build
 
-- The exact order between vision and summaries inside the window (vision first, then summaries, or interleaved), within "one or two at a time and the summary waits for its picture".
+- The exact order between vision and summaries inside the window (vision first, then summaries, or interleaved), within "one or two at a time and the summary waits for its picture". Decided in v1.120.0: vision first; a summary is handed over only on a minute when no video is queued or being enriched, and a recording whose own vision is tonight keeps its summary until its picture is done.
 
 ## 6. Gideon reads what fits
 
@@ -448,7 +448,7 @@ No wording ships untried, the repository's rule. From `llm-worker` on the office
 
 | Setting | Page | Type | Default | Chapter |
 |---|---|---|---|---|
-| Summaries tonight tick | Upload page defaults | ticked or unticked | unticked | 5 |
+| Summaries tonight starts ticked | AI assistant | On or Off | Off | 5 |
 | Summaries at once overnight | Vision | 1 or 2 | 1 | 5 |
 | Case chat: hours of talk read whole per question | Limits | hours, 6 to 600 (renamed; same key) | 120 | 6 |
 | Case chat: most recordings the overviews may point to | Limits | 5 to 60 | 30 | 6 |

@@ -27,6 +27,10 @@ log = logging.getLogger("transcribe.assistant")
 
 QUEUED, RUNNING, DONE, FAILED = "queued", "running", "done", "failed"
 STATES = [(QUEUED, "queued"), (RUNNING, "running"), (DONE, "done"), (FAILED, "failed")]
+# A Summary waiting for the overnight window (Phase 9 chapter 5); the Summary's
+# own list, so no other model's choices move.
+TONIGHT = "tonight"
+SUMMARY_STATES = STATES + [(TONIGHT, "tonight")]
 
 # Starting values for the build gate, held in code, never settings: the time
 # limits in seconds (doubled while the model may think), and the sampling.
@@ -412,7 +416,9 @@ class Summary(models.Model):
     # the lane is doing while it runs, for the card.
     digest_parts = models.IntegerField(default=0)
     stage = models.CharField(max_length=60, blank=True, default="")
-    state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
+    state = models.CharField(max_length=10, choices=SUMMARY_STATES, default=QUEUED)
+    # Written by the night's run, Summaries tonight (Phase 9 chapter 5).
+    overnight = models.BooleanField(default=False)
     # The time expectation given at the ask (v1.95.0): the size measured,
     # the office's figure, when it was asked for and when the worker began.
     expectation = models.JSONField(default=dict, blank=True)
