@@ -887,6 +887,101 @@ def find(incident, asked: str) -> dict:
     }
 
 
+def find_notes(case, asked: str) -> dict:
+    """The Notes page's Find (Phase 9 chapter 4): the case's notes (on lines
+    and at moments) and every recording's words; the exact hits first, then
+    the close ones, then a listed spelling's (chapter 2). Each hit is a moment
+    the page plays. Never logged."""
+    words = terms(asked)
+    if len("".join(words)) < SHORTEST:
+        return {"asked": asked, "hits": [], "also": [], "heard_forms": []}
+    lines = Segment.objects.filter(
+        transcript__recording__case=case, same_as_other_side=False
+    )
+    moment_notes = MomentNote.objects.filter(recording__case=case)
+    also = close.forms(
+        words,
+        sources=[
+            (lines, "text"),
+            (lines.exclude(note=""), "note"),
+            (moment_notes, "note"),
+        ],
+    )
+    heard = vocabulary.heard_as(case, words)
+    hits: list[dict] = []
+
+    def add(kind, recording, at, html, who, near):
+        hits.append(
+            {
+                "kind": kind,
+                "recording": str(recording.pk),
+                "at": round(float(at), 2),
+                "clock": exports.clock(at),
+                "html": str(html),
+                "who": who,
+                "close": near is True,
+                "heard": near == HEARD,
+                "rank": 2 if near == HEARD else (1 if near else 0),
+            }
+        )
+
+    rows, _ = _with_close(
+        lines.exclude(note="").select_related("transcript__recording", "note_by"),
+        ["note"],
+        words,
+        also,
+        heard=heard,
+    )
+    for one, near in rows:
+        add(
+            "note",
+            one.transcript.recording,
+            one.start,
+            marked(one.note, words, also, near, heard),
+            one.note_by.shown_name if one.note_by else "",
+            near,
+        )
+    rows, _ = _with_close(
+        moment_notes.select_related("recording", "note_by"),
+        ["note"],
+        words,
+        also,
+        heard=heard,
+    )
+    for one, near in rows:
+        add(
+            "note",
+            one.recording,
+            one.at,
+            marked(one.note, words, also, near, heard),
+            one.note_by.shown_name if one.note_by else "",
+            near,
+        )
+    rows, _ = _with_close(
+        lines.select_related("transcript__recording"),
+        ["text", "speaker"],
+        words,
+        also,
+        heard=heard,
+    )
+    for one, near in rows:
+        add(
+            "words",
+            one.transcript.recording,
+            one.start,
+            marked(one.text, words, also, near, heard),
+            one.speaker,
+            near,
+        )
+    hits.sort(key=lambda hit: (hit["rank"], hit["recording"], hit["at"]))
+    return {
+        "asked": asked,
+        "hits": hits[:MOST],
+        "also": close.every_form(also),
+        "heard_forms": heard,
+    }
+
+
 def find_in(recording, asked: str) -> dict:
     """Find on a recording's page (v1.97.0): the page itself finds what was
     typed in the lines it holds; this answers what it cannot, the lines that

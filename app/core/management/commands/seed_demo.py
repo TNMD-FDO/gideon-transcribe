@@ -19,6 +19,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from core import incidents, settings_store
 from core.assistant import Suggestion
@@ -222,6 +223,78 @@ class Command(BaseCommand):
                 admin, samples, f"Sample_{number:02d}", seconds=60.0 * number
             )
             self.transcript(recording, CALL_LINES[: 2 + number], every=10.0)
+
+        # A case of calls reviewed by a team (Phase 9), with notes by both
+        # people, assignments and one reviewed, for the Notes page's walk.
+        from core import assignments
+        from core.notes import MomentNote
+        from core.sharing import Share
+
+        calls_case = Case.objects.create(owner=admin, name="Pike calls (fictional)")
+        Share.objects.create(case=calls_case, person=colleague, added_by=admin)
+        pike_calls = []
+        for number in range(12):
+            call = self.audio(
+                admin,
+                calls_case,
+                f"Call_{401 + number:04d}_2026-02-{9 + number:02d}",
+                seconds=240.0 + 30.0 * (number % 5),
+            )
+            call.recording_type = "Jail call"
+            call.save(update_fields=["recording_type"])
+            self.transcript(call, CALL_LINES, every=9.0 + (number % 3))
+            pike_calls.append(call)
+        for index, call in enumerate(pike_calls):
+            assignments.assign(call, colleague if index % 2 else admin, by=admin)
+        for call, line, words, writer in (
+            (pike_calls[0], 2, "First mention of the letter; who sent it?", admin),
+            (
+                pike_calls[0],
+                4,
+                "Jordan again. Compare 0405 at the same point.",
+                admin,
+            ),
+            (pike_calls[1], 3, "The fourteenth: check the docket.", colleague),
+            (
+                pike_calls[2],
+                6,
+                "Pressure on the witness. Flag for the attorney.",
+                colleague,
+            ),
+            (
+                pike_calls[4],
+                4,
+                "Jordan named as the one who spoke to the witness.",
+                admin,
+            ),
+            (pike_calls[5], 8, "Money for the phone account, Friday.", colleague),
+            (
+                pike_calls[7],
+                6,
+                "Second ask to the witness: tell her it matters.",
+                admin,
+            ),
+            (
+                pike_calls[9],
+                2,
+                "Letter received; the date is confirmed.",
+                colleague,
+            ),
+            (pike_calls[11], 10, "Fourteenth repeated; nothing new.", admin),
+        ):
+            segment = list(call.transcript.segments.order_by("start"))[line]
+            segment.note = words
+            segment.note_by = writer
+            segment.note_changed = timezone.now()
+            segment.save(update_fields=["note", "note_by", "note_changed"])
+        MomentNote.objects.create(
+            recording=pike_calls[3],
+            at=5.0,
+            note="A long silence before anyone speaks; check the recording.",
+            note_by=colleague,
+            note_changed=timezone.now(),
+        )
+        assignments.mark_reviewed(pike_calls[0], by=admin)
 
         loose = self.audio(admin, None, "Voicemail_0412", seconds=48.0)
         self.transcript(loose, CALL_LINES[:3], every=12.0)

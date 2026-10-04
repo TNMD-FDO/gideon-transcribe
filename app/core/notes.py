@@ -475,6 +475,14 @@ def carry(kept: list[dict], transcript) -> int:
 # The case's notes ---------------------------------------------------------------------
 
 
+def _page_url(recording, key: str) -> str:
+    """The Notes page (Phase 9 chapter 4) opened on this note, or nothing
+    outside a Case."""
+    if not recording.case_id:
+        return ""
+    return f"{reverse('notes-page', args=[recording.case_id])}?note={key}"
+
+
 def _line_rows(case, links: dict | None = None) -> list[dict]:
     # The All cameras links come from one query for the case (Phase 9
     # chapter 1), not one per row.
@@ -505,6 +513,7 @@ def _line_rows(case, links: dict | None = None) -> list[dict]:
                 "at": one.start,
                 "when": exports.clock(one.start),
                 "url": f"{viewer}?t={one.start:.1f}&note=1",
+                "page_url": _page_url(recording, f"line:{one.pk}"),
                 "all_cameras": incidents.url_at(links.get(recording.pk), one.start),
                 "rests_on": one.text,
                 "who": one.speaker,
@@ -540,6 +549,7 @@ def _moment_rows(case, links: dict | None = None) -> list[dict]:
                 "at": one.at,
                 "when": exports.clock(one.at),
                 "url": f"{viewer}?t={one.at:.1f}&note=1",
+                "page_url": _page_url(recording, f"moment:{one.pk}"),
                 "all_cameras": incidents.url_at(links.get(recording.pk), one.at),
                 "rests_on": "",
                 "who": "",

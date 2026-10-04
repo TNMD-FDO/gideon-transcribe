@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Notes, {{ case.name }}{% endblock %}
+{% block body_class %}viewer incident-page notes-page{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block foot %}{% endblock %}
+{% block content %}
+  {% comment %}
+    The Notes page (Phase 9 chapter 4): the incident page's shape without the
+    wall. Left, one recording at one moment, the Preview mounted into the
+    page, with the note under its line and Previous and Next; right, the
+    work panel with Notes, Recordings, Details and a Find box. Open the call
+    opens the whole call in a pop-out over the page, never a jump away.
+    notes-page.js draws everything below the head from one reading of the
+    case (list_json) and the Preview's own readings of a moment.
+  {% endcomment %}
+  <div class="page-head np-head">
+    <div>
+      <div class="eyebrow"><a href="{% url 'cases' %}">Cases</a> &rsaquo; <a href="{% url 'case' case.pk %}">{{ case.name }}</a></div>
+      <h1>Notes</h1>
+      <p class="lead" id="np-lead">Reading the notes...</p>
+    </div>
+    <div class="actions">
+      {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
+      {% if case_chat_available %}
+        <button type="button" class="btn small" id="gideon-open-np" title="Ask Gideon about this case">{% icon "chat" %} Ask Gideon</button>
+      {% endif %}
+      <details class="menu" id="np-export">
+        <summary class="btn small" title="Download the notes or the list">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
+        <ul>
+          <li><a href="{{ notes_url }}">{% icon "word" %} Download notes (Word)</a></li>
+          <li><a href="{{ csv_url }}">{% icon "text" %} Download the list (.csv)</a></li>
+        </ul>
+      </details>
+    </div>
+  </div>
+
+  <div class="inc-desk notes-desk" id="notes-desk"
+       data-list="{{ list_url }}" data-find="{{ find_url }}" data-opening="{{ opening }}" data-case="{{ case.pk }}">
+    <div class="np-left" id="np-left">
+      <div class="np-call-head" id="np-call-head">
+        <div class="row" style="gap: 8px; flex-wrap: wrap">
+          <b id="np-call-title" style="font-size: var(--t-heading)">No recording yet</b>
+          <span id="np-call-pills" class="row" style="gap: 6px"></span>
+          <span class="grow"></span>
+          <button type="button" class="btn small ghost" id="np-open-call" hidden title="The whole call, over this page">Open the call</button>
+        </div>
+        <div class="muted small" id="np-call-facts"></div>
+      </div>
+      <div class="np-bar" id="np-bar" hidden>
+        <button type="button" class="small" data-np-seek="-5" title="Back five seconds">&minus;5s</button>
+        <button type="button" class="small" data-np-seek="5" title="Forward five seconds">+5s</button>
+        <label class="small">Speed
+          <select id="np-speed"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select>
+        </label>
+        <span class="muted small" id="np-bar-said">The player's own controls are under the picture.</span>
+      </div>
+      <canvas id="np-wave" class="np-wave" height="44" aria-hidden="true"></canvas>
+      <div id="moment" class="np-moment"></div>
+      <div class="np-foot" id="np-foot">
+        <button type="button" class="small" id="np-prev" title="The one before (K or the left arrow)">&lsaquo; <span id="np-prev-word">Previous note</span></button>
+        <button type="button" class="small" id="np-next" title="The next one (J or the right arrow)"><span id="np-next-word">Next note</span> &rsaquo;</button>
+        <span class="muted small" id="np-position"></span>
+        <span class="grow"></span>
+        <button type="button" class="small" id="np-mark" hidden>Mark reviewed</button>
+        <button type="button" class="small ghost" id="np-unmark" hidden>Not reviewed after all</button>
+        <details class="small np-overview" id="np-overview" hidden>
+          <summary>Overview, from the summary</summary>
+          <p id="np-overview-text" class="muted"></p>
+        </details>
+      </div>
+      <p class="muted small np-hint" id="np-hint">Press ? for the keyboard shortcuts: Space plays, J and K step, N writes a note, R marks reviewed.</p>
+    </div>
+
+    <div id="work-grip" class="workgrip" title="Drag to make the panel wider or narrower. Double-press for the usual width." role="separator" aria-label="Resize the panel" tabindex="0"></div>
+
+    <div class="work inc-work np-work" id="np-work">
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab on" data-panel="notes" title="Notes">{% icon "note" %} <span class="w">Notes</span> <span class="count" id="np-count-notes"></span></button>
+        <button type="button" class="tab" data-panel="recordings" title="Recordings">{% icon "recordings" %} <span class="w">Recordings</span> <span class="count" id="np-count-recordings"></span></button>
+        <button type="button" class="tab" data-panel="details" title="Details">{% icon "info" %} <span class="w">Details</span></button>
+        <input type="search" id="np-find" class="small inc-find" maxlength="200" placeholder="Find in notes and calls" aria-label="Find in the notes and the recordings' words" title="Words in a note or in any recording's lines; press a hit and it plays here. Enter for the next hit, Escape to clear.">
+      </div>
+      <div class="inc-layer" id="np-layer-find" hidden>
+        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Notes</span></button><b id="np-find-title">Find</b><span class="grow"></span></div>
+        <div class="inc-find-hits" id="np-find-hits"></div>
+      </div>
+      <div class="panels" id="np-panels">
+        <div class="panel" id="panel-notes">
+          <div class="row np-pills" id="np-pills" style="gap: 6px; flex-wrap: wrap"></div>
+          <div class="row np-pills" id="np-type-pills" style="gap: 6px; flex-wrap: wrap; margin-top: 6px"></div>
+          <div class="np-list" id="np-list"></div>
+          <div class="row small muted np-list-foot" id="np-list-foot"></div>
+        </div>
+        <div class="panel" id="panel-recordings" hidden>
+          <input type="search" id="np-rec-filter" class="small" placeholder="Filter the recordings as you type" aria-label="Filter the recordings" style="width: 100%; box-sizing: border-box; margin-bottom: 6px">
+          <div class="row np-pills" id="np-rec-pills" style="gap: 6px; flex-wrap: wrap; margin-bottom: 6px"></div>
+          <div class="tbl-wrap"><table class="tbl small" id="np-recordings"><thead><tr><th>Recording</th><th>Length</th><th>Assigned to</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row small muted" id="np-rec-foot" style="margin-top: 6px"></div>
+        </div>
+        <div class="panel" id="panel-details" hidden>
+          <div class="label">This case</div>
+          <p class="small" style="margin: 2px 0 10px">{{ facts.recordings }} recording{{ facts.recordings|pluralize }}, {{ facts.hours }} hours of talk, {{ facts.summarised }} summarised, {{ facts.notes }} note{{ facts.notes|pluralize }}.</p>
+          {% if sharing_on %}
+            <div class="label">Team</div>
+            <ul class="plain team-list" style="margin-bottom: 10px">
+              {% for row in team %}
+                <li{% if row.status %} class="muted"{% endif %}>
+                  <span><b>{{ row.person.shown_name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
+                  {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" %}<span class="pill small">Also an owner</span>{% endif %}
+                  {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
+                  <div class="muted small">{{ row.assigned }} assigned &middot; {{ row.reviewed }} reviewed &middot; {{ row.noted }} noted</div>
+                </li>
+              {% endfor %}
+            </ul>
+            <p class="muted small">Add people and assign on <a href="{% url 'case' case.pk %}">the case page</a>.</p>
+          {% endif %}
+          {% include "case-vocabulary.html" %}
+          <div class="label" style="margin-top: 12px">Downloads</div>
+          <div class="row" style="gap: 6px; margin-top: 4px; flex-wrap: wrap">
+            <a class="btn small" href="{{ notes_url }}">{% icon "word" %} Download notes</a>
+            <a class="btn small" href="{{ csv_url }}">{% icon "text" %} Download the list</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% comment %}The pop-out: the whole call over the page, the Preview grown; Esc or Close returns exactly, Open the full call leaves.{% endcomment %}
+  <div id="np-popout" class="modal-bg" hidden>
+    <div class="np-popout-card" role="dialog" aria-label="The whole call">
+      <div class="row np-popout-head">
+        <b id="np-popout-title" class="grow"></b>
+        <span class="muted small" id="np-popout-facts"></span>
+        <a class="btn small" id="np-popout-open" href="#">Open the full call</a>
+        <button type="button" class="btn small ghost" id="np-popout-close">Close</button>
+      </div>
+      <div id="np-popout-host" class="np-popout-host"></div>
+    </div>
+  </div>
+
+  {# The shortcuts overlay, as the recording page has it. #}
+  <div id="shortcuts" class="modal-bg" hidden>
+    <div class="modal">
+      <div class="row">
+        <h2 class="grow">Keyboard shortcuts</h2>
+        <button type="button" id="close-shortcuts">Close</button>
+      </div>
+      <p class="muted small">Shortcuts work whenever you are not typing in a box.</p>
+      <div class="shortcuts">
+        <div><span>Play or pause</span><kbd>Space</kbd></div>
+        <div><span>Back or forward five seconds</span><kbd>&larr; &rarr;</kbd></div>
+        <div><span>Next or previous note, or call</span><kbd>J K</kbd></div>
+        <div><span>A note on the line being spoken</span><kbd>N</kbd></div>
+        <div><span>Mark reviewed (asks first)</span><kbd>R</kbd></div>
+        <div><span>Open the call</span><kbd>O</kbd></div>
+        <div><span>Find</span><kbd>/</kbd></div>
+        <div><span>Close what is open</span><kbd>Esc</kbd></div>
+        <div><span>This list</span><kbd>?</kbd></div>
+      </div>
+    </div>
+  </div>
+
+  {% if case_chat_available %}{% include "gideon-drawer.html" with gideon_kind="case" gideon_on=gideon_on gideon_why=gideon_why %}{% endif %}
+  <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'waveform.js' %}"></script>
+  <script src="{% static 'notes-page.js' %}"></script>
+  {% if case_chat_available %}
+    <script src="{% static 'expectation.js' %}"></script>
+    <script src="{% static 'chat-ui.js' %}"></script>
+    <script src="{% static 'case-chat.js' %}"></script>
+    <script src="{% static 'gideon.js' %}"></script>
+  {% endif %}
+{% endblock %}

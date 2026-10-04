@@ -23,9 +23,9 @@ def test_the_seed_fills_an_empty_database_once(settings, tmp_path):
     settings.UPLOADS_DIR = tmp_path / "uploads"
     said = StringIO()
     call_command("seed_demo", password="a-password-for-the-walk", stdout=said)
-    assert "Seeded: 2 people, 3 cases, 12 recordings" in said.getvalue()
-    assert User.objects.count() == 2 and Case.objects.count() == 3
-    assert Recording.objects.count() == 12 and Incident.objects.count() == 1
+    assert "Seeded: 2 people, 4 cases, 24 recordings" in said.getvalue()
+    assert User.objects.count() == 2 and Case.objects.count() == 4
+    assert Recording.objects.count() == 24 and Incident.objects.count() == 1
     assert Clip.objects.count() == 3 and Suggestion.objects.count() == 4
     assert Incident.objects.get().cameras.count() == 3
     # Nothing in it is anybody's: the names are the seed's own.

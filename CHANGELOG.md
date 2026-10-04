@@ -21,6 +21,41 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.119.0, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Notes page** (Phase 9 chapter 4): the case's notes as a work page,
+the incident page's shape without the wall.
+
+- **The page.** Open as a page on the Notes tab. On the left, one
+  recording at one moment: the Preview mounted into the page, with the
+  recording's title and pills, the player, a waveform with every note
+  marked, the lines around the moment and the note under its line,
+  editable where it sits; a fold with the summary's overview. On the
+  right, the work panel: Notes (every note grouped under its recording in
+  call order, pills by writer and by type, the row playing lit), Recordings
+  (the list with its filter box, the Mine and Reviewed pills, Listen) and
+  Details (the case's figures, the team, the vocabulary, the downloads),
+  with a Find box over the notes and the recordings' words whose hits open
+  as a layer and play on the left.
+- **Stepping.** Previous and Next note through the notes listed, crossing
+  into the next recording; from the Recordings tab, Previous and Next call
+  through the recordings themselves, "Call 3 of 6 left for you". Mark
+  reviewed in the foot in both modes, with the same question as the
+  recording page.
+- **Open the call** opens the whole recording in a window over the page
+  (every line, its own player), never a jump away; Close or Esc returns
+  exactly, Open the full call leaves for the recording page.
+- **Keyboard**: Space, the arrows, J and K, N, R, O, / and ?, listed on
+  the page's own shortcuts overlay.
+- The Notes tab's rows gain "on the page", which opens the page on that
+  note. The seed's fictional office gains a case of twelve calls with notes
+  by both its people, for the walk.
+
 ## v1.118.0, 2026-10-04
 
 ```

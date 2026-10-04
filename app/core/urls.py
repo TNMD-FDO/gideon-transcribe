@@ -15,6 +15,7 @@ from core import (
     incident_pages,
     live_pages,
     media_access,
+    notes_page,
     pages,
     panel,
     panel_pages,
@@ -453,6 +454,17 @@ urlpatterns = [
         "recording/<uuid:recording_id>/reviewed",
         case_pages.mark_reviewed,
         name="mark-reviewed",
+    ),
+    path("case/<uuid:case_id>/notes-page", notes_page.page, name="notes-page"),
+    path(
+        "case/<uuid:case_id>/notes-page/list",
+        notes_page.list_json,
+        name="notes-page-list",
+    ),
+    path(
+        "case/<uuid:case_id>/notes-page/find",
+        notes_page.find,
+        name="notes-page-find",
     ),
     path(
         "case/<uuid:case_id>/vocabulary",

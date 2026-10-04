@@ -1972,6 +1972,7 @@ def citations(
 # (v1.90.0). Matched whole, without case, with markdown marks stripped.
 KNOWN_PARTS = (
     "summary",
+    "overview",
     "the cameras",
     "people",
     "what happened",

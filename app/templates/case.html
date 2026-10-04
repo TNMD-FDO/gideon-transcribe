@@ -185,9 +185,11 @@
           {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px; gap: 8px">
             <p class="lead grow" style="margin: 0">
-              {% if notes.total %}{{ notes.total }} note{{ notes.total|pluralize }} in this case, the office's own words: {{ notes.lines }} on line{{ notes.lines|pluralize }} of transcripts, {{ notes.events }} on event{{ notes.events|pluralize }}.{% else %}None yet. A note is written under a line of a transcript (<b>note</b> on the line, or N) or on an event of a chronology; every note in the case is listed here.{% endif %}
+              {% if notes.total %}{{ notes.total }} note{{ notes.total|pluralize }} in this case, the office's own words: {{ notes.lines }} on line{{ notes.lines|pluralize }} of transcripts, {{ notes.events }} on event{{ notes.events|pluralize }}.{% else %}None yet. A note is written under a line of a transcript (<b>note</b> on the line, or N) or on an event of a chronology; every note in the case is listed here, and <a href="{% url 'notes-page' case.pk %}">the Notes page</a> plays them one by one.{% endif %}
             </p>
             {% if notes.total %}
+              {% comment %}The Notes page (Phase 9 chapter 4): the notes as a work page.{% endcomment %}
+              <a class="btn small" href="{% url 'notes-page' case.pk %}" title="One page: the recording on the left, every note on the right, stepping through them">{% icon "note" %} Open as a page</a>
               <a class="btn small" href="{% url 'case' case.pk %}?tab=search&kind=notes" title="The Search tab, notes only">{% icon "search" %} Search notes</a>
               <a class="btn small" href="{% url 'case-notes' case.pk %}" title="Every note in the case as a Word document, for the office's own reading">{% icon "word" %} Download notes</a>
             {% endif %}
@@ -205,7 +207,7 @@
                 <li class="note-row" data-kind="{{ one.kind }}">
                   <a class="note-text" href="{{ one.url }}" title="Open where this note was written">{{ one.text|linebreaksbr }}</a>
                   <div class="muted small note-meta">
-                    <a href="{{ one.url }}" class="mono">{{ one.when }}</a>{% if one.all_cameras %} <a class="cite all" href="{{ one.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}
+                    <a href="{{ one.url }}" class="mono">{{ one.when }}</a>{% if one.page_url %} <a class="cite all" href="{{ one.page_url }}" title="This note on the Notes page">on the page</a>{% endif %}{% if one.all_cameras %} <a class="cite all" href="{{ one.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}
                     &middot; {{ one.where }}
                     {% comment %}A note at a moment (v1.99.0) rests on no line and says nothing here (v1.99.1).{% endcomment %}
                     {% if one.rests_on %}&middot; {% if one.kind == "event" %}on the event: {% elif one.who %}{{ one.who }}: {% endif %}<i>{{ one.rests_on|truncatechars:140 }}</i>{% endif %}

@@ -427,7 +427,14 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
         at = max(0.0, float(request.GET.get("t", "0")))
     except (TypeError, ValueError):
         at = 0.0
-    low, high = max(0.0, at - AROUND_BEFORE), at + AROUND_AFTER
+    # The whole recording (Phase 9 chapter 4, the Notes page's pop-out): every
+    # line, not the minutes around the moment.
+    whole = request.GET.get("whole", "") == "1"
+    length = float(recording.duration_seconds or 0)
+    if whole:
+        low, high = 0.0, max(length, at) + 1.0
+    else:
+        low, high = max(0.0, at - AROUND_BEFORE), at + AROUND_AFTER
     transcript = getattr(recording, "transcript", None)
     lines = []
     seen = []
@@ -472,9 +479,31 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
     playback = recording.playback_path() if recording.playback_ready else None
     replaced = being_replaced(recording)
     camera = incidents.incident_of(recording) if incidents.on() else None
+    from core import assignments, assistant
+
     return JsonResponse(
         {
             "title": exports.title_of(recording),
+            # The Notes page's left side (Phase 9 chapter 4): the facts its
+            # head and its fold show, and the waveform's peaks.
+            "length": exports.clock(length) if length else "",
+            "length_seconds": length,
+            "type": recording.recording_type,
+            "summarised": assistant.Summary.objects.filter(
+                recording=recording, state=assistant.DONE
+            ).exists(),
+            "overview": assistant.overview_of(recording),
+            "waveform": (
+                f"{media_root(recording)}/waveform.json"
+                if recording.playback_ready and recording.waveform_path.exists()
+                else ""
+            ),
+            "assigned": (
+                recording.assigned_to.shown_name if recording.assigned_to_id else ""
+            ),
+            "reviewed": assignments.reviewed_words(recording, request.user),
+            "may_mark": assignments.may_mark(recording, request.user),
+            "whole": whole,
             "seconds": at,
             "clock": exports.clock(at),
             "from": low,

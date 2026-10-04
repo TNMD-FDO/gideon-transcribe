@@ -2474,6 +2474,69 @@ def _make_digest_parts(
     return texts, False
 
 
+OVERVIEW_MOST = 600
+KNOWN_PARTS_LOWER = frozenset(one.lower() for one in prompts.KNOWN_PARTS)
+
+
+def overview_of(recording) -> str:
+    """The Overview of a recording's newest finished Summary (Phase 9
+    chapters 4 and 6): the lines after its Overview or Summary heading up to
+    the next heading; failing such a heading, its first part; a text with no
+    heading, its first 600 characters cut at a sentence end. Nothing when
+    the recording has no Summary. The Summary's own text, kept for its own
+    sake; nothing is indexed."""
+    import re
+
+    transcript = getattr(recording, "transcript", None)
+    summaries = Summary.objects.filter(recording=recording, state=DONE).order_by(
+        "-created"
+    )
+    chosen = None
+    if transcript is not None:
+        chosen = summaries.filter(transcript_created=transcript.created).first()
+    if chosen is None:
+        chosen = summaries.first()
+    if chosen is None or not (chosen.text or "").strip():
+        return ""
+    lines = [one.rstrip() for one in chosen.text.splitlines()]
+
+    def heading_of(line: str) -> str:
+        bare = re.sub(r"^[#*\s]+|[*\s]+$", "", line).strip()
+        if not bare or len(bare) > 60:
+            return ""
+        if bare.endswith(":"):
+            return bare[:-1].strip().lower()
+        return bare.lower() if bare.lower() in KNOWN_PARTS_LOWER else ""
+
+    taken: list[str] = []
+    first_part: list[str] = []
+    inside = False
+    seen_heading = False
+    for line in lines:
+        head = heading_of(line)
+        if head:
+            if inside:
+                break
+            seen_heading = True
+            inside = head in ("overview", "summary")
+            continue
+        words = line.strip()
+        if not words:
+            continue
+        if inside:
+            taken.append(words)
+        elif not seen_heading or not taken:
+            # Before any heading, or under a heading that is not the
+            # overview: the first part, kept in case no overview comes.
+            first_part.append(words)
+    text = " ".join(taken) if taken else " ".join(first_part)
+    if len(text) > OVERVIEW_MOST:
+        cut = text[:OVERVIEW_MOST]
+        end = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
+        text = cut[: end + 1] if end > 200 else cut.rsplit(" ", 1)[0] + "..."
+    return text.strip()
+
+
 def unnamed_speakers(transcript) -> list[str]:
     """Speakers still wearing the app's own label, Speaker n or Side n Speaker n."""
     names = (
