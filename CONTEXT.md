@@ -96,6 +96,14 @@ _Avoid_: hotwords, initial prompt (implementation terms)
 **Office Vocabulary**:
 Names and terms an Admin keeps for the whole office, sent with every Run ahead of the Batch's own Vocabulary.
 
+**Case vocabulary**:
+The list a Case keeps of names and places, each with its Also heard as spellings, carried into every Recording added to the Case (the names, between the Office Vocabulary and the Batch's own), into Search and Find (the spellings as forms, marked also heard as) and into what Gideon is told. A Person of the Case is an entry by itself. No Transcript is ever rewritten by it. Phase 9 chapter 2.
+_Avoid_: alias list, dictionary, glossary (this file is the glossary), find and replace
+
+**Also heard as**:
+The spellings the engine has been heard to give a name or place, listed on its Case vocabulary entry; a Search hit by one is marked so, after the exact hits. Phase 9 chapter 2.
+_Avoid_: alias, nickname, misspelling, variant
+
 **Follow mode**:
 The viewer behaviour that keeps the current Segment in view while the Recording plays. On by default; pauses while the user scrolls the Transcript by hand and resumes on request.
 
@@ -460,6 +468,13 @@ _Avoid_: comment, annotation, remark, bookmark, flag; timed note, moment note, f
 The tab on the Case page that lists every Note in the Case, on lines and on events, newest first, each opening where it was written; with Download notes, a Word document of them all for the office's own reading. Phase 8 chapter 2.
 _Avoid_: comments, annotations, notebook
 
+**Notes page**:
+The Case's work page for its notes, reached by Open as a page on the Notes tab: the recording in hand on the left (its player bar, the waveform with the notes marked, the lines around the moment with the note under its line, Previous and Next note or Previous and Next call, Mark reviewed), and the work panel on the right (Notes grouped by recording in call order with pills by writer and type, Recordings, Details, a Find box). Open the call opens the whole call in a pop-out over the page, never a jump away; Open the full call inside it is the one door to the recording page. Phase 9 chapter 4.
+_Avoid_: notes pane (the pane is the case page's right column), notebook, review page, desk
+
+**Open as a page**:
+The Notes tab's button that opens the Notes page. Phase 9 chapter 4.
+
 **To check**:
 A person's mark on an Event that something needs looking at, shown as a pill on the Chronology tab, counted in its head line, printed in the exports, and told to the memo, which says where a point is unsettled. Cleared only by a person. Phase 7 chapter 1.
 _Avoid_: flag, todo, open
@@ -498,8 +513,8 @@ An Admin giving a Case, or every Case a user owns, to a named user. The way a le
 An owner giving one of their Cases to a named colleague; the old owner stays on it as a Collaborator. Does not start the Retention policy's clock over.
 
 **Share**:
-The owner's grant of access to one Case to one named colleague. One kind only: whoever a Case is shared with can do inside it everything the owner can, short of sharing, renaming, transferring, or deleting the Case.
-_Avoid_: permission, access level, viewer, editor (there are no levels)
+The owner's grant of access to one Case to one named colleague. One kind only: whoever a Case is shared with can do inside it everything the owner can, short of sharing, renaming, transferring, or deleting the Case. One mark widens it, Also an owner (Phase 9 chapter 3); nothing narrows it.
+_Avoid_: permission, access level, viewer, editor (there are no levels; Also an owner is a mark, not a level)
 
 **Collaborator**:
 A person a Case is shared with. Their work in the Case counts as its activity, and the Recordings they add count against the owner's room.
@@ -507,6 +522,34 @@ _Avoid_: sharer (could mean either person), guest, member
 
 **Sharing**:
 The admin toggle that lets owners share Cases. Off hides every Share without ending it.
+
+**Team**:
+Everyone with a Case: its Owner first, then each Collaborator, each with when they last opened the case, how many Recordings are assigned to them, how many they have reviewed and how many they have noted; one list in the case page's right pane, seen by all of them, with Add people beside it for those who may. Phase 9 chapter 3.
+_Avoid_: members, group, roster, sharers, Shared with (the old panel's heading)
+
+**Owner**:
+The one person a Case belongs to, who created it or was handed it by Transfer or Reassign: the quota and the Retention policy's clock are theirs, with Rename, Transfer and Delete, and the Also an owner mark. First on the Team with an Owner pill.
+_Avoid_: creator, lead, manager, admin (that is the Admin)
+
+**Also an owner**:
+The one mark an Owner may put on a Collaborator's Share so they may add and remove people and assign, unassign and divide as the Owner does; Rename, Transfer, Delete and the mark itself stay the Owner's. Not a level: nothing is narrower than a Collaborator. Phase 9 chapter 3.
+_Avoid_: co-owner, role, permission, level, editor, manager, deputy
+
+**Assigned to**:
+The one team member an Owner or an also-owner has given a Recording in a Case to work on: set on one row, on ticked rows, or by Divide among; cleared by Unassign, by removing the person from the Team, or by a move to another Case. Shown as a column on the Recordings tab, in the recording page's head ("Assigned to you"), on the Notes page and on Home ("6 of 80 left for you", a plain pill, never under Needs you). Says who, never whether. Phase 9 chapter 3.
+_Avoid_: assignee (on a page), owner (of a Recording), task, to-do, taken, workload, status
+
+**Divide among**:
+The Owner's or an also-owner's one press that deals the Case's unassigned Recordings evenly, oldest added first, among the ticked team members; it never moves an assignment somebody made. Phase 9 chapter 3.
+_Avoid_: split, distribute, allocate, auto-assign, balance
+
+**Mine**:
+The Recordings tab's filter for the Recordings assigned to the person looking; "Mine, not reviewed" is the pill for the ones still to do. Phase 9 chapter 3.
+_Avoid_: my queue, my tasks, inbox
+
+**Reviewed**:
+The assignee's mark that their work on a Recording is complete, with who and when and whether it was marked with nothing to note: made with Mark reviewed, which asks one question first, undone from the toast or with Not reviewed after all, by the assignee or an owner alone; cleared when the Recording is given to a new assignee. Shown as a green pill wherever the assignment is. The one state of a review; not "Done", which is a Recording's transcription state. Phase 9 chapter 3.
+_Avoid_: done, complete, completed, finished, closed, checked off, in progress
 
 **Retention policy**:
 The admin-set rule that moves a Case to the Recycle bin the night it reaches a set number of days without activity, whatever else is going on. One clock per Case; no exceptions and no holds. The clock pauses while Folder management is off.
@@ -541,6 +584,22 @@ English prose the AI assistant writes about one Transcript when a user asks, in 
 
 **Summary template**:
 An admin-kept instruction that fixes the shape of a Summary. "Standard summary", the "Video summary", and one per shipped Recording type are built in; Admins may add more, and users choose one only when more than one is offered.
+
+**Overview**:
+The first part of a Summary (the lines after its Overview or Summary heading, else its first part, else its first 600 characters), read by the Case Chat in place of the Transcript when a question is over the ceiling (Phase 9 chapter 6). Still the Summary's own text, kept for its own sake; nothing is indexed.
+_Avoid_: abstract, digest (that is the Digest), index, embedding
+
+**Summaries tonight**:
+The Upload page's tick, "Write each recording's summary tonight", and the night's run of them: each marked Recording's Summary written in the overnight window with its type's template, oldest first, one or two at a time, not reached meaning tonight again (ADR 0017). Phase 9 chapter 5.
+_Avoid_: bulk summary, Summarise all, batch summaries
+
+**Scope**:
+The Recordings a Case Chat question is put to: the whole Case, or the Recordings narrowed to on the page by the filter box, a Search's hits, or the Notes page's pills. Kept on the turn, said in the drawer's head and in the answer's first line. Phase 9 chapter 6.
+_Avoid_: selection, context, picker, filter (that is the box)
+
+**Pointed to**:
+The Recordings the overview pass of a Case Chat question names as bearing on the question, in order of relevance, read whole in the second pass as many as fit (ADR 0018). Phase 9 chapter 6.
+_Avoid_: retrieved, ranked, top results, hits (those are Search's)
 
 **Video summary**:
 The shipped Summary template for a video Recording without a Recording type, when Moments reach answers: what was said and what the camera showed interleaved, and a part "Seen but not said" for what the camera showed that nobody spoke about. A Recording type still wins: a body camera recording keeps its Body camera summary. The viewer's button reads "Summarise this video" on such a Recording. Phase 4.

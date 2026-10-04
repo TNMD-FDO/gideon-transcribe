@@ -19,7 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+**The Phase 9 specification is published**, `docs/spec/SPEC-PHASE-9.md`,
+"The review of many recordings": six chapters, each a release to come,
+for a Case of hundreds of recordings reviewed by a team: the case page
+fit for 800, names across many recordings (the Case vocabulary), the
+Team, Assigned to and Reviewed, the Notes page, Summaries tonight (ADR
+0017) and a Case Chat that reads what fits (ADR 0018). The glossary gains
+the phase's words and `docs/spec/mockups/phase-9-mockups.html` holds the
+eight screens the maintainer picked. Nothing in the app changes with this
+commit.
 
 ## v1.115.0, 2026-10-03
 

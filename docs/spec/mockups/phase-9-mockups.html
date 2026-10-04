@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The Phase 9 mock-ups, as picked by the maintainer on 2026-10-04: one scrolling page in the app's own look, every name the fictional seed office's. Drawn for docs/spec/SPEC-PHASE-9.md. -->
+<title>Phase 9 mock-ups</title>
+<style>
+/* The page around the screens: one column, the app's own type, the screens scaled to the column. */
+:root {
+  --page-bg: #eef1f4; --page-fg: #171b21; --page-muted: #5b6673; --page-line: #d3d9e0; --page-accent: #0f5e86;
+  --page-sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --page-bg: #12161b; --page-fg: #e7ebef; --page-muted: #98a4b1; --page-line: #343d48; --page-accent: #5fadd8; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --page-bg: #12161b; --page-fg: #e7ebef; --page-muted: #98a4b1; --page-line: #343d48; --page-accent: #5fadd8; color-scheme: dark; }
+/* The app's look, as docs/the-look.md and app/static/app.css give it (light palette). */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-hover: #0b4d6e; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+  --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+  --danger: #b3261e; --danger-soft: #f9e4e2; --now: #ffe58a;
+  --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+a { color: var(--accent); text-decoration: none; } a:hover { color: var(--accent-hover); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); }
+.label { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+.row { display: flex; align-items: center; gap: 8px; } .grow { flex: 1 1 auto; min-width: 0; }
+.nowrap { white-space: nowrap; }
+
+/* The top bar and the rail folded to icons, as on the incident page. */
+.topbar { height: 44px; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar .brand { font-weight: 600; }
+.rail { width: 56px; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; }
+.rail .ic { width: 36px; height: 36px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.rail .ic.on { background: var(--accent-soft); color: var(--accent); }
+.rail .ic.act { color: var(--accent); }
+.rail .gap { height: 10px; }
+.rail svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The head of a page. */
+.page-head { display: flex; align-items: flex-start; gap: 16px; }
+.page-head .eyebrow { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+.page-head .eyebrow a { color: var(--accent); }
+.page-head h1 { margin: 2px 0 0; font-size: var(--t-title); font-weight: 600; line-height: 1.2; }
+.page-head .lead { margin: 4px 0 0; color: var(--muted); }
+.page-head .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; padding-top: 14px; }
+
+/* Buttons: four kinds at two sizes. */
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: var(--t-body); cursor: pointer; white-space: nowrap; }
+.btn.small { height: 28px; padding: 0 10px; font-size: var(--t-small); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
+.btn.danger { color: var(--danger); }
+.btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Pills: one shape, the colour is the state. */
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: var(--t-small); white-space: nowrap; }
+.pill.ok { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+.pill.warn { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.pill.red { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+.pill.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.pill.type { background: var(--surface-2); }
+
+/* Cards, panels and tabs. */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.card .pad { padding: 14px 16px; }
+.tabs { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--line); padding: 0 8px; }
+.tabs .tab { padding: 10px 12px; color: var(--muted); font-size: var(--t-body); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 6px; align-items: center; }
+.tabs .tab.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+.tabs .count { font-family: var(--mono); font-size: var(--t-small); color: var(--muted); }
+.tabs .tab.on .count { color: var(--accent); }
+.tabs svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+
+/* Tables: a row per thing. */
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--t-body); }
+.tbl th { text-align: left; font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+
+/* The player bar and the transcript lines. */
+.player { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius); }
+.player .play { height: 38px; width: 38px; border-radius: var(--radius); background: var(--accent); color: var(--accent-ink); display: inline-flex; align-items: center; justify-content: center; border: 0; }
+.player .play svg { width: 16px; height: 16px; fill: currentColor; }
+.player .time { font-family: var(--mono); font-size: 18px; font-variant-numeric: tabular-nums; }
+.wave { position: relative; height: 44px; border-radius: var(--radius); background: repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px 5px); overflow: hidden; }
+.wave .mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); opacity: .8; }
+.wave .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--danger); }
+.line-row { display: grid; grid-template-columns: 62px 92px 1fr; gap: 0 12px; padding: 6px 10px; border-radius: var(--radius); align-items: baseline; }
+.line-row .t { font-family: var(--mono); font-size: var(--t-small); color: var(--muted); font-variant-numeric: tabular-nums; }
+.line-row .who { font-weight: 500; font-size: var(--t-small); }
+.line-row.lit { background: var(--accent-soft); }
+.line-row .notebox { grid-column: 2 / 4; margin-top: 6px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); border-left: 3px solid var(--accent); }
+
+/* The panel's note rows, grouped by call. */
+.ghead { display: flex; align-items: center; gap: 8px; padding: 9px 12px 5px; font-size: var(--t-small); color: var(--muted); border-top: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; }
+.ghead b { color: var(--text); font-weight: 500; }
+.ghead.playing { background: var(--accent-soft); }
+.nrow { display: grid; grid-template-columns: 54px 1fr auto; gap: 2px 10px; padding: 7px 12px 8px; align-items: baseline; }
+.nrow:hover { background: var(--surface-2); }
+.nrow .t { font-family: var(--mono); font-size: var(--t-small); color: var(--accent); font-variant-numeric: tabular-nums; }
+.nrow .said { grid-column: 2 / 4; font-size: var(--t-small); color: var(--muted); font-style: italic; }
+.nrow .by { grid-column: 2 / 4; font-size: var(--t-small); color: var(--muted); }
+.nrow.lit { background: var(--accent-soft); }
+.cite { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.search { height: 30px; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 10px; font: inherit; font-size: var(--t-small); background: var(--surface); color: var(--text); }
+.memo h3 { font-size: var(--t-heading); font-weight: 600; margin: 14px 0 4px; }
+.memo p { margin: 0 0 8px; }
+.fold { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; background: var(--surface-2); font-size: var(--t-small); color: var(--muted); }
+
+body { background: var(--page-bg); color: var(--page-fg); font-family: var(--page-sans); font-size: 15px; line-height: 1.5; margin: 0; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-inline: 16px; }
+.wrap > h1 { font-size: 26px; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+.wrap > p.lead, .cap { color: var(--page-muted); max-width: 70ch; margin: 0 0 12px; }
+.contents { margin: 16px 0 36px; padding: 0 0 0 20px; max-width: 70ch; }
+.contents li { margin: 2px 0; }
+.wrap a { color: var(--page-accent); }
+section { margin: 0 0 44px; }
+section h2 { font-size: 20px; font-weight: 600; margin: 36px 0 6px; text-wrap: balance; }
+.shot-box { width: 100%; overflow: hidden; border: 1px solid var(--page-line); border-radius: 8px; margin: 12px 0 18px; background: #f4f6f8; color-scheme: light; }
+.shot { transform-origin: 0 0; color: #171b21; }
+.shot a { color: #0f5e86; }
+.foot { color: var(--page-muted); font-size: 13px; border-top: 1px solid var(--page-line); padding-top: 12px; max-width: 70ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Phase 9 mock-ups</h1>
+  <p class="lead">The screens for the review of many calls, in the order of the plan’s chapters, each with what it settles. Every name is the fictional seed office’s. The screens are pictures of the light theme at 1440 wide, scaled to this column.</p>
+  <ol class="contents">
+    <li><a href="#names">Chapter 2. Names across many recordings</a></li>
+<li><a href="#team">Chapter 3. The Team, Assigned to and Reviewed</a></li>
+<li><a href="#reviewed">Mark reviewed, and what Home says</a></li>
+<li><a href="#notes">Chapter 4. The Notes page</a></li>
+<li><a href="#popout">Open the call: a pop-out, never a jump away</a></li>
+  </ol>
+  <section id="names"><h2>Chapter 2. Names across many recordings</h2><p class="cap">The engine mishears names, and across 800 calls one person is spelt three ways. The case keeps the spellings it has met and uses them everywhere it reads; no transcript is ever rewritten. Here a Search for the right name also lights the misheard forms, marked “also heard as”, after the exact hits. The list itself, the Case vocabulary, is the lower block of the right pane in the next section’s first screen.</p><style>mark{background:#ffe58a;color:#171b21;border-radius:3px;padding:0 2px}
+.shot .hit td{padding:8px 10px;border-bottom:1px solid #d3d9e0;vertical-align:top}
+.shot .hit td.t{font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6673;white-space:nowrap}</style>
+<div class="shot-box" data-w="1440" data-h="560"><div class="shot" style="width:1440px;height:560px"><div style="width: 1440px; height: 560px; box-sizing: border-box; display: flex; flex-direction: column; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden; padding: 20px 32px">
+  <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; max-width: 1100px">
+    <div class="tabs">
+      <span class="tab">Recordings <span class="count">812</span></span>
+      <span class="tab on">Search</span>
+      <span class="tab">Clips <span class="count">14</span></span>
+      <span class="tab">Notes <span class="count">1,204</span></span>
+      <span class="tab">Speakers <span class="count">6</span></span>
+    </div>
+    <div style="padding: 14px 16px 10px">
+      <div class="row" style="gap: 6px"><input class="search" type="search" value="von carutthers" aria-label="Search this case" style="width: 30rem; height: 34px"><button class="btn" type="button">Search</button><a href="#" class="btn ghost">Clear</a></div>
+      <p class="lead" style="margin: 10px 0 6px">9 hits for &ldquo;von carutthers&rdquo;</p>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><span class="pill on">All (9)</span><span class="pill">Words (7)</span><span class="pill">Notes (2)</span></div>
+      <p class="muted small" style="margin: 8px 0 0">4 of them are marked <span class="pill" style="height: 18px; font-size: 11px">also heard as</span>: a spelling this case lists for the name (voncaruther, van caruthers). 1 is a <span class="pill" style="height: 18px; font-size: 11px">close</span> match. They come after the exact hits.</p>
+    </div>
+    <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0 6px">
+      <h2 style="font-size: 17px; font-weight: 600; margin: 4px 10px 2px"><a href="#">Call 0417, Sat 14 Feb 2026</a></h2>
+      <table class="hit" style="width: 100%; border-collapse: collapse">
+        <tr><td class="t"><a href="#">02:48</a> &#9654;</td><td class="muted small">Caller</td><td>Is <mark>Von Carutthers</mark> still saying it was his?</td></tr>
+        <tr><td class="t"><a href="#">04:31</a> &#9654;</td><td class="muted small">Pike <span class="pill" style="height: 18px; font-size: 11px">also heard as</span></td><td>Tell <mark>voncaruther</mark> I said it is fine.</td></tr>
+      </table>
+      <h2 style="font-size: 17px; font-weight: 600; margin: 10px 10px 2px"><a href="#">Call 0433, Mon 16 Feb 2026</a></h2>
+      <table class="hit" style="width: 100%; border-collapse: collapse">
+        <tr><td class="t"><a href="#">00:58</a> &#9654;</td><td class="muted small">Caller <span class="pill" style="height: 18px; font-size: 11px">also heard as</span></td><td>You talk to <mark>van caruthers</mark> or not?</td></tr>
+        <tr><td class="t"><a href="#">03:30</a></td><td class="muted small">Note, M. Lindqvist</td><td>Second caller asks after <mark>Von Carutthers</mark> by name; compare 0417.</td></tr>
+      </table>
+    </div>
+    <p class="muted small" style="margin: 0; padding: 8px 16px; border-top: 1px solid #d3d9e0">The transcript keeps the words the engine heard. The spelling lit on the line is the case's own, so the hit is a whole word a person can see. Search terms are never written to the audit log.</p>
+  </div>
+</div></div></div></section><section id="team"><h2>Chapter 3. The Team, Assigned to and Reviewed</h2><p class="cap">The case page as the Owner sees it: the Team in the right pane (Owner pill, “Also an owner”, last opened, assigned, reviewed and noted per person, Add people), the Case vocabulary under it, and the Recordings tab with the filter box, the pills, a tick column, the bar “3 ticked” and the Divide among card open. Then the same case as a Collaborator sees it: no ticks, no Divide, “Mine, not reviewed” lit, the Team read-only with Leave this case on their own row.</p><style>.shot .chk{display:inline-block;width:16px;height:16px;border:1px solid #5b6673;border-radius:4px;vertical-align:middle;background:#fff}
+.shot .chk.on{background:#0f5e86;border-color:#0f5e86;position:relative}
+.shot .chk.on::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.shot .team-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 0;border-top:1px solid #d3d9e0;align-items:center}
+.shot .team-row .facts{grid-column:1/3;font-size:13px;color:#5b6673}
+.shot .vocab{padding:8px 0;border-top:1px solid #d3d9e0}
+.shot .vocab .also{font-size:13px;color:#5b6673}</style>
+<div class="shot-box" data-w="1440" data-h="900"><div class="shot" style="width:1440px;height:900px"><div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <div class="topbar">
+    <span class="brand">Gideon Transcribe</span>
+    <span class="grow"></span>
+    <span class="muted small">M. Lindqvist</span>
+    <a href="#" class="small">Sign out</a>
+    <span class="muted small">Theme</span>
+  </div>
+
+  <div style="display: flex; flex: 1 1 auto; min-height: 0">
+    <div class="rail" style="width: 200px; align-items: stretch; padding: 10px 10px" aria-label="Rail">
+      <button class="btn primary" type="button" style="justify-content: center">Upload files</button>
+      <button class="btn" type="button" style="justify-content: center">Record now</button>
+      <div class="gap"></div>
+      <div style="padding: 6px 8px; color: #5b6673">Home<div class="small">What is running, and what needs you</div></div>
+      <div style="padding: 6px 8px; background: #e3eef5; color: #0f5e86; border-radius: 6px">Cases<div class="small">Kept for a matter, after sign-out</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">My recordings<div class="small">This session only, then gone</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">Clips<div class="small">Pieces cut for a hearing</div></div>
+    </div>
+
+    <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 20px 16px; max-width: 1400px">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow"><a href="#">Cases</a></div>
+          <h1>Pike matter</h1>
+          <div class="row" style="margin-top: 6px; gap: 6px"><span class="pill">Shared with 9</span><span class="pill">412 of 812 reviewed</span><span class="pill">Summaries tonight: 198</span><span class="pill">Deletes in 84 days</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button">Ask Gideon</button>
+          <button class="btn primary" type="button">Add recordings</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; flex: 1 1 auto; min-height: 0">
+
+        <!-- The Recordings tab with the pills, the ticks, the bar and the Divide among card. -->
+        <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden">
+          <div class="tabs">
+            <span class="tab on">Recordings <span class="count">812</span></span>
+            <span class="tab">Search</span>
+            <span class="tab">Clips <span class="count">14</span></span>
+            <span class="tab">Notes <span class="count">1,204</span></span>
+            <span class="tab">Speakers <span class="count">6</span></span>
+            <span class="tab">Documents <span class="count">2</span></span>
+          </div>
+          <div class="row" style="padding: 10px 14px 0; gap: 8px; flex-wrap: wrap">
+            <input class="search" type="search" placeholder="Filter these recordings" aria-label="Filter these recordings" style="width: 220px">
+            <span class="pill on">All 812</span><span class="pill">Mine 0</span><span class="pill">Reviewed 412</span><span class="pill">Unassigned 240</span>
+            <span class="grow"></span>
+            <button class="btn small" type="button">Download the list</button>
+          </div>
+          <div class="row" style="padding: 8px 14px; gap: 8px; border-bottom: 1px solid #d3d9e0">
+            <span class="small">3 ticked:</span>
+            <button class="btn small" type="button">Assign to&hellip;</button>
+            <button class="btn small" type="button">Unassign</button>
+            <span style="width: 12px"></span>
+            <button class="btn small on" type="button">Divide among</button>
+          </div>
+          <div style="margin: 10px 14px 4px; padding: 10px 14px; border: 1px solid #0f5e86; border-radius: 8px; background: #e3eef5">
+            <div style="font-weight: 500">Divide the 240 unassigned recordings among the people you tick, in date order.</div>
+            <div class="row" style="gap: 14px; margin-top: 8px; flex-wrap: wrap; font-size: 13px">
+              <label><span class="chk on"></span> A. Okafor</label><label><span class="chk on"></span> R. Castellanos</label><label><span class="chk on"></span> J. Brennan</label><label><span class="chk on"></span> P. Nakamura</label><label><span class="chk"></span> S. Adeyemi</label><label><span class="chk"></span> T. Varga</label><label><span class="chk"></span> K. Oyelaran</label>
+            </div>
+            <div class="row" style="gap: 8px; margin-top: 10px"><span class="muted small">60 each. They see them under Mine and on Home; nothing else changes.</span><span class="grow"></span><button class="btn small" type="button">Cancel</button><button class="btn small primary" type="button">Divide</button></div>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0 6px">
+            <table class="tbl">
+              <thead><tr><th style="width: 28px"></th><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Assigned to</th><th>Notes</th><th>Added</th></tr></thead>
+              <tbody>
+                <tr><td><span class="chk on"></span></td><td><a href="#">Call 0409</a><div class="muted small">Thu 12 Feb 2026, 18:40</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">09:58</td><td>R. Castellanos <span class="pill ok">Reviewed 2 Oct</span></td><td>2 notes, R. Castellanos</td><td class="muted small">29 Sep</td></tr>
+                <tr><td><span class="chk on"></span></td><td><a href="#">Call 0417</a><div class="muted small">Sat 14 Feb 2026, 09:12</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">14:52</td><td>A. Okafor</td><td>3 notes, A. Okafor</td><td class="muted small">29 Sep</td></tr>
+                <tr><td><span class="chk on"></span></td><td><a href="#">Call 0418</a><div class="muted small">Sat 14 Feb 2026, 19:55</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">12:30</td><td>J. Brennan <span class="pill ok">Reviewed 1 Oct</span></td><td>1 note, J. Brennan</td><td class="muted small">29 Sep</td></tr>
+                <tr><td><span class="chk"></span></td><td><a href="#">Call 0433</a><div class="muted small">Mon 16 Feb 2026, 08:03</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">12:08</td><td>A. Okafor</td><td>4 notes, M. Lindqvist and A. Okafor</td><td class="muted small">29 Sep</td></tr>
+                <tr><td><span class="chk"></span></td><td><a href="#">Call 0471</a><div class="muted small">Fri 20 Feb 2026, 17:22</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">08:41</td><td class="muted">nobody</td><td class="muted">none</td><td class="muted small">29 Sep, by R. Castellanos</td></tr>
+                <tr><td><span class="chk"></span></td><td><a href="#">Call 0512</a><div class="muted small">Mon 2 Mar 2026, 12:05</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">15:00</td><td class="muted">nobody</td><td>2 notes, R. Castellanos and J. Brennan</td><td class="muted small">29 Sep, by R. Castellanos</td></tr>
+                <tr><td><span class="chk"></span></td><td><a href="#">Call 0513</a><div class="muted small">Mon 2 Mar 2026, 19:30</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill">Transcribing</span></td><td class="mono">11:04</td><td class="muted">nobody</td><td class="muted">none</td><td class="muted small">today</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- The pane about the case: Team and Case vocabulary. -->
+        <div style="display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden">
+          <div class="card pad" style="padding-top: 12px; padding-bottom: 12px">
+            <div class="label">About this case</div>
+            <div class="small" style="margin-top: 4px">812 recordings, 203 hours, 14.2 GB. Deletes in 84 days unless somebody uses it.</div>
+          </div>
+
+          <div class="card pad" style="padding-top: 12px; padding-bottom: 10px">
+            <div class="row"><span style="font-size: 17px; font-weight: 600">Team</span><span class="muted small">10 people</span><span class="grow"></span><button class="btn small" type="button">Add people</button></div>
+            <div class="team-row" style="border-top: 0"><span>M. Lindqvist <span class="pill on">Owner</span></span><span></span><span class="facts">that is you &middot; 12 noted</span></div>
+            <div class="team-row"><span>A. Okafor <span class="pill">Also an owner</span></span><span class="row small"><label><span class="chk on"></span> Also an owner</label><a href="#" class="muted">Remove</a></span><span class="facts">opened today 14:10 &middot; <a href="#">80 assigned</a> &middot; 61 reviewed &middot; 70 noted</span></div>
+            <div class="team-row"><span>R. Castellanos</span><span class="row small"><label><span class="chk"></span> Also an owner</label><a href="#" class="muted">Remove</a></span><span class="facts">opened yesterday &middot; <a href="#">80 assigned</a> &middot; 74 reviewed &middot; 66 noted</span></div>
+            <div class="team-row"><span>J. Brennan</span><span class="row small"><label><span class="chk"></span> Also an owner</label><a href="#" class="muted">Remove</a></span><span class="facts">opened 1 Oct &middot; <a href="#">80 assigned</a> &middot; 52 reviewed &middot; 40 noted</span></div>
+            <div class="team-row"><span>P. Nakamura</span><span class="row small"><label><span class="chk"></span> Also an owner</label><a href="#" class="muted">Remove</a></span><span class="facts">opened 1 Oct &middot; <a href="#">80 assigned</a> &middot; 80 reviewed &middot; 31 noted</span></div>
+            <div class="team-row" style="opacity: .6"><span>L. Fontaine <span class="pill warn">deactivated</span></span><span class="row small"><a href="#" class="muted">Remove</a></span><span class="facts">opened 12 Sep &middot; <a href="#">40 assigned</a> &middot; 40 reviewed &middot; 22 noted</span></div>
+            <div class="muted small" style="padding-top: 8px">4 more: S. Adeyemi, T. Varga, K. Oyelaran, D. Chen</div>
+          </div>
+
+          <div class="card pad" style="padding-top: 12px; padding-bottom: 10px; flex: 1 1 auto; min-height: 0; overflow: hidden">
+            <div class="row"><span style="font-size: 17px; font-weight: 600">Case vocabulary</span><span class="muted small">14 names and places</span></div>
+            <div class="muted small" style="margin: 4px 0 6px">They go with every recording added here and with Process again. Search and Gideon read the spellings too. The People from the Speakers tab are here by themselves.</div>
+            <div class="vocab" style="border-top: 0"><div>Von Carutthers <span class="muted small">(Defendant, from the Speakers tab)</span></div><div class="also">also heard as voncaruther, van caruthers</div></div>
+            <div class="vocab"><div>Birch Road storage</div><div class="also">also heard as birch road storey, birchwood</div></div>
+            <div class="vocab"><div>Dana Whitlock <span class="muted small">(Lawyer)</span></div><div class="also">also heard as dana wit lock</div></div>
+            <div class="vocab" style="display: flex; flex-direction: column; gap: 6px">
+              <input class="search" type="text" value="Tomasz Rybak" aria-label="Name or place">
+              <input class="search" type="text" value="tomas ribak, thomas rybeck" aria-label="Also heard as">
+              <div class="row"><span class="muted small">Also heard as: the spellings you have met, with commas.</span><span class="grow"></span><button class="btn small primary" type="button">Add</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div></div><style>.shot .team-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 0;border-top:1px solid #d3d9e0;align-items:center}
+.shot .team-row .facts{grid-column:1/3;font-size:13px;color:#5b6673}
+.shot .vocab{padding:8px 0;border-top:1px solid #d3d9e0}
+.shot .vocab .also{font-size:13px;color:#5b6673}</style>
+<div class="shot-box" data-w="1440" data-h="900"><div class="shot" style="width:1440px;height:900px"><div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <div class="topbar">
+    <span class="brand">Gideon Transcribe</span>
+    <span class="grow"></span>
+    <span class="muted small">R. Castellanos</span>
+    <a href="#" class="small">Sign out</a>
+    <span class="muted small">Theme</span>
+  </div>
+
+  <div style="display: flex; flex: 1 1 auto; min-height: 0">
+    <div class="rail" style="width: 200px; align-items: stretch; padding: 10px 10px" aria-label="Rail">
+      <button class="btn primary" type="button" style="justify-content: center">Upload files</button>
+      <button class="btn" type="button" style="justify-content: center">Record now</button>
+      <div class="gap"></div>
+      <div style="padding: 6px 8px; color: #5b6673">Home<div class="small">What is running, and what needs you</div></div>
+      <div style="padding: 6px 8px; background: #e3eef5; color: #0f5e86; border-radius: 6px">Cases<div class="small">Kept for a matter, after sign-out</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">My recordings<div class="small">This session only, then gone</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">Clips<div class="small">Pieces cut for a hearing</div></div>
+    </div>
+
+    <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 20px 16px; max-width: 1400px">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow"><a href="#">Cases</a></div>
+          <h1>Pike matter</h1>
+          <div class="row" style="margin-top: 6px; gap: 6px"><span class="pill">Shared by M. Lindqvist</span><span class="pill">412 of 812 reviewed</span><span class="pill">6 of 80 left for you</span><span class="pill">Deletes in 84 days</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button">Ask Gideon</button>
+          <button class="btn primary" type="button">Add recordings</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; flex: 1 1 auto; min-height: 0">
+
+        <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden">
+          <div class="tabs">
+            <span class="tab on">Recordings <span class="count">812</span></span>
+            <span class="tab">Search</span>
+            <span class="tab">Clips <span class="count">14</span></span>
+            <span class="tab">Notes <span class="count">1,204</span></span>
+            <span class="tab">Speakers <span class="count">6</span></span>
+            <span class="tab">Documents <span class="count">2</span></span>
+          </div>
+          <div class="row" style="padding: 10px 14px; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #d3d9e0">
+            <input class="search" type="search" placeholder="Filter these recordings" aria-label="Filter these recordings" style="width: 220px">
+            <span class="pill">All 812</span><span class="pill">Mine 80</span><span class="pill on">Mine, not reviewed 6</span><span class="pill">Reviewed 412</span><span class="pill">Unassigned 240</span>
+            <span class="grow"></span>
+            <button class="btn small" type="button">Download the list</button>
+          </div>
+          <p class="muted small" style="margin: 10px 14px 4px">6 of your 80 are not reviewed yet. Open one, listen, leave your notes, and press Mark reviewed when you are done with it.</p>
+          <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0 6px">
+            <table class="tbl">
+              <thead><tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Assigned to</th><th>Notes</th><th>Added</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><a href="#">Call 0471</a><div class="muted small">Fri 20 Feb 2026, 17:22</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">08:41</td><td>you</td><td class="muted">none</td><td class="muted small">29 Sep, by you</td><td style="text-align: right"><button class="btn small" type="button">Open</button></td></tr>
+                <tr><td><a href="#">Call 0512</a><div class="muted small">Mon 2 Mar 2026, 12:05</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">15:00</td><td>you</td><td>2 notes, you and J. Brennan</td><td class="muted small">29 Sep, by you</td><td style="text-align: right"><button class="btn small" type="button">Open</button></td></tr>
+                <tr><td><a href="#">Call 0526</a><div class="muted small">Wed 4 Mar 2026, 10:14</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">13:27</td><td>you</td><td class="muted">none</td><td class="muted small">29 Sep</td><td style="text-align: right"><button class="btn small" type="button">Open</button></td></tr>
+                <tr><td><a href="#">Call 0530</a><div class="muted small">Thu 5 Mar 2026, 08:51</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">06:12</td><td>you</td><td class="muted">none</td><td class="muted small">29 Sep</td><td style="text-align: right"><button class="btn small" type="button">Open</button></td></tr>
+                <tr><td><a href="#">Call 0544</a><div class="muted small">Sat 7 Mar 2026, 16:40</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">14:58</td><td>you</td><td>1 note, you</td><td class="muted small">29 Sep</td><td style="text-align: right"><button class="btn small" type="button">Open</button></td></tr>
+                <tr><td><a href="#">Call 0551</a><div class="muted small">Mon 9 Mar 2026, 12:02</div></td><td><span class="pill type">Jail call</span></td><td><span class="pill ok">Done</span></td><td class="mono">10:30</td><td>you</td><td class="muted">none</td><td class="muted small">29 Sep</td><td style="text-align: right"><button class="btn small" type="button">Open</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden">
+          <div class="card pad" style="padding-top: 12px; padding-bottom: 12px">
+            <div class="label">About this case</div>
+            <div class="small" style="margin-top: 4px">812 recordings, 203 hours. Deletes in 84 days unless somebody uses it.</div>
+          </div>
+
+          <div class="card pad" style="padding-top: 12px; padding-bottom: 10px">
+            <div class="row"><span style="font-size: 17px; font-weight: 600">Team</span><span class="muted small">10 people</span></div>
+            <div class="team-row" style="border-top: 0"><span>M. Lindqvist <span class="pill on">Owner</span></span><span></span><span class="facts">opened today &middot; 12 noted</span></div>
+            <div class="team-row"><span>A. Okafor <span class="pill">Also an owner</span></span><span></span><span class="facts">opened today 14:10 &middot; <a href="#">80 assigned</a> &middot; 61 reviewed &middot; 70 noted</span></div>
+            <div class="team-row" style="background: #e3eef5; margin: 0 -16px; padding: 8px 16px"><span>R. Castellanos <span class="muted small">(you)</span></span><a href="#" class="small">Leave this case</a><span class="facts"><a href="#">80 assigned</a> &middot; 74 reviewed &middot; 66 noted</span></div>
+            <div class="team-row"><span>J. Brennan</span><span></span><span class="facts">opened 1 Oct &middot; <a href="#">80 assigned</a> &middot; 52 reviewed &middot; 40 noted</span></div>
+            <div class="team-row"><span>P. Nakamura</span><span></span><span class="facts">opened 1 Oct &middot; <a href="#">80 assigned</a> &middot; 80 reviewed &middot; 31 noted</span></div>
+            <div class="muted small" style="padding-top: 8px">5 more: L. Fontaine (deactivated), S. Adeyemi, T. Varga, K. Oyelaran, D. Chen</div>
+          </div>
+
+          <div class="card pad" style="padding-top: 12px; padding-bottom: 10px; flex: 1 1 auto; min-height: 0; overflow: hidden">
+            <div class="row"><span style="font-size: 17px; font-weight: 600">Case vocabulary</span><span class="muted small">14 names and places</span><span class="grow"></span><button class="btn small" type="button">Add a spelling</button></div>
+            <div class="vocab"><div>Von Carutthers <span class="muted small">(Defendant)</span></div><div class="also">also heard as voncaruther, van caruthers</div></div>
+            <div class="vocab"><div>Birch Road storage</div><div class="also">also heard as birch road storey, birchwood</div></div>
+            <div class="vocab"><div>Dana Whitlock <span class="muted small">(Lawyer)</span></div><div class="also">also heard as dana wit lock</div></div>
+            <div class="vocab"><div>Tomasz Rybak</div><div class="also">also heard as tomas ribak, thomas rybeck</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div></div></section><section id="reviewed"><h2>Mark reviewed, and what Home says</h2><p class="cap">The recording page’s head in three states: before, with the “Assigned to you” pill and Mark reviewed as a plain button; the one question, in both its forms; and after, with the green pill, the Undo toast and Not reviewed after all as a quiet ghost button. The fourth panel is the Notes page’s foot in call mode. Then Home’s rows: “6 of 80 left for you” is a plain pill, never in the warning tone, so a case with your calls waiting is not under Needs you.</p><style>.shot .head2{display:flex;flex-direction:column;gap:8px;padding:12px 16px;background:#fff;border:1px solid #d3d9e0;border-radius:8px}
+.shot .step{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5b6673;font-weight:500;margin:0 0 6px}
+.shot .dialog{width:420px;background:#fff;border:1px solid #d3d9e0;border-radius:8px;box-shadow:0 8px 28px rgba(15,30,45,.14);padding:16px}
+.shot .toast{display:inline-flex;align-items:center;gap:12px;background:#171b21;color:#fff;border-radius:6px;padding:8px 14px;font-size:13px}
+.shot .toast a{color:#9fd0ee}</style>
+<div class="shot-box" data-w="1440" data-h="640"><div class="shot" style="width:1440px;height:640px"><div style="width: 1440px; height: 640px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; gap: 20px 40px; padding: 24px 32px; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <div>
+    <p class="step">1. The head of an assigned call, before</p>
+    <div class="head2">
+      <div class="row" style="gap: 10px"><a href="#" class="small">&lsaquo; Pike matter</a><span style="font-size: 22px; font-weight: 600">Call 0471</span><span class="pill type">Jail call</span><span class="pill ok">Done</span><span class="pill on">Assigned to you</span></div>
+      <div class="row" style="gap: 8px"><input class="search" type="search" placeholder="Find in transcript" aria-label="Find in transcript" style="width: 200px"><button class="btn" type="button">Mark reviewed</button><span class="grow"></span><button class="btn" type="button">New clip</button><button class="btn" type="button">Export</button><button class="btn" type="button">More</button></div>
+    </div>
+    <p class="muted small" style="max-width: 60ch">The pill says whose it is. Mark reviewed is a plain button in the action line, found when looked for and not pressed by reflex. Somebody else's call shows "Assigned to R. Castellanos" and no button, unless they are an owner.</p>
+  </div>
+
+  <div>
+    <p class="step">2. One question before the mark</p>
+    <div style="display: flex; gap: 16px; align-items: flex-start">
+      <div class="dialog">
+        <div style="font-size: 17px; font-weight: 600">Mark call 0471 as reviewed?</div>
+        <p style="margin: 6px 0 12px">You have left 2 notes on it. The team will see it as reviewed by you, today.</p>
+        <div class="row" style="justify-content: flex-end; gap: 8px"><button class="btn" type="button">Not yet</button><button class="btn primary" type="button">Mark reviewed</button></div>
+      </div>
+      <div class="dialog">
+        <div style="font-size: 17px; font-weight: 600">Mark call 0530 as reviewed?</div>
+        <p style="margin: 6px 0 12px">You have left no note on it. Mark it reviewed with nothing to note?</p>
+        <div class="row" style="justify-content: flex-end; gap: 8px"><button class="btn" type="button">Not yet</button><button class="btn primary" type="button">Nothing to note, mark it</button></div>
+      </div>
+    </div>
+    <p class="muted small" style="max-width: 60ch">The question carries what the app knows, so a call with no note is a conscious answer and not a slip.</p>
+  </div>
+
+  <div>
+    <p class="step">3. After, with the way back</p>
+    <div class="head2">
+      <div class="row" style="gap: 10px"><a href="#" class="small">&lsaquo; Pike matter</a><span style="font-size: 22px; font-weight: 600">Call 0471</span><span class="pill type">Jail call</span><span class="pill ok">Done</span><span class="pill ok">Reviewed by you, 4 Oct</span></div>
+      <div class="row" style="gap: 8px"><input class="search" type="search" placeholder="Find in transcript" aria-label="Find in transcript" style="width: 200px"><button class="btn ghost" type="button">Not reviewed after all</button><span class="grow"></span><button class="btn" type="button">New clip</button><button class="btn" type="button">Export</button><button class="btn" type="button">More</button></div>
+    </div>
+    <div style="margin-top: 10px"><span class="toast">Marked reviewed. <a href="#">Undo</a></span></div>
+    <p class="muted small" style="max-width: 60ch">A toast with Undo for a few seconds, then Not reviewed after all stays in the action line as a quiet ghost button. Both are written to the audit log.</p>
+  </div>
+
+  <div>
+    <p class="step">4. The same button in the Notes page's foot</p>
+    <div class="head2" style="gap: 10px">
+      <div class="row" style="gap: 8px; border-top: 1px solid #d3d9e0; padding-top: 10px"><button class="btn small" type="button">&lsaquo; Previous call</button><button class="btn small" type="button">Next call &rsaquo;</button><span class="muted small">Call 3 of 6 left for you</span><span class="grow"></span><button class="btn small" type="button">Mark reviewed</button></div>
+    </div>
+    <p class="muted small" style="max-width: 60ch">Opened from the Recordings tab's "Mine, not reviewed", the Notes page steps through your calls instead of the notes, and Mark reviewed sits in the foot, so the loop of listen, note, mark, next never leaves the page. The same question is asked.</p>
+  </div>
+</div></div></div><style>.shot .case-row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 16px;border-top:1px solid #d3d9e0;align-items:center}
+.shot .case-row .pills{grid-column:1/3;display:flex;gap:6px;flex-wrap:wrap}
+.shot .case-row .inc{grid-column:1/3;font-size:13px;color:#5b6673}
+.shot .needs{background:#fbefd9}</style>
+<div class="shot-box" data-w="1440" data-h="640"><div class="shot" style="width:1440px;height:640px"><div style="width: 1440px; height: 640px; box-sizing: border-box; display: flex; flex-direction: column; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <div class="topbar">
+    <span class="brand">Gideon Transcribe</span>
+    <span class="grow"></span>
+    <span class="muted small">R. Castellanos</span>
+    <a href="#" class="small">Sign out</a>
+    <span class="muted small">Theme</span>
+  </div>
+
+  <div style="display: flex; flex: 1 1 auto; min-height: 0">
+    <div class="rail" style="width: 200px; align-items: stretch; padding: 10px 10px" aria-label="Rail">
+      <button class="btn primary" type="button" style="justify-content: center">Upload files</button>
+      <button class="btn" type="button" style="justify-content: center">Record now</button>
+      <div class="gap"></div>
+      <div style="padding: 6px 8px; background: #e3eef5; color: #0f5e86; border-radius: 6px">Home<div class="small">What is running, and what needs you</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">Cases<div class="small">Kept for a matter, after sign-out</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">My recordings<div class="small">This session only, then gone</div></div>
+      <div style="padding: 6px 8px; color: #5b6673">Clips<div class="small">Pieces cut for a hearing</div></div>
+    </div>
+
+    <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 20px 16px; max-width: 1400px">
+      <div class="page-head">
+        <div><div class="eyebrow">Home</div><h1>Good afternoon, R. Castellanos</h1><p class="lead">Nothing is running for you.</p></div>
+      </div>
+      <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 14px; flex: 1 1 auto; min-height: 0">
+        <div class="card" style="overflow: hidden; display: flex; flex-direction: column">
+          <div class="row" style="padding: 10px 16px"><span style="font-size: 17px; font-weight: 600">Cases</span><span class="muted small">4</span></div>
+          <div class="label" style="padding: 4px 16px; color: #9a5b06">Needs you</div>
+          <div class="case-row needs"><a href="#" style="font-weight: 500">Harbour Street stop</a><span class="muted small">today</span><div class="pills"><span class="pill warn">Not synced</span><span class="pill warn">2 to check</span></div><div class="inc"><a href="#">Stop on Route 9</a>, 3 cameras, 2 of 3 synced</div></div>
+          <div class="label" style="padding: 10px 16px 4px">Every case</div>
+          <div class="case-row"><a href="#" style="font-weight: 500">Pike matter</a><span class="muted small">today</span><div class="pills"><span class="pill">Shared by M. Lindqvist</span><span class="pill">412 of 812 reviewed</span><span class="pill on">6 of 80 left for you</span><span class="pill">Summaries tonight: 198</span></div></div>
+          <div class="case-row"><a href="#" style="font-weight: 500">Marsh Lane interview</a><span class="muted small">yesterday</span><div class="pills"><span class="pill">Shared with 2</span><span class="pill">1 of 3 reviewed</span><span class="pill on">2 of 2 left for you</span></div></div>
+          <div class="case-row"><a href="#" style="font-weight: 500">Demo: audio samples (fictional)</a><span class="muted small">12 Sep</span><div class="pills"><span class="pill">Deletes in 9 days</span></div></div>
+        </div>
+        <div class="card" style="overflow: hidden">
+          <div class="row" style="padding: 10px 16px"><span style="font-size: 17px; font-weight: 600">This session</span></div>
+          <div style="padding: 20px 16px; text-align: center; color: #5b6673"><div style="font-weight: 500; color: #171b21">Nothing uploaded this session</div><div class="small">Recordings uploaded without a case are listed here, then gone at sign-out.</div></div>
+        </div>
+      </div>
+      <p class="muted small" style="margin: 0">"6 of 80 left for you" is a plain pill, never in the warning tone, so a case with your calls waiting is not under Needs you: nothing is overdue, it is work. It links to the Recordings tab filtered to Mine, not reviewed.</p>
+    </div>
+  </div>
+</div></div></div></section><section id="notes"><h2>Chapter 4. The Notes page</h2><p class="cap">The chosen shape, A: the incident page without the wall. Left, one call at one moment with the note under its line and Previous and Next note; right, the work panel. The first screen is the drawing you picked (its Memo tab and the word “Calls” have since gone: the tabs are Notes, Recordings, Details). The second shows the page carrying the assignments: the group heads name the assignee with a Reviewed pill, and the Recordings tab filtered to “Mine, not reviewed” with Listen.</p><style></style>
+<div class="shot-box" data-w="1440" data-h="900"><div class="shot" style="width:1440px;height:900px"><div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <div class="topbar">
+    <span class="brand">Gideon Transcribe</span>
+    <span class="grow"></span>
+    <span class="muted small">A. Okafor</span>
+    <a href="#" class="small">Sign out</a>
+    <span class="muted small">Theme</span>
+  </div>
+
+  <div style="display: flex; flex: 1 1 auto; min-height: 0">
+    <div class="rail" aria-label="Rail">
+      <a href="#" class="ic act" aria-label="Upload files"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 20h16"/></svg></a>
+      <a href="#" class="ic act" aria-label="Record now"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></a>
+      <div class="gap"></div>
+      <a href="#" class="ic" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg></a>
+      <a href="#" class="ic on" aria-label="Cases"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></a>
+      <a href="#" class="ic" aria-label="My recordings"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></a>
+      <a href="#" class="ic" aria-label="Clips"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="7" cy="17" r="3"/><path d="M9.5 9 20 20M9.5 15 20 4"/></svg></a>
+      <div class="gap"></div>
+      <a href="#" class="ic" aria-label="Panel"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg></a>
+      <a href="#" class="ic" aria-label="Help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01"/></svg></a>
+    </div>
+
+    <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 14px 20px 16px; gap: 12px">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow"><a href="#">Cases</a> &rsaquo; <a href="#">Pike matter</a></div>
+          <h1>Notes</h1>
+          <p class="lead">1,204 notes on 812 calls, by 9 people. Press a note to hear its moment here.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Ask Gideon</button>
+          <button class="btn" type="button">Export <span class="muted">&#9662;</span></button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 500px; gap: 14px; flex: 1 1 auto; min-height: 0">
+
+        <!-- The call in hand: what the wall is on the incident page. -->
+        <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden">
+          <div class="pad" style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #d3d9e0; padding-top: 12px; padding-bottom: 12px">
+            <div class="grow">
+              <div class="row" style="gap: 10px">
+                <span style="font-size: 17px; font-weight: 600">Call 0417</span>
+                <span class="pill type">Jail call</span>
+                <span class="pill"><span class="mono">14:52</span></span>
+                <span class="pill ok">Summarised</span>
+              </div>
+              <div class="muted small">Sat 14 Feb 2026, 09:12 &middot; added by M. Lindqvist &middot; 3 notes</div>
+            </div>
+            <a href="#" class="btn small ghost">Open the call</a>
+          </div>
+
+          <div class="pad" style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px">
+            <div class="player">
+              <button class="play" type="button" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M7 4l12 8-12 8z"/></svg></button>
+              <button class="btn small" type="button">-5s</button>
+              <button class="btn small" type="button">+5s</button>
+              <span class="time">04:31</span><span class="muted mono small">/ 14:52</span>
+              <span class="grow"></span>
+              <button class="btn small" type="button">Speed 1x</button>
+              <button class="btn small on" type="button">Boost</button>
+              <button class="btn small" type="button">Both sides</button>
+            </div>
+            <div class="wave" aria-hidden="true">
+              <span class="mark" style="left: 7%"></span>
+              <span class="mark" style="left: 30.4%"></span>
+              <span class="mark" style="left: 76%"></span>
+              <span class="head" style="left: 30.4%"></span>
+            </div>
+          </div>
+
+          <div style="padding: 0 10px 8px; flex: 1 1 auto; min-height: 0; overflow: hidden">
+            <div class="line-row"><span class="t">04:02</span><span class="who" style="color: #1f6fb2">Pike</span><span>I told you already, that stuff is not where it was.</span></div>
+            <div class="line-row"><span class="t">04:09</span><span class="who" style="color: #c2410c">Caller</span><span>So where is it then? Because they came by asking.</span></div>
+            <div class="line-row"><span class="t">04:19</span><span class="who" style="color: #1f6fb2">Pike</span><span>Not on the phone. You know I cannot say that on here.</span></div>
+            <div class="line-row lit">
+              <span class="t">04:31</span><span class="who" style="color: #1f6fb2">Pike</span><span>You gotta go by the unit on Birch, you know the one. Tell him I said it is fine.</span>
+              <div class="notebox">
+                <div style="font-size: 15px">Second mention of the storage unit on Birch Road. Same caller as 0409. Who is "him"? Compare with 0433 at 11:20.</div>
+                <div class="row small muted" style="margin-top: 6px"><span>Note by A. Okafor, 3 Oct 14:02</span><span class="grow"></span><a href="#">Edit</a><a href="#">Remove</a></div>
+              </div>
+            </div>
+            <div class="line-row"><span class="t">04:44</span><span class="who" style="color: #c2410c">Caller</span><span>Which one, the one by the car wash?</span></div>
+            <div class="line-row"><span class="t">04:47</span><span class="who" style="color: #1f6fb2">Pike</span><span>Yeah. Do not take anybody with you.</span></div>
+            <div class="line-row"><span class="t">04:55</span><span class="who" style="color: #c2410c">Caller</span><span>Okay. Okay. When is your date again?</span></div>
+          </div>
+
+          <div class="pad" style="display: flex; align-items: center; gap: 8px; border-top: 1px solid #d3d9e0; padding-top: 10px; padding-bottom: 10px">
+            <button class="btn small" type="button">&lsaquo; Previous note</button>
+            <button class="btn small" type="button">Next note &rsaquo;</button>
+            <span class="muted small">Note 212 of 1,204, by call date</span>
+            <span class="grow"></span>
+            <details class="small" style="color: #5b6673"><summary style="cursor: pointer">Overview, from the Jail call summary</summary></details>
+          </div>
+        </div>
+
+        <!-- The work panel: tabs, like the incident page's, without the camera tabs. -->
+        <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden">
+          <div class="tabs">
+            <span class="tab on"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 9h8M8 13h6"/></svg>Notes <span class="count">1,204</span></span>
+            <span class="tab">Memo <span class="pill warn" style="height: 18px; font-size: 11px">37 notes since</span></span>
+            <span class="tab">Calls <span class="count">812</span></span>
+            <span class="tab">Details</span>
+            <span class="grow"></span>
+            <input class="search" type="search" placeholder="Find in notes and calls" aria-label="Find in notes and calls" style="width: 150px; margin: 4px 6px">
+          </div>
+
+          <div style="padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #d3d9e0">
+            <div class="row" style="flex-wrap: wrap; gap: 6px">
+              <span class="pill on">All 1,204</span>
+              <span class="pill">A. Okafor 312</span>
+              <span class="pill">M. Lindqvist 288</span>
+              <span class="pill">R. Castellanos 240</span>
+              <span class="pill">J. Brennan 171</span>
+              <span class="pill">5 more &#9662;</span>
+            </div>
+            <div class="row" style="gap: 6px">
+              <span class="pill type on">Jail call 1,180</span>
+              <span class="pill type">Interview 24</span>
+              <span class="grow"></span>
+              <span class="muted small">By call date &#9662;</span>
+            </div>
+          </div>
+
+          <div style="flex: 1 1 auto; min-height: 0; overflow: hidden">
+            <div class="ghead"><b>Thu 12 Feb 2026, 18:40</b><span>&middot; call 0409 &middot; 2 notes</span><span class="grow"></span><a href="#" class="small">Open</a></div>
+            <div class="nrow"><span class="t">02:14</span><span>Asks the caller to go by "the unit on Birch Road"; first mention.</span><span></span><span class="said">"you gotta go by the unit on Birch, you know the one"</span><span class="by">R. Castellanos, 2 Oct</span></div>
+            <div class="nrow"><span class="t">09:40</span><span>Court date given as 3 March; check against the docket.</span><span></span><span class="said">"my date is the third, March third"</span><span class="by">R. Castellanos, 2 Oct</span></div>
+
+            <div class="ghead playing"><svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: #0f5e86"><path d="M7 4l12 8-12 8z"/></svg><b>Sat 14 Feb 2026, 09:12</b><span>&middot; call 0417 &middot; 3 notes</span><span class="grow"></span><a href="#" class="small">Open</a></div>
+            <div class="nrow"><span class="t">01:05</span><span>Caller says "they came by asking"; who came by?</span><span></span><span class="said">"because they came by asking"</span><span class="by">A. Okafor, 3 Oct</span></div>
+            <div class="nrow lit"><span class="t">04:31</span><span>Second mention of the storage unit on Birch Road. Same caller as 0409. Who is "him"? Compare with 0433 at 11:20.</span><span></span><span class="said">"you gotta go by the unit on Birch, you know the one. Tell him I said it is fine"</span><span class="by">A. Okafor, 3 Oct 14:02</span></div>
+            <div class="nrow"><span class="t">11:20</span><span>"Do not take anybody with you": instruction, guarded.</span><span></span><span class="said">"do not take anybody with you"</span><span class="by">A. Okafor, 3 Oct</span></div>
+
+            <div class="ghead"><b>Sat 14 Feb 2026, 19:55</b><span>&middot; call 0418 &middot; 1 note</span><span class="grow"></span><a href="#" class="small">Open</a></div>
+            <div class="nrow"><span class="t">06:12</span><span>Nothing on the case; a family call. Marked so there is a note.</span><span></span><span class="said">"tell mom I am fine, I am eating"</span><span class="by">J. Brennan, 1 Oct</span></div>
+
+            <div class="ghead"><b>Mon 16 Feb 2026, 08:03</b><span>&middot; call 0433 &middot; 4 notes</span><span class="grow"></span><a href="#" class="small">Open</a></div>
+            <div class="nrow"><span class="t">00:48</span><span>New caller, a man; unnamed on the call. Speakers page says unnamed.</span><span></span><span class="said">"it is me, you know who"</span><span class="by">M. Lindqvist, 30 Sep</span></div>
+            <div class="nrow"><span class="t">03:30</span><span>Lawyer mentioned by first name only.</span><span></span><span class="said">"did you talk to Dana yet"</span><span class="by">M. Lindqvist, 30 Sep</span></div>
+            <div class="nrow"><span class="t">11:20</span><span>"He went by the unit. It is handled." Compare with 0417 at 04:31.</span><span></span><span class="said">"he went by the unit, it is handled"</span><span class="by">A. Okafor, 3 Oct</span></div>
+          </div>
+
+          <div class="row small muted" style="padding: 8px 12px; border-top: 1px solid #d3d9e0">
+            <span>388 calls have no note yet</span>
+            <span class="grow"></span>
+            <a href="#">Download notes</a>
+            <a href="#">Download the list</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div></div><style>.shot .step{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5b6673;font-weight:500;margin:0 0 6px}</style>
+<div class="shot-box" data-w="1440" data-h="560"><div class="shot" style="width:1440px;height:560px"><div style="width: 1440px; height: 560px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 20px 32px; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <div style="display: flex; flex-direction: column; min-height: 0">
+    <p class="step">The Notes tab: the group heads say whose call it is</p>
+    <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden">
+      <div class="tabs"><span class="tab on">Notes <span class="count">1,204</span></span><span class="tab">Recordings <span class="count">812</span></span><span class="tab">Details</span><span class="grow"></span><input class="search" type="search" placeholder="Find in notes and calls" aria-label="Find" style="width: 150px; margin: 4px 6px"></div>
+      <div style="padding: 10px 12px 8px; border-bottom: 1px solid #d3d9e0" class="row"><span class="pill on">All 1,204</span><span class="pill">A. Okafor 312</span><span class="pill">M. Lindqvist 288</span><span class="pill">R. Castellanos 240</span><span class="pill">6 more &#9662;</span></div>
+      <div style="flex: 1 1 auto; min-height: 0; overflow: hidden">
+        <div class="ghead"><b>Thu 12 Feb 2026, 18:40</b><span>&middot; call 0409 &middot; 2 notes</span><span class="grow"></span><span class="muted">R. Castellanos</span><span class="pill ok" style="height: 18px; font-size: 11px">Reviewed</span></div>
+        <div class="nrow"><span class="t">02:14</span><span>Asks the caller to go by "the unit on Birch Road"; first mention.</span><span></span><span class="by">R. Castellanos, 2 Oct</span></div>
+        <div class="ghead playing"><b>Sat 14 Feb 2026, 09:12</b><span>&middot; call 0417 &middot; 3 notes</span><span class="grow"></span><span class="muted">A. Okafor</span></div>
+        <div class="nrow lit"><span class="t">04:31</span><span>Second mention of the storage unit on Birch Road. Same caller as 0409.</span><span></span><span class="by">A. Okafor, 3 Oct</span></div>
+        <div class="ghead"><b>Fri 20 Feb 2026, 17:22</b><span>&middot; call 0471 &middot; no note</span><span class="grow"></span><span class="muted">R. Castellanos</span></div>
+        <div class="ghead"><b>Mon 16 Feb 2026, 08:03</b><span>&middot; call 0433 &middot; 4 notes</span><span class="grow"></span><span class="muted">A. Okafor</span><span class="pill ok" style="height: 18px; font-size: 11px">Reviewed</span></div>
+        <div class="nrow"><span class="t">11:20</span><span>"He went by the unit. It is handled." Compare with 0417 at 04:31.</span><span></span><span class="by">A. Okafor, 3 Oct</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; min-height: 0">
+    <p class="step">The Recordings tab: Mine, not reviewed, and Listen</p>
+    <div class="card" style="display: flex; flex-direction: column; min-height: 0; overflow: hidden">
+      <div class="tabs"><span class="tab">Notes <span class="count">1,204</span></span><span class="tab on">Recordings <span class="count">812</span></span><span class="tab">Details</span><span class="grow"></span><input class="search" type="search" placeholder="Find in notes and calls" aria-label="Find" style="width: 150px; margin: 4px 6px"></div>
+      <div style="padding: 10px 12px 8px; border-bottom: 1px solid #d3d9e0; display: flex; flex-direction: column; gap: 6px">
+        <input class="search" type="search" placeholder="Filter the recordings as you type" aria-label="Filter" style="width: 100%; box-sizing: border-box">
+        <div class="row" style="gap: 6px"><span class="pill">All 812</span><span class="pill">Mine 80</span><span class="pill on">Mine, not reviewed 6</span><span class="pill">Reviewed 412</span><span class="pill type">Jail call</span></div>
+      </div>
+      <div style="flex: 1 1 auto; min-height: 0; overflow: hidden">
+        <table class="tbl">
+          <thead><tr><th>Call</th><th>Length</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><div>Call 0471</div><div class="muted small">Fri 20 Feb 2026, 17:22 &middot; you</div></td><td class="mono">08:41</td><td class="muted">none yet</td><td style="text-align: right"><button class="btn small" type="button">Listen</button></td></tr>
+            <tr><td><div>Call 0512</div><div class="muted small">Mon 2 Mar 2026, 12:05 &middot; you</div></td><td class="mono">15:00</td><td>2 notes, you and J. Brennan</td><td style="text-align: right"><button class="btn small" type="button">Listen</button></td></tr>
+            <tr><td><div>Call 0526</div><div class="muted small">Wed 4 Mar 2026, 10:14 &middot; you</div></td><td class="mono">13:27</td><td class="muted">none yet</td><td style="text-align: right"><button class="btn small" type="button">Listen</button></td></tr>
+            <tr><td><div>Call 0530</div><div class="muted small">Thu 5 Mar 2026, 08:51 &middot; you</div></td><td class="mono">06:12</td><td class="muted">none yet</td><td style="text-align: right"><button class="btn small" type="button">Listen</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="row small muted" style="padding: 8px 12px; border-top: 1px solid #d3d9e0"><span>Listen opens the call on the left from its start, and the foot steps through these 6 with Mark reviewed beside Next call.</span></div>
+    </div>
+  </div>
+</div></div></div></section><section id="popout"><h2>Open the call: a pop-out, never a jump away</h2><p class="cap">Open the call, from the left’s head or a group head’s Open, does not leave the Notes page. The whole call opens in a pop-out over it, the chat’s Preview grown up: the full transcript with Follow, the player with Boost and the sides, the waveform with the notes marked, the note editable under its line, the summary and the speakers beside, Mark reviewed and Export in its head. Esc or Close returns you to the notes exactly where you were; Open the full call is the one way out to the recording page, for its clips, its Speakers page and its chat.</p><style>.shot .dim{position:absolute;inset:0;background:rgba(23,27,33,.45)}
+.shot .pop{position:absolute;left:150px;top:60px;width:1140px;height:790px;background:#fff;border:1px solid #d3d9e0;border-radius:8px;box-shadow:0 8px 28px rgba(15,30,45,.25);display:flex;flex-direction:column;overflow:hidden}
+.shot .part h4{font-size:13px;font-weight:600;margin:10px 0 2px}
+.shot .part p{margin:0 0 4px;font-size:13px;color:#171b21}
+.shot .spk{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #d3d9e0;font-size:13px}
+.shot .spk .sw{width:10px;height:10px;border-radius:50%}</style>
+<div class="shot-box" data-w="1440" data-h="900"><div class="shot" style="width:1440px;height:900px"><div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background: #f4f6f8; color: #171b21; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden">
+
+  <!-- The Notes page behind, as it was. -->
+  <div style="display: flex; flex-direction: column; height: 100%">
+    <div class="topbar"><span class="brand">Gideon Transcribe</span><span class="grow"></span><span class="muted small">A. Okafor</span><a href="#" class="small">Sign out</a><span class="muted small">Theme</span></div>
+    <div style="display: flex; flex: 1 1 auto; min-height: 0">
+      <div class="rail" aria-label="Rail">
+        <a href="#" class="ic act" aria-label="Upload files"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 20h16"/></svg></a>
+        <a href="#" class="ic act" aria-label="Record now"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></a>
+        <div class="gap"></div>
+        <a href="#" class="ic" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg></a>
+        <a href="#" class="ic on" aria-label="Cases"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></a>
+        <a href="#" class="ic" aria-label="My recordings"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></a>
+        <a href="#" class="ic" aria-label="Clips"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="7" cy="17" r="3"/><path d="M9.5 9 20 20M9.5 15 20 4"/></svg></a>
+      </div>
+      <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 14px 20px 16px; gap: 12px">
+        <div class="page-head"><div><div class="eyebrow"><a href="#">Cases</a> &rsaquo; <a href="#">Pike matter</a></div><h1>Notes</h1><p class="lead">1,204 notes on 812 calls, by 9 people.</p></div><div class="actions"><button class="btn" type="button">Ask Gideon</button><button class="btn" type="button">Export &#9662;</button></div></div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 500px; gap: 14px; flex: 1 1 auto; min-height: 0">
+          <div class="card" style="overflow: hidden">
+            <div class="pad" style="border-bottom: 1px solid #d3d9e0"><div class="row" style="gap: 10px"><span style="font-size: 17px; font-weight: 600">Call 0417</span><span class="pill type">Jail call</span><span class="pill"><span class="mono">14:52</span></span><span class="pill on">Assigned to you</span><span class="grow"></span><a href="#" class="btn small ghost">Open the call</a></div></div>
+            <div class="pad"><div class="player"><button class="play" type="button" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M7 4l12 8-12 8z"/></svg></button><span class="time">04:31</span><span class="muted mono small">/ 14:52</span></div></div>
+          </div>
+          <div class="card" style="overflow: hidden">
+            <div class="tabs"><span class="tab on">Notes <span class="count">1,204</span></span><span class="tab">Recordings <span class="count">812</span></span><span class="tab">Details</span></div>
+            <div class="ghead playing"><b>Sat 14 Feb 2026, 09:12</b><span>&middot; call 0417 &middot; 3 notes</span><span class="grow"></span><a href="#" class="small">Open</a></div>
+            <div class="nrow lit"><span class="t">04:31</span><span>Second mention of the storage unit on Birch Road.</span><span></span><span class="by">A. Okafor, 3 Oct</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dim"></div>
+
+  <!-- The pop-out: the whole call, over the page. -->
+  <div class="pop" role="dialog" aria-label="Call 0417">
+    <div class="row" style="padding: 12px 16px; border-bottom: 1px solid #d3d9e0; gap: 10px">
+      <div class="grow">
+        <div class="row" style="gap: 10px"><span style="font-size: 17px; font-weight: 600">Call 0417</span><span class="pill type">Jail call</span><span class="pill"><span class="mono">14:52</span></span><span class="pill on">Assigned to you</span><span class="pill ok">Summarised</span></div>
+        <div class="muted small">Sat 14 Feb 2026, 09:12 &middot; added by M. Lindqvist &middot; 3 notes &middot; the whole call, here; the notes stay behind this</div>
+      </div>
+      <button class="btn small" type="button">Mark reviewed</button>
+      <button class="btn small" type="button">Export &#9662;</button>
+      <button class="btn small" type="button">Open the full call</button>
+      <button class="btn small ghost" type="button" aria-label="Close">Close &times;</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 0; flex: 1 1 auto; min-height: 0">
+      <div style="display: flex; flex-direction: column; min-height: 0; border-right: 1px solid #d3d9e0">
+        <div style="padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 10px">
+          <div class="player">
+            <button class="play" type="button" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M7 4l12 8-12 8z"/></svg></button>
+            <button class="btn small" type="button">-5s</button><button class="btn small" type="button">+5s</button>
+            <span class="time">04:31</span><span class="muted mono small">/ 14:52</span>
+            <span class="grow"></span>
+            <button class="btn small" type="button">Speed 1x</button><button class="btn small on" type="button">Boost</button><button class="btn small" type="button">Both sides</button><button class="btn small on" type="button">Follow</button>
+          </div>
+          <div class="wave" aria-hidden="true"><span class="mark" style="left: 7%"></span><span class="mark" style="left: 30.4%"></span><span class="mark" style="left: 76%"></span><span class="head" style="left: 30.4%"></span></div>
+        </div>
+        <div style="padding: 0 10px 8px; flex: 1 1 auto; min-height: 0; overflow: hidden">
+          <div class="line-row"><span class="t">00:00</span><span class="who" style="color: #5b6673">Recording</span><span class="muted">This call is from a correctional facility and is subject to monitoring and recording.</span></div>
+          <div class="line-row"><span class="t">00:14</span><span class="who" style="color: #1f6fb2">Pike</span><span>Hey. It is me.</span></div>
+          <div class="line-row"><span class="t">00:17</span><span class="who" style="color: #c2410c">Caller</span><span>Hey. You okay?</span></div>
+          <div class="line-row"><span class="t">00:58</span><span class="who" style="color: #1f6fb2">Pike</span><span>What is wrong? You sound off.</span></div>
+          <div class="line-row"><span class="t">01:05</span><span class="who" style="color: #c2410c">Caller</span><span>Because they came by asking. <span class="pill" style="height: 18px; font-size: 11px">note</span></span></div>
+          <div class="line-row"><span class="t">01:12</span><span class="who" style="color: #1f6fb2">Pike</span><span>Who did?</span></div>
+          <div class="line-row"><span class="t">01:15</span><span class="who" style="color: #c2410c">Caller</span><span>Two of them. In a regular car.</span></div>
+          <div class="line-row"><span class="t">04:02</span><span class="who" style="color: #1f6fb2">Pike</span><span>I told you already, that stuff is not where it was.</span></div>
+          <div class="line-row"><span class="t">04:09</span><span class="who" style="color: #c2410c">Caller</span><span>So where is it then? Because they came by asking.</span></div>
+          <div class="line-row"><span class="t">04:19</span><span class="who" style="color: #1f6fb2">Pike</span><span>Not on the phone. You know I cannot say that on here.</span></div>
+          <div class="line-row lit">
+            <span class="t">04:31</span><span class="who" style="color: #1f6fb2">Pike</span><span>You gotta go by the unit on Birch, you know the one. Tell him I said it is fine.</span>
+            <div class="notebox"><div>Second mention of the storage unit on Birch Road. Same caller as 0409. Who is "him"? Compare with 0433 at 11:20.</div><div class="row small muted" style="margin-top: 6px"><span>Note by A. Okafor, 3 Oct 14:02</span><span class="grow"></span><a href="#">Edit</a><a href="#">Remove</a></div></div>
+          </div>
+          <div class="line-row"><span class="t">04:44</span><span class="who" style="color: #c2410c">Caller</span><span>Which one, the one by the car wash?</span></div>
+          <div class="line-row"><span class="t">04:47</span><span class="who" style="color: #1f6fb2">Pike</span><span>Yeah. Do not take anybody with you.</span></div>
+          <div class="line-row"><span class="t">04:55</span><span class="who" style="color: #c2410c">Caller</span><span>Okay. Okay. When is your date again?</span></div>
+          <div class="line-row"><span class="t">05:02</span><span class="who" style="color: #1f6fb2">Pike</span><span>Still the third, far as I know.</span></div>
+          <div class="line-row"><span class="t">11:14</span><span class="who" style="color: #c2410c">Caller</span><span>Should I bring my brother?</span></div>
+          <div class="line-row"><span class="t">11:20</span><span class="who" style="color: #1f6fb2">Pike</span><span>Do not take anybody with you. <span class="pill" style="height: 18px; font-size: 11px">note</span></span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 12px 16px; gap: 6px">
+        <div class="label">Summary</div>
+        <div class="part" style="flex: 1 1 auto; min-height: 0; overflow: hidden">
+          <h4 style="margin-top: 0">Overview</h4>
+          <p>Pike and the same caller as call 0409. Someone has come by asking questions; Pike sends her to the unit on Birch Road again and tells her to tell "him" it is fine, and not to take anybody with her.</p>
+          <h4>What is discussed</h4>
+          <p>Two people came by asking (01:05). The storage unit on Birch Road, again (04:31). The court date, still the third (05:02). Whether to bring her brother (11:14).</p>
+          <h4>Statements about the case</h4>
+          <p>"That stuff is not where it was." Pike, 04:02. "Not on the phone. You know I cannot say that on here." Pike, 04:19.</p>
+          <h4>Requests and instructions</h4>
+          <p>Go by the unit on Birch and tell him it is fine (04:31). Do not take anybody (04:47, 11:20).</p>
+          <h4>Threats, pressure, or guarded talk</h4>
+          <p>Guarded at 04:19 to 04:47: the subject is not named on the phone.</p>
+          <div class="muted small" style="margin-top: 8px">Written 29 Sep overnight, Jail call summary. <a href="#">Open in full</a></div>
+        </div>
+        <div class="label" style="margin-top: 6px">Speakers</div>
+        <div class="spk"><span class="sw" style="background: #1f6fb2"></span><span class="grow">Pike <span class="muted">(Defendant)</span></span><span class="muted">Side 1</span></div>
+        <div class="spk"><span class="sw" style="background: #c2410c"></span><span class="grow">Caller <span class="muted">unnamed</span></span><span class="muted">Side 2</span></div>
+      </div>
+    </div>
+
+    <div class="row small muted" style="padding: 8px 16px; border-top: 1px solid #d3d9e0"><span>Esc or Close returns you to the notes exactly where you were. Open the full call leaves for the recording page, with its clips, speakers page and chat.</span></div>
+  </div>
+</div></div></div></section>
+  <p class="foot">What your look settles: the Team block’s place and its per-person counts; an added owner’s reach (add people and assign, as drawn, or Rename too); Mark reviewed as a plain button with the one question, and the wording of its no-note form; removing a Collaborator clearing their assignments; the word Reviewed, or Finished; “Mine, not reviewed” as the filter’s name; and the Notes page’s third tab reading Recordings rather than Calls.</p>
+</div>
+<script>
+(function () {
+  function fit() {
+    document.querySelectorAll('.shot-box').forEach(function (box) {
+      var w = Number(box.dataset.w), h = Number(box.dataset.h);
+      var s = Math.min(1, box.clientWidth / w);
+      box.style.height = Math.round(h * s) + 'px';
+      box.firstElementChild.style.transform = 'scale(' + s + ')';
+    });
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>
