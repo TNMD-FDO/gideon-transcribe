@@ -288,6 +288,47 @@ def test_ready_batches_ask_one_question_of_the_database(owner, client):
     assert len(ready) == 0 and len(asked) <= 3
 
 
+def test_the_unfinished_batch_is_found_in_two_questions_and_is_the_newest(owner):
+    from core.jobs import Job, JobState
+
+    finished = Batch.objects.create(user=owner)
+    Recording.objects.create(
+        batch=finished,
+        user=owner,
+        title="Done",
+        original_filename="done.wav",
+        media_state=MediaState.READY,
+        duration_seconds=10,
+    )
+    older = Batch.objects.create(user=owner)
+    Recording.objects.create(
+        batch=older,
+        user=owner,
+        title="Still checking",
+        original_filename="checking.wav",
+        media_state=MediaState.CHECKING,
+        duration_seconds=10,
+    )
+    newer = Batch.objects.create(user=owner)
+    waiting = Recording.objects.create(
+        batch=newer,
+        user=owner,
+        title="Queued",
+        original_filename="queued.wav",
+        media_state=MediaState.READY,
+        duration_seconds=10,
+    )
+    Job.objects.create(batch=newer, recording=waiting, state=JobState.QUEUED)
+    Batch.objects.create(user=owner, is_live=True)
+    with CaptureQueriesContext(connection) as asked:
+        found = Batch.unfinished_for(owner)
+    assert found == newer and len(asked) <= 3
+    Job.objects.filter(batch=newer).update(state=JobState.DONE)
+    assert Batch.unfinished_for(owner) == older
+    Recording.objects.filter(batch=older).update(media_state=MediaState.READY)
+    assert Batch.unfinished_for(owner) is None
+
+
 def test_the_chat_row_counts_what_was_read_on_the_whole_route():
     from core import case_chat
 

@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.124.1, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Home's Running now, measured after v1.124.0.** On the office's server
+Home still asked 366 queries for an Admin, and 78 of them came from one
+place: finding the person's unfinished batch walked every batch they had
+ever uploaded, newest first, and asked each one two questions. The batches
+are now sorted in two grouped questions, and the newest unfinished one is
+the answer, as before. The same lookup opens the Upload page and guards a
+new upload, so those are lighter too.
+
 ## v1.124.0, 2026-10-04
 
 ```

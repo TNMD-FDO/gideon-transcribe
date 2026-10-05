@@ -196,11 +196,28 @@ class Batch(models.Model):
 
         A Live recording's Batch is not one: a person may record while a
         batch runs and upload while a recording is transcribed.
+
+        Two grouped questions, not two per Batch (v1.124.1): Home asked them
+        of every Batch a person ever uploaded, 78 queries for 39 batches.
+        The newest unfinished Batch is the one, as the walk newest-first
+        used to return.
         """
-        for batch in cls.objects.filter(user=user, is_live=False):
-            if not batch.is_finished:
-                return batch
-        return None
+        from core.jobs import Job, JobState
+
+        mine = cls.objects.filter(user=user, is_live=False)
+        held = set(
+            Recording.objects.filter(
+                batch__in=mine, media_state__in=MediaState.UNFINISHED
+            ).values_list("batch_id", flat=True)
+        )
+        held |= set(
+            Job.objects.filter(batch__in=mine, state__in=JobState.LIVE).values_list(
+                "batch_id", flat=True
+            )
+        )
+        if not held:
+            return None
+        return mine.filter(pk__in=held).first()
 
 
 class Recording(models.Model):
