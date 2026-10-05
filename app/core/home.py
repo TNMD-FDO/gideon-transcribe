@@ -55,20 +55,43 @@ def session_batches(user):
 def ready_batches(user) -> list[dict]:
     """The finished batches of this session with at least one transcript,
     each with its download, until Done with these takes it."""
+    from django.db.models import Count, Q
+
+    from core.jobs import JobState
+
     out = []
-    for batch in session_batches(user):
-        if not batch.is_finished:
+    # Every batch's four counts in one query (v1.124.0): each had asked four
+    # questions of its own, and an Admin's Home ran 39 batches through them.
+    batches = session_batches(user).annotate(
+        unfinished=Count(
+            "recordings",
+            filter=Q(recordings__media_state__in=MediaState.UNFINISHED),
+            distinct=True,
+        ),
+        live=Count("jobs", filter=Q(jobs__state__in=JobState.LIVE), distinct=True),
+        done_count=Count(
+            "recordings",
+            filter=Q(
+                recordings__case__isnull=True, recordings__transcript__isnull=False
+            ),
+            distinct=True,
+        ),
+        failed_count=Count(
+            "recordings",
+            filter=Q(
+                recordings__case__isnull=True,
+                recordings__media_state__in=(MediaState.FAILED, MediaState.REJECTED),
+            ),
+            distinct=True,
+        ),
+    )
+    for batch in batches:
+        if batch.unfinished or batch.live:
             continue
-        done = batch.recordings.filter(
-            case__isnull=True, transcript__isnull=False
-        ).count()
+        done = batch.done_count
         if not done:
             continue
-        failed = (
-            batch.recordings.filter(case__isnull=True)
-            .filter(media_state__in=(MediaState.FAILED, MediaState.REJECTED))
-            .count()
-        )
+        failed = batch.failed_count
         out.append(
             {
                 "batch": batch,
@@ -161,6 +184,9 @@ def incident_lines(case) -> list[dict]:
     if not incidents.on():
         return []
     out = []
+    # The pills' counts for the whole case at once (v1.124.0).
+    counts = dashboard.incident_counts(case)
+    empty = {"unsynced": 0, "to_check": 0, "proposals": 0, "writing": 0, "stale": 0}
     for incident in case.incidents.all():
         placed, tone = incidents.placed_words(incident)
         out.append(
@@ -170,7 +196,9 @@ def incident_lines(case) -> list[dict]:
                 "cameras": incident.cameras.count(),
                 "placed": placed,
                 "tone": tone,
-                "pills": dashboard.incident_pills(incident),
+                "pills": dashboard.incident_pills(
+                    incident, counts.get(incident.pk, empty)
+                ),
             }
         )
     return out

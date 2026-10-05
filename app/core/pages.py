@@ -124,6 +124,25 @@ def batch_groups(rows) -> list[dict]:
     """The recordings page's rows grouped by their batch, newest batch first,
     each group with how many transcripts are ready and the batch's download:
     the transcripts are never only on the batch page (Phase 8 chapter 13)."""
+    from core.jobs import Job, JobState
+    from core.recordings import MediaState, Recording
+
+    rows = list(rows)
+    # Whether each batch is finished, for every batch in two queries
+    # (v1.124.0): Batch.is_finished asks two per batch, and Home showed 21.
+    ids = {one.batch_id for one in rows}
+    unfinished = set(
+        Recording.objects.filter(
+            batch_id__in=ids, media_state__in=MediaState.UNFINISHED
+        )
+        .values_list("batch_id", flat=True)
+        .distinct()
+    )
+    live = set(
+        Job.objects.filter(batch_id__in=ids, state__in=JobState.LIVE)
+        .values_list("batch_id", flat=True)
+        .distinct()
+    )
     groups: dict = {}
     for one in rows:
         group = groups.get(one.batch_id)
@@ -134,7 +153,7 @@ def batch_groups(rows) -> list[dict]:
                 "done": 0,
                 "download": reverse("batch-download", args=[one.batch_id]),
                 "url": reverse("batch", args=[one.batch_id]),
-                "finished": one.batch.is_finished,
+                "finished": one.batch_id not in unfinished and one.batch_id not in live,
             }
         group["rows"].append(one)
         if hasattr(one, "transcript"):
@@ -295,6 +314,9 @@ def upload(request: HttpRequest) -> HttpResponse:
             "disk_is_low": (
                 uploads.free_disk_bytes() < settings_store.minimum_free_disk_bytes()
             ),
+            # The figures for an Admin (v1.124.0): the free space and the floor.
+            "disk_free_gb": uploads.as_gb(uploads.free_disk_bytes()),
+            "disk_floor_gb": settings_store.get("minimum_free_disk_gb"),
         },
     )
 

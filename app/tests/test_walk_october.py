@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 
 import pytest
@@ -231,6 +232,71 @@ def test_a_notes_audit_row_names_the_recording_and_the_time(owner, a_case):
     notes.set_note(call.transcript.segments.get(), "A word.", by=owner)
     row = audit.Row.objects.filter(event="Note added").get()
     assert row.object_label == "Call 0409 at 00:00:00"
+
+
+# v1.124.0: the Search tab's events, Home's counts, the Off spells once ----------------
+
+
+def test_the_off_spells_are_read_once_per_request_and_after_a_change(db):
+    from core import retention
+
+    settings_store.set_to("folder_management", True)
+    now = timezone.now()
+    settings_store.start_request_cache()
+    try:
+        with CaptureQueriesContext(connection) as asked:
+            for _ in range(4):
+                retention.days_off_between(now - dt.timedelta(days=30), now)
+        assert len(asked) == 1
+        settings_store.set_to("folder_management", False)
+        with CaptureQueriesContext(connection) as asked:
+            retention.days_off_between(now - dt.timedelta(days=30), now)
+        assert len(asked) >= 1
+    finally:
+        settings_store.end_request_cache()
+
+
+def test_the_incident_counts_are_grouped_and_read_as_the_pills_do(owner, a_case):
+    from core import dashboard
+
+    assert dashboard.incident_counts(a_case) == {}
+    assert dashboard.incident_pills(
+        type("I", (), {"pk": 1, "url": lambda self: "/x"})(),
+        {"unsynced": 1, "to_check": 2, "proposals": 0, "writing": 0, "stale": 1},
+    ) == [
+        {"words": "not synced", "href": "/x", "tone": "warn"},
+        {"words": "2 events to check", "href": "/x", "tone": "warn"},
+        {"words": "1 memo has newer events", "href": "/x", "tone": "warn"},
+    ]
+
+
+def test_ready_batches_ask_one_question_of_the_database(owner, client):
+    from core import home
+
+    for _ in range(3):
+        batch = Batch.objects.create(user=owner)
+        Recording.objects.create(
+            batch=batch,
+            user=owner,
+            title="Loose",
+            original_filename="loose.wav",
+            media_state=MediaState.READY,
+            duration_seconds=10,
+        )
+    with CaptureQueriesContext(connection) as asked:
+        ready = home.ready_batches(owner)
+    assert len(ready) == 0 and len(asked) <= 3
+
+
+def test_the_chat_row_counts_what_was_read_on_the_whole_route():
+    from core import case_chat
+
+    turn = type(
+        "T",
+        (),
+        {"selection": {}, "scope": {}, "route": "whole", "readings": [1, 2, 3]},
+    )()
+    assert case_chat._scope_fields(turn)["read_whole"] == 3
 
 
 # The page's own files ----------------------------------------------------------------

@@ -2893,7 +2893,8 @@ def end_request_cache() -> None:
 
 
 def forget(key: str | None = None) -> None:
-    """A setting moved: the request's kept copy goes, so the next read sees it."""
+    """A setting moved: the request's kept copy goes, so the next read sees
+    it; what memo() kept goes with it, since a change may bear on it."""
     kept = getattr(_request, "values", None)
     if kept is None:
         return
@@ -2901,6 +2902,20 @@ def forget(key: str | None = None) -> None:
         kept.clear()
     else:
         kept.pop(key, None)
+    for name in [one for one in kept if one.startswith("memo:")]:
+        kept.pop(name, None)
+
+
+def memo(key: str, make):
+    """A small thing read once per request (v1.124.0): `make()` the first
+    time, the kept answer after, nothing kept outside a request."""
+    kept = getattr(_request, "values", None)
+    if kept is None:
+        return make()
+    name = f"memo:{key}"
+    if name not in kept:
+        kept[name] = make()
+    return kept[name]
 
 
 def check(key: str, value):

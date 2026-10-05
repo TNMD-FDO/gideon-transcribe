@@ -8,6 +8,7 @@ setting, no audit row.
 
 from __future__ import annotations
 
+from django.db.models import Count
 from django.urls import reverse
 
 from core import (
@@ -33,11 +34,98 @@ def _count(n: int, one: str, many: str | None = None) -> str:
     return f"{n} {one if n == 1 else (many or one + 's')}"
 
 
-def _incident_pills(where: dict, href: str, add) -> None:
+def incident_counts(case) -> dict:
+    """The counts behind every incident's pills in one case, in five grouped
+    queries (v1.124.0), keyed by incident id: what _incident_pills would ask
+    of each incident, asked once for the case."""
+    counts: dict = {}
+
+    def bump(incident_id, key, n=1):
+        counts.setdefault(
+            incident_id,
+            {"unsynced": 0, "to_check": 0, "proposals": 0, "writing": 0, "stale": 0},
+        )[key] += n
+
+    for row in (
+        IncidentCamera.objects.filter(
+            placed__in=(incidents.GUESS, incidents.NOT_PLACED), incident__case=case
+        )
+        .values("incident")
+        .annotate(n=Count("id"))
+    ):
+        bump(row["incident"], "unsynced", row["n"])
+    for row in (
+        Event.objects.filter(proposed=False, to_check=True, incident__case=case)
+        .values("incident")
+        .annotate(n=Count("id"))
+    ):
+        bump(row["incident"], "to_check", row["n"])
+    for row in (
+        Event.objects.filter(proposed=True, dismissed=False, incident__case=case)
+        .values("incident")
+        .annotate(n=Count("id"))
+    ):
+        bump(row["incident"], "proposals", row["n"])
+    for row in (
+        incident_assistant.IncidentMemo.objects.filter(
+            state__in=(incident_assistant.QUEUED, incident_assistant.RUNNING),
+            incident__case=case,
+        )
+        .values("incident")
+        .annotate(n=Count("id"))
+    ):
+        bump(row["incident"], "writing", row["n"])
+    events_now = {
+        row["incident"]: row["n"]
+        for row in Event.objects.filter(proposed=False, incident__case=case)
+        .values("incident")
+        .annotate(n=Count("id"))
+    }
+    for memo in incident_assistant.IncidentMemo.objects.filter(
+        state=incident_assistant.DONE, incident__case=case
+    ).select_related("incident"):
+        newer = events_now.get(memo.incident_id, 0) - memo.events_count
+        if newer > 0 or incident_assistant.stale_words(memo, memo.incident):
+            bump(memo.incident_id, "stale")
+    return counts
+
+
+def _incident_pills(where: dict, href: str, add, counts: dict | None = None) -> None:
     """The incident pills, for a case's incidents together (the dashboard
     line) or for one incident alone (Home's line under its case, v1.115.0):
     `where` narrows the cameras, events and memos to the case or the
-    incident, and every pill links to `href`."""
+    incident, and every pill links to `href`. With `counts` (one incident's
+    row from incident_counts, v1.124.0) nothing is asked of the database."""
+    if counts is not None:
+        if counts["unsynced"]:
+            add("not synced", href, WARN)
+        if counts["to_check"]:
+            add(
+                _count(counts["to_check"], "event to check", "events to check"),
+                href,
+                WARN,
+            )
+        if counts["proposals"]:
+            add(
+                _count(
+                    counts["proposals"],
+                    "proposed event waiting",
+                    "proposed events waiting",
+                ),
+                href,
+                WARN,
+            )
+        if counts["writing"]:
+            add(_count(counts["writing"], "memo writing", "memos writing"), href)
+        if counts["stale"]:
+            add(
+                _count(
+                    counts["stale"], "memo has newer events", "memos have newer events"
+                ),
+                href,
+                WARN,
+            )
+        return
     # Not synced: an incident with a camera still at the app's guess.
     unsynced = (
         IncidentCamera.objects.filter(
@@ -88,14 +176,15 @@ def _incident_pills(where: dict, href: str, add) -> None:
         )
 
 
-def incident_pills(incident) -> list[dict]:
-    """One incident's own pills, each a link to its page (Home, v1.115.0)."""
+def incident_pills(incident, counts: dict | None = None) -> list[dict]:
+    """One incident's own pills, each a link to its page (Home, v1.115.0);
+    with `counts` from incident_counts, from memory (v1.124.0)."""
     out: list[dict] = []
 
     def add(words: str, href: str, tone: str = PLAIN) -> None:
         out.append({"words": words, "href": href, "tone": tone})
 
-    _incident_pills({"incident": incident}, incident.url(), add)
+    _incident_pills({"incident": incident}, incident.url(), add, counts)
     return out
 
 

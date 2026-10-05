@@ -540,10 +540,15 @@ def search(case, asked: str, kind: str = "") -> dict:
             names_by_incident: dict = {}
             for event, near in events:
                 incident = event.incident
-                names = names_by_incident.setdefault(
-                    incident.pk,
-                    {str(c.pk): c.camera_id() for c in incident.cameras.all()},
-                )
+                if incident.pk not in names_by_incident:
+                    # Once per incident, with the recordings joined (v1.124.0):
+                    # setdefault had built the list again for every hit, one
+                    # recording fetch per camera each time.
+                    names_by_incident[incident.pk] = {
+                        str(c.pk): c.camera_id()
+                        for c in incident.cameras.select_related("recording")
+                    }
+                names = names_by_incident[incident.pk]
                 from core import chronology
 
                 here = group(("incident", incident.pk), incident.name, incident.url())

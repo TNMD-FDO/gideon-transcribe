@@ -1361,6 +1361,13 @@
     box.maxLength = 2000;
     box.placeholder = "A note on this line: what it means for the case, a page cite, a thing to do";
     box.value = segment.note || "";
+    if (segment.note && segment.note_by) {
+      // Whose words these are (v1.124.0), as the Notes page says it.
+      var whose = document.createElement("div");
+      whose.className = "muted small";
+      whose.textContent = "Written by " + segment.note_by + (segment.note_on ? " on " + segment.note_on : "") + "; saving replaces their words.";
+      holder.appendChild(whose);
+    }
     holder.appendChild(box);
 
     var tools = document.createElement("div");

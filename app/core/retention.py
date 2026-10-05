@@ -66,8 +66,16 @@ def days_off_between(start: datetime, end: datetime) -> int:
     A spell still open runs to `end`. Both causes count the same way: the
     setting being off, and the outage a restore covers.
     """
+    from core import settings_store
+
     total = 0
-    for spell in OffSpell.objects.filter(started__lt=end).exclude(ended__lt=start):
+    # The spells once per request (v1.124.0): every case on Home asked.
+    spells = settings_store.memo(
+        "retention.spells", lambda: list(OffSpell.objects.order_by("started"))
+    )
+    for spell in spells:
+        if spell.started >= end or (spell.ended is not None and spell.ended < start):
+            continue
         began = max(spell.started, start)
         ended = min(spell.ended or end, end)
         if ended > began:

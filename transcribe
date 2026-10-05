@@ -3024,15 +3024,18 @@ finish_the_upgrade() {
   echo
   if [ "$build" = "yes" ]; then
     build_the_images
-  elif compose pull --quiet; then
+  elif compose pull --quiet --ignore-buildable && compose pull --quiet app whisperx diarizer >/dev/null 2>&1; then
     pass "the images came from the registry"
     verify_the_pull "$tag"
   else
     # Nothing may be published yet, or the registry may be out of reach, and
     # both are fine: compose.yaml carries build: beside image: for both of
-    # this repository's images, so they are built here instead.
+    # this repository's images, so they are built here instead. The upstream
+    # images are pulled loudly, so a registry out of reach is seen; the app's
+    # own three are pulled quietly (v1.124.0), since a private package answers
+    # "unauthorized" and "denied" for each, and that is this one line.
     echo
-    amber "The registry had nothing to give, so the images are built here."
+    amber "The registry had nothing to give for the app's own images, so they are built here."
     echo "  The WhisperX one takes ten to twenty minutes the first time."
     echo
     build_the_images

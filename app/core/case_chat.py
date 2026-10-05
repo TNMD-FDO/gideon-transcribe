@@ -836,7 +836,8 @@ def _scope_fields(turn) -> dict:
         "scope_count": len(scope.get("recordings") or []),
         "overviews_read": selection.get("overviews_read", 0),
         "pointed_to": selection.get("pointed_to", 0),
-        "read_whole": selection.get("read_whole", 0),
+        # On the whole and narrowed routes every reading was whole (v1.124.0).
+        "read_whole": selection.get("read_whole", len(turn.readings or [])),
         "no_summary": selection.get("no_summary", 0),
     }
 

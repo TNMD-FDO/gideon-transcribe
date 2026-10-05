@@ -21,6 +21,43 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.124.0, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**What the server showed after v1.123.1.** Measured on the office's server
+once the settings cache was on: the Search tab and Home still asked far
+more of the database than their pages warrant.
+
+- **The Search tab's events** fetched a camera's recording once per hit
+  (384 of the 643 queries for one common word on the largest case): the
+  camera list for an incident was built again for every hit. It is built
+  once per incident with the recordings joined.
+- **Home** asked each batch four questions of its own and each incident
+  five for its pills, and each case for the days the clock was off: 362
+  queries for an Admin with nine cases. The batches come in one query with
+  their four counts, an incident's pills come from five grouped queries per
+  case, and the Off spells are read once per request.
+- **The upgrade's registry noise.** While the packages are private the
+  registry answers "unauthorized" and "denied" for the app's own three
+  images, and Docker printed every refusal before the upgrade fell back to
+  building them here. The upstream images are still pulled loudly, so a
+  registry out of reach is seen; the app's own three are pulled quietly,
+  and one line says they are built here.
+- **The recording page's note box** says whose words it holds ("Written by
+  Ana Ruiz on 04 Oct; saving replaces their words"), as the Notes page and
+  the Preview do since v1.123.0.
+- **The case chat's audit row** counts the recordings read whole on every
+  route; on the whole and narrowed routes it had read 0.
+- **The Upload page**, paused for a full disk, tells an Admin the free
+  space and the floor beside the link to the Limits page.
+- Not changed: the incident page's state poll still sends the whole state;
+  a version that lets the poll answer "nothing changed" needs every writer
+  of the incident to move it, and is a release of its own.
+
 ## v1.123.1, 2026-10-04
 
 ```
