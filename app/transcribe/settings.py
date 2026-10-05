@@ -96,6 +96,8 @@ MIDDLEWARE = [
     # Below WhiteNoise, so the static files keep their own caching and every
     # page and answer of the app's own says private, no-store (v1.93.1).
     "core.middleware.NoStoreMiddleware",
+    # Each setting read once per request (v1.123.0).
+    "core.middleware.SettingsCacheMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

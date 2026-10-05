@@ -113,7 +113,11 @@ def test_a_setting_is_read_once_inside_a_request_and_afresh_after_a_change(db):
     assert len(asked) == 2
 
 
-def test_the_kept_settings_do_not_leak_between_requests(owner, client):
+def test_the_middleware_is_installed_and_the_kept_settings_do_not_leak(owner, client):
+    from django.conf import settings as django_settings
+
+    # v1.123.1: the line in settings.py had been left out of v1.123.0's push.
+    assert "core.middleware.SettingsCacheMiddleware" in django_settings.MIDDLEWARE
     signed_in(client, owner)
     settings_store.set_to("sharing", True)
     assert "Cases" in client.get("/").content.decode()

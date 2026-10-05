@@ -21,6 +21,19 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.123.1, 2026-10-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The settings cache switched on.** v1.123.0 shipped the middleware that
+reads each setting once per request but not the line in the settings
+module that installs it, so the server ran without it: the largest case
+page still took 281 queries and its Search tab 729. The line is in, and a
+test now asserts the middleware is installed. Nothing else changes.
+
 ## v1.123.0, 2026-10-04
 
 ```
