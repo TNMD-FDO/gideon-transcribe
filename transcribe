@@ -166,6 +166,21 @@ ask_yes_no() {
   [ "$(ask_choice "$1" "$2" "yes|no")" = "yes" ]
 }
 
+on_the_os_drive() {
+  # Whether a folder sits on the same filesystem as the root, which is the
+  # operating system's drive (v1.125.0). A folder not made yet is judged by
+  # the nearest parent that exists. The install asks for the data folder on
+  # a drive of its own, since recordings fill one and a full OS drive stops
+  # the whole server; this turns that advice into a question.
+  local path="$1" here root
+  while [ -n "$path" ] && [ ! -d "$path" ]; do
+    path="$(dirname "$path")"
+  done
+  here="$(df --output=source "$path" 2>/dev/null | tail -1)"
+  root="$(df --output=source / 2>/dev/null | tail -1)"
+  [ -n "$here" ] && [ "$here" = "$root" ]
+}
+
 compose() {
   docker compose "$@"
 }
@@ -555,6 +570,9 @@ cmd_check() {
     pass "the disk has ${free} GB free"
   else
     fail "the disk has only ${free:-?} GB free"
+  fi
+  if on_the_os_drive "$data"; then
+    note "the app data folder is on the same drive as the operating system"
   fi
 
   echo
@@ -1309,7 +1327,17 @@ ask_the_office_facts() {
   set_env ALLOWED_CLIENT_CIDRS "$value"
 
   echo
-  value="$(ask "The app data folder, on the largest drive and not the OS drive" "$(env_value APP_DATA_DIR)")"
+  while true; do
+    value="$(ask "The app data folder, on the largest drive and not the OS drive" "$(env_value APP_DATA_DIR)")"
+    if on_the_os_drive "$value"; then
+      amber "  $value is on the same drive as the operating system."
+      echo "  Recordings fill a drive (a six-hour body-camera export is about 13 GB)"
+      echo "  and a full OS drive stops the whole server, not only the app."
+      if ask_yes_no "  Use it anyway?" no; then break; fi
+    else
+      break
+    fi
+  done
   set_env APP_DATA_DIR "$value"
 
   echo

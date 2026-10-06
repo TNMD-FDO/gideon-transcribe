@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.125.0, 2026-10-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The data folder on the OS drive is a question, not advice.** The
+install's question about the app data folder said "not the OS drive" and
+took any answer. It now checks whether the folder, or the nearest parent
+that exists, sits on the operating system's own filesystem, says so in
+amber with the reason (recordings fill a drive, and a full OS drive stops
+the whole server), and asks whether to use it anyway, with no as the
+default. `./transcribe check` prints the same as a note. Nothing changes
+for an install whose data folder is already on a drive of its own.
+
 ## v1.124.1, 2026-10-04
 
 ```

@@ -299,3 +299,24 @@ def test_the_install_prints_the_ladder_checks_cdi_and_offers_the_rest():
     assert "refits it" in check
     finish = body.split("finish_the_upgrade() {", 1)[1].split("\n}\n", 1)[0]
     assert "migrate_the_card_memory" in finish
+
+
+@needs_bash
+def test_the_os_drive_helper_judges_by_the_nearest_folder_that_exists():
+    """v1.125.0: the root is the OS drive, a folder not made yet is judged by
+    the nearest parent that exists, and the install's question and the
+    check both call the helper."""
+    source = text()
+    match = re.search(r"^on_the_os_drive\(\) \{\n.*?^\}\n", source, re.M | re.S)
+    assert match
+    probe = (
+        "set -uo pipefail\n" + match.group(0) + "\nfor p in / /no/such/folder/yet; do"
+        ' if on_the_os_drive "$p"; then echo "$p:os"; else echo "$p:own"; fi; done\n'
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.split() == ["/:os", "/no/such/folder/yet:os"]
+    asked = source.index('ask "The app data folder')
+    assert 'on_the_os_drive "$value"' in source[asked : asked + 400]
+    assert 'ask_yes_no "  Use it anyway?" no' in source[asked : asked + 800]
+    assert source.count("on_the_os_drive") == 3

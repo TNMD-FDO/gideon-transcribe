@@ -250,7 +250,7 @@ It first checks what the server has: Docker, the Compose plugin, the `transcribe
 
 Then it asks, in plain words, in this order, offering a sensible default where there is one. For every question with fixed answers the first letter is enough, in any case, Enter takes the default in brackets, and an answer that matches nothing is asked again:
 
-- the address people will type, the port, the server's LAN address to listen on, which networks may connect, the App data folder and the time zone;
+- the address people will type, the port, the server's LAN address to listen on, which networks may connect, the App data folder and the time zone. A data folder on the same drive as the operating system is pointed out in amber with the reason, and the install asks whether to use it anyway, with no as the default;
 - the certificate: the office's own already in `tls/` (`own`), or a self-signed one made now (`self-signed`);
 - whether directory sign-in is on, and if so the directory's address, the bind account and its password, the base DN, and the two groups; no means Local admins only;
 - the card: with a driver it lists the cards, numbered, with their memory, and asks whether to use one for transcription now; with one card, Enter takes it, and with several you give its number in the list (the service keeps the card's UUID, never its number, because numbers move between reboots); then the Hugging Face token (Enter for none). Without a driver, or with no for now, transcription is not installed and it says the one command that adds it later;
