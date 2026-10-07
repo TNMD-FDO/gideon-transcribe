@@ -225,13 +225,13 @@ Written 2026-10-04 from the maintainer's question of 2026-10-03, "how do we have
 
 ### Words
 
-**Notes page**: the Case's work page for its notes, reached by **Open as a page** on the Notes tab: the recording in hand on the left, the work panel (Notes, Recordings, Details) on the right. "Pane" is not its name: the glossary gives that word to the case page's right column.
+**Notes page**: the Case's work page for its notes, reached by **Open as a page** on the Notes tab: the notes as the wide left column and the recording in hand on the right (v1.127.0, the maintainer's pick B of three mock-ups; until then the other way round, the incident page's shape). "Pane" is not its name: the glossary gives that word to the case page's right column.
 
 ### Reached
 
 - A secondary button **Notes page** in the case page's head beside Add recordings, on every case (since v1.121.1, from the walk of 2026-10-04; until then Open as a page beside Download notes on the Notes tab, which read as an export and was absent on a case with no notes), and each Notes tab row's link may carry the note so the page opens on it; else the page opens on the first note in call order. The rail folds to icons on the page, as on the incident page, and the page takes the whole width.
 
-### The left: the recording in hand
+### The player: the recording in hand (the right column since v1.127.0)
 
 - **The head**: the recording's title, its type pill, its length, Summarised when it is, **Assigned to you** or the assignee's name and **Reviewed** when marked, and the muted facts (date added, added by, note count). **Open the call** opens the pop-out below.
 - **The player bar** is the page's: Play, -5s, +5s, the time over the length, Speed, Boost, the sides on a two-channel call. The waveform under it carries every note of the recording as a mark and the playhead.
@@ -249,7 +249,7 @@ Written 2026-10-04 from the maintainer's question of 2026-10-03, "how do we have
 
 Since v1.121.1: a note on an incident's event is on the page too, listed under the camera the event sits on (its own camera, else the placed camera running at that moment), at the event's moment on that camera's clock, marked "on the event" with the event's time of day; pressing it plays the camera there and the note is shown under the nearest line read-only, since the chronology owns it, with a link to the event. The lead counts them apart ("7 notes on 3 of 4 recordings: 4 on lines, 3 on events").
 
-### The right: the work panel
+### The notes: the work panel (the left column since v1.127.0)
 
 - **The tab bar**: **Notes** with its count, **Recordings** with its count, **Details**, and the Find box at the right end. The incident page's bar and panels, drawn the same.
 - **Notes.** Filter pills by writer (All, each person with their count, folded past four) and by Recording type; the list of every note in the case grouped under its recording, in call order, scrolled whole without paging. A group head: the recording's date and time, its number or title, its note count, the assignee and a Reviewed pill when marked, and Open; the group whose recording is in hand is tinted and carries a small play mark. A row: the time in the recording, the note's words, the line's words in italics, the writer and the date; the row in hand is lit, scrolled into view as the left moves. Pressing a row opens that moment on the left. The foot: "388 recordings have no note yet", Download notes (the Notes tab's Word document) and Download the list (chapter 1).
@@ -264,7 +264,7 @@ Since v1.121.1: a note on an incident's event is on the page too, listed under t
 
 ### Layout
 
-- A grid like the incident page's desk: the left `minmax(0, 1fr)`, a grip, the work panel 460 pixels wide and resizable from 360 to three fifths, its width kept in the browser under the page's own key. At 1366 wide the left is about 780 pixels. Under 1280 wide one column, the left first with its player bar sticky at the top so stepping stays reachable while reading the list below; under 700 the Recordings tab's rows are cards, as every table is. The pop-out is a sheet from the bottom under 900 wide, as the Preview is.
+- Since v1.127.0: the notes `minmax(0, 1fr)` at the left, a grip, the player 520 pixels wide at the right and resizable from 380 to three fifths, its width kept in the browser under the page's own key; the head one line (Back to the case, the title with the case's name and the counts, Recordings and Details as buttons that swap the left column's panel with Notes as the way back, Export); the player one bar (Play and the time are the page's, the browser's own bar hidden for a sound recording and kept under a video's picture); Previous and Next with the position under the notes, Note at this moment and Mark reviewed under the player; both columns the window's height, scrolling inside. Under 1280 wide one column, the player first and no taller than half the window, the notes under it; under 700 the Recordings tab's rows are cards, as every table is. The pop-out is a sheet from the bottom under 900 wide, as the Preview is.
 
 ### In and out
 
@@ -470,4 +470,5 @@ No wording ships untried, the repository's rule. From `llm-worker` on the office
 
 ## Amendments applied
 
+- 2026-10-07, v1.127.0: chapter 4's panes swapped and its head and player bar made one line each, the maintainer's pick B of three mock-ups drawn against the page's dead space at 1366 by 768 (docs/spec/mockups/phase-9-notes-page-b.html); nothing the page does changed.
 - 2026-10-07, v1.125.1: chapter 3's Team block no longer carries an Add people button of its own; Share, among the case's actions, is the one way to add people (its dialog is titled Add people to this case). The maintainer's word: one button is less confusing, and the second had taken the first's id and never worked.

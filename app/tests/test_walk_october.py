@@ -422,3 +422,25 @@ def test_the_drawer_floats_over_the_desks_and_the_chat_list_closes_on_click_away
         in chat_js
     )
     assert 'event.key === "Escape" && listBox.open' in chat_js
+
+
+def test_the_notes_page_has_the_notes_left_the_player_right_and_a_way_back():
+    """v1.127.0, the maintainer's pick B: Back to the case in the head, the
+    notes column before the grip and the player after it, one player bar
+    with the page's Play, and no sentence about the browser's controls."""
+    page = (APP / "templates" / "notes-page.html").read_text(encoding="utf-8")
+    assert "Back to the case" in page
+    assert (
+        page.index('id="np-work"')
+        < page.index('id="work-grip"')
+        < page.index('id="np-left"')
+    )
+    assert 'id="np-play"' in page and 'id="np-note-now"' in page
+    assert "np-bar-said" not in page
+    assert page.count('data-panel="notes"') == 2  # Recordings' and Details' way back
+    js = (APP / "static" / "notes-page.js").read_text(encoding="utf-8")
+    assert "np-bar-said" not in js and "function wirePlayer" in js
+    assert 'KEY = "notes-page-player-width"' in js
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert "grid-template-columns: minmax(0, 1fr) 12px var(--player, 520px)" in css
+    assert ".preview-card.mounted .preview-media audio { display: none; }" in css

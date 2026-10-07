@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.127.0, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Notes page, the notes first.** At a 1366 by 768 laptop the page
+spent a third of its height before a line of transcript appeared, the
+player had two control bars, and four lines fit. Of three mock-ups drawn
+against that, the maintainer picked B: the notes are the page, so they
+are the wide left column, a reading list in call order with the pills
+and the Find box above it and Previous and Next under it; the recording
+in hand is the right column with one player bar (Play and the time are
+the page's; the browser's own bar is hidden for a sound recording and
+kept under a video's picture), the waveform, the lines around the
+moment, Note at this moment and Mark reviewed. The head is one line:
+Back to the case, the title with the case's name and the counts,
+Recordings and Details as buttons that swap the left column with Notes
+as the way back, and Export. Both columns fill the window and scroll
+inside themselves; under 1280 wide the player comes first, no taller
+than half the window, and the notes follow. Nothing the page does
+changed: the keys, the pop-out, Find, the two stepping modes and
+Mark reviewed are as they were.
+
 ## v1.126.2, 2026-10-07
 
 ```

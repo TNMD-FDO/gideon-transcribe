@@ -71,6 +71,34 @@
     drawMark(recording);
   }
 
+  // The page's own Play and time (v1.127.0): the browser's bar is hidden
+  // for a sound recording, so the one bar is the page's. A video keeps its
+  // own controls under the picture as well, for scrubbing.
+  var wired = null;
+  function clock(seconds) {
+    var s = Math.max(0, Math.floor(seconds || 0));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(x).padStart(2, "0");
+  }
+  function sayTime() {
+    var player = left.media();
+    if (!player) { return; }
+    // The length from the file, else from the record (a stand-in file has none).
+    var told = left.told();
+    var length = isFinite(player.duration) && player.duration > 0 ? clock(player.duration) : (told && told.length ? told.length.replace(/^00:/, "") : "0:00");
+    document.getElementById("np-time").textContent = clock(player.currentTime) + " / " + length;
+    var play = document.getElementById("np-play");
+    play.innerHTML = "<svg class='i' aria-hidden='true'><use href='#i-" + (player.paused ? "play" : "pause") + "'></use></svg>";
+    play.setAttribute("aria-label", player.paused ? "Play" : "Pause");
+    play.title = player.paused ? "Play (Space)" : "Pause (Space)";
+  }
+  function wirePlayer(player) {
+    if (!player || player === wired) { return; }
+    wired = player;
+    ["timeupdate", "play", "pause", "loadedmetadata", "durationchange", "ended"].forEach(function (name) { player.addEventListener(name, sayTime); });
+    sayTime();
+  }
+
   function loaded(told, first) {
     var fold = document.getElementById("np-overview");
     fold.hidden = !told.overview;
@@ -89,11 +117,7 @@
     if (player && first) {
       player.playbackRate = parseFloat(document.getElementById("np-speed").value) || 1;
     }
-    // The bar's sentence by the kind of recording (v1.121.1): a video's
-    // controls sit under the picture, a sound recording's above the lines.
-    document.getElementById("np-bar-said").textContent = player && player.tagName === "VIDEO"
-      ? "The player's own controls are under the picture."
-      : "The player's own controls are above the lines.";
+    wirePlayer(player);
     showSides(told);
     if (first) { applySound(player); }
     showEventNote();
@@ -291,8 +315,9 @@
       if (recording.id !== lastRecording) {
         lastRecording = recording.id;
         var count = listed.filter(function (one) { return one.recording === recording.id; }).length;
+        // The head leads with the recording (v1.127.0); its added date is in the player's head.
         html += "<div class='np-group" + (recording.id === playing ? " playing" : "") + "' data-recording='" + recording.id + "'>" +
-          "<b>" + escape(recording.date) + "</b> <span class='muted'>&middot; " + escape(recording.title) + " &middot; " + plural(count, "note") + "</span>" +
+          "<b>" + escape(recording.title) + "</b> <span class='muted'>" + (recording.type ? "&middot; " + escape(recording.type) + " " : "") + (recording.length ? "&middot; " + escape(recording.length) + " " : "") + "&middot; " + plural(count, "note") + "</span>" +
           "<span class='grow'></span>" +
           (recording.assigned ? "<span class='muted small'>" + escape(recording.assigned) + "</span>" : "") +
           (recording.reviewed ? " <span class='pill small ok'>Reviewed</span>" : "") +
@@ -555,13 +580,18 @@
 
   var panels = document.getElementById("np-panels");
   var findLayer = document.getElementById("np-layer-find");
+  // The left column's panel (v1.127.0): Notes, or Recordings and Details
+  // from the head's buttons, each with Notes as its way back.
   function showTab(name) {
     findLayer.hidden = true; panels.hidden = false;
-    Array.prototype.forEach.call(document.querySelectorAll("#np-work .tab"), function (tab) { tab.classList.toggle("on", tab.dataset.panel === name); });
+    document.getElementById("np-work").dataset.showing = name;
+    Array.prototype.forEach.call(document.querySelectorAll(".np-panel-button"), function (button) { button.classList.toggle("on", button.dataset.panel === name); });
     ["notes", "recordings", "details"].forEach(function (one) { document.getElementById("panel-" + one).hidden = one !== name; });
+    panels.scrollTop = 0;
   }
-  Array.prototype.forEach.call(document.querySelectorAll("#np-work .tab"), function (tab) {
-    tab.addEventListener("click", function () { showTab(tab.dataset.panel); });
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-panel]");
+    if (button) { showTab(button.dataset.panel); }
   });
   var findHits = document.getElementById("np-find-hits");
   // A hit pressed, or stepped to with Enter (v1.121.3): lit, played on the
@@ -625,23 +655,24 @@
   (function () {
     var grip = document.getElementById("work-grip");
     if (!grip) { return; }
-    var KEY = "notes-page-work-width";
-    try { var kept = parseInt(window.localStorage.getItem(KEY), 10); if (kept) { desk.style.setProperty("--work", kept + "px"); } } catch (ignored) { /* no storage */ }
+    // The player's width (v1.127.0), since the player is the right column now.
+    var KEY = "notes-page-player-width";
+    try { var kept = parseInt(window.localStorage.getItem(KEY), 10); if (kept) { desk.style.setProperty("--player", kept + "px"); } } catch (ignored) { /* no storage */ }
     var from = null;
-    grip.addEventListener("pointerdown", function (event) { from = { x: event.clientX, width: document.getElementById("np-work").getBoundingClientRect().width }; grip.setPointerCapture(event.pointerId); });
+    grip.addEventListener("pointerdown", function (event) { from = { x: event.clientX, width: document.getElementById("np-left").getBoundingClientRect().width }; grip.setPointerCapture(event.pointerId); });
     grip.addEventListener("pointermove", function (event) {
       if (!from) { return; }
-      var width = Math.round(Math.min(desk.clientWidth * 0.6, Math.max(360, from.width - (event.clientX - from.x))));
-      desk.style.setProperty("--work", width + "px");
+      var width = Math.round(Math.min(desk.clientWidth * 0.6, Math.max(380, from.width - (event.clientX - from.x))));
+      desk.style.setProperty("--player", width + "px");
     });
     function letGo() {
       if (!from) { return; }
       from = null;
-      try { window.localStorage.setItem(KEY, parseInt(getComputedStyle(desk).getPropertyValue("--work"), 10)); } catch (ignored) { /* no storage */ }
+      try { window.localStorage.setItem(KEY, parseInt(getComputedStyle(desk).getPropertyValue("--player"), 10)); } catch (ignored) { /* no storage */ }
       drawWave();
     }
     grip.addEventListener("pointerup", letGo); grip.addEventListener("pointercancel", letGo);
-    grip.addEventListener("dblclick", function () { desk.style.removeProperty("--work"); try { window.localStorage.removeItem(KEY); } catch (ignored) { /* no storage */ } drawWave(); });
+    grip.addEventListener("dblclick", function () { desk.style.removeProperty("--player"); try { window.localStorage.removeItem(KEY); } catch (ignored) { /* no storage */ } drawWave(); });
   })();
   window.addEventListener("resize", drawWave);
 
@@ -653,6 +684,14 @@
       if (button) { button.click(); }
     });
   }
+
+  // The player's Play and the note button (v1.127.0).
+  document.getElementById("np-play").addEventListener("click", function () {
+    var player = left.media();
+    if (!player) { return; }
+    if (player.paused) { player.play(); } else { player.pause(); }
+  });
+  document.getElementById("np-note-now").addEventListener("click", function () { left.noteOnLit(); });
 
   // The keyboard ------------------------------------------------------------------------
 
@@ -717,7 +756,7 @@
           plural(state.notes.length, "note") + " on " + (got.noted || 0) + " of " + plural(state.recordings.length, "recording") +
           (state.writers.length ? ", by " + plural(state.writers.length, "person").replace("persons", "people") : "") +
           (onEvents ? ": " + (state.notes.length - onEvents) + " on lines, " + plural(onEvents, "event").replace(/^(\d+) event/, "$1 on event") : "") +
-          ". Press a note to hear its moment here.";
+          ". Press a note and its moment plays on the right.";
         drawPills(); drawList(); drawRecordings();
         setOrder("notes");
         var opening = desk.dataset.opening;

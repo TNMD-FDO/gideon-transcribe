@@ -1,0 +1,540 @@
+<title>Notes Page Shapes</title>
+<style>
+  /* Layout: three frames of the Notes page at a laptop's proportions (1366 by 768, drawn at 0.72), each with its caption under it; the app's own tokens. */
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --now: #ffe58a; --now-ink: #171b21; --sp1: #1f6fb2; --sp2: #c2410c;
+    --radius: 8px; --radius-lg: 12px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526;
+      --now: #5a4a12; --now-ink: #f3e6b0; --sp1: #7ab4e6; --sp2: #f0956a; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526;
+    --now: #5a4a12; --now-ink: #f3e6b0; --sp1: #7ab4e6; --sp2: #f0956a; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 18px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 66ch; color: var(--muted); margin: 0; }
+  .caption { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 28px; max-width: 100%; }
+  @media (max-width: 760px) { .caption { grid-template-columns: minmax(0, 1fr); } }
+  .caption p { margin: 0; }
+  .caption ul { margin: 0; padding-left: 20px; }
+  .caption li { margin-bottom: 4px; }
+  .saves { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; font-size: 14px; }
+  .saves b { color: var(--ok); }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  b { font-weight: 600; }
+
+  /* The frame: a 1366 by 768 page scaled down. */
+  .frame-box { width: 100%; aspect-ratio: 1366 / 768; max-width: 100%; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); }
+  .frame { position: absolute; left: 0; top: 0; width: 1366px; height: 768px; transform-origin: 0 0; transform: scale(var(--k, 0.76)); display: grid; grid-template-columns: 64px minmax(0, 1fr); font-size: 15px; }
+  .rail { background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 14px; }
+  .rail .dot { width: 30px; height: 30px; border-radius: 8px; background: var(--surface-2); }
+  .rail .dot.on { background: var(--accent-soft); outline: 2px solid var(--accent); }
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .topbar { height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .topbar b { color: var(--text); }
+  .topbar .grow { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill.on { background: var(--accent-soft); color: var(--accent); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .head { display: flex; align-items: center; gap: 12px; padding: 10px 18px; }
+  .head h3 { margin: 0; font-size: 20px; }
+  .head .grow { flex: 1; }
+  .desk { display: grid; gap: 0 14px; padding: 0 18px 12px; min-height: 0; flex: 1; }
+  .pane { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+  .bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .bar .grow { flex: 1; }
+  .wave { height: 34px; margin: 6px 12px 0; background: linear-gradient(90deg, var(--surface-2) 0 100%); border-radius: 4px; position: relative; }
+  .wave i { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--sp2); }
+  .wave .play { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); }
+  .lines { flex: 1; overflow: hidden; padding: 6px 0; }
+  .line { display: grid; grid-template-columns: 64px 54px minmax(0, 1fr) 42px; gap: 8px; padding: 5px 12px; font-size: 14px; align-items: baseline; }
+  .line .t { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .line .s { color: var(--sp1); font-weight: 600; font-size: 13px; }
+  .line .s.two { color: var(--sp2); }
+  .line .n { color: var(--muted); font-size: 12px; text-align: right; }
+  .line.lit { background: var(--now); color: var(--now-ink); }
+  .line.lit .t, .line.lit .s, .line.lit .n { color: var(--now-ink); }
+  .line .note { grid-column: 3; font-style: italic; font-size: 13px; }
+  .foot { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 13px; }
+  .foot .grow { flex: 1; }
+  .tabs { display: flex; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); background: var(--surface-2); align-items: center; }
+  .tab { font-size: 14px; font-weight: 600; padding: 8px 12px; color: var(--muted); border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; }
+  .tab.on { color: var(--text); background: var(--surface); border-color: var(--line); }
+  .tabs .find { margin-left: auto; width: 180px; height: 26px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); font-size: 12px; padding: 0 8px; display: flex; align-items: center; margin-bottom: 6px; }
+  .pills { display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
+  .group { padding: 6px 12px 2px; display: flex; gap: 8px; align-items: baseline; font-size: 13px; border-top: 1px solid var(--line); }
+  .group b { font-size: 13px; }
+  .group .grow { flex: 1; }
+  .group .open { color: var(--accent); }
+  .ncard { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 2px 8px; padding: 6px 12px 8px; font-size: 13px; }
+  .ncard .t { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .ncard .q { color: var(--muted); font-style: italic; }
+  .ncard .w { color: var(--muted); font-size: 12px; grid-column: 2; }
+  .ncard.lit { background: var(--accent-soft); border-left: 3px solid var(--accent); padding-left: 9px; }
+  .notes-list { flex: 1; overflow: hidden; }
+  .calls { display: flex; flex-direction: column; }
+  .call { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .call .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .call.on { background: var(--accent-soft); }
+  .strip { height: 56px; margin: 8px 18px 0; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .strip .seg { position: absolute; top: 10px; bottom: 10px; background: var(--surface-2); border-radius: 3px; }
+  .strip .seg.on { outline: 2px solid var(--accent); }
+  .strip .tick { position: absolute; top: 4px; bottom: 4px; width: 2px; background: var(--sp2); }
+  .strip .lbl { position: absolute; bottom: -18px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+  /* Video frames (the second set). */
+  .split { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0 10px; padding: 6px 12px 0; flex: 1; min-height: 0; }
+  .split .lines { padding: 0; }
+  .video { aspect-ratio: 16 / 9; width: 100%; background: #0d1217; border-radius: 6px; position: relative; overflow: hidden; }
+  .video::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 40% 60%, rgba(120, 140, 160, 0.35), transparent 60%); }
+  .video .stamp { position: absolute; right: 8px; top: 6px; color: #f3e6b0; font: 600 12px/1 ui-monospace, Consolas, monospace; z-index: 1; }
+  .video .cam { position: absolute; left: 8px; bottom: 6px; color: #e7ebef; font-size: 12px; z-index: 1; }
+  .video.wide { margin: 8px 12px 0; width: auto; }
+  .video.mid { margin: 8px 12px 0; width: auto; max-height: 300px; }
+  .line.v { grid-template-columns: 64px 54px minmax(0, 1fr) 36px; }
+  .label { position: absolute; z-index: 2; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, three mock-ups</div>
+    <h1>Notes page shapes</h1>
+    <p class="lede">The Notes page at a 1366 by 768 laptop, which is where the dead space shows: today the head takes a third of the height before a line of transcript appears, the player has two control bars, and only four lines fit. Three directions, each with a Back to the case button. Fictional office, fictional names.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="frame-box" style="--k: 0.76">
+      <span class="label" style="left: 12px; top: 12px">A</span>
+      <div class="frame">
+        <div class="rail"><div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="main">
+          <div class="topbar"><span class="btn">‹ Back to the case</span><span class="muted">Cases › Pike calls</span><span class="grow"></span><span>test · Admin · Sign out</span></div>
+          <div class="head">
+            <h3>Notes <span class="muted" style="font-weight: 400">· Pike calls</span></h3>
+            <span class="muted small">11 notes on 9 of 12 recordings, by 2 people</span>
+            <span class="grow"></span>
+            <span class="btn">Export ▾</span>
+          </div>
+          <div class="desk" style="grid-template-columns: minmax(0, 1fr) 460px">
+            <div class="pane">
+              <div class="bar"><b>Call_0401_2026-02-09</b><span class="pill">Jail call</span><span class="muted">04:00 · 2 notes</span><span class="grow"></span><span class="btn ghost">Open the call</span></div>
+              <div class="bar" style="border-bottom: 0"><span class="btn primary">▶</span><span style="font-variant-numeric: tabular-nums">0:30 / 4:00</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="btn">Speed 1×</span><span class="btn">Boost</span><span class="grow"></span><span class="btn">Note at this moment</span></div>
+              <div class="wave"><i style="left: 12%"></i><i style="left: 20%"></i><span class="play" style="left: 12%"></span></div>
+              <div class="lines">
+                <div class="line"><span class="t">00:00:12</span><span class="s">Side 1</span><span>This call is from a correctional facility and may be recorded.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:00:21</span><span class="s two">Side 2</span><span>Hello?</span><span class="n">note</span></div>
+                <div class="line lit"><span class="t">00:00:30</span><span class="s">Side 1</span><span>Hey, it's me. Did you get the letter?</span><span class="n">edit</span><span class="note">Note, Pat Okonkwo: Pat replaced this note.</span></div>
+                <div class="line"><span class="t">00:00:39</span><span class="s two">Side 2</span><span>I got it yesterday. The hearing's on the fourteenth.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:00:48</span><span class="s">Side 1</span><span>Did Jordan say anything about the witness?</span><span class="n">edit</span><span class="note">Note, test: Jordan again. Compare 0405 at the same moment.</span></div>
+                <div class="line"><span class="t">00:00:57</span><span class="s two">Side 2</span><span>Only that she might not come. Her sister's sick.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:01:06</span><span class="s">Side 1</span><span>Tell her it matters. Tell her I said please.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:01:18</span><span class="s two">Side 2</span><span>I'll try. Did you talk to the lawyer?</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:01:27</span><span class="s">Side 1</span><span>Not since Tuesday. He said the fourteenth is firm.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:01:40</span><span class="s two">Side 2</span><span>Okay. I'll be there.</span><span class="n">note</span></div>
+              </div>
+              <div class="foot"><span class="btn">‹ Previous note</span><span class="btn">Next note ›</span><span class="muted">Note 1 of 11, by call date</span><span class="grow"></span><span class="btn">Mark reviewed</span></div>
+            </div>
+            <div class="pane">
+              <div class="tabs"><span class="tab on">Notes 11</span><span class="tab">Recordings 12</span><span class="tab">Details</span><span class="find">Find in notes and calls</span></div>
+              <div class="pills"><span class="pill on">All 11</span><span class="pill">Pat Okonkwo 7</span><span class="pill">test 4</span></div>
+              <div class="notes-list">
+                <div class="group" style="border-top: 0"><b>Call_0401</b><span class="muted">09 Feb · 2 notes</span><span class="grow"></span><span class="open">Open</span></div>
+                <div class="ncard lit"><span class="t">00:00:30</span><span>Pat replaced this note.</span><span class="w">"Hey, it's me. Did you get the letter?" · Pat Okonkwo, 04 Oct</span></div>
+                <div class="ncard"><span class="t">00:00:48</span><span>Jordan again. Compare 0405 at the same moment.</span><span class="w">"Did Jordan say anything about the witness?" · test, 04 Oct</span></div>
+                <div class="group"><b>Call_0402</b><span class="muted">10 Feb · 1 note</span><span class="grow"></span><span class="open">Open</span></div>
+                <div class="ncard"><span class="t">00:00:42</span><span>The fourteenth: check the docket.</span><span class="w">"I got it yesterday. The hearing's on the fourteenth." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="group"><b>Call_0403</b><span class="muted">11 Feb · 1 note</span><span class="grow"></span><span class="open">Open</span></div>
+                <div class="ncard"><span class="t">00:01:18</span><span>Pressure on the witness. Flag for the attorney.</span><span class="w">"Tell her it matters. Tell her I said please." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="group"><b>Call_0405</b><span class="muted">13 Feb · 2 notes</span><span class="grow"></span><span class="open">Open</span></div>
+                <div class="ncard"><span class="t">00:02:04</span><span>Same question about Jordan, four days later.</span><span class="w">"Has Jordan called you?" · test, 04 Oct</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" style="margin-top: 14px">
+      <div>
+        <div class="eyebrow">A</div>
+        <h2>The same page, tightened</h2>
+        <p>Nothing moves; everything that was tall gets short. The page head becomes one line (Back to the case at the left, the case's name in the title, the counts beside it, Export at the right). The browser's own player bar goes: Play and the time join the page's bar, which also carries "Note at this moment". The call's facts sit on one line. On the right each recording is one line with its note count, and each note shows the line it sits on in grey under it.</p>
+      </div>
+      <div class="saves">
+        <b>Room gained at 768 high:</b> ten lines of transcript where there were four, the player and the waveform still in view, the first four notes on the right without scrolling.<br><br>
+        <b>What it keeps:</b> the shape people have learned since v1.119.0, the keys, the Find layer, the pop-out. The smallest change and the quickest to build.
+      </div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="frame-box" style="--k: 0.76">
+      <span class="label" style="left: 12px; top: 12px">B</span>
+      <div class="frame">
+        <div class="rail"><div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="main">
+          <div class="topbar"><span class="btn">‹ Back to the case</span><span class="muted">Cases › Pike calls</span><span class="grow"></span><span>test · Admin · Sign out</span></div>
+          <div class="head">
+            <h3>Notes <span class="muted" style="font-weight: 400">· Pike calls</span></h3>
+            <span class="muted small">11 notes on 9 of 12 recordings, by 2 people</span>
+            <span class="grow"></span>
+            <span class="btn">Recordings 12</span><span class="btn">Details</span><span class="btn">Export ▾</span>
+          </div>
+          <div class="desk" style="grid-template-columns: minmax(0, 1fr) 520px">
+            <div class="pane">
+              <div class="bar"><span class="pill on">All 11</span><span class="pill">Pat Okonkwo 7</span><span class="pill">test 4</span><span class="grow"></span><span class="find" style="margin: 0; width: 200px">Find in notes and calls</span></div>
+              <div class="notes-list">
+                <div class="group" style="border-top: 0"><b>Call_0401_2026-02-09</b><span class="muted">Jail call · 04:00 · 2 notes</span><span class="grow"></span><span class="open">Open the call</span></div>
+                <div class="ncard lit"><span class="t">00:00:30</span><span><b>Pat replaced this note.</b></span><span class="w">"Hey, it's me. Did you get the letter?" · Pat Okonkwo, 04 Oct 16:42</span></div>
+                <div class="ncard"><span class="t">00:00:48</span><span><b>Jordan again. Compare 0405 at the same moment.</b></span><span class="w">"Did Jordan say anything about the witness?" · test, 04 Oct 16:44</span></div>
+                <div class="group"><b>Call_0402_2026-02-10</b><span class="muted">Jail call · 06:00 · 1 note</span><span class="grow"></span><span class="open">Open the call</span></div>
+                <div class="ncard"><span class="t">00:00:42</span><span><b>The fourteenth: check the docket.</b></span><span class="w">"I got it yesterday. The hearing's on the fourteenth." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="group"><b>Call_0403_2026-02-11</b><span class="muted">Jail call · 05:30 · 1 note</span><span class="grow"></span><span class="open">Open the call</span></div>
+                <div class="ncard"><span class="t">00:01:18</span><span><b>Pressure on the witness. Flag for the attorney.</b></span><span class="w">"Tell her it matters. Tell her I said please." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="group"><b>Call_0405_2026-02-13</b><span class="muted">Jail call · 08:10 · 2 notes</span><span class="grow"></span><span class="open">Open the call</span></div>
+                <div class="ncard"><span class="t">00:02:04</span><span><b>Same question about Jordan, four days later.</b></span><span class="w">"Has Jordan called you?" · test, 04 Oct</span></div>
+                <div class="ncard"><span class="t">00:05:40</span><span><b>Money asked for, first time.</b></span><span class="w">"Can you put something on my books?" · Pat Okonkwo, 04 Oct</span></div>
+                <div class="group"><b>Call_0406_2026-02-14</b><span class="muted">Jail call · 03:50 · 1 note</span><span class="grow"></span><span class="open">Open the call</span></div>
+              </div>
+              <div class="foot"><span class="btn">‹ Previous</span><span class="btn">Next ›</span><span class="muted">Note 1 of 11, by call date · J and K step</span></div>
+            </div>
+            <div class="pane">
+              <div class="bar"><b>Call_0401_2026-02-09</b><span class="muted">00:00:30</span><span class="grow"></span><span class="btn ghost">Open the call</span></div>
+              <div class="bar" style="border-bottom: 0"><span class="btn primary">▶</span><span style="font-variant-numeric: tabular-nums">0:30 / 4:00</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="btn">1×</span><span class="btn">Boost</span></div>
+              <div class="wave"><i style="left: 12%"></i><i style="left: 20%"></i><span class="play" style="left: 12%"></span></div>
+              <div class="lines">
+                <div class="line" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:00:12</span><span class="s">Side 1</span><span>This call is from a correctional facility and may be recorded.</span></div>
+                <div class="line" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:00:21</span><span class="s two">Side 2</span><span>Hello?</span></div>
+                <div class="line lit" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:00:30</span><span class="s">Side 1</span><span>Hey, it's me. Did you get the letter?</span><span class="note">Pat replaced this note. <span class="muted">edit · remove</span></span></div>
+                <div class="line" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:00:39</span><span class="s two">Side 2</span><span>I got it yesterday. The hearing's on the fourteenth.</span></div>
+                <div class="line" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:00:48</span><span class="s">Side 1</span><span>Did Jordan say anything about the witness?</span><span class="note">Jordan again. Compare 0405 at the same moment.</span></div>
+                <div class="line" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:00:57</span><span class="s two">Side 2</span><span>Only that she might not come. Her sister's sick.</span></div>
+                <div class="line" style="grid-template-columns: 60px 50px minmax(0, 1fr)"><span class="t">00:01:06</span><span class="s">Side 1</span><span>Tell her it matters. Tell her I said please.</span></div>
+              </div>
+              <div class="foot"><span class="btn">Note at this moment</span><span class="grow"></span><span class="btn">Mark reviewed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" style="margin-top: 14px">
+      <div>
+        <div class="eyebrow">B</div>
+        <h2>The notes are the page</h2>
+        <p>The panes swap. The notes become the wide left column, a reading list in call order: each note in bold, the line it sits on quoted under it, who wrote it and when. Pressing a note plays its moment in the narrower player on the right, which shows the lines around it with the notes inline, as the Preview does. The Recordings and Details tabs move to buttons in the head, since they are visited, not read.</p>
+      </div>
+      <div class="saves">
+        <b>Room gained:</b> the whole height for the notes, nine in view at once instead of four; the player loses nothing it needs.<br><br>
+        <b>What it changes:</b> the page's job is reading what the team wrote, so that is what is big. Stepping with J and K still plays each moment. A bigger change than A, with the same parts rearranged.
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="frame-box" style="--k: 0.76">
+      <span class="label" style="left: 12px; top: 12px">C</span>
+      <div class="frame">
+        <div class="rail"><div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="main">
+          <div class="topbar"><span class="btn">‹ Back to the case</span><span class="muted">Cases › Pike calls</span><span class="grow"></span><span>test · Admin · Sign out</span></div>
+          <div class="head">
+            <h3>Notes <span class="muted" style="font-weight: 400">· Pike calls</span></h3>
+            <span class="muted small">11 notes on 9 of 12 recordings, by 2 people</span>
+            <span class="grow"></span>
+            <span class="pill on">All 11</span><span class="pill">Pat Okonkwo 7</span><span class="pill">test 4</span>
+            <span class="find" style="margin: 0 0 0 8px; width: 190px">Find in notes and calls</span>
+            <span class="btn">Export ▾</span>
+          </div>
+          <div class="strip">
+            <div class="seg on" style="left: 1%; width: 10%"></div><div class="tick" style="left: 2.2%"></div><div class="tick" style="left: 3%"></div>
+            <div class="seg" style="left: 12%; width: 14%"></div><div class="tick" style="left: 14%"></div>
+            <div class="seg" style="left: 27%; width: 12%"></div><div class="tick" style="left: 31%"></div>
+            <div class="seg" style="left: 40%; width: 8%"></div>
+            <div class="seg" style="left: 49%; width: 18%"></div><div class="tick" style="left: 54%"></div><div class="tick" style="left: 62%"></div>
+            <div class="seg" style="left: 68%; width: 9%"></div><div class="tick" style="left: 70%"></div>
+            <div class="seg" style="left: 78%; width: 21%"></div><div class="tick" style="left: 85%"></div><div class="tick" style="left: 90%"></div><div class="tick" style="left: 96%"></div>
+            <span class="lbl" style="left: 6%">0401</span><span class="lbl" style="left: 19%">0402</span><span class="lbl" style="left: 33%">0403</span><span class="lbl" style="left: 44%">0404</span><span class="lbl" style="left: 58%">0405</span><span class="lbl" style="left: 72%">0406</span><span class="lbl" style="left: 88%">0407 to 0412</span>
+          </div>
+          <div class="desk" style="grid-template-columns: 300px minmax(0, 1fr) 380px; margin-top: 22px">
+            <div class="pane">
+              <div class="bar"><b>Recordings</b><span class="muted">12</span><span class="grow"></span><span class="muted">1 of 12 reviewed</span></div>
+              <div class="calls">
+                <div class="call on"><span class="grow"><b>Call_0401</b> · 09 Feb</span><span class="pill">2</span></div>
+                <div class="call"><span class="grow"><b>Call_0402</b> · 10 Feb</span><span class="pill">1</span></div>
+                <div class="call"><span class="grow"><b>Call_0403</b> · 11 Feb</span><span class="pill">1</span></div>
+                <div class="call"><span class="grow"><b>Call_0404</b> · 12 Feb</span><span class="muted small">no notes</span></div>
+                <div class="call"><span class="grow"><b>Call_0405</b> · 13 Feb</span><span class="pill">2</span></div>
+                <div class="call"><span class="grow"><b>Call_0406</b> · 14 Feb</span><span class="pill">1</span><span class="pill ok">✓</span></div>
+                <div class="call"><span class="grow"><b>Call_0407</b> · 15 Feb</span><span class="pill">1</span></div>
+                <div class="call"><span class="grow"><b>Call_0408</b> · 16 Feb</span><span class="pill">1</span></div>
+                <div class="call"><span class="grow"><b>Call_0409</b> · 17 Feb</span><span class="muted small">no notes</span></div>
+                <div class="call"><span class="grow"><b>Call_0410</b> · 18 Feb</span><span class="pill">1</span></div>
+              </div>
+            </div>
+            <div class="pane">
+              <div class="bar"><b>Call_0401_2026-02-09</b><span class="pill">Jail call</span><span class="muted">04:00</span><span class="grow"></span><span class="btn primary">▶</span><span style="font-variant-numeric: tabular-nums">0:30 / 4:00</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="btn">1×</span><span class="btn">Boost</span></div>
+              <div class="lines">
+                <div class="line"><span class="t">00:00:12</span><span class="s">Side 1</span><span>This call is from a correctional facility and may be recorded.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:00:21</span><span class="s two">Side 2</span><span>Hello?</span><span class="n">note</span></div>
+                <div class="line lit"><span class="t">00:00:30</span><span class="s">Side 1</span><span>Hey, it's me. Did you get the letter?</span><span class="n">edit</span><span class="note">Note, Pat Okonkwo: Pat replaced this note.</span></div>
+                <div class="line"><span class="t">00:00:39</span><span class="s two">Side 2</span><span>I got it yesterday. The hearing's on the fourteenth.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:00:48</span><span class="s">Side 1</span><span>Did Jordan say anything about the witness?</span><span class="n">edit</span><span class="note">Note, test: Jordan again. Compare 0405 at the same moment.</span></div>
+                <div class="line"><span class="t">00:00:57</span><span class="s two">Side 2</span><span>Only that she might not come. Her sister's sick.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:01:06</span><span class="s">Side 1</span><span>Tell her it matters. Tell her I said please.</span><span class="n">note</span></div>
+                <div class="line"><span class="t">00:01:18</span><span class="s two">Side 2</span><span>I'll try. Did you talk to the lawyer?</span><span class="n">note</span></div>
+              </div>
+              <div class="foot"><span class="btn">‹ Previous note</span><span class="btn">Next note ›</span><span class="muted">Note 1 of 11</span><span class="grow"></span><span class="btn">Open the call</span><span class="btn">Mark reviewed</span></div>
+            </div>
+            <div class="pane">
+              <div class="bar"><b>Notes on this call</b><span class="muted">2</span></div>
+              <div class="ncard lit"><span class="t">00:00:30</span><span>Pat replaced this note.</span><span class="w">Pat Okonkwo, 04 Oct 16:42</span></div>
+              <div class="ncard"><span class="t">00:00:48</span><span>Jordan again. Compare 0405 at the same moment.</span><span class="w">test, 04 Oct 16:44</span></div>
+              <div class="bar" style="border-top: 1px solid var(--line)"><b>Next on other calls</b></div>
+              <div class="ncard"><span class="t">0402</span><span>The fourteenth: check the docket.</span><span class="w">Pat Okonkwo · 00:00:42</span></div>
+              <div class="ncard"><span class="t">0403</span><span>Pressure on the witness. Flag for the attorney.</span><span class="w">Pat Okonkwo · 00:01:18</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" style="margin-top: 14px">
+      <div>
+        <div class="eyebrow">C</div>
+        <h2>The case on a strip</h2>
+        <p>A strip across the top draws the whole case: one block per recording in call order, sized to its length, with a tick for every note. You see at a glance which calls the team has marked and which are untouched, and press a tick to go there. Under it three columns: the recordings with their note counts and reviewed marks, the lines with the player folded into the call's own bar, and this call's notes with the next ones on other calls.</p>
+      </div>
+      <div class="saves">
+        <b>Room gained:</b> the head and the player each become one bar; eight lines in view with the whole case still in sight above them.<br><br>
+        <b>What it changes:</b> the most. A new piece (the strip) and three columns, so it wants 1280 or wider; below that the strip stays and the columns fold to A's two. The best answer to "where are the notes in this case" and the biggest build.
+      </div>
+    </div>
+  </section>
+
+
+  <header style="margin-top: 8px">
+    <div class="eyebrow">The same three, with a video open</div>
+    <h1 style="font-size: 22px">When the recording is a body camera</h1>
+    <p class="lede">A picture needs height an audio call never did: a 16 by 9 frame across a 700 px pane is 390 px tall, half the laptop's screen. Each shape below opens on BWC-1 of the Harbour Street stop, with the rule it uses to keep the picture and the lines both in view.</p>
+  </header>
+
+  <!-- A with video -->
+  <section>
+    <div class="frame-box" style="--k: 0.76">
+      <span class="label" style="left: 12px; top: 12px">A · video</span>
+      <div class="frame">
+        <div class="rail"><div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="main">
+          <div class="topbar"><span class="btn">‹ Back to the case</span><span class="muted">Cases › Harbour Street stop</span><span class="grow"></span><span>test · Admin · Sign out</span></div>
+          <div class="head">
+            <h3>Notes <span class="muted" style="font-weight: 400">· Harbour Street stop</span></h3>
+            <span class="muted small">6 notes on 3 of 4 recordings, by 2 people</span>
+            <span class="grow"></span>
+            <span class="btn">Export ▾</span>
+          </div>
+          <div class="desk" style="grid-template-columns: minmax(0, 1fr) 460px">
+            <div class="pane">
+              <div class="bar"><b>BWC-1</b><span class="pill">Body camera</span><span class="muted">13:41 · 3 notes · on the Harbour car park clock</span><span class="grow"></span><span class="btn ghost">Open the recording</span><span class="btn ghost">All cameras</span></div>
+              <div class="bar" style="border-bottom: 0"><span class="btn primary">▶</span><span style="font-variant-numeric: tabular-nums">2:14 / 13:41</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="btn">Speed 1×</span><span class="btn">Boost</span><span class="grow"></span><span class="btn">Note at this moment</span></div>
+              <div class="split">
+                <div class="picture">
+                  <div class="video"><span class="stamp">21:56:19</span><span class="cam">BWC-1</span></div>
+                  <div class="wave" style="margin: 6px 0 0"><i style="left: 16%"></i><i style="left: 41%"></i><i style="left: 70%"></i><span class="play" style="left: 16%"></span></div>
+                </div>
+                <div class="lines">
+                  <div class="line v"><span class="t">00:02:02</span><span class="s">Officer</span><span>Step out of the vehicle for me.</span><span class="n">note</span></div>
+                  <div class="line v"><span class="t">00:02:08</span><span class="s two">Driver</span><span>What did I do?</span><span class="n">note</span></div>
+                  <div class="line v lit"><span class="t">00:02:14</span><span class="s">Officer</span><span>Licence and registration. Keep your hands where I can see them.</span><span class="n">edit</span><span class="note">Note, Pat Okonkwo: the licence is asked for here; the report says 21:58.</span></div>
+                  <div class="line v"><span class="t">00:02:21</span><span class="s two">Driver</span><span>It's in the glove box.</span><span class="n">note</span></div>
+                  <div class="line v"><span class="t">00:02:30</span><span class="s">Officer</span><span>Slowly.</span><span class="n">note</span></div>
+                  <div class="line v"><span class="t">00:02:38</span><span class="s two">Driver</span><span>I'm reaching for it now.</span><span class="n">note</span></div>
+                  <div class="line v"><span class="t">00:02:49</span><span class="s">Officer</span><span>Dispatch, run a plate for me.</span><span class="n">note</span></div>
+                  <div class="line v"><span class="t">00:03:01</span><span class="s">Officer</span><span>Stay in the car, sir.</span><span class="n">note</span></div>
+                </div>
+              </div>
+              <div class="foot"><span class="btn">‹ Previous note</span><span class="btn">Next note ›</span><span class="muted">Note 2 of 6, by recording</span><span class="grow"></span><span class="btn">Mark reviewed</span></div>
+            </div>
+            <div class="pane">
+              <div class="tabs"><span class="tab on">Notes 6</span><span class="tab">Recordings 4</span><span class="tab">Details</span><span class="find">Find in notes and recordings</span></div>
+              <div class="pills"><span class="pill on">All 6</span><span class="pill">Pat Okonkwo 4</span><span class="pill">test 2</span></div>
+              <div class="notes-list">
+                <div class="group" style="border-top: 0"><b>BWC-1</b><span class="muted">Body camera · 3 notes</span><span class="grow"></span><span class="open">Open</span></div>
+                <div class="ncard"><span class="t">00:00:40</span><span>Lights on at 21:54:45 by the clock.</span><span class="w">"Unit 12, traffic stop, Harbour Street." · test, 04 Oct</span></div>
+                <div class="ncard lit"><span class="t">00:02:14</span><span>The licence is asked for here; the report says 21:58.</span><span class="w">"Licence and registration. Keep your hands..." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="ncard"><span class="t">00:09:30</span><span>Second officer arrives; compare BWC-2 at this moment.</span><span class="w">"Go ahead and step to the kerb." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="group"><b>BWC-2</b><span class="muted">Body camera · 2 notes</span><span class="grow"></span><span class="open">Open</span></div>
+                <div class="ncard"><span class="t">00:01:05</span><span>Arrives 7 s after BWC-1's clock says.</span><span class="w">"Copy, en route." · Pat Okonkwo, 04 Oct</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" style="margin-top: 14px">
+      <div>
+        <div class="eyebrow">A · video</div>
+        <h2>The picture beside the lines</h2>
+        <p>With a video open, A's left pane splits in two: the picture at the left, no wider than 360 px, with the waveform under it, and the lines at the right at full height. The picture stays a sensible size (about 200 px tall), and eight lines stay in view. Below about 900 px of pane the picture goes back above the lines, capped at a third of the height.</p>
+        <p>The call's bar says "on the Harbour car park clock" and gains <b>All cameras</b>, which opens the incident page at this moment; "Open the call" reads "Open the recording" here, the glossary's word for a video.</p>
+      </div>
+      <div class="saves">
+        <b>What a video costs here:</b> two lines of transcript (eight instead of ten), and nothing else.<br><br>
+        <b>The pop-out</b> ("Open the recording") shows the video large with the lines under it, as it does for a call today.
+      </div>
+    </div>
+  </section>
+
+  <!-- B with video -->
+  <section>
+    <div class="frame-box" style="--k: 0.76">
+      <span class="label" style="left: 12px; top: 12px">B · video</span>
+      <div class="frame">
+        <div class="rail"><div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="main">
+          <div class="topbar"><span class="btn">‹ Back to the case</span><span class="muted">Cases › Harbour Street stop</span><span class="grow"></span><span>test · Admin · Sign out</span></div>
+          <div class="head">
+            <h3>Notes <span class="muted" style="font-weight: 400">· Harbour Street stop</span></h3>
+            <span class="muted small">6 notes on 3 of 4 recordings, by 2 people</span>
+            <span class="grow"></span>
+            <span class="btn">Recordings 4</span><span class="btn">Details</span><span class="btn">Export ▾</span>
+          </div>
+          <div class="desk" style="grid-template-columns: minmax(0, 1fr) 560px">
+            <div class="pane">
+              <div class="bar"><span class="pill on">All 6</span><span class="pill">Pat Okonkwo 4</span><span class="pill">test 2</span><span class="grow"></span><span class="find" style="margin: 0; width: 200px">Find in notes and recordings</span></div>
+              <div class="notes-list">
+                <div class="group" style="border-top: 0"><b>BWC-1</b><span class="muted">Body camera · 13:41 · 3 notes · on the incident clock</span><span class="grow"></span><span class="open">Open the recording</span></div>
+                <div class="ncard"><span class="t">00:00:40</span><span><b>Lights on at 21:54:45 by the clock.</b></span><span class="w">"Unit 12, traffic stop, Harbour Street." · test, 04 Oct 16:50</span></div>
+                <div class="ncard lit"><span class="t">00:02:14</span><span><b>The licence is asked for here; the report says 21:58.</b></span><span class="w">"Licence and registration. Keep your hands where I can see them." · Pat Okonkwo, 04 Oct 16:52</span></div>
+                <div class="ncard"><span class="t">00:09:30</span><span><b>Second officer arrives; compare BWC-2 at this moment.</b></span><span class="w">"Go ahead and step to the kerb." · Pat Okonkwo, 04 Oct 16:55</span></div>
+                <div class="group"><b>BWC-2</b><span class="muted">Body camera · 12:58 · 2 notes · on the incident clock</span><span class="grow"></span><span class="open">Open the recording</span></div>
+                <div class="ncard"><span class="t">00:01:05</span><span><b>Arrives 7 s after BWC-1's clock says.</b></span><span class="w">"Copy, en route." · Pat Okonkwo, 04 Oct</span></div>
+                <div class="ncard"><span class="t">00:08:12</span><span><b>Search of the boot begins. Nothing said about consent.</b></span><span class="w">(nothing said here; the camera shows the boot opened) · test, 04 Oct</span></div>
+                <div class="group"><b>Dash camera</b><span class="muted">Dash camera · 15:00 · 1 note · on the incident clock</span><span class="grow"></span><span class="open">Open the recording</span></div>
+                <div class="ncard"><span class="t">00:00:00</span><span><b>Plate readable at the start.</b></span><span class="w">(nothing said here) · Pat Okonkwo, 04 Oct</span></div>
+              </div>
+              <div class="foot"><span class="btn">‹ Previous</span><span class="btn">Next ›</span><span class="muted">Note 2 of 6, by recording · J and K step</span></div>
+            </div>
+            <div class="pane">
+              <div class="bar"><b>BWC-1</b><span class="muted">00:02:14 · 21:56:19</span><span class="grow"></span><span class="btn ghost">All cameras</span><span class="btn ghost">Open the recording</span></div>
+              <div class="video wide"><span class="stamp">21:56:19</span><span class="cam">BWC-1</span></div>
+              <div class="bar" style="border-bottom: 0"><span class="btn primary">▶</span><span style="font-variant-numeric: tabular-nums">2:14 / 13:41</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="btn">1×</span><span class="btn">Boost</span></div>
+              <div class="lines">
+                <div class="line" style="grid-template-columns: 60px 56px minmax(0, 1fr)"><span class="t">00:02:08</span><span class="s two">Driver</span><span>What did I do?</span></div>
+                <div class="line lit" style="grid-template-columns: 60px 56px minmax(0, 1fr)"><span class="t">00:02:14</span><span class="s">Officer</span><span>Licence and registration. Keep your hands where I can see them.</span><span class="note">The licence is asked for here; the report says 21:58. <span class="muted">edit · remove</span></span></div>
+                <div class="line" style="grid-template-columns: 60px 56px minmax(0, 1fr)"><span class="t">00:02:21</span><span class="s two">Driver</span><span>It's in the glove box.</span></div>
+                <div class="line" style="grid-template-columns: 60px 56px minmax(0, 1fr)"><span class="t">00:02:30</span><span class="s">Officer</span><span>Slowly.</span></div>
+              </div>
+              <div class="foot"><span class="btn">Note at this moment</span><span class="grow"></span><span class="btn">Mark reviewed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" style="margin-top: 14px">
+      <div>
+        <div class="eyebrow">B · video</div>
+        <h2>The picture fits the player's column</h2>
+        <p>B takes a video most naturally: the right column is the player, so the picture sits on top at the column's width (560 px, about 315 tall), the bar under it, and the lines around the moment under that. The notes at the left are untouched by what kind of recording is open. A note on something seen and not said (the boot opened) reads "(nothing said here)" with the camera's words, as the Preview says it since v1.99.1.</p>
+      </div>
+      <div class="saves">
+        <b>What a video costs here:</b> the lines fall from seven to four, since the picture takes the column's top. The notes list, which is the page's point in B, loses nothing.<br><br>
+        <b>At laptop height</b> the player column scrolls on its own if it must; the notes never do because of it.
+      </div>
+    </div>
+  </section>
+
+  <!-- C with video -->
+  <section>
+    <div class="frame-box" style="--k: 0.76">
+      <span class="label" style="left: 12px; top: 12px">C · video</span>
+      <div class="frame">
+        <div class="rail"><div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="main">
+          <div class="topbar"><span class="btn">‹ Back to the case</span><span class="muted">Cases › Harbour Street stop</span><span class="grow"></span><span>test · Admin · Sign out</span></div>
+          <div class="head">
+            <h3>Notes <span class="muted" style="font-weight: 400">· Harbour Street stop</span></h3>
+            <span class="muted small">6 notes on 3 of 4 recordings, by 2 people</span>
+            <span class="grow"></span>
+            <span class="pill on">All 6</span><span class="pill">Pat Okonkwo 4</span><span class="pill">test 2</span>
+            <span class="find" style="margin: 0 0 0 8px; width: 190px">Find in notes and recordings</span>
+            <span class="btn">Export ▾</span>
+          </div>
+          <div class="strip">
+            <div class="seg on" style="left: 1%; width: 30%"></div><div class="tick" style="left: 2.5%"></div><div class="tick" style="left: 5.8%"></div><div class="tick" style="left: 22%"></div>
+            <div class="seg" style="left: 33%; width: 28%"></div><div class="tick" style="left: 35.3%"></div><div class="tick" style="left: 50%"></div>
+            <div class="seg" style="left: 63%; width: 33%"></div><div class="tick" style="left: 63.2%"></div>
+            <span class="lbl" style="left: 16%">BWC-1 · 13:41</span><span class="lbl" style="left: 47%">BWC-2 · 12:58</span><span class="lbl" style="left: 79%">Dash camera · 15:00</span>
+          </div>
+          <div class="desk" style="grid-template-columns: 260px minmax(0, 1fr) 340px; margin-top: 22px">
+            <div class="pane">
+              <div class="bar"><b>Recordings</b><span class="muted">4</span><span class="grow"></span><span class="muted">0 of 4 reviewed</span></div>
+              <div class="calls">
+                <div class="call on"><span class="grow"><b>BWC-1</b> · body camera</span><span class="pill">3</span></div>
+                <div class="call"><span class="grow"><b>BWC-2</b> · body camera</span><span class="pill">2</span></div>
+                <div class="call"><span class="grow"><b>Dash camera</b></span><span class="pill">1</span></div>
+                <div class="call"><span class="grow"><b>Call_0088</b> · phone call</span><span class="muted small">no notes</span></div>
+              </div>
+              <div class="bar" style="border-top: 1px solid var(--line); border-bottom: 0"><span class="muted small">Three cameras sit on the Harbour car park clock; the strip above draws them by that clock.</span></div>
+            </div>
+            <div class="pane">
+              <div class="bar"><b>BWC-1</b><span class="pill">Body camera</span><span class="muted">21:56:19</span><span class="grow"></span><span class="btn primary">▶</span><span style="font-variant-numeric: tabular-nums">2:14 / 13:41</span><span class="btn">-5s</span><span class="btn">+5s</span><span class="btn">1×</span></div>
+              <div class="video mid"><span class="stamp">21:56:19</span><span class="cam">BWC-1</span></div>
+              <div class="lines">
+                <div class="line v"><span class="t">00:02:08</span><span class="s two">Driver</span><span>What did I do?</span><span class="n">note</span></div>
+                <div class="line v lit"><span class="t">00:02:14</span><span class="s">Officer</span><span>Licence and registration. Keep your hands where I can see them.</span><span class="n">edit</span><span class="note">Note, Pat Okonkwo: the licence is asked for here; the report says 21:58.</span></div>
+                <div class="line v"><span class="t">00:02:21</span><span class="s two">Driver</span><span>It's in the glove box.</span><span class="n">note</span></div>
+                <div class="line v"><span class="t">00:02:30</span><span class="s">Officer</span><span>Slowly.</span><span class="n">note</span></div>
+              </div>
+              <div class="foot"><span class="btn">‹ Previous note</span><span class="btn">Next note ›</span><span class="muted">Note 2 of 6</span><span class="grow"></span><span class="btn">All cameras</span><span class="btn">Open the recording</span><span class="btn">Mark reviewed</span></div>
+            </div>
+            <div class="pane">
+              <div class="bar"><b>Notes on BWC-1</b><span class="muted">3</span></div>
+              <div class="ncard"><span class="t">00:00:40</span><span>Lights on at 21:54:45 by the clock.</span><span class="w">test, 04 Oct</span></div>
+              <div class="ncard lit"><span class="t">00:02:14</span><span>The licence is asked for here; the report says 21:58.</span><span class="w">Pat Okonkwo, 04 Oct</span></div>
+              <div class="ncard"><span class="t">00:09:30</span><span>Second officer arrives; compare BWC-2 at this moment.</span><span class="w">Pat Okonkwo, 04 Oct</span></div>
+              <div class="bar" style="border-top: 1px solid var(--line)"><b>At this moment on other cameras</b></div>
+              <div class="ncard"><span class="t">BWC-2</span><span>Arrives 7 s after BWC-1's clock says.</span><span class="w">00:01:05 · Pat Okonkwo</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" style="margin-top: 14px">
+      <div>
+        <div class="eyebrow">C · video</div>
+        <h2>The strip draws the cameras by the incident's clock</h2>
+        <p>Where the recordings are cameras of an incident, C's strip lays them along the incident's clock instead of end to end, so a tick on BWC-1 and a tick on BWC-2 at the same moment sit one above the other. The middle column shows the picture at its width (about 300 px tall) over the lines, and the right column adds "At this moment on other cameras", the Notes page's own small All cameras.</p>
+      </div>
+      <div class="saves">
+        <b>What a video costs here:</b> the lines fall from eight to four under the picture; the strip and the two side columns are untouched.<br><br>
+        <b>Where it shines:</b> a multi-camera incident with notes on three cameras, which is the case this page was not drawn for the first time round.
+      </div>
+    </div>
+  </section>
+
+  <section class="saves" style="max-width: 72ch">
+    <b style="color: var(--text)">Choosing with videos in mind:</b> A keeps the most transcript in view with a video open (eight lines) because the picture goes beside the lines rather than above them; B keeps the notes list whole and lets the player column take the picture; C is the only one that shows where the notes fall across several cameras at once. Any of the three can borrow A's side-by-side picture for its player when the column is wide enough.
+  </section>
+
+  <section class="saves" style="max-width: 70ch">
+    <b style="color: var(--text)">In all three:</b> Back to the case at the head's left, the case's name in the title, one player bar instead of two, "Note at this moment" said in words, one line per recording on the right, and the page's keys (J, K, N, R) unchanged. A and C are a Phase 9 chapter 4 amendment of layout only; B amends which pane is which and would be drawn once more at the phone and tablet shapes before it is built.
+  </section>
+</div>

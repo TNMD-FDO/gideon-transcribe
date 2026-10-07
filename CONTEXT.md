@@ -469,7 +469,7 @@ The tab on the Case page that lists every Note in the Case, on lines and on even
 _Avoid_: comments, annotations, notebook
 
 **Notes page**:
-The Case's work page for its notes, reached by the **Notes page** button in the case page's head (on every case; until v1.121.1, Open as a page on the Notes tab): the recording in hand on the left (its player bar, the waveform with the notes marked, the lines around the moment with the note under its line, Previous and Next note or Previous and Next call, Mark reviewed), and the work panel on the right (Notes grouped by recording in call order with pills by writer and type, Recordings, Details, a Find box). Open the call opens the whole call in a pop-out over the page, never a jump away; Open the full call inside it is the one door to the recording page. Phase 9 chapter 4.
+The Case's work page for its notes, reached by the **Notes page** button in the case page's head (on every case; until v1.121.1, Open as a page on the Notes tab): the notes as the wide left column (grouped by recording in call order with pills by writer and type, a Find box, Previous and Next note or Previous and Next call), the recording in hand on the right (its one player bar, the waveform with the notes marked, the lines around the moment with the note under its line, Note at this moment, Mark reviewed), and Recordings and Details as buttons in the head; the columns were the other way round until v1.127.0. Open the call opens the whole call in a pop-out over the page, never a jump away; Open the full call inside it is the one door to the recording page. Phase 9 chapter 4.
 _Avoid_: notes pane (the pane is the case page's right column), notebook, review page, desk
 
 **Open as a page**:

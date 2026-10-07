@@ -3019,9 +3019,31 @@ body.gideon-window .gideon-grip { display: none; }
 /* The Notes page (Phase 9 chapter 4): the incident page's desk without the
    wall. The left is the Preview mounted into the page; the right is the work
    panel. */
-.notes-page .np-head { padding: 12px 16px 0; }
-.notes-desk { align-items: stretch; }
-.np-left { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; max-height: 80vh; }
+/* v1.127.0, the maintainer's pick B: the notes are the wide left column and
+   the recording in hand the right; one-line head; one player bar. Both
+   columns fill the window's height and scroll inside themselves. */
+.notes-page .np-head { padding: 10px 16px 0; margin-bottom: 10px; display: block; }
+.np-head-row { gap: 12px; align-items: center; flex-wrap: wrap; }
+.np-title-box { min-width: 0; }
+.np-title { margin: 0; font-size: var(--t-title); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.np-title .count { font-weight: 500; color: var(--muted); font-size: var(--t-body); }
+.np-title .np-case { font-weight: 400; font-size: var(--t-body); }
+.np-head .lead { margin: 0; max-width: none; }
+.np-actions { gap: 8px; align-items: center; flex-wrap: wrap; }
+.np-panel-button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.notes-desk { align-items: stretch; grid-template-columns: minmax(0, 1fr) 12px var(--player, 520px); }
+.np-notes, .np-left { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; max-height: calc(100vh - 150px); }
+.np-notes.inc-work { max-height: calc(100vh - 150px); }
+.np-notes-bar { border-bottom: 1px solid var(--line); padding: 8px 12px; flex-wrap: wrap; }
+.np-notes-bar .inc-find { flex: 1 1 10rem; min-width: 0; max-width: 16rem; }
+.np-notes[data-showing='recordings'] .np-pills, .np-notes[data-showing='details'] .np-pills { display: none; }
+.np-notes .panels { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.np-notes .panels .panel { padding: 0; }
+.np-notes #panel-notes { padding: 4px 8px 8px; }
+.np-panel-body { padding: 10px 12px; }
+.preview-card.mounted .preview-media audio { display: none; }
+/* The page's Note at this moment stands in for the Preview's own foot button (v1.127.0). */
+.preview-card.mounted .preview-foot [data-preview-moment], .preview-card.mounted .preview-foot [data-preview-note] { display: none; }
 .np-call-head { padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .np-bar { display: flex; align-items: center; gap: 6px; padding: 8px 14px 4px; flex-wrap: wrap; }
 .np-wave { display: block; width: calc(100% - 28px); margin: 4px 14px; height: 44px; border-radius: var(--radius); background: var(--surface-2); cursor: pointer; }
@@ -3063,8 +3085,11 @@ body.gideon-window .gideon-grip { display: none; }
 .np-popout-host { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .preview-card.mounted.whole .preview-lines { font-size: var(--t-body); }
 @media (max-width: 1279px) {
-  .np-left { max-height: none; }
-  .np-left .np-bar, .np-left .np-call-head { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  /* One column (v1.127.0): the player first, no taller than half the window, the notes under it. */
+  .notes-desk { grid-template-columns: minmax(0, 1fr); }
+  .notes-desk .np-left { order: -1; max-height: 50vh; }
+  .notes-desk .np-notes, .notes-desk .np-notes.inc-work { max-height: none; margin-top: 10px; }
+  .notes-desk .np-notes .panels { overflow: visible; }
 }
 @media (max-width: 899px) { .np-popout-card { inset: 0; border-radius: 0; } }
 
