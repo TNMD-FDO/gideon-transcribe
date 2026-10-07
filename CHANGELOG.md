@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.128.0, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Speaker check says the big thing first.** A run on the office's
+server proposed 179 line moves on one transcript, and the second reading
+backed one and set aside 178, 18 of them with the voice step agreeing.
+The moves were not 179 slips: they were two or three voices under six
+labels, seen line by line. The check's output is redrawn (ADR 0019):
+
+- **One card per speaker** whose lines often read as another speaker's:
+  how many and the share as a bar, what the voice step heard on them (two
+  voices heard, one voice heard, or the voice is silent), three moments
+  to hear and one of the speaker's own. **Merge** is the card's main
+  button only when a clear majority of the lines and the voice step
+  agree; below that the card describes, asks for a listen, and keeps
+  Merge as a quiet "after listening" button beside Not the same. A card
+  the voice step argues against offers no merge.
+- **Then the stretches**: one card per run of moves between the same two
+  speakers close together, with the span, the count, the reason, one
+  moment to hear and Accept the stretch; the voice-backed first; those
+  inside a speaker card's pair under a fold. Accept all becomes **Accept
+  every voice-backed stretch**; **Check again** reads the transcript
+  afresh after your merges.
+- **The second reading is retired.** The voice step's note is the one
+  measure, said in words on every card. Nothing is dropped and nothing
+  moves until you say so, as before. The user guide and the glossary say
+  how to read the cards.
+
 ## v1.127.1, 2026-10-07
 
 ```

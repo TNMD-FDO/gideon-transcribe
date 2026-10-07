@@ -469,25 +469,6 @@ SPEAKER_CHECK = (
 # literature (docs/research/speaker-attribution.md): an untrained model
 # correcting speakers by the words alone moves lines to whoever reads more
 # plausibly, and the voice has to have a say.
-SPEAKER_SECOND = (
-    "The speakers of this transcript were told apart by their voices, and a "
-    "first reading named some lines as given to the wrong speaker. You are "
-    "the second reading, and you are not told what the first one said. For "
-    "each line marked >>> below, say who spoke it, from the words of the "
-    "line and of the lines around it: who asks and who answers, who is "
-    "addressed and who replies, who commands and who is commanded. The "
-    "marked line's label is left out; the labels of the lines around it are "
-    "as the voices gave them. Where a note says what the voice step heard on "
-    "the line, weigh it: a long line the voice gave firmly to one speaker is "
-    "seldom another's. Answer with a speaker from the list, or cannot tell "
-    "when either of two could have said it. Never guess."
-)
-SPEAKER_SECOND_FORMAT = (
-    "Answer with the JSON asked for: a list under readings, one item for "
-    "every marked line, each the line's number as shown in brackets and the "
-    "speaker who said it, exactly as in the list of speakers, or cannot tell."
-)
-CANNOT_TELL = "cannot tell"
 
 # The sketch before the check (v1.100.0): who is who across the whole
 # recording, read once and given to every window. The app's own words,
@@ -1578,34 +1559,6 @@ def speaker_check_schema(speakers: list[str]) -> dict:
     }
 
 
-def speaker_second_schema(speakers: list[str]) -> dict:
-    """The second reading's answer: for each marked line a Speaker already on
-    the Transcript, or cannot tell."""
-    return {
-        "type": "object",
-        "properties": {
-            "readings": {
-                "type": "array",
-                "maxItems": 60,
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "line": {"type": "integer"},
-                        "speaker": {
-                            "type": "string",
-                            "enum": [*speakers, CANNOT_TELL],
-                        },
-                    },
-                    "required": ["line", "speaker"],
-                    "additionalProperties": False,
-                },
-            }
-        },
-        "required": ["readings"],
-        "additionalProperties": False,
-    }
-
-
 def incident_events_schema() -> dict:
     """The proposals' answer: a list of events, each a time, an end, a line
     and the words it rests on."""
@@ -1762,30 +1715,6 @@ def speaker_check_input(lines: list, speakers: list[str], sketch: str = "") -> s
         else ""
     )
     return f"{head}Speakers: {', '.join(speakers)}\n\nLines:\n{render(lines)}"
-
-
-def speaker_second_input(sketch: str, speakers: list[str], blocks: list[dict]) -> str:
-    """The marked lines as the second reading sees them: the sketch when
-    there is one, the Speakers, then each marked line among the lines around
-    it, its own label left out, with the voice step's note when it has one.
-    Each block is {"line": Line, "around": [Line], "voice": str}."""
-    head = f"{SPEAKER_SKETCH_ABOVE}\n{sketch.strip()}\n\n" if sketch.strip() else ""
-    parts = []
-    for block in blocks:
-        marked = block["line"]
-        rows = []
-        for line in block["around"]:
-            if line.number == marked.number:
-                rows.append(f">>> [{line.number}] {clock(line.start)} {line.text}")
-            else:
-                rows.append(render([line]))
-        note = f"\n{block['voice']}" if block.get("voice") else ""
-        parts.append("\n".join(rows) + note)
-    return (
-        f"{head}Speakers: {', '.join(speakers)}\n\n"
-        + "\n\n".join(parts)
-        + "\n\nSay who spoke each marked line."
-    )
 
 
 def speaker_sketch_input(lines: list, speakers: list[str], cut: bool) -> str:

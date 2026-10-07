@@ -211,6 +211,11 @@ urlpatterns = [
         assistant_pages.accept_corrections,
         name="accept-corrections",
     ),
+    path(
+        "recording/<uuid:recording_id>/corrections/<str:verdict>-many",
+        assistant_pages.decide_corrections,
+        name="decide-corrections",
+    ),
     # The sign-out dialog's two downloads, across the whole Workspace.
     path(
         "download/<str:shape>",

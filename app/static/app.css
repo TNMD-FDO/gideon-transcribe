@@ -2328,11 +2328,16 @@ details.inline[open] summary::after { content: ": "; }
 .sp-corrections { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 .sp-corrections .head { gap: 8px; }
 .sp-corrections .corrections { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.sp-corrections .correction { padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-1); font-size: var(--t-small); }
-.sp-corrections .correction .move { margin-left: 6px; }
-.sp-corrections .correction .q { margin: 4px 0 0; }
-.sp-corrections .correction .why { margin: 2px 0 0; }
-.sp-corrections .correction .acts { margin-top: 6px; gap: 6px; }
+/* What the check found (v1.128.0): one card per speaker, then one per stretch. */
+.sp-corrections .found-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.sp-corrections .found-card { padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-1); font-size: var(--t-small); display: flex; flex-direction: column; gap: 4px; }
+.sp-corrections .found-card.clears, .sp-corrections .found-card.stretch.agrees { border-left: 3px solid var(--accent); }
+.sp-corrections .found-card .title { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.sp-corrections .found-card .bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.sp-corrections .found-card .bar i { display: block; height: 100%; background: var(--accent); }
+.sp-corrections .found-card .why, .sp-corrections .found-card .hear { margin: 0; }
+.sp-corrections .found-card .acts { gap: 6px; margin-top: 2px; }
+.sp-card .check-hint { margin-left: 4px; }
 
 /* The strip's count of corrections waiting (Phase 5 chapter 3). */
 button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: var(--t-small); min-height: 0; line-height: 1.4; padding: 2px 8px; }
@@ -2363,7 +2368,6 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sp-lanes .swap-form label { display: inline-flex; align-items: center; gap: 4px; }
 .sp-lanes .swap-form select { max-width: 11rem; }
 .sp-lanes .swap-form input { width: 5.5rem; }
-.sp-corrections .swap-offer { margin: 6px 0 0; }
 .sp-filter { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex: none; font-size: var(--t-small); }
 .sp-filter .sw { border: 1px solid var(--line); border-radius: 999px; padding: 0 10px; min-height: 22px; background: none; color: inherit; }
 .sp-filter .sw.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }

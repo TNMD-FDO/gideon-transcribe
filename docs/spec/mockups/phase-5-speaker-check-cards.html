@@ -1,0 +1,236 @@
+<title>Speaker Check Cards</title>
+<style>
+  /* Layout: the Speakers page's left column (the cards and, under them, what the check found) drawn at its real width, with a caption beside each figure; the app's own tokens. */
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp4: #8e24aa; --sp5: #00838f; --sp6: #ad1457;
+    --radius: 8px; --radius-lg: 12px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp4: #c77ddb; --sp5: #4fc3d9; --sp6: #e57aa8; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp4: #c77ddb; --sp5: #4fc3d9; --sp6: #e57aa8; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 18px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 66ch; color: var(--muted); margin: 0; }
+  .figure { display: grid; grid-template-columns: 440px minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 800px) { .figure { grid-template-columns: minmax(0, 1fr); } }
+  .caption { display: flex; flex-direction: column; gap: 10px; max-width: 54ch; }
+  .caption p { margin: 0; }
+  .caption ul { margin: 0; padding-left: 20px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .tiny { font-size: 12px; }
+  b { font-weight: 600; }
+
+  /* The column. */
+  .col { width: 440px; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.tiny { font-size: 12px; padding: 2px 8px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .sp { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .sp .lane { width: 6px; height: 36px; border-radius: 3px; }
+  .sp .grow { flex: 1; min-width: 0; }
+  .sp .name { font-weight: 600; }
+  .sp .facts { color: var(--muted); font-size: 12px; }
+  .s1 { background: var(--sp1); } .s2 { background: var(--sp2); } .s4 { background: var(--sp4); } .s5 { background: var(--sp5); } .s6 { background: var(--sp6); }
+  .found { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .found .state { font-size: 13px; color: var(--muted); }
+  .found .state b { color: var(--text); }
+  .card { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+  .card.lead { border-left: 3px solid var(--accent); }
+  .card .title { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .card .title b { font-size: 15px; }
+  .card .why { color: var(--muted); font-size: 13px; }
+  .hear { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .hear .cite { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-variant-numeric: tabular-nums; }
+  .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .fold { font-size: 13px; color: var(--muted); padding: 4px 2px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .bar i { position: absolute; top: 0; bottom: 0; left: 0; }
+  .undo { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .keys { font-size: 12px; color: var(--muted); }
+  kbd { font: inherit; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; background: var(--surface-2); }
+  .numbers { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 18px; max-width: 70ch; font-size: 14px; }
+  .numbers table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  .numbers td { padding: 4px 0; border-top: 1px solid var(--line); }
+  .numbers td:last-child { text-align: right; }
+  .numbers tr:first-child td { border-top: 0; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>Speaker check cards</h1>
+    <p class="lede">The Speakers page's left column after a check, drawn from a real run's figures: 522 lines under six labels, 179 lines the check wanted to move, 1 backed by the second reading, 178 set aside. The second reading is retired; the check says the big thing first, as one card per speaker, then the stretches; a merge is offered only where the words and the voice agree. Fictional names throughout.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section class="figure">
+    <div class="col">
+      <div class="head-row">
+        <b>Speakers</b><span class="muted small">0 of 6 named</span>
+        <span style="flex: 1"></span>
+        <span class="btn">Check the speakers</span><span class="btn">Suggest names</span>
+      </div>
+      <div class="muted tiny">For the best names, check the speakers first: a name rests on the lines a speaker has, so a moved line can change who it points to.</div>
+      <div class="sp"><span class="lane s5"></span><div class="grow"><div class="name">Speaker 5</div><div class="facts">182 lines · 21 min</div></div><span class="pill warn">often reads as 2 others</span></div>
+      <div class="sp"><span class="lane s2"></span><div class="grow"><div class="name">Speaker 2</div><div class="facts">131 lines · 15 min</div></div></div>
+      <div class="sp"><span class="lane s1"></span><div class="grow"><div class="name">Speaker 1</div><div class="facts">62 lines · 7 min</div></div></div>
+      <div class="sp"><span class="lane s6"></span><div class="grow"><div class="name">Speaker 6</div><div class="facts">45 lines · 4 min</div></div><span class="pill warn">often reads as Speaker 2</span></div>
+      <div class="sp"><span class="lane s4"></span><div class="grow"><div class="name">Speaker 4</div><div class="facts">35 lines · 3 min</div></div><span class="pill warn">sometimes reads as Speaker 5</span></div>
+
+      <div class="found">
+        <div class="state"><b>Checked today 15:27, read whole.</b> Three labels often read as other speakers, none clearly enough to merge on the check's word alone: hear them. 12 stretches to move besides. Nothing moves until you say so.</div>
+
+        <div class="card lead">
+          <div class="title"><b>Speaker 5 often reads as Speaker 2</b><span class="pill ok">two voices heard on 18 lines</span></div>
+          <div class="bar"><i class="s2" style="width: 32%"></i><i class="s1" style="left: 32%; width: 11%"></i></div>
+          <div class="why">58 of its 182 lines read as Speaker 2's, and 20 as Speaker 1's; 104 read as its own. Either the engine split one voice into two labels, or Speaker 5 is a third person whose lines the words confuse. Your ear decides: if the three below are the same voice as Speaker 2, merge; if not, the stretches below move the lines one run at a time.</div>
+          <div class="hear">Hear three of the 58: <span class="cite">▶ 4:31</span><span class="cite">▶ 12:08</span><span class="cite">▶ 19:46</span> <span class="muted">· and one of Speaker 5's own:</span> <span class="cite">▶ 8:02</span></div>
+          <div class="acts"><span class="btn ghost tiny">Merge Speaker 5 into Speaker 2 after listening</span><span class="btn ghost tiny">Not the same</span></div>
+        </div>
+
+        <div class="card">
+          <div class="title"><b>Speaker 6 often reads as Speaker 2</b><span class="pill">the voice is silent: short lines</span></div>
+          <div class="bar"><i class="s2" style="width: 53%"></i></div>
+          <div class="why">24 of its 45 lines read as Speaker 2's; the lines are short, so the voice step has nothing to add. Hear them before anything.</div>
+          <div class="hear">Hear three of the 24: <span class="cite">▶ 2:10</span><span class="cite">▶ 9:55</span><span class="cite">▶ 23:02</span> <span class="muted">· one of its own:</span> <span class="cite">▶ 15:30</span></div>
+          <div class="acts"><span class="btn ghost tiny">Merge Speaker 6 into Speaker 2 after listening</span><span class="btn ghost tiny">Not the same</span></div>
+        </div>
+
+        <div class="card">
+          <div class="title"><b>Speaker 4 sometimes reads as Speaker 5</b><span class="pill warn">one voice heard on 4 lines, the labelled one</span></div>
+          <div class="bar"><i class="s5" style="width: 26%"></i></div>
+          <div class="why">9 of its 35 lines read as Speaker 5's, and the voice step kept most of them with Speaker 4. Probably a real speaker with a few confused lines; those nine are in the stretches below.</div>
+          <div class="hear">Hear three of the 9: <span class="cite">▶ 6:40</span><span class="cite">▶ 7:12</span><span class="cite">▶ 30:18</span></div>
+          <div class="acts"><span class="btn ghost tiny">Not the same</span></div>
+        </div>
+
+        <div class="fold">▸ 12 stretches to move</div>
+      </div>
+
+      <div class="found" style="border-top: 1px dashed var(--line)">
+        <div class="state muted">For comparison, a card that clears the bar (another recording, not today's):</div>
+        <div class="card lead">
+          <div class="title"><b>Speaker 3 is Speaker 1</b><span class="pill ok">two voices heard on 30 lines</span></div>
+          <div class="bar"><i class="s1" style="width: 93%"></i></div>
+          <div class="why">41 of its 44 lines read as Speaker 1's, and the voice step heard Speaker 1 on 30 of them. One voice under two labels.</div>
+          <div class="hear">Hear three: <span class="cite">▶ 0:40</span><span class="cite">▶ 3:15</span><span class="cite">▶ 7:58</span></div>
+          <div class="acts"><span class="btn primary tiny">Merge Speaker 3 into Speaker 1</span><span class="btn ghost tiny">Not the same</span></div>
+        </div>
+      </div>
+      <p class="keys"><kbd>1</kbd> to <kbd>9</kbd> give the line being spoken to a speaker. <kbd>Space</kbd> plays, <kbd>B</kbd> goes back three seconds.</p>
+    </div>
+    <div class="caption">
+      <div class="eyebrow">Figure 1</div>
+      <h2>One card per speaker, and the merge has to earn its button</h2>
+      <p>When a share of one label's lines read as another speaker's, the check says so once, as a card on that label: how many lines, which speaker they read as, the share as a bar, three moments that read as the other speaker and one that reads as its own, so the ear compares. The small amber pill on the speaker's own card names the finding where the person already looks.</p>
+      <p><b>Two kinds of card.</b> A card <b>clears the bar</b> when a clear majority of the label's lines read as one other speaker and the voice step heard that speaker inside many of them; only then is Merge the primary button, since merging against the voice is how a real person vanishes. Below the bar the card <b>describes</b>: it says what the words suggest and what else it could mean, asks for a listen, and keeps Merge as a quiet "after listening" button. None of today's three cards clears the bar; the dashed example shows one that does.</p>
+      <p>Confidence comes from the voice step and nothing else, in three plain states: two voices heard, one voice heard (the labelled one), or silent. The blind second reading is gone: on this run it backed 1 of 179 and overruled the voice 18 times.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section class="figure">
+    <div class="col">
+      <div class="found" style="border-top: 0; padding-top: 0">
+        <div class="undo"><span class="btn ghost tiny">Undo</span>After listening: Speaker 5 merged into Speaker 2 (182 lines) and Speaker 6 into Speaker 2 (45 lines).</div>
+        <div class="state"><b>Checked today 15:27, read whole.</b> After the merges, 4 stretches to move. Voice-backed first.</div>
+
+        <div class="card lead">
+          <div class="title"><b>4:30 to 4:36</b><span class="muted">5 lines of Speaker 2 that read as Speaker 1's</span><span class="pill ok">two voices heard</span></div>
+          <div class="why">A question and its answer under one name: "Where's the rod?" answered by "I'm going to help you up."</div>
+          <div class="hear">Hear it: <span class="cite">▶ 4:30</span></div>
+          <div class="acts"><span class="btn primary tiny">Accept the stretch</span><span class="btn ghost tiny">Dismiss</span></div>
+        </div>
+
+        <div class="card">
+          <div class="title"><b>12:02 to 12:49</b><span class="muted">8 lines of Speaker 1 that read as Speaker 2's</span><span class="pill ok">two voices heard</span></div>
+          <div class="why">Someone addressed by name answering under the asker's label.</div>
+          <div class="hear">Hear it: <span class="cite">▶ 12:02</span></div>
+          <div class="acts"><span class="btn primary tiny">Accept the stretch</span><span class="btn ghost tiny">Dismiss</span></div>
+        </div>
+
+        <div class="card">
+          <div class="title"><b>27:15</b><span class="muted">1 line of Speaker 4 that reads as Speaker 2's</span><span class="pill">the voice is silent: a short line</span></div>
+          <div class="why">"Yeah." after Speaker 2's question, under Speaker 4.</div>
+          <div class="hear">Hear it: <span class="cite">▶ 27:15</span></div>
+          <div class="acts"><span class="btn tiny">Accept</span><span class="btn ghost tiny">Dismiss</span></div>
+        </div>
+
+        <div class="card">
+          <div class="title"><b>31:40 to 31:58</b><span class="muted">3 lines of Speaker 2 that read as Speaker 4's</span><span class="pill warn">one voice heard, the labelled one</span></div>
+          <div class="why">The words say Speaker 4; the voice step gave every word to Speaker 2. Listen before deciding.</div>
+          <div class="hear">Hear it: <span class="cite">▶ 31:40</span></div>
+          <div class="acts"><span class="btn tiny">Accept the stretch</span><span class="btn ghost tiny">Dismiss</span></div>
+        </div>
+
+        <div class="acts"><span class="btn ghost tiny">Accept every voice-backed stretch (2)</span><span class="btn ghost tiny">Check again</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <div class="eyebrow">Figure 2</div>
+      <h2>Then the stretches, each a card</h2>
+      <p>What remains after the merges is grouped into runs of the same move close together: one card per run with its span, its line count, the check's reason in a sentence, one moment to hear, and <b>Accept the stretch</b>. The real run had 70 such runs before any merge; with Speaker 5 and 6 folded into Speaker 2, most of them vanish, since they were the same mislabelling seen line by line.</p>
+      <p>The voice-backed cards come first and get the primary button. A card where the voice disagrees is drawn last, says so, and asks for a listen. "Accept every voice-backed stretch" replaces Accept all, so the one-press path never moves what the voice argued against.</p>
+      <p>Undo at the top reverses the last merge, as today, and <b>Check again</b> reads the merged transcript afresh.</p>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section class="figure">
+    <div class="col">
+      <div class="head-row">
+        <b>Speakers</b><span class="muted small">0 of 3 named</span>
+        <span style="flex: 1"></span>
+        <span class="btn">Check the speakers</span><span class="btn">Suggest names</span>
+      </div>
+      <div class="sp"><span class="lane s2"></span><div class="grow"><div class="name">Speaker 2</div><div class="facts">358 lines · 40 min</div></div></div>
+      <div class="sp"><span class="lane s1"></span><div class="grow"><div class="name">Speaker 1</div><div class="facts">82 lines · 9 min</div></div></div>
+      <div class="sp"><span class="lane s4"></span><div class="grow"><div class="name">Speaker 4</div><div class="facts">35 lines · 3 min</div></div></div>
+      <div class="found">
+        <div class="state"><b>Checked today 15:41, read whole.</b> Nothing to move. Suggest names is next.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <div class="eyebrow">Figure 3</div>
+      <h2>Done: three speakers, one line</h2>
+      <p>After two merges and two accepted stretches, Check again reads the transcript as it now stands and finds nothing. The state line says so and points to the next step. Six labels became three speakers in four presses, where the old page offered 179 rows and a fold.</p>
+    </div>
+  </section>
+
+  <section class="numbers">
+    <b>What the design is built from</b>, the real run of today 15:27 on the office's server (no words, only counts):
+    <table style="margin-top: 8px">
+      <tr><td>Lines in the transcript</td><td>522 under six labels</td></tr>
+      <tr><td>Lines the check wanted to move</td><td>179</td></tr>
+      <tr><td>Of which Speaker 5 to Speaker 2 / Speaker 6 to Speaker 2 / Speaker 5 to Speaker 1</td><td>58 / 24 / 20</td></tr>
+      <tr><td>Runs of the same move, under 20 s apart</td><td>70, the largest 25 lines</td></tr>
+      <tr><td>Backed by the blind second reading</td><td>1</td></tr>
+      <tr><td>Set aside although the voice step agreed</td><td>18</td></tr>
+      <tr><td>Set aside as "too short for the words to settle"</td><td>58</td></tr>
+    </table>
+    <p class="small muted" style="margin: 10px 0 0">A card appears from about a fifth of a label's lines; the merge button is primary only above a clear majority with the voice step agreeing on many of them. Both figures are set from the probe, by ear, not from this page. The engine side is tried from the worker against this recording and one other before any wording ships.</p>
+  </section>
+</div>

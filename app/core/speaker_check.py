@@ -254,9 +254,18 @@ FIRM_WORDS = 12
 # The lines before and after a marked line that the second reading sees, the
 # lines one call reads, and the readings each line gets. The app keeps a
 # move in front of the person only where the readings agree.
-AROUND = 4
-SECOND_BATCH = 20
-SECOND_READINGS = 2
+# The cards (v1.128.0): a Speaker card appears when this share of a label's
+# lines, and at least this many, read as one other Speaker; Merge is the
+# primary button only above MERGE_SHARE with the voice step hearing the
+# other Speaker on enough of them. A stretch is a run of moves between the
+# same two Speakers no further apart than STRETCH_GAP seconds. All set
+# by the build and read against the office's recordings by ear.
+CARD_SHARE = 0.2
+CARD_LEAST = 5
+MERGE_SHARE = 0.5
+MERGE_VOICE_SHARE = 0.3
+MERGE_VOICE_LEAST = 3
+STRETCH_GAP = 20.0
 BACKED, ASIDE = SpeakerCorrection.BACKED, SpeakerCorrection.ASIDE
 VOICE_AGREES = SpeakerCorrection.VOICE_AGREES
 VOICE_AGAINST = SpeakerCorrection.VOICE_AGAINST
@@ -322,145 +331,27 @@ def voice_of(heard: Counter, from_: str, to: str) -> tuple[str, str]:
     return "", ""
 
 
-def _second_look(
-    transcript,
-    lines: list,
-    speakers: list[str],
-    sketch: str,
-    kept: dict,
-    ground_text: str,
-    usage: dict,
-) -> dict:
-    """Every move the check proposes, read again before a person sees it.
-    Each kept move gains `second` (BACKED, ASIDE or nothing when no reading
-    could be had), `aside_why` and `voice`. Nothing is dropped: a move set
-    aside is still the person's to decide, shown apart. A reading that
-    fails leaves the moves as the check made them."""
-    summary = {
-        "rows": len(kept),
-        "backed": 0,
-        "aside": 0,
-        "short": 0,
-        "voice_against": 0,
-        "apart": 0,
-        "unread": 0,
-        "calls": 0,
-    }
+def _voice_notes(transcript, kept: dict) -> dict:
+    """What the voice step heard on each proposed line (v1.105.0), kept as
+    the one measure beside the words (v1.128.0): the blind second reading
+    is retired, since on the office's recordings it backed almost nothing
+    and overruled the voice. Nothing is dropped; every move is a person's
+    to decide, drawn as cards."""
+    summary = {"rows": len(kept), "voice_agrees": 0, "voice_against": 0, "silent": 0}
     if not kept:
         return summary
     heard = voices_heard(transcript)
-    where = {line.segment_id: index for index, line in enumerate(lines)}
-    notes: dict = {}
-    to_read = []
     for one in kept.values():
         one["second"], one["aside_why"] = "", ""
-        one["voice"], notes[one["segment_id"]] = voice_of(
+        one["voice"], _ = voice_of(
             heard.get(one["segment_id"]) or Counter(), one["from"], one["to"]
         )
-        if len(one["quote"].split()) <= SHORT_LINE_WORDS:
-            one["second"] = ASIDE
-            one["aside_why"] = "too short for the words to settle"
-            summary["short"] += 1
-        elif one["segment_id"] in where:
-            to_read.append(one)
-    system = prompts.system_message(
-        ground_text, prompts.SPEAKER_SECOND, prompts.SPEAKER_SECOND_FORMAT
-    )
-    cap = settings_store.speaker_check_answer_cap()
-    said: dict = {}
-    for start in range(0, len(to_read), SECOND_BATCH):
-        batch = to_read[start : start + SECOND_BATCH]
-        blocks = []
-        numbered = {}
-        for one in batch:
-            index = where[one["segment_id"]]
-            numbered[lines[index].number] = one
-            blocks.append(
-                {
-                    "line": lines[index],
-                    "around": lines[max(0, index - AROUND) : index + AROUND + 1],
-                    "voice": notes[one["segment_id"]],
-                }
-            )
-        user = prompts.speaker_second_input(sketch, speakers, blocks)
-        if not prompts.fits(system, user, answer_cap=cap, window=assistant.window()):
-            continue
-        for _ in range(SECOND_READINGS):
-            try:
-                answer = engine.complete(
-                    assistant._messages(system, user),
-                    max_completion_tokens=cap,
-                    thinking=assistant.thinking(),
-                    timeout=assistant.time_limit(FEATURE),
-                    schema=prompts.speaker_second_schema(speakers),
-                    # Not the check's own sampling: at zero the two readings
-                    # would be one reading asked twice.
-                    **assistant.SAMPLING,
-                )
-            except engine.Problem as problem:
-                log.warning(
-                    "speaker check for %s: a second reading could not be asked (%s)",
-                    transcript.pk,
-                    problem.reason,
-                )
-                continue
-            summary["calls"] += 1
-            usage["input_tokens"] += answer.get("input_tokens", 0) or 0
-            usage["output_tokens"] += answer.get("output_tokens", 0) or 0
-            try:
-                try:
-                    parsed = json.loads(answer["text"])
-                except ValueError:
-                    parsed = json.loads(prompts.salvage_json(answer["text"]))
-                raw = parsed.get("readings", [])
-                if not isinstance(raw, list):
-                    raise ValueError("not a list")
-            except (ValueError, AttributeError, TypeError):
-                log.warning(
-                    "speaker check for %s: a second reading was unreadable",
-                    transcript.pk,
-                )
-                continue
-            seen: set = set()
-            for item in raw:
-                if not isinstance(item, dict):
-                    continue
-                try:
-                    number = int(item.get("line"))
-                except (TypeError, ValueError):
-                    continue
-                one = numbered.get(number)
-                if one is None or number in seen:
-                    continue
-                seen.add(number)
-                said.setdefault(one["segment_id"], []).append(
-                    str(item.get("speaker", "")).strip()
-                )
-    for one in to_read:
-        readings = said.get(one["segment_id"], [])
-        if len(readings) < SECOND_READINGS:
-            summary["unread"] += 1
-            continue
-        if all(reading == one["to"] for reading in readings):
-            if one["voice"] == VOICE_AGAINST:
-                one["second"] = ASIDE
-                one["aside_why"] = "the voice step was firm on this line"
-                summary["voice_against"] += 1
-            else:
-                one["second"] = BACKED
-            continue
-        one["second"] = ASIDE
-        if len(set(readings)) > 1:
-            one["aside_why"] = "the two readings differed"
-            summary["apart"] += 1
-        elif readings[0] == one["from"]:
-            one["aside_why"] = f"the second reading kept it with {one['from']}"[:120]
-        elif readings[0] == prompts.CANNOT_TELL:
-            one["aside_why"] = "the second reading could not tell"
+        if one["voice"] == VOICE_AGREES:
+            summary["voice_agrees"] += 1
+        elif one["voice"] == VOICE_AGAINST:
+            summary["voice_against"] += 1
         else:
-            one["aside_why"] = f"the second reading gave it to {readings[0]}"[:120]
-    summary["backed"] = sum(1 for one in kept.values() if one["second"] == BACKED)
-    summary["aside"] = sum(1 for one in kept.values() if one["second"] == ASIDE)
+            summary["silent"] += 1
     return summary
 
 
@@ -575,11 +466,8 @@ def run(check_id, attempt: int = 1) -> None:
                 continue
             for one in prompts.keep_corrections(raw, window, speakers):
                 kept.setdefault(one["segment_id"], one)
-        # The second reading and the voice (v1.105.0), before a person sees
-        # any of it; it marks the moves and loses none.
-        check.second_look = _second_look(
-            transcript, lines, speakers, sketch, kept, ground.text, usage
-        )
+        # The voice step's note on each move (v1.105.0, alone since v1.128.0).
+        check.second_look = _voice_notes(transcript, kept)
         _store(transcript, kept)
         check.found = len(kept)
         check.windows = calls
@@ -603,9 +491,8 @@ def run(check_id, attempt: int = 1) -> None:
             sketch=bool(sketch),
             sketch_cut=sketch_cut,
             whole=whole,
-            backed=check.second_look.get("backed", 0),
-            set_aside=check.second_look.get("aside", 0),
-            second_calls=check.second_look.get("calls", 0),
+            voice_agrees=check.second_look.get("voice_agrees", 0),
+            voice_against=check.second_look.get("voice_against", 0),
         )
     except engine.Problem as problem:
         # What was found before the problem is kept: every one passed the checks.
@@ -667,28 +554,176 @@ def _store(transcript, kept: dict) -> None:
 
 
 def score(transcript) -> dict:
-    """The office's own measure (v1.105.0): of the corrections a person has
-    decided on this Transcript, how many were accepted and dismissed among
-    those the second reading backed, those it set aside, and those no second
-    reading saw. Counts only."""
-    out = {
-        key: {"accepted": 0, "dismissed": 0} for key in ("backed", "aside", "unread")
-    }
-    for second, state in transcript.corrections.exclude(
+    """The office's own measure: of the corrections a person has decided on
+    this Transcript, how many were accepted and how many dismissed."""
+    out = {"accepted": 0, "dismissed": 0}
+    for state in transcript.corrections.exclude(
         state=SpeakerCorrection.PENDING
-    ).values_list("second", "state"):
-        out[second or "unread"][state] = out[second or "unread"].get(state, 0) + 1
+    ).values_list("state", flat=True):
+        out[state] = out.get(state, 0) + 1
+    return out
+
+
+def live_rows(transcript) -> list:
+    """The pending corrections whose line still carries the label the check
+    saw; one moved since (by hand, a merge, a swap) is left out."""
+    return [
+        one
+        for one in transcript.corrections.filter(state=SpeakerCorrection.PENDING)
+        .select_related("segment")
+        .order_by("start")
+        if one.segment is not None and one.segment.speaker == one.speaker_from
+    ]
+
+
+def speaker_cards(transcript, rows: list) -> list[dict]:
+    """The big thing first (v1.128.0): for each label whose lines often read
+    as one other Speaker's, one card: the share, what the voice step heard,
+    three moments to hear and one of the label's own, and whether the card
+    clears the bar for Merge to be the primary button."""
+    from core import exports
+
+    lines_of = Counter(
+        transcript.segments.filter(same_as_other_side=False).values_list(
+            "speaker", flat=True
+        )
+    )
+    by_from: dict = {}
+    for one in rows:
+        by_from.setdefault(one.speaker_from, []).append(one)
+    cards = []
+    for from_, moves in by_from.items():
+        total = lines_of.get(from_, 0)
+        if not total:
+            continue
+        into = Counter(one.speaker_to for one in moves)
+        top, count = into.most_common(1)[0]
+        if count < CARD_LEAST or count < CARD_SHARE * total:
+            continue
+        tops = sorted(
+            (one for one in moves if one.speaker_to == top), key=lambda one: one.start
+        )
+        both = sum(1 for one in tops if one.voice == VOICE_AGREES)
+        against = sum(1 for one in tops if one.voice == VOICE_AGAINST)
+        voice_floor = max(MERGE_VOICE_LEAST, MERGE_VOICE_SHARE * count)
+        clears = count >= MERGE_SHARE * total and both >= voice_floor
+        # The pill carries the count, so one agreeing line is enough to say
+        # so; "against" only when the voice argued and never agreed.
+        if both:
+            voice = "agrees"
+        elif against >= voice_floor:
+            voice = "against"
+        else:
+            voice = "silent"
+        picks = [tops[i] for i in sorted({0, len(tops) // 2, len(tops) - 1})]
+        proposed = {one.segment_id for one in moves}
+        own = list(
+            transcript.segments.filter(speaker=from_, same_as_other_side=False)
+            .exclude(pk__in=proposed)
+            .order_by("start")
+            .values_list("start", flat=True)
+        )
+        own_at = own[len(own) // 2] if own else None
+        cards.append(
+            {
+                "from": from_,
+                "lines": total,
+                "to": top,
+                "count": count,
+                "share": round(count / total, 2),
+                "others": [
+                    {"to": other, "count": n}
+                    for other, n in into.most_common()
+                    if other != top
+                ],
+                "voice": voice,
+                "voice_both": both,
+                "voice_against": against,
+                "clears": clears,
+                "hear": [
+                    {"start": one.start, "clock": exports.clock(one.start)}
+                    for one in picks
+                ],
+                "own": (
+                    {"start": own_at, "clock": exports.clock(own_at)}
+                    if own_at is not None
+                    else None
+                ),
+                "ids": [str(one.pk) for one in tops],
+            }
+        )
+    cards.sort(key=lambda card: (not card["clears"], -card["count"]))
+    return cards
+
+
+def stretches(rows: list, cards: list[dict]) -> list[dict]:
+    """Then the stretches (v1.128.0): runs of moves between the same two
+    Speakers close together, one card each, the voice-backed first. A
+    stretch inside a pair a Speaker card names is marked covered, and the
+    page folds those under the cards."""
+    from core import exports
+
+    covered = {(card["from"], card["to"]) for card in cards}
+    out: list[dict] = []
+    for one in sorted(rows, key=lambda row: row.start):
+        key = (one.speaker_from, one.speaker_to)
+        last = out[-1] if out else None
+        if last and last["key"] == key and one.start - last["end"] <= STRETCH_GAP:
+            last["ids"].append(str(one.pk))
+            last["count"] += 1
+            last["end"] = one.start
+            last["voices"].append(one.voice)
+        else:
+            out.append(
+                {
+                    "key": key,
+                    "from": key[0],
+                    "to": key[1],
+                    "ids": [str(one.pk)],
+                    "count": 1,
+                    "start": one.start,
+                    "end": one.start,
+                    "reason": one.reason,
+                    "quote": one.quote,
+                    "voices": [one.voice],
+                    "covered": key in covered,
+                }
+            )
+    order = {"agrees": 0, "silent": 1, "mixed": 2, "against": 3}
+    for one in out:
+        agrees = sum(1 for voice in one["voices"] if voice == VOICE_AGREES)
+        against = sum(1 for voice in one["voices"] if voice == VOICE_AGAINST)
+        if agrees and not against:
+            one["voice"] = "agrees"
+        elif against and not agrees:
+            one["voice"] = "against"
+        elif agrees and against:
+            one["voice"] = "mixed"
+        else:
+            one["voice"] = "silent"
+        one["clock"] = exports.clock(one["start"])
+        one["clock_end"] = exports.clock(one["end"])
+        del one["key"]
+        del one["voices"]
+    out.sort(key=lambda one: (order[one["voice"]], one["start"]))
     return out
 
 
 def state_json(transcript) -> dict:
-    """The corrections pending and the last run, for the state answer."""
+    """The corrections pending, as cards, and the last run, for the state answer."""
     from core import exports
 
     if transcript is None:
-        return {"offered": False, "pending": [], "aside": [], "run": None}
+        return {
+            "offered": False,
+            "pending": [],
+            "speakers": [],
+            "stretches": [],
+            "run": None,
+        }
     last = transcript.speaker_checks.first()
-    pending = transcript.corrections.filter(state=SpeakerCorrection.PENDING)
+    rows = live_rows(transcript)
+    cards = speaker_cards(transcript, rows)
 
     def row(one) -> dict:
         return {
@@ -700,19 +735,14 @@ def state_json(transcript) -> dict:
             "from": one.speaker_from,
             "to": one.speaker_to,
             "reason": one.reason,
-            "second": one.second,
-            "why": one.aside_why,
             "voice": one.voice,
         }
 
-    rows = list(pending.order_by("start"))
     return {
         "offered": offered(transcript),
-        # In front of the person: what the second reading backed, and what
-        # no second reading saw. Set aside (v1.105.0): still theirs to
-        # decide, shown apart, left by Accept all.
-        "pending": [row(one) for one in rows if one.second != ASIDE],
-        "aside": [row(one) for one in rows if one.second == ASIDE],
+        "pending": [row(one) for one in rows],
+        "speakers": cards,
+        "stretches": stretches(rows, cards),
         "score": score(transcript),
         "run": (
             {
@@ -724,8 +754,8 @@ def state_json(transcript) -> dict:
                 # read whole (v1.100.0).
                 "sketch": last.sketch,
                 "whole": last.whole,
-                # What the second reading did with the proposals (v1.105.0).
-                "second_look": last.second_look or {},
+                # What the voice step heard of the proposals (v1.128.0).
+                "voice_notes": last.second_look or {},
                 "said": assistant.what_to_say(last.reason_class)
                 if last.reason_class
                 else "",
@@ -742,12 +772,7 @@ def state_json(transcript) -> dict:
 def pending_count(transcript) -> int:
     if transcript is None:
         return 0
-    # What asks for a person's attention: not the ones set aside (v1.105.0).
-    return (
-        transcript.corrections.filter(state=SpeakerCorrection.PENDING)
-        .exclude(second=ASIDE)
-        .count()
-    )
+    return transcript.corrections.filter(state=SpeakerCorrection.PENDING).count()
 
 
 # Deciding ---------------------------------------------------------------------------

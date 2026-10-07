@@ -788,17 +788,53 @@
     return !!busy;
   }
 
-  // The Speaker check (Phase 5 chapter 3): the button, its state line, and
-  // the Suggested corrections under the cards, each row a line the check
-  // says belongs to another speaker.
+  // What the check found (v1.128.0): the state line, one card per label
+  // whose lines often read as another Speaker's, then the stretches; the
+  // speaker cards above gain a small pill naming the finding.
+  function voicePill(voice, count) {
+    if (voice === "agrees") { return "<span class='pill small ok' title='Word by word, the voice step heard the other speaker inside " + (count ? "these lines" : "this line") + ".'>two voices heard" + (count ? " on " + count + " line" + (count === 1 ? "" : "s") : "") + "</span>"; }
+    if (voice === "against") { return "<span class='pill small warn' title='The voice step gave every word of " + (count ? "these long lines" : "this long line") + " to the speaker " + (count ? "they are" : "it is") + " labelled with.'>one voice heard, the labelled one" + (count ? ", on " + count + " line" + (count === 1 ? "" : "s") : "") + "</span>"; }
+    if (voice === "mixed") { return "<span class='pill small' title='The voice step heard two voices on some of these lines and one on others.'>the voice is split</span>"; }
+    return "<span class='pill small' title='" + (count ? "These lines are" : "This line is") + " short, or the words were not timed, so the voice step has nothing to add; the words alone decide.'>the voice is silent</span>";
+  }
+
+  function speakerCard(card) {
+    var verb = card.clears ? "is" : (card.share >= 0.4 ? "often reads as" : "sometimes reads as");
+    var others = card.others.map(function (one) { return ", and " + one.count + " as " + escape(one.to) + "'s"; }).join("");
+    var own = card.lines - card.count - card.others.reduce(function (sum, one) { return sum + one.count; }, 0);
+    var why = card.clears
+      ? "One voice under two labels."
+      : "Either the engine split one voice into two labels, or " + escape(card.from) + " is another person whose lines the words confuse. Your ear decides: if the three below sound like " + escape(card.to) + ", merge; if not, the stretches below move the lines one run at a time.";
+    var hear = card.hear.map(function (one) { return "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>"; }).join(" ");
+    var ownHear = card.own ? " <span class='muted'>&middot; and one of its own:</span> <a href='#' class='cite mono' data-seconds='" + card.own.start + "'>" + escape(card.own.clock) + "</a>" : "";
+    var mergeButton = card.voice === "against" ? ""
+      : "<button type='button' class='tiny merge-card" + (card.clears ? " primary" : " ghost") + "' data-from='" + escape(card.from) + "' data-to='" + escape(card.to) + "'>Merge " + escape(card.from) + " into " + escape(card.to) + (card.clears ? "" : " after listening") + "</button> ";
+    return "<div class='found-card speaker" + (card.clears ? " clears" : "") + "' data-ids='" + card.ids.join(",") + "'>" +
+      "<div class='title'><b>" + escape(card.from) + " " + verb + " " + escape(card.to) + "</b> " + voicePill(card.voice, card.voice === "agrees" ? card.voice_both : (card.voice === "against" ? card.voice_against : 0)) + "</div>" +
+      "<div class='bar'><i style='width: " + Math.round(card.share * 100) + "%'></i></div>" +
+      "<p class='why small muted'>" + card.count + " of its " + card.lines + " line" + (card.lines === 1 ? "" : "s") + " read as " + escape(card.to) + "'s" + others + (own > 0 ? "; " + own + " read as its own" : "") + ". " + why + "</p>" +
+      "<div class='hear small muted'>Hear three of the " + card.count + ": " + hear + ownHear + "</div>" +
+      "<div class='row acts'>" + mergeButton + "<button type='button' class='ghost tiny not-same'>Not the same</button></div></div>";
+  }
+
+  function stretchCard(one) {
+    var span = one.count > 1 ? escape(one.clock) + " to " + escape(one.clock_end) : escape(one.clock);
+    return "<div class='found-card stretch " + one.voice + "' data-ids='" + one.ids.join(",") + "'>" +
+      "<div class='title'><b>" + span + "</b> <span class='muted'>" + one.count + " line" + (one.count === 1 ? "" : "s") + " of " + escape(one.from) + " that read" + (one.count === 1 ? "s" : "") + " as " + escape(one.to) + "'s</span> " + voicePill(one.voice, 0) + "</div>" +
+      (one.reason || one.quote ? "<p class='why small muted'>" + (one.reason ? escape(one.reason) + ": " : "") + (one.quote ? "&ldquo;" + escape(one.quote) + "&rdquo;" : "") + "</p>" : "") +
+      "<div class='hear small muted'>Hear it: <a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a></div>" +
+      "<div class='row acts'><button type='button' class='tiny accept-stretch" + (one.voice === "agrees" ? " primary" : "") + "'>Accept" + (one.count > 1 ? " the stretch" : "") + "</button> " +
+      "<button type='button' class='ghost tiny dismiss-stretch'>Dismiss</button></div></div>";
+  }
+
   function drawCorrections(body) {
     if (!checkLine || !correctionsBox || !V.assistant.speakerCheck) { return false; }
     var check = body.speaker_check || {};
     var run = check.run;
-    var pending = check.pending || [];
-    // Set aside by the second reading (v1.105.0): still the person's to
-    // decide, shown apart under a fold, and left by Accept all.
-    var aside = check.aside || [];
+    var cards = check.speakers || [];
+    var all = check.stretches || [];
+    var open = all.filter(function (one) { return !one.covered; });
+    var covered = all.filter(function (one) { return one.covered; });
     var busy = run && (run.state === "queued" || run.state === "running");
     checkLine.hidden = !check.offered;
     var button = document.getElementById("check-speakers");
@@ -809,8 +845,8 @@
     var how = run && run.state === "done" ? (run.whole ? ", read whole" : (run.windows ? ", read in " + run.windows + " window" + (run.windows === 1 ? "" : "s") : "")) : "";
     if (busy) { said.textContent = run.sketch ? "Reading the transcript, " + (run.windows ? run.windows + " windows so far..." : "window by window...") : "Reading the whole transcript for who is who..."; }
     else if (run && run.state === "failed") { said.textContent = run.said || ""; }
-    else if (run && run.state === "done" && !pending.length && !aside.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
-    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + secondWords(run.second_look) + "."; }
+    else if (run && run.state === "done" && !cards.length && !all.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
+    else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + "."; }
     else { said.textContent = ""; }
     var sketchBox = document.getElementById("check-sketch");
     if (sketchBox) {
@@ -827,91 +863,47 @@
           ? " cut short at the answer cap; raise the cap on the Panel's Speakers page or shorten the window, then check again."
           : " cut short at the answer cap; ask your Admin to raise it, then check again.");
     }
-    correctionsBox.hidden = !pending.length && !aside.length;
-    document.getElementById("corrections-title").textContent =
-      "Suggested corrections (" + pending.length + ")";
-    document.getElementById("accept-corrections").hidden = pending.length < 2;
-    drawSwapOffer(pending);
-    document.getElementById("corrections-list").innerHTML = pending.map(correctionRow).join("");
-    var asideBox = document.getElementById("corrections-aside");
-    if (asideBox) {
-      asideBox.hidden = !aside.length;
-      document.getElementById("corrections-aside-title").textContent =
-        aside.length + " more the second reading did not back";
-      document.getElementById("corrections-aside-list").innerHTML = aside.map(correctionRow).join("");
+    correctionsBox.hidden = !cards.length && !all.length;
+    var state = document.getElementById("corrections-state");
+    var parts = [];
+    if (cards.length) {
+      var clear = cards.filter(function (one) { return one.clears; }).length;
+      parts.push(cards.length + " label" + (cards.length === 1 ? "" : "s") + " often read" + (cards.length === 1 ? "s" : "") + " as " + (cards.length === 1 ? "another speaker" : "other speakers") +
+        (clear ? "" : ", none clearly enough to merge on the check's word alone: hear them"));
     }
+    if (open.length) { parts.push(open.length + " stretch" + (open.length === 1 ? "" : "es") + " to move" + (cards.length ? " besides" : "")); }
+    state.textContent = parts.length ? parts.join("; ") + ". Nothing moves until you say so." : "";
+    document.getElementById("speaker-cards").innerHTML = cards.map(speakerCard).join("");
+    document.getElementById("stretches").innerHTML = open.map(stretchCard).join("");
+    var fold = document.getElementById("stretches-covered");
+    fold.hidden = !covered.length;
+    document.getElementById("stretches-covered-title").textContent =
+      covered.length + " stretch" + (covered.length === 1 ? "" : "es") + " within the speakers above; merge, or move them one run at a time after listening";
+    document.getElementById("stretches-covered-list").innerHTML = covered.map(stretchCard).join("");
+    var backed = all.filter(function (one) { return one.voice === "agrees"; }).length;
+    document.getElementById("corrections-actions").hidden = !cards.length && !all.length;
+    var acceptBacked = document.getElementById("accept-corrections");
+    acceptBacked.hidden = backed < 2;
+    acceptBacked.textContent = "Accept every voice-backed stretch (" + backed + ")";
+    // The finding on the speaker's own card, where the person already looks.
+    Array.prototype.forEach.call(document.querySelectorAll(".sp-card .check-hint"), function (pill) { pill.remove(); });
+    cards.forEach(function (card) {
+      var owner = cardOf(card.from);
+      var head = owner && owner.querySelector(".h");
+      if (!head) { return; }
+      var pill = document.createElement("span");
+      pill.className = "pill small warn check-hint";
+      pill.textContent = (card.clears ? "is " : (card.share >= 0.4 ? "often reads as " : "sometimes reads as ")) + card.to;
+      head.appendChild(pill);
+    });
     var scoreLine = document.getElementById("corrections-score");
     if (scoreLine) {
-      var decided = scoreWords(check.score);
+      var score = check.score || {};
+      var decided = (score.accepted || 0) + (score.dismissed || 0);
       scoreLine.hidden = !decided;
-      scoreLine.textContent = decided;
+      scoreLine.textContent = decided ? "Decided so far: " + (score.accepted || 0) + " accepted, " + (score.dismissed || 0) + " dismissed." : "";
     }
     return !!busy;
-  }
-
-  // One suggested correction: the time that plays it, the move, the words,
-  // the check's reason, what the voice step heard (v1.105.0), and, for one
-  // set aside, why the second reading did not back it.
-  function correctionRow(one) {
-    var voice = one.voice === "agrees" ? "<span class='pill small ok' title='Word by word, the voice step heard this other speaker within the line.'>the voice heard both</span> "
-      : (one.voice === "against" ? "<span class='pill small warn' title='The voice step gave every word of this long line to the speaker it is labelled with.'>the voice was firm</span> " : "");
-    return "<li class='correction' data-correction='" + one.id + "' data-segment='" + one.segment + "' data-to='" + escape(one.to) + "'>" +
-      "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a> " +
-      "<span class='move'><b>" + escape(one.to) + "</b>, not " + escape(one.from) + "</span> " + voice +
-      "<p class='q'>“" + escape(one.quote) + "”</p>" +
-      (one.reason ? "<p class='why small muted'>" + escape(one.reason) + "</p>" : "") +
-      (one.second === "aside" && one.why ? "<p class='why small muted'>Set aside: " + escape(one.why) + ".</p>" : "") +
-      "<span class='row acts'><button type='button' class='tiny accept-correction'>Accept</button> " +
-      "<button type='button' class='ghost tiny dismiss-correction'>Dismiss</button></span></li>";
-  }
-
-  // "; 61 proposed, 38 backed by a second reading, 23 set aside" (v1.105.0),
-  // or nothing for a run before the second reading or one it could not make.
-  function secondWords(look) {
-    if (!look || !look.rows) { return ""; }
-    if (!look.backed && !look.aside) { return "; " + look.rows + " proposed, and the second reading could not be made"; }
-    return "; " + look.rows + " proposed, " + look.backed + " backed by a second reading, " + look.aside + " set aside" +
-      (look.unread ? ", " + look.unread + " not read twice" : "");
-  }
-
-  // The office's own measure (v1.105.0): what a person has decided so far,
-  // among the backed and among the set aside.
-  function scoreWords(score) {
-    if (!score) { return ""; }
-    function part(counts, label) {
-      var decided = (counts.accepted || 0) + (counts.dismissed || 0);
-      return decided ? (counts.accepted || 0) + " of " + decided + " " + label + " accepted" : "";
-    }
-    var parts = [part(score.backed || {}, "backed"), part(score.aside || {}, "set aside"), part(score.unread || {}, "not read twice")].filter(Boolean);
-    return parts.length ? "Decided so far: " + parts.join("; ") + "." : "";
-  }
-
-  // A run of corrections between the same two speakers is a swapped
-  // stretch (v1.56.0): the diarizer confused two voices for a passage. The
-  // section offers the one press that fixes it instead of many accepts.
-  function drawSwapOffer(pending) {
-    var line = document.getElementById("corrections-said");
-    if (!line) { return; }
-    line.hidden = true;
-    line.innerHTML = "";
-    if (pending.length < 8) { return; }
-    var pair = null;
-    var same = pending.every(function (one) {
-      var key = [one.from, one.to].sort().join("\u0000");
-      if (pair === null) { pair = key; }
-      return key === pair;
-    });
-    if (!same) { return; }
-    var two = pair.split("\u0000");
-    var first = pending[0].start;
-    var lastOne = pending[pending.length - 1];
-    var lastSegment = segments.filter(function (one) { return String(one.id) === String(lastOne.segment); })[0];
-    var end = lastSegment ? lastSegment.end : lastOne.start + 5;
-    line.hidden = false;
-    line.className = "small swap-offer";
-    line.innerHTML = "These look like a swapped stretch: every move is between the same two speakers. " +
-      "<button type='button' class='tiny swap-stretch' data-a='" + escape(two[0]) + "' data-b='" + escape(two[1]) + "' data-start='" + first + "' data-end='" + end + "'>" +
-      "Swap " + escape(two[0]) + " and " + escape(two[1]) + " between " + clock(first) + " and " + clock(end) + "</button>";
   }
 
   function swap(a, b, start, end) {
@@ -1000,12 +992,7 @@
     correctionsBox.addEventListener("click", function (event) {
       var cite = event.target.closest(".cite");
       if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.seconds)); play(); return; }
-      var stretch = event.target.closest(".swap-stretch");
-      if (stretch) {
-        swap(stretch.dataset.a, stretch.dataset.b, parseFloat(stretch.dataset.start), parseFloat(stretch.dataset.end));
-        return;
-      }
-      var row = event.target.closest(".correction");
+      if (event.target.closest("#check-again")) { document.getElementById("check-speakers").click(); return; }
       if (event.target.closest("#accept-corrections")) {
         send("/recording/" + V.recording + "/corrections/accept-all").then(function (answer) {
           if (!answer.ok) { UI.toast(answer.said.error || "Nothing was moved.", { problem: true, icon: "warning" }); return; }
@@ -1014,14 +1001,22 @@
         });
         return;
       }
-      if (!row) { return; }
-      var accept = event.target.closest(".accept-correction");
-      var dismiss = event.target.closest(".dismiss-correction");
+      var mergeCard = event.target.closest(".merge-card");
+      if (mergeCard) { merge(mergeCard.dataset.from, mergeCard.dataset.to); return; }
+      var card = event.target.closest(".found-card");
+      if (!card) { return; }
+      var ids = (card.dataset.ids || "").split(",").filter(Boolean);
+      var accept = event.target.closest(".accept-stretch");
+      var dismiss = event.target.closest(".dismiss-stretch, .not-same");
       if (!accept && !dismiss) { return; }
-      send("/correction/" + row.dataset.correction + "/" + (accept ? "accept" : "dismiss")).then(function (answer) {
+      send("/recording/" + V.recording + "/corrections/" + (accept ? "accept" : "dismiss") + "-many", { ids: ids.join(",") }).then(function (answer) {
         if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
-        if (accept && answer.said.stale) { UI.toast("That line changed since the check, so it was left as it is.", { icon: "info" }); }
-        else if (accept) { moved(row.dataset.segment, row.dataset.to); sayUndo(answer.said.undo); }
+        if (accept) {
+          if (!answer.said.changed) { UI.toast("Those lines changed since the check, so they were left as they are.", { icon: "info" }); }
+          else { sayUndo(answer.said.undo); }
+          load().then(refreshSuggestions);
+          return;
+        }
         refreshSuggestions();
       });
     });

@@ -684,9 +684,9 @@ def decide_correction(
 @login_required
 @require_POST
 def accept_corrections(request: HttpRequest, recording_id) -> JsonResponse:
-    """Accept all: every pending correction in front of the person, each
-    through the same move. The ones the second reading set aside are left
-    (v1.105.0): each of those is decided on its own."""
+    """Accept every voice-backed stretch (v1.128.0): the pending corrections
+    the voice step itself heard the other Speaker on, each through the same
+    move; the rest are decided card by card."""
     from core.assistant import SpeakerCorrection
     from core.viewer import being_replaced, last_change_line
 
@@ -701,13 +701,66 @@ def accept_corrections(request: HttpRequest, recording_id) -> JsonResponse:
     cases.used(recording, by=request.user)
     changed = 0
     for one in list(
-        transcript.corrections.filter(state=SpeakerCorrection.PENDING)
-        .exclude(second=SpeakerCorrection.ASIDE)
-        .select_related("segment")
+        transcript.corrections.filter(
+            state=SpeakerCorrection.PENDING, voice=SpeakerCorrection.VOICE_AGREES
+        ).select_related("segment")
     ):
         changed += speaker_check.accept(one, by=request.user, request=request)
     return JsonResponse(
         {"ok": True, "changed": changed, "undo": last_change_line(transcript)}
+    )
+
+
+@login_required
+@require_POST
+def decide_corrections(
+    request: HttpRequest, recording_id, verdict: str
+) -> JsonResponse:
+    """A card's worth at once (v1.128.0): Accept the stretch, or Not the
+    same and Dismiss, over the corrections the card names, each through
+    the same move or the same dismissal."""
+    from core.assistant import SpeakerCorrection
+    from core.viewer import being_replaced, last_change_line
+
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "there is no transcript yet"}, status=409)
+    if verdict not in ("accept", "dismiss"):
+        return JsonResponse({"error": "accept or dismiss"}, status=400)
+    if being_replaced(recording):
+        return JsonResponse({"error": "This transcript is being replaced."}, status=409)
+    import uuid
+
+    ids = []
+    for one in request.POST.get("ids", "").split(","):
+        try:
+            ids.append(uuid.UUID(one.strip()))
+        except ValueError:
+            continue
+    rows = list(
+        transcript.corrections.filter(
+            state=SpeakerCorrection.PENDING, pk__in=ids[:500]
+        ).select_related("segment")
+    )
+    if not rows:
+        return JsonResponse({"error": "nothing left to decide"}, status=409)
+    cases.used(recording, by=request.user)
+    changed = 0
+    for one in rows:
+        if verdict == "accept":
+            changed += speaker_check.accept(one, by=request.user, request=request)
+        else:
+            speaker_check.dismiss(one, by=request.user, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "changed": changed,
+            "decided": len(rows),
+            "undo": last_change_line(transcript),
+        }
     )
 
 

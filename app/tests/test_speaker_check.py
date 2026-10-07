@@ -191,12 +191,9 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     assert check.state == assistant.DONE and check.found == 1 and check.windows == 1
     # The sketch first (v1.100.0): the whole transcript, plain text, kept on
     # the run; then the check, given the sketch above its lines, whole in
-    # one window since it fits; then the second reading, twice (v1.105.0),
-    # which this engine does not answer: the move stands, marked as not read
-    # twice, and nothing is lost.
-    assert len(asked) == 4
-    assert check.second_look["rows"] == 1 and check.second_look["unread"] == 1
-    assert check.second_look["backed"] == 0 and check.second_look["aside"] == 0
+    # one window since it fits; and no reading after them (v1.128.0).
+    assert len(asked) == 2
+    assert check.second_look["rows"] == 1
     sketching = asked[0]
     assert "Read the whole transcript" in sketching["messages"][0]["content"]
     assert "Speakers: Speaker 1, Speaker 2" in sketching["messages"][-1]["content"]
@@ -315,13 +312,17 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
 
 
 @pytest.mark.django_db
-def test_accept_all_moves_every_pending_line(admin, tmp_path, settings, client):
+def test_accept_every_voice_backed_stretch_moves_those_lines_and_leaves_the_rest(
+    admin, tmp_path, settings, client
+):
+    """v1.128.0: the one-press path takes the corrections the voice step
+    itself heard the other speaker on, and leaves the rest to their cards."""
     switched_on()
     recording = a_recording(admin, tmp_path, settings)
     transcript = recording.transcript
-    for start, from_, to in (
-        (12.4, "Speaker 2", "Speaker 1"),
-        (724.0, "Speaker 1", "Speaker 2"),
+    for start, from_, to, voice in (
+        (12.4, "Speaker 2", "Speaker 1", SpeakerCorrection.VOICE_AGREES),
+        (724.0, "Speaker 1", "Speaker 2", ""),
     ):
         SpeakerCorrection.objects.create(
             transcript=transcript,
@@ -329,14 +330,15 @@ def test_accept_all_moves_every_pending_line(admin, tmp_path, settings, client):
             start=start,
             speaker_from=from_,
             speaker_to=to,
+            voice=voice,
         )
     signed_in(client, admin)
     answer = client.post(f"/recording/{recording.pk}/corrections/accept-all").json()
-    assert answer["changed"] == 2 and answer["undo"]
+    assert answer["changed"] == 1 and answer["undo"]
     assert Segment.objects.get(start=12.4).speaker == "Speaker 1"
-    assert Segment.objects.get(start=724.0).speaker == "Speaker 2"
-    assert not transcript.corrections.filter(state=SpeakerCorrection.PENDING).exists()
-    assert Row.objects.filter(event="Speaker correction accepted").count() == 2
+    assert Segment.objects.get(start=724.0).speaker == "Speaker 1"
+    assert transcript.corrections.filter(state=SpeakerCorrection.PENDING).count() == 1
+    assert Row.objects.filter(event="Speaker correction accepted").count() == 1
 
 
 def spoken(text, label, other="", others=0):
@@ -353,26 +355,17 @@ def spoken(text, label, other="", others=0):
     ]
 
 
-def readings(*items):
-    return json.dumps(
-        {"readings": [{"line": line, "speaker": who} for line, who in items]}
-    )
-
-
 @pytest.mark.django_db
-def test_the_second_reading_backs_or_sets_aside_and_the_voice_has_a_say(
+def test_the_check_says_the_big_thing_first_and_the_voice_is_the_one_measure(
     admin, tmp_path, settings, client, monkeypatch
 ):
-    """v1.105.0: the check's writer does not police its own moves. Each move
-    is read again, twice, blind: the marked line's label left out, the first
-    reading's answer not given. A move both readings give to the same
-    speaker is backed; the rest are set aside with the reason, still the
-    person's to decide, left by Accept all. A line of three words is never
-    for the words to settle. The voice step's word-by-word labels have a
-    say: a long line it was firm on is set aside though the readings agree,
-    and a line it heard both speakers in says so. The person's decisions are
-    the measure."""
+    """v1.128.0: no second reading. Each move keeps the voice step's note;
+    the state draws one card per label whose lines often read as another
+    speaker's (Merge primary only when the share and the voice agree) and
+    one card per stretch of moves between the same two speakers; a card's
+    worth is accepted or dismissed at once; nothing is dropped."""
     switched_on()
+    monkeypatch.setattr(speaker_check, "CARD_LEAST", 2)
     recording = a_recording(admin, tmp_path, settings)
     transcript = recording.transcript
     transcript.segments.all().delete()
@@ -403,7 +396,6 @@ def test_the_second_reading_backs_or_sets_aside_and_the_voice_has_a_say(
             words=words if words is not None else spoken(text, label),
         )
     check = SpeakerCheck.objects.create(transcript=transcript, asked_by=admin)
-    first = [(3, "Speaker 1"), (4, "Speaker 2"), (6, "Speaker 2"), (7, "Speaker 2")]
     asked = engine_answering(
         monkeypatch,
         [
@@ -416,97 +408,101 @@ def test_the_second_reading_backs_or_sets_aside_and_the_voice_has_a_say(
                 (7, "Speaker 1", "Speaker 2", "denies the bag"),
                 (8, "Speaker 2", "Speaker 1", "speaks of the car"),
             ),
-            readings(*first, (8, "Speaker 2")),
-            readings(
-                (3, "Speaker 1"),
-                (4, prompts.CANNOT_TELL),
-                (6, "Speaker 2"),
-                (7, "Speaker 2"),
-                (8, "Speaker 2"),
-            ),
         ],
     )
     speaker_check.run(check.pk)
     check.refresh_from_db()
     assert check.state == assistant.DONE and check.found == 6
+    # The sketch and the one window: no reading after them.
+    assert len(asked) == 2
     assert check.second_look == {
         "rows": 6,
-        "backed": 2,
-        "aside": 4,
-        "short": 1,
+        "voice_agrees": 1,
         "voice_against": 1,
-        "apart": 1,
-        "unread": 0,
-        "calls": 2,
+        "silent": 4,
     }
     by_start = {one.start: one for one in SpeakerCorrection.objects.all()}
-    assert (by_start[10.0].second, by_start[10.0].voice) == ("backed", "")
-    assert (by_start[30.0].second, by_start[30.0].voice) == ("backed", "agrees")
-    assert by_start[15.0].second == "aside"
-    assert by_start[15.0].aside_why == "the two readings differed"
-    assert by_start[20.0].aside_why == "too short for the words to settle"
-    assert (by_start[25.0].second, by_start[25.0].voice) == ("aside", "against")
-    assert by_start[25.0].aside_why == "the voice step was firm on this line"
-    assert by_start[35.0].aside_why == "the second reading kept it with Speaker 2"
-    # Nothing is lost: all six are still pending.
+    assert by_start[30.0].voice == "agrees" and by_start[25.0].voice == "against"
+    assert all(one.second == "" for one in by_start.values())
     assert {one.state for one in by_start.values()} == {SpeakerCorrection.PENDING}
-
-    # The second reading is blind: the marked line without its label, the
-    # lines around it as the voices gave them, the sketch above, the voice
-    # step's note where it has one, and never what the first reading said.
-    assert len(asked) == 4
-    second = asked[2]
-    system, user = (str(m["content"]) for m in second["messages"][:2])
-    assert prompts.SPEAKER_SECOND in system and prompts.SPEAKER_SECOND_FORMAT in system
-    assert SKETCH in user and "Speakers: Speaker 1, Speaker 2" in user
-    assert ">>> [3] [00:00:10] Licence and registration, right now please." in user
-    assert "[2] [00:00:05] Speaker 2: Why, what did I do, officer?" in user
-    assert "Voice: the voice step gave all 14 words of this line to Speaker 1." in user
-    assert "Voice: the voice step heard Speaker 1 and Speaker 2 on this line." in user
-    assert ">>> [5]" not in user  # too short to be worth a reading
-    assert "a command" not in user and "denies the bag" not in user
-    assert asked[3]["messages"] == second["messages"]
-    # Two readings, not one asked twice: not the check's own zero sampling.
-    assert second["temperature"] == assistant.SAMPLING["temperature"] != 0.0
-    answers = second["schema"]["properties"]["readings"]["items"]["properties"]
-    assert answers["speaker"]["enum"] == ["Speaker 1", "Speaker 2", "cannot tell"]
     row = Row.objects.get(event="AI assistant call")
-    assert row.details["backed"] == 2 and row.details["set_aside"] == 4
-    assert row.details["second_calls"] == 2
-    assert "Licence" not in json.dumps(row.details)
+    assert row.details["voice_agrees"] == 1 and row.details["voice_against"] == 1
+    assert "backed" not in row.details and "Licence" not in json.dumps(row.details)
 
-    # The page: the backed in front, the set aside under a fold with why.
+    # The state: six pending, two speaker cards, five stretches, all within
+    # the cards' pairs.
     signed_in(client, admin)
     state = client.get(f"/recording/{recording.pk}/assistant").json()["speaker_check"]
-    assert [one["start"] for one in state["pending"]] == [10.0, 30.0]
-    assert state["pending"][1]["voice"] == "agrees"
-    assert [one["start"] for one in state["aside"]] == [15.0, 20.0, 25.0, 35.0]
-    assert state["aside"][2]["why"] == "the voice step was firm on this line"
-    assert state["run"]["second_look"]["backed"] == 2
-    assert speaker_check.pending_count(transcript) == 2
+    assert len(state["pending"]) == 6 and "aside" not in state
+    cards = {one["from"]: one for one in state["speakers"]}
+    assert set(cards) == {"Speaker 1", "Speaker 2"}
+    one = cards["Speaker 1"]
+    assert (one["to"], one["count"], one["lines"], one["share"]) == (
+        "Speaker 2",
+        3,
+        4,
+        0.75,
+    )
+    # Three of four lines read as the other speaker, but the voice backs only
+    # one of them, so the bar is not cleared: the card describes.
+    assert one["clears"] is False and one["voice"] == "agrees"
+    assert one["voice_both"] == 1 and one["voice_against"] == 1
+    assert [hear["start"] for hear in one["hear"]] == [15.0, 25.0, 30.0]
+    assert one["own"]["start"] == 0.0 and len(one["ids"]) == 3
+    runs = state["stretches"]
+    assert len(runs) == 5 and all(run["covered"] for run in runs)
+    pair = [run for run in runs if run["count"] == 2][0]
+    assert (pair["from"], pair["to"], pair["start"], pair["end"]) == (
+        "Speaker 1",
+        "Speaker 2",
+        25.0,
+        30.0,
+    )
+    assert pair["voice"] == "mixed" and pair["reason"] == "pleads"
+    assert runs[0]["voice"] == "agrees" or runs[0]["voice"] == "silent"
+    assert state["run"]["voice_notes"]["rows"] == 6
+    assert speaker_check.pending_count(transcript) == 6
     page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
-    assert 'id="corrections-aside"' in page and 'id="corrections-score"' in page
+    assert 'id="speaker-cards"' in page and 'id="stretches"' in page
+    assert (
+        "Accept every voice-backed stretch" in page
+        and 'id="corrections-aside"' not in page
+    )
     script = (
         Path(__file__).resolve().parents[1] / "static" / "speakers-page.js"
     ).read_text(encoding="utf-8")
-    assert "secondWords" in script and "scoreWords" in script
-    assert "the voice was firm" in script and "the voice heard both" in script
+    assert "two voices heard" in script and "the voice is silent" in script
+    assert "after listening" in script and "secondWords" not in script
 
-    # Accept all takes what is in front of the person and leaves the rest.
-    answer = client.post(f"/recording/{recording.pk}/corrections/accept-all").json()
-    assert answer["changed"] == 2
-    assert Segment.objects.get(start=10.0).speaker == "Speaker 1"
-    assert Segment.objects.get(start=25.0).speaker == "Speaker 1"
-    assert transcript.corrections.filter(state=SpeakerCorrection.PENDING).count() == 4
-    # One set aside is still decided on its own, and the decisions are the
-    # office's measure: counts, among the backed and among the set aside.
-    assert client.post(f"/correction/{by_start[35.0].pk}/accept").json()["ok"] is True
-    assert client.post(f"/correction/{by_start[15.0].pk}/dismiss").json()["ok"] is True
-    assert speaker_check.score(transcript) == {
-        "backed": {"accepted": 2, "dismissed": 0},
-        "aside": {"accepted": 1, "dismissed": 1},
-        "unread": {"accepted": 0, "dismissed": 0},
-    }
+    # A stretch accepted at once moves its lines; a card dismissed at once
+    # puts its corrections away; the decisions are counted.
+    answer = client.post(
+        f"/recording/{recording.pk}/corrections/accept-many",
+        {"ids": ",".join(pair["ids"])},
+    ).json()
+    assert answer["ok"] is True and answer["changed"] == 2 and answer["decided"] == 2
+    assert Segment.objects.get(start=25.0).speaker == "Speaker 2"
+    assert Segment.objects.get(start=30.0).speaker == "Speaker 2"
+    answer = client.post(
+        f"/recording/{recording.pk}/corrections/dismiss-many",
+        {"ids": ",".join(cards["Speaker 2"]["ids"])},
+    ).json()
+    assert answer["ok"] is True and answer["decided"] == 3
+    assert transcript.corrections.filter(state=SpeakerCorrection.PENDING).count() == 1
+    assert speaker_check.score(transcript) == {"accepted": 2, "dismissed": 3}
+    # Nothing left for the one-press path: the voice-backed line is already moved.
+    assert (
+        client.post(f"/recording/{recording.pk}/corrections/accept-all").json()[
+            "changed"
+        ]
+        == 0
+    )
+    assert (
+        client.post(
+            f"/recording/{recording.pk}/corrections/accept-many", {"ids": "nothing"}
+        ).status_code
+        == 409
+    )
 
 
 def test_the_voice_says_nothing_of_a_short_line_or_a_label_spread_over_names(db):
