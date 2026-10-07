@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.125.1, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Two things the maintainer met on the case page.**
+
+- **Add people did nothing.** The Team block's button and the Share button
+  shared one id, and the browser gave the click to the first. The Team
+  block's button is gone: Share is the one way to add people to a case,
+  and the block's empty line says so.
+- **The tabs ran under About this case.** The seven tabs never wrapped or
+  shrank, so on a 1366-wide laptop, or a wider screen zoomed past 100%,
+  the row ran under the right pane. The row folds onto a second line when
+  it must, and when the page's main is narrower than a wide desktop the
+  tabs' icons go so the words fit on one line longer.
+
 ## v1.125.0, 2026-10-06
 
 ```

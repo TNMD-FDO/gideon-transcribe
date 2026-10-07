@@ -809,7 +809,6 @@
                data-transfer-words="{{ transfer_words|join:' ' }}">
             <div class="row" style="align-items: baseline">
               <h3 class="grow">Team <span class="muted small">{{ team|length }} {{ team|length|pluralize:"person,people" }}</span></h3>
-              {% if may_share %}<button type="button" class="btn small" id="share">Add people</button>{% endif %}
             </div>
             <ul class="plain team-list" id="team">
               {% for row in team %}
@@ -837,7 +836,7 @@
               {% endfor %}
             </ul>
             {% if may_share and team|length == 1 %}
-              <p class="muted small" id="nobody-yet">Nobody else yet. Whoever you add can work in this case as you do; Add people is above.</p>
+              <p class="muted small" id="nobody-yet">Nobody else yet. Whoever you add with Share can work in this case as you do.</p>
             {% endif %}
             {% if may_transfer %}
               <div class="row actions" style="margin-top: 8px">

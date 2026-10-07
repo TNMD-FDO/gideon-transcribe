@@ -357,3 +357,14 @@ def test_the_case_page_fits_the_room_main_has_and_the_button_covers_no_row():
     assert "Back to the case" in (APP / "templates" / "incident.html").read_text(
         encoding="utf-8"
     )
+
+
+def test_share_is_the_one_button_and_the_case_tabs_fold():
+    """v1.125.1: the Team block's Add people button shared the Share button's
+    id and never got the click; the tabs ran under About this case at 1366."""
+    page = (APP / "templates" / "case.html").read_text(encoding="utf-8")
+    assert page.count('id="share"') == 1
+    assert "Add people is above" not in page
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".case-page .tabs { flex-wrap: wrap; }" in css
+    assert ".case-page .tabs .tab .i { display: none; }" in css

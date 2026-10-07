@@ -152,7 +152,7 @@ Written 2026-10-04 from the maintainer's words over two days. First: "I don't wa
 
 ### The Team
 
-- **Where.** The owner's "Shared with" panel becomes the **Team** block in the case page's right pane, seen by every member, with **Add people** beside the heading for those who may. The Team block is the first in the pane after the case's own facts; the Case vocabulary (chapter 2) follows it.
+- **Where.** The owner's "Shared with" panel becomes the **Team** block in the case page's right pane, seen by every member. Adding people stays the Share action among the case's actions (v1.125.1: a second button on the block beside Share was one way too many, and it had taken the same id). The Team block is the first in the pane after the case's own facts; the Case vocabulary (chapter 2) follows it.
 - **The rows.** The Owner first with an **Owner** pill; then each Collaborator by name, an **Also an owner** pill when marked, and a muted line: when they last opened the case, "80 assigned", "61 reviewed", "70 noted", the first two linking to the Recordings tab filtered to that person. A Collaborator who is deactivated or blocked is greyed with the status pill, as the panel showed them. The person looking sees "(you)" on their own row and, as a Collaborator, **Leave this case** there.
 - **The controls** are by standing, not by a second page: an Owner sees an **Also an owner** tick and **Remove** on each Collaborator's row; an also-owner sees Remove alone; a Collaborator sees the list. Add people is the share flow as it stands (the picker of colleagues, the "case shared with you" mail, the audit row); the page says Add people, the dialog and the mail keep saying shared.
 - **Also an owner.** The tick sets `also_owner` on the Share. An also-owner may add and remove people and may assign, unassign and divide; they may not rename, transfer or delete the Case, and may not mark or unmark the tick. Transfer to an also-owner clears their mark, since the Owner needs none. Removing a Collaborator who is also an owner removes both.
@@ -180,7 +180,7 @@ Written 2026-10-04 from the maintainer's words over two days. First: "I don't wa
 
 ### In and out
 
-- **In**: the Team block and its rows; Add people as the share flow's name on the page; the Also an owner mark and its gate; Assigned to by fold, by ticked rows and by Divide among; Unassign; the filters and their combining; the pills on the recording page, Home and the Dashboard line; Reviewed with its question, Undo, Not reviewed after all and Next; the key R; the audit rows.
+- **In**: the Team block and its rows; Share as the one way to add people (its dialog titled Add people to this case); the Also an owner mark and its gate; Assigned to by fold, by ticked rows and by Divide among; Unassign; the filters and their combining; the pills on the recording page, Home and the Dashboard line; Reviewed with its question, Undo, Not reviewed after all and Next; the key R; the audit rows.
 - **Out**: a mail for an assignment or the mark; a second level of Share; a Reviewed mark by anyone but the assignee or an owner; an in-progress, taken or done state; a recording assigned to two people; an Incident assigned; a case under Needs you for work waiting.
 
 ### What changes from earlier phases
@@ -470,4 +470,4 @@ No wording ships untried, the repository's rule. From `llm-worker` on the office
 
 ## Amendments applied
 
-None yet.
+- 2026-10-07, v1.125.1: chapter 3's Team block no longer carries an Add people button of its own; Share, among the case's actions, is the one way to add people (its dialog is titled Add people to this case). The maintainer's word: one button is less confusing, and the second had taken the first's id and never worked.

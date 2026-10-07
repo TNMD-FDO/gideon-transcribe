@@ -405,7 +405,8 @@ def test_the_team_the_pills_and_the_columns(a_case, owner, friend, third, client
 
     signed_in(client, friend)
     page = client.get(reverse("case", args=[a_case.pk])).content.decode()
-    assert ">Team <" in page and "Add people" in page
+    assert ">Team <" in page and "Add people" not in page
+    assert page.count('id="share"') == 1
     assert "Also an owner" in page and ">Owner<" in page
     assert "2 assigned</a> &middot; 1 reviewed" in page
     assert "Mine, not reviewed 1" in page and "Unassigned 1" in page

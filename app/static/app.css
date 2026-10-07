@@ -3063,5 +3063,15 @@ body.gideon-window .gideon-grip { display: none; }
   .case-page .panes { grid-template-columns: minmax(0, 1fr); }
   .case-page .pane-detail { position: static; border-left: 0; padding-left: 0; }
 }
+/* v1.125.1: the case page's seven tabs are wider than the list's column on a
+   1366 laptop (and on a wider screen zoomed past 100%), and a flex row that
+   never wraps ran under About this case. The row folds onto a second line,
+   as the incident page's work panel does, and when main is narrower than a
+   wide desktop the icons go so the words fit on one line longer. */
+.case-page .tabs { flex-wrap: wrap; }
+@container (max-width: 1280px) {
+  .case-page .tabs .tab .i { display: none; }
+  .case-page .tabs .tab { padding-left: 10px; padding-right: 10px; }
+}
 /* The floating Ask Gideon button never covers a page's last row (v1.123.0). */
 body:has(.gideon-button) .shell > main { padding-bottom: 84px; }
