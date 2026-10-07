@@ -382,3 +382,29 @@ def test_the_share_reloads_and_the_chat_list_has_its_two_tabs():
     assert "one.yours === false" in chat_js and "whose-notice" in chat_js
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     assert ".chat-ui .chat-list .whose-tab.on" in css
+
+
+def test_the_fold_saves_on_change_and_the_view_keeps_type_and_description(
+    owner, friend, a_case, client
+):
+    """v1.126.1: no Save button; the type cell is addressable; the view
+    keeps what is posted and refuses a stranger."""
+    page = (APP / "templates" / "case.html").read_text(encoding="utf-8")
+    assert "save-details" not in page and 'class="muted type"' in page
+    cases_js = (APP / "static" / "cases.js").read_text(encoding="utf-8")
+    assert 'closest(".a-type, .a-description")' in cases_js
+    assert "save-details" not in cases_js
+    call = a_call(owner, a_case, "Call 0001")
+    signed_in(client, owner)
+    said = client.post(
+        reverse("case-details", args=[call.pk]),
+        {"recording_type": "Hearing", "description": "  the bail hearing  "},
+    )
+    assert said.status_code == 200 and said.json()["ok"] is True
+    call.refresh_from_db()
+    assert call.recording_type == "Hearing"
+    assert call.description == "the bail hearing"
+    stranger = colleague("cy", "Cy Park")
+    signed_in(client, stranger)
+    assert client.post(reverse("case-details", args=[call.pk]), {}).status_code == 404
+    assert friend.pk is not None

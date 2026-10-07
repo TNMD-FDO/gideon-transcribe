@@ -591,18 +591,28 @@
 
   // The type and the description, on a case page's rows ----------------------
 
-  document.addEventListener("click", function (event) {
-    var save = event.target.closest(".save-details");
-    if (!save) { return; }
-    var row = save.closest("[data-recording]");
-    save.disabled = true;
-    post("/recording/" + row.dataset.recording + "/case-details", {
-      recording_type: row.querySelector(".a-type").value,
-      description: row.querySelector(".a-description").value
+  // Saved as they change (v1.126.1), as Assigned to beside them is: the
+  // select on change, the description when it is left or Enter is pressed
+  // (both fire change on an input). The row's Type cell follows at once.
+  document.addEventListener("change", function (event) {
+    var field = event.target.closest(".a-type, .a-description");
+    if (!field) { return; }
+    var fold = field.closest("[data-recording]");
+    var typed = fold.querySelector(".a-type").value;
+    field.disabled = true;
+    post("/recording/" + fold.dataset.recording + "/case-details", {
+      recording_type: typed,
+      description: fold.querySelector(".a-description").value
     }).then(function (answer) {
-      save.disabled = false;
-      save.textContent = answer.ok ? "Saved" : "Not saved";
-      window.setTimeout(function () { save.textContent = "Save"; }, 1500);
+      field.disabled = false;
+      if (!answer.ok) {
+        UI.toast((answer.said && answer.said.why) || "That could not be saved.", { problem: true, icon: "warning" });
+        return;
+      }
+      var row = document.querySelector('tr.pick[data-recording="' + fold.dataset.recording + '"]');
+      var cell = row && row.querySelector("td.type");
+      if (cell) { cell.textContent = typed; }
+      UI.toast("Saved.", { icon: "ok" });
     });
   });
 

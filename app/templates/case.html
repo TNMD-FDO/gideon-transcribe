@@ -660,7 +660,7 @@
                     {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
                   {% if may_direct %}<td class="col-tick"><input type="checkbox" class="tick" value="{{ recording.pk }}" aria-label="Tick {{ recording.title }}"></td>{% endif %}
                   <td><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
-                  {% if any_type %}<td class="muted">{{ recording.recording_type }}</td>{% endif %}
+                  {% if any_type %}<td class="muted type">{{ recording.recording_type }}</td>{% endif %}
                   <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}{% if recording.summary_tonight_word %} <span class="muted small">{{ recording.summary_tonight_word|lower }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
@@ -689,16 +689,16 @@
                       {% if recording.failure_message %}
                         <p class="small" style="margin: 0 0 8px">{{ recording.state_word }}: {{ recording.failure_message }}</p>
                       {% endif %}
+                      {% comment %}v1.126.1: the type saves as it changes and the description when it is left or Enter is pressed, as Assigned to below saves; no Save button to miss.{% endcomment %}
                       <div class="row" style="gap: 6px">
-                        <select class="a-type" style="max-width: 12rem">
+                        <select class="a-type" style="max-width: 12rem" aria-label="Recording type">
                           <option value="">No type</option>
                           {% for one in types %}
                             <option value="{{ one }}"{% if one == recording.recording_type %} selected{% endif %}>{{ one }}</option>
                           {% endfor %}
                         </select>
                         <input type="text" class="a-description grow" maxlength="2000"
-                               value="{{ recording.description }}" placeholder="Notes about this recording">
-                        <button type="button" class="btn small save-details">Save</button>
+                               value="{{ recording.description }}" placeholder="Notes about this recording; Enter or leaving the box saves">
                       </div>
                       {% if may_direct %}
                         <div class="row assign-tools" style="gap: 6px; margin-top: 6px">

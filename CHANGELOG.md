@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.126.1, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The fold saves as you change it.** In a recording's expanded row on
+the case page, the type and the description saved only when the small
+Save beside them was pressed, while Assigned to right under them saved
+on change; a type picked and then left looked saved and was not, and
+even a saved one showed in the row's Type column only after a reload.
+The type now saves the moment it is changed and the description when
+the box is left or Enter is pressed; the row's Type column follows at
+once, a quiet "Saved." says so, and a failure says why. The Save button
+is gone.
+
 ## v1.126.0, 2026-10-07
 
 ```
