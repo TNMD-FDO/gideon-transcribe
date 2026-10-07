@@ -408,3 +408,17 @@ def test_the_fold_saves_on_change_and_the_view_keeps_type_and_description(
     signed_in(client, stranger)
     assert client.post(reverse("case-details", args=[call.pk]), {}).status_code == 404
     assert friend.pk is not None
+
+
+def test_the_drawer_floats_over_the_desks_and_the_chat_list_closes_on_click_away():
+    """v1.126.2: the incident and Notes pages are excused from the docked
+    panel's padding, and the chat component closes its list on click-away."""
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert "body.incident-page.gideon-open .shell > main, " in css
+    assert "body.notes-page.gideon-open .shell > main { padding-right: 0; }" in css
+    chat_js = (APP / "static" / "chat-ui.js").read_text(encoding="utf-8")
+    assert (
+        "if (listBox.open && !listBox.contains(event.target)) { listBox.open = false; }"
+        in chat_js
+    )
+    assert 'event.key === "Escape" && listBox.open' in chat_js

@@ -2604,6 +2604,11 @@ body.gideon-window main, body.gideon-window header, body.gideon-window nav, body
    was, closed when done. The width follows the drawer's own (--gideon). */
 @media (min-width: 1280px) {
   body.gideon-open .shell > main { padding-right: calc(var(--gideon, 420px) + 36px); }
+  /* v1.126.2: the incident page's desk and the Notes page's cannot give
+     up the room (their work panel keeps its width, so the wall or the
+     lines took the whole loss: 687 px to 231 at 1366). On those two the
+     drawer floats over the page, as it did before v1.112.0. */
+  body.incident-page.gideon-open .shell > main, body.notes-page.gideon-open .shell > main { padding-right: 0; }
 }
 .gideon-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .gideon-body { flex: 1 1 auto; overflow: auto; padding: 12px 16px; }

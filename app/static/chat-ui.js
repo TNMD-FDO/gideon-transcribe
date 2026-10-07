@@ -489,6 +489,14 @@
       box.scrollIntoView({ block: "nearest" });
     }
 
+    // The chat list closes when a click lands elsewhere or Escape is pressed
+    // (v1.126.2); a native fold only closed on its own heading.
+    document.addEventListener("click", function (event) {
+      if (listBox.open && !listBox.contains(event.target)) { listBox.open = false; }
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && listBox.open) { listBox.open = false; }
+    });
     askButton.addEventListener("click", function () { ask(); });
     askBox.addEventListener("input", grow);
     askBox.addEventListener("keydown", function (event) {

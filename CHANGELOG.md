@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.126.2, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Two things on the incident page.**
+
+- **The chat crushed the page.** Since v1.112.0 the open Gideon panel
+  docks as a column on a wide window and the page keeps its room beside
+  it, which suits the case page. The incident page's desk cannot give up
+  the room: its work panel keeps its width, so the wall of cameras took
+  the whole loss (687 px to 231 at 1366 wide). On the incident page and
+  the Notes page, which share the desk, the panel floats over the page
+  again.
+- **The chat list stayed open.** The list of chats closed only from its
+  own heading or by picking a chat. It closes when a click lands anywhere
+  else, and on Escape.
+
 ## v1.126.1, 2026-10-07
 
 ```
