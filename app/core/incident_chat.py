@@ -55,7 +55,8 @@ def _citations_json(incident, citations: dict) -> dict:
     return out
 
 
-def _turn_json(incident, turn: CaseChatTurn) -> dict:
+def _turn_json(incident, turn: CaseChatTurn, me=None) -> dict:
+    asker = turn.asked_by or turn.chat.asked_by
     from core import case_chat
 
     running = turn.state in (QUEUED, RUNNING)
@@ -73,10 +74,12 @@ def _turn_json(incident, turn: CaseChatTurn) -> dict:
         "parts_done": 0,
         "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
         "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
+        "asked_by": asker.shown_name if asker else "",
+        "yours": bool(me is not None and asker is not None and asker.pk == me.pk),
     }
 
 
-def _chat_json(incident, chat: CaseChat) -> dict:
+def _chat_json(incident, chat: CaseChat, me=None) -> dict:
     turns = list(chat.turns.all())
     first = next((one for one in turns if one.state == DONE), None)
     return {
@@ -90,11 +93,13 @@ def _chat_json(incident, chat: CaseChat) -> dict:
             else ""
         ),
         "earlier": "",
-        "turns": [_turn_json(incident, one) for one in turns],
+        "turns": [_turn_json(incident, one, me) for one in turns],
+        "asked_by": chat.asked_by.shown_name if chat.asked_by else "",
+        "yours": bool(me is not None and chat.asked_by_id == me.pk),
     }
 
 
-def state_json(incident) -> dict:
+def state_json(incident, me=None) -> dict:
     """What the drawer asks for every few seconds."""
     from core.incident_assistant import synced_cameras
 
@@ -106,7 +111,10 @@ def state_json(incident) -> dict:
         for one in incident.cameras.select_related("recording")
         if not one.is_synced()
     ]
-    chats = [_chat_json(incident, one) for one in incident.chats.all()]
+    chats = [
+        _chat_json(incident, one, me)
+        for one in incident.chats.select_related("asked_by")
+    ]
     return {
         "reachable": engine.is_reachable(),
         "unavailable_line": engine.WHAT_TO_SAY[engine.UNREACHABLE],

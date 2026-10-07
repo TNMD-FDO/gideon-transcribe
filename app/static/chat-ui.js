@@ -128,7 +128,15 @@
       if (!state || !state.chats || !state.chats.length) { return null; }
       var found = null;
       state.chats.forEach(function (one) { if (one.id === currentChat) { found = one; } });
-      if (!found) { found = state.chats[0]; currentChat = found.id; }
+      if (!found) {
+        // Your own newest chat first (v1.126.0): on a shared case a colleague's
+        // chat never opens by itself; with none of yours, the starters.
+        var shared = state.chats.some(function (one) { return one.yours === false; });
+        var mine = state.chats.filter(function (one) { return one.yours !== false; });
+        if (shared && !mine.length) { return null; }
+        found = (shared ? mine : state.chats)[0];
+        currentChat = found.id;
+      }
       return found;
     }
 
@@ -221,17 +229,35 @@
         (over ? " &middot; " + escape(over) : "") + "</span></div>";
     }
 
+    // On a shared case the list opens on your chats, everyone's a tab away
+    // (v1.126.0); a chat without the field (a recording's) is yours.
+    var listTab = "mine";
     function drawList(chat) {
       var chats = state.chats || [];
+      var shared = chats.some(function (one) { return one.yours === false; });
+      var mine = chats.filter(function (one) { return one.yours !== false; });
+      var shown = shared && listTab === "mine" ? mine : chats;
       var others = chats.filter(function (one) { return !chat || one.id !== chat.id; });
       listBox.hidden = chats.length < 2 && !others.length;
-      var listHtml = chats.map(function (one) {
+      var listHtml = "";
+      if (shared) {
+        listHtml += "<li class='whose'><button type='button' class='whose-tab" + (listTab === "mine" ? " on" : "") + "' data-tab='mine'>Mine <span class='count'>" + mine.length + "</span></button>" +
+          "<button type='button' class='whose-tab" + (listTab === "all" ? " on" : "") + "' data-tab='all'>Everyone's <span class='count'>" + chats.length + "</span></button></li>";
+      }
+      listHtml += shown.map(function (one) {
         var count = one.turns ? one.turns.length : 0;
+        var who = shared && listTab === "all" ? "<b>" + (one.yours ? "You" : escape(one.asked_by || "Somebody")) + "</b> &middot; " : "";
         return "<li><button type='button' class='thread" + (chat && one.id === chat.id ? " on" : "") +
           "' data-chat='" + one.id + "'><span class='name'>" + escape(one.name) + "</span>" +
-          "<span class='muted tiny'>" + (one.started ? escape(when(one.started)) + " &middot; " : "") +
+          "<span class='muted tiny'>" + who + (one.started ? escape(when(one.started)) + " &middot; " : "") +
           count + " question" + (count === 1 ? "" : "s") + "</span></button></li>";
       }).join("");
+      if (shared && listTab === "mine" && !mine.length) {
+        listHtml += "<li class='muted tiny whose-none'>No chat of yours yet. New chat starts one; Everyone's has the team's.</li>";
+      }
+      if (shared) {
+        listHtml += "<li class='muted tiny whose-foot'>" + (listTab === "mine" ? "Your chats on this case. Everyone with the case can open them." : "Every chat on this case, newest first.") + "</li>";
+      }
       if (listHtml !== lastList) {
         list.innerHTML = listHtml;
         lastList = listHtml;
@@ -264,12 +290,16 @@
           "</div>";
       }
       if (chat) {
+        if (chat.yours === false) {
+          html += "<p class='notice quiet tiny whose-notice'><b>" + escape(chat.asked_by || "A colleague") + "'s chat</b>" + (chat.started ? ", started " + escape(when(chat.started)) : "") +
+            ". Everyone with the case can read it and go on with it; what you ask here is added under your name.</p>";
+        }
         if (chat.notice) { html += "<p class='notice quiet tiny'><svg class='i' aria-hidden='true'><use href='#i-info'></use></svg> " + escape(chat.notice) + "</p>"; }
         if (chat.earlier) { html += "<p class='muted tiny'>" + escape(chat.earlier) + "</p>"; }
         chat.turns.forEach(function (turn) {
           html += "<div class='turn'>" +
             "<div class='bubble you'><p>" + escape(turn.question) + "</p>" +
-              (turn.asked_at ? "<span class='muted tiny stamp'>" + escape(when(turn.asked_at)) + "</span>" : "") + "</div>";
+              (turn.asked_at ? "<span class='muted tiny stamp'>" + (chat.yours === false && turn.asked_by ? (turn.yours ? "You" : escape(turn.asked_by)) + " &middot; " : "") + escape(when(turn.asked_at)) + "</span>" : "") + "</div>";
           if (turn.state === "queued" || turn.state === "running") {
             html += waiting(turn);
           } else if (turn.state === "failed") {
@@ -354,6 +384,8 @@
           .then(function () { askBox.focus(); });
         return;
       }
+      var whoseTab = target.closest(".whose-tab");
+      if (whoseTab) { listTab = whoseTab.dataset.tab; lastList = ""; drawList(theChat()); listBox.open = true; return; }
       var thread = target.closest(".thread");
       if (thread) { currentChat = thread.dataset.chat; followBottom = true; listBox.open = false; draw(); return; }
       var starter = target.closest(".starter, .again");

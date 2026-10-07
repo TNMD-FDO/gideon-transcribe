@@ -102,6 +102,16 @@ class CaseChatTurn(models.Model):
     chat = models.ForeignKey(CaseChat, on_delete=models.CASCADE, related_name="turns")
     number = models.IntegerField()
     question = models.TextField()
+    # Who asked (v1.126.0): a chat is the case's and anyone with the case may
+    # carry it on, so a colleague's chat names the asker on each question.
+    # Empty on turns from before; the page falls back to the chat's starter.
+    asked_by = models.ForeignKey(
+        "core.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
     answer = models.TextField(blank=True, default="")
     # "[Recording 3, 00:12:45]" -> {"recording": id, "seconds": 765.0}
     citations = models.JSONField(default=dict, blank=True)

@@ -368,3 +368,17 @@ def test_share_is_the_one_button_and_the_case_tabs_fold():
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     assert ".case-page .tabs { flex-wrap: wrap; }" in css
     assert ".case-page .tabs .tab .i { display: none; }" in css
+
+
+def test_the_share_reloads_and_the_chat_list_has_its_two_tabs():
+    """v1.126.0: the share's success reloads the page (the old table row is
+    gone), and the chat component draws Mine and Everyone's on a shared case."""
+    cases_js = (APP / "static" / "cases.js").read_text(encoding="utf-8")
+    assert "addShareRow" not in cases_js
+    shared = cases_js.index('"/share", { who: who }')
+    assert "window.location.reload()" in cases_js[shared : shared + 600]
+    chat_js = (APP / "static" / "chat-ui.js").read_text(encoding="utf-8")
+    assert "Everyone's <span class='count'>" in chat_js
+    assert "one.yours === false" in chat_js and "whose-notice" in chat_js
+    css = (APP / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".chat-ui .chat-list .whose-tab.on" in css

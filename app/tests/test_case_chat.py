@@ -811,3 +811,26 @@ def test_the_answer_says_which_videos_were_read_from_the_transcript_alone(db):
     # Digests off: every video reads from the transcript, so nothing is said.
     settings_store.set_to("digests_available", False)
     assert case_chat.transcript_alone_line(readings) == ""
+
+
+def test_the_panel_knows_whose_chat_and_whose_question(owner, a_case, client):
+    """v1.126.0: each chat and turn says who asked and whether that is you;
+    a question from before the field falls back to its chat's starter."""
+    friend = User.objects.create_local_admin("friend", "a long enough password 1")
+    mine = CaseChat.objects.create(case=a_case, asked_by=owner, name="Mine")
+    theirs = CaseChat.objects.create(case=a_case, asked_by=friend, name="Theirs")
+    CaseChatTurn.objects.create(chat=theirs, number=1, question="Any court date?")
+    CaseChatTurn.objects.create(
+        chat=theirs, number=2, question="After the 19th?", asked_by=owner
+    )
+    signed_in(client, owner)
+    said = client.get(f"/case/{a_case.pk}/chat").json()
+    by_name = {one["name"]: one for one in said["chats"]}
+    assert by_name["Mine"]["yours"] is True
+    assert by_name["Mine"]["asked_by"] == owner.shown_name
+    assert by_name["Theirs"]["yours"] is False
+    assert by_name["Theirs"]["asked_by"] == friend.shown_name
+    turns = by_name["Theirs"]["turns"]
+    assert [one["asked_by"] for one in turns] == [friend.shown_name, owner.shown_name]
+    assert [one["yours"] for one in turns] == [False, True]
+    assert mine.pk is not None

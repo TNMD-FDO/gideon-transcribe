@@ -99,7 +99,7 @@ def chat_state(request: HttpRequest, case_id, incident_id) -> JsonResponse:
     from core import incident_chat
 
     _, incident = _incident(request, case_id, incident_id)
-    return JsonResponse(incident_chat.state_json(incident))
+    return JsonResponse(incident_chat.state_json(incident, request.user))
 
 
 @login_required

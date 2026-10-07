@@ -297,21 +297,6 @@
       });
     }
 
-    function addShareRow(share) {
-      var table = document.getElementById("shares");
-      var row = document.createElement("tr");
-      row.dataset.share = share.id;
-      row.innerHTML =
-        "<td>" + escaped(share.name) + "</td>" +
-        "<td class='muted'>" + escaped(share.added_on) + "</td>" +
-        "<td class='muted'>" + (share.last_opened ? escaped(share.last_opened) : "not yet") + "</td>" +
-        "<td class='acts'><button type='button' class='small ghost unshare' data-share='" + share.id +
-        "' data-name='" + escaped(share.name) + "'>Remove</button></td>";
-      table.querySelector("tbody").appendChild(row);
-      show(table, true);
-      show(document.getElementById("nobody-yet"), false);
-    }
-
     var share = document.getElementById("share");
     if (share) {
       share.addEventListener("click", function () {
@@ -328,8 +313,9 @@
               UI.toast(answer.said.why || "That person could not be added.", { problem: true, icon: "warning" });
               return;
             }
-            addShareRow(answer.said.share);
-            UI.toast("Shared with " + answer.said.share.name + ".", { icon: "ok" });
+            // The Team block is the page's to draw (v1.126.0): reload, as
+            // Transfer does, so the person, the counts and the pills are right.
+            window.location.reload();
           });
         });
       });

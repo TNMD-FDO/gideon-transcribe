@@ -1644,6 +1644,14 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .chat-ui .thread:hover { background: var(--surface-2); }
 .chat-ui .thread.on { background: var(--surface-2); color: var(--accent); }
 .chat-ui .thread .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* v1.126.0: on a shared case the list opens on your chats; everyone's a tab away. */
+.chat-ui .chat-list .whose { display: flex; gap: 2px; padding: 2px 4px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.chat-ui .chat-list .whose-tab { font-size: var(--t-small); font-weight: 600; padding: 5px 10px; min-height: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.chat-ui .chat-list .whose-tab.on { background: var(--accent-soft); color: var(--accent); }
+.chat-ui .chat-list .whose-tab .count { font-weight: 500; font-variant-numeric: tabular-nums; }
+.chat-ui .chat-list .whose-foot { padding: 6px 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+.chat-ui .chat-list .whose-none { padding: 6px 8px; }
+.chat-ui .whose-notice b { color: var(--text); }
 .chat-ui .chat-body { flex: 1; min-height: 6rem; max-height: 60vh; overflow-y: auto; padding: 8px 2px; display: flex; flex-direction: column; gap: 10px; }
 /* In the work area, and in a window of its own, the conversation takes the
    height there is; the cap is for the case page. */

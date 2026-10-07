@@ -1,0 +1,235 @@
+<title>Chats, Yours First</title>
+<style>
+  /* Layout: a narrow column of figures, each the drawer at its real width (420 px) with a caption beside or under it; the app's own tokens so the drawer reads as the app. */
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --radius: 8px; --radius-lg: 12px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48;
+      --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b;
+      --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48;
+    --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b;
+    --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 18px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 64ch; color: var(--muted); margin: 0; }
+  .figure { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 760px) { .figure { grid-template-columns: minmax(0, 1fr); } }
+  .caption { display: flex; flex-direction: column; gap: 10px; max-width: 52ch; }
+  .caption p { margin: 0; }
+  .caption ul { margin: 0; padding-left: 20px; }
+  .caption li { margin-bottom: 4px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .tiny { font-size: 12px; }
+  b { font-weight: 600; }
+
+  /* The drawer, as the app draws it. */
+  .drawer { width: 420px; max-width: 100%; height: 640px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: -12px 0 40px rgba(0, 0, 0, 0.18); display: flex; flex-direction: column; overflow: hidden; }
+  .g-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .g-head .grow { flex: 1; min-width: 0; }
+  .g-body { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; min-height: 0; position: relative; }
+  .btn { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .chat-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .chat-head .grow { flex: 1; }
+  .summary { font-size: 13px; color: var(--muted); padding: 4px 6px; border-radius: 6px; background: var(--surface-2); }
+  .summary.open { color: var(--text); }
+
+  /* The list, a dropdown under the summary, as today, with the two tabs new. */
+  .list { position: absolute; left: 16px; top: 46px; z-index: 5; width: 22rem; max-width: calc(100% - 32px); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); padding: 4px; }
+  .list .tabs { display: flex; gap: 2px; padding: 2px 4px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .list .tab { font: inherit; font-size: 13px; font-weight: 600; padding: 5px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+  .list .tab.on { background: var(--accent-soft); color: var(--accent); }
+  .list .tab .count { font-weight: 500; color: var(--muted); margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .list .tab.on .count { color: var(--accent); }
+  .thread { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 6px; text-align: left; }
+  .thread.on { background: var(--surface-2); color: var(--accent); }
+  .thread .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .thread .who { color: var(--muted); font-size: 12px; }
+  .thread .who b { color: var(--text); font-weight: 600; }
+  .list .foot { padding: 6px 8px 4px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); margin-top: 4px; }
+
+  /* The conversation behind. */
+  .conv { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 8px 2px; min-height: 0; overflow: hidden; }
+  .grounding { color: var(--muted); font-size: 13px; }
+  .you { align-self: flex-end; max-width: 85%; background: var(--accent); color: var(--accent-ink); border-radius: 14px 14px 4px 14px; padding: 8px 12px; font-size: 14px; }
+  .you .stamp { display: block; text-align: right; opacity: 0.75; font-size: 12px; margin-top: 2px; }
+  .answer { align-self: flex-start; max-width: 95%; background: var(--surface); border: 1px solid var(--line); border-radius: 4px 14px 14px 14px; padding: 10px 12px; font-size: 14px; }
+  .answer p { margin: 0 0 6px; }
+  .answer p:last-child { margin: 0; }
+  .cite { display: inline-block; font-size: 12px; padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .foot { display: flex; gap: 8px; align-items: center; }
+  .foot .box { flex: 1; border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; color: var(--muted); font-size: 14px; background: var(--surface); }
+  .hint { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  .notice { font-size: 13px; color: var(--muted); background: var(--surface-2); border-radius: var(--radius); padding: 6px 10px; }
+  .notice b { color: var(--text); }
+  .dim { opacity: 0.45; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill.you-pill { background: var(--accent-soft); color: var(--accent); }
+  .unchanged { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 16px 20px; max-width: 64ch; }
+  .unchanged h2 { margin-bottom: 8px; }
+  .unchanged ul { margin: 0; padding-left: 20px; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>Chats, yours first</h1>
+    <p class="lede">The Gideon drawer on a shared case, as a Collaborator sees it. Nothing becomes private: every chat still belongs to the case. The drawer opens on your own chats, and the team's are one tab away. Fictional office, fictional names.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section class="figure">
+    <div class="drawer" aria-label="Figure 1">
+      <div class="g-head">
+        <div class="grow"><b>Gideon</b><div class="muted small">This case</div></div>
+        <button class="btn ghost" type="button">⤢</button>
+        <button class="btn ghost" type="button">Close</button>
+      </div>
+      <div class="g-body">
+        <div class="chat-head">
+          <button class="btn" type="button">New chat</button>
+          <span class="summary open">Chats (2) ▾</span>
+          <span class="grow"></span>
+          <span class="btn dim">Export to Word</span>
+        </div>
+        <div class="list">
+          <div class="tabs">
+            <button class="tab on" type="button">Mine<span class="count">2</span></button>
+            <button class="tab" type="button">Everyone's<span class="count">9</span></button>
+          </div>
+          <div class="thread on"><span class="name">Who does the caller call "Bootsy"?</span><span class="who">Today 09:14 &middot; 3 questions</span></div>
+          <div class="thread"><span class="name">Mentions of the storage unit on Pike</span><span class="who">03 Oct &middot; 5 questions</span></div>
+          <div class="foot">Your chats on this case. Everyone with the case can open them.</div>
+        </div>
+        <div class="conv dim">
+          <div class="grounding">Answers come from the 12 transcripts in this case, read afresh for every question.</div>
+          <div class="you">Who does the caller call "Bootsy"?<span class="stamp">09:14</span></div>
+          <div class="answer"><p>In four of the twelve calls, "Bootsy" is how the caller addresses the person the case vocabulary lists as Von Carutthers; the clearest is <span class="cite">Recording 3, 0:04:12</span>.</p></div>
+        </div>
+        <div class="foot"><div class="box">Ask anything about the recordings in this case</div><button class="btn primary" type="button">Ask</button></div>
+        <p class="hint">Enter to ask, Shift+Enter for a new line.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <div class="eyebrow">Figure 1</div>
+      <h2>The list opens on Mine</h2>
+      <p>The chat list is the same dropdown it is today, with two tabs at its top. <b>Mine</b> holds the chats you started, newest first, and is where the list opens. The counts say what each tab holds.</p>
+      <p>When the drawer opens, it shows your newest chat. With none, it shows the starters and a fresh chat, exactly as today. It never opens on a colleague's conversation.</p>
+      <p class="muted small">The one line at the foot of the list says what the specification keeps true: your chats are readable by everyone with the case.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section class="figure">
+    <div class="drawer" aria-label="Figure 2">
+      <div class="g-head">
+        <div class="grow"><b>Gideon</b><div class="muted small">This case</div></div>
+        <button class="btn ghost" type="button">⤢</button>
+        <button class="btn ghost" type="button">Close</button>
+      </div>
+      <div class="g-body">
+        <div class="chat-head">
+          <button class="btn" type="button">New chat</button>
+          <span class="summary open">Chats (2) ▾</span>
+          <span class="grow"></span>
+          <span class="btn dim">Export to Word</span>
+        </div>
+        <div class="list">
+          <div class="tabs">
+            <button class="tab" type="button">Mine<span class="count">2</span></button>
+            <button class="tab on" type="button">Everyone's<span class="count">9</span></button>
+          </div>
+          <div class="thread on"><span class="name">Who does the caller call "Bootsy"?</span><span class="who"><b>You</b> &middot; Today 09:14 &middot; 3 questions</span></div>
+          <div class="thread"><span class="name">Any talk of a court date</span><span class="who"><b>Pat Okonkwo</b> &middot; Yesterday 16:40 &middot; 2 questions</span></div>
+          <div class="thread"><span class="name">Mentions of the storage unit on Pike</span><span class="who"><b>You</b> &middot; 03 Oct &middot; 5 questions</span></div>
+          <div class="thread"><span class="name">Calls where money is asked for</span><span class="who"><b>Pat Okonkwo</b> &middot; 03 Oct &middot; 4 questions</span></div>
+          <div class="thread"><span class="name">Who is "the lady at the counter"</span><span class="who"><b>Sam Reyes</b> &middot; 02 Oct &middot; 1 question</span></div>
+          <div class="thread"><span class="name">New chat</span><span class="who"><b>Sam Reyes</b> &middot; 02 Oct &middot; 0 questions</span></div>
+          <div class="thread"><span class="name">Timeline of the Feb 19 call</span><span class="who"><b>Pat Okonkwo</b> &middot; 01 Oct &middot; 6 questions</span></div>
+          <div class="foot">Every chat on this case, newest first.</div>
+        </div>
+        <div class="conv dim">
+          <div class="grounding">Answers come from the 12 transcripts in this case, read afresh for every question.</div>
+          <div class="you">Who does the caller call "Bootsy"?<span class="stamp">09:14</span></div>
+          <div class="answer"><p>In four of the twelve calls, "Bootsy" is how the caller addresses the person the case vocabulary lists as Von Carutthers; the clearest is <span class="cite">Recording 3, 0:04:12</span>.</p></div>
+        </div>
+        <div class="foot"><div class="box">Ask anything about the recordings in this case</div><button class="btn primary" type="button">Ask</button></div>
+        <p class="hint">Enter to ask, Shift+Enter for a new line.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <div class="eyebrow">Figure 2</div>
+      <h2>Everyone's names who asked</h2>
+      <p>The second tab is the list as it is today, every chat on the case newest first, with one thing added: whose chat each one is. Yours say <b>You</b>. A colleague's empty "New chat" sits where it sits today, now with a name on it, which is how you know it is theirs and not yours.</p>
+      <p>Nothing here is hidden from anyone. A reviewer who wants to see what a colleague has already asked Gideon about the case looks here, as the specification intends.</p>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section class="figure">
+    <div class="drawer" aria-label="Figure 3">
+      <div class="g-head">
+        <div class="grow"><b>Gideon</b><div class="muted small">This case</div></div>
+        <button class="btn ghost" type="button">⤢</button>
+        <button class="btn ghost" type="button">Close</button>
+      </div>
+      <div class="g-body">
+        <div class="chat-head">
+          <button class="btn" type="button">New chat</button>
+          <span class="summary">Chats (2) ▾</span>
+          <span class="grow"></span>
+          <span class="btn">Export to Word</span>
+        </div>
+        <div class="conv">
+          <div class="notice"><b>Pat Okonkwo's chat</b>, started yesterday 16:40. Everyone with the case can read it and go on with it; what you ask here is added to it under your name.</div>
+          <div class="grounding">Answers come from the 12 transcripts in this case, read afresh for every question.</div>
+          <div class="you">Any talk of a court date?<span class="stamp">Pat Okonkwo &middot; Yesterday 16:40</span></div>
+          <div class="answer"><p>Two calls mention a date in court. In <span class="cite">Recording 7, 0:11:03</span> the caller says "the fourteenth, in the morning"; in <span class="cite">Recording 9, 0:02:48</span> the other side asks whether "the lawyer got it moved".</p></div>
+          <div class="you">Which month is the fourteenth?<span class="stamp">Pat Okonkwo &middot; Yesterday 16:43</span></div>
+          <div class="answer"><p>Neither call names the month. The nearest clue is in <span class="cite">Recording 7, 0:11:40</span>, where the caller says it is "after the holiday".</p></div>
+          <div class="you">Does any call after the 19th mention the court?<span class="stamp">You &middot; Today 09:20</span></div>
+          <div class="answer"><p>No. The three calls after 19 February (Recordings 10 to 12) do not mention a court, a judge, or a lawyer.</p></div>
+        </div>
+        <div class="foot"><div class="box">Ask anything about the recordings in this case</div><button class="btn primary" type="button">Ask</button></div>
+        <p class="hint">Enter to ask, Shift+Enter for a new line.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <div class="eyebrow">Figure 3</div>
+      <h2>Inside a colleague's chat</h2>
+      <p>Opening a colleague's chat says whose it is in one line at the top, and each question carries the name of the person who asked it. Carrying a chat on is allowed, as today; your question goes in under your name, so the thread reads as a conversation between the team and Gideon rather than one voice.</p>
+      <p>In your own chats, nothing changes: no notice, and the stamps stay the time alone.</p>
+    </div>
+  </section>
+
+  <section class="unchanged">
+    <h2>What does not change</h2>
+    <ul>
+      <li>Every chat belongs to the case, is open to whoever can open the case, and leaves with it. The Phase 2 principle "nothing is private inside a shared case" stays, with one sentence added: the drawer shows yours first.</li>
+      <li>Export to Word, Delete chat, the audit rows and the recording page's and incident page's chats are untouched.</li>
+      <li>An Admin who is not a member sees Everyone's as today, with their access audited as today.</li>
+      <li>Someone who is the only person on a case sees no tabs at all: the list is theirs already.</li>
+    </ul>
+  </section>
+</div>

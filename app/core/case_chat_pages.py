@@ -88,8 +88,9 @@ def _expected(chat, case, scope: dict | None = None) -> dict:
     return expectation.note("case_chat_turn", size)
 
 
-def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
+def _turn_json(turn: CaseChatTurn, still_here: dict, me=None) -> dict:
     """One turn as the tab draws it, its Citations resolved to links or not."""
+    asker = turn.asked_by or turn.chat.asked_by
     cited = {}
     for text, where in (turn.citations or {}).items():
         if where.get("kind") == "document":
@@ -156,6 +157,9 @@ def _turn_json(turn: CaseChatTurn, still_here: dict) -> dict:
         "expectation": expectation.json_of(turn.expectation, turn.state, "chat"),
         "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
         "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
+        # Whose question (v1.126.0), for a colleague's chat.
+        "asked_by": asker.shown_name if asker else "",
+        "yours": bool(me is not None and asker is not None and asker.pk == me.pk),
     }
 
 
@@ -235,7 +239,7 @@ def _earlier_line(chat: CaseChat, still_here: dict) -> str:
     )
 
 
-def _chat_json(chat: CaseChat, still_here: dict) -> dict:
+def _chat_json(chat: CaseChat, still_here: dict, me=None) -> dict:
     turns = list(chat.turns.all())
     first_model = next((one.model for one in turns if one.model), "")
     first_when = next((one.answered_at for one in turns if one.answered_at), None)
@@ -248,7 +252,11 @@ def _chat_json(chat: CaseChat, still_here: dict) -> dict:
         ),
         "notice": assistant.notice(first_model, first_when) if first_when else "",
         "earlier": _earlier_line(chat, still_here),
-        "turns": [_turn_json(one, still_here) for one in turns],
+        "turns": [_turn_json(one, still_here, me) for one in turns],
+        # Whose chat (v1.126.0): the panel lists yours first, everyone's a
+        # tab away, and a colleague's chat says whose it is.
+        "asked_by": chat.asked_by.shown_name if chat.asked_by else "",
+        "yours": bool(me is not None and chat.asked_by_id == me.pk),
     }
 
 
@@ -258,7 +266,8 @@ def state(request: HttpRequest, case_id) -> JsonResponse:
     still_here = {str(one.pk): one for one in Recording.objects.filter(case=case)}
     # The incident's conversations live on the incident page (Phase 7 chapter 5).
     chats = [
-        _chat_json(one, still_here) for one in case.chats.filter(incident__isnull=True)
+        _chat_json(one, still_here, request.user)
+        for one in case.chats.filter(incident__isnull=True).select_related("asked_by")
     ]
     read, skipped = case_chat.readable(case)
     # What a whole-case question would do (Phase 9 chapter 6), for the
@@ -336,6 +345,7 @@ def ask(request: HttpRequest, chat_id) -> JsonResponse:
         chat=chat,
         number=chat.turns.count() + 1,
         question=question[:4000],
+        asked_by=request.user,
         scope=scope if not chat.incident_id else {},
         expectation=_expected(chat, case, scope),
     )

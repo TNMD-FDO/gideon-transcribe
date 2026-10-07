@@ -344,7 +344,7 @@ In Phase 1 nothing is shared: a Workspace is one person's, and nothing leaves it
 
 1. **A Share names a person.** One colleague who has signed in to the app at least once. Internal users only, never anyone outside the office; no directory groups and no typed addresses.
 2. **Everyone shared with can edit.** One level, and the Share dialog says so before the owner confirms.
-3. **Nothing is private inside a shared Case.** One Case, one page: everyone who can open it sees the same Transcripts, Corrections, Speaker names, People, Summaries, Chats, Case Chats, and Clips.
+3. **Nothing is private inside a shared Case.** One Case, one page: everyone who can open it sees the same Transcripts, Corrections, Speaker names, People, Summaries, Chats, Case Chats, and Clips. Shown, not hidden: the Gideon panel's chat list opens on the person's own chats, with everyone's one tab away, and a colleague's chat names who asked each question (v1.126.0).
 4. **The Case stays the owner's.** Sharing, renaming, transferring, and deleting the Case belong to the owner and to Admins. A Collaborator never passes a Case on.
 5. **Sharing is per Case**, never per Recording. To share one Recording, put it in a Case of its own.
 
@@ -391,7 +391,7 @@ One rule sits behind the destructive row: an action that throws away someone els
 
 ### Nothing private inside a shared Case
 
-A Chat with the AI assistant is the Case's, not the person's: a Collaborator sees the owner's Chats and the owner sees theirs. The same holds for Case Chats, Summaries, Corrections, Speaker names, People with their Roles and notes, and Clips. One Case, one page; everyone sees the same thing. Hiding any of it would surprise more than it protects.
+A Chat with the AI assistant is the Case's, not the person's: a Collaborator sees the owner's Chats and the owner sees theirs. The same holds for Case Chats, Summaries, Corrections, Speaker names, People with their Roles and notes, and Clips. One Case, one page; everyone sees the same thing. Hiding any of it would surprise more than it protects. What may differ is the order: the panel lists the person's own chats first and everyone's a tab away, and a colleague's chat says whose it is (v1.126.0), so a team of ten does not open the panel on ten people's history.
 
 ### The Collaborator's Cases page
 

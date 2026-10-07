@@ -620,7 +620,7 @@ What the chat is called on the pages, as shipped: the value of the Appearance se
 _Avoid_: bot, assistant (as a name), AI (as a name), the engine's name
 
 **Case Chat**:
-A Chat grounded in every Transcript in a Case, as the Case stands when each question is asked. It belongs to the Case, is open to whoever can open the Case, and leaves with it; the "Chat across cases" setting turns it on and off.
+A Chat grounded in every Transcript in a Case, as the Case stands when each question is asked. It belongs to the Case, is open to whoever can open the Case, and leaves with it; the "Chat across cases" setting turns it on and off. The Gideon panel's list opens on your own chats, with everyone's one tab away, and a colleague's chat names who asked (v1.126.0); nothing is hidden by it.
 _Avoid_: cross-Case Chat (would mean several Cases), Case-wide Chat
 
 **Reading**:

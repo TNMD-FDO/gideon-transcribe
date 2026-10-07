@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.126.0, 2026-10-07
+
+```
+Models: unchanged
+Database: migrates
+```
+
+**Chats, yours first.** On a shared case the Gideon panel opened on
+every colleague's history. Nothing becomes private, as Phase 2's
+principle keeps it: the panel's chat list now opens on **Mine**, the
+chats you started, with **Everyone's** one tab away, each chat named for
+who started it. A colleague's chat says whose it is at its top and names
+the asker on each question, and what you ask in it goes in under your
+name. Someone alone on a case sees no tabs. The incident page's chats
+carry the same names. Migration 0077 records who asked each question;
+older questions are shown as their chat's starter's.
+
+**Share shows the person at once.** Sharing a case succeeded but the Team
+block did not show the new person until a reload: the page was still
+trying to add a row to the table the Team block replaced. The page now
+reloads after a share, as it does after a Transfer.
+
 ## v1.125.1, 2026-10-07
 
 ```
