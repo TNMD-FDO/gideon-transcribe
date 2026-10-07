@@ -442,7 +442,17 @@
     var ask = document.getElementById("suggest-ask");
     var count = document.getElementById("suggest-count");
     var countWords = document.getElementById("suggest-count-words");
-    if (ask) { ask.hidden = pending.length > 0; }
+    if (ask) {
+      ask.hidden = pending.length > 0;
+      // The best-practice line (v1.127.1), in place of the question while it
+      // applies; Suggest names stays live either way.
+      var check = state.speaker_check || {};
+      var waiting = (check.pending || []).length;
+      var checkRun = check.run;
+      if (waiting) { ask.textContent = "For the best names, settle the " + waiting + " speaker correction" + (waiting === 1 ? "" : "s") + " on the Speakers page first. This works either way."; }
+      else if (check.offered && (!checkRun || checkRun.state !== "done")) { ask.textContent = "For the best names, check the speakers first on the Speakers page. This works either way."; }
+      else { ask.textContent = "Want name suggestions from what people say?"; }
+    }
     if (count) {
       count.hidden = !pending.length;
       count.textContent = pending.length + (pending.length === 1 ? " name suggested" : " names suggested");

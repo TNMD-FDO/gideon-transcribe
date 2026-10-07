@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.127.1, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**Two things on the recording page.**
+
+- **The word mark stayed behind.** As the transcript followed the sound,
+  the last word spoken of every line passed kept its underline, so a
+  played stretch left a trail of marked words. The mark leaves with the
+  line.
+- **Check the speakers first, as advice.** On the Speakers page Check
+  the speakers now stands before Suggest names, and one line says why:
+  for the best names, check the speakers first, since a name rests on
+  the lines a speaker has. While suggested corrections wait, or the
+  check has not run on this transcript, the line beside Suggest names
+  (and the question on the recording page) says so and adds "works
+  either way". Nothing is withheld; the user guide's two bullets open
+  with the same practice.
+
 ## v1.127.0, 2026-10-07
 
 ```

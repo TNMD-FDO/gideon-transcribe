@@ -758,6 +758,15 @@
     else if (run && run.state === "failed") { said.textContent = run.said || ""; }
     else if (run && run.state === "done" && !(body.pending || []).length) { said.textContent = "Nothing in the transcript shows who these speakers are."; }
     else { said.textContent = ""; }
+    // The best-practice line (v1.127.1): advice, never a bar; the button
+    // stays live whatever the check has done.
+    if (!said.textContent && V.assistant.speakerCheck) {
+      var check = body.speaker_check || {};
+      var waiting = (check.pending || []).length;
+      var checkRun = check.run;
+      if (waiting) { said.textContent = "For the best names, settle the " + waiting + " suggested correction" + (waiting === 1 ? "" : "s") + " below first. Suggest names works either way."; }
+      else if (check.offered && (!checkRun || checkRun.state !== "done")) { said.textContent = "For the best names, run Check the speakers first. Suggest names works either way."; }
+    }
     cards().forEach(function (card) {
       var box = card.querySelector(".suggested");
       box.hidden = true;

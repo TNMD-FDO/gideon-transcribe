@@ -444,3 +444,18 @@ def test_the_notes_page_has_the_notes_left_the_player_right_and_a_way_back():
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     assert "grid-template-columns: minmax(0, 1fr) 12px var(--player, 520px)" in css
     assert ".preview-card.mounted .preview-media audio { display: none; }" in css
+
+
+def test_the_word_mark_leaves_with_the_line_and_the_check_stands_first():
+    """v1.127.1: the viewer clears the word mark of the line it leaves; the
+    Speakers page puts Check the speakers before Suggest names with the
+    best-practice line; both scripts carry the advice and never a bar."""
+    viewer = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
+    assert 'was.querySelectorAll(".word.now")' in viewer
+    page = (APP / "templates" / "speakers-page.html").read_text(encoding="utf-8")
+    assert page.index('id="check-line"') < page.index('id="suggest-line"')
+    assert "For the best names, check the speakers first" in page
+    for name in ("speakers-page.js", "assistant.js"):
+        script = (APP / "static" / name).read_text(encoding="utf-8")
+        assert "works either way" in script, name
+        assert "For the best names" in script, name

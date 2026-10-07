@@ -27,12 +27,6 @@
         <button type="button" class="ghost tiny" id="speakers-undo">Undo</button>
         <span id="speakers-undo-what">{{ last_change }}</span>
       </span>
-      {% if assistant.suggestions %}
-        <span id="suggest-line" hidden>
-          <button type="button" class="small" id="suggest-names" title="Ask the AI assistant who these speakers are, from what people say">Suggest names</button>
-          <span id="suggest-said" class="small muted"></span>
-        </span>
-      {% endif %}
       {% if assistant.speaker_check %}
         {% comment %}
           The Speaker check (Phase 5 chapter 3): shown by the script only
@@ -49,6 +43,19 @@
           <p class="muted">The assistant's reading of the words before it checked the lines. It is not a finding, and it names nobody the words do not name.</p>
           <p id="check-sketch-words" style="white-space: pre-wrap"></p>
         </details>
+      {% endif %}
+      {% if assistant.suggestions %}
+        <span id="suggest-line" hidden>
+          <button type="button" class="small" id="suggest-names" title="Ask the AI assistant who these speakers are, from what people say">Suggest names</button>
+          <span id="suggest-said" class="small muted"></span>
+        </span>
+      {% endif %}
+      {% comment %}
+        v1.127.1: Check the speakers stands before Suggest names, and one line
+        says why, as advice; neither is ever withheld for the other.
+      {% endcomment %}
+      {% if assistant.suggestions and assistant.speaker_check %}
+        <span class="small muted" id="speakers-practice" style="flex-basis: 100%">For the best names, check the speakers first: a name rests on the lines a speaker has, so a moved line can change who it points to.</span>
       {% endif %}
     {% endif %}
     <span class="small muted" id="win-state"></span>

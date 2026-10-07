@@ -509,7 +509,13 @@
     var index = at(time);
     if (index !== here) {
       var was = column ? column.querySelector(".seg.here") : null;
-      if (was) { was.classList.remove("here"); }
+      if (was) {
+        was.classList.remove("here");
+        // The word mark leaves with the line (v1.127.1): the loop below marks
+        // words in the line in hand only, so the last word spoken of every
+        // line passed had kept its mark.
+        Array.prototype.forEach.call(was.querySelectorAll(".word.now"), function (word) { word.classList.remove("now"); });
+      }
       var now = column ? column.children[index] : null;
       if (now) {
         now.classList.add("here");
