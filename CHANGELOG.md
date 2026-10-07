@@ -21,6 +21,45 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.129.0, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+**The Speaker check as a list of proposals.** Read on the office's server,
+v1.128.0's output was still a wall: nine labels on one call gave four
+speaker cards and forty stretch cards in two vocabularies, Merge and
+Accept, each card with a paragraph of arithmetic under it, and the engine's
+sketch of who is who above them all. Everything the check finds is now one
+kind of thing, a proposal you answer by ear:
+
+- **Every card is a question with a yes and a no.** "Is Speaker 5 the same
+  voice as Speaker 2?" with one line under it, "About a third of Speaker
+  5's lines read like Speaker 2. Yes settles 58 lines.", the three moments
+  and one of the speaker as itself, **Yes, the same voice** and **No**.
+  "Are these 5 lines Speaker 1's?" with one moment, **Yes, move them** and
+  **No**. No arithmetic, no list of other speakers, no reasoning; the bar
+  keeps the figures on hover.
+- **Biggest first.** The speaker questions come first, by lines settled;
+  then the small ones the voice backs, with **Yes to all the voice backs**;
+  the ones the voice could not judge, and the ones a speaker question would
+  settle, fold under their counts. A count at the top says how many lines
+  were found, settled and left, and goes down as you answer. Check again
+  sits at the foot with its reason once something is settled.
+- **A yes on a speaker question settles its lines.** The merge now carries
+  the check's proposals with it: the ones it fulfils are accepted, one that
+  proposed another speaker for a merged line keeps its proposal under the
+  new label, one that proposed the merged-away label now proposes the
+  surviving one. Undo puts them all back. A rename is followed the same
+  way, so renaming a speaker no longer hides its proposals.
+- **The sketch comes off the page.** The check still writes and reads by
+  it; the page no longer prints it.
+
+The user guide and the glossary say how to read the list; the mock-up is
+filed with the specification.
+
 ## v1.128.0, 2026-10-07
 
 ```

@@ -1,0 +1,254 @@
+<title>Speaker Check Proposals</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp4: #8e24aa; --sp5: #00838f; --sp6: #ad1457;
+    --radius: 8px; --radius-lg: 12px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp4: #c77ddb; --sp5: #4fc3d9; --sp6: #e57aa8; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp4: #c77ddb; --sp5: #4fc3d9; --sp6: #e57aa8; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 18px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 66ch; color: var(--muted); margin: 0; }
+  .figure { display: grid; grid-template-columns: 440px minmax(0, 1fr); gap: 18px 28px; align-items: start; }
+  @media (max-width: 800px) { .figure { grid-template-columns: minmax(0, 1fr); } }
+  .fig-head { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
+  .fig-head h2 { font-size: 20px; }
+  .caption { display: flex; flex-direction: column; gap: 10px; max-width: 54ch; }
+  .caption p { margin: 0; }
+  .caption ul { margin: 0; padding-left: 20px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .tiny { font-size: 12px; }
+  b { font-weight: 600; }
+
+  .col { width: 440px; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.tiny { font-size: 12px; padding: 2px 8px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .sp { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .sp .lane { width: 6px; height: 36px; border-radius: 3px; }
+  .sp .grow { flex: 1; min-width: 0; }
+  .sp .name { font-weight: 600; }
+  .sp .facts { color: var(--muted); font-size: 12px; }
+  .s1 { background: var(--sp1); } .s2 { background: var(--sp2); } .s4 { background: var(--sp4); } .s5 { background: var(--sp5); } .s6 { background: var(--sp6); }
+  .found { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .found .state { font-size: 13px; color: var(--muted); }
+  .found .state b { color: var(--text); }
+  .card { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+  .card.lead { border-left: 3px solid var(--accent); }
+  .card .title { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .card .title b { font-size: 15px; }
+  .card .why { color: var(--muted); font-size: 13px; }
+  .card.thin { padding: 7px 10px; gap: 4px; }
+  .card.thin .title b { font-size: 14px; }
+  .hear { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .hear .cite { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-variant-numeric: tabular-nums; }
+  .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .fold { font-size: 13px; color: var(--muted); padding: 4px 2px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .bar i { position: absolute; top: 0; bottom: 0; left: 0; }
+  .more { text-align: center; font-size: 12px; color: var(--muted); padding: 6px; border: 1px dashed var(--line); border-radius: var(--radius); }
+
+  /* The steps (new). */
+  .step { display: flex; flex-direction: column; gap: 8px; }
+  .step-head { display: flex; gap: 10px; align-items: baseline; }
+  .step-head .n { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 600; align-items: center; justify-content: center; flex: none; }
+  .step-head b { font-size: 15px; }
+  .step-head .sub { color: var(--muted); font-size: 13px; }
+  .step.done .n { background: var(--ok); }
+  .step.dim { opacity: 0.6; }
+  .step.dim .n { background: var(--surface-2); color: var(--muted); }
+  .progress { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .progress .track { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .progress .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); }
+  .done-line { font-size: 13px; color: var(--ok); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .done-line .undo { color: var(--muted); }
+  .numbers { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 18px; max-width: 70ch; font-size: 14px; }
+  .numbers table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  .numbers td { padding: 4px 0; border-top: 1px solid var(--line); }
+  .numbers td:last-child { text-align: right; }
+  .numbers tr:first-child td { border-top: 0; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The Speaker check as a list of proposals</h1>
+    <p class="lede">What the Speakers page shows after a check, drawn from today's run on the server: 522 lines under nine labels, 179 lines the check wants to move. Figure 1 is the page as v1.128.0 draws it. Figures 2 and 3 are one change seen at two moments: every finding as a proposal with a yes and a no, the biggest first, one short line each, and the engine's sketch off the page. Speaker numbers only, no names.</p>
+  </header>
+
+  <!-- Figure 1: today -->
+  <section class="figure">
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The page today (v1.128.0)</div><h2>Today: two kinds of answer, side by side, 44 cards deep</h2></div>
+    <div class="col">
+      <div class="found" style="border-top: 0; padding-top: 0">
+        <div class="muted small">Checked today 17:42, read whole.</div>
+        <div class="fold" style="border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px">&#9662; Who is who, as the check read it<div class="muted tiny" style="margin-top: 4px">The assistant's reading of the words before it checked the lines. It is not a finding, and it names nobody the words do not name.</div><div class="tiny" style="margin-top: 4px">Speaker 2 appears to be the person who placed the call: they open with a greeting, ask about the hearing date and refer to "my lawyer" twice. Speaker 5 responds to questions about the hearing and seems to be the person called, though several of Speaker 5's lines answer as if from Speaker 2's side of the conversation, which suggests … <span class="muted">(470 words)</span></div></div>
+        <div class="state"><b>What the check found.</b> 4 labels often read as other speakers, none clearly enough to merge on the check's word alone: hear them; 40 stretches to move besides. Nothing moves until you say so.</div>
+        <div class="card lead">
+          <div class="title"><b>Speaker 5 often reads as Speaker 2</b><span class="pill ok">two voices heard on 11 lines</span></div>
+          <div class="bar"><i class="s2" style="width: 32%"></i><i class="s1" style="left: 32%; width: 11%"></i></div>
+          <div class="why">58 of its 182 lines read as Speaker 2's, and 20 as Speaker 1's, and 6 as Speaker 4's, and 4 as Speaker 6's, and 4 as Speaker 3's; 90 read as its own. Either the engine split one voice into two labels, or Speaker 5 is another person whose lines the words confuse. Your ear decides: if the three below sound like Speaker 2, merge; if not, the stretches below move the lines one run at a time.</div>
+          <div class="hear">Hear three of the 58: <span class="cite">▶ 4:31</span><span class="cite">▶ 12:08</span><span class="cite">▶ 19:46</span> <span class="muted">· one of its own:</span> <span class="cite">▶ 8:02</span></div>
+          <div class="acts"><span class="btn ghost tiny">Merge Speaker 5 into Speaker 2 after listening</span><span class="btn ghost tiny">Not the same</span></div>
+        </div>
+        <div class="more">… three more speaker cards (Speaker 6, Speaker 1, Speaker 4)</div>
+        <div class="card thin agrees">
+          <div class="title"><b>3:31 to 3:40</b> <span class="muted">2 lines of Speaker 5 that read as Speaker 4's</span> <span class="pill ok">two voices heard</span></div>
+          <div class="hear">Hear it: <span class="cite">▶ 3:31</span></div>
+          <div class="acts"><span class="btn primary tiny">Accept the stretch</span><span class="btn ghost tiny">Dismiss</span></div>
+        </div>
+        <div class="card thin">
+          <div class="title"><b>5:02</b> <span class="muted">1 line of Speaker 6 that reads as Speaker 1's</span> <span class="pill">the voice is silent</span></div>
+          <div class="hear">Hear it: <span class="cite">▶ 5:02</span></div>
+          <div class="acts"><span class="btn tiny">Accept</span><span class="btn ghost tiny">Dismiss</span></div>
+        </div>
+        <div class="more">… 38 more stretch cards, 34 of them one line or two</div>
+        <div class="fold">▸ 30 stretches within the speakers above; merge, or move them one run at a time after listening</div>
+        <div class="acts"><span class="btn tiny">Accept every voice-backed stretch (8)</span><span class="btn ghost tiny">Check again</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      
+      <p>The speaker cards ask "is this label really that speaker?" and answer with <b>Merge</b>. The stretch cards ask "do these lines belong to that speaker?" and answer with <b>Accept</b>. Both are right, but they sit in one pile with no line between them, so the page reads as 44 things to approve in two vocabularies, and the one move that would settle most of it (hear two cards, merge) is not said anywhere.</p>
+      <p>There is also no sense of progress: 179 found, and nothing on the page counts down as you decide.</p>
+      <p><b>And each card explains too much.</b> The paragraph under the title does arithmetic across five speakers and then reasons about what it might mean. A person who is not a programmer reads that and stops. The card needs one short line they can nod at.</p>
+      <p><b>And above it all, the sketch.</b> Since v1.100.0 the check reads the whole call once and writes itself a sketch of who is who before judging the lines. The page shows that sketch under a fold, "Who is who, as the check read it": today's is 470 words of the engine's own prose. It was put there so a person could see what the check had in mind, but it is model output, not a finding, and on this page it reads as a long explanation nobody asked for. The sketch's wording in the figure is invented, not today's.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: one list, before -->
+  <section class="figure">
+    <div class="fig-head"><div class="eyebrow">Figure 2 · Proposed: before any answer</div><h2>One list of proposals, biggest first</h2></div>
+    <div class="col">
+      <div class="found" style="border-top: 0; padding-top: 0">
+        <div class="muted small">Checked today 17:42.</div>
+        <div class="state"><b>The check found 179 lines that read like another speaker's.</b> Each card below is a proposal: play the moments and say yes or no. Yes moves the lines. The biggest come first.</div>
+        <div class="progress"><span>179 found</span><div class="track"><i style="width: 0%"></i></div><span>0 settled</span></div>
+
+        <div class="card lead">
+          <div class="title"><b>Is Speaker 5 the same voice as Speaker 2?</b><span class="pill ok">two voices heard on 11 lines</span></div>
+          <div class="why">About a third of Speaker 5's lines read like Speaker 2. Yes settles 58 lines.</div>
+          <div class="hear"><span class="cite">▶ 4:31</span><span class="cite">▶ 12:08</span><span class="cite">▶ 19:46</span> <span class="muted">· Speaker 5 as itself:</span> <span class="cite">▶ 8:02</span></div>
+          <div class="acts"><span class="btn tiny">Yes, the same voice</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="card lead">
+          <div class="title"><b>Is Speaker 6 the same voice as Speaker 2?</b><span class="pill ok">two voices heard on 7 lines</span></div>
+          <div class="why">Half of Speaker 6's lines read like Speaker 2. Yes settles 24 lines.</div>
+          <div class="hear"><span class="cite">▶ 2:10</span><span class="cite">▶ 9:55</span><span class="cite">▶ 23:02</span> <span class="muted">· Speaker 6 as itself:</span> <span class="cite">▶ 15:30</span></div>
+          <div class="acts"><span class="btn tiny">Yes, the same voice</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="card">
+          <div class="title"><b>Is Speaker 1 the same voice as Speaker 2?</b><span class="pill">the voice is silent</span></div>
+          <div class="why">A few of Speaker 1's lines read like Speaker 2. Yes settles 14 lines.</div>
+          <div class="hear"><span class="cite">▶ 1:05</span><span class="cite">▶ 7:48</span><span class="cite">▶ 21:12</span> <span class="muted">· Speaker 1 as itself:</span> <span class="cite">▶ 3:00</span></div>
+          <div class="acts"><span class="btn tiny">Yes, the same voice</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="card">
+          <div class="title"><b>Is Speaker 4 the same voice as Speaker 5?</b><span class="pill ok">two voices heard on 4 lines</span></div>
+          <div class="why">A few of Speaker 4's lines read like Speaker 5. Yes settles 9 lines.</div>
+          <div class="hear"><span class="cite">▶ 6:40</span><span class="cite">▶ 7:12</span><span class="cite">▶ 30:18</span> <span class="muted">· Speaker 4 as itself:</span> <span class="cite">▶ 9:30</span></div>
+          <div class="acts"><span class="btn tiny">Yes, the same voice</span><span class="btn ghost tiny">No</span></div>
+        </div>
+
+        <div class="card lead thin">
+          <div class="title"><b>Are these 5 lines Speaker 1's?</b> <span class="muted">14:56 to 15:40, labelled Speaker 5</span> <span class="pill ok">two voices heard</span></div>
+          <div class="hear"><span class="cite">▶ 14:56</span></div>
+          <div class="acts"><span class="btn primary tiny">Yes, move them</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="card lead thin">
+          <div class="title"><b>Are these 3 lines Speaker 5's?</b> <span class="muted">8:14 to 8:30, labelled Speaker 6</span> <span class="pill ok">two voices heard</span></div>
+          <div class="hear"><span class="cite">▶ 8:14</span></div>
+          <div class="acts"><span class="btn primary tiny">Yes, move them</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="more">… 6 more the voice backs</div>
+        <div class="acts"><span class="btn tiny">Yes to all 8 the voice backs</span></div>
+        <div class="fold">▸ 32 single lines and short runs the voice could not judge</div>
+        <div class="fold">▸ 30 proposals inside the speaker questions above; answered by them</div>
+        <div class="acts" style="margin-top: 4px"><span class="btn ghost tiny">Check again</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Everything is a proposal.</b> One shape of card, one kind of answer: play the moments, say yes or no. The state line says so in one sentence and that is the whole explanation on the page. Each card has a question for its title and one short line under it, "About a third of Speaker 5's lines read like Speaker 2. Yes settles 58 lines." Nothing else: no arithmetic, no list of other speakers, no reasoning.</p>
+      <p><b>Biggest first.</b> A proposal about a whole speaker ("the same voice?") settles dozens of lines, so those sit at the top. A proposal about a few lines ("are these 5 lines Speaker 1's?") settles a few, so those follow, the ones the voice backs first with the filled button. A merge and a move are different things underneath, and the page keeps them so (Undo works as now), but the person only ever answers yes or no.</p>
+      <p><b>The small ones fold.</b> The 32 single lines the voice could not judge sit under one line with their count, and the 30 proposals that a speaker question would settle sit under another. The page is six cards and two folds instead of 44 cards.</p>
+      <p><b>The count</b> at the top goes down as you answer.</p>
+    </div>
+  </section>
+
+  <!-- Figure 3: one list, after -->
+  <section class="figure">
+    <div class="fig-head"><div class="eyebrow">Figure 3 · Proposed: after two yeses</div><h2>The same list after answering the top two</h2></div>
+    <div class="col">
+      <div class="found" style="border-top: 0; padding-top: 0">
+        <div class="muted small">Checked today 17:42.</div>
+        <div class="state"><b>The check found 179 lines that read like another speaker's.</b> Play the moments and say yes or no. Yes moves the lines.</div>
+        <div class="progress"><span>179 found</span><div class="track"><i style="width: 46%"></i></div><span>82 settled, 97 left</span></div>
+        <div class="done-line">Speaker 5 merged into Speaker 2, 58 lines <span class="undo">· Undo</span></div>
+        <div class="done-line">Speaker 6 merged into Speaker 2, 24 lines <span class="undo">· Undo</span></div>
+
+        <div class="card">
+          <div class="title"><b>Is Speaker 1 the same voice as Speaker 2?</b><span class="pill">the voice is silent</span></div>
+          <div class="why">A few of Speaker 1's lines read like Speaker 2. Yes settles 14 lines.</div>
+          <div class="hear"><span class="cite">▶ 1:05</span><span class="cite">▶ 7:48</span><span class="cite">▶ 21:12</span> <span class="muted">· Speaker 1 as itself:</span> <span class="cite">▶ 3:00</span></div>
+          <div class="acts"><span class="btn tiny">Yes, the same voice</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="card">
+          <div class="title"><b>Is Speaker 4 the same voice as Speaker 2?</b><span class="pill ok">two voices heard on 4 lines</span></div>
+          <div class="why">A few of Speaker 4's lines read like Speaker 2. Yes settles 9 lines.</div>
+          <div class="hear"><span class="cite">▶ 6:40</span><span class="cite">▶ 7:12</span><span class="cite">▶ 30:18</span> <span class="muted">· Speaker 4 as itself:</span> <span class="cite">▶ 9:30</span></div>
+          <div class="acts"><span class="btn tiny">Yes, the same voice</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="card lead thin">
+          <div class="title"><b>Are these 5 lines Speaker 1's?</b> <span class="muted">14:56 to 15:40, labelled Speaker 2</span> <span class="pill ok">two voices heard</span></div>
+          <div class="hear"><span class="cite">▶ 14:56</span></div>
+          <div class="acts"><span class="btn primary tiny">Yes, move them</span><span class="btn ghost tiny">No</span></div>
+        </div>
+        <div class="more">… 7 more the voice backs</div>
+        <div class="acts"><span class="btn tiny">Yes to all 8 the voice backs</span></div>
+        <div class="fold">▸ 32 single lines and short runs the voice could not judge</div>
+        <div class="acts" style="margin-top: 4px"><span class="btn tiny">Check again</span><span class="muted tiny">the speakers changed; a fresh read usually leaves less</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p>Two yeses at the top and the page shrinks. The merges show as two lines with Undo, the count reads 82 settled, the 30 proposals inside those pairs are gone because the merges answered them, and the card for Speaker 4 now asks about Speaker 2, since Speaker 5 is Speaker 2 now.</p>
+      <p>What is left is the small proposals: the eight the voice backs, one bulk yes for them, and the fold of 32 the voice could not judge. <b>Check again</b> at the foot says in a few words why you might press it now.</p>
+      <p>Then Suggest names, as the advice line above the speakers already says.</p>
+    </div>
+  </section>
+
+  <section class="numbers">
+    <b>What stays the same underneath</b>
+    <table>
+      <tr><td>The check's engine side, the cards' thresholds and the voice notes</td><td>unchanged</td></tr>
+      <tr><td>Merge, Undo and the bulk routes (accept-many, dismiss-many)</td><td>unchanged</td></tr>
+      <tr><td>The audit rows</td><td>unchanged</td></tr>
+      <tr><td>New: one list sorted by lines settled, the question wording, one short line per card, the count, the two folds</td><td>page script and template</td></tr>
+      <tr><td>Gone from the page: the sketch's fold (the check still writes and uses it)</td><td>template; Phase 5 chapter 3 amended; user guide</td></tr>
+      <tr><td>Database</td><td>unchanged</td></tr>
+    </table>
+  </section>
+</div>

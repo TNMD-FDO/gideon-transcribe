@@ -604,7 +604,7 @@
   function merge(was, onto) {
     UI.confirm({
       title: "Merge " + was + " into " + onto + "?",
-      body: "Every line of " + was + " becomes " + onto + ". Undo puts them back.",
+      body: "Every line of " + was + " becomes " + onto + "'s. Undo puts them back.",
       ok: "Merge"
     }).then(function (yes) {
       if (!yes) { return; }
@@ -764,7 +764,7 @@
       var check = body.speaker_check || {};
       var waiting = (check.pending || []).length;
       var checkRun = check.run;
-      if (waiting) { said.textContent = "For the best names, settle the " + waiting + " suggested correction" + (waiting === 1 ? "" : "s") + " below first. Suggest names works either way."; }
+      if (waiting) { said.textContent = "For the best names, answer the " + waiting + " proposal" + (waiting === 1 ? "" : "s") + " below first. Suggest names works either way."; }
       else if (check.offered && (!checkRun || checkRun.state !== "done")) { said.textContent = "For the best names, run Check the speakers first. Suggest names works either way."; }
     }
     cards().forEach(function (card) {
@@ -788,9 +788,12 @@
     return !!busy;
   }
 
-  // What the check found (v1.128.0): the state line, one card per label
-  // whose lines often read as another Speaker's, then the stretches; the
-  // speaker cards above gain a small pill naming the finding.
+  // What the check found (v1.129.0): one list of proposals, each a question
+  // with a yes and a no, the biggest first. A proposal about a whole
+  // speaker ("the same voice?") settles dozens of lines and sits at the
+  // top; one about a few lines follows, the voice-backed first; the single
+  // lines the voice could not judge and the proposals a speaker question
+  // would settle fold under their counts. A count at the top goes down.
   function voicePill(voice, count) {
     if (voice === "agrees") { return "<span class='pill small ok' title='Word by word, the voice step heard the other speaker inside " + (count ? "these lines" : "this line") + ".'>two voices heard" + (count ? " on " + count + " line" + (count === 1 ? "" : "s") : "") + "</span>"; }
     if (voice === "against") { return "<span class='pill small warn' title='The voice step gave every word of " + (count ? "these long lines" : "this long line") + " to the speaker " + (count ? "they are" : "it is") + " labelled with.'>one voice heard, the labelled one" + (count ? ", on " + count + " line" + (count === 1 ? "" : "s") : "") + "</span>"; }
@@ -798,42 +801,52 @@
     return "<span class='pill small' title='" + (count ? "These lines are" : "This line is") + " short, or the words were not timed, so the voice step has nothing to add; the words alone decide.'>the voice is silent</span>";
   }
 
+  // The share in three sizes and nothing else.
+  function howMany(share) {
+    if (share >= 0.67) { return "Most of"; }
+    if (share >= 0.42) { return "Half of"; }
+    if (share >= 0.25) { return "About a third of"; }
+    return "A few of";
+  }
+
+  function cite(one) { return "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>"; }
+
   function speakerCard(card) {
-    var verb = card.clears ? "is" : (card.share >= 0.4 ? "often reads as" : "sometimes reads as");
-    var others = card.others.map(function (one) { return ", and " + one.count + " as " + escape(one.to) + "'s"; }).join("");
-    var own = card.lines - card.count - card.others.reduce(function (sum, one) { return sum + one.count; }, 0);
-    var why = card.clears
-      ? "One voice under two labels."
-      : "Either the engine split one voice into two labels, or " + escape(card.from) + " is another person whose lines the words confuse. Your ear decides: if the three below sound like " + escape(card.to) + ", merge; if not, the stretches below move the lines one run at a time.";
-    var hear = card.hear.map(function (one) { return "<a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>"; }).join(" ");
-    var ownHear = card.own ? " <span class='muted'>&middot; and one of its own:</span> <a href='#' class='cite mono' data-seconds='" + card.own.start + "'>" + escape(card.own.clock) + "</a>" : "";
-    var mergeButton = card.voice === "against" ? ""
-      : "<button type='button' class='tiny merge-card" + (card.clears ? " primary" : " ghost") + "' data-from='" + escape(card.from) + "' data-to='" + escape(card.to) + "'>Merge " + escape(card.from) + " into " + escape(card.to) + (card.clears ? "" : " after listening") + "</button> ";
+    var figures = card.count + " of " + card.lines + " line" + (card.lines === 1 ? "" : "s") + " read as " + card.to + "'s" +
+      card.others.map(function (one) { return ", " + one.count + " as " + one.to + "'s"; }).join("");
+    var hear = card.hear.map(cite).join(" ");
+    var own = card.own ? " <span class='muted'>&middot; " + escape(card.from) + " as itself:</span> " + cite(card.own) : "";
+    var yes = card.voice === "against" ? ""
+      : "<button type='button' class='tiny merge-card" + (card.clears ? " primary" : "") + "' data-from='" + escape(card.from) + "' data-to='" + escape(card.to) + "'>Yes, the same voice</button> ";
     return "<div class='found-card speaker" + (card.clears ? " clears" : "") + "' data-ids='" + card.ids.join(",") + "'>" +
-      "<div class='title'><b>" + escape(card.from) + " " + verb + " " + escape(card.to) + "</b> " + voicePill(card.voice, card.voice === "agrees" ? card.voice_both : (card.voice === "against" ? card.voice_against : 0)) + "</div>" +
-      "<div class='bar'><i style='width: " + Math.round(card.share * 100) + "%'></i></div>" +
-      "<p class='why small muted'>" + card.count + " of its " + card.lines + " line" + (card.lines === 1 ? "" : "s") + " read as " + escape(card.to) + "'s" + others + (own > 0 ? "; " + own + " read as its own" : "") + ". " + why + "</p>" +
-      "<div class='hear small muted'>Hear three of the " + card.count + ": " + hear + ownHear + "</div>" +
-      "<div class='row acts'>" + mergeButton + "<button type='button' class='ghost tiny not-same'>Not the same</button></div></div>";
+      "<div class='title'><b>Is " + escape(card.from) + " the same voice as " + escape(card.to) + "?</b> " + voicePill(card.voice, card.voice === "agrees" ? card.voice_both : (card.voice === "against" ? card.voice_against : 0)) + "</div>" +
+      "<div class='bar' title='" + escape(figures) + "'><i style='width: " + Math.round(card.share * 100) + "%'></i></div>" +
+      "<p class='why small muted'>" + howMany(card.share) + " " + escape(card.from) + "'s lines read like " + escape(card.to) + ". Yes settles " + card.count + " line" + (card.count === 1 ? "" : "s") + ".</p>" +
+      "<div class='hear small muted'>" + hear + own + "</div>" +
+      "<div class='row acts'>" + yes + "<button type='button' class='ghost tiny not-same'>No</button></div></div>";
   }
 
   function stretchCard(one) {
     var span = one.count > 1 ? escape(one.clock) + " to " + escape(one.clock_end) : escape(one.clock);
+    var question = one.count > 1 ? "Are these " + one.count + " lines " + escape(one.to) + "'s?" : "Is this line " + escape(one.to) + "'s?";
     return "<div class='found-card stretch " + one.voice + "' data-ids='" + one.ids.join(",") + "'>" +
-      "<div class='title'><b>" + span + "</b> <span class='muted'>" + one.count + " line" + (one.count === 1 ? "" : "s") + " of " + escape(one.from) + " that read" + (one.count === 1 ? "s" : "") + " as " + escape(one.to) + "'s</span> " + voicePill(one.voice, 0) + "</div>" +
-      (one.reason || one.quote ? "<p class='why small muted'>" + (one.reason ? escape(one.reason) + ": " : "") + (one.quote ? "&ldquo;" + escape(one.quote) + "&rdquo;" : "") + "</p>" : "") +
-      "<div class='hear small muted'>Hear it: <a href='#' class='cite mono' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a></div>" +
-      "<div class='row acts'><button type='button' class='tiny accept-stretch" + (one.voice === "agrees" ? " primary" : "") + "'>Accept" + (one.count > 1 ? " the stretch" : "") + "</button> " +
-      "<button type='button' class='ghost tiny dismiss-stretch'>Dismiss</button></div></div>";
+      "<div class='title'><b>" + question + "</b> <span class='muted'>" + span + ", labelled " + escape(one.from) + "</span> " + voicePill(one.voice, 0) + "</div>" +
+      "<div class='hear small muted'>" + cite(one) + (one.quote ? " <span class='quote'>&ldquo;" + escape(one.quote) + "&rdquo;</span>" : "") + "</div>" +
+      "<div class='row acts'><button type='button' class='tiny accept-stretch" + (one.voice === "agrees" ? " primary" : "") + "'>Yes, move " + (one.count > 1 ? "them" : "it") + "</button> " +
+      "<button type='button' class='ghost tiny dismiss-stretch'>No</button></div></div>";
   }
+
+  function plural(count, word) { return count + " " + word + (count === 1 ? "" : "s"); }
 
   function drawCorrections(body) {
     if (!checkLine || !correctionsBox || !V.assistant.speakerCheck) { return false; }
     var check = body.speaker_check || {};
     var run = check.run;
-    var cards = check.speakers || [];
+    var cards = (check.speakers || []).slice().sort(function (a, b) { return b.count - a.count; });
     var all = check.stretches || [];
     var open = all.filter(function (one) { return !one.covered; });
+    var backed = open.filter(function (one) { return one.voice === "agrees"; });
+    var quiet = open.filter(function (one) { return one.voice !== "agrees"; });
     var covered = all.filter(function (one) { return one.covered; });
     var busy = run && (run.state === "queued" || run.state === "running");
     checkLine.hidden = !check.offered;
@@ -841,20 +854,13 @@
     var said = document.getElementById("check-said");
     button.disabled = !body.reachable || !!busy;
     button.title = body.reachable ? "" : (body.unavailable_line || "");
-    // How it was read (v1.100.0): whole, or in windows, after the sketch.
-    var how = run && run.state === "done" ? (run.whole ? ", read whole" : (run.windows ? ", read in " + run.windows + " window" + (run.windows === 1 ? "" : "s") : "")) : "";
+    // How it was read (v1.100.0): whole, or in windows.
+    var how = run && run.state === "done" ? (run.whole ? ", read whole" : (run.windows ? ", read in " + plural(run.windows, "window") : "")) : "";
     if (busy) { said.textContent = run.sketch ? "Reading the transcript, " + (run.windows ? run.windows + " windows so far..." : "window by window...") : "Reading the whole transcript for who is who..."; }
     else if (run && run.state === "failed") { said.textContent = run.said || ""; }
     else if (run && run.state === "done" && !cards.length && !all.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
     else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + "."; }
     else { said.textContent = ""; }
-    var sketchBox = document.getElementById("check-sketch");
-    if (sketchBox) {
-      var sketch = run && run.state === "done" ? (run.sketch || "") : "";
-      sketchBox.hidden = !sketch;
-      var words = document.getElementById("check-sketch-words");
-      if (words) { words.textContent = sketch; }
-    }
     if (run && run.cut_short) {
       // A window's list ran past the answer cap (v1.56.0): the run did not
       // see everything, and the page says so rather than looking finished.
@@ -863,28 +869,39 @@
           ? " cut short at the answer cap; raise the cap on the Panel's Speakers page or shorten the window, then check again."
           : " cut short at the answer cap; ask your Admin to raise it, then check again.");
     }
-    correctionsBox.hidden = !cards.length && !all.length;
-    var state = document.getElementById("corrections-state");
-    var parts = [];
-    if (cards.length) {
-      var clear = cards.filter(function (one) { return one.clears; }).length;
-      parts.push(cards.length + " label" + (cards.length === 1 ? "" : "s") + " often read" + (cards.length === 1 ? "s" : "") + " as " + (cards.length === 1 ? "another speaker" : "other speakers") +
-        (clear ? "" : ", none clearly enough to merge on the check's word alone: hear them"));
-    }
-    if (open.length) { parts.push(open.length + " stretch" + (open.length === 1 ? "" : "es") + " to move" + (cards.length ? " besides" : "")); }
-    state.textContent = parts.length ? parts.join("; ") + ". Nothing moves until you say so." : "";
+    // The one explanation on the page, and the count that goes down. Once
+    // everything is settled the count stays, so the page says it is done.
+    var found = run && run.found ? run.found : (check.pending || []).length;
+    var left = (check.pending || []).length;
+    var settled = Math.max(0, found - left);
+    correctionsBox.hidden = !cards.length && !all.length && !settled;
+    document.getElementById("corrections-state").textContent = !left && settled
+      ? "The check found " + plural(found, "line") + " that read like another speaker's; every one is settled."
+      : "The check found " + plural(found, "line") + " that read like another speaker's. Each card below is a proposal: play the moments and say yes or no. Yes moves the lines." +
+        (cards.length && (backed.length || quiet.length) ? " The biggest come first." : "");
+    var progress = document.getElementById("corrections-progress");
+    progress.hidden = !found;
+    progress.querySelector(".track i").style.width = (found ? Math.round((settled / found) * 100) : 0) + "%";
+    document.getElementById("corrections-found").textContent = plural(found, "line") + " found";
+    document.getElementById("corrections-left").textContent = settled ? settled + " settled, " + left + " left" : "0 settled";
     document.getElementById("speaker-cards").innerHTML = cards.map(speakerCard).join("");
-    document.getElementById("stretches").innerHTML = open.map(stretchCard).join("");
+    document.getElementById("stretches").innerHTML = backed.map(stretchCard).join("");
+    var acceptBacked = document.getElementById("accept-corrections");
+    acceptBacked.hidden = backed.length < 2;
+    acceptBacked.textContent = "Yes to all " + backed.length + " the voice backs";
+    var quietFold = document.getElementById("stretches-quiet");
+    quietFold.hidden = !quiet.length;
+    document.getElementById("stretches-quiet-title").textContent =
+      (quiet.length === 1 ? "1 proposal" : quiet.length + " proposals") + " the voice could not judge" + (backed.length || cards.length ? "" : "; the words alone decide");
+    document.getElementById("stretches-quiet-list").innerHTML = quiet.map(stretchCard).join("");
     var fold = document.getElementById("stretches-covered");
     fold.hidden = !covered.length;
     document.getElementById("stretches-covered-title").textContent =
-      covered.length + " stretch" + (covered.length === 1 ? "" : "es") + " within the speakers above; merge, or move them one run at a time after listening";
+      (covered.length === 1 ? "1 proposal" : covered.length + " proposals") + " inside the speaker questions above; a yes there answers them";
     document.getElementById("stretches-covered-list").innerHTML = covered.map(stretchCard).join("");
-    var backed = all.filter(function (one) { return one.voice === "agrees"; }).length;
-    document.getElementById("corrections-actions").hidden = !cards.length && !all.length;
-    var acceptBacked = document.getElementById("accept-corrections");
-    acceptBacked.hidden = backed < 2;
-    acceptBacked.textContent = "Accept every voice-backed stretch (" + backed + ")";
+    document.getElementById("corrections-actions").hidden = backed.length < 2;
+    var again = document.getElementById("check-again-why");
+    if (again) { again.hidden = !settled; }
     // The finding on the speaker's own card, where the person already looks.
     Array.prototype.forEach.call(document.querySelectorAll(".sp-card .check-hint"), function (pill) { pill.remove(); });
     cards.forEach(function (card) {
@@ -893,7 +910,7 @@
       if (!head) { return; }
       var pill = document.createElement("span");
       pill.className = "pill small warn check-hint";
-      pill.textContent = (card.clears ? "is " : (card.share >= 0.4 ? "often reads as " : "sometimes reads as ")) + card.to;
+      pill.textContent = "reads like " + card.to + "?";
       head.appendChild(pill);
     });
     var scoreLine = document.getElementById("corrections-score");
@@ -901,7 +918,7 @@
       var score = check.score || {};
       var decided = (score.accepted || 0) + (score.dismissed || 0);
       scoreLine.hidden = !decided;
-      scoreLine.textContent = decided ? "Decided so far: " + (score.accepted || 0) + " accepted, " + (score.dismissed || 0) + " dismissed." : "";
+      scoreLine.textContent = decided ? "Decided so far: " + (score.accepted || 0) + " yes, " + (score.dismissed || 0) + " no." : "";
     }
     return !!busy;
   }
@@ -1001,6 +1018,8 @@
         });
         return;
       }
+      // Yes on a speaker question is the page's own merge, with its Undo;
+      // the corrections follow it (v1.129.0).
       var mergeCard = event.target.closest(".merge-card");
       if (mergeCard) { merge(mergeCard.dataset.from, mergeCard.dataset.to); return; }
       var card = event.target.closest(".found-card");

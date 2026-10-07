@@ -805,6 +805,12 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     merging = transcript.segments.filter(speaker=now).exists()
     moved = list(transcript.segments.filter(speaker=was).values_list("pk", flat=True))
     changed = transcript.segments.filter(pk__in=moved).update(speaker=now)
+    # The Speaker check's corrections follow the change (v1.129.0): a merge
+    # settles the ones it fulfils, the rest keep their proposal under the
+    # new label. Undo puts them back with the lines.
+    from core import speaker_check
+
+    followed = speaker_check.follow(transcript, was, now, by=request.user)
     # Remembered on the Transcript, so a merge made by mistake can be undone
     # later, exactly: these Segments go back to that name and no others do.
     changes = list(transcript.speaker_changes or [])
@@ -814,6 +820,7 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
             "to": now,
             "segments": moved,
             "merged": merging,
+            "corrections": followed,
             "at": timezone.now().isoformat(),
         }
     )
@@ -841,9 +848,16 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
         object_id=recording.pk,
         object_label=recording.original_filename,
         segments_changed=changed,
+        corrections_settled=len(followed.get("accepted", []))
+        + len(followed.get("moot", [])),
     )
     return JsonResponse(
-        {"changed": changed, "merged": merging, "undo": last_change_line(transcript)}
+        {
+            "changed": changed,
+            "merged": merging,
+            "settled": len(followed.get("accepted", [])),
+            "undo": last_change_line(transcript),
+        }
     )
 
 
@@ -1089,6 +1103,15 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
         restored = transcript.segments.filter(
             pk__in=last.get("segments") or [], speaker=last.get("to", "")
         ).update(speaker=last.get("from", ""))
+        if last.get("corrections"):
+            from core import speaker_check
+
+            speaker_check.unfollow(
+                transcript,
+                last.get("from", ""),
+                last.get("to", ""),
+                last.get("corrections"),
+            )
     transcript.speaker_changes = changes
     transcript.save(update_fields=["speaker_changes"])
     if recording.case_id and not last.get("swap"):

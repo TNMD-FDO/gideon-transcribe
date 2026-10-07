@@ -37,12 +37,6 @@
           <button type="button" class="small" id="check-speakers" title="Ask the AI assistant which lines the words show were given to the wrong speaker">Check the speakers</button>
           <span id="check-said" class="small muted"></span>
         </span>
-        {% comment %}The sketch of who is who (v1.100.0): the engine's reading of the words before the check, never a finding.{% endcomment %}
-        <details id="check-sketch" class="small check-sketch" hidden>
-          <summary>Who is who, as the check read it</summary>
-          <p class="muted">The assistant's reading of the words before it checked the lines. It is not a finding, and it names nobody the words do not name.</p>
-          <p id="check-sketch-words" style="white-space: pre-wrap"></p>
-        </details>
       {% endif %}
       {% if assistant.suggestions %}
         <span id="suggest-line" hidden>
@@ -145,15 +139,28 @@
               <b class="grow" id="corrections-title">What the check found</b>
             </div>
             <p class="small muted" id="corrections-state"></p>
+            {% comment %}The count that goes down (v1.129.0): found, settled, left.{% endcomment %}
+            <div class="progress small muted" id="corrections-progress" hidden>
+              <span id="corrections-found"></span>
+              <span class="track"><i></i></span>
+              <span id="corrections-left"></span>
+            </div>
             <div id="speaker-cards" class="found-cards"></div>
             <div id="stretches" class="found-cards"></div>
+            <div class="row acts" id="corrections-actions" style="gap: 6px; margin-top: 8px" hidden>
+              <button type="button" class="tiny" id="accept-corrections" hidden>Yes to all the voice backs</button>
+            </div>
+            <details id="stretches-quiet" class="small" hidden>
+              <summary id="stretches-quiet-title"></summary>
+              <div id="stretches-quiet-list" class="found-cards"></div>
+            </details>
             <details id="stretches-covered" class="small" hidden>
               <summary id="stretches-covered-title"></summary>
               <div id="stretches-covered-list" class="found-cards"></div>
             </details>
-            <div class="row acts" id="corrections-actions" style="gap: 6px; margin-top: 8px" hidden>
-              <button type="button" class="tiny" id="accept-corrections" hidden>Accept every voice-backed stretch</button>
+            <div class="row acts" style="gap: 8px; margin-top: 8px; align-items: baseline">
               <button type="button" class="ghost tiny" id="check-again">Check again</button>
+              <span class="small muted" id="check-again-why" hidden>the speakers changed; a fresh read usually leaves less</span>
             </div>
             <p class="small muted" id="corrections-score" hidden></p>
           </section>

@@ -2338,6 +2338,12 @@ details.inline[open] summary::after { content: ": "; }
 .sp-corrections .found-card .why, .sp-corrections .found-card .hear { margin: 0; }
 .sp-corrections .found-card .acts { gap: 6px; margin-top: 2px; }
 .sp-card .check-hint { margin-left: 4px; }
+/* The count that goes down (v1.129.0). */
+.sp-corrections .progress { display: flex; gap: 10px; align-items: center; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.sp-corrections .progress .track { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.sp-corrections .progress .track i { display: block; height: 100%; width: 0; background: var(--ok); }
+.sp-corrections .found-card .quote { font-style: italic; }
+.sp-corrections details summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
 
 /* The strip's count of corrections waiting (Phase 5 chapter 3). */
 button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: var(--t-small); min-height: 0; line-height: 1.4; padding: 2px 8px; }

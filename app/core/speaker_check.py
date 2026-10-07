@@ -564,6 +564,69 @@ def score(transcript) -> dict:
     return out
 
 
+def follow(transcript, was: str, now: str, by=None) -> dict:
+    """The pending corrections follow a rename or a merge of `was` into
+    `now` (v1.129.0), so a yes on a Speaker card settles what it should
+    and the rest stay in view under the new label:
+
+    - a correction that proposed exactly this (its line was `was`'s and it
+      read as `now`'s) is accepted: the merge did what it asked;
+    - one that proposed another Speaker for a line of `was` keeps its
+      proposal, now from `now`;
+    - one that proposed `was` for another Speaker's line now proposes
+      `now`, unless that is the line's own label, in which case it is moot
+      and dismissed.
+
+    Returns what changed, by id, for Undo to put back."""
+    stamp = timezone.now()
+    pending = transcript.corrections.filter(state=SpeakerCorrection.PENDING)
+    done = {"accepted": [], "from": [], "to": [], "moot": []}
+    for one in pending.filter(speaker_from=was):
+        if one.speaker_to == now:
+            one.state = SpeakerCorrection.ACCEPTED
+            one.decided_by = by
+            one.decided_at = stamp
+            one.save(update_fields=["state", "decided_by", "decided_at"])
+            done["accepted"].append(str(one.pk))
+        else:
+            one.speaker_from = now
+            one.save(update_fields=["speaker_from"])
+            done["from"].append(str(one.pk))
+    for one in pending.filter(speaker_to=was):
+        one.speaker_to = now
+        if one.speaker_from == now:
+            one.state = SpeakerCorrection.DISMISSED
+            one.decided_by = by
+            one.decided_at = stamp
+            one.save(update_fields=["speaker_to", "state", "decided_by", "decided_at"])
+            done["moot"].append(str(one.pk))
+        else:
+            one.save(update_fields=["speaker_to"])
+            done["to"].append(str(one.pk))
+    return {key: ids for key, ids in done.items() if ids}
+
+
+def unfollow(transcript, was: str, now: str, followed: dict | None) -> int:
+    """Undo of a rename or a merge puts its corrections back as they were
+    (v1.129.0): the accepted and the moot are pending again, and the
+    labels that followed the change follow it back."""
+    if not followed:
+        return 0
+    rows = transcript.corrections
+    count = 0
+    for pk in followed.get("accepted", []) + followed.get("moot", []):
+        count += rows.filter(pk=pk).update(
+            state=SpeakerCorrection.PENDING, decided_by=None, decided_at=None
+        )
+    for pk in followed.get("moot", []):
+        rows.filter(pk=pk).update(speaker_to=was)
+    for pk in followed.get("from", []):
+        count += rows.filter(pk=pk, speaker_from=now).update(speaker_from=was)
+    for pk in followed.get("to", []):
+        count += rows.filter(pk=pk, speaker_to=now).update(speaker_to=was)
+    return count
+
+
 def live_rows(transcript) -> list:
     """The pending corrections whose line still carries the label the check
     saw; one moved since (by hand, a merge, a swap) is left out."""

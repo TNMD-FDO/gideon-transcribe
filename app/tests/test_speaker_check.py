@@ -244,7 +244,9 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     # page the strip's pill.
     page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
     assert 'id="check-speakers"' in page and 'id="corrections"' in page
-    assert 'id="check-sketch"' in page and "Who is who, as the check read it" in page
+    # The sketch stays on the run and off the page (v1.129.0).
+    assert 'id="check-sketch"' not in page
+    assert "Who is who, as the check read it" not in page
     assert "speakerCheck: true" in page
     viewer_page = client.get(f"/recording/{recording.pk}").content.decode()
     assert 'id="corrections-pill"' in viewer_page
@@ -464,15 +466,16 @@ def test_the_check_says_the_big_thing_first_and_the_voice_is_the_one_measure(
     assert speaker_check.pending_count(transcript) == 6
     page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
     assert 'id="speaker-cards"' in page and 'id="stretches"' in page
-    assert (
-        "Accept every voice-backed stretch" in page
-        and 'id="corrections-aside"' not in page
-    )
+    assert 'id="stretches-quiet"' in page and 'id="corrections-progress"' in page
+    assert 'id="corrections-aside"' not in page
     script = (
         Path(__file__).resolve().parents[1] / "static" / "speakers-page.js"
     ).read_text(encoding="utf-8")
     assert "two voices heard" in script and "the voice is silent" in script
-    assert "after listening" in script and "secondWords" not in script
+    # Every finding is a question with a yes and a no (v1.129.0).
+    assert "the same voice as" in script and "Yes, the same voice" in script
+    assert "Yes, move " in script and "Yes to all " in script
+    assert "after listening" not in script and "secondWords" not in script
 
     # A stretch accepted at once moves its lines; a card dismissed at once
     # puts its corrections away; the decisions are counted.
@@ -877,5 +880,100 @@ def test_the_sketch_is_in_the_glossary_and_the_guide():
     guide = (root / "docs" / "user-guide.md").read_text(encoding="utf-8")
     assert "**Sketch**:" in glossary
     assert "writes a sketch of who is who" in guide
-    assert "**Who is who, as the check read it**" in guide
+    # Off the page since v1.129.0.
+    assert "**Who is who, as the check read it**" not in guide
     assert "—" not in prompts.SPEAKER_SKETCH + prompts.SPEAKER_SKETCH_USE
+
+
+@pytest.mark.django_db
+def test_a_merge_settles_the_corrections_it_fulfils_and_undo_puts_them_back(
+    admin, tmp_path, settings, client
+):
+    """v1.129.0: a yes on a speaker question is the page's merge, and the
+    pending corrections follow it: the ones it fulfils are accepted, one
+    that proposed another speaker for a merged line keeps its proposal
+    under the new label, one that proposed the merged-away label now
+    proposes the surviving one, and a proposal made moot is dismissed.
+    Undo puts every one of them back. A rename is followed the same way."""
+    switched_on()
+    recording = a_recording(admin, tmp_path, settings)
+    transcript = recording.transcript
+    # Lines at 0 (Speaker 1), 12.4 (Speaker 2), 724 (Speaker 1).
+    Segment.objects.create(
+        transcript=transcript,
+        start=400.0,
+        end=403.0,
+        text="And then he said no.",
+        speaker="Speaker 3",
+        speaker_label="SPEAKER_3",
+    )
+
+    def row(start, was, to):
+        return SpeakerCorrection.objects.create(
+            transcript=transcript,
+            segment=Segment.objects.get(start=start),
+            start=start,
+            speaker_from=was,
+            speaker_to=to,
+        )
+
+    fulfilled = row(12.4, "Speaker 2", "Speaker 1")
+    kept = row(12.4, "Speaker 2", "Speaker 3")
+    retargeted = row(400.0, "Speaker 3", "Speaker 2")
+    moot = row(0.0, "Speaker 1", "Speaker 2")
+    signed_in(client, admin)
+    answer = client.post(
+        f"/recording/{recording.pk}/speakers",
+        {"from": "Speaker 2", "to": "Speaker 1"},
+        content_type="application/json",
+    ).json()
+    assert answer["merged"] is True and answer["settled"] == 1
+    for one in (fulfilled, kept, retargeted, moot):
+        one.refresh_from_db()
+    assert fulfilled.state == SpeakerCorrection.ACCEPTED
+    assert fulfilled.decided_by_id == admin.pk
+    assert (kept.state, kept.speaker_from, kept.speaker_to) == (
+        SpeakerCorrection.PENDING,
+        "Speaker 1",
+        "Speaker 3",
+    )
+    assert (retargeted.state, retargeted.speaker_from, retargeted.speaker_to) == (
+        SpeakerCorrection.PENDING,
+        "Speaker 3",
+        "Speaker 1",
+    )
+    assert (moot.state, moot.speaker_to) == (SpeakerCorrection.DISMISSED, "Speaker 1")
+    # The kept and the retargeted are still live: their lines carry the label.
+    live = {str(one.pk) for one in speaker_check.live_rows(transcript)}
+    assert live == {str(kept.pk), str(retargeted.pk)}
+    assert speaker_check.score(transcript) == {"accepted": 1, "dismissed": 1}
+    row_ = Row.objects.get(event="Speakers merged")
+    assert row_.details["corrections_settled"] == 2
+    assert "Speaker" not in json.dumps(row_.details)
+    # Undo puts the lines and the corrections back.
+    undone = client.post(f"/recording/{recording.pk}/speakers/undo").json()
+    assert undone["restored"] == 1
+    for one in (fulfilled, kept, retargeted, moot):
+        one.refresh_from_db()
+        assert one.state == SpeakerCorrection.PENDING and one.decided_by_id is None
+    assert (kept.speaker_from, kept.speaker_to) == ("Speaker 2", "Speaker 3")
+    assert (retargeted.speaker_from, retargeted.speaker_to) == (
+        "Speaker 3",
+        "Speaker 2",
+    )
+    assert (moot.speaker_from, moot.speaker_to) == ("Speaker 1", "Speaker 2")
+    assert len(speaker_check.live_rows(transcript)) == 4
+    # A rename carries every correction's labels with it, and Undo back.
+    client.post(
+        f"/recording/{recording.pk}/speakers",
+        {"from": "Speaker 2", "to": "Pat"},
+        content_type="application/json",
+    )
+    fulfilled.refresh_from_db()
+    retargeted.refresh_from_db()
+    assert fulfilled.speaker_from == "Pat" and retargeted.speaker_to == "Pat"
+    assert len(speaker_check.live_rows(transcript)) == 4
+    client.post(f"/recording/{recording.pk}/speakers/undo")
+    fulfilled.refresh_from_db()
+    assert fulfilled.speaker_from == "Speaker 2"
+    assert len(speaker_check.live_rows(transcript)) == 4
