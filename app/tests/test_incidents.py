@@ -703,3 +703,35 @@ def test_the_words_are_in_the_glossary_the_guide_and_the_catalogue():
         "incidents_sound_match",
     ):
         assert settings_store.definition(key).page == "incidents"
+
+
+def test_a_clock_printed_with_its_zone_still_reads_as_a_time():
+    """v1.129.2: the Axon stamp prints "17:11:14 -0500", and the picture
+    reader sometimes keeps the zone inside the time; six cameras of one
+    incident stayed unsynced on the office's server for it. A zone, a
+    zone's name, or AM and PM after the digits are read; nonsense is not."""
+    from core import prompts
+
+    assert prompts.clock_seconds("17:11:14") == 17 * 3600 + 11 * 60 + 14
+    assert prompts.clock_seconds("17:11:14 -0500") == 17 * 3600 + 11 * 60 + 14
+    assert prompts.clock_seconds("17:11:14-05:00") == 17 * 3600 + 11 * 60 + 14
+    assert prompts.clock_seconds("17:11:14 CDT") == 17 * 3600 + 11 * 60 + 14
+    assert prompts.clock_seconds("5:11:14 PM") == 17 * 3600 + 11 * 60 + 14
+    assert prompts.clock_seconds("5:11:14 p.m. CDT") == 17 * 3600 + 11 * 60 + 14
+    assert prompts.clock_seconds("12:00:01 AM") == 1
+    assert prompts.clock_seconds("12:00:01 PM") == 12 * 3600 + 1
+    assert prompts.clock_seconds("17:11") is None
+    assert prompts.clock_seconds("17:11:14 -0500 17:11:15") is None
+    assert prompts.clock_seconds("13:11:14 PM") is None
+    assert prompts.clock_seconds("25:11:14") is None
+
+
+@pytest.mark.django_db
+def test_a_camera_whose_stamp_carries_the_zone_is_placed_from_its_clock(person, a_case):
+    first = video(person, a_case, "first", stamp=stamp("17:09:18 -0500", "BWC-1"))
+    second = video(person, a_case, "second", stamp=stamp("17:11:14 -0500", "BWC-4"))
+    incident = incidents.make(a_case, "Hermitage", [first, second], by=person)
+    cams = {one.recording.title: one for one in incident.cameras.all()}
+    assert cams["first"].placed == "clock" and cams["first"].starts_at == 0.0
+    assert cams["second"].placed == "clock"
+    assert cams["second"].starts_at == pytest.approx(116.0)

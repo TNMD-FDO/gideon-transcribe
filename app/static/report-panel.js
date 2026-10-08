@@ -52,10 +52,17 @@
     return html + "</section>";
   }
 
+  // Open one document of several (v1.129.2): its pill lit, the others' pages hidden.
+  function show(root, id) {
+    Array.prototype.forEach.call(root.querySelectorAll("[data-pick-document]"), function (pill) { pill.classList.toggle("on", pill.dataset.pickDocument === id); });
+    Array.prototype.forEach.call(root.querySelectorAll(".report-doc"), function (doc) { doc.hidden = doc.dataset.document !== id; });
+  }
+
   function light(root, page, n) {
     Array.prototype.forEach.call(root.querySelectorAll(".lit"), function (one) { one.classList.remove("lit"); });
-    var box = root.querySelector(".doc-box[data-page='" + page + "'][data-n='" + n + "']");
-    var line = root.querySelector(".doc-para[data-page='" + page + "'][data-n='" + n + "']");
+    var within = root.querySelector(".report-doc:not([hidden])") || root;
+    var box = within.querySelector(".doc-box[data-page='" + page + "'][data-n='" + n + "']");
+    var line = within.querySelector(".doc-para[data-page='" + page + "'][data-n='" + n + "']");
     if (box) { box.classList.add("lit"); }
     if (line) { line.classList.add("lit"); line.scrollIntoView({ block: "center" }); }
   }
@@ -248,9 +255,22 @@
     Promise.all(listed.map(function (one) {
       return fetch(one.state).then(function (answer) { return answer.ok ? answer.json() : null; }).catch(function () { return null; });
     })).then(function (states) {
-      box.innerHTML = states.map(function (state, index) {
-        if (!state) { return "<p class='muted'>" + escape(listed[index].title || "A document") + " could not be read just now.</p>"; }
-        return drawDocument(state, home);
+      // Several documents (v1.129.2): a row of pills, one per document with
+      // its page count, and one document open at a time; the first opens.
+      // One document draws as before, with no row.
+      var pills = "";
+      if (states.length > 1) {
+        pills = "<div class='report-pick row' style='gap: 6px; flex-wrap: wrap; margin-bottom: 8px'>" + states.map(function (state, index) {
+          var id = state ? state.id : listed[index].id;
+          var title = state ? state.title : (listed[index].title || "A document");
+          var pages = state && state.pages_line ? " <span class='muted'>" + escape(String(state.pages_line).split(",")[0]) + "</span>" : "";
+          return "<button type='button' class='pill small" + (index === 0 ? " on" : "") + "' data-pick-document='" + escape(id) + "'>" + escape(title) + pages + "</button>";
+        }).join("") + "</div>";
+      }
+      box.innerHTML = pills + states.map(function (state, index) {
+        if (!state) { return "<p class='muted report-doc' data-document='" + escape(listed[index].id) + "'" + (states.length > 1 && index > 0 ? " hidden" : "") + ">" + escape(listed[index].title || "A document") + " could not be read just now.</p>"; }
+        var html = drawDocument(state, home);
+        return states.length > 1 && index > 0 ? html.replace("<section class='report-doc'", "<section class='report-doc' hidden") : html;
       }).join("");
       // On the recording page the comparison sits under the document; on the
       // incident page it opens as a layer from its button.
@@ -278,6 +298,8 @@
       });
     });
     box.addEventListener("click", function (event) {
+      var pick = event.target.closest("[data-pick-document]");
+      if (pick) { show(box, pick.dataset.pickDocument); return; }
       var open = event.target.closest("[data-open-comparison]");
       if (open && window.INCIDENT_PAGE && window.INCIDENT_PAGE.openComparison) {
         var holder = open.closest(".compare-box");
@@ -291,5 +313,5 @@
     });
   }
 
-  window.REPORT_PANEL = { draw: draw, drawComparison: drawComparison };
+  window.REPORT_PANEL = { draw: draw, drawComparison: drawComparison, show: show };
 })();

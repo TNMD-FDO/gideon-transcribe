@@ -1,0 +1,185 @@
+<title>Reports Beside Cameras</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2f7d4f;
+    --radius: 8px; --radius-lg: 12px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      --c1: #7ab4e6; --c2: #f0956a; --c3: #6fc28a; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    --c1: #7ab4e6; --c2: #f0956a; --c3: #6fc28a; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 26px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 20px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 66ch; color: var(--muted); margin: 0; }
+  .figure { display: grid; grid-template-columns: 460px minmax(0, 1fr); gap: 18px 28px; align-items: start; }
+  @media (max-width: 820px) { .figure { grid-template-columns: minmax(0, 1fr); } }
+  .fig-head { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
+  .caption { display: flex; flex-direction: column; gap: 10px; max-width: 54ch; }
+  .caption p { margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .tiny { font-size: 12px; }
+  b { font-weight: 600; }
+
+  .col { width: 460px; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.tiny { font-size: 12px; padding: 2px 8px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.on { background: var(--accent); color: var(--accent-ink); }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field > span { font-size: 13px; color: var(--muted); }
+  .select, .input { border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; background: var(--surface); font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .choice.on { border-color: var(--accent); background: var(--accent-soft); }
+  .choice .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); flex: none; margin-top: 3px; }
+  .choice.on .dot { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 3px var(--accent-soft); }
+  .choice .why { color: var(--muted); font-size: 13px; }
+  .tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding-bottom: 6px; font-size: 13px; }
+  .tabbar span { padding: 3px 8px; border-radius: 6px; color: var(--muted); }
+  .tabbar span.on { background: var(--surface-2); color: var(--text); font-weight: 600; }
+  .doc { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .doc .head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .pg { background: var(--surface-2); border-radius: 4px; height: 54px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+  .pages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .para { font-size: 12px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 8px; }
+  .para.lit { border-left-color: var(--accent); color: var(--text); }
+  .docpick { display: flex; gap: 6px; flex-wrap: wrap; }
+  .docpick .pill { padding: 4px 10px; font-size: 13px; cursor: default; }
+  .more { text-align: center; font-size: 12px; color: var(--muted); padding: 6px; border: 1px dashed var(--line); border-radius: var(--radius); }
+  .sync-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .sync-card.unsynced { box-shadow: inset 3px 0 0 0 var(--warn); }
+  .sync-card .name { display: flex; gap: 8px; align-items: center; }
+  .sync-card .name b { color: var(--c1); }
+  .jumble { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
+  .jumble .wide { width: 712px; display: grid; grid-template-columns: 34px 200px 233px 181px 64px; gap: 0 6px; font-size: 12px; }
+  .jumble .wide > div { border-top: 1px solid var(--line); padding: 5px 0; }
+  .jumble .edge { position: absolute; right: 0; top: 0; bottom: 0; width: 60px; background: linear-gradient(to right, transparent, var(--surface)); }
+  .numbers { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 18px; max-width: 70ch; font-size: 14px; }
+  .numbers table { border-collapse: collapse; width: 100%; }
+  .numbers td { padding: 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  .numbers td:last-child { text-align: right; white-space: nowrap; }
+  .numbers tr:first-child td { border-top: 0; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>Reports beside the cameras, and the Sync sheet</h1>
+    <p class="lede">Three things the maintainer met on 2026-10-08 with an eleven-camera incident and three reports: the Sync sheet laid out wrong, the Add the report page's "what is it for" question, and three reports drawn as one long scroll on the Report tab. Figure 1 is the fix for the sheet. Figures 2 and 3 are proposals, drawn beside today's page. Fictional names.</p>
+  </header>
+
+  <!-- Figure 1: the sync sheet -->
+  <section class="figure">
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The Sync sheet, today and fixed</div><h2>One camera per card, inside the panel</h2></div>
+    <div class="col">
+      <div class="eyebrow">Today</div>
+      <div class="jumble">
+        <div class="wide">
+          <div>☐</div><div><b style="color: var(--c1)">BWC-1</b><div class="muted">Officer1_BWC-1-0</div></div><div><span class="pill ok">06 Nov 2025 20:25:12, checked</span></div><div><span class="pill ok">From its clock, checked</span></div><div>More</div>
+          <div>☐</div><div><b style="color: var(--c2)">BWC-4</b><div class="muted">Officer4_BWC-4-0</div></div><div><span class="pill warn">17:11:14 -0500</span></div><div><span class="pill warn">Not synced yet</span><div>Needs a hand: the clock could not be read as a time.</div></div><div>Listen · Type a time · From its file · Match</div>
+        </div>
+        <div class="edge"></div>
+      </div>
+      <div class="muted tiny">The table is 712 pixels wide in a 430 pixel panel; the actions column sits off the right edge and the rows wrap into each other when a camera's controls open.</div>
+      <div class="eyebrow" style="margin-top: 6px">Fixed</div>
+      <div class="row"><span class="eyebrow">Sync</span><span class="small">5 of 11 synced.</span><span style="flex: 1"></span><span class="btn primary tiny">Sync all</span><span class="btn tiny">Sync ticked</span><span class="btn ghost tiny">Done</span></div>
+      <div class="sync-card">
+        <div class="name">☐ <b>BWC-1</b><span class="muted small">Involved Officer</span><span style="flex: 1"></span><span class="pill ok">From its clock, checked</span></div>
+        <div class="row small"><span class="pill ok">23 Jun 2024 17:09:18</span><span class="muted">by the app</span><span style="flex: 1"></span><span class="btn ghost tiny">More</span></div>
+      </div>
+      <div class="sync-card unsynced">
+        <div class="name">☐ <b style="color: var(--c2)">BWC-4</b><span class="muted small">After Use of Force</span><span style="flex: 1"></span><span class="pill warn">Not synced yet</span></div>
+        <div class="row small"><span class="pill warn">17:11:14 -0500</span><span class="muted">no clock second: see figure 1's note</span></div>
+        <div class="row"><span class="btn tiny">Type a time</span><span class="btn tiny">From its file</span><span class="btn tiny">Match the sound</span><span class="btn ghost tiny">Read the clock again</span></div>
+      </div>
+      <div class="more">… nine more cameras, one card each</div>
+    </div>
+    <div class="caption">
+      <p><b>What is wrong.</b> Two styles share one name. The sheet's table is called <code>inc-sync</code>, and so is the one-line sync bar on each camera tile, which is a flexible wrapping row. The tile's rule wins, so the sheet's table is laid out as a wrapping row: five columns 712 pixels wide inside a 430 pixel panel, the actions column off the edge, and when an unsynced camera's controls open the rows fold into each other. It has been so since v1.66.0 and shows itself on a laptop with many cameras.</p>
+      <p><b>The fix.</b> The tile's style gets the tile's name, and the sheet stops being a table: one card per camera, the shape the Cameras tab already uses, with the name and the placed pill on the first line, the clock and who placed it on the second, and the controls on a third only when the camera needs a hand. It fits the panel at any width, and eleven cameras read as a list. No mock-up needed beyond this; it is the Cameras tab's card.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: add the report -->
+  <section class="figure">
+    <div class="fig-head"><div class="eyebrow">Figure 2 · Add the report, today and proposed</div><h2>Say what the choice means, and make the usual answer the default</h2></div>
+    <div class="col">
+      <div class="eyebrow">Today</div>
+      <div class="field"><span>What is it the report for?</span>
+        <div class="row"><span class="small">Incident</span><span class="select">none ▾</span><span class="small">Camera</span><span class="select">none ▾</span></div>
+        <div class="muted tiny">One at least; both when the report is about the incident and one of its cameras in particular.</div>
+      </div>
+      <div class="eyebrow" style="margin-top: 10px">Proposed</div>
+      <div class="field"><span>This report is about</span>
+        <div class="choice on"><span class="dot"></span><div><b>The whole incident: Hermitage Avenue, 23 June</b><div class="why">The report that tells the story of the event. Gideon reads it beside every camera, the Comparison checks it against the whole record, and it sits on the incident's Report tab.</div></div></div>
+        <div class="choice"><span class="dot"></span><div><b>One camera's own report</b><div class="why">An officer's own report of what their camera saw. It is read beside that camera alone and sits on that recording's Report tab. <span class="select" style="display: inline-block; margin-top: 4px">Pick the camera ▾</span></div></div></div>
+        <div class="muted tiny">Most reports are about the whole incident. Pick the camera only when the report is one officer's account of their own footage.</div>
+      </div>
+      <div class="field"><span>The PDF</span><span class="input muted">Choose a file…</span></div>
+      <div class="field"><span>Title <span class="muted">(the file's name unless you change it)</span></span><span class="input muted">Final Summary Report</span></div>
+      <div class="row"><span class="btn primary">Add the report</span><span class="btn ghost">Cancel</span></div>
+    </div>
+    <div class="caption">
+      <p><b>Why it confuses.</b> Two dropdowns both saying "none", a rule in small print, and no word on what the choice changes. The person has to know that a document's home decides which Report tab it appears on and which record the Comparison reads it against.</p>
+      <p><b>Proposed.</b> One question, "This report is about", answered by two plain choices that say what each means and where the report lands. Coming from an incident's Details tab, the incident is already chosen and named, so the usual case is one press. The camera choice opens its picker only when chosen. The spec's "both" case (a report about the incident and one camera in particular) was never the common one; it stays reachable by adding the same PDF to the camera as well, and the rule line says so only if you need it.</p>
+      <p>Nothing changes underneath: the same two fields are posted, the same limits apply, the Documents tab's "The report for" column reads the same.</p>
+    </div>
+  </section>
+
+  <!-- Figure 3: the report tab -->
+  <section class="figure">
+    <div class="fig-head"><div class="eyebrow">Figure 3 · The Report tab with three documents, today and proposed</div><h2>One document open at a time, the others a press away</h2></div>
+    <div class="col">
+      <div class="eyebrow">Today</div>
+      <div class="doc"><div class="head"><b>Final Summary Report</b><span class="muted small">42 pages</span></div><div class="pages"><div class="pg">p. 1</div><div class="pg">p. 2</div><div class="pg">p. 3</div></div><div class="para">1. On 23 June 2024 at approximately 17:09, officers responded to …</div><div class="para">2. The involved officer observed …</div></div>
+      <div class="doc"><div class="head"><b>Case Report</b><span class="muted small">3 pages</span></div><div class="pages"><div class="pg">p. 1</div><div class="pg">p. 2</div><div class="pg">p. 3</div></div><div class="para">1. Narrative: …</div></div>
+      <div class="doc"><div class="head"><b>Arrest Report</b><span class="muted small">5 pages</span></div><div class="pages"><div class="pg">p. 1</div><div class="pg">p. 2</div><div class="pg">p. 3</div></div><div class="para">1. Arrestee …</div></div>
+      <div class="muted tiny">Three documents end to end, every page of every one, in one scroll: fifty pages of pictures and paragraphs before the panel's foot.</div>
+      <div class="eyebrow" style="margin-top: 10px">Proposed</div>
+      <div class="docpick"><span class="pill on">Final Summary Report · 42 p.</span><span class="pill">Case Report · 3 p.</span><span class="pill">Arrest Report · 5 p.</span></div>
+      <div class="doc">
+        <div class="head"><b>Final Summary Report</b><span class="muted small">42 pages · added by Pat Reyes, 8 Oct</span><span style="flex: 1"></span><span class="btn tiny">Open the comparison, 14 findings</span></div>
+        <div class="pages"><div class="pg">p. 1</div><div class="pg">p. 2</div><div class="pg">p. 3</div></div>
+        <div class="para lit">1. On 23 June 2024 at approximately 17:09, officers responded to a call of a person with a gun in the 8100 block of …</div>
+        <div class="para">2. The involved officer observed the subject …</div>
+        <div class="more">… the rest of this document's pages</div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Why it jumbles.</b> The Report tab was drawn for one report. With three, it draws them end to end, pages and paragraphs, and the panel becomes fifty pages of scroll with no landmark; the comparison button of the second document is somewhere in the middle.</p>
+      <p><b>Proposed.</b> A row of pills at the top of the tab, one per document with its page count, the first open. Press a pill and that document's pages and paragraphs take the panel, with its own comparison button in its head. A citation from Gideon or a Search hit that lands in another document switches the pill for you, so the lit paragraph is always on screen. One document at a time is also what the Comparison reads, so the tab and the comparison agree.</p>
+      <p>The recording page's Report tab gets the same row when a recording has more than one document; with one, no row, as today.</p>
+    </div>
+  </section>
+
+  <section class="numbers">
+    <b>What each costs</b>
+    <table>
+      <tr><td>Figure 1, the Sync sheet as cards</td><td>script and style, a test; no spec change</td></tr>
+      <tr><td>Figure 2, the Add the report page's question</td><td>template and wording; Phase 8 chapter 4 part 2 amended; user guide</td></tr>
+      <tr><td>Figure 3, one document at a time on the Report tab</td><td>script and style; Phase 8 chapter 4 part 1 amended; user guide</td></tr>
+      <tr><td>Database and the engine side</td><td>unchanged</td></tr>
+    </table>
+  </section>
+</div>

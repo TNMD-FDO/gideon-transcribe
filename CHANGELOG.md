@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.129.2, 2026-10-08
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Four things from an eleven-camera incident with three reports, found by the
+maintainer on 2026-10-08:
+
+- **A clock printed with its zone now reads.** The Axon stamp prints
+  "17:11:14 -0500", and the picture reader sometimes keeps the zone inside
+  the time; the app's parser took only a bare hh:mm:ss, so six of eleven
+  cameras had no clock second and stayed "Not synced yet" while the page
+  showed the clock on each. A time followed by a zone, a zone's name, or
+  AM and PM now reads, and the confirming reads agree and mark the stamp
+  checked. The six place themselves at the next Sync all without reading
+  the clock again.
+- **The Sync sheet fits its panel.** Its table shared a name with the
+  camera tiles' sync bar, whose wrapping-row style laid the table out as a
+  row 712 pixels wide in a 430 pixel panel, with the controls off the edge
+  and the rows folding into each other when a camera's controls opened.
+  The sheet is now one card per camera, the Cameras tab's shape.
+- **Add the report asks one question.** "This report is about": the whole
+  incident, or one camera's own report, each choice saying what it means
+  and where the report lands; the incident is already chosen when you
+  came from its Details tab, and the picker shows only when it was not.
+  Most reports are about the whole incident, and the page says so.
+- **Several reports on one Report tab** are a row of pills, one per
+  document with its page count, and one document open at a time with its
+  own Compare button; with one document the tab is as it was. Three
+  reports had been drawn end to end in one scroll.
+
+The user guide and Phase 6 and Phase 8's amendments say so; the mock-up is
+filed with the specification.
+
 ## v1.129.1, 2026-10-07
 
 ```

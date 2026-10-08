@@ -2506,21 +2506,27 @@
       "<button type='button' class='small primary' id='sync-all' title='The app tries each camera not yet synced: its clock, then the sound against a camera in step, then asks for a hand'>Sync all</button>" +
       "<button type='button' class='small' id='sync-ticked' title='The rounds on the ticked cameras, synced or not'" + (ticked.length ? "" : " disabled") + ">Sync ticked</button>" +
       "<button type='button' class='small ghost' id='sync-close'>Done</button></div>";
-    html += "<table class='inc-sync'><tbody>";
+    // One card per camera (v1.129.2): the name and where it stands, then
+    // the clock and who placed it, then the controls when it needs a hand.
+    html += "<div class='inc-sync-list'>";
     cams.forEach(function (cam) {
       var open = !cam.synced || cam.id === syncOpenRow;
-      html += "<tr data-sync-row='" + cam.id + "'" + (cam.synced ? "" : " class='unsynced'") + ">" +
-        "<td><input type='checkbox' name='sync-tick' value='" + cam.id + "'" + (ticked.indexOf(cam.id) !== -1 ? " checked" : "") + " aria-label='Tick " + quoted(cam.camera_id) + "'></td>" +
-        "<td><b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><div class='muted small'>" + escape(cam.title) + "</div></td>" +
-        "<td>" + (cam.clock ? "<span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span>" : "<span class='muted small'>" + (cam.has_clock ? "" : "no clock in the picture") + "</span>") + "</td>" +
-        "<td><span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" +
-        (cam.placed_by && cam.synced ? "<div class='muted small'>by " + escape(cam.placed_by) + "</div>" : "") +
+      html += "<div class='inc-sync-card" + (cam.synced ? "" : " unsynced") + "' data-sync-row='" + cam.id + "'>" +
+        "<div class='name'><input type='checkbox' name='sync-tick' value='" + cam.id + "'" + (ticked.indexOf(cam.id) !== -1 ? " checked" : "") + " aria-label='Tick " + quoted(cam.camera_id) + "'> " +
+        "<b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><span class='muted small grow'>" + escape(cam.title) + "</span>" +
+        "<span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span></div>" +
+        "<div class='facts'>" +
+        (cam.clock ? "<span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span>" : "<span class='muted small'>" + (cam.has_clock ? "" : "no clock in the picture") + "</span>") +
+        (cam.placed_by && cam.synced ? "<span class='muted small'>by " + escape(cam.placed_by) + "</span>" : "") +
+        (open ? "" : "<span class='grow'></span><button type='button' class='tiny ghost' data-act='sync-open' data-camera='" + cam.id + "'>More</button>") +
+        "</div>" +
         (cam.needs_hand ? "<div class='small problem'>Needs a hand: " + escape(cam.needs_hand) + ".</div>" : "") +
         (cam.placed === "clock_unchecked" ? "<div class='small'>Read once: listen to a moment two cameras hear. <button type='button' class='tiny' data-act='listen' data-camera='" + cam.id + "'>Listen</button></div>" : "") +
-        matchLine(cam) + "</td>" +
-        "<td class='acts'>" + (open ? "<div class='inc-place-box'>" + placeControls(cam) + "</div>" : "<button type='button' class='tiny ghost' data-act='sync-open' data-camera='" + cam.id + "'>More</button>") + "</td></tr>";
+        matchLine(cam) +
+        (open ? "<div class='inc-place-box'>" + placeControls(cam) + "</div>" : "") +
+        "</div>";
     });
-    html += "</tbody></table>";
+    html += "</div>";
     syncBox.innerHTML = html;
   }
   // Listen: the first moment this camera and a synced camera run together,

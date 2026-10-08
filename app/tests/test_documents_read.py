@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 import json
+from pathlib import Path
 
 import pytest
 from core import case_chat, documents, incident_chat, incidents, settings_store, tasks
@@ -263,6 +264,11 @@ def test_the_report_tab_is_there_only_while_a_document_is_linked(
     settings_store.set_to("clips_available", True)
     page = client.get(incident.url()).content.decode()
     assert 'id="tab-report"' in page and 'id="panel-report"' in page
+    # Several documents on one tab are pills and one open at a time (v1.129.2).
+    panel_script = (
+        Path(__file__).resolve().parents[1] / "static" / "report-panel.js"
+    ).read_text(encoding="utf-8")
+    assert "report-pick" in panel_script and "data-pick-document" in panel_script
     state = client.get(f"{incident.url()}/state").json()["incident"]
     assert state["documents"][0]["id"] == str(report.pk)
     assert state["case_id"] == str(a_case.pk)
@@ -294,12 +300,30 @@ def test_adding_from_the_documents_tab_picks_the_home_and_relink_is_a_row(
     assert 'id="pick-incident"' in page and 'id="pick-recording"' in page
     assert ">Stop</option>" in page and ">first</option>" in page
     assert "for an incident or a camera of this case" in page
+    # One question since v1.129.2: the whole incident, or one camera's own.
+    assert 'name="about" value="incident" checked' in page
+    assert 'name="about" value="recording"' in page
+    assert "This report is about" in page and "One camera's own report" in page
     # From a Details tab the home arrives ticked.
     page = client.get(
         f"/case/{a_case.pk}/documents/add?incident={incident.pk}"
     ).content.decode()
-    assert f'value="{incident.pk}" selected' in page and "this incident" in page
-    # Nothing picked is refused with the reason; both picked links both.
+    assert f'value="{incident.pk}"' in page and "this incident" in page
+    # Nothing picked is refused with the reason; both picked links both
+    # (an older form, or Re-link); with the question answered, one counts.
+    fields = {
+        "title": "R",
+        "file": io.BytesIO(make_pdf(REPORT)),
+        "about": "incident",
+        "incident": str(incident.pk),
+        "recording": str(second.pk),
+    }
+    fields["file"].name = "r.pdf"
+    told = client.post(f"/case/{a_case.pk}/documents/add", fields)
+    assert told.status_code == 302 and told.url == incident.url()
+    only = Document.objects.get()
+    assert only.incident == incident and only.recording is None
+    only.delete()
     fields = {"title": "R", "file": io.BytesIO(make_pdf(REPORT))}
     fields["file"].name = "r.pdf"
     page = client.post(f"/case/{a_case.pk}/documents/add", fields).content.decode()

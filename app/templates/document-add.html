@@ -32,24 +32,40 @@
 
     <form method="post" enctype="multipart/form-data" class="card" id="document-form">
       {% csrf_token %}
-      {% comment %}What the report is about (part 2): given by the Details tab it came from, or picked here; an incident, a recording, or both.{% endcomment %}
+      {% comment %}What the report is about (part 2; one question since v1.129.2): the whole incident, or one camera's own report. The field names incident and recording are the same; the choice says which one counts.{% endcomment %}
       <div class="field" id="document-home">
-        <span>What is it the report for?</span>
-        <div class="row" style="gap: 12px; flex-wrap: wrap">
-          <label class="row small" style="gap: 6px">Incident
-            <select name="incident" id="pick-incident">
-              <option value="">none</option>
-              {% for home in homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}"{% if home.id == picked_incident %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}
-            </select>
-          </label>
-          <label class="row small" style="gap: 6px">Camera
-            <select name="recording" id="pick-recording">
-              <option value="">none</option>
-              {% for home in homes %}{% if home.kind == "recording" %}<option value="{{ home.id }}"{% if home.id == picked_recording %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}
-            </select>
-          </label>
-        </div>
-        <p class="muted small" style="margin: 4px 0 0">One at least; both when the report is about the incident and one of its cameras in particular.</p>
+        <span>This report is about</span>
+        <label class="choice{% if not picked_recording %} on{% endif %}" id="about-incident">
+          <input type="radio" name="about" value="incident"{% if not picked_recording %} checked{% endif %}>
+          <span class="choice-words">
+            <b>The whole incident{% if picked_incident and home_name %}: {{ home_name }}{% endif %}</b>
+            <span class="why small muted">The report that tells the story of the event. Gideon reads it beside every camera, the Comparison checks it against the whole record, and it sits on the incident's Report tab.</span>
+            {% if not picked_incident %}
+              <select name="incident" id="pick-incident" class="small">
+                <option value="">Pick the incident</option>
+                {% for home in homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}">{{ home.name }}</option>{% endif %}{% endfor %}
+              </select>
+            {% else %}
+              <input type="hidden" name="incident" id="pick-incident" value="{{ picked_incident }}">
+            {% endif %}
+          </span>
+        </label>
+        <label class="choice{% if picked_recording %} on{% endif %}" id="about-camera">
+          <input type="radio" name="about" value="recording"{% if picked_recording %} checked{% endif %}>
+          <span class="choice-words">
+            <b>One camera's own report{% if picked_recording and home_name %}: {{ home_name }}{% endif %}</b>
+            <span class="why small muted">An officer's own report of what their camera saw. It is read beside that camera alone and sits on that recording's Report tab.</span>
+            {% if not picked_recording %}
+              <select name="recording" id="pick-recording" class="small">
+                <option value="">Pick the camera</option>
+                {% for home in homes %}{% if home.kind == "recording" %}<option value="{{ home.id }}">{{ home.name }}</option>{% endif %}{% endfor %}
+              </select>
+            {% else %}
+              <input type="hidden" name="recording" id="pick-recording" value="{{ picked_recording }}">
+            {% endif %}
+          </span>
+        </label>
+        <p class="muted small" style="margin: 4px 0 0">Most reports are about the whole incident. Pick the camera only when the report is one officer's account of their own footage.</p>
       </div>
       <label class="field">
         <span>The PDF</span>

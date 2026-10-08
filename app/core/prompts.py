@@ -1396,7 +1396,17 @@ STAMP_SCHEMA = {
     "required": ["date", "time", "camera", "other"],
 }
 STAMP_CAP = 200
-CLOCK_TIME = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
+# A printed clock time: hh:mm:ss, then whatever the camera burns after it
+# (v1.129.2): a zone such as "-0500" or "CDT", or AM and PM, which are read.
+# The Axon stamp prints "17:11:14 -0500", and the picture reader sometimes
+# keeps the zone inside the time; six cameras of one incident stayed
+# unsynced on the office's server because the time would not parse.
+CLOCK_TIME = re.compile(
+    r"^(\d{1,2}):(\d{2}):(\d{2})"
+    r"(?:\s*([AaPp])\.?\s?[Mm]\.?)?"
+    r"(?:\s*[+-]\d{2}:?\d{2})?"
+    r"(?:\s+[A-Za-z][A-Za-z .]*)?\s*$"
+)
 
 
 def clock_seconds(text: str) -> int | None:
@@ -1404,7 +1414,12 @@ def clock_seconds(text: str) -> int | None:
     match = CLOCK_TIME.match((text or "").strip())
     if not match:
         return None
-    hours, minutes, seconds = (int(part) for part in match.groups())
+    hours, minutes, seconds = (int(part) for part in match.groups()[:3])
+    half = (match.group(4) or "").lower()
+    if half:
+        if hours < 1 or hours > 12:
+            return None
+        hours = hours % 12 + (12 if half == "p" else 0)
     if hours > 23 or minutes > 59 or seconds > 59:
         return None
     return hours * 3600 + minutes * 60 + seconds

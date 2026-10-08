@@ -268,3 +268,19 @@ def test_the_clip_from_the_strip_needs_no_event_and_takes_an_unsynced_camera(
         url + "/clip", json.dumps(body), content_type="application/json"
     )
     assert answer.json()["error"] == "mute has no playback copy."
+
+
+def test_the_sync_sheet_is_cards_and_the_tiles_style_is_the_tiles():
+    """v1.129.2: the sheet had been a table named as the tiles' sync bar, so
+    the bar's wrapping-row style laid the table out as a row and its columns
+    ran off the panel. The sheet is one card per camera; the tile's style is
+    scoped to the tile."""
+    from pathlib import Path
+
+    static = Path(__file__).resolve().parents[1] / "static"
+    script = (static / "incident.js").read_text(encoding="utf-8")
+    assert "inc-sync-card" in script and "data-sync-row" in script
+    assert "<table class='inc-sync'" not in script
+    style = (static / "app.css").read_text(encoding="utf-8")
+    assert ".inc-tile .inc-sync {" in style
+    assert "\n.inc-sync {" not in style and ".inc-sync-card.unsynced" in style

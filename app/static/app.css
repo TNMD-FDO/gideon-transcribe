@@ -2145,6 +2145,10 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 .doc-n { display: inline-block; min-width: 1.6em; }
 /* The Report tab and the document citations (Phase 8 chapter 4, part 2). */
 .report-doc { margin: 0 0 18px; }
+/* Several documents on one Report tab (v1.129.2): the pills, one lit. */
+.report-pick .pill { cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: var(--t-small); }
+.report-pick .pill.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.report-pick .pill.on .muted { color: inherit; opacity: 0.8; }
 .report-sheet { position: relative; margin: 8px 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .report-sheet img { display: block; width: 100%; height: auto; }
 .report-sheet figcaption { position: absolute; left: 8px; bottom: 6px; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
@@ -2681,10 +2685,22 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .chat-preview video { width: 100%; max-height: 240px; background: var(--well); border-radius: 4px; display: block; margin-bottom: 6px; }
 /* Sync, one control, and the clip from the strip (Phase 6 chapter 5). */
 .inc-sync-box { padding: 8px 16px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
-.inc-sync { width: 100%; border-collapse: collapse; font-size: var(--t-small); margin-top: 6px; }
-.inc-sync td { padding: 5px 6px; border-top: 1px solid var(--line); vertical-align: top; }
-.inc-sync tr.unsynced td { background: color-mix(in srgb, var(--warn) 6%, transparent); }
-.inc-sync .acts { white-space: normal; }
+/* Add the report's one question (v1.129.2): two choices that say what they mean. */
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.choice.on, .choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choice input[type="radio"] { margin-top: 4px; flex: none; }
+.choice .choice-words { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.choice select { align-self: flex-start; margin-top: 2px; }
+/* The sheet's cameras as cards (v1.129.2): the sheet had been a table whose
+   name the tiles' sync bar shared, so it was laid out as a wrapping row and
+   its columns ran off the panel; a card fits the panel at any width. */
+.inc-sync-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: var(--t-small); }
+.inc-sync-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; background: var(--surface-1); }
+.inc-sync-card.unsynced { box-shadow: inset 3px 0 0 0 var(--warn); }
+.inc-sync-card .name { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inc-sync-card .name .grow { min-width: 0; }
+.inc-sync-card .facts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inc-sync-card .inc-place-box { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .inc-strip .ruler { position: relative; }
 .inc-strip .ruler .ticks { position: relative; }
 .inc-clip-cams .clip-cam.unsynced { border-style: dashed; }
@@ -2738,7 +2754,7 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .inc-tile-head .sync-open { flex: none; }
 .inc-tile-head .tile-menu > summary { padding: 0 6px; }
 .inc-tile-head .tile-menu > ul { right: 0; left: auto; }
-.inc-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--accent-soft); font-size: var(--t-small); }
+.inc-tile .inc-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--accent-soft); font-size: var(--t-small); }
 .inc-cameras tr.unsynced td:first-child { box-shadow: inset 3px 0 0 0 var(--warn); }
 @media (min-width: 1900px) {
   /* Three columns, the grip between: the two-column rule here was from

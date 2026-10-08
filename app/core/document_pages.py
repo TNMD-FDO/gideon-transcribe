@@ -26,9 +26,13 @@ def _home_from(request: HttpRequest, case, source) -> dict:
     """The incident or recording named in the request, checked to be the case's."""
     incident = None
     recording = None
-    if source.get("incident"):
+    # The page asks one question since v1.129.2, "This report is about": the
+    # answer says which of the two fields counts. A request without it (the
+    # Documents tab's Re-link, an older form) is read as before.
+    about = (source.get("about") or "").strip()
+    if source.get("incident") and about != "recording":
         incident = incidents.Incident.objects.filter(pk=source.get("incident")).first()
-    if source.get("recording"):
+    if source.get("recording") and about != "incident":
         recording = Recording.objects.filter(pk=source.get("recording")).first()
     return documents.home_of(case, incident=incident, recording=recording)
 
