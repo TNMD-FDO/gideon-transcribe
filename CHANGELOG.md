@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.129.3, 2026-10-08
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Two presses on the Sync sheet that work on many cameras at once, from the
+same eleven-camera incident once v1.129.2 had placed its six stragglers:
+
+- **Check the clocks.** A stamp is read once and never re-read by itself,
+  so cameras read before the app could read a time with its zone stayed
+  "unchecked" after the fix, eight of eleven on the office's incident. One
+  press now reads every unconfirmed clock again, one after another, and
+  places each camera from what is read; the button carries the count and
+  says how many reads are waiting.
+- **Sync ticked by the sound.** Clocks place cameras to the second, and
+  camera clocks drift, so two cameras placed by their clocks sit a second
+  or two apart. Tick the cameras, choose the camera to match against, and
+  every ticked one is matched by its audio to a fraction of a second, each
+  marked Matched by sound as its match lands. Sync all is unchanged.
+
 ## v1.129.2, 2026-10-08
 
 ```

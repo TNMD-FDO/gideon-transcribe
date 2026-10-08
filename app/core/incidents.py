@@ -662,6 +662,42 @@ def sync_rounds(incident: Incident, cameras, *, by, request=None, force=False) -
     return got
 
 
+def unconfirmed(incident: Incident) -> list:
+    """The cameras whose clock is not confirmed (v1.129.3): read once and
+    not checked by the second frame, or not read at all, with a picture."""
+    return [
+        camera
+        for camera in incident.cameras.select_related("recording").order_by("starts_at")
+        if is_video(camera.recording) and not stamp_checked(camera.recording)
+    ]
+
+
+def check_clocks(incident: Incident, *, by) -> int:
+    """Check the clocks (v1.129.3): read every unconfirmed camera's clock
+    again, one after another on the engine worker, so a stamp read before
+    the app could read its form (a zone after the time) is confirmed
+    without a press per camera. Returns how many reads were queued."""
+    queued = 0
+    for camera in unconfirmed(incident):
+        if read_again(camera.recording, by=by):
+            queued += 1
+    return queued
+
+
+def match_many(cameras, against: IncidentCamera, *, by) -> int:
+    """Sync ticked by the sound (v1.129.3): every ticked camera matched by
+    its audio against one anchor the person chose, so a set of cameras the
+    clocks placed to the second falls into step to a fraction of one.
+    Returns how many matches were queued."""
+    queued = 0
+    for camera in cameras:
+        if camera.pk == against.pk:
+            continue
+        if ask_for_match(camera, against, by=by):
+            queued += 1
+    return queued
+
+
 def rounds_line(got: dict) -> str:
     """The state line: "Syncing 6 cameras: 3 from their clocks, 1 matching
     the sound, 2 need a hand"."""

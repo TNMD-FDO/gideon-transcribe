@@ -194,6 +194,8 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
         "clock_tone": tone,
         "file_time": file_words,
         "has_clock": incidents.clock_zero_of(recording) is not None,
+        # Confirmed by the second frame (v1.129.3, for Check the clocks).
+        "clock_checked": incidents.stamp_checked(recording),
         # A read of the clock waiting or running (v1.101.0).
         "clock_reading": incidents.stamp_reading(recording),
         "synced": camera.is_synced(),
@@ -425,16 +427,57 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
     elif action == "sync_all":
         # Sync all, or Sync ticked (Phase 6 chapter 5): the rounds on every
         # camera not yet synced, or on the ticked ones whether synced or not.
+        # Sync ticked by the sound (v1.129.3): the ticked ones matched by
+        # their audio against one anchor.
         wanted = [one for one in request.POST.getlist("cameras") if one]
         cameras = list(
             incident.cameras.select_related("recording").order_by("starts_at")
         )
         if wanted:
             cameras = [one for one in cameras if str(one.pk) in wanted]
-        got = incidents.sync_rounds(
-            incident, cameras, by=user, request=request, force=bool(wanted)
+        if request.POST.get("how") == "sound":
+            if not wanted:
+                return JsonResponse({"error": "Tick the cameras first."}, status=400)
+            anchor = _camera_of(incident, request.POST.get("against"))
+            if not anchor.is_synced():
+                return JsonResponse(
+                    {"error": "The camera to match against must be synced."},
+                    status=400,
+                )
+            queued = incidents.match_many(cameras, anchor, by=user)
+            if not queued:
+                return JsonResponse(
+                    {
+                        "error": "Nothing to match: the sound match is off, "
+                        "or only the anchor was ticked."
+                    },
+                    status=400,
+                )
+            said = (
+                f"Matching {queued} camera{'' if queued == 1 else 's'} by the sound "
+                f"against {anchor.camera_id()}; about a minute each."
+            )
+        else:
+            got = incidents.sync_rounds(
+                incident, cameras, by=user, request=request, force=bool(wanted)
+            )
+            said = incidents.rounds_line(got)
+    elif action == "check_clocks":
+        # Check the clocks (v1.129.3): every unconfirmed camera's clock read
+        # again, one after another; each is placed from what is read.
+        queued = incidents.check_clocks(incident, by=user)
+        if not queued:
+            return JsonResponse(
+                {
+                    "error": "No clock to check: every camera's clock is confirmed, "
+                    "a read is already waiting, or the engine is away."
+                },
+                status=400,
+            )
+        said = (
+            f"Reading {queued} clock{'' if queued == 1 else 's'} again, one after "
+            "another; a few seconds each. Each camera is placed from what is read."
         )
-        said = incidents.rounds_line(got)
     elif action == "match":
         camera = _camera_of(incident, request.POST.get("camera"))
         against = _camera_of(incident, request.POST.get("against"))

@@ -13,6 +13,7 @@ named; an event's clip keeps chapter 1's rule.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from core import chronology, incidents, settings_store, tasks
@@ -284,3 +285,103 @@ def test_the_sync_sheet_is_cards_and_the_tiles_style_is_the_tiles():
     style = (static / "app.css").read_text(encoding="utf-8")
     assert ".inc-tile .inc-sync {" in style
     assert "\n.inc-sync {" not in style and ".inc-sync-card.unsynced" in style
+
+
+def test_check_the_clocks_reads_every_unconfirmed_camera_again(
+    person, a_case, client, no_workers, monkeypatch
+):
+    """v1.129.3: one press reads every camera whose clock is not confirmed
+    again, one after another; a confirmed camera is left alone; nothing to
+    read is refused with the reason."""
+    from core import engine, tasks
+
+    settings_store.set_to("assistant_available", True)
+    monkeypatch.setattr(engine, "is_reachable", lambda: True)
+    queued = []
+    monkeypatch.setattr(tasks.read_stamp_again, "defer", lambda **kw: queued.append(kw))
+    checked = video(person, a_case, "checked", stamp=stamp("21:56:19", "BWC-1"))
+    once = video(
+        person, a_case, "once", stamp=stamp("21:58:00 -0500", "BWC-2", checked=False)
+    )
+    unread = video(person, a_case, "unread", stamp={})
+    incident = incidents.make(a_case, "Stop", [checked, once, unread], by=person)
+    signed_in(client, person)
+    url = f"/case/{a_case.pk}/incident/{incident.pk}"
+    state = client.get(url + "/state").json()
+    by_id = {one["camera_id"]: one for one in state["cameras"]}
+    assert by_id["BWC-1"]["clock_checked"] is True
+    assert by_id["BWC-2"]["clock_checked"] is False
+    got = client.post(url + "/act", {"action": "check_clocks"}).json()
+    assert got["said"].startswith("Reading 2 clocks again, one after another")
+    assert sorted(one["recording_id"] for one in queued) == sorted(
+        [str(once.pk), str(unread.pk)]
+    )
+    # Nothing unconfirmed: refused with the reason.
+    monkeypatch.setattr(incidents, "unconfirmed", lambda incident: [])
+    refused = client.post(url + "/act", {"action": "check_clocks"})
+    assert refused.status_code == 400 and "No clock to check" in refused.json()["error"]
+    script = (Path(__file__).resolve().parents[1] / "static" / "incident.js").read_text(
+        encoding="utf-8"
+    )
+    assert "Check the clocks" in script and 'action: "check_clocks"' in script
+
+
+def test_sync_ticked_by_the_sound_matches_the_ticked_against_one_anchor(
+    person, a_case, client, no_workers
+):
+    """v1.129.3: the ticked cameras are matched by their audio against the
+    anchor chosen, the anchor itself skipped; an unsynced anchor and an
+    empty tick are refused."""
+    settings_store.set_to("incidents_sound_match", True)
+    anchor = video(person, a_case, "anchor", stamp=stamp("21:56:19", "BWC-1"))
+    second = video(person, a_case, "second", stamp=stamp("21:56:20", "BWC-2"))
+    third = video(person, a_case, "third", stamp=stamp("21:56:21", "BWC-3"))
+    loose = video(person, a_case, "loose", stamp={})
+    incident = incidents.make(a_case, "Stop", [anchor, second, third, loose], by=person)
+    cams = cameras_of(incident)
+    signed_in(client, person)
+    url = f"/case/{a_case.pk}/incident/{incident.pk}"
+    got = client.post(
+        url + "/act",
+        {
+            "action": "sync_all",
+            "how": "sound",
+            "against": str(cams["anchor"].pk),
+            "cameras": [
+                str(cams["anchor"].pk),
+                str(cams["second"].pk),
+                str(cams["third"].pk),
+            ],
+        },
+    ).json()
+    assert (
+        got["said"]
+        == "Matching 2 cameras by the sound against BWC-1; about a minute each."
+    )
+    # The queue is written on commit, which a test's transaction never
+    # reaches; the rows say what was asked.
+    for name in ("second", "third"):
+        cams[name].refresh_from_db()
+        assert cams[name].match_state == "queued"
+        assert cams[name].match_against_id == cams["anchor"].pk
+    cams["anchor"].refresh_from_db()
+    assert cams["anchor"].match_state == ""
+    refused = client.post(
+        url + "/act",
+        {
+            "action": "sync_all",
+            "how": "sound",
+            "against": str(cams["loose"].pk),
+            "cameras": [str(cams["second"].pk)],
+        },
+    )
+    assert refused.status_code == 400 and "must be synced" in refused.json()["error"]
+    refused = client.post(
+        url + "/act",
+        {"action": "sync_all", "how": "sound", "against": str(cams["anchor"].pk)},
+    )
+    assert refused.status_code == 400 and "Tick the cameras" in refused.json()["error"]
+    script = (Path(__file__).resolve().parents[1] / "static" / "incident.js").read_text(
+        encoding="utf-8"
+    )
+    assert "Sync ticked by the sound" in script and 'how: "sound"' in script

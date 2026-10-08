@@ -2481,6 +2481,7 @@
   // ones. A camera the app could not sync says why and shows what to do.
   var syncOpenRow = null;
   var syncSaid = "";
+  var syncAnchor = null;
   function openSync(cameraId) {
     syncOpenRow = cameraId || null;
     syncSaid = "";
@@ -2506,6 +2507,20 @@
       "<button type='button' class='small primary' id='sync-all' title='The app tries each camera not yet synced: its clock, then the sound against a camera in step, then asks for a hand'>Sync all</button>" +
       "<button type='button' class='small' id='sync-ticked' title='The rounds on the ticked cameras, synced or not'" + (ticked.length ? "" : " disabled") + ">Sync ticked</button>" +
       "<button type='button' class='small ghost' id='sync-close'>Done</button></div>";
+    // Check the clocks and Sync ticked by the sound (v1.129.3).
+    var unconfirmed = cams.filter(function (cam) { return cam.has_picture !== false && !cam.clock_checked; });
+    var reading = cams.filter(function (cam) { return cam.clock_reading; }).length;
+    var anchors = cams.filter(function (cam) { return cam.synced; });
+    html += "<div class='row small' style='gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px'>" +
+      (unconfirmed.length ? "<button type='button' class='tiny' id='check-clocks'" + (reading ? " disabled" : "") +
+        " title='Read every unconfirmed clock again, one after another; each camera is placed from what is read'>" +
+        (reading ? "Reading " + reading + " clock" + (reading === 1 ? "" : "s") + "..." : "Check the clocks (" + unconfirmed.length + ")") + "</button>" : "") +
+      (S.incident.sound_match && anchors.length ? "<span class='inc-match'>" +
+        "<button type='button' class='tiny' id='sync-ticked-sound'" + (ticked.length ? "" : " disabled") + " title='Match every ticked camera by its sound against the camera chosen here'>Sync ticked by the sound against</button> " +
+        "<select id='sync-anchor' class='small' aria-label='The camera to match against'>" +
+        anchors.map(function (one) { return "<option value='" + one.id + "'" + (one.id === syncAnchor ? " selected" : "") + ">" + escape(one.camera_id) + "</option>"; }).join("") +
+        "</select></span>" : "") +
+      "</div>";
     // One card per camera (v1.129.2): the name and where it stands, then
     // the clock and who placed it, then the controls when it needs a hand.
     html += "<div class='inc-sync-list'>";
@@ -2546,6 +2561,9 @@
   // The layer's hidden, not the box's: since chapter 1 made Sync a layer the
   // box itself is never hidden (v1.75.1, from the walk).
   document.getElementById("sync-open").addEventListener("click", function () { if (!layerOf("sync") || layerOf("sync").hidden) { openSync(null); } else { closeSync(); } });
+  syncBox.addEventListener("change", function (event) {
+    if (event.target.id === "sync-anchor") { syncAnchor = event.target.value; }
+  });
   syncBox.addEventListener("click", function (event) {
     if (event.target.closest("#sync-close")) { closeSync(); return; }
     if (event.target.closest("#sync-all") || event.target.closest("#sync-ticked")) {
@@ -2557,6 +2575,20 @@
       return;
     }
     if (event.target.closest("input[name='sync-tick']")) { drawSync(); return; }
+    if (event.target.closest("#check-clocks")) {
+      syncSaid = "Reading the clocks...";
+      drawSync();
+      post({ action: "check_clocks" }).then(function (got) { syncSaid = got.ok ? (got.said.said || "") : (got.said.error || ""); drawSync(); });
+      return;
+    }
+    if (event.target.closest("#sync-ticked-sound")) {
+      var anchorPick = syncBox.querySelector("#sync-anchor");
+      syncAnchor = anchorPick ? anchorPick.value : null;
+      syncSaid = "Matching the sound...";
+      drawSync();
+      post({ action: "sync_all", cameras: tickedSync(), how: "sound", against: syncAnchor || "" }).then(function (got) { syncSaid = got.ok ? (got.said.said || "") : (got.said.error || ""); drawSync(); });
+      return;
+    }
     var button = event.target.closest("[data-act]");
     if (!button) { return; }
     var cam = cameraById(button.dataset.camera);
