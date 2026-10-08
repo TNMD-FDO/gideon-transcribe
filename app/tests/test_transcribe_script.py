@@ -320,3 +320,18 @@ def test_the_os_drive_helper_judges_by_the_nearest_folder_that_exists():
     assert 'on_the_os_drive "$value"' in source[asked : asked + 400]
     assert 'ask_yes_no "  Use it anyway?" no' in source[asked : asked + 800]
     assert source.count("on_the_os_drive") == 3
+
+
+def test_the_check_sends_one_test_message_and_never_counts_mailboxes():
+    """v1.129.1: the check's Email section proves the relay with one test
+    message and no more; the count of Sign-in members without a mail value
+    is gone at the maintainer's word. And the backup section says it could
+    not read the secrets without sudo rather than calling them empty."""
+    source = text()
+    mail = source.split("check_the_mail() {", 1)[1].split("\n}\n", 1)[0]
+    assert "mail_check test" in mail and "mail_check count" not in mail
+    assert source.count("mail_check count") == 0
+    backup = source.split("check_the_backup() {", 1)[1].split("\n}\n", 1)[0]
+    sudo_note = backup.index("could not read the secrets folder without sudo")
+    assert sudo_note < backup.index("secrets/backup_ssh_key is empty")
+    assert "sudo -n true 2>/dev/null" in backup[:sudo_note]

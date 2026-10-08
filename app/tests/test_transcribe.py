@@ -252,7 +252,8 @@ def test_email_is_in_the_script_the_compose_file_and_the_guides():
         assert name in script, name
     assert "  ask_the_mail\n" in script and "  check_the_mail\n" in script
     assert "install-mail) shift && cmd_install_mail" in script
-    assert "mail_check test" in script and "mail_check count" in script
+    # The count of members without a mail value left the check in v1.129.1.
+    assert "mail_check test" in script and "mail_check count" not in script
     example = (HERE / ".env.example").read_text(encoding="utf-8")
     for key in (
         "SMTP_HOST=",

@@ -2652,9 +2652,10 @@ cmd_install_mail() {
   echo "Panel, Settings, Email, Send a test message."
 }
 
-# The check's two mail lines: the relay takes a message from this server and
-# lets the sender through, proven by sending one to the Operator address; and
-# the Sign-in group's members without a mail value, as a warning.
+# The check's mail line: the relay takes a message from this server and lets
+# the sender through, proven by sending one to the Operator address. (The
+# count of Sign-in members without a mail value was a second line until
+# v1.129.1; the maintainer did not want the check doing that at all.)
 check_the_mail() {
   echo
   echo "Email"
@@ -2668,13 +2669,6 @@ check_the_mail() {
     OK:*) pass "${said#OK: }" ;;
     NOTE:*) note "${said#NOTE: }" ;;
     "") fail "the app did not answer; is the stack up?" ;;
-    *) fail "${said#FAIL: }" ;;
-  esac
-  said="$(app_command mail_check count 2>/dev/null | grep -v procrastinate | tail -1)" || true
-  case "$said" in
-    OK:*) pass "${said#OK: }" ;;
-    NOTE:*) note "${said#NOTE: }" ;;
-    "") ;;
     *) fail "${said#FAIL: }" ;;
   esac
 }
@@ -2726,7 +2720,13 @@ check_the_backup() {
   key="$(backup_secret_file "$(env_value BACKUP_SSH_KEY_FILE)")"
   known="$(backup_secret_file "$(env_value BACKUP_KNOWN_HOSTS_FILE)")"
 
-  # 1. The key and the host key are present.
+  # 1. The key and the host key are present. Root's secrets folder cannot
+  # be read without sudo, and a check run from a script or over ssh has
+  # none; say so rather than call the secrets empty (v1.129.1).
+  if ! [ -r "$(dirname "$key")" ] && ! sudo -n true 2>/dev/null; then
+    note "could not read the secrets folder without sudo; run: sudo ./transcribe check"
+    return 0
+  fi
   if secret_present "$key"; then pass "the backup key is present"; else fail "secrets/backup_ssh_key is empty: place it from the password manager, or run ./transcribe install-backup"; return 0; fi
   if secret_present "$known"; then pass "the store's host key is recorded"; else fail "secrets/backup_known_hosts is empty: run ./transcribe install-backup"; return 0; fi
   if secret_present "$(backup_secret_file "$(env_value BACKUP_KEY_FILE)")"; then pass "the repository password is present"; else fail "secrets/backup_password is empty: place it from the password manager"; fi

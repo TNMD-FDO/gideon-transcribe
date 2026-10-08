@@ -21,6 +21,28 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.129.1, 2026-10-07
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Two lines of `./transcribe check`, at the maintainer's word:
+
+- **The Email section sends one test message and stops.** It no longer
+  counts the Sign-in group's members without a mail address in the
+  directory; the check has no business doing that. The management
+  command `mail_check count` stays for anyone who wants the figure by
+  hand.
+- **The Backup section says when it cannot read the secrets.** Run
+  without sudo (from a script, or over ssh), the check used to call the
+  backup key and password "empty" when it simply could not look inside
+  root's secrets folder. It now says "could not read the secrets folder
+  without sudo; run: sudo ./transcribe check", as the data folder's check
+  already did, and counts no failure. The nightly backup checks both
+  secrets for real and fails loudly, so nothing was at risk.
+
 ## v1.129.0, 2026-10-07
 
 ```
