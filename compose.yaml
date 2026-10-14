@@ -267,7 +267,7 @@ services:
       # away for the migrations at every upgrade, and a finish that never
       # landed used to leave the upload to be dropped ten minutes later.
       - "-hooks-http-retry=10"
-      - "-hooks-http-backoff=10"
+      - "-hooks-http-backoff=10s"
       - "-port=1080"
     volumes:
       - "${APP_DATA_DIR}:/srv/data"

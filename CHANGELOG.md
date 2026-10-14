@@ -21,6 +21,18 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.132.3, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+After the upgrade to v1.132.2 the upload sidecar would not start: v1.132.0
+gave its hook retry wait as "10" where the sidecar wants a duration with a
+unit, so it printed its help and exited, and uploads were refused until this
+tag. The wait is "10s". Nothing else changes.
+
 ## v1.132.2, 2026-10-14
 
 ```
