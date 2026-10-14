@@ -37,7 +37,7 @@ def test_every_failure_is_one_of_seven_reason_classes():
     request = object()
 
     def status_error(cls, status, message):
-        import httpx
+        import httpx2 as httpx
 
         response = httpx.Response(status, request=httpx.Request("POST", "http://x"))
         return cls(message, response=response, body=None)
@@ -220,7 +220,7 @@ def test_a_single_served_model_lends_its_window_whatever_its_name(monkeypatch):
 
 @pytest.mark.django_db
 def test_the_check_names_the_reason_when_the_engine_refuses(monkeypatch):
-    import httpx
+    import httpx2 as httpx
     from openai import AuthenticationError
 
     monkeypatch.setattr(engine, "token_is_set", lambda: True)

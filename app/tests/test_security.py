@@ -65,7 +65,7 @@ def test_every_page_script_escapes_both_quotes():
 
 def test_the_libraries_that_print_what_they_are_handed_are_held_at_warning():
     loggers = django_settings.LOGGING["loggers"]
-    for name in ("procrastinate", "openai", "httpx", "httpcore"):
+    for name in ("procrastinate", "openai", "httpx", "httpcore", "httpx2", "httpcore2"):
         assert loggers[name]["level"] == "WARNING", name
         assert loggers[name]["propagate"] is False, name
 

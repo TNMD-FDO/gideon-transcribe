@@ -27,6 +27,9 @@ Markdown==3.10.3
 
 # The AI assistant's client. Same pin as the image's.
 openai==3.8.0
+# The client's transport, named here so the app's own retry rule, which
+# reads its connection errors, imports a listed package (v1.134.1).
+httpx2==2.12.0
 
 # The sound match (Phase 6 chapter 1). Same pin as the image's.
 numpy==2.3.4

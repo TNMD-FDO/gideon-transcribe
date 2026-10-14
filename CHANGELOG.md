@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.134.1, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+v1.134.0's retry rule for the engine imported `httpx`, the client's old
+transport. The openai package since its version 3 depends on `httpx2`
+alone, so the app image carries no `httpx`: the first connection error
+on the engine would have raised "No module named httpx" inside the
+error handler and been reported as a problem instead of as unreachable,
+with no retry. CI did not catch it because the transcription service's
+development list brings `httpx` into the same interpreter. The rule
+imports `httpx2`, the package is named in the app's own lists, and the
+client's transport loggers (`httpx2`, `httpcore2`) are held at WARNING
+like the rest. Found by the dependencies pass's first reader; nothing
+else changes.
+
 ## v1.134.0, 2026-10-14
 
 ```

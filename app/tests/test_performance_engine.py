@@ -200,7 +200,7 @@ def _call(messages):
 def test_a_large_request_is_sent_again_only_when_the_connection_was_never_made(
     monkeypatch,
 ):
-    import httpx
+    import httpx2 as httpx
     from openai import APIConnectionError
 
     request = httpx.Request("POST", "http://engine.test/v1/chat/completions")

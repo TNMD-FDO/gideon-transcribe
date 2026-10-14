@@ -220,7 +220,15 @@ LOGGING = {
         # person typed, and no transcript, is for the journal at any level.
         **{
             name: {"handlers": ["console"], "level": "WARNING", "propagate": False}
-            for name in ("procrastinate", "openai", "httpx", "httpcore")
+            for name in (
+                "procrastinate",
+                "openai",
+                "httpx",
+                "httpcore",
+                # The client's own transport since openai 3 (v1.134.1).
+                "httpx2",
+                "httpcore2",
+            )
         },
     },
 }

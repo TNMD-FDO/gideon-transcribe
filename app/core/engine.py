@@ -438,10 +438,14 @@ def retry_allowed(problem: Exception, messages: list[dict]) -> bool:
     the request is small enough that sending it twice costs the engine
     nothing worth counting. A reset part-way through a large request is
     reported as unreachable instead."""
-    import httpx
+    # The client's transport is httpx2, not httpx (v1.134.1): the openai
+    # package since its version 3 depends on httpx2 alone, and the app image
+    # carries no httpx; v1.134.0 imported the wrong name, which the tests did
+    # not catch because the service's dev list brings httpx into CI.
+    import httpx2
 
     cause = getattr(problem, "__cause__", None)
-    if isinstance(cause, httpx.ConnectError):
+    if isinstance(cause, httpx2.ConnectError):
         return True
     return _text_chars(messages) / 4 <= SMALL_REQUEST_TOKENS
 
