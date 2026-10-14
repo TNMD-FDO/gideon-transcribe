@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.132.2, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The upgrade to v1.132.1 stopped at the dump: v1.132.0 had moved the dump's
+work folder under the backup folder, which the app's own account owns and
+nobody else can enter, so the operator's shell could not write into it. The
+work folder is gone. A dump and the configuration archive are now written
+by the app's account itself, straight into the backup folder under a tight
+umask, so the file is private from its first byte, lands on the data disk,
+and passes through no folder on the way. Nothing else changes.
+
+Because the failing step runs in the script already on the server, this tag
+is reached by checking it out first: `git fetch --tags && git checkout
+v1.132.2`, then `./transcribe upgrade v1.132.2` (the install guide's own
+recovery).
+
 ## v1.132.1, 2026-10-14
 
 ```

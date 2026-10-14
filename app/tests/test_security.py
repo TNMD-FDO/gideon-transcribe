@@ -189,8 +189,10 @@ def test_the_scripts_files_are_born_private():
     # Never a script-wide umask (v1.132.1): it reached the upgrade's checkout.
     assert "\numask 077\n" not in script
     assert "repair_the_checkout" in script
-    assert script.count("(umask 077;") == 4
+    assert script.count("(umask 077;") == 1
     assert '>"/tmp/' not in script
     assert 'tar -cf "/tmp/' not in script
-    assert script.count('work="$(private_folder)"') == 3
-    assert "trap forget_private_folders EXIT" in script
+    # The dumps and the archive are written by the app's account straight
+    # into the backup folder (v1.132.2); no work folder on the way.
+    assert "private_folder" not in script
+    assert script.count("| keep_private ") == 3

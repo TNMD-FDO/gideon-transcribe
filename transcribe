@@ -59,33 +59,16 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
-# A folder of this run's own, mode 0700, for a dump or an archive on its way
-# to the backup folder; removed when the script ends however it ends.
-PRIVATE_FOLDERS=()
-private_folder() {
-  # Under the backup folder when the data folder is known (v1.132.0): a dump
-  # written on the root filesystem could fill the tight disk, and the install
-  # into the backup folder is then a rename on the same filesystem.
-  local made base
-  base="$(env_value APP_DATA_DIR 2>/dev/null || true)"
-  if [ -n "$base" ] && [ -d "$base" ]; then
-    sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$base/backup" 2>/dev/null || true
-    made="$(sudo -u "$APP_USER" mktemp -d "$base/backup/work.XXXXXX" 2>/dev/null || mktemp -d)"
-  else
-    made="$(mktemp -d)"
-  fi
-  chmod 700 "$made"
-  PRIVATE_FOLDERS+=("$made")
-  printf '%s\n' "$made"
+# A dump or an archive goes straight into the backup folder, written by the
+# app's own account under a tight umask (v1.132.2): the file is private from
+# its first byte, lands on the data disk, and passes through no folder on
+# the way. v1.130.0 had written it in /tmp at the caller's umask, and
+# v1.132.0 in a work folder under the backup folder, which the app's account
+# owns and nobody else can enter, so the operator's shell could not write
+# there. Read from standard input; the path is the file to make.
+keep_private() {
+  sudo -u "$APP_USER" sh -c 'umask 077; cat > "$1"' sh "$1"
 }
-forget_private_folders() {
-  local one
-  for one in "${PRIVATE_FOLDERS[@]:-}"; do
-    if [ -n "$one" ]; then rm -rf "$one" 2>/dev/null || sudo rm -rf "$one"; fi
-  done
-  return 0
-}
-trap forget_private_folders EXIT
 
 ENV_FILE="$HERE/.env"
 SECRETS="$HERE/secrets"
@@ -2030,15 +2013,14 @@ cmd_backup_db() {
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
 
   echo "Taking a dump into $folder/$name.dump"
-  local work
-  work="$(private_folder)"
-  (umask 077; compose exec -T postgres pg_dump \
+  if ! compose exec -T postgres pg_dump \
     -U "$(env_value POSTGRES_USER)" \
     -d "$(env_value POSTGRES_DB)" \
-    --format=custom >"$work/$name.dump")
-
-  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "$work/$name.dump" "$folder/$name.dump"
-  rm -rf "$work"
+    --format=custom | keep_private "$folder/$name.dump"; then
+    sudo rm -f "$folder/$name.dump"
+    red "The dump failed; nothing was kept."
+    exit 1
+  fi
   green "Done: $(sudo du -h "$folder/$name.dump" | cut -f1)"
 }
 
@@ -2193,14 +2175,10 @@ cmd_backup() {
   step=dump
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder/.restic-cache" 2>/dev/null || true
-  local work
-  work="$(private_folder)"
-  if ! (umask 077; compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom >"$work/$dump"); then
-    rm -rf "$work"
+  if ! compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom | keep_private "$folder/$dump"; then
+    sudo rm -f "$folder/$dump"
     record_backup_failure "$step" "dump_failed"
   fi
-  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "$work/$dump" "$folder/$dump"
-  rm -rf "$work"
   local dump_bytes
   dump_bytes="$(sudo stat -c %s "$folder/$dump")"
 
@@ -3177,13 +3155,10 @@ keep_the_configuration() {
   local folder
   folder="$(env_value APP_DATA_DIR)/backup"
   echo "Keeping this office's configuration in $folder/config-pre-$tag.tar"
-  local work
-  work="$(private_folder)"
-  (umask 077; tar -cf "$work/config-pre-$tag.tar" -C "$HERE" \
-    .env secrets tls ca whisperx-service/.env whisperx-service/secrets 2>/dev/null || true)
-  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 \
-    "$work/config-pre-$tag.tar" "$folder/config-pre-$tag.tar"
-  rm -rf "$work"
+  sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
+  (tar -cf - -C "$HERE" \
+    .env secrets tls ca whisperx-service/.env whisperx-service/secrets 2>/dev/null || true) \
+    | keep_private "$folder/config-pre-$tag.tar"
 }
 
 read_the_release_lines() {
