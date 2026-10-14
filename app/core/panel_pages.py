@@ -218,9 +218,41 @@ def _services() -> list[dict]:
         _reachable("tusd", os.environ.get("TUSD_URL", "http://tusd:1080") + "/metrics"),
         _database(),
         _service_health(),
-        _worker("default"),
-        _worker("media"),
+        _workers(),
     ]
+
+
+EXPECTED_WORKERS = 3
+
+
+def _workers() -> dict:
+    """The three workers from the queue's own heartbeat table (v1.132.0).
+
+    Each worker writes a heartbeat every ten seconds and a stalled one is
+    pruned when another starts. The row had read the newest "succeeded"
+    event, which stopped existing when v1.130.0 began deleting successful
+    jobs, so it said "not running" of a worker that was fine, and would have
+    said the same of one that died.
+    """
+    from django.db import connection
+    from django.utils import timezone
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT last_heartbeat FROM procrastinate_workers")
+        beats = [row[0] for row in cursor.fetchall() if row[0] is not None]
+    now = timezone.now()
+    alive = [one for one in beats if (now - one).total_seconds() < 60]
+    newest = max(beats) if beats else None
+    says = f"{len(alive)} of {EXPECTED_WORKERS} alive"
+    if newest is not None:
+        says += f", newest heartbeat {_when(newest)}"
+    else:
+        says += ", no heartbeat yet"
+    return {
+        "name": "workers",
+        "state": "healthy" if len(alive) >= EXPECTED_WORKERS else "not running",
+        "says": says,
+    }
 
 
 def _listening(name: str, host: str, port: int) -> dict:
@@ -279,6 +311,16 @@ def _service_health() -> dict:
     if whisperx.is_alive():
         return {"name": "whisperx", "state": "healthy", "says": "answering"}
     return {"name": "whisperx", "state": "unreachable", "says": "no answer"}
+
+
+def _a_date(text: str):
+    """An ISO date from a filter, or None (v1.132.0)."""
+    import datetime as dt
+
+    try:
+        return dt.date.fromisoformat(text.strip())
+    except ValueError:
+        return None
 
 
 def _when(moment) -> str:
@@ -1081,10 +1123,15 @@ def audit_log(request: HttpRequest) -> HttpResponse:
         "client": request.GET.get("client", ""),
     }
 
+    # A date typed or pasted in another form is dropped rather than crashing
+    # the page (v1.132.0).
+    for key in ("since", "until"):
+        if asked[key] and _a_date(asked[key]) is None:
+            asked[key] = ""
     if asked["since"]:
-        rows = rows.filter(at__date__gte=asked["since"])
+        rows = rows.filter(at__date__gte=_a_date(asked["since"]))
     if asked["until"]:
-        rows = rows.filter(at__date__lte=asked["until"])
+        rows = rows.filter(at__date__lte=_a_date(asked["until"]))
     if asked["actor"]:
         rows = rows.filter(actor_username__icontains=asked["actor"])
     if asked["affected"]:
@@ -1110,7 +1157,10 @@ def audit_log(request: HttpRequest) -> HttpResponse:
         ).filter(client_text__icontains=asked["client"])
 
     found = rows.count()
-    page = max(1, int(request.GET.get("page", "1") or 1))
+    try:
+        page = max(1, int(request.GET.get("page", "1") or 1))
+    except ValueError:
+        page = 1
     start = (page - 1) * A_PAGE
 
     query = request.GET.copy()

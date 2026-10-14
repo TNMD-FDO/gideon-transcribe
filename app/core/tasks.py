@@ -281,6 +281,7 @@ def poll_service(attempt: int = 1) -> None:
     if not jobs:
         return
 
+    silent: set[str] = set()
     try:
         states = {one["id"]: one for one in whisperx.jobs()}
         if whisperx.fast_lane_configured():
@@ -291,9 +292,18 @@ def poll_service(attempt: int = 1) -> None:
                 states.update({one["id"]: one for one in whisperx.jobs(whisperx.FAST)})
             except whisperx.ServiceError:
                 log.warning("the fast lane did not answer the poll")
+                silent.add(whisperx.FAST)
     except whisperx.ServiceError as problem:
-        if attempt >= queue.POLLS_BEFORE_GIVING_UP:
-            log.warning("the service has not answered twice; failing what is out there")
+        # A refused connection is given two strikes; a service that is busy
+        # and slow to answer, more (v1.132.0): a model loading for a minute
+        # used to fail every live Job as unreachable.
+        strikes = (
+            queue.POLLS_BEFORE_GIVING_UP
+            if "timed out" not in str(problem).lower()
+            else queue.POLLS_BEFORE_GIVING_UP_ON_A_SLOW_ANSWER
+        )
+        if attempt >= strikes:
+            log.warning("the service has not answered; failing what is out there")
             for job in jobs:
                 queue.fail(job, problem.reason_class)
             return
@@ -301,7 +311,7 @@ def poll_service(attempt: int = 1) -> None:
         return
 
     for job in jobs:
-        queue.take_state_from(job, states)
+        queue.take_state_from(job, states, silent_lanes=frozenset(silent))
 
     if queue.live_jobs().exists():
         _poll_again(1)
@@ -334,6 +344,9 @@ def keep_the_queue_moving(timestamp: int) -> None:
     """
     from core import pieces, queue, uploads
 
+    finished = uploads.finish_the_complete()
+    if finished:
+        log.info("%d complete upload(s) were taken in without their finish", finished)
     dropped = uploads.drop_abandoned()
     if dropped:
         log.info("%d abandoned upload(s) were dropped", dropped)
@@ -350,6 +363,16 @@ def keep_the_queue_moving(timestamp: int) -> None:
         for job in queue.never_handed_over():
             log.warning("job %s was never handed over; again", job.pk)
             hand_over_job.defer(job_id=str(job.pk))
+    # A playback copy that never came is made again, three times at most
+    # (v1.132.0); each try is counted on the row.
+    from core.recordings import Recording as _Recording
+
+    for recording in queue.without_a_playback_copy():
+        _Recording.objects.filter(pk=recording.pk).update(
+            playback_tries=recording.playback_tries + 1
+        )
+        log.warning("recording %s has no playback copy yet; made again", recording.pk)
+        make_playback_copy.defer(recording_id=str(recording.pk))
 
     # A video left queued for vision with no task behind it (v1.54.1).
     from core import vision
@@ -560,7 +583,16 @@ def describe_intervals(run_id: str) -> None:
     assistant.describe_intervals(run_id)
 
 
-@app.periodic(cron="30 3 * * *")
+def _not_half_past_three() -> bool:
+    """The queue's schedule runs on UTC, so a nightly task wakes at half past
+    every hour and does its work at half past three in the office's own time
+    (v1.132.0): the sweeps had run at 03:30 UTC, an evening hour here."""
+    from django.utils import timezone
+
+    return timezone.localtime().hour != 3
+
+
+@app.periodic(cron="30 * * * *")
 @app.task(queue="default", name="retention_sweep")
 def retention_sweep(timestamp: int) -> None:
     """The Retention policy's nightly pass, at half past three.
@@ -574,12 +606,17 @@ def retention_sweep(timestamp: int) -> None:
     """
     from core import dictation, retention
 
-    retention.sweep()
-    # The Dictations' own pass, whatever Folder management says.
-    dictation.sweep()
+    if _not_half_past_three():
+        return
+    try:
+        retention.sweep()
+    finally:
+        # The Dictations' own pass, whatever Folder management says, and
+        # whatever the retention pass did (v1.132.0).
+        dictation.sweep()
 
 
-@app.periodic(cron="30 3 * * *")
+@app.periodic(cron="30 * * * *")
 @app.task(queue="default", name="sweep_audit_log")
 def sweep_audit_log(timestamp: int) -> None:
     """Remove audit rows past the retention setting, nightly at half past three.
@@ -590,10 +627,25 @@ def sweep_audit_log(timestamp: int) -> None:
     """
     from core import audit, settings_store
 
+    if _not_half_past_three():
+        return
     audit.sweep(settings_store.audit_retention_months())
 
 
-@app.periodic(cron="30 3 * * *")
+@app.periodic(cron="45 * * * *")
+@app.task(queue="default", name="forget_old_jobs")
+async def forget_old_jobs(timestamp: int) -> None:
+    """The queue's own finished rows, nightly (v1.132.0): a failed job's
+    arguments are kept a week for the log's sake and then go; successful ones
+    are deleted as they end since v1.130.0, and the rows from before that
+    release go here too. Async, as retry_stalled_jobs is, because the queue's
+    manager is."""
+    if _not_half_past_three():
+        return
+    await app.job_manager.delete_old_jobs(nb_hours=24 * 7, include_failed=True)
+
+
+@app.periodic(cron="30 * * * *")
 @app.task(queue="media", name="sweep_the_disk")
 def sweep_the_disk(timestamp: int) -> None:
     """The daily tidy, at the same quiet hour as the audit sweep.
@@ -604,6 +656,8 @@ def sweep_the_disk(timestamp: int) -> None:
     """
     from core import sweeping
 
+    if _not_half_past_three():
+        return
     sweeping.sweep()
 
 
@@ -694,7 +748,23 @@ async def retry_stalled_jobs(timestamp: int) -> None:
     The queueing lock means two workers cannot both be putting the same jobs
     back at once.
     """
+    from procrastinate import jobs as queue_jobs
+
     stalled = await app.job_manager.get_stalled_jobs()
     for job in stalled:
+        if job.attempts >= 2:
+            # Twice is enough (v1.132.0): a job that kills its own worker
+            # (the memory cap) used to be handed back every ten minutes for
+            # ever. It is failed, and the journal names it.
+            log.error(
+                "job %s (%s) has stopped its worker %d times; failed",
+                job.id,
+                job.task_name,
+                job.attempts,
+            )
+            await app.job_manager.finish_job(
+                job, status=queue_jobs.Status.FAILED, delete_job=False
+            )
+            continue
         log.warning("job %s was left by a worker that stopped; queued again", job.id)
         await app.job_manager.retry_job(job)

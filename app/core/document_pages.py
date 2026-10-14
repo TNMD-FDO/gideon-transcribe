@@ -10,7 +10,7 @@ from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from core import documents, incidents
+from core import chronology, documents, incidents
 from core import home as home_page
 from core.case_pages import _on_or_404, _their_case
 from core.documents import READY, Document
@@ -184,7 +184,7 @@ def comparison_act(request: HttpRequest, case_id, document_id) -> HttpResponse:
             comparison.make_event(
                 made,
                 finding,
-                at=float(at) if at not in ("", None) else None,
+                at=chronology.a_moment(at) if at not in ("", None) else None,
                 by=request.user,
                 request=request,
             )

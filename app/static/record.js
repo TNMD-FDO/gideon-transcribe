@@ -437,6 +437,23 @@
       // The last piece follows the stop event; the source ends after it.
       window.setTimeout(source.end, 300);
     });
+    // The microphone going away (unplugged, a headset powered off, the
+    // computer asleep) stops the recorder by itself; the page used to keep
+    // the clock running and say the recording continued (v1.132.0).
+    recorder.addEventListener("error", function () {
+      if (!ended) {
+        problem("during-problem", "The recorder stopped at " + clock(elapsed()) + ". The recording was ended with what had been sent.");
+        endNow("device");
+      }
+    });
+    if (stream && stream.getAudioTracks().length) {
+      stream.getAudioTracks()[0].addEventListener("ended", function () {
+        if (!ended) {
+          problem("during-problem", "The microphone stopped at " + clock(elapsed()) + ". The recording was ended with what had been sent.");
+          endNow("device");
+        }
+      });
+    }
 
     upload = new tus.Upload(source, {
       endpoint: "/files/",
@@ -458,12 +475,20 @@
       }
     });
     upload.start();
-    // The sidecar's id for this upload, so an early end can take the pieces.
-    window.setTimeout(function () {
-      if (upload && upload.url) {
-        post("/record/" + recording.id + "/upload", { tus: upload.url.split("/").pop() });
+    // The sidecar's id for this upload, so an early end can take the pieces:
+    // posted as soon as the upload exists, and again until the app has it
+    // (v1.132.0). The sidecar's own hook notes it too.
+    var idNoted = false;
+    function noteTheId(tries) {
+      if (idNoted || !upload || !upload.url) {
+        if (!idNoted && tries < 20) { window.setTimeout(function () { noteTheId(tries + 1); }, 1500); }
+        return;
       }
-    }, 1500);
+      post("/record/" + recording.id + "/upload", { tus: upload.url.split("/").pop() })
+        .then(function (got) { if (got.ok) { idNoted = true; } else if (tries < 20) { window.setTimeout(function () { noteTheId(tries + 1); }, 3000); } })
+        .catch(function () { if (tries < 20) { window.setTimeout(function () { noteTheId(tries + 1); }, 3000); } });
+    }
+    window.setTimeout(function () { noteTheId(0); }, 1000);
 
     recorder.start(5000);
     startedAt = performance.now();
@@ -600,8 +625,25 @@
     document.getElementById("open-case").href = recording.caseUrl;
     show(after);
     finishMark();
-    post("/record/" + recording.id + "/ended", { how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10, computer_ended_at: computerEndedAt, taps: taps, marks: marks })
-      .then(function () { if (uploadDone || how !== "stop") { watch(); } });
+    sendTheEnd({ how: how, pauses: pauses, seconds: Math.round(seconds * 10) / 10, computer_ended_at: computerEndedAt, taps: taps, marks: marks }, 0);
+  }
+
+  // The end is tried again until the app has it (v1.132.0): a failed post
+  // left "Sending the last piece." for ever, with the taps and marks lost.
+  function sendTheEnd(facts, tries) {
+    post("/record/" + recording.id + "/ended", facts)
+      .then(function (got) {
+        if (!got.ok && got.said && got.said.why) { problem("after-problem", got.said.why); return; }
+        if (uploadDone || facts.how !== "stop") { watch(); }
+      })
+      .catch(function () {
+        if (tries < 10) {
+          problem("after-problem", "The app did not take the end of the recording; trying again.");
+          window.setTimeout(function () { sendTheEnd(facts, tries + 1); }, 5000);
+        } else {
+          problem("after-problem", "The app did not take the end of the recording. Reload the page; what was sent is kept.");
+        }
+      });
   }
 
   // Leaving the page ends the recording with what has been sent. A beacon

@@ -150,7 +150,7 @@ def _run(arguments: list[str], timeout: int) -> subprocess.CompletedProcess:
         arguments = [arguments[0], "-threads", str(threads_per_job()), *arguments[1:]]
 
     try:
-        return subprocess.run(
+        finished = subprocess.run(
             arguments, capture_output=True, text=True, timeout=timeout, check=False
         )
     except subprocess.TimeoutExpired as problem:
@@ -159,6 +159,28 @@ def _run(arguments: list[str], timeout: int) -> subprocess.CompletedProcess:
         raise MediaError(
             "This recording took too long to prepare.", "media_timeout"
         ) from problem
+    if finished.returncode != 0:
+        _say_why(arguments, finished)
+    return finished
+
+
+def _say_why(arguments: list[str], finished: subprocess.CompletedProcess) -> None:
+    """A failed media command's last lines go to the journal, and a full disk
+    is named as such (v1.132.0): every failure had been "could not be made"
+    with nothing to say why, and the floor was tested only at upload."""
+    from core import settings_store, uploads
+
+    tail = (finished.stderr or "").strip().splitlines()[-3:]
+    log.warning(
+        "%s exited %d: %s",
+        Path(arguments[0]).name if arguments else "?",
+        finished.returncode,
+        " | ".join(line[:200] for line in tail) or "(nothing on stderr)",
+    )
+    if uploads.free_disk_bytes() < settings_store.minimum_free_disk_bytes():
+        # Not the upload refusal's class: that would mark the file as the
+        # person's fault; this is the server's, with Retry once there is room.
+        raise MediaError("The server's disk is full. Tell IT.", "server_disk_full")
 
 
 def hash_file(path: Path) -> str:
@@ -745,32 +767,45 @@ def make_waveform(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    peaks = subprocess.run(
-        [
-            "audiowaveform",
-            "-i",
-            "-",
-            "--input-format",
-            "wav",
-            "-o",
-            str(partial),
-            "--output-format",
-            "json",
-            "-z",
-            str(waveform_zoom(duration_seconds)),
-            "-b",
-            "8",
-            *(["--split-channels"] if split_channels else []),
-        ],
-        stdin=decode.stdout,
-        capture_output=True,
-        text=True,
-        timeout=DECODE_TIMEOUT,
-        check=False,
-    )
-    if decode.stdout:
-        decode.stdout.close()
-    decode.wait(timeout=DECODE_TIMEOUT)
+    try:
+        peaks = subprocess.run(
+            [
+                "audiowaveform",
+                "-i",
+                "-",
+                "--input-format",
+                "wav",
+                "-o",
+                str(partial),
+                "--output-format",
+                "json",
+                "-z",
+                str(waveform_zoom(duration_seconds)),
+                "-b",
+                "8",
+                *(["--split-channels"] if split_channels else []),
+            ],
+            stdin=decode.stdout,
+            capture_output=True,
+            text=True,
+            timeout=DECODE_TIMEOUT,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as problem:
+        # The decoder is killed with the reader (v1.132.0): the library's
+        # timeout had escaped raw and left an ffmpeg running.
+        decode.kill()
+        partial.unlink(missing_ok=True)
+        raise MediaError(
+            "The waveform for this recording took too long to make", "media_timeout"
+        ) from problem
+    finally:
+        if decode.stdout:
+            decode.stdout.close()
+        try:
+            decode.wait(timeout=DECODE_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            decode.kill()
 
     if peaks.returncode != 0 or not partial.exists():
         partial.unlink(missing_ok=True)

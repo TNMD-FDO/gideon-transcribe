@@ -565,7 +565,9 @@ def ended(
     def end(live: dict):
         if live.get("ended"):
             return False
-        live["ended"] = how if how in ("stop", "limit", "closed", "disk") else "closed"
+        live["ended"] = (
+            how if how in ("stop", "limit", "closed", "disk", "device") else "closed"
+        )
         live["ended_at"] = timezone.localtime(timezone.now()).isoformat()
         live["pauses"] = [
             {"at": float(one.get("at", 0)), "seconds": float(one.get("seconds", 0))}
@@ -824,6 +826,7 @@ ENDINGS = {
     "limit": "stopped at the longest allowed length",
     "closed": "ended when the page closed, with what had been sent",
     "disk": "ended when the server stopped taking it",
+    "device": "ended when the microphone stopped, with what had been sent",
     "": "still recording",
 }
 

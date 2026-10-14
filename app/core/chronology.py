@@ -249,16 +249,14 @@ def note_line_and_detail(event) -> tuple[str, str]:
 
 def _cleaned(incident, fields: dict, *, most: int = TEXT_MOST) -> dict:
     """The fields of an Event from a request, checked."""
-    try:
-        at = float(fields.get("at", ""))
-    except (TypeError, ValueError):
-        raise ValueError("When did it happen?") from None
+    at = a_moment(fields.get("at", ""))
+    if at is None:
+        raise ValueError("When did it happen?")
     until = None
     if str(fields.get("until", "")).strip():
-        try:
-            until = float(fields["until"])
-        except (TypeError, ValueError):
-            raise ValueError("When did it end?") from None
+        until = a_moment(fields["until"])
+        if until is None:
+            raise ValueError("When did it end?")
         if until <= at:
             until = None
     # One line per line typed, the spacing tidied, blank lines dropped: a
@@ -736,6 +734,17 @@ def _rows(incident) -> list[dict]:
         for row in group:
             row["spell"] = words
     return rows
+
+
+def a_moment(value, *, default=None):
+    """A time on the incident clock from a request, finite and within a day
+    and a bit either side (v1.132.0); the default for anything else."""
+    from core import numbers
+
+    found = numbers.finite(
+        value, least=-numbers.A_DAY_AND_MORE, most=numbers.A_DAY_AND_MORE
+    )
+    return default if found is None else found
 
 
 def cell(value) -> str:

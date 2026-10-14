@@ -535,7 +535,7 @@ If a Release is wrong for you, go back to the one before:
 ./transcribe rollback <the tag you were on>
 ```
 
-It checks that tag out and starts it. Run without a tag, it lists the tags this server knows about.
+It refuses while work is running, takes a dump, checks that tag out, writes it as the release the stack runs, pulls or builds that release's images, and starts them. Run without a tag, it lists the tags this server knows about. (Before v1.132.0 the rollback left the newer release's images running under the older tag's files.)
 
 Rolling back the code does not roll back the database. Usually that does not matter, because the old code reads the new database happily. When it does matter, the app will not start after the rollback, and the fix is the dump the upgrade took before it changed anything:
 

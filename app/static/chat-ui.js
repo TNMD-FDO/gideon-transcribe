@@ -355,6 +355,14 @@
       options.ask(chatId, question).then(function () {
         delete pending[chatId];
         return options.refresh();
+      }).catch(function () {
+        // The app did not take the question (v1.132.0): the box opens again
+        // with the words back in it, rather than waiting for ever.
+        delete pending[chatId];
+        askBox.value = question;
+        grow();
+        draw();
+        if (window.UI && window.UI.toast) { window.UI.toast("The app did not take the question. Try again.", { problem: true }); }
       });
     }
 

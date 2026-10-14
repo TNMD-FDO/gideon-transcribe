@@ -48,6 +48,9 @@ CASE_TOO_LARGE = "llm_case_too_large"
 # The app's own code failed around the call (v1.131.0): not the engine's
 # fault, and said so, with Try again.
 INTERNAL = "internal"
+# The minute check has not run for this long: the worker that runs it is
+# gone (v1.132.0).
+STALE_CHECK_SECONDS = 180
 
 WHAT_TO_SAY = {
     INTERNAL: (
@@ -356,6 +359,20 @@ def status_for_the_panel() -> dict:
         }
     if status.checked_at is None:
         return {"state": "unknown", "says": "not checked yet", "test": status.last_test}
+    stale = (timezone.now() - status.checked_at).total_seconds()
+    if stale > STALE_CHECK_SECONDS:
+        # The minute check has stopped (v1.132.0): the engine worker that
+        # runs it is down, whatever the last check said.
+        return {
+            "state": "unknown",
+            "says": (
+                f"not checked for {int(stale // 60)} minutes; the engine worker "
+                "may be down"
+            ),
+            "models": status.served_models,
+            "test": status.last_test,
+            "window": window(),
+        }
     if status.reachable:
         return {
             "state": "reachable",

@@ -262,7 +262,12 @@ services:
       - "-base-path=/files/"
       - "-upload-dir=/srv/data/uploads"
       - "-hooks-http=http://app:8000/upload-hook/"
-      - "-hooks-enabled-events=pre-create,post-finish"
+      - "-hooks-enabled-events=pre-create,post-create,post-finish"
+      # The finish is tried for a minute and a half (v1.132.0): the app is
+      # away for the migrations at every upgrade, and a finish that never
+      # landed used to leave the upload to be dropped ten minutes later.
+      - "-hooks-http-retry=10"
+      - "-hooks-http-backoff=10"
       - "-port=1080"
     volumes:
       - "${APP_DATA_DIR}:/srv/data"
@@ -278,6 +283,10 @@ services:
       driver: journald
 
   media-worker:
+    # Minutes to finish what is in hand at a restart (v1.132.0): the default
+    # ten seconds killed a transcode or a question mid-flight at every
+    # upgrade, to be redone from the start up to ten minutes later.
+    stop_grace_period: 10m
     # ffmpeg and audiowaveform: hashing, probing, Sides, the audio the service
     # is sent, the Playback copy, the waveform, and Clip renders. CPU only; no
     # container built from the app image ever sees a GPU.
@@ -326,6 +335,10 @@ services:
       driver: journald
 
   worker:
+    # Minutes to finish what is in hand at a restart (v1.132.0): the default
+    # ten seconds killed a transcode or a question mid-flight at every
+    # upgrade, to be redone from the start up to ten minutes later.
+    stop_grace_period: 10m
     # The queue and the schedules: handing Runs to the WhisperX service,
     # polling it, merging results, and the nightly sweeps.
     image: ghcr.io/tnmd-fdo/gideon-transcribe-app:${RELEASE_TAG:-dev}
@@ -369,6 +382,10 @@ services:
       driver: journald
 
   llm-worker:
+    # Minutes to finish what is in hand at a restart (v1.132.0): the default
+    # ten seconds killed a transcode or a question mid-flight at every
+    # upgrade, to be redone from the start up to ten minutes later.
+    stop_grace_period: 10m
     # The AI assistant: Summary, Chat, and Speaker suggestions, and the once a
     # minute check of the engine. Its own queue so that a call to the engine
     # never delays the three-second poll on `worker`. It is the only container

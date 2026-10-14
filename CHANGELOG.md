@@ -21,6 +21,72 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.132.0, 2026-10-14
+
+```
+Models: unchanged
+Database: migrates (0079: a Recording's playback tries, the backup status's
+watched-since)
+```
+
+The robustness pass of the code audit: its eight High and nineteen Medium
+findings fixed, each with a test that keeps the rule. Three of them were
+this audit's own, from v1.130.0 and v1.131.0, and they go first.
+
+**Put right from the last two releases.**
+
+- A fast lane that stops answering no longer fails its Runs as "the service
+  restarted": a lane that did not answer leaves its Runs where they were.
+- The Status page's workers row reads the queue's own heartbeats ("3 of 3
+  alive") instead of completion events that v1.130.0 had begun deleting.
+- A dump's private folder is made under the backup folder, on the data
+  disk, not on the root filesystem.
+
+**Nothing stalled or stuck.**
+
+- A service answer in the wrong shape (a page instead of JSON, a body cut
+  short, a submit with no id, a job entry without a state) is the service's
+  failure with its reason, never a merge tried again every minute with every
+  other job waiting behind it, and never a Job queued for ever.
+- A slow service is given more polls than a refused one before its jobs are
+  failed; a playback copy that never came is made again; a job that stopped
+  its own worker twice is failed with a line in the journal.
+- A complete upload whose finish never reached the app during a restart is
+  taken in by the minute sweep instead of being dropped ten minutes later;
+  the sidecar tries the finish for a minute and a half.
+
+**Numbers and dates that broke pages.** A time posted as "nan" or "inf" is
+refused with the reason wherever a time is taken, so one bad placement can
+no longer break the incident page for everyone; the audit log's typed dates
+and page number no longer crash it; the three nightly sweeps run at half
+past three in the office's time, not UTC.
+
+**The pages.** The Speakers page's poll goes on after a failed answer and
+its buttons come back; the Record page ends the recording when the
+microphone goes away and says so, posts its upload id until the app has it,
+and tries a failed end again; the incident page's actions say when the app
+did not answer and the About box is kept while it is being written in; a
+chat question the app did not take comes back to the box; the Upload page
+keys files by their place (two files of one name no longer share a
+recording) and resumes a broken upload from where it got to; five scripts
+read the CSRF cookie correctly whatever its place; a rename, an undo, a
+cancel or a summary that is refused says so instead of reloading.
+
+**Operations.** The rollback writes the release tag it lands on, pulls or
+builds, refuses over running work and takes a dump; the upgrade runs the
+migrations as their own step and says what to do when they or the start
+fail; the workers have ten minutes to finish at a restart and the gate
+counts their work; the Status page says when the engine's check has
+stopped and when a backup timer has never fired; failed job rows go after
+a week; a full disk is named as such in a media failure or a document read;
+the clip downloads are built on disk and streamed under threaded web
+workers.
+
+Phase 1 chapters 3 and 4, Phase 3 and Phase 6's amendments, the admin guide
+and the install guide say so. Left for a follow-up: the Low findings, and
+among the Medium ones the case chat's citations resolved per poll and the
+bulk deletes inside a request.
+
 ## v1.131.0, 2026-10-14
 
 ```

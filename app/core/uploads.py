@@ -383,6 +383,27 @@ def hook(request: HttpRequest) -> JsonResponse:
         return _pre_create(event, upload)
     if name == "post-finish":
         return _post_finish(event, upload, metadata)
+    if name == "post-create" and (metadata.get("live") or "") == "1":
+        return _post_create_live(event, upload, metadata)
+    return JsonResponse({})
+
+
+def _post_create_live(event: dict, upload: dict, metadata: dict) -> JsonResponse:
+    """A Live recording's upload exists: its id is noted on the Recording here,
+    by the sidecar (v1.132.0), as well as by the page, whose one-shot post
+    could miss it and leave an early end with nothing to take."""
+    from core import live
+
+    session = _session_of(event)
+    if session is None:
+        return JsonResponse({})
+    recording = Recording.objects.filter(
+        pk=metadata.get("recording", ""),
+        user=session.user,
+        media_state=MediaState.UPLOADING,
+    ).first()
+    if recording is not None and recording.is_live:
+        live.note_upload(recording, str(upload.get("ID") or ""))
     return JsonResponse({})
 
 
@@ -503,14 +524,76 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
         recording.save(update_fields=["media_state", "failure_message"])
         return JsonResponse({})
 
-    recording.folder.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(arrived), recording.original_path)
-    arrived.with_name(f"{arrived.name}.info").unlink(missing_ok=True)
-
-    recording.size_bytes = recording.original_path.stat().st_size
-    recording.media_state = MediaState.CHECKING
-    recording.save(update_fields=["size_bytes", "media_state"])
-
+    if not take_in(recording, arrived):
+        return JsonResponse({})
     prepare_recording.defer(recording_id=str(recording.pk))
     log.info("recording %s arrived and was given to the media worker", recording.id)
     return JsonResponse({})
+
+
+def take_in(recording: Recording, arrived: Path) -> bool:
+    """Move the sidecar's file into the Recording's folder, guarded (v1.132.0).
+
+    A full disk or a vanished file had raised after the claim, answering the
+    sidecar 500 and leaving the row "checking" for ever while the browser had
+    already shown "Uploaded". The row is failed with a sentence instead, and
+    the file is left for the sweep.
+    """
+    try:
+        recording.folder.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(arrived), recording.original_path)
+        arrived.with_name(f"{arrived.name}.info").unlink(missing_ok=True)
+        recording.size_bytes = recording.original_path.stat().st_size
+    except OSError:
+        log.exception("the upload of recording %s could not be stored", recording.pk)
+        recording.media_state = MediaState.FAILED
+        recording.failure_message = "The upload could not be stored. Try again."
+        recording.save(update_fields=["media_state", "failure_message"])
+        return False
+    recording.media_state = MediaState.CHECKING
+    recording.save(update_fields=["size_bytes", "media_state"])
+    return True
+
+
+def finish_the_complete() -> int:
+    """Uploads whose file is whole but whose finish never reached the app
+    (v1.132.0): the sidecar's hook has a few quick retries and the app is
+    away for a minute at every upgrade, so the minute sweep finishes them
+    the way the hook would, rather than dropping them ten minutes later."""
+    from core.tasks import prepare_recording
+
+    folder = Path(settings.UPLOADS_DIR)
+    if not folder.is_dir():
+        return 0
+    finished = 0
+    for info in folder.glob("*.info"):
+        try:
+            described = json.loads(info.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        recording_id = (described.get("MetaData") or {}).get("recording")
+        size = described.get("Size")
+        if not recording_id or not isinstance(size, int) or size <= 0:
+            continue
+        pieces = info.with_suffix("")
+        try:
+            if pieces.stat().st_size < size:
+                continue
+        except OSError:
+            continue
+        recording = Recording.objects.filter(
+            pk=recording_id, media_state=MediaState.UPLOADING
+        ).first()
+        if recording is None or recording.is_live:
+            continue
+        arrived = arrived_file(pieces.name)
+        if arrived is None or not claim(recording):
+            continue
+        log.warning(
+            "recording %s was uploaded whole but its finish never came; taken in",
+            recording.pk,
+        )
+        if take_in(recording, arrived):
+            prepare_recording.defer(recording_id=str(recording.pk))
+            finished += 1
+    return finished

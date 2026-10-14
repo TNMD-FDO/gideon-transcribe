@@ -28,6 +28,7 @@ from core import (
     incident_clips,
     incidents,
     media,
+    numbers,
     settings_store,
     sharing,
     sitting,
@@ -173,7 +174,10 @@ def _asked_moment(request, incident: Incident, state: dict) -> float:
             # Clamped to the span's low end (v1.131.0), which is below zero
             # for a camera that began before the one that set the clock.
             floor = float(low) if low is not None else 0.0
-            return max(floor, float(request.GET["t"]))
+            asked = numbers.finite(request.GET["t"])
+            if asked is None:
+                raise ValueError("not a moment")
+            return max(floor, asked)
         if request.GET.get("recording") and request.GET.get("at"):
             camera = IncidentCamera.objects.filter(
                 incident=incident, recording_id=request.GET["recording"]
@@ -188,11 +192,19 @@ def _asked_moment(request, incident: Incident, state: dict) -> float:
 def _others(case, incident: Incident) -> list[dict]:
     """The case's videos not in this Incident, for Add cameras."""
     inside = set(incident.cameras.values_list("recording_id", flat=True))
+    # One query for every placement in the case (v1.132.0): the row had
+    # looked each recording's incident up on every three-second poll.
+    elsewhere_by = {
+        camera.recording_id: camera
+        for camera in incidents.IncidentCamera.objects.filter(
+            recording__case=case
+        ).select_related("incident")
+    }
     rows = []
     for recording in case.recordings.order_by("title"):
         if recording.pk in inside or not incidents.is_video(recording):
             continue
-        elsewhere = incidents.incident_of(recording)
+        elsewhere = elsewhere_by.get(recording.pk)
         words, tone = incidents.stamp_words(recording)
         rows.append(
             {
@@ -433,9 +445,12 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                     status=400,
                 )
         elif how == "hand":
-            try:
-                starts_at = float(request.POST.get("starts_at", ""))
-            except ValueError:
+            starts_at = numbers.finite(
+                request.POST.get("starts_at", ""),
+                least=-numbers.A_DAY_AND_MORE,
+                most=numbers.A_DAY_AND_MORE,
+            )
+            if starts_at is None:
                 return JsonResponse({"error": "Where should it start?"}, status=400)
             incidents.place_by_hand(camera, starts_at, by=user, request=request)
         elif how == "match":

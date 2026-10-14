@@ -74,6 +74,11 @@
       body: JSON.stringify(body || {})
     }).then(function (answer) {
       return answer.json().then(function (said) { return { ok: answer.ok, said: said }; });
+    }).catch(function () {
+      // The app did not answer, or answered with a page (v1.132.0): the
+      // caller gets a plain "not ok" rather than a dead button.
+      if (window.UI && window.UI.toast) { window.UI.toast("The app did not answer. Try again.", { problem: true }); }
+      return { ok: false, said: {} };
     });
   }
 
@@ -697,7 +702,8 @@
       if (accept || reject) {
         var button = accept || reject;
         button.disabled = true;
-        send("/suggestion/" + button.dataset.suggestion + "/" + (accept ? "accept" : "reject")).then(function () {
+        send("/suggestion/" + button.dataset.suggestion + "/" + (accept ? "accept" : "reject")).then(function (got) {
+          if (!got.ok) { button.disabled = false; return; }
           tell({ kind: "speakers-changed" });
           if (accept) { reloadHere(button.dataset.name); } else { refreshSuggestions(); }
         });
@@ -978,7 +984,13 @@
         if (suggestTimer) { window.clearTimeout(suggestTimer); suggestTimer = null; }
         if (busy) { suggestTimer = window.setTimeout(refreshSuggestions, 2000); }
       })
-      .catch(function () { /* the button waits for the next look */ });
+      .catch(function () {
+        // One failed answer (an upgrade's restart, a network blink) used to
+        // end the polling for good and leave the buttons dead (v1.132.0).
+        if (said) { said.textContent = "The app did not answer; trying again."; }
+        if (suggestTimer) { window.clearTimeout(suggestTimer); }
+        suggestTimer = window.setTimeout(refreshSuggestions, 6000);
+      });
   }
 
   // A correction accepted moves the line here as give() does, so the lanes,
@@ -1000,8 +1012,12 @@
   }
   if (checkLine) {
     document.getElementById("check-speakers").addEventListener("click", function () {
-      this.disabled = true;
-      send("/recording/" + V.recording + "/speaker-check").then(refreshSuggestions);
+      var button = this;
+      button.disabled = true;
+      send("/recording/" + V.recording + "/speaker-check").then(function (got) {
+        if (!got.ok) { button.disabled = false; return; }
+        refreshSuggestions();
+      });
     });
   }
   if (correctionsBox) {
@@ -1041,8 +1057,12 @@
   }
   if (suggestLine) {
     document.getElementById("suggest-names").addEventListener("click", function () {
-      this.disabled = true;
-      send("/recording/" + V.recording + "/suggest").then(refreshSuggestions);
+      var button = this;
+      button.disabled = true;
+      send("/recording/" + V.recording + "/suggest").then(function (got) {
+        if (!got.ok) { button.disabled = false; return; }
+        refreshSuggestions();
+      });
     });
     cardsBox.addEventListener("click", function (event) {
       var cite = event.target.closest(".cite");

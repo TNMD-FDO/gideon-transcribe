@@ -1180,16 +1180,16 @@ def download_case_clips(request: HttpRequest, case_id) -> HttpResponse:
         if one.state == RenderState.READY and one.path.exists()
     ]
 
-    holder = io.BytesIO()
+    spool = exports.spool()
     taken: set[str] = set()
-    with zipfile.ZipFile(holder, "w", zipfile.ZIP_DEFLATED) as bundle:
+    with zipfile.ZipFile(spool, "w", zipfile.ZIP_STORED) as bundle:
         for clip in clips:
             clip_work.add_to_zip(bundle, clip, taken)
             _record(request, clip, "Clip downloaded")
 
     cases.note_activity(case, by=request.user)
-    return exports.hand_over(
-        holder.getvalue(),
+    return exports.hand_over_file(
+        spool,
         exports.zip_name(f"{case.name} clips"),
         "application/zip",
     )

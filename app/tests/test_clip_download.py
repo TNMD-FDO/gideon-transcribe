@@ -70,7 +70,9 @@ def a_ready_clip(recording, person, title, start=0.0):
 
 
 def names_in(answer) -> list[str]:
-    return sorted(zipfile.ZipFile(io.BytesIO(answer.content)).namelist())
+    # Streamed from a spool since v1.132.0.
+    body = b"".join(answer.streaming_content) if answer.streaming else answer.content
+    return sorted(zipfile.ZipFile(io.BytesIO(body)).namelist())
 
 
 @pytest.mark.django_db

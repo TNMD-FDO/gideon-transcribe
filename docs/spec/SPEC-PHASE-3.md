@@ -405,6 +405,8 @@ Every one takes effect at once; a Session in progress keeps the settings it star
 
 ## Amendments applied
 
+- **2026-10-14, v1.132.0, the robustness pass.** **A microphone that goes away ends the recording**: the Record page listens for the microphone's track ending and the recorder's own error, ends the recording with what had been sent, and says so with the time ("ended when the microphone stopped" in the provenance); it had kept the clock running and said the recording continued. **The upload's id reaches the server**: posted as soon as the upload exists and again until the app has it, and noted by the sidecar itself from its post-create event, so an early end always has pieces to take. **A failed end is tried again** until the app has it, with words on the page.
+
 - **From the build, v1.23.0 (step one: the Record page with the microphone alone), the decisions it left to the build:**
   - **The encoding** is Opus in WebM at 48 kbit/s, one channel, as `MediaRecorder` makes it in Edge and Chrome; the recorder emits a piece every five seconds and the upload client sends 64 KB at a time, about ten seconds of speech, so a page that dies loses at most that.
   - **The upload** is one tus upload of deferred length into the existing sidecar, with `live=1` in its metadata; the sidecar's pre-create hook takes a deferred-length upload only for a Live recording still recording, tests the disk floor, and tests the Case owner's room against the longest allowed recording at the encoding's rate. The post-finish hook is unchanged; a Recording the page already ended is not taken twice.

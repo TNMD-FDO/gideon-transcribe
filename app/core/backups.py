@@ -55,6 +55,10 @@ class BackupStatus(models.Model):
     last_drill_ok = models.BooleanField(default=False)
     last_drill_step = models.CharField(max_length=80, blank=True, default="")
     overdue_said_on = models.DateField(null=True, blank=True)
+    # When the app first looked (v1.132.0, migration 0079): a timer that never
+    # fires is overdue a day after this, where "no snapshot yet" had stayed
+    # amber for ever.
+    watched_since = models.DateTimeField(null=True, blank=True)
 
     @classmethod
     def the_one(cls) -> BackupStatus:
@@ -335,6 +339,17 @@ def status_for_the_panel() -> dict:
     if status.last_snapshot_at is None:
         says = f"no Snapshot yet; the first runs {next_run()}"
         colour = "amber"
+        if (
+            status.watched_since is not None
+            and now - status.watched_since > SNAPSHOT_OVERDUE
+        ):
+            # A day has passed and nothing ran (v1.132.0): the timer is not
+            # firing, which is the host's side to look at.
+            says = (
+                "no Snapshot has ever run, though a day has passed; the timer "
+                "on the server is not firing. Tell IT."
+            )
+            colour = "red"
     elif not status.last_snapshot_ok:
         says = (
             f"failed {local(status.last_snapshot_at):%a %H:%M} "
@@ -380,10 +395,23 @@ def watch() -> list[str]:
     said: list[str] = []
     if status.overdue_said_on == today:
         return said
+    if status.watched_since is None:
+        status.watched_since = now
+        status.save(update_fields=["watched_since"])
+    never_started = (
+        status.last_snapshot_at is None
+        and now - status.watched_since > SNAPSHOT_OVERDUE
+    )
     if (
-        status.last_good_snapshot_at is not None
-        and now - status.last_good_snapshot_at > SNAPSHOT_OVERDUE
-    ) or (status.last_good_snapshot_at is None and status.last_snapshot_at is not None):
+        (
+            status.last_good_snapshot_at is not None
+            and now - status.last_good_snapshot_at > SNAPSHOT_OVERDUE
+        )
+        or (
+            status.last_good_snapshot_at is None and status.last_snapshot_at is not None
+        )
+        or never_started
+    ):
         audit.write(
             audit.Category.SYSTEM,
             "Backup overdue",

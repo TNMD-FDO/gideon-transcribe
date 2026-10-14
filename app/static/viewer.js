@@ -185,10 +185,10 @@
 
   // The transcript ------------------------------------------------------------
 
-  function draw() {
-    if (!column) { return; }
-    column.innerHTML = "";
-    segments.forEach(function (segment, index) {
+  // One row of the transcript (v1.132.0: a correction or a note replaces
+  // its own row rather than building every row again, which froze the tab
+  // for seconds on a long transcript).
+  function buildRow(segment, index) {
       var row = document.createElement("li");
       row.className = "seg";
       row.dataset.index = index;
@@ -292,8 +292,23 @@
         }
         if (one.at >= segment.start && (!next || one.at < next.start)) { row.appendChild(momentNote(one)); }
       });
-      column.appendChild(row);
-    });
+      return row;
+  }
+
+  function redrawRow(segment) {
+    var index = segments.indexOf(segment);
+    var old = column ? column.querySelector('li.seg[data-index="' + index + '"]') : null;
+    if (index < 0 || !old) { draw(); return; }
+    old.replaceWith(buildRow(segment, index));
+    tintRange();
+    if (clipStartsAt !== null) { showsStart(clipStartsAt); }
+    document.dispatchEvent(new Event("transcript-drawn"));
+  }
+
+  function draw() {
+    if (!column) { return; }
+    column.innerHTML = "";
+    segments.forEach(function (segment, index) { column.appendChild(buildRow(segment, index)); });
     tintRange();
     // A redraw builds every row again, so a start marked before it has to be
     // put back on the row it belongs to.
@@ -1268,7 +1283,7 @@
         // the old word timings no longer describe it.
         segment.words = [];
         editing = null;
-        draw();
+        redrawRow(segment);
         // draw() built the rows again, so the highlight and any search
         // have to be put back.
         here = -1;
@@ -1333,7 +1348,7 @@
         segment.note = told.note || "";
         segment.note_by = told.note_by || "";
         segment.note_on = told.note_on || "";
-        draw();
+        redrawRow(segment);
         here = -1;
         follow();
         if (search && search.value.trim()) { look(); }
@@ -1423,7 +1438,7 @@
         segment.note_by = told.note_by || "";
         segment.note_on = told.note_on || "";
         noting = null;
-        draw();
+        redrawRow(segment);
         here = -1;
         follow();
         if (search && search.value.trim()) { look(); }
@@ -1605,7 +1620,12 @@
         "X-CSRFToken": cookie("csrftoken")
       },
       body: JSON.stringify({ from: from, to: to })
-    }).then(function () { window.location.reload(); });
+    }).then(function (answer) {
+      if (answer.ok) { window.location.reload(); return; }
+      return answer.json().then(function (said) {
+        UI.toast((said && (said.error || said.why)) || "The name was not changed.", { problem: true, icon: "warning" });
+      });
+    }).catch(function () { UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
   }
 
   // Undo the last rename or merge: the lines it moved take their old name.
@@ -1619,7 +1639,10 @@
           fetch("/recording/" + window.VIEWER.recording + "/speakers/undo", {
             method: "POST",
             headers: { "X-CSRFToken": cookie("csrftoken") }
-          }).then(function () { window.location.reload(); });
+          }).then(function (answer) {
+            if (answer.ok) { window.location.reload(); return; }
+            UI.toast("That could not be undone.", { problem: true, icon: "warning" });
+          }).catch(function () { UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
         });
     });
   }
@@ -2350,7 +2373,10 @@
         fetch("/recording/" + window.VIEWER.recording + "/delete", {
           method: "POST",
           headers: { "X-CSRFToken": cookie("csrftoken") }
-        }).then(function () { window.location = "/"; });
+        }).then(function (answer) {
+          if (answer.ok) { window.location = "/"; return; }
+          UI.toast("This recording could not be cancelled.", { problem: true, icon: "warning" });
+        }).catch(function () { UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
       });
     });
   }

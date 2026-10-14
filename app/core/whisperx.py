@@ -15,6 +15,7 @@ batch service, "fast" for the lane), and a Run remembers which it went to.
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import urllib.error
@@ -95,7 +96,15 @@ def _request(
     try:
         with urllib.request.urlopen(request, timeout=timeout) as answer:
             raw = answer.read()
-            return answer.status, (json.loads(raw) if raw else None)
+            try:
+                return answer.status, (json.loads(raw) if raw else None)
+            except json.JSONDecodeError:
+                # A 200 whose body is not JSON (a proxy page, a body cut
+                # short) is the service failing, not the app (v1.132.0).
+                raise ServiceError(
+                    "the WhisperX service answered with something that is not JSON",
+                    "internal",
+                ) from None
     except urllib.error.HTTPError as refused:
         raw = refused.read()
         try:
@@ -105,6 +114,12 @@ def _request(
     except (urllib.error.URLError, TimeoutError, OSError) as unreachable:
         raise ServiceError(
             f"the WhisperX service could not be reached: {unreachable}",
+            "service_unreachable",
+        ) from None
+    except http.client.HTTPException as broken:
+        # A connection dropped half-way through a large result (v1.132.0).
+        raise ServiceError(
+            f"the WhisperX service's answer was cut short: {broken}",
             "service_unreachable",
         ) from None
 
@@ -156,8 +171,15 @@ def submit(audio: Path, request: dict[str, Any], lane: str = "") -> Submitted:
     )
 
     if status in (200, 202) and answer:
+        # The answer's shape is checked (v1.132.0): one without an id used
+        # to raise out of the hand-over and leave the Job queued for ever.
+        if not isinstance(answer, dict) or not answer.get("id"):
+            raise ServiceError(
+                "the WhisperX service accepted the job but gave it no id",
+                "internal",
+            )
         return Submitted(
-            id=answer["id"],
+            id=str(answer["id"]),
             position=answer.get("position", 0),
             audio_minutes_ahead=answer.get("audio_minutes_ahead", 0.0),
         )
@@ -183,8 +205,15 @@ def jobs(lane: str = "") -> list[dict[str, Any]]:
     state of every Run rather than one request per Run.
     """
     status, answer = _request("GET", "/v1/jobs", lane=lane)
-    if status == 200 and answer:
-        return answer.get("jobs", [])
+    if status == 200 and answer is not None:
+        # An empty answer is an empty list, not a refusal (v1.132.0); and an
+        # entry without an id or a state is left out rather than killing
+        # the poll.
+        return [
+            one
+            for one in ((answer or {}).get("jobs") or [])
+            if isinstance(one, dict) and one.get("id") and one.get("state")
+        ]
     if status == 401:
         raise ServiceError(
             "the service does not know this app's token", "service_refused"

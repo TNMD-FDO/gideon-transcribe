@@ -262,11 +262,15 @@
         template: templateChoice ? templateChoice.value : "",
         focus: document.getElementById("summary-focus").value,
         length: document.getElementById("summary-length").value
-      }).then(function () {
+      }).then(function (answer) {
+        if (answer && answer.ok === false) {
+          UI.toast((answer.said && (answer.said.error || answer.said.why)) || "The summary was not started.", { problem: true, icon: "warning" });
+          return;
+        }
         summaryDialog.hidden = true;
         document.getElementById("summary-focus").value = "";
         refresh();
-      });
+      }).catch(function () { UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
     });
   }
 
@@ -497,11 +501,13 @@
       if (!button) { return; }
       button.disabled = true;
       post("/suggestion/" + button.dataset.suggestion + "/" + (accept ? "accept" : "reject"))
-        .then(function () {
+        .then(function (answer) {
+          if (answer && answer.ok === false) { button.disabled = false; return; }
           // Accept renamed every segment of that speaker: the rows, the
           // chips and the colours all change, so the page is loaded again.
           if (accept) { window.location.reload(); } else { refresh(); }
-        });
+        })
+        .catch(function () { button.disabled = false; UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
     });
   }
 

@@ -7,7 +7,6 @@ was, and may not adjust, rename, or delete it: those are the owner's.
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 import shutil
@@ -273,10 +272,13 @@ def save_clip(request: HttpRequest, recording_id) -> JsonResponse:
 
 def _span(wanted: dict, recording) -> tuple[str, float, float]:
     """The two times, checked against the shortest and longest a Clip may be."""
-    try:
-        start = max(0.0, float(wanted.get("start", 0)))
-        end = float(wanted.get("end", 0))
-    except (TypeError, ValueError):
+    from core import numbers
+
+    start = numbers.finite(
+        wanted.get("start", 0), least=0.0, most=numbers.A_DAY_AND_MORE
+    )
+    end = numbers.finite(wanted.get("end", 0), least=0.0, most=numbers.A_DAY_AND_MORE)
+    if start is None or end is None:
         return "those times could not be read", 0.0, 0.0
 
     length = recording.duration_seconds or end
@@ -443,16 +445,19 @@ def download_all_clips(request: HttpRequest) -> HttpResponse:
         ]
         stem = "clips"
 
-    holder = io.BytesIO()
+    # On disk and stored, never deflated (v1.132.0): video does not compress,
+    # and a zip of two hundred clips built in memory took the web worker past
+    # its time limit and answered nothing.
+    spool = exports.spool()
     taken: set[str] = set()
-    with zipfile.ZipFile(holder, "w", zipfile.ZIP_DEFLATED) as bundle:
+    with zipfile.ZipFile(spool, "w", zipfile.ZIP_STORED) as bundle:
         for clip in clips:
             clip_work.add_to_zip(bundle, clip, taken)
             _record(request, clip, "Clip downloaded")
             clip_work.mark_downloaded(clip, True)
 
-    return _hand_over(
-        holder.getvalue(),
+    return exports.hand_over_file(
+        spool,
         f"{stem} clips {timezone.localtime():%Y-%m-%d %H%M}.zip",
         "application/zip",
     )

@@ -439,9 +439,12 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
     recording = Recording.objects.filter(pk=recording_id).first()
     if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
-    try:
-        at = max(0.0, float(request.GET.get("t", "0")))
-    except (TypeError, ValueError):
+    from core import numbers
+
+    at = numbers.finite(
+        request.GET.get("t", "0"), least=0.0, most=numbers.A_DAY_AND_MORE
+    )
+    if at is None:
         at = 0.0
     # The whole recording (Phase 9 chapter 4, the Notes page's pop-out): every
     # line, not the minutes around the moment.
@@ -636,9 +639,10 @@ def note_at(request: HttpRequest, recording_id) -> JsonResponse:
             return JsonResponse({"error": "no such note"}, status=404)
         saved = notes.set_moment_note(one, words, by=request.user, request=request)
         return JsonResponse({"saved": True, "on": "moment", "moment": saved})
-    try:
-        at = float(wanted.get("at"))
-    except (TypeError, ValueError):
+    from core import numbers
+
+    at = numbers.finite(wanted.get("at"), least=0.0, most=numbers.A_DAY_AND_MORE)
+    if at is None:
         return JsonResponse({"error": "that is not a moment"}, status=400)
     length = recording.duration_seconds
     if at < 0 or (length and at > float(length) + 1):
@@ -1466,16 +1470,30 @@ def _the_rest_of_the_case(recording) -> list:
     if not recording.case_id or not cases.folder_management_on():
         return []
 
+    from core.jobs import Job, JobState, Transcript
+
+    # Three queries whatever the case's size (v1.132.0): the rail had asked
+    # twice per recording, 1,600 queries for a case of 800.
+    siblings = list(recording.case.recordings.order_by("-created"))
+    with_transcript = set(
+        Transcript.objects.filter(recording__in=siblings).values_list(
+            "recording_id", flat=True
+        )
+    )
+    in_the_queue = set(
+        Job.objects.filter(recording__in=siblings, state__in=JobState.LIVE).values_list(
+            "recording_id", flat=True
+        )
+    )
     rows = []
-    for one in recording.case.recordings.order_by("-created"):
-        job = one.jobs.order_by("-created").first()
+    for one in siblings:
         rows.append(
             {
                 "recording": one,
                 "here": one.pk == recording.pk,
                 "length": exports.clock(one.duration_seconds or 0),
-                "ready": hasattr(one, "transcript"),
-                "in_the_queue": bool(job is not None and job.is_live),
+                "ready": one.pk in with_transcript,
+                "in_the_queue": one.pk in in_the_queue,
                 "failed": one.media_state in ("failed", "rejected"),
             }
         )

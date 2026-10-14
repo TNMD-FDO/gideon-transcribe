@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import math
 import re
 
 from django.db import IntegrityError, transaction
@@ -28,6 +29,9 @@ log = logging.getLogger("transcribe.queue")
 # Two polls in a row have to fail before a Job is given up on. One dropped
 # packet must not fail a two-hour transcription.
 POLLS_BEFORE_GIVING_UP = 2
+# A slow answer (a read timeout) is given more polls than a refused one
+# (v1.132.0): the service loading a model is busy, not gone.
+POLLS_BEFORE_GIVING_UP_ON_A_SLOW_ANSWER = 5
 
 
 def make_job(recording: Recording) -> Job:
@@ -171,6 +175,11 @@ def hand_over(job: Job) -> Job:
             submitted = whisperx.submit(run.audio_path, request_for(run), lane)
         except whisperx.ServiceError as problem:
             return fail(job, problem.reason_class)
+        except Exception:  # noqa: BLE001 - the last resort (v1.132.0)
+            # A missing prepared file, or an answer of the wrong shape, used
+            # to leave the Job queued for ever and handed over every minute.
+            log.exception("job %s could not be handed over", job.id)
+            return fail(job, Reason.INTERNAL)
 
         run.service_job_id = submitted.id
         run.lane = lane
@@ -191,7 +200,26 @@ def hand_over(job: Job) -> Job:
 POLLS_BEFORE_MISSING = 10
 
 
-def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
+def _number(value) -> float | None:
+    """A float from the service's answer, or None for anything that is not one
+    (v1.132.0): a percent of "n/a" used to kill the poll each minute."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _whole(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def take_state_from(
+    job: Job, service_jobs: dict[str, dict], silent_lanes: frozenset = frozenset()
+) -> Job:
     """Bring one Job up to date from what the service just said.
 
     The service is asked once for everything, so this reads from that one
@@ -200,6 +228,10 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
     for run in job.runs.all():
         state = service_jobs.get(run.service_job_id)
         if state is None:
+            if run.lane in silent_lanes:
+                # The lane did not answer this round (v1.132.0): its Runs
+                # are left where they were, not counted as missing.
+                continue
             if run.service_job_id and run.state not in ("done", "failed", "cancelled"):
                 # The service does not list it (v1.131.0): its store was
                 # recreated, its token changed, or the job aged out. A few
@@ -215,11 +247,11 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
 
         if run.missing_polls:
             run.missing_polls = 0
-        run.state = state["state"]
-        run.stage = state.get("stage") or ""
-        run.percent = state.get("percent")
-        run.position = state.get("position")
-        run.audio_minutes_ahead = state.get("audio_minutes_ahead")
+        run.state = str(state.get("state") or run.state)
+        run.stage = str(state.get("stage") or "")
+        run.percent = _number(state.get("percent"))
+        run.position = _whole(state.get("position"))
+        run.audio_minutes_ahead = _number(state.get("audio_minutes_ahead"))
 
         if state["state"] in ("failed", "cancelled") and not run.failure_class:
             failure = state.get("failure") or {}
@@ -288,6 +320,11 @@ def merge(job: Job) -> Job:
             results[run.pk] = whisperx.result(run.service_job_id, run.lane)
     except whisperx.ServiceError as problem:
         return fail(job, problem.reason_class)
+    except Exception:  # noqa: BLE001 - the last resort (v1.132.0)
+        # Anything else here used to kill the poll and have the merge tried
+        # again every minute for ever, every other job waiting behind it.
+        log.exception("the results of job %s could not be fetched", job.id)
+        return fail(job, Reason.INTERNAL)
 
     try:
         # A savepoint (v1.131.0): the old Transcript is deleted before the new
@@ -396,6 +433,10 @@ def relabel(job: Job) -> Job:
     except whisperx.ServiceError as problem:
         live.mark_speakers_pass(recording, "failed")
         return fail(job, problem.reason_class)
+    except Exception:  # noqa: BLE001 - the last resort (v1.132.0)
+        log.exception("the speakers pass of job %s could not be fetched", job.id)
+        live.mark_speakers_pass(recording, "failed")
+        return fail(job, Reason.INTERNAL)
 
     runs = {run.pk: run for run in job.runs.all()}
     many_sides = len({run.side_id for run in runs.values()}) > 1
@@ -813,6 +854,19 @@ def live_jobs():
 def ready_without_a_job():
     """Recordings that are Ready and have not joined the line yet."""
     return Recording.objects.filter(media_state=MediaState.READY, jobs__isnull=True)
+
+
+def without_a_playback_copy(older_than_seconds: int = 600):
+    """Ready recordings whose playback copy never came (v1.132.0): the task
+    is deferred once, and a copy whose making died is made again by the
+    minute sweep after ten minutes."""
+    stale = timezone.now() - dt.timedelta(seconds=older_than_seconds)
+    return Recording.objects.filter(
+        media_state=MediaState.READY,
+        playback_ready=False,
+        created__lt=stale,
+        playback_tries__lt=3,
+    )
 
 
 def never_handed_over(older_than_seconds: int = 120):

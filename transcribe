@@ -57,8 +57,17 @@ cd "$HERE"
 # to the backup folder; removed when the script ends however it ends.
 PRIVATE_FOLDERS=()
 private_folder() {
-  local made
-  made="$(mktemp -d)"
+  # Under the backup folder when the data folder is known (v1.132.0): a dump
+  # written on the root filesystem could fill the tight disk, and the install
+  # into the backup folder is then a rename on the same filesystem.
+  local made base
+  base="$(env_value APP_DATA_DIR 2>/dev/null || true)"
+  if [ -n "$base" ] && [ -d "$base" ]; then
+    sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$base/backup" 2>/dev/null || true
+    made="$(sudo -u "$APP_USER" mktemp -d "$base/backup/work.XXXXXX" 2>/dev/null || mktemp -d)"
+  else
+    made="$(mktemp -d)"
+  fi
   chmod 700 "$made"
   PRIVATE_FOLDERS+=("$made")
   printf '%s\n' "$made"
@@ -66,7 +75,7 @@ private_folder() {
 forget_private_folders() {
   local one
   for one in "${PRIVATE_FOLDERS[@]:-}"; do
-    if [ -n "$one" ]; then rm -rf "$one"; fi
+    if [ -n "$one" ]; then rm -rf "$one" 2>/dev/null || sudo rm -rf "$one"; fi
   done
   return 0
 }
@@ -3095,7 +3104,28 @@ finish_the_upgrade() {
     echo
     build_the_images
   fi
-  compose up -d
+  # The migrations as their own watched step (v1.132.0), before anything is
+  # replaced: a migration that failed or outlasted the health window used to
+  # end the script with the site down and no next step.
+  echo
+  echo "Migrating the database"
+  if ! compose run --rm --no-deps app python manage.py migrate --no-input; then
+    echo
+    red "The database migration failed, so the upgrade stops here."
+    echo "  The old containers are still running and nothing was replaced."
+    echo "  The message above says what went wrong. To go back to $before:"
+    echo "    ./transcribe rollback $before"
+    exit 1
+  fi
+  if ! compose up -d --remove-orphans; then
+    echo
+    red "The stack did not come up whole."
+    echo "  './transcribe logs' shows why. When it is fixed: docker compose up -d"
+    echo "  To go back to $before, with the dump taken before this upgrade:"
+    echo "    ./transcribe rollback $before"
+    echo "    ./transcribe restore-dump $(env_value APP_DATA_DIR)/backup/pre-$tag.dump"
+    exit 1
+  fi
   tidy_the_images "$tag" "$before"
 
   # Caddy's configuration is a file mounted into it, not part of its image,
@@ -3183,9 +3213,16 @@ models_changed() {
 }
 
 running_jobs() {
+  # Transcription Jobs, and the queue's own work in hand (v1.132.0): a
+  # transcode or a question mid-flight was killed at every upgrade.
   compose exec -T app python -c "
+from django.db import connection
 from core.jobs import Job, JobState
-raise SystemExit(0 if Job.objects.filter(state__in=JobState.LIVE).exists() else 1)
+if Job.objects.filter(state__in=JobState.LIVE).exists():
+    raise SystemExit(0)
+with connection.cursor() as c:
+    c.execute(\"select count(*) from procrastinate_jobs where status = 'doing' and task_name not in ('poll_service', 'keep_the_queue_moving', 'mind_the_workspaces', 'mind_the_night', 'check_the_engine', 'retry_stalled_jobs', 'watch_the_backups', 'check_the_directory')\")
+    raise SystemExit(0 if c.fetchone()[0] else 1)
 " >/dev/null 2>&1
 }
 
@@ -3202,9 +3239,25 @@ cmd_rollback() {
     exit 1
   fi
 
+  # Not over running work, and with a dump first, as the upgrade (v1.132.0).
+  if running_jobs; then
+    red "Jobs are running. Wait for them, or cancel them on the Queue page."
+    exit 1
+  fi
+  cmd_backup_db "pre-rollback-$tag"
   echo "Rolling back to $tag"
   git -C "$HERE" checkout --quiet "$tag"
-  compose up -d
+  # The release the stack runs is the one checked out (v1.132.0): the
+  # rollback had left RELEASE_TAG at the newer tag, so the newer images kept
+  # running under the older compose file.
+  set_env RELEASE_TAG "$tag"
+  if compose pull --quiet --ignore-buildable && compose pull --quiet app whisperx diarizer >/dev/null 2>&1; then
+    pass "the images came from the registry"
+  else
+    amber "The registry had nothing to give for the app's own images, so they are built here."
+    compose build
+  fi
+  compose up -d --remove-orphans
 
   echo
   amber "If the app will not start because a migration cannot be reversed,"

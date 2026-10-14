@@ -17,7 +17,7 @@
   "use strict";
 
   function cookie(name) {
-    var found = document.cookie.match("(^|;)\s*" + name + "\s*=\s*([^;]+)");
+    var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
     return found ? found.pop() : "";
   }
 

@@ -244,6 +244,14 @@ def prepare_audio_again(recording: Recording) -> Recording:
         _make_asr_audio(recording)
     except media.MediaError as problem:
         return _failed(recording, problem)
+    except Gone:
+        return recording
+    except Exception:  # noqa: BLE001 - the last resort (v1.132.0)
+        log.exception("recording %s failed in the app's own code", recording.pk)
+        return _failed(
+            recording,
+            media.MediaError(Reason.MESSAGES[Reason.INTERNAL], Reason.INTERNAL),
+        )
 
     recording.media_state = MediaState.READY
     recording.save(update_fields=["media_state"])
@@ -278,6 +286,9 @@ def make_playback(recording: Recording) -> Recording:
             recording.id,
             problem.message,
         )
+        return recording
+    except Exception:  # noqa: BLE001 - the last resort (v1.132.0)
+        log.exception("the playback copy of recording %s failed", recording.id)
         return recording
 
     recording.playback_ready = True

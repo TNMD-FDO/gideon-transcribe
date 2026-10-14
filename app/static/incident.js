@@ -149,6 +149,13 @@
     });
     return fetch(C.act, { method: "POST", headers: { "X-CSRFToken": cookie("csrftoken") }, body: body })
       .then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, said: said }; }); })
+      .catch(function () {
+        // The app did not answer, or answered with a page (v1.132.0): the
+        // page says so and the head is redrawn, so no button stays grey.
+        window.UI.toast("The app did not answer. Try again.", { problem: true });
+        if (S) { drawProposals(); }
+        return { ok: false, said: {} };
+      })
       .then(function (got) {
         if (!got.ok) {
           window.UI.toast(got.said.error || "That did not work.", { problem: true });
@@ -202,7 +209,11 @@
     drawHead();
     drawWall();
     drawStrip();
-    drawChronology();
+    // Not while the About box is being written in (v1.132.0): the tab was
+    // rebuilt every three seconds while anything was busy, and the words
+    // being typed went with it.
+    var aboutBox = document.getElementById("about-box");
+    if (!(aboutBox && !aboutBox.hidden)) { drawChronology(); }
     // An open Event card is redrawn from the fresh state (chapter 11).
     if (window.EVENT_CARD) { window.EVENT_CARD.refresh(); }
     drawMemo();
@@ -2238,7 +2249,9 @@
       else if (act === "listen") { listen(cam); }
       else if (act === "nudge") {
         var from = cam.starts_at !== null && cam.placed ? cam.starts_at : (S.incident.span_low || 0);
-        post({ action: "place", camera: cam.id, how: "hand", starts_at: (from + parseFloat(button.dataset.by)).toFixed(2) });
+        var moved = Number(from) + parseFloat(button.dataset.by);
+        if (!isFinite(moved)) { return; }
+        post({ action: "place", camera: cam.id, how: "hand", starts_at: moved.toFixed(2) });
       } else if (act === "type") {
         window.UI.prompt({ title: "When does " + cam.camera_id + " start?", body: S.incident.has_clock ? "A time of day, hh:mm:ss, by the cameras' clocks." : "Minutes and seconds from the first camera, m:ss.", ok: "Sync" }).then(function (text) {
           if (!text) { return; }

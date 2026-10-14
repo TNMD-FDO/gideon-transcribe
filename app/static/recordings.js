@@ -5,7 +5,7 @@
   "use strict";
 
   function cookie(name) {
-    var found = document.cookie.match("(^|;)\s*" + name + "\s*=\s*([^;]+)");
+    var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
     return found ? found.pop() : "";
   }
 
@@ -149,7 +149,12 @@
           method: "POST",
           headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
           body: JSON.stringify({ title: now.trim() })
-        }).then(function (answer) { if (answer.ok) { window.location.reload(); } });
+        }).then(function (answer) {
+          if (answer.ok) { window.location.reload(); return; }
+          return answer.json().then(function (said) {
+            UI.toast((said && (said.error || said.why)) || "The recording was not renamed.", { problem: true, icon: "warning" });
+          });
+        }).catch(function () { UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
       });
   });
 })();

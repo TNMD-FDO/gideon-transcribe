@@ -1132,6 +1132,27 @@ def _record_clip(request, clip) -> None:
     clip_work.mark_downloaded(clip, clip.recording.user_id == request.user.pk)
 
 
+def spool():
+    """A temporary file a download is built in (v1.132.0), removed when it
+    is closed; the response streams it rather than holding it in memory."""
+    import tempfile
+
+    return tempfile.TemporaryFile(prefix="transcribe-download-")
+
+
+def hand_over_file(spool, filename: str, content_type: str):
+    """A download streamed from a spool file, named as hand_over names it."""
+    from urllib.parse import quote
+
+    from django.http import FileResponse
+
+    spool.seek(0)
+    answer = FileResponse(spool, content_type=content_type)
+    answer["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+    answer["Cache-Control"] = "private, no-store"
+    return answer
+
+
 def hand_over(body, filename: str, content_type: str) -> HttpResponse:
     """A download, named so that the browser keeps the name the app chose."""
     answer = HttpResponse(body, content_type=content_type)

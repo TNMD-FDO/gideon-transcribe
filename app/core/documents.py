@@ -12,6 +12,7 @@ are packages in the app image, on the CPU. No retrieval store, no embeddings.
 
 from __future__ import annotations
 
+import errno
 import io
 import logging
 import re
@@ -412,7 +413,12 @@ def read(document_id) -> None:
     except Exception as trouble:  # noqa: BLE001 - the row says why, whatever it was
         log.exception("document %s could not be read", document.pk)
         document.state = FAILED
-        document.error = str(trouble)[:300] or "unreadable"
+        # Plain words, never the server's own path (v1.132.0): a full disk is
+        # named, anything else is "unreadable" with the detail in the journal.
+        if isinstance(trouble, OSError) and trouble.errno == errno.ENOSPC:
+            document.error = "The server's disk is full. Tell IT."
+        else:
+            document.error = "This document could not be read."
         document.save(update_fields=["state", "error"])
 
 

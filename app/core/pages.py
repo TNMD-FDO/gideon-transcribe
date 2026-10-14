@@ -952,12 +952,14 @@ def process_again(request: HttpRequest, recording_id) -> JsonResponse:
 
     # The settings come pre-filled from the Recording and a person may change
     # any of them before submitting.
-    for field, key in (
-        ("spoken_language", "language"),
-        ("context", "context"),
+    # Each field cut at its own column's width (v1.132.0): the language had
+    # been cut at 500 where the column is 10, a crash that left a Batch.
+    for field, key, most in (
+        ("spoken_language", "language", 10),
+        ("context", "context", 500),
     ):
         if key in wanted:
-            setattr(recording, field, (wanted.get(key) or "")[:500])
+            setattr(recording, field, str(wanted.get(key) or "")[:most])
     if "diarize" in wanted:
         recording.diarize = bool(wanted["diarize"])
     if "translate" in wanted:

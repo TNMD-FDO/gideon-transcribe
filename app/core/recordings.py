@@ -287,6 +287,9 @@ class Recording(models.Model):
         max_length=20, choices=MediaState.CHOICES, default=MediaState.UPLOADING
     )
     playback_ready = models.BooleanField(default=False)
+    # How many times the minute sweep has asked for the copy again after the
+    # first making died (v1.132.0, migration 0079); three at most.
+    playback_tries = models.IntegerField(default=0)
 
     refusal_class = models.CharField(max_length=40, blank=True, default="")
     failure_message = models.CharField(max_length=300, blank=True, default="")

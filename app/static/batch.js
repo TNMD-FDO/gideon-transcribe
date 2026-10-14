@@ -270,7 +270,10 @@
       fetch("/batch/" + window.BATCH + "/cancel", {
         method: "POST",
         headers: { "X-CSRFToken": cookie("csrftoken") }
-      }).then(function () { window.location = "/"; });
+      }).then(function (answer) {
+        if (answer.ok) { window.location = "/"; return; }
+        UI.toast("The batch could not be cancelled.", { problem: true, icon: "warning" });
+      }).catch(function () { UI.toast("The app did not answer. Try again.", { problem: true, icon: "warning" }); });
     });
   });
 

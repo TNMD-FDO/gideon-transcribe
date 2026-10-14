@@ -607,8 +607,11 @@
   }
 
   function startUploads(files, recordings, batch) {
+    // Keyed by each file's place in the list, never its name (v1.132.0):
+    // two folders' "video.mp4" had shared one recording.
     var byName = {};
-    recordings.forEach(function (one) { byName[one.name] = one.id; });
+    recordings.forEach(function (one, index) { byName[index] = one.id; });
+    files.forEach(function (one, index) { one.key = index; });
 
     var progress = document.getElementById("progress");
     var start = document.getElementById("start");
@@ -628,17 +631,17 @@
         "<strong>" + escape(one.title) + "</strong>" +
         "<p class='state quiet'>Waiting</p>";
       progress.appendChild(line);
-      lines[one.file.name] = line;
+      lines[one.key] = line;
     });
 
     function say(one, words, isProblem) {
-      var line = lines[one.file.name].querySelector(".state");
+      var line = lines[one.key].querySelector(".state");
       line.textContent = words;
       line.className = isProblem ? "state problem" : "state quiet";
     }
 
     function offerRetry(one) {
-      var line = lines[one.file.name];
+      var line = lines[one.key];
       if (line.querySelector("button")) { return; }
       var again = document.createElement("button");
       again.type = "button";
@@ -658,7 +661,7 @@
     // at work on it. When the last file is up the page says it is going to
     // the batch, and goes (v1.63.2).
     var byId = {};
-    files.forEach(function (one) { byId[byName[one.file.name]] = one; });
+    files.forEach(function (one) { byId[byName[one.key]] = one; });
     var up = {};
     var asking = null;
     var STATES = {
@@ -729,9 +732,12 @@
 
       var upload = new tus.Upload(one.file, {
         endpoint: "/files/",
-        retryDelays: [0, 1000, 3000, 5000],
+        // A longer tail for an office network that drops for a minute
+        // (v1.132.0); the client resumes from the sidecar's offset.
+        retryDelays: [0, 1000, 3000, 5000, 10000, 30000, 60000],
         chunkSize: 50 * 1024 * 1024,
-        metadata: { recording: byName[one.file.name], filename: one.file.name },
+        removeFingerprintOnSuccess: true,
+        metadata: { recording: byName[one.key], filename: one.file.name },
         onProgress: function (sent, total) {
           say(one, "Uploading " + Math.floor((sent / total) * 100) + "%");
         },
@@ -744,13 +750,18 @@
         onSuccess: function () {
           running -= 1;
           done += 1;
-          up[one.file.name] = true;
+          up[one.key] = true;
           say(one, "Uploaded");
           watchTheBatch();
           next();
         }
       });
-      upload.start();
+      // Try again, or a reload, goes on from where the sidecar got to
+      // (v1.132.0) rather than from byte zero.
+      upload.findPreviousUploads().then(function (previous) {
+        if (previous && previous.length) { upload.resumeFromPreviousUpload(previous[0]); }
+        upload.start();
+      }).catch(function () { upload.start(); });
       next();
     }
 

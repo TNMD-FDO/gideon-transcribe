@@ -176,14 +176,15 @@ def ended(request: HttpRequest, recording_id) -> JsonResponse:
             pauses = json.loads(told.get("pauses") or "[]")
         except json.JSONDecodeError:
             pauses = []
-    try:
-        seconds = float(told.get("seconds") or 0) or None
-    except (TypeError, ValueError):
-        seconds = None
-    try:
-        computer_ended_at = float(told.get("computer_ended_at"))
-    except (TypeError, ValueError):
-        computer_ended_at = None
+    from core import numbers
+
+    seconds = (
+        numbers.finite(told.get("seconds") or 0, least=0.0, most=numbers.A_DAY_AND_MORE)
+        or None
+    )
+    computer_ended_at = numbers.finite(
+        told.get("computer_ended_at"), least=0.0, most=numbers.A_DAY_AND_MORE
+    )
     taps = _list_of(told, "taps")
     marks = _list_of(told, "marks")
     live.ended(

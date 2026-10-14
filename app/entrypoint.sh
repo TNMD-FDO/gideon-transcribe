@@ -21,9 +21,13 @@ case "${1:-web}" in
     python manage.py migrate --no-input
     # No access log: Caddy keeps the request record, and gunicorn's would put a
     # line in the journal for every health check, four times a minute, for ever.
+    # Threads under each worker (v1.132.0): one slow download no longer
+    # takes a quarter of the app with it.
     exec gunicorn transcribe.wsgi:application \
       --bind 0.0.0.0:8000 \
       --workers "${GUNICORN_WORKERS:-4}" \
+      --worker-class gthread \
+      --threads "${GUNICORN_THREADS:-4}" \
       --timeout "${GUNICORN_TIMEOUT:-120}" \
       --error-logfile -
     ;;
@@ -31,17 +35,20 @@ case "${1:-web}" in
     exec python manage.py procrastinate worker \
       --queues media \
       --concurrency "${MEDIA_CONCURRENT_JOBS:-4}" \
-      --delete-jobs=successful
+      --delete-jobs=successful \
+      --shutdown-graceful-timeout 540
     ;;
   worker)
     # A finished job's row carries its arguments, and a mail's arguments are
     # the message; a successful job is deleted as it ends (v1.130.0).
     exec python manage.py procrastinate worker --queues default --concurrency 1 \
-      --delete-jobs=successful
+      --delete-jobs=successful \
+      --shutdown-graceful-timeout 540
     ;;
   llm-worker)
     exec python manage.py procrastinate worker --queues llm --concurrency 4 \
-      --delete-jobs=successful
+      --delete-jobs=successful \
+      --shutdown-graceful-timeout 540
     ;;
   *)
     # Anything else is a Django management command. The guides write these
