@@ -293,13 +293,13 @@ def reviewed_words(recording, user) -> str:
     if recording.reviewed_on is None:
         return ""
     if recording.reviewed_by_id is None:
-        return f"Reviewed, {recording.reviewed_on:%d %b}"
+        return f"Reviewed, {timezone.localtime(recording.reviewed_on):%d %b}"
     who = (
         "you"
         if recording.reviewed_by_id == user.pk
         else recording.reviewed_by.shown_name
     )
-    return f"Reviewed by {who}, {recording.reviewed_on:%d %b}"
+    return f"Reviewed by {who}, {timezone.localtime(recording.reviewed_on):%d %b}"
 
 
 def next_for(user, recording):

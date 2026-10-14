@@ -834,6 +834,14 @@ def delete(incident: Incident, *, by, request=None) -> None:
     """The Incident, its placements and nothing else: never a recording."""
     case = incident.case
     name = incident.name
+    # A report whose only home was this incident goes with it, with its own
+    # row (v1.131.0); one that is also about a camera's recording stays.
+    from core import documents
+
+    for document in documents.Document.objects.filter(
+        incident=incident, recording__isnull=True
+    ):
+        documents.remove(document, by=by, request=request)
     incident.delete()
     audit.write(
         CATEGORY,
@@ -859,15 +867,59 @@ def left_the_case(recording) -> None:
 # Placing ----------------------------------------------------------------------------
 
 
+def _events_follow(camera: IncidentCamera, was: float | None) -> int:
+    """The camera's own events move with it (v1.131.0).
+
+    An event made from a camera's line carries the incident second of that
+    moment; placed again, the camera's lines and note events moved and its
+    accepted events did not. Note events follow through the notes; the rest
+    are shifted by the move. Nothing moves on a first placement.
+    """
+    if was is None or camera.starts_at is None:
+        return 0
+    delta = float(camera.starts_at) - float(was)
+    if not delta:
+        return 0
+    from django.db.models import F
+
+    from core.chronology import Event
+
+    own = Event.objects.filter(
+        camera=camera, segment__isnull=True, moment_note__isnull=True
+    )
+    moved = own.update(at=F("at") + delta)
+    own.filter(until__isnull=False).update(until=F("until") + delta)
+    return moved
+
+
+def _followers_follow(incident: Incident, *, by, request) -> None:
+    """Cameras matched by sound sit their lag after their anchor; when the
+    anchor moved, they move too (v1.131.0)."""
+    for follower in (
+        incident.cameras.filter(placed=SOUND, match_against__isnull=False)
+        .exclude(match_lag=None)
+        .select_related("match_against")
+    ):
+        anchor = IncidentCamera.objects.get(pk=follower.match_against_id)
+        if not anchor.is_synced():
+            continue
+        wanted = anchor.starts_at + follower.match_lag
+        if abs(wanted - float(follower.starts_at or 0.0)) < 0.001:
+            continue
+        _placed(follower, SOUND, wanted, by=by, request=request, quietly=True)
+
+
 def _placed(
     camera: IncidentCamera, how: str, starts_at: float, *, by, request, quietly
 ):
+    was = camera.starts_at if camera.is_placed() else None
     camera.starts_at = float(starts_at)
     camera.placed = how
     camera.placed_by = by
     camera.placed_at = timezone.now()
     camera.save(update_fields=["starts_at", "placed", "placed_by", "placed_at"])
     _notes_follow(camera)
+    _events_follow(camera, was)
     if not quietly:
         audit.write(
             CATEGORY,
@@ -948,6 +1000,7 @@ def place_from_clock(
                         request=request,
                         quietly=True,
                     )
+            _followers_follow(incident, by=by, request=request)
         return True
     _placed(
         camera,
@@ -1030,6 +1083,7 @@ def run_match(camera: IncidentCamera) -> None:
     from core import sound_match
 
     against = camera.match_against
+    placed_then = camera.placed_at
     camera.match_state = MATCH_RUNNING
     camera.save(update_fields=["match_state"])
     try:
@@ -1062,7 +1116,17 @@ def run_match(camera: IncidentCamera) -> None:
         update_fields=["match_state", "match_lag", "match_strength", "match_reason"]
     )
     if found.strength >= STRONG_MATCH:
-        apply_match(camera, by=camera.placed_by)
+        # Not over a placement made while the match ran (v1.131.0): a hand
+        # placed meanwhile stands, as it does for a clock read again.
+        now = (
+            IncidentCamera.objects.filter(pk=camera.pk)
+            .values_list("placed_at", flat=True)
+            .first()
+        )
+        if now == placed_then:
+            apply_match(camera, by=camera.placed_by)
+        else:
+            log.info("camera %s was placed while its match ran; left", camera.pk)
 
 
 def _first_side_audio(recording):

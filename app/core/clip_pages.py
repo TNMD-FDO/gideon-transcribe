@@ -114,12 +114,12 @@ def _row(clip: Clip, here=None, asker=None) -> dict:
             ""
             if clip.recording.case_id
             else (
-                f"Downloaded {clip.first_downloaded:%d %b %H:%M}"
+                f"Downloaded {timezone.localtime(clip.first_downloaded):%d %b %H:%M}"
                 if clip.first_downloaded
                 else "Not yet"
             )
         ),
-        "saved": f"{clip.created:%d %b %H:%M}",
+        "saved": f"{timezone.localtime(clip.created):%d %b %H:%M}",
         "is_video": clip.is_video,
         "url": f"{media_root(clip.recording)}/clips/{clip.pk}{clip.suffix}",
     }

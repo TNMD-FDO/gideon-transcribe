@@ -10,6 +10,7 @@ Media work is CPU only. No container built from the app image ever sees a GPU.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 
 from procrastinate import exceptions
@@ -43,6 +44,10 @@ def prepare_recording(recording_id: str) -> None:
         return
 
     recording = pipeline.prepare(recording)
+    if not Recording.objects.filter(pk=recording.pk).exists():
+        # Cancelled or deleted while the media worker held it (v1.131.0).
+        log.info("recording %s went while it was prepared", recording.pk)
+        return
     if recording.media_state == MediaState.READY:
         # The line first: a Recording joins it the moment it is Ready, and the
         # Playback copy is made beside the transcription rather than before it.
@@ -162,6 +167,7 @@ def read_stamp_again(recording_id: str, by_id: str = "") -> None:
 
 @app.task(queue="media", name="match_sound")
 def match_sound(camera_id: str) -> None:
+    """A match queued or left running by a worker that died (v1.131.0)."""
     """One camera's sound compared with a placed camera's (Phase 6 chapter 1)."""
     from core import incidents
     from core.incidents import IncidentCamera
@@ -169,7 +175,10 @@ def match_sound(camera_id: str) -> None:
     camera = (
         IncidentCamera.objects.filter(pk=camera_id).select_related("recording").first()
     )
-    if camera is not None and camera.match_state == incidents.MATCH_QUEUED:
+    if camera is not None and camera.match_state in (
+        incidents.MATCH_QUEUED,
+        incidents.MATCH_RUNNING,
+    ):
         incidents.run_match(camera)
 
 
@@ -177,8 +186,12 @@ def match_sound(camera_id: str) -> None:
 def propose_incident_events(incident_id: str, attempt: int = 1) -> None:
     """Propose events on an Incident (Phase 6 chapter 3)."""
     from core import incident_assistant
+    from core.incidents import Incident
 
-    incident_assistant.propose(incident_id, attempt)
+    with or_failed(
+        Incident, incident_id, state="proposals_state", reason="proposals_reason"
+    ):
+        incident_assistant.propose(incident_id, attempt)
 
 
 @app.task(queue="llm", name="compare_report")
@@ -186,7 +199,8 @@ def compare_report(comparison_id: str, attempt: int = 1) -> None:
     """Compare with the report (Phase 8 chapter 4, part 3)."""
     from core import comparison
 
-    comparison.compare(comparison_id, attempt=attempt)
+    with or_failed(comparison.Comparison, comparison_id):
+        comparison.compare(comparison_id, attempt=attempt)
 
 
 @app.task(queue="llm", name="write_incident_memo")
@@ -197,7 +211,8 @@ def write_incident_memo(
     `from_sheet` is Rewrite from the sheet."""
     from core import incident_assistant
 
-    incident_assistant.write_memo(memo_id, attempt, from_sheet=from_sheet)
+    with or_failed(incident_assistant.IncidentMemo, memo_id):
+        incident_assistant.write_memo(memo_id, attempt, from_sheet=from_sheet)
 
 
 @app.task(queue="default", name="hand_over_job")
@@ -329,6 +344,11 @@ def keep_the_queue_moving(timestamp: int) -> None:
     if pieces.transcription_installed():
         for recording in queue.ready_without_a_job():
             job = queue.make_job(recording)
+            if job is not None:
+                hand_over_job.defer(job_id=str(job.pk))
+        # A Job whose hand-over was lost is handed over again (v1.131.0).
+        for job in queue.never_handed_over():
+            log.warning("job %s was never handed over; again", job.pk)
             hand_over_job.defer(job_id=str(job.pk))
 
     # A video left queued for vision with no task behind it (v1.54.1).
@@ -423,7 +443,8 @@ def answer_case_turn(turn_id: str) -> None:
     """One Case Chat question: its Readings and, when in parts, the combining call."""
     from core import case_chat
 
-    case_chat.answer_case_turn(turn_id)
+    with or_failed(case_chat.CaseChatTurn, turn_id):
+        case_chat.answer_case_turn(turn_id)
 
 
 @app.task(queue="llm", name="answer_incident_turn")
@@ -431,28 +452,51 @@ def answer_incident_turn(turn_id: str, attempt: int = 1) -> None:
     """One question to Gideon on the incident page (Phase 7 chapter 5)."""
     from core import incident_chat
 
-    incident_chat.answer_incident_turn(turn_id, attempt=attempt)
+    with or_failed(incident_chat.IncidentChatTurn, turn_id):
+        incident_chat.answer_incident_turn(turn_id, attempt=attempt)
+
+
+@contextlib.contextmanager
+def or_failed(model, pk, *, state="state", reason="reason_class", states=None):
+    """The last resort for a writer (v1.131.0): an error that is not the
+    engine's used to leave the row "running" for ever, a chat refusing every
+    question and one overnight summary stopping every night's. The row is
+    marked failed with the app's own reason, and the error goes to the log."""
+    from core import engine
+
+    try:
+        yield
+    except Exception:
+        waiting = list(states or ("queued", "running"))
+        model.objects.filter(pk=pk, **{f"{state}__in": waiting}).update(
+            **{state: "failed", reason: engine.INTERNAL}
+        )
+        log.exception("%s %s failed in the app's own code", model.__name__, pk)
+        raise
 
 
 @app.task(queue="llm", name="write_summary")
 def write_summary(summary_id: str) -> None:
     from core import assistant
 
-    assistant.write_summary(summary_id)
+    with or_failed(assistant.Summary, summary_id):
+        assistant.write_summary(summary_id)
 
 
 @app.task(queue="llm", name="answer_turn")
 def answer_turn(turn_id: str) -> None:
     from core import assistant
 
-    assistant.answer_turn(turn_id)
+    with or_failed(assistant.ChatTurn, turn_id):
+        assistant.answer_turn(turn_id)
 
 
 @app.task(queue="llm", name="suggest_names")
 def suggest_names(run_id: str) -> None:
     from core import assistant
 
-    assistant.suggest_names(run_id)
+    with or_failed(assistant.SuggestionRun, run_id):
+        assistant.suggest_names(run_id)
 
 
 @app.task(queue="llm", name="check_speakers")

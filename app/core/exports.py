@@ -568,7 +568,10 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
             ("Recording", recording.original_filename),
             *in_a_case,
             ("Length", length_of(recording)),
-            ("Uploaded", f"{recording.created:{DAY}} by {recording.user.username}"),
+            (
+                "Uploaded",
+                f"{local(recording.created):{DAY}} by {recording.user.username}",
+            ),
             (
                 "Speakers",
                 "; ".join(one.name for one in who) if who else "not separated",

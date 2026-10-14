@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core import cases, dictation, expectation, exports, live, media_access, retention
@@ -221,7 +222,7 @@ def send(request: HttpRequest, recording_id) -> JsonResponse:
                 "id": share.pk,
                 "name": person.shown_name,
                 "attached": share.attached,
-                "sent_on": share.sent_on.strftime("%d %b %Y"),
+                "sent_on": timezone.localtime(share.sent_on).strftime("%d %b %Y"),
             },
         }
     )

@@ -357,11 +357,19 @@ def open_job(recording: Recording):
     """The one Job a recording in stretches has, open until its last stretch."""
     from core.jobs import Job, JobState
 
-    job = Job.objects.filter(recording=recording, open=True).first()
-    if job is None:
-        job = Job.objects.create(
-            recording=recording, batch=recording.batch, open=True, state=JobState.QUEUED
-        )
+    # Under the recording's row lock (v1.131.0): a short stretch's retry and
+    # the next stretch can both arrive here, and two open Jobs would leave one
+    # never merged.
+    with transaction.atomic():
+        Recording.objects.select_for_update().get(pk=recording.pk)
+        job = Job.objects.filter(recording=recording, open=True).first()
+        if job is None:
+            job = Job.objects.create(
+                recording=recording,
+                batch=recording.batch,
+                open=True,
+                state=JobState.QUEUED,
+            )
     return job
 
 
@@ -517,7 +525,9 @@ def ask_for_speakers_pass(recording: Recording, results: dict):
     for side in _live_sides(recording):
         Run.objects.create(job=job, side=side)
     mark_speakers_pass(recording, "waiting")
-    hand_over_job.defer(job_id=str(job.pk))
+    from core.deferring import after_commit
+
+    after_commit(lambda: hand_over_job.defer(job_id=str(job.pk)))
     log.info("recording %s: speakers pass asked for", recording.pk)
     return job
 
@@ -709,7 +719,11 @@ def _take_what_arrived(recording: Recording) -> None:
     with nothing in it, which is marked failed and says why.
     """
     from core.tasks import prepare_recording
+    from core.uploads import claim
 
+    if not claim(recording):
+        # The sidecar's finish took it first; nothing to do.
+        return
     arrived = _arrived(recording)
     if arrived is None or arrived.stat().st_size == 0:
         recording.media_state = MediaState.FAILED

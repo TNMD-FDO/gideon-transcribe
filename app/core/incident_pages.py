@@ -146,9 +146,10 @@ def _cited_words(request: HttpRequest, incident) -> str:
             at = float(request.GET.get("t", ""))
         except ValueError:
             return ""
-        return _line_at(camera.recording, max(0.0, at - camera.starts_at))[
-            : chronology.TEXT_MOST
-        ]
+        own = at - camera.starts_at
+        if own < 0:
+            return ""
+        return _line_at(camera.recording, own)[: chronology.TEXT_MOST]
     return request.GET.get("event", "")[: chronology.TEXT_MOST]
 
 
@@ -166,9 +167,13 @@ def find(request: HttpRequest, case_id, incident_id) -> JsonResponse:
 def _asked_moment(request, incident: Incident, state: dict) -> float:
     """Where the page opens: ?t= on the Incident clock, ?recording=&at= on a
     camera's own clock, else the first placed camera's start."""
+    low = state["incident"]["span_low"]
     try:
         if request.GET.get("t"):
-            return max(0.0, float(request.GET["t"]))
+            # Clamped to the span's low end (v1.131.0), which is below zero
+            # for a camera that began before the one that set the clock.
+            floor = float(low) if low is not None else 0.0
+            return max(floor, float(request.GET["t"]))
         if request.GET.get("recording") and request.GET.get("at"):
             camera = IncidentCamera.objects.filter(
                 incident=incident, recording_id=request.GET["recording"]
@@ -177,7 +182,6 @@ def _asked_moment(request, incident: Incident, state: dict) -> float:
                 return camera.starts_at + float(request.GET["at"])
     except (TypeError, ValueError):
         pass
-    low = state["incident"]["span_low"]
     return float(low) if low is not None else 0.0
 
 

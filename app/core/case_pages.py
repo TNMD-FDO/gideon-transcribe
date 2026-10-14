@@ -21,6 +21,7 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core import (
@@ -654,7 +655,9 @@ def _rows_for(case: Case, names: dict | None = None) -> list:
             else ""
         )
         one.reviewed_words = (
-            f"Reviewed {one.reviewed_on:%d %b}" if one.reviewed_on else ""
+            f"Reviewed {timezone.localtime(one.reviewed_on):%d %b}"
+            if one.reviewed_on
+            else ""
         )
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
@@ -1403,9 +1406,11 @@ def _share_json(share) -> dict:
         "name": share.person.shown_name,
         "username": share.person.username,
         "status": share.status,
-        "added_on": share.added_on.strftime("%d %b %Y"),
+        "added_on": timezone.localtime(share.added_on).strftime("%d %b %Y"),
         "last_opened": (
-            share.last_opened.strftime("%d %b %Y %H:%M") if share.last_opened else ""
+            timezone.localtime(share.last_opened).strftime("%d %b %Y %H:%M")
+            if share.last_opened
+            else ""
         ),
         "also_owner": share.also_owner,
     }

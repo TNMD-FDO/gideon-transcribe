@@ -112,7 +112,10 @@ def lag_between(
     lags = np.concatenate([np.arange(0, len(a)), np.arange(-len(b) + 1, 0)])
     values = np.concatenate([correlation[: len(a)], correlation[size - len(b) + 1 :]])
     # The two must overlap by a minute for the shift to mean anything.
-    overlap = np.minimum(len(a) - lags, len(b) + lags)
+    # For a shift k the two overlap from max(0, k) to min(A, B + k) frames
+    # of the reference (v1.131.0); the earlier line overstated it whenever
+    # the shorter sat wholly inside the longer, which scored late shifts up.
+    overlap = np.minimum(len(a), len(b) + lags) - np.maximum(0, lags)
     keep = overlap >= int(60 / hop)
     if expected is not None:
         centre = int(round(expected / hop))

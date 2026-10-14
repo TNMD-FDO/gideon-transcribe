@@ -663,7 +663,9 @@ def _can_retry(recording, job) -> bool:
     """
     if recording.media_state == MediaState.FAILED:
         return True
-    return job is not None and job.state == JobState.FAILED
+    # A Job the Admin cancelled is offered Retry too (v1.131.0): the recording
+    # had been left with no way back but Delete and upload again.
+    return job is not None and job.state in (JobState.FAILED, JobState.CANCELLED)
 
 
 def _everything_done_by(batch, speed) -> str | None:
@@ -907,6 +909,13 @@ def process_again(request: HttpRequest, recording_id) -> JsonResponse:
     if not hasattr(recording, "transcript"):
         return JsonResponse(
             {"error": "this recording has no transcript to replace"}, status=400
+        )
+    if recording.jobs.filter(state__in=JobState.LIVE).exists():
+        # Not while a Job runs (v1.131.0): the page hides the button, and the
+        # endpoint refuses too, so no second Job joins the first's.
+        return JsonResponse(
+            {"error": "This recording is being transcribed; wait for it to finish."},
+            status=409,
         )
 
     unfinished = Batch.unfinished_for(request.user)

@@ -12,10 +12,11 @@ being prepared.
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import re
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from core import audit, settings_store, whisperx
@@ -36,9 +37,20 @@ def make_job(recording: Recording) -> Job:
     stretch instead (core.live); this is the whole-file path, and Process
     again on such a recording comes back through it.
     """
-    job = Job.objects.create(recording=recording, batch=recording.batch)
-    for side in recording.sides.all().order_by("number"):
-        Run.objects.create(job=job, side=side)
+    # The database keeps one live Job per recording (v1.131.0, migration
+    # 0078): the minute sweep and the media worker can both arrive here, and
+    # the second maker gets the first's Job rather than a twin.
+    try:
+        with transaction.atomic():
+            job = Job.objects.create(recording=recording, batch=recording.batch)
+            for side in recording.sides.all().order_by("number"):
+                Run.objects.create(job=job, side=side)
+    except IntegrityError:
+        return (
+            recording.jobs.filter(state__in=JobState.LIVE, kind="")
+            .order_by("-created")
+            .first()
+        )
     return job
 
 
@@ -174,6 +186,11 @@ def hand_over(job: Job) -> Job:
     return job
 
 
+# How many polls a Run may be missing from the service's list before its Job
+# is failed as service_restarted (v1.131.0): about half a minute.
+POLLS_BEFORE_MISSING = 10
+
+
 def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
     """Bring one Job up to date from what the service just said.
 
@@ -183,8 +200,21 @@ def take_state_from(job: Job, service_jobs: dict[str, dict]) -> Job:
     for run in job.runs.all():
         state = service_jobs.get(run.service_job_id)
         if state is None:
+            if run.service_job_id and run.state not in ("done", "failed", "cancelled"):
+                # The service does not list it (v1.131.0): its store was
+                # recreated, its token changed, or the job aged out. A few
+                # polls' grace for a slow answer, then the Job fails plainly
+                # rather than staying queued for ever.
+                run.missing_polls += 1
+                run.save(update_fields=["missing_polls"])
+                if run.missing_polls >= POLLS_BEFORE_MISSING:
+                    run.failure_class = Reason.SERVICE_RESTARTED
+                    run.save(update_fields=["failure_class"])
+                    return fail(job, Reason.SERVICE_RESTARTED)
             continue
 
+        if run.missing_polls:
+            run.missing_polls = 0
         run.state = state["state"]
         run.stage = state.get("stage") or ""
         run.percent = state.get("percent")
@@ -260,7 +290,11 @@ def merge(job: Job) -> Job:
         return fail(job, problem.reason_class)
 
     try:
-        transcript = _store(job, results)
+        # A savepoint (v1.131.0): the old Transcript is deleted before the new
+        # one is built, so a failure here rolls back to before the delete and
+        # the person keeps what they had; the failure is then written.
+        with transaction.atomic():
+            transcript = _store(job, results)
     except Exception:  # noqa: BLE001 - anything here is the same failure
         log.exception("the transcript of job %s could not be stored", job.id)
         return fail(job, Reason.MERGE_FAILED)
@@ -779,6 +813,22 @@ def live_jobs():
 def ready_without_a_job():
     """Recordings that are Ready and have not joined the line yet."""
     return Recording.objects.filter(media_state=MediaState.READY, jobs__isnull=True)
+
+
+def never_handed_over(older_than_seconds: int = 120):
+    """Live Jobs with a Run that has no service id after a couple of minutes:
+    a hand-over that was lost (v1.131.0), handed over again by the sweep."""
+    stale = timezone.now() - dt.timedelta(seconds=older_than_seconds)
+    return (
+        Job.objects.filter(
+            state__in=JobState.LIVE,
+            open=False,
+            created__lt=stale,
+            runs__service_job_id="",
+        )
+        .exclude(runs__isnull=True)
+        .distinct()
+    )
 
 
 def unname(transcript: Transcript, name: str) -> int:

@@ -22,6 +22,7 @@ from http.cookies import SimpleCookie
 from pathlib import Path
 
 from django.conf import settings
+from django.db.models import Q
 from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -119,7 +120,9 @@ def check_before_upload(
     somebody else's Case counts against that owner's space, so the space
     tested is theirs and the refusal names whose it is.
     """
-    if free_disk_bytes() < settings_store.minimum_free_disk_bytes():
+    # The floor is tested with this file counted (v1.131.0): what is free
+    # once it has arrived, not what is free now.
+    if free_disk_bytes() - size_bytes < settings_store.minimum_free_disk_bytes():
         return Refused(Refusal.MESSAGES[Refusal.DISK_FULL], Refusal.DISK_FULL)
 
     largest = settings_store.largest_file_bytes()
@@ -229,7 +232,12 @@ def drop_abandoned() -> int:
     cutoff = timezone.now() - SILENCE_ALLOWED
     dropped = 0
 
-    for recording in Recording.objects.filter(media_state=MediaState.UPLOADING):
+    # Never a Live recording (v1.131.0): it is "uploading" from Record until
+    # Stop, and a Pause stops its pieces; it has its own end (core.live).
+    waiting = Recording.objects.filter(media_state=MediaState.UPLOADING).filter(
+        Q(live__isnull=True) | Q(live={})
+    )
+    for recording in waiting:
         received, quiet_for = arriving.get(str(recording.pk), (None, None))
 
         if received is None:
@@ -319,6 +327,20 @@ def arrived_file(upload_id: str) -> Path | None:
     return arrived
 
 
+def claim(recording: Recording) -> bool:
+    """Take an uploading Recording for its finish: one taker, by one update.
+
+    True for the caller that moved the row from Uploading to Checking; False
+    for anybody who comes second, whose file has already been taken.
+    """
+    taken = Recording.objects.filter(
+        pk=recording.pk, media_state=MediaState.UPLOADING
+    ).update(media_state=MediaState.CHECKING)
+    if taken:
+        recording.media_state = MediaState.CHECKING
+    return bool(taken)
+
+
 def through_the_front_door(request: HttpRequest) -> bool:
     """Did this request come through Caddy rather than from the sidecar?
 
@@ -400,7 +422,8 @@ def _pre_create(event: dict, upload: dict) -> JsonResponse:
         session.user,
         batch,
         int(upload.get("Size") or 0),
-        batch.recordings.count() + 1,
+        # The rows were all made at the Batch's start, this one among them.
+        batch.recordings.count(),
         into=recording.case if recording is not None else None,
     )
     if refusal is not None:
@@ -429,10 +452,10 @@ def _pre_create_live(event: dict, upload: dict) -> JsonResponse:
     ).first()
     if recording is None or not recording.is_live:
         return _reject("There is no recording to record into.", "no_recording")
-    if free_disk_bytes() < settings_store.minimum_free_disk_bytes():
-        return _reject(Refusal.MESSAGES[Refusal.DISK_FULL], Refusal.DISK_FULL)
     # Opus at the page's rate is about a quarter of a megabyte a minute.
     at_most = live.longest_seconds() // 60 * 256 * 1024
+    if free_disk_bytes() - at_most < settings_store.minimum_free_disk_bytes():
+        return _reject(Refusal.MESSAGES[Refusal.DISK_FULL], Refusal.DISK_FULL)
     whose = recording.case.owner if recording.case_id else session.user
     if used_bytes(whose) + at_most > quota_bytes(whose):
         message = (
@@ -466,9 +489,10 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
     if recording is None:
         log.warning("an upload finished for a recording that is not there")
         return JsonResponse({})
-    if recording.media_state != MediaState.UPLOADING:
-        # A Live recording the Record page already ended took what had
-        # arrived; the sidecar's finish comes second and changes nothing.
+    # The row is claimed before the file is moved (v1.131.0): the Record
+    # page's end and the sidecar's finish can land together, and only the one
+    # that claims it takes the file; the other changes nothing.
+    if not claim(recording):
         log.info("an upload finished for recording %s, already taken", recording.id)
         return JsonResponse({})
 
@@ -476,7 +500,7 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
     if arrived is None:
         recording.media_state = MediaState.FAILED
         recording.failure_message = "The upload did not arrive."
-        recording.save()
+        recording.save(update_fields=["media_state", "failure_message"])
         return JsonResponse({})
 
     recording.folder.mkdir(parents=True, exist_ok=True)
@@ -485,7 +509,7 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
 
     recording.size_bytes = recording.original_path.stat().st_size
     recording.media_state = MediaState.CHECKING
-    recording.save()
+    recording.save(update_fields=["size_bytes", "media_state"])
 
     prepare_recording.defer(recording_id=str(recording.pk))
     log.info("recording %s arrived and was given to the media worker", recording.id)

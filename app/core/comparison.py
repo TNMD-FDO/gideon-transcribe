@@ -185,7 +185,11 @@ def ask_for(document: Document, home, *, by) -> Comparison | None:
     if old is not None and old.state in (QUEUED, RUNNING):
         return old
     if old is not None:
-        old.delete()
+        # Every older one, not the first found (v1.131.0).
+        document.comparisons.filter(
+            incident=home if isinstance(home, incidents.Incident) else None,
+            recording=home if not isinstance(home, incidents.Incident) else None,
+        ).delete()
     fields = (
         {"incident": home}
         if isinstance(home, incidents.Incident)

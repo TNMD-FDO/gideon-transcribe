@@ -149,9 +149,16 @@ def _run(arguments: list[str], timeout: int) -> subprocess.CompletedProcess:
     if arguments and Path(arguments[0]).name.startswith(("ffmpeg", "ffprobe")):
         arguments = [arguments[0], "-threads", str(threads_per_job()), *arguments[1:]]
 
-    return subprocess.run(
-        arguments, capture_output=True, text=True, timeout=timeout, check=False
-    )
+    try:
+        return subprocess.run(
+            arguments, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired as problem:
+        # The cap is a media failure like any other (v1.131.0): the library's
+        # own error had escaped every step and left a Recording "checking".
+        raise MediaError(
+            "This recording took too long to prepare.", "media_timeout"
+        ) from problem
 
 
 def hash_file(path: Path) -> str:

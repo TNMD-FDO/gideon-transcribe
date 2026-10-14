@@ -133,6 +133,15 @@ class Job(models.Model):
     class Meta:
         ordering = ["created"]
         indexes = [models.Index(fields=["state"])]
+        constraints = [
+            # One live transcription Job per recording, the database's rule
+            # (v1.131.0): two makers can arrive together.
+            models.UniqueConstraint(
+                fields=["recording"],
+                condition=models.Q(state__in=("queued", "running"), kind=""),
+                name="one_live_job_per_recording",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"job {self.id} for {self.recording_id}"
@@ -207,6 +216,8 @@ class Run(models.Model):
     audio_minutes_ahead = models.FloatField(null=True, blank=True)
 
     failure_class = models.CharField(max_length=40, blank=True, default="")
+    # Polls in a row at which the service did not list this Run (v1.131.0).
+    missing_polls = models.IntegerField(default=0)
 
     submitted = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
@@ -301,7 +312,9 @@ class Segment(models.Model):
     transcript = models.ForeignKey(
         Transcript, on_delete=models.CASCADE, related_name="segments"
     )
-    side = models.ForeignKey("core.Side", on_delete=models.CASCADE, null=True)
+    # Set null, never cascade (v1.131.0, migration 0078): a Side deletion
+    # had emptied a Transcript through this link.
+    side = models.ForeignKey("core.Side", on_delete=models.SET_NULL, null=True)
 
     start = models.FloatField()
     end = models.FloatField()

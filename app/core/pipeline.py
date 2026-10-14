@@ -15,7 +15,10 @@ import logging
 import shutil
 from pathlib import Path
 
+from django.db import DatabaseError
+
 from core import audit, media, settings_store
+from core.jobs import Reason
 from core.models import User
 from core.recordings import Batch, MediaState, Recording, Refusal, Side
 
@@ -58,9 +61,18 @@ def prepare(recording: Recording) -> Recording:
         _length_from_the_prepared_audio(recording)
     except media.MediaError as problem:
         return _failed(recording, problem)
+    except Gone:
+        return recording
+    except Exception:  # noqa: BLE001 - the last resort: Failed, with Retry
+        log.exception("recording %s failed in the app's own code", recording.pk)
+        return _failed(
+            recording,
+            media.MediaError(Reason.MESSAGES[Reason.INTERNAL], Reason.INTERNAL),
+        )
 
     recording.media_state = MediaState.READY
-    recording.save()
+    if not _keep(recording):
+        return recording
     _record_accepted(recording)
     log.info(
         "recording %s is ready: %.1f minutes, %d side(s)",
@@ -106,7 +118,28 @@ def _check(recording: Recording) -> None:
         )
 
     media.test_decode(path, probed.best_track)
-    recording.save()
+    _keep(recording)
+
+
+class Gone(Exception):
+    """The Recording's row went (a Cancel, a Delete, a Workspace's end) while
+    the media worker held it; nothing more is to be written."""
+
+
+def _keep(recording: Recording) -> bool:
+    """Save the row as an update and never an insert (v1.131.0).
+
+    A full save on an object whose row is gone inserts it again: a cancelled
+    recording came back as a ghost with no files. A forced update on a
+    missing row raises instead, and the step stops.
+    """
+    if not Recording.objects.filter(pk=recording.pk).exists():
+        raise Gone(str(recording.pk))
+    try:
+        recording.save(force_update=True)
+    except DatabaseError as problem:
+        raise Gone(str(recording.pk)) from problem
+    return True
 
 
 def _find_sides(recording: Recording) -> None:
@@ -121,8 +154,12 @@ def _find_sides(recording: Recording) -> None:
     track = probed.best_track
 
     # A Live recording transcribed in stretches made its Sides at the first
-    # stretch, and its Runs hang off them; they are kept, not remade.
-    if recording.is_live and recording.sides.exists():
+    # stretch, and its Runs hang off them; they are kept, not remade. And
+    # under a Transcript the Sides never change (v1.131.0): a Retry after a
+    # failed Process again had deleted them, and every line with them.
+    if recording.sides.exists() and (
+        recording.is_live or hasattr(recording, "transcript")
+    ):
         return
 
     recording.sides.all().delete()
@@ -151,7 +188,7 @@ def _find_sides(recording: Recording) -> None:
         recording.tracks_distinct = 1
         Side.objects.create(recording=recording, number=1, kind=Side.WHOLE, name="")
 
-    recording.save()
+    _keep(recording)
 
 
 def _length_from_the_prepared_audio(recording: Recording) -> None:
@@ -308,7 +345,10 @@ def _failed(recording: Recording, problem: media.MediaError) -> Recording:
     recording.media_state = MediaState.REJECTED if refused else MediaState.FAILED
     recording.refusal_class = problem.reason_class
     recording.failure_message = problem.message
-    recording.save()
+    try:
+        _keep(recording)
+    except Gone:
+        return recording
 
     audit.write(
         audit.Category.RECORDINGS,

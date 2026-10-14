@@ -254,6 +254,23 @@ def remove_recording(recording: Recording, cause: str, actor=None, request=None)
         object_label=recording.original_filename,
         cause=cause,
     )
+    # Its work at the transcription service is given up (v1.131.0): a case's
+    # delete had left the service transcribing for nobody.
+    from core import whisperx
+    from core.jobs import JobState
+
+    for job in recording.jobs.filter(state__in=JobState.LIVE):
+        for run in job.runs.exclude(service_job_id=""):
+            whisperx.delete(run.service_job_id, run.lane)
+    # A report whose only home was this recording goes with it, with its own
+    # row (v1.131.0); one that is also about an incident stays there.
+    from core import documents
+
+    for document in documents.Document.objects.filter(
+        recording=recording, incident__isnull=True
+    ):
+        documents.remove(document, by=actor, request=request)
+
     folder = recording.folder
     batch = recording.batch
     recording.delete()
@@ -343,7 +360,10 @@ def discard(user) -> tuple[int, int]:
     # The person's own folder goes too, so that nothing is left standing
     # under scratch/ with their id on it. Named from the setting rather than
     # from a Recording, because a Recording in a Case points elsewhere.
-    shutil.rmtree(settings.SCRATCH_DIR / str(user.pk), ignore_errors=True)
+    # Not while a dictation of theirs lives there (v1.131.0): a Dictation is
+    # kept past sign-out by design and its folder is in the same place.
+    if not Recording.objects.filter(user=user, case__isnull=True).exists():
+        shutil.rmtree(settings.SCRATCH_DIR / str(user.pk), ignore_errors=True)
 
     return len(recordings), gone
 

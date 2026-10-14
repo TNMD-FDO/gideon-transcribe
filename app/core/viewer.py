@@ -11,6 +11,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -816,6 +817,19 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     if role not in people.roles():
         role = ""
 
+    # One transaction under the transcript's row lock (v1.131.0): the
+    # Speaker check's store takes the same lock, and two renames at once no
+    # longer lose an undo entry.
+    with transaction.atomic():
+        return _speakers_under_the_lock(request, recording, transcript, was, now, role)
+
+
+def _speakers_under_the_lock(request, recording, transcript, was, now, role):
+    from core import people
+    from core.jobs import Transcript
+
+    Transcript.objects.select_for_update().get(pk=transcript.pk)
+    transcript.refresh_from_db()
     merging = transcript.segments.filter(speaker=now).exists()
     moved = list(transcript.segments.filter(speaker=was).values_list("pk", flat=True))
     changed = transcript.segments.filter(pk__in=moved).update(speaker=now)
@@ -1244,7 +1258,8 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
         ("SHA-256", recording.sha256),
         (
             "Uploaded by",
-            f"{recording.user.username} on {recording.created:%d %B %Y %H:%M}",
+            f"{recording.user.username} on "
+            f"{timezone.localtime(recording.created):%d %B %Y %H:%M}",
         ),
         ("Length", exports.clock(recording.duration_seconds or 0)),
         ("Container", probe.get("format_name", "")),
@@ -1310,7 +1325,7 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
                 "Processing time",
                 _plainly(timings.get("total", 0)) if timings else "",
             ),
-            ("Processed", f"{transcript.created:%d %B %Y %H:%M}"),
+            ("Processed", f"{timezone.localtime(transcript.created):%d %B %Y %H:%M}"),
             ("Segments", str(transcript.segments.count())),
         ]
 
@@ -1332,7 +1347,8 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
             rows.append(
                 (
                     "Digest",
-                    f"made {made:%d %B %Y %H:%M} from the transcript and "
+                    f"made {timezone.localtime(made):%d %B %Y %H:%M} "
+                    "from the transcript and "
                     f"{used} description{'' if used == 1 else 's'}, "
                     f"in {len(parts)} part{'' if len(parts) == 1 else 's'}",
                 )
@@ -1346,7 +1362,11 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
                 f"{exports.clock(clip.start)} to {exports.clock(clip.end)}, "
                 f"{'captions burned, ' if clip.burn_captions else ''}"
                 f"{'excerpt' if clip.include_excerpt else 'no excerpt'}"
-                + (f", rendered {clip.rendered:%d %b %H:%M}" if clip.rendered else ""),
+                + (
+                    f", rendered {timezone.localtime(clip.rendered):%d %b %H:%M}"
+                    if clip.rendered
+                    else ""
+                ),
             )
         )
 
@@ -1385,7 +1405,11 @@ def _digest_for_admins(transcript) -> dict:
                 ),
                 "text": one.text,
                 "model": one.model,
-                "made": f"{one.made_at:%d %B %Y %H:%M}" if one.made_at else "",
+                "made": (
+                    f"{timezone.localtime(one.made_at):%d %B %Y %H:%M}"
+                    if one.made_at
+                    else ""
+                ),
                 "cut_short": one.cut_short,
             }
             for one in transcript.digest_parts.all()

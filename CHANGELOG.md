@@ -21,6 +21,75 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.131.0, 2026-10-14
+
+```
+Models: unchanged
+Database: migrates (0078: a Segment's side link set null, a Run's missing
+polls, one live Job per recording, one live Speaker check per transcript)
+```
+
+The data integrity pass of the code audit: its seven High and seventeen
+Medium findings fixed, each with a test that keeps the rule.
+
+**Four ways to lose work, closed.**
+
+- **A live recording paused for more than ten minutes is no longer deleted.**
+  The sweep that drops an abandoned upload leaves live recordings alone;
+  a Pause stops their pieces, and they end by Stop or the page closing.
+- **Signing out no longer removes a dictation's files.** The discard leaves
+  the person's folder while a dictation lives there.
+- **Retry after a failed Process again keeps the transcript.** The Sides
+  are never remade under a transcript, and a line's link to its Side is
+  set null rather than cascading.
+- **A failed merge keeps the old transcript.** The new one is built under
+  a savepoint; a failure rolls back and the job fails plainly.
+
+**Nothing stuck for ever.**
+
+- A media step that overruns its time cap is a media failure with Retry,
+  and any other error in the pipeline marks the recording failed rather
+  than leaving it "checking" with the person's uploads blocked.
+- Every assistant writer (summary, chat, case chat, incident chat, names,
+  the memo, the comparison, proposed events) that fails in the app's own
+  code is marked failed with "Something went wrong in the app" rather than
+  left "running"; a chat answers again and the night's summaries go on.
+- A job the service no longer lists fails as "service restarted" within a
+  minute; a lost hand-over is handed over again; Retry is offered on a job
+  the Admin cancelled; a sound match handed back by a dead worker runs.
+
+**The sums.**
+
+- The sound match's overlap is computed correctly, so a short camera inside
+  a long one is placed where it is and not minutes off as a strong match.
+- A batch of exactly the limit (25 by default) is no longer refused at its
+  first byte by a count that was one too many.
+- A camera's events move with it when it is placed again, and a camera
+  matched by sound follows its anchor when the anchor moves.
+- Dates and times on the case page's Reviewed pill, the recording's Details,
+  the Clips page, the sharing panel, the Dictations page, the Panel's engine
+  line and the Word export's Uploaded row are in the office's time.
+- A citation into a camera that began before the incident's zero opens at
+  the right moment; the free-disk floor counts the file about to arrive.
+
+**The rules the database keeps.** One live transcription job per recording
+and one live Speaker check per transcript are constraints now; Process again
+is refused while a job runs; a finish is claimed by one update before the
+file is moved, as is the batch-finished mail; the speaker tools and the
+check's store take the transcript's row lock; a deleted recording is never
+written back by the media worker; a strong match lands only on a placement
+unchanged since it was asked; a summary, chat or name suggestion already
+done is not written again; the three deferrals a worker makes inside a
+transaction wait for its commit.
+
+**And.** A report whose only home is deleted goes with it, with its own row;
+a Local admin who owns a case or holds a recording cannot be deleted until
+they are handed on; removing a recording any way cancels its work at the
+transcription service.
+
+Phase 1 chapter 4, Phase 6 and Phase 8's amendments and the admin guide say
+so. Left for a follow-up: the Low findings.
+
 ## v1.130.1, 2026-10-14
 
 ```

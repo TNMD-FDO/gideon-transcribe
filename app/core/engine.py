@@ -45,7 +45,14 @@ NO_VISION = "llm_no_vision"
 # The Case Chat's own: a question over more talk than the ceiling allows.
 CASE_TOO_LARGE = "llm_case_too_large"
 
+# The app's own code failed around the call (v1.131.0): not the engine's
+# fault, and said so, with Try again.
+INTERNAL = "internal"
+
 WHAT_TO_SAY = {
+    INTERNAL: (
+        "Something went wrong in the app. Try again, and if it happens again, tell IT."
+    ),
     UNREACHABLE: "The assistant is not available right now.",
     TIMEOUT: "The assistant took too long. Try again.",
     REFUSED: "The engine refused the connection. Tell whoever looks after the server.",

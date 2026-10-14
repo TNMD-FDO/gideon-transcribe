@@ -22,7 +22,7 @@ import logging
 import time
 from collections import Counter
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from core import assistant, audit, engine, prompts, settings_store
@@ -113,7 +113,12 @@ def queue_check(recording, *, by=None, how: str = "landed") -> SpeakerCheck | No
         return None
     from core import tasks
 
-    check = SpeakerCheck.objects.create(transcript=transcript, asked_by=by)
+    try:
+        with transaction.atomic():
+            check = SpeakerCheck.objects.create(transcript=transcript, asked_by=by)
+    except IntegrityError:
+        # Two asks at once: the database keeps one live check (v1.131.0).
+        return None
     wait = 0
     if by is None and settings_store.speaker_check_runs() == OVERNIGHT:
         wait = seconds_until_the_night()
@@ -526,6 +531,16 @@ def run(check_id, attempt: int = 1) -> None:
 
 def _store(transcript, kept: dict) -> None:
     """The pending corrections replaced by this run's; decided ones stay."""
+    with transaction.atomic():
+        _store_under_the_lock(transcript, kept)
+
+
+def _store_under_the_lock(transcript, kept: dict) -> None:
+    from core.jobs import Transcript
+
+    # The transcript's row is the lock the speaker tools take too (v1.131.0),
+    # so a merge following corrections never meets a row this delete took.
+    Transcript.objects.select_for_update().get(pk=transcript.pk)
     transcript.corrections.filter(state=SpeakerCorrection.PENDING).delete()
     dismissed = set(
         transcript.corrections.filter(state=SpeakerCorrection.DISMISSED).values_list(
@@ -847,6 +862,14 @@ def accept(correction: SpeakerCorrection, *, by, request=None) -> int:
     correction dismissed, never applied on a stale label."""
     from core import viewer
 
+    with transaction.atomic():
+        return _accept_under_the_lock(correction, by=by, request=request, viewer=viewer)
+
+
+def _accept_under_the_lock(correction, *, by, request, viewer) -> int:
+    from core.jobs import Transcript
+
+    Transcript.objects.select_for_update().get(pk=correction.transcript_id)
     segment = correction.segment
     transcript = correction.transcript
     if segment is None or segment.speaker != correction.speaker_from:

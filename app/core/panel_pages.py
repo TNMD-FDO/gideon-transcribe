@@ -430,7 +430,8 @@ def _directory() -> dict:
         "reachable": True,
         "says": "reachable",
         "last_check": (
-            f"{last.at:%d %b %H:%M} {last.event.lower()}, {last.outcome}"
+            f"{timezone.localtime(last.at):%d %b %H:%M} {last.event.lower()}, "
+            f"{last.outcome}"
             if last
             else "no check has run yet"
         ),
@@ -818,6 +819,20 @@ def local_admin_action(request: HttpRequest, username: str) -> HttpResponse:
     elif doing == "delete":
         if User.objects.filter(is_local=True).count() <= 1:
             _tell(request, "The last Local admin cannot be deleted.")
+            return redirect(reverse("panel-users"))
+        # Not while they own a case or hold a recording (v1.131.0): the delete
+        # had crashed on a case, and taken a Workspace silently.
+        from core.cases import Case
+        from core.recordings import Recording
+
+        owned = Case.objects.filter(owner=person).count()
+        held = Recording.objects.filter(user=person).count()
+        if owned or held:
+            _tell(
+                request,
+                f"{username} owns {owned} case(s) and {held} recording(s). "
+                "Transfer the cases and delete or move the recordings first.",
+            )
             return redirect(reverse("panel-users"))
         audit.write(
             audit.Category.ACCOUNTS,

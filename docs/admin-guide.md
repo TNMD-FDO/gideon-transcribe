@@ -78,7 +78,7 @@ The **Documents** page of the settings turns the police report beside the camera
 
 Every transcription job in the office, whoever started it: the user, the recording, its batch, its length, its state and its step. One runs at a time, in arrival order, with no priority for anyone, and this page is where you see whose turn it is.
 
-**Cancel** stops one job. The person's recording stays; only its transcription is stopped, and they can retry it. Cancelling is written to the audit log with your name.
+**Cancel** stops one job. The person's recording stays; only its transcription is stopped, and they can retry it (Retry appears on the recording from v1.131.0). Cancelling is written to the audit log with your name. A job the service no longer lists, after its store was recreated or its token changed, fails by itself within a minute as "service restarted", with Retry.
 
 ## The Users page
 
@@ -95,7 +95,7 @@ For each person, **Block** and **Reassign** sit on the row, the quota is set in 
 
 A person who has left the sign-in group is shown as **Deactivated** after the next directory check and cannot sign in. Putting them back in the group and running **Check directory now** reactivates them.
 
-**Local admins** are created at the foot of the page. A Local admin has a password kept in the app, which **Change password** sets and which never goes anywhere near the directory. Keep one, for the day the directory is down, and give it a long password.
+**Local admins** are created at the foot of the page. A Local admin has a password kept in the app, which **Change password** sets and which never goes anywhere near the directory. Keep one, for the day the directory is down, and give it a long password. A Local admin who owns a case or holds a recording cannot be deleted until the cases are transferred and the recordings deleted or moved; the page says so.
 
 ## The audit log
 

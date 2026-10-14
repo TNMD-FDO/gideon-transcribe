@@ -569,6 +569,14 @@ class SpeakerCheck(models.Model):
 
     class Meta:
         ordering = ["-created"]
+        constraints = [
+            # One live check per transcript, the database's rule (v1.131.0).
+            models.UniqueConstraint(
+                fields=["transcript"],
+                condition=models.Q(state__in=("queued", "running")),
+                name="one_live_check_per_transcript",
+            )
+        ]
 
 
 class SpeakerCorrection(models.Model):
@@ -888,7 +896,9 @@ def _unreachable() -> engine.Problem | None:
 def write_summary(summary_id) -> None:
     """One Summary, whole, from the whole Transcript."""
     summary = Summary.objects.filter(pk=summary_id).select_related("recording").first()
-    if summary is None:
+    if summary is None or summary.state not in (QUEUED, RUNNING):
+        # Done or failed already (v1.131.0): a second run would write the
+        # engine's answer over a finished one and count twice.
         return
     recording = summary.recording
     transcript = getattr(recording, "transcript", None)
@@ -1036,7 +1046,7 @@ def answer_turn(turn_id) -> None:
         .select_related("chat", "chat__recording")
         .first()
     )
-    if turn is None:
+    if turn is None or turn.state not in (QUEUED, RUNNING):
         return
     chat = turn.chat
     recording = chat.recording
@@ -2090,7 +2100,9 @@ def queue_preparation(recording) -> bool:
             "prepare_total",
         ]
     )
-    tasks.prepare_video.defer(transcript_id=str(transcript.pk))
+    from core.deferring import after_commit
+
+    after_commit(lambda: tasks.prepare_video.defer(transcript_id=str(transcript.pk)))
     return True
 
 
@@ -2599,7 +2611,7 @@ def suggest_names(run_id) -> None:
         .select_related("transcript", "transcript__recording")
         .first()
     )
-    if run is None:
+    if run is None or run.state not in (QUEUED, RUNNING):
         return
     transcript = run.transcript
     recording = transcript.recording

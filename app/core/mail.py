@@ -557,16 +557,19 @@ def send_to_operator(kind: str, subject: str, body: str, **details) -> bool:
 
 
 def _queue(kind, to_address, recipient, subject, body, **fields) -> None:
+    from core.deferring import after_commit
     from core.tasks import send_email
 
-    send_email.defer(
-        kind=kind,
-        to_address=to_address,
-        recipient=recipient,
-        subject=subject,
-        body=body,
-        tries=1,
-        **fields,
+    after_commit(
+        lambda: send_email.defer(
+            kind=kind,
+            to_address=to_address,
+            recipient=recipient,
+            subject=subject,
+            body=body,
+            tries=1,
+            **fields,
+        )
     )
 
 
@@ -1047,8 +1050,16 @@ def batch_finished(batch) -> bool:
         time=_when(timezone.now()),
         link=link,
     )
-    batch.mail_sent_at = timezone.now()
-    batch.save(update_fields=["mail_sent_at"])
+    # Claimed by one update (v1.131.0): two recordings of one Batch ending
+    # at the same moment on two workers would otherwise both send it.
+    from core.recordings import Batch
+
+    now = timezone.now()
+    if not Batch.objects.filter(pk=batch.pk, mail_sent_at__isnull=True).update(
+        mail_sent_at=now
+    ):
+        return False
+    batch.mail_sent_at = now
     return send_to_person(
         BATCH,
         batch.user,
