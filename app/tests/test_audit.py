@@ -277,3 +277,48 @@ def test_months_are_calendar_months(db):
     assert audit.months_ago(1, when).day == 28
     assert audit.months_ago(3, when).month == 12
     assert audit.months_ago(3, when).year == 2025
+
+
+# The write and the check, after v1.134.0 ---------------------------------------
+
+
+def test_a_write_counts_no_rows(db):
+    # The newest hash alone is read under the lock; the COUNT of the whole
+    # log that used to come with it served nothing.
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    with CaptureQueriesContext(connection) as caught:
+        audit.write(audit.Category.SYSTEM, "daily sweeper ran", system="sweeper")
+    assert not any("COUNT(" in one["sql"].upper() for one in caught.captured_queries)
+    assert audit._previous() == rows()[-1].row_hash
+
+
+def test_the_integrity_button_starts_the_walk_on_the_worker(client, admin, monkeypatch):
+    from core import tasks
+
+    sign_in(client)
+    deferred = {}
+    monkeypatch.setattr(
+        tasks.check_audit_integrity, "defer", lambda **kwargs: deferred.update(kwargs)
+    )
+    answer = client.post("/panel/audit/check")
+    assert answer.status_code == 200
+    assert answer.json() == {
+        "ok": True,
+        "queued": True,
+        "says": (
+            "The check is running; its result lands in the audit log within a "
+            "few minutes."
+        ),
+    }
+    assert deferred == {"by_id": str(admin.pk)}
+    # Nothing was walked in the request.
+    assert rows("Integrity check run") == []
+
+    # The task walks the chain and writes the row in the Admin's name.
+    tasks.check_audit_integrity.func(by_id=str(admin.pk))
+    row = rows("Integrity check run")[-1]
+    assert row.actor_username == "transcribe-admin"
+    assert row.outcome == audit.Outcome.SUCCESS
+    assert row.details["rows"] >= 1 and "Unbroken" in row.details["message"]

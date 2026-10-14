@@ -361,6 +361,27 @@ def test_a_consumer_lists_only_its_own_jobs(client):
     assert len(every) == 2
 
 
+def test_the_list_keeps_every_queued_job_past_the_cap_on_ended_ones(
+    client, store, monkeypatch
+):
+    # The cap is on ended jobs alone (v1.134.0), so a Consumer with a long
+    # line sees all of it and never takes a waiting job for a lost one.
+    original = store.jobs_for
+    monkeypatch.setattr(
+        store, "jobs_for", lambda consumer, admin: original(consumer, admin, limit=1)
+    )
+    ended = [submit(client, client_reference=f"old-{n}").json()["id"] for n in range(2)]
+    for job_id in ended:
+        store.cancel(job_id)
+    waiting = [
+        submit(client, client_reference=f"waiting-{n}").json()["id"] for n in range(4)
+    ]
+    listed = client.get("/v1/jobs", headers=headers()).json()["jobs"]
+    ids = {one["id"] for one in listed}
+    assert all(job_id in ids for job_id in waiting)
+    assert len([one for one in listed if one["state"] == "cancelled"]) == 1
+
+
 # What the service says about itself ------------------------------------------
 
 

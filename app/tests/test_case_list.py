@@ -56,6 +56,9 @@ def a_call(owner, case, title, kind="Jail call", words=True):
         media_state=MediaState.READY,
         recording_type=kind,
         duration_seconds=895,
+        # Measured already (v1.134.0): a recording never measured is measured
+        # once, on its first page, and that is not the page's own question.
+        on_disk_bytes=0,
     )
     if words:
         transcript = Transcript.objects.create(recording=recording, language="en")

@@ -83,7 +83,8 @@ def test_the_two_settings_sit_on_their_pages():
     known = settings_store.DEFINITIONS
     assert known["summaries_at_once_overnight"].page == settings_store.VISION
     assert known["summaries_at_once_overnight"].default == 1
-    assert known["summaries_at_once_overnight"].most == 2
+    # Four since v1.134.0: the number in flight, each in one of the lanes.
+    assert known["summaries_at_once_overnight"].most == 4
     assert known["summaries_tonight_tick_default"].page == settings_store.ASSISTANT
     assert known["summaries_tonight_tick_default"].default is False
     # The window is shared, so it is never greyed behind the vision position.

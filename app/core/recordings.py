@@ -280,6 +280,11 @@ class Recording(models.Model):
     summary_wanted = models.BooleanField(default=False)
 
     size_bytes = models.BigIntegerField(default=0)
+    # Everything under the Recording's folder, measured when a file lands
+    # or goes and once a night (v1.134.0); empty until measured once. The
+    # quota, Home, the Cases page and the Status page sum this column
+    # instead of walking the disk in a request.
+    on_disk_bytes = models.BigIntegerField(null=True, blank=True)
     sha256 = models.CharField(max_length=64, blank=True, default="", db_index=True)
     duration_seconds = models.FloatField(null=True, blank=True)
 
@@ -391,12 +396,37 @@ class Recording(models.Model):
         return None
 
     def disk_bytes(self) -> int:
-        """Everything on disk for this Recording, which is what a quota counts."""
-        if not self.folder.exists():
-            return 0
-        return sum(
-            path.stat().st_size for path in self.folder.rglob("*") if path.is_file()
-        )
+        """Everything on disk for this Recording, which is what a quota counts:
+        the figure kept on the row, measured now if it never was."""
+        if self.on_disk_bytes is None:
+            return self.measure_disk()
+        return self.on_disk_bytes
+
+    def measure_disk(self) -> int:
+        """Walk this one Recording's folder and keep the figure on the row.
+
+        Called where a file lands or goes (the pipeline, a Clip, a stretch,
+        the upload) and once a night for everything; a request never walks.
+        """
+        total = 0
+        if self.folder.exists():
+            total = sum(
+                path.stat().st_size for path in self.folder.rglob("*") if path.is_file()
+            )
+        if total != self.on_disk_bytes:
+            self.on_disk_bytes = total
+            if self.pk:
+                type(self).objects.filter(pk=self.pk).update(on_disk_bytes=total)
+        return total
+
+
+def summed_disk_bytes(recordings) -> int:
+    """The kept sizes of these Recordings in one query, after measuring any
+    that never were (the rows from before v1.134.0, once each)."""
+    for one in recordings.filter(on_disk_bytes__isnull=True):
+        one.measure_disk()
+    total = recordings.aggregate(total=models.Sum("on_disk_bytes"))["total"]
+    return total or 0
 
 
 class Side(models.Model):

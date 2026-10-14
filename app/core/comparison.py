@@ -53,6 +53,10 @@ MARK_WORDS = {
 }
 # The window of pages one call reads against the whole record.
 PAGES_A_WINDOW = 8
+# What the expectation's size allows for the system message and the
+# chronology when it asks whether the whole report reads in one window
+# (v1.134.0); the run itself fits the real text.
+SIZE_TEMPLATES_ALLOWANCE = 6000
 # The most findings kept from one window, and per comparison.
 WINDOW_MOST = 25
 FINDINGS_MOST = 200
@@ -220,9 +224,14 @@ def _size_of(document: Document, home) -> int:
         record = sitting.record_tokens(home)
     else:
         record = assistant.reading_size(getattr(home, "transcript", None))
-    return len(windows) * record + sum(
-        prompts.tokens(_paragraph_lines(one)) for one in windows
+    pages = sum(prompts.tokens(_paragraph_lines(one)) for one in windows)
+    # Read in one window when the whole report fits beside the record
+    # (v1.134.0), the templates allowed for at SIZE_TEMPLATES_ALLOWANCE.
+    one_window = (
+        record + pages + assistant.cap(answer_cap()) + SIZE_TEMPLATES_ALLOWANCE
+        <= assistant.window()
     )
+    return (1 if one_window else len(windows)) * record + pages
 
 
 def _paragraph_windows(document: Document) -> list[list[dict]]:
@@ -245,6 +254,16 @@ def _paragraph_lines(rows: list[dict]) -> str:
         f"[Report, page {row['page']}, paragraph {row['n']}] {row['text']}"
         for row in rows
     )
+
+
+def _one_window_if_it_fits(windows: list[list[dict]], fits) -> list[list[dict]]:
+    """The report's windows of pages as one window when the whole report fits
+    beside the record (v1.134.0); `fits` is given the rows and says. The
+    windows as they were otherwise."""
+    if len(windows) <= 1:
+        return windows
+    whole = [row for window in windows for row in window]
+    return [whole] if fits(whole) else windows
 
 
 def _record_for(comparison: Comparison) -> dict:
@@ -746,6 +765,25 @@ def compare(comparison_id, attempt: int = 1) -> None:
                 ) from None
             comparison.cameras_words_alone = list(words_alone)
             against = _record_for(comparison)
+        # The whole report in one window when it fits beside the record
+        # (v1.134.0): the record was sent once per eight pages, whatever
+        # the room. Eight-page windows only when the whole does not fit.
+        windows = _one_window_if_it_fits(
+            windows,
+            lambda rows: prompts.fits(
+                system,
+                prompts.comparison_input(
+                    against["head"],
+                    against["events"],
+                    against["record"],
+                    _paragraph_lines(rows),
+                    first=rows[0]["page"],
+                    last=rows[-1]["page"],
+                ),
+                answer_cap=cap,
+                window=assistant.window(),
+            ),
+        )
         findings: list[dict] = []
         taken: set = set()
         cut = 0

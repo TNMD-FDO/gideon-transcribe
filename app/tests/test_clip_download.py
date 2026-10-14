@@ -106,3 +106,46 @@ def test_in_a_case_every_collaborators_clips_of_the_recording_come(person, clien
     signed_in(client, person)
     names = names_in(client.get(f"/clips/download?recording={recording.pk}"))
     assert len(names) == 2
+
+
+# The zips stream from a spool (v1.134.0) ---------------------------------------------
+
+
+def a_transcript(recording):
+    from core.jobs import Segment, Transcript
+
+    transcript = Transcript.objects.create(recording=recording, language="en")
+    Segment.objects.create(
+        transcript=transcript, start=0, end=4, text="Good morning.", speaker="Rowe"
+    )
+    return transcript
+
+
+@pytest.mark.django_db
+def test_the_workspace_and_case_zips_stream_and_keep_their_names(person, client):
+    settings_store.set_to("clips_available", True)
+    settings_store.set_to("folder_management", True)
+    workspace = a_recording(person, title="Stop")
+    a_transcript(workspace)
+    a_ready_clip(workspace, person, "The warning")
+    case = Case.objects.create(owner=person, name="Ramirez")
+    filed = a_recording(person, case=case, title="Interview")
+    a_transcript(filed)
+    signed_in(client, person)
+
+    everything = client.get("/download/everything")
+    assert everything.status_code == 200 and everything.streaming
+    assert everything["Content-Disposition"].startswith("attachment; filename*=")
+    names = names_in(everything)
+    assert any(one.endswith("transcript.docx") for one in names)
+    assert any(one.endswith("transcript.txt") for one in names)
+    assert len([one for one in names if "The warning" in one]) == 1
+    assert len(names) == 3
+
+    transcripts = client.get("/download/transcripts")
+    assert transcripts.streaming
+    assert names_in(transcripts) == [one for one in names if one.endswith(".txt")]
+
+    of_the_case = client.get(f"/case/{case.pk}/download")
+    assert of_the_case.streaming
+    assert [one for one in names_in(of_the_case)] == ["Interview - transcript.txt"]

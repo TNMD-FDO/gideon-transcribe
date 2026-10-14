@@ -16,7 +16,15 @@ from __future__ import annotations
 import json
 
 import pytest
-from core import case_chat, chronology, incident_chat, incidents, settings_store, tasks
+from core import (
+    case_chat,
+    chronology,
+    incident_chat,
+    incidents,
+    prompts,
+    settings_store,
+    tasks,
+)
 from core.assistant import PromptTemplate
 from core.audit import Row
 from core.case_chat import CaseChat, CaseChatTurn
@@ -237,9 +245,12 @@ def test_the_answer_reads_the_record_and_cites_the_incident_clock(
     assert PromptTemplate.named(PromptTemplate.INCIDENT_CHAT).text in system
     assert "on one clock" in system
     user = asked[0]["messages"][-1]["content"]
-    assert "The question: Was a gun found?" in user
-    assert "Gun found" in user and "Page 4" in user and "Route 9" in user
-    assert "I got, I got gun" in user
+    assert user == "The question: Was a gun found?"
+    # The record, the chronology, its note and About are read ahead of the
+    # chat so far, at the end of the system message (v1.134.0, ADR 0020).
+    reading = system[system.index(prompts.INCIDENT_RULES) :]
+    assert "Gun found" in reading and "Page 4" in reading and "Route 9" in reading
+    assert "I got, I got gun" in reading
     assert asked[0]["max_completion_tokens"] == 2000
     # The page's shape: the clock, the seconds, the incident page at that moment.
     state = incident_chat.state_json(incident)

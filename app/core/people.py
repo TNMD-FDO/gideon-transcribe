@@ -70,24 +70,26 @@ class Person(models.Model):
             transcript__recording__case=self.case, speaker__iexact=self.name.strip()
         )
 
-    def recordings(self):
-        """The Recordings the Person appears in, with the first Segment of each."""
+    def recordings(self, spoken: dict | None = None, rows: dict | None = None):
+        """The Recordings the Person appears in, with the first Segment of
+        each, by title. Two queries on its own (v1.134.0: it had asked one
+        per recording); none with `spoken` from speakers_in and `rows`, the
+        case's Recordings by id, from a page that loaded them."""
         from core.recordings import Recording
 
-        found = []
-        ids = (
-            self.segments()
-            .values_list("transcript__recording_id", flat=True)
-            .distinct()
-        )
-        for recording in Recording.objects.filter(pk__in=list(ids)).order_by("title"):
-            first = (
-                self.segments()
-                .filter(transcript__recording=recording)
-                .order_by("start")
-                .first()
-            )
-            found.append((recording, first.start if first else 0.0))
+        if spoken is None:
+            spoken = speakers_in(self.case, self.name)
+        firsts = spoken.get(self.name.strip().casefold(), {})
+        if rows is None:
+            rows = {
+                one.pk: one for one in Recording.objects.filter(pk__in=list(firsts))
+            }
+        found = [
+            (rows[recording_id], firsts[recording_id]["first"])
+            for recording_id in firsts
+            if recording_id in rows
+        ]
+        found.sort(key=lambda one: (one[0].title, str(one[0].pk)))
         return found
 
 
@@ -313,19 +315,74 @@ def delete(person: Person, *, by, request=None) -> int:
 # What the pages and the AI assistant read ------------------------------------------
 
 
-def unnamed_by_recording(case) -> list[tuple]:
-    """(recording, how many unnamed) for every Recording whose Transcript has one."""
-    from core.assistant import unnamed_speakers
+def speakers_in(case, name: str | None = None) -> dict:
+    """Every Speaker of the Case's Transcripts and where they speak, in one
+    grouped query (v1.134.0): {name casefolded: {recording id: {"first":
+    the first second, "own": how many of its lines are its own Side's}}}.
+    What the rename box, the Speakers tab and the Speakers page count from.
+    With `name`, that one Speaker's rows alone."""
+    from django.db.models import Count, Min, Q
 
-    found = []
-    for recording in case.recordings.order_by("title"):
-        transcript = getattr(recording, "transcript", None)
-        if transcript is None:
-            continue
-        count = len(unnamed_speakers(transcript))
-        if count:
-            found.append((recording, count))
+    from core.jobs import Segment
+
+    rows = Segment.objects.filter(transcript__recording__case=case).exclude(speaker="")
+    if name is not None:
+        rows = rows.filter(speaker__iexact=name.strip())
+    found: dict = {}
+    for row in (
+        rows.values("speaker", "transcript__recording_id")
+        .order_by()
+        .annotate(
+            first=Min("start"), own=Count("id", filter=Q(same_as_other_side=False))
+        )
+    ):
+        key = row["speaker"].strip().casefold()
+        where = found.setdefault(key, {})
+        held = where.get(row["transcript__recording_id"])
+        # One name spelt two ways is one Speaker: the earliest first second.
+        if held is None:
+            where[row["transcript__recording_id"]] = {
+                "first": float(row["first"] or 0.0),
+                "own": row["own"],
+            }
+        else:
+            held["first"] = min(held["first"], float(row["first"] or 0.0))
+            held["own"] += row["own"]
     return found
+
+
+def unnamed_counts(spoken: dict) -> dict:
+    """{recording id: how many Speakers still wear the app's own label},
+    from speakers_in, for the recordings that have one."""
+    from core.assistant import _is_a_label
+
+    counts: dict = {}
+    for key, where in spoken.items():
+        if not _is_a_label(key.title()):
+            continue
+        for recording_id, row in where.items():
+            if row["own"]:
+                counts[recording_id] = counts.get(recording_id, 0) + 1
+    return counts
+
+
+def unnamed_by_recording(case, spoken: dict | None = None) -> list[tuple]:
+    """(recording, how many unnamed) for every Recording whose Transcript has
+    one, by title: two queries for the case (v1.134.0), none past the
+    recordings' rows with `spoken` from speakers_in."""
+    from core.recordings import Recording
+
+    if spoken is None:
+        spoken = speakers_in(case)
+    counts = unnamed_counts(spoken)
+    if not counts:
+        return []
+    return [
+        (recording, counts[recording.pk])
+        for recording in Recording.objects.filter(pk__in=list(counts))
+        .select_related("transcript")
+        .order_by("title")
+    ]
 
 
 def _in_a_case(recording) -> bool:

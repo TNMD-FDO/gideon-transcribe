@@ -227,6 +227,7 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
     # shows "Preparing video" and asks again until this says yes.
     playback = recording.playback_path() if recording.playback_ready else None
 
+    case_people = _people_of(recording)
     speakers = []
     if transcript is not None:
         # order_by("speaker") is not for the order: it clears the Segment's own
@@ -241,14 +242,14 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
             .values_list("speaker", flat=True)
             .distinct()
         )
-        from core import people
-
+        # The Case's People once (v1.134.0), for the roles and the rename box.
+        roles = {one["name"].strip().casefold(): one["role"] for one in case_people}
         speakers = [
             {
                 "name": name,
                 "colour": colour_for(number),
                 # The Role badge, inside a Case, when the name is a Person's.
-                "role": people.role_of(recording, name),
+                "role": roles.get(name.strip().casefold(), ""),
             }
             for number, name in enumerate(names)
         ]
@@ -286,7 +287,7 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
             else ""
         ),
         # The Case's People, for the rename box to offer; none in a Workspace.
-        "people": _people_of(recording),
+        "people": case_people,
         "speaker_roles": _roles_if_in_a_case(recording),
         # The case's Chat tab, for the link under the viewer's chat.
         "case_chat_url": _case_chat_url(recording),
@@ -346,7 +347,8 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
 
 @login_required
 def segments(request: HttpRequest, recording_id) -> JsonResponse:
-    """The Transcript itself, as the page reads it."""
+    """The Transcript itself, as the page reads it; with ?words=0, the lines
+    without their word timings (v1.134.0)."""
     recording = Recording.objects.filter(pk=recording_id).first()
     if recording is None or not cases.standing(recording, request.user):
         return JsonResponse({"error": "no such recording"}, status=404)
@@ -354,6 +356,7 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
     transcript = getattr(recording, "transcript", None)
     if transcript is None:
         return JsonResponse({"segments": []})
+    with_words = request.GET.get("words", "1") != "0"
 
     from core import live
 
@@ -380,7 +383,10 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
                     "text": segment.text,
                     "speaker": segment.speaker,
                     "corrected": segment.corrected,
-                    "words": segment.words or [],
+                    # The word timings, unless ?words=0 asked for the lines
+                    # alone (v1.134.0): the Speakers page draws no words,
+                    # and they were most of the answer.
+                    **({"words": segment.words or []} if with_words else {}),
                     # The note on the line (Phase 8 chapter 2).
                     **notes.line_json(segment),
                 }
@@ -1501,12 +1507,19 @@ def _the_rest_of_the_case(recording) -> list:
 
 
 def _people_of(recording) -> list[dict]:
+    """The Case's People with how many recordings each speaks in, from two
+    queries (v1.134.0): the People, and every Speaker's recordings grouped."""
     from core import people
 
     if not people._in_a_case(recording):
         return []
+    spoken = people.speakers_in(recording.case)
     return [
-        {"name": one.name, "role": one.role, "count": len(one.recordings())}
+        {
+            "name": one.name,
+            "role": one.role,
+            "count": len(spoken.get(one.name.strip().casefold(), {})),
+        }
         for one in recording.case.people.all()
     ]
 

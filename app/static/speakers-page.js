@@ -975,7 +975,8 @@
 
   function refreshSuggestions() {
     if (!V.assistant || (!V.assistant.suggestions && !V.assistant.speakerCheck)) { return; }
-    fetch("/recording/" + V.recording + "/assistant")
+    // Not while the tab is hidden (v1.134.0): the ask waits for it to come back.
+    window.UI.whenVisible().then(function () { return fetch("/recording/" + V.recording + "/assistant"); })
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         var busy = drawNameSuggestions(body);
@@ -1133,7 +1134,9 @@
 
   function load() {
     if (!V.hasTranscript) { return Promise.resolve(); }
-    return fetch("/recording/" + V.recording + "/segments")
+    // Without the words (v1.134.0): this page reads lines, speakers and
+    // times and never a word's timing, and the words were most of the answer.
+    return fetch("/recording/" + V.recording + "/segments?words=0")
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         segments = body.segments || [];

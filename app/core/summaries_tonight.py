@@ -9,11 +9,12 @@ same Summary a press of New summary gives. Nothing here runs in the daytime.
 
 The window is the Vision page's (Overnight from, Overnight until). Inside it
 the night's vision work runs first; a summary is handed to the summary worker
-only while no video is being enriched, one at a time by default and two when
-the Admin's setting says so, and a recording whose own vision is still to
-come waits for its picture, so its summary is written from the words and the
-picture together. When the window closes with summaries waiting, each is
-marked not reached and tried the next night.
+only while no video is being enriched, one in flight by default and up to
+four when the Admin's setting says so (v1.134.0), the next starting the
+moment one finishes, and a recording whose own vision is still to come waits
+for its picture, so its summary is written from the words and the picture
+together. When the window closes with summaries waiting, each is marked not
+reached and tried the next night.
 """
 
 from __future__ import annotations
@@ -38,9 +39,16 @@ def on() -> bool:
     )
 
 
+AT_ONCE_MOST = 4
+
+
 def at_once() -> int:
-    """How many of the night's summaries may be written at the same time."""
-    return max(1, min(2, int(settings_store.get("summaries_at_once_overnight") or 1)))
+    """How many of the night's summaries may be in flight at the same time:
+    the setting, one to AT_ONCE_MOST (four since v1.134.0; two before)."""
+    return max(
+        1,
+        min(AT_ONCE_MOST, int(settings_store.get("summaries_at_once_overnight") or 1)),
+    )
 
 
 def tick_default() -> bool:
@@ -249,12 +257,31 @@ def hand_over(summary: Summary) -> None:
     tasks.write_summary.defer(summary_id=str(summary.pk))
 
 
+def hand_over_waiting() -> int:
+    """The oldest summaries marked tonight handed over, as many as the
+    setting allows beyond those in flight (v1.134.0: one a tick until then,
+    so a setting of two never filled two lanes), never more than are waiting.
+    Returns how many were handed over."""
+    room = at_once() - running_now()
+    handed = 0
+    for summary in waiting():
+        if handed >= room:
+            break
+        if getattr(summary.recording, "transcript", None) is None:
+            continue
+        if _waits_for_its_picture(summary):
+            continue
+        hand_over(summary)
+        handed += 1
+    return handed
+
+
 def mind_the_night(vision_did: str = "", now=None) -> str:
     """Every minute, after the vision tick: inside the window, while the
-    night's vision work is not running, the oldest summary marked tonight is
-    handed over, up to the setting's count at once; outside it, as the window
-    closes, the ones still waiting are marked not reached. Returns what it
-    did, in a word."""
+    night's vision work is not running, the oldest summaries marked tonight
+    are handed over, up to the setting's count in flight; outside it, as the
+    window closes, the ones still waiting are marked not reached. Returns
+    what it did, in a word."""
     if not on():
         return "off"
     if not vision.in_window(now):
@@ -269,14 +296,19 @@ def mind_the_night(vision_did: str = "", now=None) -> str:
     if not engine.is_reachable():
         # The engine is away: nothing fails, everything waits for it.
         return "engine away"
-    for summary in waiting():
-        if getattr(summary.recording, "transcript", None) is None:
-            continue
-        if _waits_for_its_picture(summary):
-            continue
-        hand_over(summary)
-        return "queued"
-    return "nothing"
+    return "queued" if hand_over_waiting() else "nothing"
+
+
+def carry_on(now=None) -> int:
+    """One of the night's summaries has finished (v1.134.0): the next waiting
+    one starts now, under the tick's own rules (inside the window, the
+    vision work not running, the engine answering), rather than at the next
+    minute. Returns how many were handed over."""
+    if not on() or not vision.in_window(now) or vision.busy():
+        return 0
+    if running_now() >= at_once() or not engine.is_reachable():
+        return 0
+    return hand_over_waiting()
 
 
 # The mail --------------------------------------------------------------------------

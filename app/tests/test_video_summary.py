@@ -342,16 +342,18 @@ def test_chat_is_told_the_rules_and_cites_the_camera(ready, person, monkeypatch)
     turn.refresh_from_db()
     assert turn.state == assistant.DONE
     system = asked[0]["messages"][0]["content"]
-    assert system.endswith(prompts.CHAT_FORMAT + "\n\n" + prompts.CAMERA_RULES)
+    # The rules sit before the reading, which ends the system message since
+    # v1.134.0 (ADR 0020); the question alone is the last message.
+    assert prompts.CHAT_FORMAT + "\n\n" + prompts.CAMERA_RULES in system
     assert "the camera shows" in system
-    assert prompts.CAMERA_NOTE in asked[0]["messages"][-1]["content"]
+    assert prompts.CAMERA_NOTE in system
     assert turn.citations == {"[00:00:45]": 45.0}
 
     Moment.objects.all().delete()
     second = ChatTurn.objects.create(chat=chat, number=2, question="and then?")
     assistant.answer_turn(second.pk)
     system = asked[1]["messages"][0]["content"]
-    assert prompts.CAMERA_RULES not in system and system.endswith(prompts.CHAT_FORMAT)
+    assert prompts.CAMERA_RULES not in system and prompts.CHAT_FORMAT in system
 
 
 @pytest.mark.django_db

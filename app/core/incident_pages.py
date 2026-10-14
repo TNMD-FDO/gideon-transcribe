@@ -12,6 +12,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -36,7 +37,7 @@ from core import (
 )
 from core.case_pages import _their_case
 from core.incidents import Incident, IncidentCamera
-from core.media_access import media_root
+from core.media_access import playback_url
 from core.recordings import Recording
 from core.viewer import colour_for
 
@@ -187,9 +188,12 @@ def _asked_moment(request, incident: Incident, state: dict) -> float:
     return float(low) if low is not None else 0.0
 
 
-def _others(case, incident: Incident) -> list[dict]:
-    """The case's videos not in this Incident, for Add cameras."""
-    inside = set(incident.cameras.values_list("recording_id", flat=True))
+def _others(case, incident: Incident, cameras=None) -> list[dict]:
+    """The case's videos not in this Incident, for Add cameras; `cameras`
+    is the incident's list when the page loaded it (v1.134.0)."""
+    if cameras is None:
+        cameras = incident.cameras.all()
+    inside = {one.recording_id for one in cameras}
     # One query for every placement in the case (v1.132.0): the row had
     # looked each recording's incident up on every three-second poll.
     elsewhere_by = {
@@ -199,7 +203,9 @@ def _others(case, incident: Incident) -> list[dict]:
         ).select_related("incident")
     }
     rows = []
-    for recording in case.recordings.order_by("title"):
+    # The videos narrowed in SQL (v1.134.0), not every recording of the
+    # case asked twice of the disk on every poll.
+    for recording in incidents.videos_of(case.recordings.order_by("title")):
         if recording.pk in inside or not incidents.is_video(recording):
             continue
         elsewhere = elsewhere_by.get(recording.pk)
@@ -215,9 +221,14 @@ def _others(case, incident: Incident) -> list[dict]:
     return rows
 
 
-def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
+def _camera_json(
+    camera: IncidentCamera, colour: str, on_wall: bool, reading: set | None = None
+) -> dict:
+    """One camera as the page draws it; `reading` is the set of recording
+    ids whose clock is being read, from one query for the incident."""
     recording = camera.recording
-    playback = recording.playback_path() if recording.playback_ready else None
+    if reading is None:
+        reading = incidents.stamp_reading_in([recording.pk])
     words, tone = incidents.stamp_words(recording)
     file_words, _ = incidents.file_time_of(recording)
     return {
@@ -234,7 +245,7 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
         "placed_by": camera.placed_by.shown_name if camera.placed_by else "",
         "placed_at": camera.placed_at.isoformat() if camera.placed_at else "",
         "on_wall": on_wall,
-        "media_url": f"{media_root(recording)}/{playback.name}" if playback else "",
+        "media_url": playback_url(recording),
         "clock": words,
         "clock_tone": tone,
         "file_time": file_words,
@@ -242,7 +253,7 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
         # Confirmed by the second frame (v1.129.3, for Check the clocks).
         "clock_checked": incidents.stamp_checked(recording),
         # A read of the clock waiting or running (v1.101.0).
-        "clock_reading": incidents.stamp_reading(recording),
+        "clock_reading": str(recording.pk) in reading,
         "synced": camera.is_synced(),
         "ends_at": camera.ends_at(),
         # Why the app could not sync it by itself (Phase 6 chapter 5).
@@ -260,9 +271,17 @@ def _camera_json(camera: IncidentCamera, colour: str, on_wall: bool) -> dict:
 
 
 def state_json(incident: Incident, user) -> dict:
-    """Everything the page draws from, in one answer."""
-    incidents.guess_the_unplaced(incident)
-    cameras = list(incident.cameras.select_related("recording", "placed_by"))
+    """Everything the page draws from, in one answer. The cameras come once,
+    with their recordings and transcripts, and every helper that read them
+    again is handed the list (v1.134.0); the clock reads for all of them
+    come from one query."""
+    cameras = list(
+        incident.cameras.select_related(
+            "recording", "recording__transcript", "placed_by"
+        )
+    )
+    incidents.guess_the_unplaced(incident, cameras)
+    reading = incidents.stamp_reading_in([one.recording_id for one in cameras])
     placed = sorted(
         (one for one in cameras if one.is_placed()),
         key=lambda one: (one.starts_at, one.added),
@@ -270,10 +289,10 @@ def state_json(incident: Incident, user) -> dict:
     unplaced = [one for one in cameras if not one.is_placed()]
     ordered = placed + unplaced
     colours = {str(one.pk): colour_for(index) for index, one in enumerate(ordered)}
-    on_wall = [str(one.pk) for one in incidents.wall_of(incident)]
+    on_wall = [str(one.pk) for one in incidents.wall_of(incident, cameras)]
     wall = set(on_wall)
-    low, high = incidents.span_of(incident)
-    placed_words, placed_tone = incidents.placed_words(incident)
+    low, high = incidents.span_of(incident, cameras)
+    placed_words, placed_tone = incidents.placed_words(incident, cameras)
     return {
         "incident": {
             "id": str(incident.pk),
@@ -286,7 +305,7 @@ def state_json(incident: Incident, user) -> dict:
             "clock_checked": incident.clock_checked,
             "span_low": low,
             "span_high": high,
-            "span_words": incidents.span_words(incident),
+            "span_words": incidents.span_words(incident, cameras),
             "placed_words": placed_words,
             "placed_tone": placed_tone,
             "count": len(cameras),
@@ -323,7 +342,7 @@ def state_json(incident: Incident, user) -> dict:
             ),
         },
         "cameras": [
-            _camera_json(one, colours[str(one.pk)], str(one.pk) in wall)
+            _camera_json(one, colours[str(one.pk)], str(one.pk) in wall, reading)
             for one in ordered
         ],
         # The Wall's order, the person's or the clock's (v1.60.1).
@@ -338,7 +357,7 @@ def state_json(incident: Incident, user) -> dict:
                 "tone": one["tone"],
                 "elsewhere": one["elsewhere"],
             }
-            for one in _others(incident.case, incident)
+            for one in _others(incident.case, incident, cameras)
         ],
         # The Chronology (chapter 2).
         "events": chronology.events_json(incident),
@@ -355,9 +374,50 @@ def state_json(incident: Incident, user) -> dict:
     }
 
 
+def busy_json(incident: Incident) -> dict:
+    """Whether anything on the page is still at work, from the same five
+    conditions the full state reports (the proposals, the memo, a clip
+    rendering, a sound match, a clock being read), in three queries
+    (v1.134.0): what the page polls between full states."""
+    from core.clips import RenderState
+
+    busy = incident.proposals_state in (
+        incident_assistant.QUEUED,
+        incident_assistant.RUNNING,
+    )
+    if not busy:
+        busy = (
+            Incident.objects.filter(pk=incident.pk)
+            .filter(
+                Q(
+                    memo__state__in=(
+                        incident_assistant.QUEUED,
+                        incident_assistant.RUNNING,
+                    )
+                )
+                | Q(events__clips__state=RenderState.RENDERING)
+                | Q(
+                    cameras__match_state__in=(
+                        incidents.MATCH_QUEUED,
+                        incidents.MATCH_RUNNING,
+                    )
+                )
+            )
+            .exists()
+        )
+    if not busy:
+        ids = list(incident.cameras.values_list("recording_id", flat=True))
+        busy = bool(incidents.stamp_reading_in(ids))
+    return {"busy": busy}
+
+
 @login_required
 def state(request: HttpRequest, case_id, incident_id) -> JsonResponse:
+    """The page's state; with ?what=busy, only whether anything is still at
+    work (v1.134.0), for the poll between full states."""
     _, incident = _incident(request, case_id, incident_id)
+    if request.GET.get("what") == "busy":
+        return JsonResponse(busy_json(incident))
     return JsonResponse(state_json(incident, request.user))
 
 

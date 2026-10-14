@@ -1,4 +1,5 @@
-// The Queue page: every job, and a cancel on the ones still running.
+// The Queue page: every job, and a cancel on the ones still running. Read
+// again every five seconds while someone is looking (v1.134.0).
 
 (function () {
   "use strict";
@@ -44,17 +45,21 @@
       fetch("/panel/queue/" + button.dataset.job + "/cancel", {
         method: "POST",
         headers: { "X-CSRFToken": cookie("csrftoken") }
-      }).then(ask);
+      }).then(function () { polling.now(); });
     });
   });
 
   function ask() {
-    fetch("/panel/queue/state")
+    return fetch("/panel/queue/state")
       .then(function (answer) { return answer.json(); })
-      .then(function (state) { draw(state); })
-      .catch(function () { /* the next ask will find it */ })
-      .then(function () { window.setTimeout(ask, EVERY); });
+      .then(function (state) { draw(state); });
   }
 
-  ask();
+  // The reading is UI.poll's (v1.134.0): nothing while the tab is hidden,
+  // at once when it comes back, slower as the page is left alone, and after
+  // an hour it stops and the line under the lead says so until a click.
+  var pausedLine = document.getElementById("poll-paused");
+  var polling = window.UI.poll(ask, EVERY, {
+    paused: function (isPaused) { if (pausedLine) { pausedLine.hidden = !isPaused; } }
+  });
 })();

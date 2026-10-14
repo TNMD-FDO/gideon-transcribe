@@ -208,13 +208,15 @@ def test_one_reading_sends_the_people_the_headers_and_the_template(
     assert call["max_completion_tokens"] == case_chat.PART_CAP
     system = call["messages"][0]["content"]
     assert prompts.CASE_CHAT in system and prompts.CASE_CHAT_FORMAT in system
-    user = call["messages"][-1]["content"]
+    # The reading sits at the end of the system message, ahead of the chat
+    # so far, and the question is the last message alone (v1.134.0, ADR 0020).
+    user = system[system.index("People in this case") :]
+    assert call["messages"][-1]["content"] == "What colour was the car?"
     assert user.startswith("People in this case: Maria Lopez (Client)")
     assert "Recording 1 of 2: Jail call 1, Jail call, uploaded" in user
     assert "Recording 2 of 2: Jail call 2" in user
     assert "machine transcription in English, speakers separated automatically" in user
     assert "[1] [00:00:00] Speaker 1: This is Jail call 1" in user
-    assert user.rstrip().endswith("What colour was the car?")
 
     turn = CaseChatTurn.objects.get()
     assert turn.state == "done" and turn.parts == 0
@@ -266,7 +268,7 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
 
     def by_the_question(messages, **options):
         asked.append({"messages": messages, **options})
-        user = messages[-1]["content"]
+        user = " ".join(str(m["content"]) for m in messages)
         text = next(answer for key, answer in by_content.items() if key in user)
         return {
             "text": text,
@@ -295,12 +297,12 @@ def test_a_case_read_in_parts_asks_each_part_then_combines(
     # as disagreement (v1.87.0).
     assert "not a disagreement" in prompts.COMBINING
     # Each part was told which recordings it holds (v1.87.0).
-    parts_asked = [one["messages"][-1]["content"] for one in asked[:3]]
+    parts_asked = [one["messages"][0]["content"] for one in asked[:3]]
     assert all("This is part " in one for one in parts_asked)
+    # The part line opens the reading, after the system message's own part.
     assert any(
-        one.startswith(
-            "This is part 2 of 3 of the case's recordings: it holds Recording 2 of 3."
-        )
+        "\n\nThis is part 2 of 3 of the case's recordings: it holds Recording 2 of 3."
+        in one
         for one in parts_asked
     )
     turn.refresh_from_db()
@@ -380,7 +382,7 @@ def test_an_incidents_cameras_are_read_as_one_record(
     case_chat.answer_case_turn(turn.pk)
 
     assert len(asked) == 1
-    user = asked[0]["messages"][-1]["content"]
+    user = asked[0]["messages"][0]["content"]
     # Every recording keeps its header; the incident's two cameras are one item.
     for n in (1, 2, 3):
         assert f"Recording {n} of 3" in user
@@ -408,7 +410,9 @@ def test_an_incidents_cameras_are_read_as_one_record(
     # The model is told what the record's marks mean and that the picture
     # belongs in an account of what happened (v1.87.1).
     system = asked[0]["messages"][0]["content"]
-    assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
+    assert prompts.CAMERA_RULES in system and prompts.RECORD_RULES in system
+    # The rules end the system message's own part; the reading follows them.
+    assert system.index(prompts.RECORD_RULES) < system.index("Recording 1 of 3")
     assert "(seen) is what the camera showed" in prompts.RECORD_RULES
     # In a list, a line from the picture begins with Camera: (v1.87.2), and
     # each line carries its own line's reference (v1.87.3).
@@ -438,7 +442,7 @@ def test_a_cameras_words_go_alone_when_the_record_would_not_fit_a_reading(
     case_chat.answer_case_turn(turn.pk)
 
     assert len(asked) == 1
-    user = asked[0]["messages"][-1]["content"]
+    user = asked[0]["messages"][0]["content"]
     assert "the words alone of BWC2-1" in user
     assert "[Recording 2, 00:00:30] Officer Hale: Hands where I can see them." in user
     assert "(seen) A long description" not in user

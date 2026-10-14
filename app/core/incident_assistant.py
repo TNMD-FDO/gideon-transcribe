@@ -786,12 +786,37 @@ def _taken(camera, *groups) -> list[float]:
     return [one.at for group in groups for one in group if one.camera_id == camera.pk]
 
 
-def _known(incident, standing: list, made: list) -> list[str]:
+def _known(
+    incident, standing: list, made: list, within: tuple[float, float] | None = None
+) -> list[str]:
+    """The events a window's head lists: those that stand and those made so
+    far, within the window's span on the incident clock when one is given
+    (v1.134.0: every window of a long incident used to carry the whole
+    chronology and every proposal made before it)."""
     return [
         f"{_clock(incident, one.at)} {one.text}"
         + (f" (the office's note: {one.note})" if one.note else "")
         for one in sorted([*standing, *made], key=lambda one: one.at)
+        if within is None or within[0] <= one.at <= within[1]
     ]
+
+
+def _window_span(camera, window: list[str], seconds: int) -> tuple[float, float] | None:
+    """A window's span on the incident clock, with a margin of one window
+    either side (v1.134.0), from the first and last times its lines carry;
+    none when no line carries a time."""
+    stamped = [found for found in (STAMP.search(line) for line in window) if found]
+    if not stamped:
+        return None
+
+    def at(found) -> float:
+        return float(
+            int(found.group(1)) * 3600 + int(found.group(2)) * 60 + int(found.group(3))
+        )
+
+    first, last = at(stamped[0]), at(stamped[-1])
+    margin = float(max(seconds, 1))
+    return (camera.starts_at + first - margin, camera.starts_at + last + margin)
 
 
 def propose(incident_id, attempt: int = 1) -> None:
@@ -949,6 +974,8 @@ def propose(incident_id, attempt: int = 1) -> None:
                 windows += 1
                 kept_here = 0
                 mine: list[str] = []
+                # The head lists only the events near this window (v1.134.0).
+                span = _window_span(camera, window, window_seconds)
                 for look in ("first", "second"):
                     if kept_here >= most:
                         break
@@ -960,7 +987,7 @@ def propose(incident_id, attempt: int = 1) -> None:
                         _clock_words(incident, camera.starts_at),
                         _clock_words(incident, camera.ends_at()),
                         nature,
-                        _known(incident, standing, [*pending, *made]),
+                        _known(incident, standing, [*pending, *made], within=span),
                         context=context,
                         look_for=look_for,
                     )

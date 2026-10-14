@@ -107,11 +107,12 @@ class Case(models.Model):
         return self.deleted_on is not None
 
     def disk_bytes(self) -> int:
-        if not self.folder.exists():
-            return 0
-        return sum(
-            path.stat().st_size for path in self.folder.rglob("*") if path.is_file()
-        )
+        """The Case's Recordings' kept sizes and its documents', summed in two
+        queries (v1.134.0); a Recording never measured is measured first."""
+        from core.recordings import summed_disk_bytes
+
+        documents = self.documents.aggregate(total=models.Sum("size_bytes"))["total"]
+        return summed_disk_bytes(self.recordings.all()) + (documents or 0)
 
     def member(self, user) -> str:
         """What this person is inside the Case: "owner", "collaborator", or "".

@@ -12,6 +12,7 @@ import io
 import zipfile
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q
 from django.http import (
     Http404,
     HttpRequest,
@@ -131,8 +132,14 @@ def cases_page(request: HttpRequest) -> HttpResponse:
         if request.GET.get("who") == "everyone" and request.user.is_admin
         else "mine"
     )
+    shown = list((others if who == "everyone" else mine).select_related("owner"))
+    # The rows' counts and the person's shares for every case at once
+    # (v1.134.0), not a handful of queries per row.
+    counts = dashboard.counts_for(shown, request.user)
+    shares = shares_of(request.user, shown)
     rows = [
-        _as_row(one, request.user) for one in (others if who == "everyone" else mine)
+        _as_row(one, request.user, counts.get(one.pk), shares.get(one.pk))
+        for one in shown
     ]
     if expiring:
         rows = [one for one in rows if one["warned"]]
@@ -157,19 +164,43 @@ def cases_page(request: HttpRequest) -> HttpResponse:
     )
 
 
-def _as_row(case: Case, viewer=None) -> dict:
+def shares_of(viewer, cases) -> dict:
+    """The viewer's Shares on these cases in one query, by case id (v1.134.0):
+    what a row says about who shared it and whether it is New."""
+    if viewer is None or not sharing.on():
+        return {}
+    ids = [one.pk for one in cases if one.owner_id != viewer.pk]
+    if not ids:
+        return {}
+    return {
+        one.case_id: one
+        for one in sharing.Share.objects.filter(person=viewer, case_id__in=ids)
+    }
+
+
+def _as_row(case: Case, viewer=None, counts: dict | None = None, share=None) -> dict:
+    """A case's row on Home and the Cases page. With `counts` (its row from
+    dashboard.counts_for) and `share` (from shares_of) nothing is asked of
+    the database; without them the row asks for itself (v1.134.0)."""
     left = retention.days_left(case)
     # A Case shared with the person carries its owner's name and is New until
     # they first open it; the Share remembers.
-    share = None
-    if viewer is not None and case.owner_id != viewer.pk and sharing.on():
+    if (
+        share is None
+        and counts is None
+        and viewer is not None
+        and case.owner_id != viewer.pk
+        and sharing.on()
+    ):
         share = case.shares.filter(person=viewer).first()
+    if counts is None:
+        counts = dashboard.counts_for([case], viewer)[case.pk]
     return {
         "case": case,
         "shared_by": case.owner.shown_name if share is not None else "",
         "is_new": share is not None and share.last_opened is None,
-        "recordings": case.recordings.count(),
-        "size": uploads.as_size(case.disk_bytes()),
+        "recordings": counts["recordings"],
+        "size": uploads.as_size(counts["size_bytes"]),
         "opens_at": opens_at(case),
         # The Retention warning: the amber mark and its line, computed at
         # every page load so the Warning setting takes effect at once, and
@@ -265,6 +296,11 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # The tools fold away until the case uses assignment (v1.121.2): an
     # incident reviewed by one person never sees ticks, a bar and five pills.
     tools_open = any(one.assigned_to_id for one in rows) or bool(who or state)
+    # The dashboard line's counts once (v1.134.0): the pills and the size
+    # read the same figures.
+    counts = dashboard.counts_for([case], request.user)[case.pk]
+    # The videos not yet enriched, read once for the line and the offer.
+    unenriched = vision.unenriched(case)
 
     return render(
         request,
@@ -334,8 +370,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 if may_direct
                 else []
             ),
-            "vision_line": vision.line(case),
-            "vision_pending": vision.pending(case),
+            "vision_line": vision.line(case, unenriched),
+            "vision_pending": bool(unenriched),
             "vision_offers": vision.offers(case, user=request.user),
             # Summaries tonight (Phase 9 chapter 5): the line and the offer.
             "summaries_line": summaries_tonight.line(case),
@@ -349,9 +385,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 else None
             ),
             # The dashboard line (Phase 7 chapter 3).
-            "pills": dashboard.pills(case, role, request.user),
+            "pills": dashboard.pills(case, role, request.user, counts),
             "types": cases.recording_types(),
-            "size": uploads.as_size(case.disk_bytes()),
+            "size": uploads.as_size(counts["size_bytes"]),
             # Incidents (Phase 6 chapter 1): the strip under the case name,
             # the offers, and the videos New incident lists.
             **_incidents_context(case),
@@ -395,7 +431,9 @@ def _incidents_context(case: Case) -> dict:
         incident__case=case
     ).select_related("incident"):
         cameras.setdefault(camera.recording_id, camera)
-    for recording in case.recordings.order_by("created"):
+    # The videos narrowed in SQL and settled from the probe (v1.134.0): the
+    # page had asked the disk twice for every recording in the case.
+    for recording in incidents.videos_of(case.recordings.order_by("created")):
         if not incidents.is_video(recording):
             continue
         words, tone = incidents.stamp_words(recording)
@@ -476,27 +514,37 @@ def _speakers_tab(case: Case) -> dict:
     shown["people_count"] = len(shown["people"])
     # A voice named across the case (Phase 9 chapter 2).
     shown["side_rule"] = vocabulary.side_rule(case)
-    shown["two_channel_count"] = case.recordings.filter(
-        is_two_channel_call=True
-    ).count()
-    # The calls the rule cannot reach: a single track with both voices in it
-    # has no Sides, and which voice is which is not fixed by position.
-    shown["single_channel_calls"] = case.recordings.filter(
-        is_two_channel_call=False, recording_type__iexact="Jail call"
-    ).count()
+    # The two counts in one query (v1.134.0). The calls the rule cannot
+    # reach: a single track with both voices in it has no Sides, and which
+    # voice is which is not fixed by position.
+    calls = case.recordings.aggregate(
+        two=Count("id", filter=Q(is_two_channel_call=True)),
+        single=Count(
+            "id",
+            filter=Q(is_two_channel_call=False, recording_type__iexact="Jail call"),
+        ),
+    )
+    shown["two_channel_count"] = calls["two"]
+    shown["single_channel_calls"] = calls["single"]
     # The recordings with unnamed speakers, the longest talkers first, each
     # with its minutes of talk (v1.89.0, from the walk): a person naming
     # twelve cameras starts where the naming pays most.
-    ordered = []
-    for recording, count in shown["unnamed"]:
-        transcript = getattr(recording, "transcript", None)
-        seconds = 0.0
-        if transcript is not None:
-            seconds = sum(
-                float(one.end) - float(one.start)
-                for one in transcript.segments.only("start", "end")
-            )
-        ordered.append((recording, count, int(round(seconds / 60))))
+    from django.db.models import F, Sum
+
+    # The talk per recording in one query (v1.134.0), not every line of each.
+    talk = {
+        row["transcript__recording_id"]: float(row["seconds"] or 0.0)
+        for row in Segment.objects.filter(
+            transcript__recording_id__in=[one.pk for one, _ in shown["unnamed"]]
+        )
+        .values("transcript__recording_id")
+        .order_by()
+        .annotate(seconds=Sum(F("end") - F("start")))
+    }
+    ordered = [
+        (recording, count, int(round(talk.get(recording.pk, 0.0) / 60)))
+        for recording, count in shown["unnamed"]
+    ]
     ordered.sort(key=lambda one: (-one[2], -one[1]))
     shown["unnamed"] = ordered
     return shown
@@ -576,8 +624,6 @@ def _rows_for(case: Case, names: dict | None = None) -> list:
     """
     from collections import defaultdict
 
-    from django.db.models import Count
-
     from core import assistant, incidents
     from core.clips import Clip
     from core.jobs import Job
@@ -627,6 +673,9 @@ def _rows_for(case: Case, names: dict | None = None) -> list:
         .annotate(n=Count("id"))
         .values_list("recording_id", "n")
     )
+    # The case's open and declined vision requests once (v1.134.0), not two
+    # questions per video.
+    requests = vision.requests_of(case) if vision_on else None
 
     rows = []
     for one in recordings:
@@ -663,10 +712,13 @@ def _rows_for(case: Case, names: dict | None = None) -> list:
         if transcript is not None:
             # The transcript came with the recording; spare its way back.
             transcript.recording = one
+        # Whether it has a picture, from the probe (v1.134.0), not the disk.
         is_eligible = bool(
-            vision_on and transcript is not None and assistant.has_picture(one)
+            vision_on and transcript is not None and incidents.is_video(one)
         )
-        one.prepare_word, one.prepare_tone = vision.words(transcript, is_eligible)
+        one.prepare_word, one.prepare_tone = vision.words(
+            transcript, is_eligible, requests
+        )
         one.vision_state = getattr(transcript, "prepare_state", "")
         one.vision_offered = is_eligible
         # The Clock in the picture and Incident columns (Phase 6 chapter 1).
@@ -900,12 +952,16 @@ def what_would_go(request: HttpRequest, case_id) -> JsonResponse:
 
 
 def _counts_of(case: Case) -> dict:
+    """What a Delete names: counts and the kept sizes (v1.134.0), never a
+    question per recording."""
+    from core.clips import Clip
+
     recordings = case.recordings.all()
     return {
         "name": case.name,
         "recordings": recordings.count(),
-        "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
-        "clips": sum(one.clips.count() for one in recordings),
+        "transcripts": recordings.filter(transcript__isnull=False).count(),
+        "clips": Clip.objects.filter(recording__in=recordings).count(),
         "chats": case.chats.count(),
         "size": uploads.as_size(case.disk_bytes()),
     }
@@ -1144,15 +1200,16 @@ def download_case(request: HttpRequest, case_id) -> HttpResponse:
     _on_or_404()
     case = _their_case(request, case_id)
 
-    body, included = exports.transcripts_zip(
+    bundle, included = exports.transcripts_zip(
         case.recordings.select_related("transcript", "user").order_by("created")
     )
     for one in included:
         exports.record_export(request, one, "transcript text")
 
     cases.note_activity(case, by=request.user)
-    return exports.hand_over(
-        body, exports.zip_name(f"{case.name} transcripts"), "application/zip"
+    # Streamed from the spool the zip was built in (v1.134.0).
+    return exports.hand_over_file(
+        bundle, exports.zip_name(f"{case.name} transcripts"), "application/zip"
     )
 
 

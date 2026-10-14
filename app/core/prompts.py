@@ -1504,6 +1504,19 @@ CHARS_PER_TOKEN = 4
 # The margin as a fraction in whole numbers, so the estimate is exact arithmetic
 # and 400 characters is 110 tokens rather than a float a hair over it.
 MARGIN_NUMERATOR, MARGIN_DENOMINATOR = 11, 10
+# What a rendered line's opening, "[1234] [01:16:07]", costs the engine
+# (v1.134.0): the Qwen family reads every digit and bracket as a token of
+# its own, so the opening is about eighteen tokens where four characters a
+# token would say five. Counted once per line wherever a rendered
+# transcript is sized, in tokens() below; before this a three-hour
+# transcript was undercounted by about a quarter.
+LINE_PREFIX_TOKENS = 18
+RENDERED_LINE = re.compile(r"^\[\d+\] \[\d{2}:\d{2}:\d{2}\]", re.MULTILINE)
+# An incident record's line opens with the camera and the time on the
+# incident clock, "BWC2-1: [21:56:27]", about fourteen tokens the same way;
+# the memo's Sitting and the comparison size the record by this.
+RECORD_PREFIX_TOKENS = 14
+RECORD_LINE = re.compile(r"^[\w-]{1,24}: \[\d{2}:\d{2}:\d{2}\]", re.MULTILINE)
 ENGINE_WINDOW = 131072
 
 SUGGESTIONS_SCHEMA = {
@@ -1811,10 +1824,34 @@ def salvage_json(text: str) -> str:
 
 
 def tokens(text: str) -> int:
-    """The app's own estimate of a text's size, never the engine's count."""
-    return math.ceil(
-        len(text) * MARGIN_NUMERATOR / (CHARS_PER_TOKEN * MARGIN_DENOMINATOR)
+    """The app's own estimate of a text's size, never the engine's count.
+
+    Four characters a token with the margin, except a rendered line's
+    opening, which is counted at LINE_PREFIX_TOKENS apiece (v1.134.0). This
+    is the one place a rendered transcript is sized: every fit, every
+    Reading packed, every window cut and every expectation reads it.
+    """
+    openings = RENDERED_LINE.findall(text)
+    record_openings = RECORD_LINE.findall(text)
+    opening_chars = sum(len(one) for one in openings) + sum(
+        len(one) for one in record_openings
     )
+    return (
+        math.ceil(
+            (len(text) - opening_chars)
+            * MARGIN_NUMERATOR
+            / (CHARS_PER_TOKEN * MARGIN_DENOMINATOR)
+        )
+        + len(openings) * LINE_PREFIX_TOKENS
+        + len(record_openings) * RECORD_PREFIX_TOKENS
+    )
+
+
+def line_tokens(lines: int) -> int:
+    """What the openings of this many rendered lines cost on their own, for
+    a caller that sizes a transcript by its count of lines rather than its
+    text (v1.134.0)."""
+    return max(0, lines) * LINE_PREFIX_TOKENS
 
 
 def clock(seconds: float) -> str:

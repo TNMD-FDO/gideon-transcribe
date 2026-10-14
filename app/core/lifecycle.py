@@ -148,13 +148,15 @@ def counts(user) -> dict:
     the day they arrive.
     """
     from core.clips import Clip
+    from core.recordings import summed_disk_bytes
 
+    # Counts and a summed size (v1.134.0): the dialog had loaded every
+    # recording to ask each for its transcript and walk its folder.
     recordings = in_the_workspace(user)
-    done = [one for one in recordings if hasattr(one, "transcript")]
     clips = Clip.objects.filter(recording__user=user)
     return {
         "recordings": recordings.count(),
-        "transcripts": len(done),
+        "transcripts": recordings.filter(transcript__isnull=False).count(),
         "summaries": 0,
         "chats": 0,
         "clips": clips.count(),
@@ -166,7 +168,7 @@ def counts(user) -> dict:
         "running": Job.objects.filter(
             recording__user=user, state__in=JobState.LIVE
         ).count(),
-        "gigabytes": round(sum(one.disk_bytes() for one in recordings) / (1024**3), 1),
+        "gigabytes": round(summed_disk_bytes(recordings) / (1024**3), 1),
     }
 
 

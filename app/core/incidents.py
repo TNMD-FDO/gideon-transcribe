@@ -258,16 +258,42 @@ class IncidentCamera(models.Model):
 
 
 def is_video(recording) -> bool:
-    """A recording with a picture, from the copy when there is one, else the probe."""
+    """A recording with a picture: from the probe, which every checked
+    upload carries, and from the copy on disk only for a row whose probe
+    says nothing (v1.134.0: the case page and the incident poll had asked
+    the disk twice per recording)."""
     from core import media
 
+    probe = recording.probe or {}
+    if probe.get("streams"):
+        try:
+            return media.video_stream(probe) is not None
+        except Exception:  # noqa: BLE001 - an odd probe is not a picture
+            return False
     playback = recording.playback_path()
     if playback is not None:
         return playback.suffix == ".mp4"
-    try:
-        return media.video_stream(recording.probe or {}) is not None
-    except Exception:  # noqa: BLE001 - an odd probe is not a picture
-        return False
+    return False
+
+
+def videos_of(recordings):
+    """These recordings narrowed to the ones that may have a picture, in
+    SQL (v1.134.0): a probe with a video stream, or one that says nothing
+    about its streams, which is_video then settles row by row."""
+    from django.db.models import Q
+
+    return recordings.filter(
+        Q(probe__streams__contains=[{"codec_type": "video"}])
+        | ~Q(probe__has_key="streams")
+    )
+
+
+def playback_name(recording) -> str:
+    """The playback copy's file name from the record, never the disk:
+    mp4 for a picture, m4a for sound alone; "" until the copy is ready."""
+    if not recording.playback_ready:
+        return ""
+    return "playback.mp4" if is_video(recording) else "playback.m4a"
 
 
 def clock_zero_of(recording) -> float | None:
@@ -739,10 +765,12 @@ def rounds_line(got: dict) -> str:
     )
 
 
-def guess_the_unplaced(incident: Incident) -> None:
+def guess_the_unplaced(incident: Incident, cameras=None) -> None:
     """Cameras added before v1.60.0 with no place yet get the guess when the
-    page next draws them."""
-    for camera in incident.cameras.select_related("recording"):
+    page next draws them; `cameras` is the list the page loaded."""
+    if cameras is None:
+        cameras = incident.cameras.select_related("recording")
+    for camera in cameras:
         if not camera.is_placed():
             guess(camera)
 
@@ -1142,25 +1170,19 @@ def _first_side_audio(recording):
 # The clock's words and the page's state ----------------------------------------------
 
 
-def span_of(incident: Incident) -> tuple[float | None, float | None]:
-    """Where the placed cameras start and end on the Incident clock."""
-    starts = [
-        one.starts_at
-        for one in incident.cameras.select_related("recording")
-        if one.is_placed()
-    ]
-    ends = [
-        one.ends_at()
-        for one in incident.cameras.select_related("recording")
-        if one.is_placed()
-    ]
-    if not starts:
+def span_of(incident: Incident, cameras=None) -> tuple[float | None, float | None]:
+    """Where the placed cameras start and end on the Incident clock;
+    `cameras` is the incident's list when the page loaded it (v1.134.0)."""
+    if cameras is None:
+        cameras = incident.cameras.select_related("recording")
+    placed = [one for one in cameras if one.is_placed()]
+    if not placed:
         return None, None
-    return min(starts), max(ends)
+    return min(one.starts_at for one in placed), max(one.ends_at() for one in placed)
 
 
-def span_words(incident: Incident) -> str:
-    low, high = span_of(incident)
+def span_words(incident: Incident, cameras=None) -> str:
+    low, high = span_of(incident, cameras)
     if low is None:
         return "no camera placed"
     if incident.clock_zero is None:
@@ -1169,8 +1191,12 @@ def span_words(incident: Incident) -> str:
     return f"{date}{time_of_day(incident, low)} to {time_of_day(incident, high)}"
 
 
-def placed_words(incident: Incident) -> tuple[str, str]:
-    cameras = list(incident.cameras.select_related("recording"))
+def placed_words(incident: Incident, cameras=None) -> tuple[str, str]:
+    """ "3 of 4 synced", and the pill's tone; `cameras` is the incident's
+    list when the page loaded it already (v1.134.0)."""
+    if cameras is None:
+        cameras = list(incident.cameras.all())
+    cameras = list(cameras)
     synced = sum(1 for one in cameras if one.is_synced())
     if not cameras:
         return "no cameras", "warn"
@@ -1179,20 +1205,37 @@ def placed_words(incident: Incident) -> tuple[str, str]:
 
 
 def strip_rows(case) -> list[dict]:
-    """The case page's Incidents strip, one line per Incident."""
-    from core import incident_assistant, sitting
+    """The case page's Incidents strip, one line per Incident. The cameras
+    and the event counts for every incident at once (v1.134.0)."""
+    from django.db.models import Count
 
+    from core import incident_assistant, sitting
+    from core.chronology import Event
+
+    cameras: dict = {}
+    for camera in IncidentCamera.objects.filter(incident__case=case).select_related(
+        "recording"
+    ):
+        cameras.setdefault(camera.incident_id, []).append(camera)
+    events = {
+        row["incident"]: row["n"]
+        for row in Event.objects.filter(incident__case=case, proposed=False)
+        .order_by()
+        .values("incident")
+        .annotate(n=Count("id"))
+    }
     rows = []
     for incident in case.incidents.all():
-        words, tone = placed_words(incident)
+        own = cameras.get(incident.pk, [])
+        words, tone = placed_words(incident, own)
         rows.append(
             {
                 "incident": incident,
-                "cameras": incident.cameras.count(),
-                "span": span_words(incident),
+                "cameras": len(own),
+                "span": span_words(incident, own),
                 "placed": words,
                 "tone": tone,
-                "events": incident.events.filter(proposed=False).count(),
+                "events": events.get(incident.pk, 0),
                 "memo": incident_assistant.memo_line(incident),
                 "url": incident.url(),
                 # The sitting in small (Phase 8 chapter 10), from the kept shares.
@@ -1261,14 +1304,13 @@ def links_in(case) -> dict:
     return links
 
 
-def wall_of(incident: Incident) -> list[IncidentCamera]:
-    """The cameras on the Wall, in the person's order or the clock's."""
+def wall_of(incident: Incident, cameras=None) -> list[IncidentCamera]:
+    """The cameras on the Wall, in the person's order or the clock's;
+    `cameras` is the incident's list when the page loaded it (v1.134.0)."""
+    if cameras is None:
+        cameras = incident.cameras.select_related("recording")
     placed = sorted(
-        (
-            one
-            for one in incident.cameras.select_related("recording")
-            if one.is_placed()
-        ),
+        (one for one in cameras if one.is_placed()),
         key=lambda one: (one.starts_at, one.added),
     )
     by_id = {str(one.pk): one for one in placed}
@@ -1325,16 +1367,28 @@ def read_again(recording, *, by) -> bool:
 def stamp_reading(recording) -> bool:
     """Whether a read of this recording's clock is waiting or running, from
     the queue's own table; no on a table that cannot be read."""
+    return str(recording.pk) in stamp_reading_in([recording.pk])
+
+
+def stamp_reading_in(recording_ids) -> set[str]:
+    """The ids, as strings, of these recordings whose clock is being read,
+    in one query for all of them (v1.134.0); none on a table that cannot
+    be read."""
+    if not recording_ids:
+        return set()
     try:
         from procrastinate.contrib.django.models import ProcrastinateJob
 
-        return ProcrastinateJob.objects.filter(
-            task_name="read_stamp_again",
-            status__in=("todo", "doing"),
-            args__recording_id=str(recording.pk),
-        ).exists()
+        return {
+            str(one.get("recording_id", ""))
+            for one in ProcrastinateJob.objects.filter(
+                task_name="read_stamp_again",
+                status__in=("todo", "doing"),
+                args__recording_id__in=[str(one) for one in recording_ids],
+            ).values_list("args", flat=True)
+        }
     except Exception:  # noqa: BLE001 - the table is the queue's, not the app's
-        return False
+        return set()
 
 
 def read_early(recording) -> None:

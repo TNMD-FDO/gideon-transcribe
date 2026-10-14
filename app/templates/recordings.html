@@ -65,7 +65,7 @@
                     <td>{% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                     <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span></td>
                     <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
-                    <td>{% if recording.clips.count %}{{ recording.clips.count }}{% endif %}</td>
+                    <td>{% if recording.clips_count %}{{ recording.clips_count }}{% endif %}</td>
                     <td class="muted">{{ recording.batch.created|date:"j M" }}, {{ recording.batch.created|time:"g:i a" }}</td>
                     <td class="acts">
                       {% if recording.transcript %}
@@ -90,7 +90,7 @@
                             <dd>Two-channel call, {{ recording.sides.count }} sides, each transcribed on its own</dd>
                           {% endif %}
                           <dt>Clips</dt>
-                          <dd>{{ recording.clips.count }}</dd>
+                          <dd>{{ recording.clips_count }}</dd>
                         </dl>
                         <div class="row actions">
                           {% if recording.transcript %}
@@ -119,7 +119,7 @@
                           <button type="button" class="ghost small danger delete"
                                   data-recording="{{ recording.pk }}"
                                   data-title="{{ recording.title }}"
-                                  data-clips="{{ recording.clips.count }}">Delete</button>
+                                  data-clips="{{ recording.clips_count }}">Delete</button>
                         </div>
                       </div>
                     </td>

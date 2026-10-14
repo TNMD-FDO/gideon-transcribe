@@ -81,7 +81,7 @@ class Submitted:
 def _request(
     method: str,
     path: str,
-    body: bytes | None = None,
+    body: bytes | StreamedBody | None = None,
     content_type: str | None = None,
     timeout: int = ASK_TIMEOUT,
     lane: str = "",
@@ -92,6 +92,10 @@ def _request(
     request.add_header("Authorization", f"Bearer {settings.WHISPERX_TOKEN}")
     if content_type:
         request.add_header("Content-Type", content_type)
+    if isinstance(body, StreamedBody):
+        # A body read from the file as it is sent needs its length said up
+        # front (v1.134.0); urllib works it out for bytes alone.
+        request.add_header("Content-Length", str(body.size))
 
     try:
         with urllib.request.urlopen(request, timeout=timeout) as answer:
@@ -136,26 +140,53 @@ def is_alive(lane: str = "") -> bool:
         return False
 
 
-def _multipart(audio: Path, request: dict[str, Any]) -> tuple[bytes, str]:
+# How much of the audio file is read and sent at a time.
+SEND_CHUNK = 1024 * 1024
+
+
+class StreamedBody:
+    """A multipart body sent from the file rather than from memory (v1.134.0).
+
+    The body used to be built whole with read_bytes() and b"".join(), so a
+    460 MB WAV became about a gigabyte in the worker before a byte was sent.
+    urllib takes any iterable of bytes as a request body once its length is
+    given, so this yields the head, then the file a megabyte at a time, then
+    the tail, and knows its size without reading anything.
+    """
+
+    def __init__(self, head: bytes, audio: Path, tail: bytes) -> None:
+        self.head = head
+        self.audio = audio
+        self.tail = tail
+        self.size = len(head) + audio.stat().st_size + len(tail)
+
+    def __iter__(self):
+        yield self.head
+        with self.audio.open("rb") as handle:
+            yield from iter(lambda: handle.read(SEND_CHUNK), b"")
+        yield self.tail
+
+    def read_all(self) -> bytes:
+        """The whole body, for a test or a log; the send never calls this."""
+        return b"".join(self)
+
+
+def _multipart(audio: Path, request: dict[str, Any]) -> tuple[StreamedBody, str]:
     """The submit body: the audio, and the settings beside it.
 
     Built by hand rather than with a library, because it is two parts and one
-    boundary, and a dependency for that is a dependency to keep pinned.
+    boundary, and a dependency for that is a dependency to keep pinned. The
+    audio part is streamed from the file, never held whole.
     """
     boundary = f"----gideon{uuid.uuid4().hex}"
-    pieces = [
-        (
-            f'--{boundary}\r\nContent-Disposition: form-data; name="request"\r\n'
-            f"Content-Type: application/json\r\n\r\n{json.dumps(request)}\r\n"
-        ).encode(),
-        (
-            f'--{boundary}\r\nContent-Disposition: form-data; name="audio"; '
-            f'filename="side.wav"\r\nContent-Type: audio/wav\r\n\r\n'
-        ).encode(),
-        audio.read_bytes(),
-        f"\r\n--{boundary}--\r\n".encode(),
-    ]
-    return b"".join(pieces), f"multipart/form-data; boundary={boundary}"
+    head = (
+        f'--{boundary}\r\nContent-Disposition: form-data; name="request"\r\n'
+        f"Content-Type: application/json\r\n\r\n{json.dumps(request)}\r\n"
+        f'--{boundary}\r\nContent-Disposition: form-data; name="audio"; '
+        f'filename="side.wav"\r\nContent-Type: audio/wav\r\n\r\n'
+    ).encode()
+    tail = f"\r\n--{boundary}--\r\n".encode()
+    return StreamedBody(head, audio, tail), f"multipart/form-data; boundary={boundary}"
 
 
 def submit(audio: Path, request: dict[str, Any], lane: str = "") -> Submitted:
@@ -221,6 +252,26 @@ def jobs(lane: str = "") -> list[dict[str, Any]]:
     raise ServiceError(f"the service answered {status}", "service_refused")
 
 
+def status_of(job_id: str, lane: str = "") -> dict[str, Any] | None:
+    """One job's status body, or None when the service has no such job.
+
+    Asked before a Run absent from the list is counted as missing
+    (v1.134.0): the list is complete for queued and running jobs now, but
+    one more question for the one Run costs nothing against failing a Job
+    the service is still transcribing.
+    """
+    status, answer = _request("GET", f"/v1/jobs/{job_id}", lane=lane)
+    if status == 200 and isinstance(answer, dict) and answer.get("state"):
+        return answer
+    if status == 404:
+        return None
+    if status == 401:
+        raise ServiceError(
+            "the service does not know this app's token", "service_refused"
+        )
+    raise ServiceError(f"the service answered {status}", "service_refused")
+
+
 def result(job_id: str, lane: str = "") -> dict[str, Any]:
     """The finished result, or why there is not one."""
     status, answer = _request(
@@ -251,9 +302,11 @@ def delete(job_id: str, lane: str = "") -> None:
         log.warning("could not delete service job %s", job_id)
 
 
-def status(lane: str = "") -> dict[str, Any]:
-    """What the service says about itself, for the admin status page."""
-    code, answer = _request("GET", "/v1/status", lane=lane)
+def status(lane: str = "", timeout: int | None = None) -> dict[str, Any]:
+    """What the service says about itself, for the admin status page. A page
+    asks with a short timeout (v1.134.0), never the hand-over's long one."""
+    extra = {"timeout": timeout} if timeout else {}
+    code, answer = _request("GET", "/v1/status", lane=lane, **extra)
     if code == 200 and answer:
         return answer
     raise ServiceError(f"the service answered {code}", "service_refused")

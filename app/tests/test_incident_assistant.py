@@ -609,7 +609,10 @@ def test_a_look_for_run_proposes_only_what_was_looked_for(person, a_case, monkey
     # Three windows, one look each, every one told what the run looks for.
     assert len(asked) == 3 and not any("You proposed" in one for one in asked)
     assert all("looks for one thing alone: pill bottle." in one for one in asked)
-    assert all("A man was told to step out." in one for one in asked)
+    # The head lists the events near the window alone (v1.134.0): the one
+    # at 10 s is in the first window's head and not the later windows'.
+    assert "A man was told to step out." in asked[0]
+    assert not any("A man was told to step out." in one for one in asked[1:])
     pending = list(made.events.filter(proposed=True).order_by("at"))
     assert [(one.at, one.source) for one in pending] == [
         (10.0, "assistant"),

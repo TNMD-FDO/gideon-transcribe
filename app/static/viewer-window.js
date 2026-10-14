@@ -101,7 +101,8 @@
 
   function loadSegments() {
     if (!V.hasTranscript) { return Promise.resolve(); }
-    return fetch("/recording/" + V.recording + "/segments")
+    // Without the words (v1.134.0): the window follows by the lines' times.
+    return fetch("/recording/" + V.recording + "/segments?words=0")
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         segments = body.segments || [];

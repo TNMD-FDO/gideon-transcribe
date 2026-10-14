@@ -112,6 +112,23 @@ def test_a_consumer_lists_only_its_own(store):
     assert len(store.jobs_for("it", admin=True)) == 2
 
 
+def test_every_queued_job_is_listed_whatever_the_limit(store):
+    # The limit caps the ended jobs alone (v1.134.0): a long line used to lose
+    # its oldest queued jobs from the list, and the app failed them for lost.
+    ended = [add(store, reference=f"old-{n}") for n in range(3)]
+    for job in ended:
+        store.cancel(job.id)
+    waiting = [add(store, reference=f"waiting-{n}") for n in range(5)]
+    listed = store.jobs_for("transcribe", admin=False, limit=2)
+    ids = [job.id for job in listed]
+    assert all(job.id in ids for job in waiting)
+    assert len([one for one in listed if one.ended]) == 2
+    # Newest first, as before.
+    assert ids[: len(waiting)] == [job.id for job in reversed(waiting)]
+    # And the admin's list follows the same rule.
+    assert len(store.jobs_for("it", admin=True, limit=2)) == len(waiting) + 2
+
+
 # Duplicates ------------------------------------------------------------------
 
 

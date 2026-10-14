@@ -207,6 +207,10 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         # longest cameras' pictures go first when the whole does not fit.
         from core import sitting
 
+        # The fit counts the question with the rest; the request then puts
+        # the record and the papers ahead of the chat so far and the
+        # question last, alone (v1.134.0, ADR 0020).
+        question = "The question: " + turn.question
         record, user, words_alone = sitting.fit(
             incident,
             system=system,
@@ -215,13 +219,14 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
                     _cameras_line(incident), event_lines, body, about=incident.about
                 )
                 + ("\n\n" + papers if papers else "")
-                + "\n\nThe question: "
-                + turn.question
+                + "\n\n"
+                + question
             ),
             answer_cap=assistant.cap(wanted),
         )
+        reading = user.removesuffix("\n\n" + question)
         answer = engine.complete(
-            case_chat._messages(system, user, history),
+            case_chat._messages(system, question, history, reading=reading),
             max_completion_tokens=assistant.cap(wanted),
             thinking=assistant.thinking(),
             timeout=assistant.time_limit(FEATURE),

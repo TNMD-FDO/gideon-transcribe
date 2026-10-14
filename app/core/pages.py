@@ -11,6 +11,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -32,6 +33,7 @@ from core import (
     uploads,
     vision,
     vocabulary,
+    waiting,
     whisperx,
 )
 from core.jobs import JobState
@@ -164,20 +166,38 @@ def _with_their_state(recordings):
     """Each Recording with the one word its row shows.
 
     A Recording being transcribed again says so, rather than looking done
-    while its transcript is about to be replaced.
+    while its transcript is about to be replaced. The newest Job of every
+    recording comes in one query, the transcript and the batch with the
+    rows, and the clip count annotated (v1.134.0): the page had asked three
+    questions per row and the template three more.
     """
-    rows = []
-    for one in recordings:
-        job = one.jobs.order_by("-created").first()
+    from core.jobs import Job
+
+    if hasattr(recordings, "select_related"):
+        recordings = recordings.select_related("transcript", "batch").annotate(
+            clips_count=Count("clips", distinct=True)
+        )
+    rows = list(recordings)
+    ids = [one.pk for one in rows]
+    newest: dict = {}
+    for job in (
+        Job.objects.filter(recording_id__in=ids)
+        .select_related("batch")
+        .order_by("recording_id", "-created")
+    ):
+        newest.setdefault(job.recording_id, job)
+    for one in rows:
+        job = newest.get(one.pk)
         one.being_replaced = bool(
             job is not None and job.is_live and job.batch.is_reprocessing
         )
         one.in_the_queue = bool(job is not None and job.is_live)
+        if not hasattr(one, "clips_count"):
+            one.clips_count = one.clips.count()
         # A length, not a count of seconds: the same shape a Citation and an
         # export use, so the app says a length one way everywhere.
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = state_words(one)
-        rows.append(one)
     return rows
 
 
@@ -570,14 +590,34 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
     in_line = _runs_in_line()
     cases_are_on = cases.folder_management_on()
 
+    # The Batch's recordings with their transcripts and side counts, and
+    # every recording's newest Job with its Runs, in three queries for the
+    # whole poll (v1.134.0): it had asked six or seven per recording every
+    # few seconds.
+    recordings = list(
+        found.recordings.select_related("transcript")
+        .annotate(side_count=Count("sides", distinct=True))
+        .order_by("created")
+    )
+    newest = newest_jobs_of(recordings)
     rows = []
-    for recording in found.recordings.order_by("created"):
-        job = recording.jobs.order_by("-created").first()
+    unfinished = []
+    for recording in recordings:
+        job = newest.get(recording.pk)
         # A Recording in a Case is the Batch's, so the Batch still shows it,
         # and it is still reachable while Cases are on. While they are off it
         # says where it went and offers no way in, because a hidden Case is
         # out of reach for everyone.
         out_of_reach = bool(recording.case_id) and not cases_are_on
+        if job is not None and job.is_live:
+            unfinished.append(
+                {
+                    "run": _first_run(job),
+                    "model": recording.model or settings_store.get("model"),
+                    "diarize": recording.diarize,
+                    "minutes": (recording.duration_seconds or 0) / 60,
+                }
+            )
         rows.append(
             {
                 "id": str(recording.pk),
@@ -587,7 +627,7 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
                 "state": recording.media_state,
                 "playback_ready": recording.playback_ready,
                 "minutes": round((recording.duration_seconds or 0) / 60, 1),
-                "sides": recording.sides.count(),
+                "sides": recording.side_count,
                 "two_channel_call": recording.is_two_channel_call,
                 "message": recording.failure_message,
                 "reason": recording.refusal_class,
@@ -629,7 +669,7 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
             "finished": found.is_finished,
             "started": found.created.isoformat(),
             "reprocessing": found.is_reprocessing,
-            "everything_done_by": _everything_done_by(found, speed),
+            "everything_done_by": waiting.everything_done_by(unfinished, speed),
             "recordings": rows,
             "case": _case_of(found),
             "preparing": {
@@ -645,12 +685,80 @@ def batch_state(request: HttpRequest, batch_id) -> JsonResponse:
     )
 
 
+# The service's published speed, read at most once a minute (v1.134.0): the
+# poll had asked the service on every answer, and waited up to thirty seconds
+# for it. One figure for the process, with when it was read and which status
+# function read it, so a test that stands another in is not told a stale one.
+SPEED_EVERY_SECONDS = 60
+_speed: dict = {"at": 0.0, "speed": None, "asked": None}
+
+
 def _service_speed() -> dict | None:
     """The speed the service publishes, or nothing when it cannot be asked."""
+    import time
+
+    now = time.monotonic()
+    asked = whisperx.status
+    if _speed["asked"] is asked and now - _speed["at"] < SPEED_EVERY_SECONDS:
+        return _speed["speed"]
     try:
-        return (whisperx.status() or {}).get("speed")
+        try:
+            told = whisperx.status(timeout=3)
+        except TypeError:
+            told = whisperx.status()
+        speed = (told or {}).get("speed")
     except Exception:  # noqa: BLE001 - a wait is not worth failing a page for
-        return None
+        speed = None
+    _speed.update({"at": now, "speed": speed, "asked": asked})
+    return speed
+
+
+def newest_jobs_of(recordings) -> dict:
+    """Every recording's newest Job by recording id, each with its Runs and
+    their Sides already loaded, in two queries (v1.134.0)."""
+    from django.db.models import Prefetch
+
+    from core.jobs import Job, Run
+
+    ids = [one.pk for one in recordings]
+    newest: dict = {}
+    for job in (
+        Job.objects.filter(recording_id__in=ids)
+        .select_related("batch")
+        .prefetch_related(
+            Prefetch(
+                "runs", Run.objects.select_related("side").order_by("side__number")
+            )
+        )
+        .order_by("recording_id", "-created")
+    ):
+        newest.setdefault(job.recording_id, job)
+    return newest
+
+
+def _first_run(job):
+    """The Run of the first Side, from the Runs already loaded."""
+    runs = list(job.runs.all())
+    return runs[0] if runs else None
+
+
+def step_of(job) -> str:
+    """Job.step from the Runs already loaded on the Job (v1.134.0): the same
+    words, without the two queries the property asks per Job."""
+    from core.jobs import MERGING, STEPS
+
+    if job.merging:
+        return MERGING
+    runs = list(job.runs.all())
+    running = next((one for one in runs if one.state == "running"), None)
+    if running is None:
+        return ""
+    step = STEPS.get(running.stage or "", "")
+    if step == "Transcribing" and running.percent is not None:
+        step = f"Transcribing {running.percent:.0f}%"
+    if len(runs) > 1:
+        return f"Side {running.side.number} of {len(runs)}: {step}"
+    return step
 
 
 def _can_retry(recording, job) -> bool:
@@ -665,25 +773,6 @@ def _can_retry(recording, job) -> bool:
     # A Job the Admin cancelled is offered Retry too (v1.131.0): the recording
     # had been left with no way back but Delete and upload again.
     return job is not None and job.state in (JobState.FAILED, JobState.CANCELLED)
-
-
-def _everything_done_by(batch, speed) -> str | None:
-    from core import waiting
-
-    unfinished = []
-    for recording in batch.recordings.all():
-        job = recording.jobs.order_by("-created").first()
-        if job is None or not job.is_live:
-            continue
-        unfinished.append(
-            {
-                "run": job.runs.order_by("side__number").first(),
-                "model": recording.model or settings_store.get("model"),
-                "diarize": recording.diarize,
-                "minutes": (recording.duration_seconds or 0) / 60,
-            }
-        )
-    return waiting.everything_done_by(unfinished, speed)
 
 
 def _runs_in_line():
@@ -702,14 +791,14 @@ def _runs_in_line():
 
 
 def _job_state(job, speed=None, in_line=None, user=None) -> dict | None:
-    from core import waiting
-
+    """One Job as the Batch page reads it, from a Job newest_jobs_of gave
+    (its Runs loaded) or any other (its Runs asked for)."""
     if job is None:
         return None
-    run = job.runs.order_by("side__number").first()
+    run = _first_run(job)
     return {
         "state": job.state,
-        "step": job.step,
+        "step": step_of(job),
         "percent": run.percent if run else None,
         "position": run.position if run else None,
         "audio_minutes_ahead": run.audio_minutes_ahead if run else None,
@@ -736,13 +825,16 @@ def what_would_be_cleared(request: HttpRequest) -> JsonResponse:
     if batch_id:
         wanted = wanted.filter(batch_id=batch_id)
 
-    recordings = list(wanted)
+    # Two counts and the summed sizes (v1.134.0), not a question per recording.
+    from core.clips import Clip
+    from core.recordings import summed_disk_bytes
+
     return JsonResponse(
         {
-            "recordings": len(recordings),
-            "transcripts": sum(1 for one in recordings if hasattr(one, "transcript")),
-            "clips": sum(one.clips.count() for one in recordings),
-            "size": uploads.as_size(sum(one.disk_bytes() for one in recordings)),
+            "recordings": wanted.count(),
+            "transcripts": wanted.filter(transcript__isnull=False).count(),
+            "clips": Clip.objects.filter(recording__in=wanted).count(),
+            "size": uploads.as_size(summed_disk_bytes(wanted)),
         }
     )
 

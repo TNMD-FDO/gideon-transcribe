@@ -139,7 +139,7 @@ A regular token can cancel or delete only its own jobs; an admin token can cance
 
 ### List: `GET /v1/jobs`
 
-The caller's own jobs, newest first, each as a status body. The app's worker calls this once every three seconds and gets every Run of its own in one call. For an admin token: every job (ids, Consumer names, stages, timings, never content).
+The caller's own jobs, newest first, each as a status body: every job that is still queued or running, whatever their number, and the 200 newest that have ended (since v1.134.0; before it the whole list was cut at 200, and a long line lost its oldest queued jobs from the answer). The app's worker calls this every few seconds and gets every Run of its own in one call; a Run it does not find in the list is asked for by its id (`GET /v1/jobs/{id}`) before it is taken for lost. For an admin token: every job (ids, Consumer names, stages, timings, never content).
 
 ### Models: `GET /v1/models`
 
@@ -523,6 +523,7 @@ and not a history. What was decided, on 2026-09-03:
 
 ## Amendments applied
 
+- v1.134.0 (2026-10-14): `GET /v1/jobs` lists every queued and running job of the caller and caps only the ended ones at 200; the app asks `GET /v1/jobs/{id}` for a Run it does not find in the list before it takes it for lost.
 - Service 0.4.0 (2026-09-26): the `diarize` task and the result's `speakers.turns`, for the app's Live recordings, whose stretches are diarized one by one and, under Nemotron, carried no voice prints to match their speakers by; one pass over the whole file at Stop matches them instead.
 - From Phase 5 chapter 4 (The diarizer, 2026-09-24) to the request fields, the result, `models.yaml`, the token and a new section: `diarizer` (`nemotron` by default from 0.3.0, `pyannote`), the refusals `hint_not_supported` and `embeddings_not_supported`, `settings_used.diarizer` and `diarizer_version`, the `nvidia/Nemotron-3-Diarization` pin, the token optional, and the `diarizer` container. ADR 0014.
 - From "Translation-to-English behaviour" to the request fields: `task` gains `translate_if_needed`; new field `translate_if_mixed`, default `false`.

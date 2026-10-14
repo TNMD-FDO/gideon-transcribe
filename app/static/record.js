@@ -672,6 +672,8 @@
     var line = document.getElementById("after-line");
     var pill = document.getElementById("after-pill");
     function ask() {
+      // A hidden tab skips its turn (v1.134.0); the next one asks.
+      if (!window.UI.pollingAllowed()) { return; }
       fetch("/record/" + recording.id + "/state", { cache: "no-store" })
         .then(function (answer) { return answer.json(); })
         .then(function (said) {

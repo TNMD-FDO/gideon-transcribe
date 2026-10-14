@@ -2293,14 +2293,16 @@ def _rows() -> list[Definition]:
             kind=NUMBER,
             default=1,
             least=1,
-            most=2,
+            most=4,
             needs="summary_available",
             what_it_does=(
-                "How many of the night's summaries are written at the same time "
-                "(Summaries tonight, Phase 9 chapter 5, ADR 0017), inside the "
-                "window above. The vision work runs first, and a summary waits "
-                "for its recording's picture. At one, 800 calls take about two "
-                "nights; at two, about one."
+                "How many of the night's summaries are in flight at the same "
+                "time (Summaries tonight, Phase 9 chapter 5, ADR 0017), inside "
+                "the window above: the next starts the moment one finishes. "
+                "The vision work runs first, and a summary waits for its "
+                "recording's picture. Each in flight takes one of the "
+                "assistant's four lanes. At one, 800 calls take two or three "
+                "nights; at four, about one."
             ),
             when_changed="The next window.",
         ),

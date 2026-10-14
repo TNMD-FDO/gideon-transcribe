@@ -310,6 +310,9 @@ def _astats(path: Path, track: Track | None, filters: str) -> dict[str, float]:
             *forced_decoder(track),
             "-i",
             str(path),
+            # Sound alone (v1.134.0): with "-f null" and no "-vn" ffmpeg
+            # decoded a video's whole picture to throw it away.
+            "-vn",
             "-af",
             filters,
             "-f",
@@ -429,6 +432,9 @@ def _measure_loudness(
             "-i",
             str(path),
             *_span_length(span),
+            # Sound alone (v1.134.0): the first pass decoded a video's whole
+            # picture to measure its loudness.
+            "-vn",
             "-af",
             # The same chain the second pass runs, so the figures describe the
             # signal that is actually written.

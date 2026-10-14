@@ -828,8 +828,25 @@ def notice(model: str, when) -> str:
 # The calls ---------------------------------------------------------------------
 
 
-def _messages(system: str, user: str, history: list[tuple[str, str]] | None = None):
-    messages = [{"role": "system", "content": system}]
+def _messages(
+    system: str,
+    user: str,
+    history: list[tuple[str, str]] | None = None,
+    *,
+    reading: str = "",
+):
+    """The request's messages: the system message, the chat so far, the
+    user's turn.
+
+    `reading` is what the call reads (the transcript, the Digest, the
+    papers) and goes at the end of the system message, ahead of the history
+    (v1.134.0, ADR 0020): the engine caches the prefix the requests share,
+    and with the reading after the history every follow-up question read
+    the whole transcript again. The last user message carries the question
+    alone.
+    """
+    content = system + ("\n\n" + reading if reading else "")
+    messages = [{"role": "system", "content": content}]
     for question, answer in history or []:
         messages.append({"role": "user", "content": question})
         messages.append({"role": "assistant", "content": answer})
@@ -890,8 +907,12 @@ def _unreachable() -> engine.Problem | None:
     return None
 
 
-def write_summary(summary_id) -> None:
-    """One Summary, whole, from the whole Transcript."""
+def write_summary(summary_id, attempt: int = 1) -> None:
+    """One Summary, whole, from the whole Transcript.
+
+    `attempt` counts the times the task was queued again while the video's
+    own preparation ran (v1.134.0); the task layer passes it back.
+    """
     summary = Summary.objects.filter(pk=summary_id).select_related("recording").first()
     if summary is None or summary.state not in (QUEUED, RUNNING):
         # Done or failed already (v1.131.0): a second run would write the
@@ -935,11 +956,21 @@ def write_summary(summary_id) -> None:
         ):
             summary.stage = "preparing"
             summary.save(update_fields=["stage"])
-            wait_or_prepare(
-                transcript,
-                asked_by=summary.asked_by,
-                still_wanted=lambda: Summary.objects.filter(pk=summary.pk).exists(),
-            )
+            try:
+                wait_or_prepare(
+                    transcript,
+                    asked_by=summary.asked_by,
+                    attempt=attempt,
+                    since=summary.created,
+                )
+            except ComeBackLater:
+                # The transcript's own task is at it: this lane is given
+                # back and the summary is queued again in a minute, its
+                # stage still "preparing" for the card.
+                from core import tasks
+
+                _later(tasks.write_summary, summary_id=str(summary.pk), attempt=attempt)
+                return
             # Deleted while the video was prepared: the preparation stands,
             # the transcript's own, and there is nothing left to write.
             if not Summary.objects.filter(pk=summary.pk).exists():
@@ -1034,10 +1065,20 @@ def write_summary(summary_id) -> None:
             reason=problem.reason,
             **expectation.for_audit(summary.expectation),
         )
+    if summary.overnight:
+        # One of the night's done, whichever way: the next waiting one
+        # starts now rather than at the minute tick (v1.134.0, ADR 0017).
+        from core import summaries_tonight
+
+        summaries_tonight.carry_on()
 
 
-def answer_turn(turn_id) -> None:
-    """One Chat question, answered from the whole Transcript and the Chat so far."""
+def answer_turn(turn_id, attempt: int = 1) -> None:
+    """One Chat question, answered from the whole Transcript and the Chat so far.
+
+    `attempt` counts the times the task was queued again while the video's
+    own preparation ran (v1.134.0); the task layer passes it back.
+    """
     turn = (
         ChatTurn.objects.filter(pk=turn_id)
         .select_related("chat", "chat__recording")
@@ -1071,7 +1112,18 @@ def answer_turn(turn_id) -> None:
             and not prepared(transcript)
             and not vision.scheduled()
         ):
-            wait_or_prepare(transcript, asked_by=chat.asked_by)
+            try:
+                wait_or_prepare(
+                    transcript,
+                    asked_by=chat.asked_by,
+                    attempt=attempt,
+                    since=turn.asked_at,
+                )
+            except ComeBackLater:
+                from core import tasks
+
+                _later(tasks.answer_turn, turn_id=str(turn.pk), attempt=attempt)
+                return
             transcript.refresh_from_db()
         lines = prompts.lines_of(transcript)
         rendered = prompts.render(lines)
@@ -1120,7 +1172,9 @@ def answer_turn(turn_id) -> None:
             if digest
             else prompts.camera_lines(seen)
         )
-        user = "\n\n".join(
+        # The transcript, the picture and the papers go ahead of the chat so
+        # far (v1.134.0, ADR 0020); the question is the last message alone.
+        reading = "\n\n".join(
             part
             for part in [
                 prompts.nature_line(recording, transcript),
@@ -1128,18 +1182,23 @@ def answer_turn(turn_id) -> None:
                 rendered,
                 picture,
                 papers,
-                turn.question,
             ]
             if part
         )
+        user = turn.question
         history_text = "\n".join(q + "\n" + a for q, a in history)
         chat_cap = settings_store.chat_answer_cap()
         if not prompts.fits(
-            system, user, history_text, answer_cap=cap(chat_cap), window=window()
+            system,
+            reading,
+            user,
+            history_text,
+            answer_cap=cap(chat_cap),
+            window=window(),
         ):
             raise engine.Problem(engine.TOO_LONG, "the transcript is too long")
         answer = engine.complete(
-            _messages(system, user, history),
+            _messages(system, user, history, reading=reading),
             max_completion_tokens=cap(chat_cap),
             thinking=thinking(),
             timeout=time_limit("chat_turn"),
@@ -1275,20 +1334,57 @@ def question_times(at: float, frames: int, length: float) -> list[float]:
     return times
 
 
-def describe_moment(moment_id) -> None:
+def record_frame_plan(span_start: float, span_end: float) -> tuple[float, int]:
+    """The frames a second and the height a record span's clip is cut at:
+    the settings, the rate thinned so a long still span costs no more than
+    a short busy one. One place (v1.134.0), so the clip cut ahead of its
+    description is the clip the description would have cut."""
+    fps = record_fps(span_end - span_start, settings_store.moment_frames_per_second())
+    return fps, settings_store.moment_frame_height()
+
+
+def cut_record_clip(playback, span_start: float, span_end: float, *, fps, height):
+    """A record span's clip, cut into a file of the container's own. Touches
+    nothing in the database, so a thread may do it while the engine is busy
+    with the span before (v1.134.0). Raises media.MediaError."""
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from core import media
+
+    handle, name = tempfile.mkstemp(suffix=".mp4", prefix="moment-")
+    os.close(handle)
+    clip = Path(name)
+    try:
+        media.cut_for_description(
+            playback, clip, span_start, span_end, fps=fps, height=height
+        )
+    except media.MediaError:
+        clip.unlink(missing_ok=True)
+        raise
+    return clip
+
+
+def describe_moment(moment_id, *, prepared: dict | None = None) -> None:
     """One Moment: a clip cut from the Playback copy, shown with its words.
 
     Or, when the Moment carries a question, a few still frames at the camera's
     own detail with the question, answered in a fixed shape.
+
+    `prepared` is what the picture record computes once for every span
+    (v1.134.0) rather than per span: the transcript's lines, the two
+    templates, and the span's clip already cut (a Path), or the failure
+    cutting it met (a MediaError). Without it everything is read here.
     """
     import base64
-    import os
     import shutil
     import tempfile
     from pathlib import Path
 
     from core import media
 
+    prepared = prepared or {}
     moment = (
         Moment.objects.filter(pk=moment_id)
         .select_related("transcript", "transcript__recording")
@@ -1299,14 +1395,14 @@ def describe_moment(moment_id) -> None:
     transcript = moment.transcript
     recording = transcript.recording
     started = time.monotonic()
-    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
-    template = PromptTemplate.named(PromptTemplate.MOMENT)
+    ground = prepared.get("ground") or PromptTemplate.named(PromptTemplate.GROUND_RULES)
+    template = prepared.get("template") or PromptTemplate.named(PromptTemplate.MOMENT)
     templates_line = f"ground-rules v{ground.version}; Moment v{template.version}"
     moment.state = RUNNING
     moment.save(update_fields=["state"])
 
     usage: dict = {}
-    clip = None
+    clip = prepared.get("clip") if isinstance(prepared.get("clip"), Path) else None
     stills = None
     try:
         problem = _unreachable()
@@ -1324,7 +1420,11 @@ def describe_moment(moment_id) -> None:
         else:
             span_start, span_end = moment_span(recording, moment.at)
         moment.span_start, moment.span_end = span_start, span_end
-        lines = prompts.lines_of(transcript)
+        lines = (
+            prepared["lines"]
+            if prepared.get("lines") is not None
+            else prompts.lines_of(transcript)
+        )
         spoken = prompts.lines_in_span(lines, span_start, span_end)
         answer_cap = settings_store.moments_answer_cap()
 
@@ -1353,11 +1453,12 @@ def describe_moment(moment_id) -> None:
             )
             extra = prompts.still_tokens(frames, height)
         else:
-            fps = settings_store.moment_frames_per_second()
             if record:
                 # A long still span costs no more than a short busy one.
-                fps = record_fps(span_end - span_start, fps)
-            height = settings_store.moment_frame_height()
+                fps, height = record_frame_plan(span_start, span_end)
+            else:
+                fps = settings_store.moment_frames_per_second()
+                height = settings_store.moment_frame_height()
             frames = max(1, round((span_end - span_start) * fps))
             style = (
                 prompts.MOMENT_FORMAT_FULL
@@ -1402,20 +1503,21 @@ def describe_moment(moment_id) -> None:
             shutil.rmtree(stills, ignore_errors=True)
             stills = None
         else:
-            handle, name = tempfile.mkstemp(suffix=".mp4", prefix="moment-")
-            os.close(handle)
-            clip = Path(name)
-            try:
-                media.cut_for_description(
-                    recording.playback_path(),
-                    clip,
-                    span_start,
-                    span_end,
-                    fps=fps,
-                    height=height,
-                )
-            except media.MediaError as why:
-                raise engine.Problem(MEDIA_FAILED, str(why)[:200]) from why
+            ready = prepared.get("clip")
+            if isinstance(ready, media.MediaError):
+                # Cut ahead by the record, and the cut failed.
+                raise engine.Problem(MEDIA_FAILED, str(ready)[:200]) from ready
+            if clip is None:
+                try:
+                    clip = cut_record_clip(
+                        recording.playback_path(),
+                        span_start,
+                        span_end,
+                        fps=fps,
+                        height=height,
+                    )
+                except media.MediaError as why:
+                    raise engine.Problem(MEDIA_FAILED, str(why)[:200]) from why
             data_url = "data:video/mp4;base64," + base64.b64encode(
                 clip.read_bytes()
             ).decode("ascii")
@@ -1651,21 +1753,67 @@ def describe_intervals(run_id) -> None:
     ]
     run.total = len(moments)
     run.save(update_fields=["total"])
+    # Once for the whole record (v1.134.0): the lines and the templates,
+    # which every span used to read again; and each span's clip is cut in a
+    # thread while the engine describes the span before it, so the lane's
+    # one engine call never waits on ffmpeg. One call in flight, as before.
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path
+
+    from core import media
+
+    prepared = {
+        "lines": prompts.lines_of(transcript),
+        "ground": PromptTemplate.named(PromptTemplate.GROUND_RULES),
+        "template": PromptTemplate.named(PromptTemplate.MOMENT),
+    }
+    playback = recording.playback_path()
+
+    def cut_ahead(moment):
+        fps, height = record_frame_plan(moment.span_start, moment.span_end)
+        return cut_record_clip(
+            playback, moment.span_start, moment.span_end, fps=fps, height=height
+        )
+
+    def ready(future):
+        if future is None:
+            return None
+        try:
+            return future.result()
+        except media.MediaError as why:
+            return why
+
     reason = ""
-    for moment in moments:
-        if reason:
-            moment.state = FAILED
-            moment.reason_class = reason
-            moment.save(update_fields=["state", "reason_class"])
-            continue
-        describe_moment(moment.pk)
-        moment.refresh_from_db()
-        if moment.state == DONE:
-            run.found += 1
-            run.save(update_fields=["found"])
-        elif moment.reason_class == engine.UNREACHABLE:
-            reason = engine.UNREACHABLE
-        _prepare_tick(transcript)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        ahead = pool.submit(cut_ahead, moments[0]) if moments else None
+        for index, moment in enumerate(moments):
+            clip = ready(ahead)
+            following = moments[index + 1] if index + 1 < len(moments) else None
+            ahead = (
+                pool.submit(cut_ahead, following)
+                if following is not None and not reason
+                else None
+            )
+            if reason:
+                if isinstance(clip, Path):
+                    clip.unlink(missing_ok=True)
+                moment.state = FAILED
+                moment.reason_class = reason
+                moment.save(update_fields=["state", "reason_class"])
+                continue
+            describe_moment(moment.pk, prepared={**prepared, "clip": clip})
+            if isinstance(clip, Path):
+                clip.unlink(missing_ok=True)
+            moment.refresh_from_db()
+            if moment.state == DONE:
+                run.found += 1
+                run.save(update_fields=["found"])
+            elif moment.reason_class == engine.UNREACHABLE:
+                reason = engine.UNREACHABLE
+            _prepare_tick(transcript)
+        leftover = ready(ahead)
+        if isinstance(leftover, Path):
+            leftover.unlink(missing_ok=True)
     run.state = FAILED if reason else DONE
     run.reason_class = reason
     run.finished_at = timezone.now()
@@ -1884,6 +2032,11 @@ QUESTION_FRAMES = 3
 STAMP_HEIGHT = 720
 DIGEST_SECONDS_GUESS = 30
 PREPARE_WAIT_SECONDS = 3 * 3600
+# A summary or a question that finds the video being prepared by its own
+# task is queued again this often (v1.134.0), at most PREPARE_RETRIES times:
+# the same three hours, counted in re-queues rather than slept in a lane.
+PREPARE_RETRY_SECONDS = 60
+PREPARE_RETRIES = PREPARE_WAIT_SECONDS // PREPARE_RETRY_SECONDS
 PLAYBACK_RETRY_SECONDS = 60
 # How long the task waits before looking again at a transcript it found not
 # yet marked queued on its first go (v1.54.1).
@@ -2058,23 +2211,46 @@ def prepare(transcript, *, asked_by=None) -> bool:
     return not reason
 
 
-def wait_or_prepare(transcript, *, asked_by=None, still_wanted=None) -> bool:
+class ComeBackLater(Exception):
+    """The transcript's own task is preparing the video: the caller is to
+    give its lane back and be queued again in a minute (v1.134.0). Never a
+    sleep in a lane: until this release a summary or a question could hold
+    one of the assistant's four lanes for up to three hours doing nothing."""
+
+
+def wait_or_prepare(transcript, *, asked_by=None, attempt: int = 1, since=None) -> bool:
     """Prepared by the transcript's own task if it is at it, else here and now.
-    `still_wanted` says whether the caller's summary or question still exists;
-    the wait ends early when it does not."""
+
+    While the transcript's own task is at it, raises ComeBackLater for the
+    caller to queue itself again; `attempt` is how many times it has, and
+    `since` when the caller's row was made, so the wait still ends after
+    PREPARE_WAIT_SECONDS all told whichever of the two is counted.
+    """
     transcript.refresh_from_db(fields=["prepare_state"])
     if transcript.prepare_state in (QUEUED, PREPARING):
-        waited = 0
-        while waited < PREPARE_WAIT_SECONDS:
-            time.sleep(5)
-            waited += 5
-            if still_wanted is not None and not still_wanted():
-                return False
-            transcript.refresh_from_db(fields=["prepare_state"])
-            if transcript.prepare_state not in (QUEUED, PREPARING):
-                return transcript.prepare_state == DONE
-        raise engine.Problem(engine.TIMEOUT, "the preparation is taking too long")
+        waited_too_long = attempt > PREPARE_RETRIES or (
+            since is not None
+            and (timezone.now() - since).total_seconds() > PREPARE_WAIT_SECONDS
+        )
+        if waited_too_long:
+            raise engine.Problem(engine.TIMEOUT, "the preparation is taking too long")
+        raise ComeBackLater()
     return prepare(transcript, asked_by=asked_by)
+
+
+def _later(task, *, attempt: int, **fields) -> None:
+    """The task queued again a minute on with the next attempt number, when
+    its task accepts one; a task layer that does not yet take `attempt` is
+    queued without it, and the wait is then bounded by `since` alone."""
+    import inspect
+
+    try:
+        takes_attempt = "attempt" in inspect.signature(task.func).parameters
+    except (AttributeError, TypeError, ValueError):
+        takes_attempt = False
+    if takes_attempt:
+        fields["attempt"] = attempt + 1
+    task.configure(schedule_in={"seconds": PREPARE_RETRY_SECONDS}).defer(**fields)
 
 
 def queue_preparation(recording) -> bool:

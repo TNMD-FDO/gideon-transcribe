@@ -431,7 +431,10 @@ def test_the_clock_is_read_again_on_request(person, a_case, client, monkeypatch)
     assert got["said"].startswith("Reading the clock again; a few seconds.")
     assert queued == [{"recording_id": str(read.pk), "by_id": str(person.pk)}]
     # While one waits, the page says so and a second press is refused.
-    monkeypatch.setattr(incidents, "stamp_reading", lambda recording: True)
+    # The reads are asked for in one query per page (v1.134.0).
+    monkeypatch.setattr(
+        incidents, "stamp_reading_in", lambda ids: {str(one) for one in ids}
+    )
     state = client.get(f"{incident.url()}/state").json()
     assert state["cameras"][0]["clock_reading"] is True
     refused = client.post(

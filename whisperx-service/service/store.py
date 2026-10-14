@@ -213,14 +213,33 @@ class Store:
         return job
 
     def jobs_for(self, consumer: str, admin: bool, limit: int = 200) -> list[Job]:
+        """The caller's jobs, newest first: every one still in the line, and
+        the newest `limit` that have ended.
+
+        The limit used to cut the whole list (v1.134.0): with more than 200
+        jobs at the service the oldest queued ones fell off the end, and a
+        Consumer that takes an unlisted job for a lost one failed them while
+        they were still waiting their turn. A job in the line is always
+        listed; only the ended ones, which a Consumer fetches and deletes,
+        are capped.
+        """
         with self._lock:
             if admin:
                 return self._many(
-                    "SELECT * FROM jobs ORDER BY sequence DESC LIMIT ?", (limit,)
+                    "SELECT * FROM jobs WHERE state IN (?, ?) "
+                    "UNION ALL SELECT * FROM ("
+                    "SELECT * FROM jobs WHERE state NOT IN (?, ?) "
+                    "ORDER BY sequence DESC LIMIT ?) "
+                    "ORDER BY sequence DESC",
+                    (QUEUED, RUNNING, QUEUED, RUNNING, limit),
                 )
             return self._many(
-                "SELECT * FROM jobs WHERE consumer = ? ORDER BY sequence DESC LIMIT ?",
-                (consumer, limit),
+                "SELECT * FROM jobs WHERE consumer = ? AND state IN (?, ?) "
+                "UNION ALL SELECT * FROM ("
+                "SELECT * FROM jobs WHERE consumer = ? AND state NOT IN (?, ?) "
+                "ORDER BY sequence DESC LIMIT ?) "
+                "ORDER BY sequence DESC",
+                (consumer, QUEUED, RUNNING, consumer, QUEUED, RUNNING, limit),
             )
 
     def ahead_of(self, job: Job) -> tuple[int, float]:

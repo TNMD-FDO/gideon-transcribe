@@ -314,7 +314,9 @@ services:
       - "${APP_DATA_DIR}:/srv/data"
     healthcheck:
       test: ["CMD", "python", "manage.py", "procrastinate", "healthchecks"]
-      interval: 30s
+      # Every five minutes (v1.134.0): each check boots Django, and three
+      # workers checked every thirty seconds were a boot every ten.
+      interval: 5m
       timeout: 10s
       retries: 3
       start_period: 30s
@@ -367,7 +369,9 @@ services:
       - "${APP_DATA_DIR}:/srv/data"
     healthcheck:
       test: ["CMD", "python", "manage.py", "procrastinate", "healthchecks"]
-      interval: 30s
+      # Every five minutes (v1.134.0): each check boots Django, and three
+      # workers checked every thirty seconds were a boot every ten.
+      interval: 5m
       timeout: 10s
       retries: 3
       start_period: 30s
@@ -413,7 +417,9 @@ services:
       - "${APP_DATA_DIR}:/srv/data"
     healthcheck:
       test: ["CMD", "python", "manage.py", "procrastinate", "healthchecks"]
-      interval: 30s
+      # Every five minutes (v1.134.0): each check boots Django, and three
+      # workers checked every thirty seconds were a boot every ten.
+      interval: 5m
       timeout: 10s
       retries: 3
       start_period: 30s

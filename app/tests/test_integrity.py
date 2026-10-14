@@ -360,6 +360,9 @@ def test_a_run_the_service_no_longer_lists_fails_the_job(person, a_case, monkeyp
     job = Job.objects.create(recording=recording, batch=recording.batch)
     Run.objects.create(job=job, side=side, service_job_id="lost", state="queued")
     monkeypatch.setattr(whisperx, "delete", lambda job_id, lane="": None)
+    # Asked for by its id before a miss is counted (v1.134.0): the service
+    # has no such job.
+    monkeypatch.setattr(whisperx, "status_of", lambda job_id, lane="": None)
     for _ in range(queue.POLLS_BEFORE_MISSING - 1):
         queue.take_state_from(job, {})
         job.refresh_from_db()

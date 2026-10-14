@@ -240,7 +240,8 @@
   }
 
   function ask() {
-    fetch("/batch/" + window.BATCH + "/state")
+    // Not while the tab is hidden (v1.134.0): the ask waits for it to come back.
+    window.UI.whenVisible().then(function () { return fetch("/batch/" + window.BATCH + "/state"); })
       .then(function (answer) { return answer.json(); })
       .then(function (state) {
         draw(state);

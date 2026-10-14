@@ -1,5 +1,6 @@
-// The Status page: everything read again every five seconds, like every
-// other page in the app.
+// The Status page: everything read again every five seconds while someone
+// is looking, like every other page in the app, and more slowly as the page
+// is left alone (v1.134.0).
 
 (function () {
   "use strict";
@@ -233,12 +234,18 @@
   }
 
   function ask() {
-    fetch("/panel/status/lines")
+    return fetch("/panel/status/lines")
       .then(function (answer) { return answer.json(); })
-      .then(function (state) { draw(state); })
-      .catch(function () { /* the next ask will find it */ })
-      .then(function () { window.setTimeout(ask, EVERY); });
+      .then(function (state) { draw(state); });
   }
+
+  // The reading is UI.poll's (v1.134.0): nothing while the tab is hidden,
+  // at once when it comes back, slower as the page is left alone, and after
+  // an hour it stops and the line under the lead says so until a click.
+  var pausedLine = document.getElementById("poll-paused");
+  window.UI.poll(ask, EVERY, {
+    paused: function (isPaused) { if (pausedLine) { pausedLine.hidden = !isPaused; } }
+  });
 
   function cookie(name) {
     var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -258,7 +265,10 @@
     })
       .then(function (answer) { return answer.json(); })
       .then(function (result) {
-        said.textContent = result.message + " (" + result.rows + " rows checked)";
+        // The check is queued and runs on a worker (v1.134.0): the answer
+        // says so, and the row it writes lands in the Audit log. An app
+        // that still walks the chain here answers with the old summary.
+        said.textContent = result.says || (result.message + " (" + result.rows + " rows checked)");
       })
       .catch(function () { said.textContent = "The check could not be run."; })
       .then(function () { check.disabled = false; });
@@ -281,6 +291,4 @@
         .then(function () { window.setTimeout(function () { testEngine.disabled = false; }, 8000); });
     });
   }
-
-  ask();
 })();

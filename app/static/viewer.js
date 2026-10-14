@@ -282,17 +282,39 @@
       // the line's words and read as that line's note). Those before the
       // first line sit over it. They are drawn inside the line's row so
       // the rows and the lines stay one to one.
-      var next = segments[index + 1];
-      momentNotes.forEach(function (one) {
-        if (index === 0 && one.at < segment.start) {
-          var over = momentNote(one);
-          over.classList.add("over");
-          row.insertBefore(over, row.firstChild);
-          return;
-        }
-        if (one.at >= segment.start && (!next || one.at < next.start)) { row.appendChild(momentNote(one)); }
+      notesOf(segment, index).forEach(function (one) {
+        var box = momentNote(one);
+        if (one.at < segment.start) { box.classList.add("over"); row.insertBefore(box, row.firstChild); return; }
+        row.appendChild(box);
       });
+      // Kept beside the row (v1.134.0): the words lowered once for Find, and
+      // what the row was built from, so a reload can leave it alone.
+      row.lowered = (segment.text || "").toLowerCase();
+      row.signature = signatureOf(segment, index);
+      row.marked = false;
       return row;
+  }
+
+  // The notes kept at moments that sit in this row: from this line to the
+  // next, and over the first line those before it.
+  function notesOf(segment, index) {
+    var next = segments[index + 1];
+    return momentNotes.filter(function (one) {
+      if (one.at < segment.start) { return index === 0; }
+      return !next || one.at < next.start;
+    });
+  }
+
+  // What a row is built from, as one string (v1.134.0): a reload that finds
+  // the same string for a row leaves the row as it stands.
+  function signatureOf(segment, index) {
+    return [
+      segment.speaker || "", colours[segment.speaker] || "", segment.text || "", wordTiming ? "w" : "",
+      segment.note || "", segment.note_by || "", segment.note_on || "", segment.corrected ? "c" : "",
+      notesOf(segment, index).map(function (one) {
+        return one.id + ":" + one.at + ":" + (one.note_by || "") + ":" + (one.note || "");
+      }).join("|")
+    ].join("\u0001");
   }
 
   function redrawRow(segment) {
@@ -314,6 +336,22 @@
     // put back on the row it belongs to.
     if (clipStartsAt !== null) { showsStart(clipStartsAt); }
     // The AI assistant puts its suggestion pills on the rows after they exist.
+    document.dispatchEvent(new Event("transcript-drawn"));
+  }
+
+  // After a reload with as many lines as before (v1.134.0), only the rows
+  // whose line changed are built again: a name given in the Speakers window
+  // touches some rows of thousands, and draw() rebuilt every one.
+  function redrawChanged() {
+    var changed = 0;
+    Array.prototype.forEach.call(column.children, function (row, index) {
+      if (row.signature === signatureOf(segments[index], index)) { return; }
+      row.replaceWith(buildRow(segments[index], index));
+      changed += 1;
+    });
+    if (!changed) { return; }
+    tintRange();
+    if (clipStartsAt !== null) { showsStart(clipStartsAt); }
     document.dispatchEvent(new Event("transcript-drawn"));
   }
 
@@ -370,7 +408,10 @@
         var kept = got.told.moment;
         momentNotes = momentNotes.filter(function (other) { return other.id !== one.id; });
         if (kept.id !== null && kept.note) { momentNotes.push(kept); momentNotes.sort(function (a, b) { return a.at - b.at; }); }
-        draw();
+        // The one row that holds the moment is built again (v1.134.0), not
+        // every row: a note on a two-hour recording rebuilt thousands.
+        var rowAt = segments.length ? Math.max(0, at(one.at)) : -1;
+        if (rowAt < 0) { draw(); } else { redrawRow(segments[rowAt]); }
         if (search && search.value.trim()) { look(); }
         UI.toast(kept.note ? "Note saved." : "Note removed.", { icon: "ok" });
         return true;
@@ -1681,24 +1722,29 @@
     matches = [];
     atMatch = -1;
 
+    // The pattern once, not once a row (v1.134.0).
+    var pattern = wanted ? new RegExp(wanted.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi") : null;
     Array.prototype.forEach.call(column ? column.children : [], function (row, index) {
       var segment = segments[index];
-      var hit = wanted && segment.text.toLowerCase().indexOf(wanted) !== -1;
+      // The lowered words were kept beside the row when it was built.
+      var lowered = row.lowered !== undefined ? row.lowered : (segment.text || "").toLowerCase();
+      var hit = wanted && lowered.indexOf(wanted) !== -1;
       row.hidden = wanted !== "" && !hit;
       row.classList.remove("match-here");
 
-      var said = row.querySelector(".txt");
-      if (!said) { return; }
       if (hit) {
+        var said = row.querySelector(".txt");
+        if (!said) { return; }
         matches.push(index);
-        var pattern = new RegExp(
-          wanted.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"
-        );
         said.innerHTML = escape(segment.text).replace(pattern, function (found) {
           return "<mark>" + found + "</mark>";
         });
-      } else if (!wanted) {
-        said.innerHTML = wordsOf(segment);
+        row.marked = true;
+      } else if (row.marked) {
+        // Only a row that was marked is put back; the others were never touched.
+        var unmarked = row.querySelector(".txt");
+        if (unmarked) { unmarked.innerHTML = wordsOf(segment); }
+        row.marked = false;
       }
     });
 
@@ -1782,11 +1828,21 @@
     });
   }
 
+  // A pause of 150 ms after a keystroke before the rows are searched
+  // (v1.134.0): typing a word ran look() over every row for every letter.
+  var lookTimer = null;
+  function lookSoon() {
+    window.clearTimeout(lookTimer);
+    lookTimer = window.setTimeout(function () { lookTimer = null; look(); }, 150);
+  }
+
   if (search) {
-    search.addEventListener("input", look);
+    search.addEventListener("input", lookSoon);
     search.addEventListener("keydown", function (event) {
       if (event.key !== "Enter") { return; }
       event.preventDefault();
+      // Enter before the pause is up searches now, so the jump has the matches.
+      if (lookTimer) { window.clearTimeout(lookTimer); lookTimer = null; look(); }
       if (!matches.length) { return; }
       atMatch = event.shiftKey
         ? (atMatch <= 0 ? matches.length - 1 : atMatch - 1)
@@ -2025,10 +2081,13 @@
     fetch("/recording/" + window.VIEWER.recording + "/segments")
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
-        segments = body.segments || [];
+        var fresh = body.segments || [];
+        // As many lines as before: only the rows that changed are built again.
+        var sameCount = !!column && fresh.length === segments.length && fresh.length === column.children.length;
+        segments = fresh;
         momentNotes = body.moment_notes || [];
         wordTiming = body.word_timestamps;
-        draw();
+        if (sameCount) { redrawChanged(); } else { draw(); }
         here = -1;
         if (player) { follow(); }
         if (search && search.value.trim()) { look(); }
@@ -2313,26 +2372,45 @@
 
   // Waiting for the transcript -------------------------------------------------
 
+  // Asked every five seconds while the tab is in view, and no longer once
+  // the job has ended either way (v1.134.0): a failed job was asked about
+  // for as long as the page stayed open. There is no state answer for one
+  // recording, so the batch's is read and this recording's row taken.
   function watchTheQueue() {
     if (!window.VIEWER.batch) { return; }
-    window.setInterval(function () {
+    var watching = window.setInterval(function () {
+      if (!window.UI.pollingAllowed()) { return; }
       fetch("/batch/" + window.VIEWER.batch + "/state")
-        .then(function (answer) { return answer.json(); })
+        .then(function (answer) {
+          // A batch that is gone ends the watch; a moment's trouble does not.
+          if (answer.status === 404) { return { recordings: [] }; }
+          return answer.ok ? answer.json() : null;
+        })
         .then(function (state) {
+          if (!state) { return; }
           var mine = (state.recordings || []).filter(function (one) {
             return one.id === window.VIEWER.recording;
           })[0];
-          if (!mine) { return; }
-          if (mine.has_transcript) { window.location.reload(); return; }
+          if (!mine) { window.clearInterval(watching); return; }
+          if (mine.has_transcript) { window.clearInterval(watching); window.location.reload(); return; }
 
           var what = document.getElementById("waiting-what");
           var where = document.getElementById("waiting-where");
-          if (!what || !mine.job) { return; }
-          if (mine.job.state === "running") {
-            what.textContent = mine.job.step || "Transcribing";
+          var job = mine.job;
+          var ended = (job && (job.state === "failed" || job.state === "cancelled" || job.state === "done")) ||
+            mine.state === "rejected" || mine.state === "failed";
+          if (ended) {
+            window.clearInterval(watching);
+            if (what) { what.textContent = "The transcription did not finish."; }
+            if (where) { where.textContent = "The batch page says why."; }
+            return;
+          }
+          if (!what || !job) { return; }
+          if (job.state === "running") {
+            what.textContent = job.step || "Transcribing";
             where.textContent = "Diarization follows. You can leave this page.";
-          } else if (mine.job.position) {
-            what.textContent = "Position " + mine.job.position + " in the line";
+          } else if (job.position) {
+            what.textContent = "Position " + job.position + " in the line";
             where.textContent = "You can leave this page.";
           }
         })
@@ -2350,10 +2428,20 @@
   // work meanwhile, and nothing here writes an audit row.
   function watchThePlayer() {
     if (window.VIEWER.canPlay) { return; }
-    window.setInterval(function () {
+    var watching = window.setInterval(function () {
+      // A hidden tab skips its turn (v1.134.0); a copy that failed, or a
+      // recording that is gone, is not asked about again.
+      if (!window.UI.pollingAllowed()) { return; }
       fetch("/recording/" + window.VIEWER.recording + "/media")
-        .then(function (answer) { return answer.json(); })
-        .then(function (state) { if (state.ready) { window.location.reload(); } })
+        .then(function (answer) {
+          if (answer.status === 404) { return { gone: true }; }
+          return answer.ok ? answer.json() : null;
+        })
+        .then(function (state) {
+          if (!state) { return; }
+          if (state.ready) { window.clearInterval(watching); window.location.reload(); return; }
+          if (state.failed || state.gone) { window.clearInterval(watching); }
+        })
         .catch(function () { /* the next look will find it */ });
     }, 5000);
   }

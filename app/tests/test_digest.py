@@ -141,12 +141,14 @@ def test_the_transcript_is_cut_into_windows_on_line_boundaries():
     # the budget says; an unknown id changes nothing (v1.53.0).
     forced = {str(lines[4].segment_id), "not-a-line"}
     assert assistant.digest_windows(lines, 10**6, forced) == [(0, 4), (4, 10)]
+    # Line 10's "[10]" is a character longer than "[9]", which once cost it a
+    # token; a line's opening is a fixed cost since v1.134.0, so the last
+    # three lines fit one window.
     assert assistant.digest_windows(lines, one * 3, forced) == [
         (0, 3),
         (3, 4),
         (4, 7),
-        (7, 9),
-        (9, 10),
+        (7, 10),
     ]
 
 
@@ -465,7 +467,9 @@ def test_the_chat_is_told_the_digest_and_the_descriptions_at_the_times_asked(
     assistant.answer_turn(turn.pk)
     turn.refresh_from_db()
     assert turn.state == assistant.DONE
-    user = asked[0]["messages"][-1]["content"]
+    # The reading at the end of the system message (v1.134.0, ADR 0020).
+    user = asked[0]["messages"][0]["content"]
+    assert asked[0]["messages"][-1]["content"] == "what was on the seat at 12:40?"
     assert prompts.RECORD_HEADING in user and "(both) A stop." in user
     assert prompts.CAMERA_HEADING not in user
     # 12:40 is 760 s, inside the third span: that description, and no other.
@@ -475,19 +479,20 @@ def test_the_chat_is_told_the_digest_and_the_descriptions_at_the_times_asked(
     # The camera rules and, since the Digest's lines are marked, the record
     # rules (v1.87.1).
     system = asked[0]["messages"][0]["content"]
-    assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
+    assert prompts.CAMERA_RULES in system and prompts.RECORD_RULES in system
+    assert system.index(prompts.RECORD_RULES) < system.index(prompts.RECORD_HEADING)
     assert turn.citations == {"[00:10:00]": 600.0}
 
     # No time in the question: the Digest alone for the picture.
     second = ChatTurn.objects.create(chat=chat, number=2, question="and then?")
     assistant.answer_turn(second.pk)
-    user = asked[1]["messages"][-1]["content"]
+    user = asked[1]["messages"][0]["content"]
     assert prompts.RECORD_HEADING in user and prompts.NEAR_HEADING not in user
     # The setting at 0: never the descriptions.
     settings_store.set_to("chat_descriptions_near", 0)
     third = ChatTurn.objects.create(chat=chat, number=3, question="at 12:40?")
     assistant.answer_turn(third.pk)
-    assert prompts.NEAR_HEADING not in asked[2]["messages"][-1]["content"]
+    assert prompts.NEAR_HEADING not in asked[2]["messages"][0]["content"]
     assert prompts.near_descriptions([], [760.0], 6) == []
 
 
@@ -515,7 +520,7 @@ def test_the_case_chat_reads_a_digest_after_each_transcript_and_alone_when_too_b
     case_chat.answer_case_turn(turn.pk)
     turn.refresh_from_db()
     assert turn.state == assistant.DONE, turn.reason_class
-    user = asked[0]["messages"][-1]["content"]
+    user = asked[0]["messages"][0]["content"]
     # The first recording: its transcript, then its Digest; the second: the
     # transcript alone. The rules follow the format because a Digest is present.
     assert "Recording 1 of 2: First" in user and "Recording 2 of 2: Second" in user
@@ -523,7 +528,8 @@ def test_the_case_chat_reads_a_digest_after_each_transcript_and_alone_when_too_b
     assert user.index("Look at that") < user.index(prompts.RECORD_HEADING)
     assert "(both) The first stop." in user
     system = asked[0]["messages"][0]["content"]
-    assert prompts.CAMERA_RULES in system and system.endswith(prompts.RECORD_RULES)
+    assert prompts.CAMERA_RULES in system and prompts.RECORD_RULES in system
+    assert system.index(prompts.RECORD_RULES) < system.index("Recording 1 of 2")
     assert turn.readings[0]["digest"] is True and turn.readings[1]["digest"] is False
 
     # Over the hours ceiling: the recording with a Digest contributes the
@@ -536,7 +542,7 @@ def test_the_case_chat_reads_a_digest_after_each_transcript_and_alone_when_too_b
     case_chat.answer_case_turn(turn.pk)
     turn.refresh_from_db()
     assert turn.state == assistant.DONE, turn.reason_detail
-    user = asked[1]["messages"][-1]["content"]
+    user = asked[1]["messages"][0]["content"]
     assert "Recording 1 of 2: First" in user and "(both) The first stop." in user
     first_block = user[user.index("Recording 1 of 2") : user.index("Recording 2 of 2")]
     assert "Look at that" not in first_block and "Look at that" in user

@@ -84,6 +84,12 @@ NO_VISION_WORDS = ("video", "image", "multimodal", "multi-modal", "modality")
 TOKENS_PER_SECOND = 500
 # The check and Test connection are quick questions, not calls.
 CHECK_TIMEOUT = 10
+# A request this small (estimated tokens) is retried once on any connection
+# failure; a larger one only when the connection was never made (v1.134.0).
+# The openai client's APIConnectionError also covers a connection reset
+# part-way through generation, and sending a Reading of a hundred thousand
+# tokens twice to an engine that just dropped it is the wrong answer.
+SMALL_REQUEST_TOKENS = 4000
 # What Test connection asks the model, and the only answer it wants.
 TINY_QUESTION = "Reply with the single word: ready"
 
@@ -404,10 +410,9 @@ def status_for_the_panel() -> dict:
 # One call ----------------------------------------------------------------------
 
 
-def reading_allowance(messages: list[dict]) -> float:
-    """The seconds a call's time limit grows by for what it sends: one for
-    every TOKENS_PER_SECOND tokens, the text estimated at four characters a
-    token. A picture or a clip in a message counts nothing here."""
+def _text_chars(messages: list[dict]) -> int:
+    """The characters of text a request sends; a picture or a clip counts
+    nothing here."""
     chars = 0
     for message in messages:
         content = message.get("content")
@@ -417,7 +422,28 @@ def reading_allowance(messages: list[dict]) -> float:
             for part in content:
                 if isinstance(part, dict) and isinstance(part.get("text"), str):
                     chars += len(part["text"])
-    return chars / 4 / TOKENS_PER_SECOND
+    return chars
+
+
+def reading_allowance(messages: list[dict]) -> float:
+    """The seconds a call's time limit grows by for what it sends: one for
+    every TOKENS_PER_SECOND tokens, the text estimated at four characters a
+    token. A picture or a clip in a message counts nothing here."""
+    return _text_chars(messages) / 4 / TOKENS_PER_SECOND
+
+
+def retry_allowed(problem: Exception, messages: list[dict]) -> bool:
+    """Whether a failed call is sent once more (v1.134.0): when the
+    connection was never made (httpx's ConnectError is the cause), or when
+    the request is small enough that sending it twice costs the engine
+    nothing worth counting. A reset part-way through a large request is
+    reported as unreachable instead."""
+    import httpx
+
+    cause = getattr(problem, "__cause__", None)
+    if isinstance(cause, httpx.ConnectError):
+        return True
+    return _text_chars(messages) / 4 <= SMALL_REQUEST_TOKENS
 
 
 def complete(
@@ -438,10 +464,18 @@ def complete(
     output when a feature wants one, and the priority every request carries.
     `extra` is merged into the request's vLLM-only fields, for a feature that
     needs one more (a Moment's frame sampling). One automatic retry on a
-    connection error and none on a timeout. Returns the text, the finish
-    reason, the engine's usage figures, and the model, and raises Problem
-    otherwise. A message's content may be a string or a list of parts, as the
-    OpenAI shape allows; nothing here looks inside it.
+    connection error, when retry_allowed() says so, and none on a timeout.
+    Returns the text, the finish reason, the engine's usage figures, and the
+    model, and raises Problem otherwise. A message's content may be a string
+    or a list of parts, as the OpenAI shape allows; nothing here looks inside
+    it.
+
+    The answer is read whole, not streamed (v1.134.0, looked at and left):
+    a stream with an idle limit would tell a dead engine from a slow one,
+    but this app's requests carry the lowest priority on a shared engine,
+    and the wait for the first token on a busy night can honestly pass any
+    idle limit worth having. The time limits stay as they are and the
+    Speaker check's whole read is capped instead.
     """
     from openai import APIConnectionError, APITimeoutError
 
@@ -470,7 +504,9 @@ def complete(
             answer = once()
         except APITimeoutError:
             raise
-        except APIConnectionError:
+        except APIConnectionError as failed:
+            if not retry_allowed(failed, messages):
+                raise
             answer = once()
     except Exception as problem:  # noqa: BLE001 - every failure becomes a reason class
         raise Problem(classify(problem), str(problem)[:200]) from problem

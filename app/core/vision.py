@@ -297,7 +297,10 @@ def unenriched(case, recording=None) -> list:
             TONIGHT,
         ):
             continue
-        if assistant.has_picture(transcript.recording):
+        # From the probe (v1.134.0), never the disk, for a page of hundreds.
+        from core import incidents
+
+        if incidents.is_video(transcript.recording):
             found.append(transcript)
     return found
 
@@ -332,19 +335,50 @@ def enrich_now(case, *, by, recording=None, how: str = "now") -> int:
     return count
 
 
-def open_request(case, recording=None):
-    """The request waiting on this case, or on this video, if any."""
+def open_request(case, recording=None, requests: dict | None = None):
+    """The request waiting on this case, or on this video, if any; with
+    `requests` from requests_of, from memory (v1.134.0)."""
+    if requests is not None:
+        return next(
+            (
+                one
+                for one in requests["open"]
+                if recording is None or one.recording_id in (None, recording.pk)
+            ),
+            None,
+        )
     rows = VisionRequest.objects.filter(case=case, state=VisionRequest.WAITING)
     if recording is not None:
         rows = rows.filter(models.Q(recording=recording) | models.Q(recording=None))
     return rows.first()
 
 
-def last_declined(case, recording=None):
+def last_declined(case, recording=None, requests: dict | None = None):
+    if requests is not None:
+        return next(
+            (
+                one
+                for one in requests["declined"]
+                if recording is None or one.recording_id in (None, recording.pk)
+            ),
+            None,
+        )
     rows = VisionRequest.objects.filter(case=case, state=VisionRequest.DECLINED)
     if recording is not None:
         rows = rows.filter(models.Q(recording=recording) | models.Q(recording=None))
     return rows.order_by("-decided_at").first()
+
+
+def requests_of(case) -> dict:
+    """The case's waiting requests and its declined ones, newest decision
+    first, in one query (v1.134.0): what a page of hundreds of rows reads
+    instead of asking twice per video."""
+    found = {"open": [], "declined": []}
+    for one in VisionRequest.objects.filter(
+        case=case, state__in=(VisionRequest.WAITING, VisionRequest.DECLINED)
+    ).order_by(models.F("decided_at").desc(nulls_last=True)):
+        found["open" if one.state == VisionRequest.WAITING else "declined"].append(one)
+    return found
 
 
 def ask(case, *, by, recording=None, why: str = "") -> VisionRequest | None:
@@ -429,7 +463,9 @@ def requests_waiting():
 # What the pages say ---------------------------------------------------------------
 
 
-def words(transcript, is_eligible: bool | None = None) -> tuple[str, str]:
+def words(
+    transcript, is_eligible: bool | None = None, requests: dict | None = None
+) -> tuple[str, str]:
     """The Vision column's words and the pill's tone, in the one family the
     chapter fixes; nothing for sound alone. A page drawing hundreds of rows
     says whether the recording is eligible itself, having read the settings
@@ -464,9 +500,9 @@ def words(transcript, is_eligible: bool | None = None) -> tuple[str, str]:
         why = assistant.what_to_say(transcript.prepare_reason)
         return "Not enriched: " + why, "danger"
     if recording.case_id is not None:
-        if open_request(recording.case, recording) is not None:
+        if open_request(recording.case, recording, requests) is not None:
             return "Requested now, waiting for an Admin", "warn"
-        declined = last_declined(recording.case, recording)
+        declined = last_declined(recording.case, recording, requests)
         if declined is not None and declined.decided_at is not None:
             said = "Not yet enriched with vision; the request was declined"
             if declined.line:
@@ -487,10 +523,12 @@ def offers(case, *, user) -> dict:
     }
 
 
-def line(case) -> str:
+def line(case, waiting: list | None = None) -> str:
     """The case page's line about its videos not yet enriched, and about the
-    ones waiting for tonight (v1.54.2), or nothing."""
-    waiting = unenriched(case)
+    ones waiting for tonight (v1.54.2), or nothing; `waiting` is unenriched's
+    list when the page read it already (v1.134.0)."""
+    if waiting is None:
+        waiting = unenriched(case)
     tonight = waiting_tonight().filter(recording__case=case).count()
     parts = []
     if waiting:

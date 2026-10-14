@@ -21,6 +21,101 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.134.0, 2026-10-14
+
+```
+Models: unchanged
+Database: migrates (0080: a Recording's size on disk kept on its row)
+```
+
+The performance pass of the code audit: its fifteen High and twenty-five
+Medium findings fixed. Nothing a person does changes; what changes is how
+much the server does for it. Measured on this release's own test fixtures:
+Home with twenty cases 549 queries to 44; a batch page's poll with
+twenty-five recordings 215 to 16; the Queue page's poll at a hundred jobs
+305 to 6; a recording opened in a case of fifteen named people 114 to 41;
+the case page's Speakers tab at two hundred recordings 944 to 80; the case
+chat's poll at two hundred recordings 325 to 19; My recordings at fifty
+314 to 15; ten byte ranges of a playback copy by an Admin ten audit rows
+to one.
+
+**Sizes are kept, never walked.** A Recording's size on disk is measured
+when a file lands or goes (the upload, the pipeline, a Clip, a stretch)
+and once a night, and kept on its row (migration 0080). Home, the Cases
+page, the case page, the Status page, the Users page, the upload check
+and the quota sum that column; none of them walks the disk in a request
+any more. Rows from before this release are measured the first time a
+page needs them, once each.
+
+**The pages ask grouped questions.** Home's counts and pills for all of a
+person's cases in a dozen queries instead of thirty a case; the batch
+page's Jobs and Runs in two; the Queue page's Runs prefetched; the People
+of a case from one query of who speaks where; the case chat's citations
+in one; the incident page's cameras loaded once and its clock reads in
+one query; the case page's videos told from the probe and its vision
+requests fetched once; My recordings with its Jobs, Batches and clip
+counts in a handful; the "what would go" counts in two. The Audit log's
+date filter uses the index on the time column and counts at most ten
+thousand rows ("More than 10,000 rows"). The Status page's reachability
+checks are remembered for thirty seconds, and the transcription service
+is asked for its speed at most once a minute with a short timeout, never
+inside every poll.
+
+**The polls behave.** No page polls while its tab is hidden; the Status
+and Queue pages slow down when left alone (every fifteen seconds after a
+minute, every minute after ten) and pause after an hour until a click.
+The incident page and the assistant's tabs ask a small "busy?" question
+while work runs and fetch the whole state only when it changes. The
+recording page's two watchers stop when a job fails or finishes. Find in
+a transcript waits for a pause in typing, a note saved at a moment
+redraws its one row, and the incident wall's tick does nothing while
+every camera is paused. The transcript's segments are compressed on the
+way to the browser (Caddy's encode on the app's routes; the media routes
+are unchanged), and the Speakers page asks for them without the word
+timings it never reads: 3.3 MB becomes well under half a megabyte.
+
+**The engine is asked less.** The transcript, the Digest and the papers
+go ahead of the chat history in every chat (ADR 0020), so the engine's
+prefix cache serves a follow-up question instead of reading the whole
+transcript again. The overnight summaries are handed over as the
+"Summaries at once overnight" setting allows (its ceiling is four now)
+and a finished summary starts the next at once; the setting's wording
+says what the night can do. A summary or a chat question on a video
+still being prepared waits by being queued again a minute later, never
+by sleeping in an engine lane. The app's token estimate counts a
+transcript line's prefix, which undercounted a transcript by about a
+quarter, and every Case Chat Reading is checked whole against the window
+before it is sent. A connection error is retried only when nothing was
+sent or the request is small; the Speaker check's whole read is capped at
+four windows' time and its calls no longer think; Propose events tells
+each window only the events near it; a comparison reads a report in one
+window when it fits beside the record; the picture record reads the
+transcript once and cuts the next span's clip while the engine describes
+the current one; a Case Chat question renders each transcript once.
+
+**The queue and the files.** The transcription service lists every queued
+and running job of the app (it listed its two hundred newest, which with
+more than two hundred Runs at once hid the oldest and let v1.131.0's
+missing-poll rule fail them while the service went on transcribing them),
+and the app asks about one Run before counting it missing. The poll
+prefetches the Runs, writes a Run only when it changed, and asks every
+thirty seconds while everything is queued. The loudness measurement no
+longer decodes a video's picture. The nightly manifest hashes only files
+whose size or time changed. An audit row's write no longer counts the
+whole log under its lock. The hand-over streams the audio file instead of
+holding it in memory, and the default queue runs two lanes with the poll
+held to one. A merge fetches the service's results before its
+transaction and relabels in bulk. The transcript and clip bundles are
+built in a spool and streamed. The audit log's integrity check runs on
+the queue and lands as a row. The workers' health checks run every five
+minutes instead of every thirty seconds. The two-sides match walks the
+second side once.
+
+Left on the pass's page, on purpose: the Low findings; streaming the
+engine's answer with an idle limit (not done blind against a shared
+engine); the expectation computed on the case chat's ask; a single clip's
+download read whole; a bulk settings read for the case page.
+
 ## v1.133.0, 2026-10-14
 
 ```

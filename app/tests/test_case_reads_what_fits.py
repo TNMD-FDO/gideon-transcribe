@@ -217,7 +217,7 @@ def test_a_narrowed_question_reads_those_recordings_alone_and_says_so(
     case_chat.answer_case_turn(turn.pk)
     turn.refresh_from_db()
     assert turn.state == "done" and turn.route == case_scope.NARROWED
-    user = asked[0]["messages"][-1]["content"]
+    user = asked[0]["messages"][0]["content"]
     assert "Recording 1 of 1: Call 1" in user and "Call 2" not in user
     assert turn.answer.startswith("Read the 1 recording narrowed to on the page.")
     assert [one["title"] for one in turn.readings] == ["Call 1"]
@@ -369,7 +369,7 @@ def test_over_the_ceiling_the_overviews_are_read_first_then_the_picks_whole(
     assert "2. Call 2, Jail call" in user and "(no summary yet)" in user
     assert user.rstrip().endswith("The question: Who mentioned the storage unit?")
     # Pass two: the picks whole, in upload order, numbered among themselves.
-    second = asked[1]["messages"][-1]["content"]
+    second = asked[1]["messages"][0]["content"]
     assert "Recording 1 of 2: Call 1" in second and "Recording 2 of 2: Call 4" in second
     assert "Call 3" not in second and "Call 2," not in second
     assert turn.selection["pointed_to"] == 2 and turn.selection["read_whole"] == 2

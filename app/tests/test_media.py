@@ -337,3 +337,33 @@ def test_a_two_channel_call_gets_one_lane_per_side_and_nothing_else_does(
     # any other stereo recording is mixed to one lane.
     assert "--split-channels" not in asked[0]
     assert "--split-channels" in asked[1]
+
+
+# Sound alone (v1.134.0) ---------------------------------------------------------
+
+
+def test_the_level_passes_decode_the_sound_alone(monkeypatch):
+    """Both measuring passes write nothing, so without -vn ffmpeg decoded a
+    video's whole picture to throw it away."""
+    asked = []
+
+    def remember(arguments, timeout):
+        asked.append(arguments)
+
+        class Finished:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Finished()
+
+    monkeypatch.setattr(media, "_run", remember)
+    media._astats(Path("in.mp4"), None, "astats")
+    media._measure_loudness(Path("in.mp4"), None, None)
+    media._measure_loudness(Path("in.mp4"), None, 1, span=(10.0, 20.0))
+    assert len(asked) == 3
+    for arguments in asked:
+        assert "-vn" in arguments
+        # After the input and before the filter chain, where it applies to
+        # the output and not to the input.
+        assert arguments.index("-i") < arguments.index("-vn") < arguments.index("-af")

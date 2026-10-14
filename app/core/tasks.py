@@ -19,9 +19,13 @@ from procrastinate.contrib.django import app
 log = logging.getLogger("transcribe.tasks")
 
 # One poll waiting at a time, and three seconds between them, as the
-# specification fixes.
+# specification fixes. Three seconds while a Run is running at the service
+# (v1.134.0); while everything is still queued there is nothing to read but
+# its place in the line, so thirty seconds between polls is enough, and a
+# hand-over asks for a poll at once anyway.
 POLL_LOCK = "whisperx-poll"
 POLL_SECONDS = 3
+POLL_SECONDS_WHILE_QUEUED = 30
 
 
 @app.task(queue="media", name="prepare_recording")
@@ -314,7 +318,14 @@ def poll_service(attempt: int = 1) -> None:
         queue.take_state_from(job, states, silent_lanes=frozenset(silent))
 
     if queue.live_jobs().exists():
-        _poll_again(1)
+        _poll_again(1, when=_poll_cadence())
+
+
+def _poll_cadence() -> int:
+    """Three seconds while a Run is running; thirty while all are queued."""
+    from core import queue
+
+    return POLL_SECONDS if queue.something_is_running() else POLL_SECONDS_WHILE_QUEUED
 
 
 def _poll_again(attempt: int, when: int = POLL_SECONDS) -> None:
@@ -323,11 +334,13 @@ def _poll_again(attempt: int, when: int = POLL_SECONDS) -> None:
     The queueing lock allows exactly one poll to be waiting, and asking for a
     second raises rather than being ignored. That is the lock doing its work,
     not a fault: whichever poll is already queued will find whatever this one
-    would have.
+    would have. The plain lock beside it (v1.134.0) keeps two polls from
+    running at once now that the default worker runs two jobs at a time: a
+    waiting poll is not started while one is running.
     """
     try:
         poll_service.configure(
-            queueing_lock=POLL_LOCK, schedule_in={"seconds": when}
+            lock=POLL_LOCK, queueing_lock=POLL_LOCK, schedule_in={"seconds": when}
         ).defer(attempt=attempt)
     except exceptions.AlreadyEnqueued:
         log.debug("a poll is already waiting")
@@ -499,19 +512,19 @@ def or_failed(model, pk, *, state="state", reason="reason_class", states=None):
 
 
 @app.task(queue="llm", name="write_summary")
-def write_summary(summary_id: str) -> None:
+def write_summary(summary_id: str, attempt: int = 1) -> None:
     from core import assistant
 
     with or_failed(assistant.Summary, summary_id):
-        assistant.write_summary(summary_id)
+        assistant.write_summary(summary_id, attempt)
 
 
 @app.task(queue="llm", name="answer_turn")
-def answer_turn(turn_id: str) -> None:
+def answer_turn(turn_id: str, attempt: int = 1) -> None:
     from core import assistant
 
     with or_failed(assistant.ChatTurn, turn_id):
-        assistant.answer_turn(turn_id)
+        assistant.answer_turn(turn_id, attempt)
 
 
 @app.task(queue="llm", name="suggest_names")
@@ -632,6 +645,33 @@ def sweep_audit_log(timestamp: int) -> None:
     audit.sweep(settings_store.audit_retention_months())
 
 
+@app.task(queue="default", name="check_audit_integrity")
+def check_audit_integrity(by_id: str = "") -> None:
+    """The Status page's Integrity check, run here rather than in the request
+    (v1.134.0): the walk reads the whole audit log, which is minutes on a
+    long one, and a request held that long timed out at the proxy. The
+    result lands in the audit log as the row the view used to write, in the
+    name of the Admin who pressed the button; `./transcribe integrity-check`
+    keeps its own path.
+    """
+    from core import audit
+    from core.models import User
+
+    by = User.objects.filter(pk=by_id).first() if by_id else None
+    result = audit.check_integrity()
+    audit.write(
+        audit.Category.ADMIN,
+        "Integrity check run",
+        actor=by,
+        system=None if by is not None else "worker",
+        outcome=(
+            audit.Outcome.SUCCESS if result["unbroken"] else audit.Outcome.FAILURE
+        ),
+        rows=result["rows"],
+        message=result["message"],
+    )
+
+
 @app.periodic(cron="45 * * * *")
 @app.task(queue="default", name="forget_old_jobs")
 async def forget_old_jobs(timestamp: int) -> None:
@@ -659,6 +699,7 @@ def sweep_the_disk(timestamp: int) -> None:
     if _not_half_past_three():
         return
     sweeping.sweep()
+    sweeping.measure_disks()
 
 
 @app.periodic(cron="0 * * * *")

@@ -181,10 +181,12 @@ def test_gideon_reads_the_report_and_cites_its_paragraphs(
     )
     incident_chat.answer_incident_turn(turn.pk)
     turn.refresh_from_db()
-    user = asked[0]["messages"][-1]["content"]
-    assert "The report for this incident:\nReport: Incident report, 2 pages." in user
-    assert "[Report, page 1, paragraph 3] A small bag was found" in user
-    assert user.index("The report for this incident") < user.index("The question:")
+    # The record and the report end the system message since v1.134.0 (ADR
+    # 0020); the question alone is the last message.
+    reading = asked[0]["messages"][0]["content"]
+    assert "The report for this incident:\nReport: Incident report, 2 pages." in reading
+    assert "[Report, page 1, paragraph 3] A small bag was found" in reading
+    assert turn.question in asked[0]["messages"][-1]["content"]
     assert documents.RULE in asked[0]["messages"][0]["content"]
     assert turn.citations["[21:56:47]"] == 30.0
     assert turn.citations["[Report, page 1, paragraph 3]"]["kind"] == "document"
@@ -199,7 +201,8 @@ def test_gideon_reads_the_report_and_cites_its_paragraphs(
     )
     asked = engine_answering(monkeypatch, ["Yes [Report, page 1, paragraph 3]."])
     case_chat.answer_case_turn(turn.pk)
-    user = asked[0]["messages"][-1]["content"]
+    # The papers end the system message since v1.134.0 (ADR 0020).
+    user = asked[0]["messages"][0]["content"]
     assert (
         "The reports in this case:" in user and "[Report, page 1, paragraph 3]" in user
     )

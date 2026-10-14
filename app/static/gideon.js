@@ -73,7 +73,8 @@
       refresh: function () { return refresh(); }
     });
     function refresh() {
-      return fetch("/case/" + caseId + "/incident/" + incidentId + "/chat")
+      // Not while the tab is hidden (v1.134.0): the ask waits for it to come back.
+      return window.UI.whenVisible().then(function () { return fetch("/case/" + caseId + "/incident/" + incidentId + "/chat"); })
         .then(function (answer) { return answer.json(); })
         .then(function (got) {
           state = got;

@@ -164,6 +164,12 @@ https://{$APP_HOSTNAME}:443 {
 		request_body {
 			max_size 64MB
 		}
+		# The pages and their JSON go out compressed (v1.134.0): a long
+		# transcript's segments are a few megabytes of text, and the state a
+		# page reads every few seconds is mostly repeated words. This block
+		# alone: the media routes above serve bytes that are already packed
+		# and must stay rangeable, and the upload route carries bodies in.
+		encode zstd gzip
 		reverse_proxy app:8000 {
 			header_up X-Forwarded-Proto https
 		}

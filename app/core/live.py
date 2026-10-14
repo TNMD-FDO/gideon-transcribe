@@ -729,6 +729,7 @@ def _take_what_arrived(recording: Recording) -> None:
         return
     recording.folder.mkdir(parents=True, exist_ok=True)
     shutil.move(str(arrived), recording.original_path)
+    recording.measure_disk()
     arrived.with_name(f"{arrived.name}.info").unlink(missing_ok=True)
     recording.size_bytes = recording.original_path.stat().st_size
     recording.media_state = MediaState.CHECKING

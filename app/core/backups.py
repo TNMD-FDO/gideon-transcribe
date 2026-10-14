@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import shutil
 from datetime import timedelta
@@ -23,6 +24,8 @@ from django.db import connection, models
 from django.utils import timezone
 
 from core import audit, settings_store
+
+log = logging.getLogger("transcribe.backups")
 
 # The Status page's colours: a Snapshot is overdue after this long, a drill
 # after this many days past its month.
@@ -135,20 +138,71 @@ def row_counts() -> dict[str, int]:
     return counts
 
 
-def file_hashes(root: Path) -> dict[str, str]:
-    """A sha256 per file under cases/, by its path relative to cases/."""
+def file_hashes(root: Path, cache: Path | None = None) -> dict[str, str]:
+    """A sha256 per file under cases/, by its path relative to cases/.
+
+    With a cache file given (v1.134.0), a file whose size and modification
+    time are what the cache remembers keeps the hash it had and is not read;
+    every other file is read and the cache rewritten. The manifest used to
+    hash every byte under cases/ every night. The manifest's own shape does
+    not change: the cache is a file of its own beside it.
+    """
     hashes: dict[str, str] = {}
     if not root.exists():
         return hashes
+    remembered = _read_hash_cache(cache)
+    fresh: dict[str, dict] = {}
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        digest = hashlib.sha256()
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        hashes[path.relative_to(root).as_posix()] = digest.hexdigest()
+        name = path.relative_to(root).as_posix()
+        facts = path.stat()
+        known = remembered.get(name)
+        if (
+            known
+            and known.get("size") == facts.st_size
+            and known.get("mtime") == facts.st_mtime_ns
+            and known.get("sha256")
+        ):
+            hashes[name] = known["sha256"]
+        else:
+            hashes[name] = _sha256_of(path)
+        fresh[name] = {
+            "size": facts.st_size,
+            "mtime": facts.st_mtime_ns,
+            "sha256": hashes[name],
+        }
+    if cache is not None:
+        try:
+            cache.write_text(json.dumps(fresh), encoding="utf-8")
+        except OSError:
+            # Without the cache the next run reads everything again, as it
+            # always did; the manifest is whole either way.
+            log.warning("the file-hash cache at %s could not be written", cache)
     return hashes
+
+
+def _sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _read_hash_cache(cache: Path | None) -> dict[str, dict]:
+    if cache is None or not cache.exists():
+        return {}
+    try:
+        read = json.loads(cache.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return read if isinstance(read, dict) else {}
+
+
+def hash_cache_file() -> Path:
+    """The cache beside the manifest; never part of the Snapshot's checks."""
+    return backup_folder() / "file-hashes.json"
 
 
 def migration_number() -> str:
@@ -176,7 +230,7 @@ def write_manifest(dump: Path | None = None) -> dict:
         "dump": dump.name if dump else "",
         "dump_size": dump.stat().st_size if dump and dump.exists() else 0,
         "tables": row_counts(),
-        "files": file_hashes(cases_folder()),
+        "files": file_hashes(cases_folder(), cache=hash_cache_file()),
     }
     (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
     return manifest

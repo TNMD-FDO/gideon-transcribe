@@ -73,6 +73,8 @@ def prepare(recording: Recording) -> Recording:
     recording.media_state = MediaState.READY
     if not _keep(recording):
         return recording
+    # The figure on disk, now that the prepared audio is there (v1.134.0).
+    recording.measure_disk()
     _record_accepted(recording)
     log.info(
         "recording %s is ready: %.1f minutes, %d side(s)",
@@ -255,6 +257,7 @@ def prepare_audio_again(recording: Recording) -> Recording:
 
     recording.media_state = MediaState.READY
     recording.save(update_fields=["media_state"])
+    recording.measure_disk()
     return recording
 
 
@@ -293,6 +296,9 @@ def make_playback(recording: Recording) -> Recording:
 
     recording.playback_ready = True
     recording.save(update_fields=["playback_ready"])
+    # The copy and the waveform are the last files the pipeline adds, so the
+    # figure on disk is taken again here (v1.134.0).
+    recording.measure_disk()
     log.info("recording %s can be played", recording.id)
     return recording
 

@@ -88,8 +88,17 @@ def _expected(chat, case, scope: dict | None = None) -> dict:
     return expectation.note("case_chat_turn", size)
 
 
-def _turn_json(turn: CaseChatTurn, still_here: dict, me=None) -> dict:
-    """One turn as the tab draws it, its Citations resolved to links or not."""
+def _turn_json(
+    turn: CaseChatTurn,
+    still_here: dict,
+    me=None,
+    lines: dict | None = None,
+    links: dict | None = None,
+) -> dict:
+    """One turn as the tab draws it, its Citations resolved to links or not.
+    `lines` holds the cited lines by (recording id, second) and `links`
+    every synced camera's All cameras link by recording id, both from one
+    query for the whole state (v1.134.0)."""
     asker = turn.asked_by or turn.chat.asked_by
     cited = {}
     for text, where in (turn.citations or {}).items():
@@ -112,10 +121,14 @@ def _turn_json(turn: CaseChatTurn, still_here: dict, me=None) -> dict:
             # The Preview (v1.98.0) reads the lines around the moment itself.
             "recording": str(recording.pk),
             # The line it points to, for the pill's hover; never logged.
-            "line": _line_at(recording, where["seconds"]),
+            "line": _line_at(recording, where["seconds"], lines),
             # All cameras (Phase 6 chapter 1): the incident page at that
             # moment, for a placed camera of an incident; "" otherwise.
-            "all": incidents.all_cameras_url(recording, where["seconds"]),
+            "all": (
+                incidents.url_at(links.get(recording.pk), where["seconds"])
+                if links is not None
+                else incidents.all_cameras_url(recording, where["seconds"])
+            ),
         }
     running = turn.state in (assistant.QUEUED, assistant.RUNNING)
     count = len(turn.readings or [])
@@ -164,31 +177,54 @@ def _turn_json(turn: CaseChatTurn, still_here: dict, me=None) -> dict:
 
 
 def _media_of(recording) -> str:
-    from core.media_access import media_root
+    # From the record, never the disk (v1.134.0).
+    from core.media_access import playback_url
 
-    playback = recording.playback_path() if recording.playback_ready else None
-    return f"{media_root(recording)}/{playback.name}" if playback else ""
+    return playback_url(recording)
 
 
-def _line_at(recording, seconds: float) -> str:
+def _line_at(recording, seconds: float, lines: dict | None = None) -> str:
     """The line the pill's hover shows: the transcript line at that second, or,
     when nothing was said there, what the camera showed as the Digest has it
-    (v1.82.0)."""
-    from core.jobs import Segment
-
-    segment = (
-        Segment.objects.filter(
-            transcript__recording=recording,
-            start__gte=int(seconds),
-            start__lt=int(seconds) + 1,
-        )
-        .order_by("start")
-        .first()
-    )
+    (v1.82.0). With `lines` from lines_at, nothing is asked here."""
+    if lines is None:
+        lines = lines_at([(recording.pk, seconds)])
+    segment = lines.get((recording.pk, int(seconds)))
     if segment is None:
         return _seen_at(recording, seconds)
     who = f"{segment.speaker}: " if segment.speaker else ""
     return (who + segment.text)[:200]
+
+
+def lines_at(moments) -> dict:
+    """The first line starting inside each cited second, for every
+    (recording id, seconds) pair at once, keyed by (recording id, whole
+    second): one query for a whole state (v1.134.0), where each citation
+    had asked for its own."""
+    from django.db.models import Q
+
+    from core.jobs import Segment
+
+    wanted = {(recording_id, int(seconds)) for recording_id, seconds in moments}
+    if not wanted:
+        return {}
+    asked = Q()
+    for recording_id, second in wanted:
+        asked |= Q(
+            transcript__recording_id=recording_id,
+            start__gte=second,
+            start__lt=second + 1,
+        )
+    found: dict = {}
+    for segment in (
+        Segment.objects.filter(asked)
+        .order_by("start", "id")
+        .only("transcript_id", "transcript__recording_id", "start", "speaker", "text")
+        .select_related("transcript")
+    ):
+        key = (segment.transcript.recording_id, int(segment.start))
+        found.setdefault(key, segment)
+    return found
 
 
 STAMPED = re.compile(r"\[(\d{1,2}):(\d{2}):(\d{2})\]")
@@ -218,10 +254,14 @@ def _seen_at(recording, seconds: float) -> str:
     return ""
 
 
-def _earlier_line(chat: CaseChat, still_here: dict) -> str:
+def _earlier_line(chat: CaseChat, still_here: dict, turns=None) -> str:
     """Process again on a Recording since an answer used its Transcript."""
     replaced = []
-    for turn in chat.turns.filter(state=assistant.DONE):
+    if turns is None:
+        turns = list(chat.turns.all())
+    for turn in turns:
+        if turn.state != assistant.DONE:
+            continue
         for one in turn.readings or []:
             recording = still_here.get(one["recording"])
             transcript = getattr(recording, "transcript", None) if recording else None
@@ -239,7 +279,13 @@ def _earlier_line(chat: CaseChat, still_here: dict) -> str:
     )
 
 
-def _chat_json(chat: CaseChat, still_here: dict, me=None) -> dict:
+def _chat_json(
+    chat: CaseChat,
+    still_here: dict,
+    me=None,
+    lines: dict | None = None,
+    links: dict | None = None,
+) -> dict:
     turns = list(chat.turns.all())
     first_model = next((one.model for one in turns if one.model), "")
     first_when = next((one.answered_at for one in turns if one.answered_at), None)
@@ -251,8 +297,8 @@ def _chat_json(chat: CaseChat, still_here: dict, me=None) -> dict:
             one.state in (assistant.QUEUED, assistant.RUNNING) for one in turns
         ),
         "notice": assistant.notice(first_model, first_when) if first_when else "",
-        "earlier": _earlier_line(chat, still_here),
-        "turns": [_turn_json(one, still_here, me) for one in turns],
+        "earlier": _earlier_line(chat, still_here, turns),
+        "turns": [_turn_json(one, still_here, me, lines, links) for one in turns],
         # Whose chat (v1.126.0): the panel lists yours first, everyone's a
         # tab away, and a colleague's chat says whose it is.
         "asked_by": chat.asked_by.shown_name if chat.asked_by else "",
@@ -260,16 +306,60 @@ def _chat_json(chat: CaseChat, still_here: dict, me=None) -> dict:
     }
 
 
+def _readable(recordings) -> tuple[list, list[dict]]:
+    """case_chat.readable, from the recordings already loaded with their
+    transcripts and one query for the jobs of those without (v1.134.0): the
+    poll had asked two questions of every recording every two seconds."""
+    from core import pages
+
+    rows = sorted(recordings, key=lambda one: (one.created, str(one.pk)))
+    read = [one for one in rows if getattr(one, "transcript", None) is not None]
+    without = [one for one in rows if getattr(one, "transcript", None) is None]
+    newest = pages.newest_jobs_of(without) if without else {}
+    skipped = []
+    for recording in without:
+        job = newest.get(recording.pk)
+        failed = recording.media_state in ("failed", "rejected") or (
+            job is not None and job.state == "failed"
+        )
+        skipped.append(
+            {
+                "recording": str(recording.pk),
+                "title": case_chat._title(recording),
+                "why": "failed" if failed else "still transcribing",
+            }
+        )
+    return read, skipped
+
+
 @login_required
 def state(request: HttpRequest, case_id) -> JsonResponse:
     case = _the_case(request, case_id)
-    still_here = {str(one.pk): one for one in Recording.objects.filter(case=case)}
+    # The case's recordings with their transcripts, once (v1.134.0).
+    still_here = {
+        str(one.pk): one
+        for one in Recording.objects.filter(case=case).select_related("transcript")
+    }
     # The incident's conversations live on the incident page (Phase 7 chapter 5).
-    chats = [
-        _chat_json(one, still_here, request.user)
-        for one in case.chats.filter(incident__isnull=True).select_related("asked_by")
+    chats_here = list(
+        case.chats.filter(incident__isnull=True)
+        .select_related("asked_by")
+        .prefetch_related("turns", "turns__asked_by")
+    )
+    # Every citation's line in one query, and every camera's link in one.
+    moments = [
+        (still_here[where["recording"]].pk, where["seconds"])
+        for chat in chats_here
+        for turn in chat.turns.all()
+        for where in (turn.citations or {}).values()
+        if where.get("kind") != "document" and where.get("recording") in still_here
     ]
-    read, skipped = case_chat.readable(case)
+    lines = lines_at(moments)
+    links = incidents.links_in(case)
+    chats = [
+        _chat_json(one, still_here, request.user, lines, links) for one in chats_here
+    ]
+    read, skipped = _readable(still_here.values())
     # What a whole-case question would do (Phase 9 chapter 6), for the
     # drawer's head and its grounding line.
     hours = case_scope.hours_of(read)

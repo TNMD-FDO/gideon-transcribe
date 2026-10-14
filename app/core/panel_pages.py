@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings as django_settings
@@ -203,6 +204,33 @@ def status_lines(request: HttpRequest) -> JsonResponse:
     )
 
 
+# A reachability check's answer, kept for thirty seconds in the process
+# (v1.134.0): the Status page polls every five, and each poll had opened a
+# socket to Caddy, the sidecar, the service and the directory. Keyed by the
+# check and by the function that answers it, so a test that stands another
+# function in is not told the last one's answer.
+CHECK_EVERY_SECONDS = 30
+_checked: dict = {}
+
+
+def _remembered(key: str, ask, who=None):
+    """`ask()`'s answer, asked at most once every CHECK_EVERY_SECONDS."""
+    import time
+
+    now = time.monotonic()
+    held = _checked.get(key)
+    if held is not None and held[2] is who and now - held[0] < CHECK_EVERY_SECONDS:
+        return held[1]
+    answer = ask()
+    _checked[key] = (now, answer, who)
+    return answer
+
+
+def forget_checks() -> None:
+    """Every kept answer dropped, so the next poll asks afresh."""
+    _checked.clear()
+
+
 def _services() -> list[dict]:
     """A health row per service, by asking each one rather than asking Docker.
 
@@ -214,8 +242,13 @@ def _services() -> list[dict]:
     """
     return [
         {"name": "app", "state": "healthy", "says": "answering this page"},
-        _listening("caddy", "caddy", 443),
-        _reachable("tusd", os.environ.get("TUSD_URL", "http://tusd:1080") + "/metrics"),
+        _remembered("caddy", lambda: _listening("caddy", "caddy", 443)),
+        _remembered(
+            "tusd",
+            lambda: _reachable(
+                "tusd", os.environ.get("TUSD_URL", "http://tusd:1080") + "/metrics"
+            ),
+        ),
         _database(),
         _service_health(),
         _workers(),
@@ -308,7 +341,7 @@ def _service_health() -> dict:
             "state": "not installed",
             "says": "no card yet; ./transcribe add transcription",
         }
-    if whisperx.is_alive():
+    if _remembered("whisperx-alive", whisperx.is_alive, whisperx.is_alive):
         return {"name": "whisperx", "state": "healthy", "says": "answering"}
     return {"name": "whisperx", "state": "unreachable", "says": "no answer"}
 
@@ -335,10 +368,16 @@ def _whisperx(lane: str = "") -> dict:
     """The service's own status endpoint, rendered for an Admin."""
     if not pieces.transcription_installed():
         return {"up": False, "installed": False, "says": "not installed"}
-    try:
-        return {"up": True, **whisperx.status(lane)}
-    except Exception as problem:  # noqa: BLE001 - any failure is "not reachable"
-        return {"up": False, "says": str(problem)}
+
+    # Asked once per answer and kept for thirty seconds (v1.134.0): three
+    # lines of the page read the same status.
+    def ask() -> dict:
+        try:
+            return {"up": True, **whisperx.status(lane)}
+        except Exception as problem:  # noqa: BLE001 - any failure is "not reachable"
+            return {"up": False, "says": str(problem)}
+
+    return _remembered(f"whisperx-status-{lane}", ask, whisperx.status)
 
 
 def _fast_lane() -> dict:
@@ -349,27 +388,35 @@ def _fast_lane() -> dict:
 
 
 def _workspaces() -> dict:
-    people = User.objects.filter(recordings__isnull=False).distinct()
-    open_now = busy = 0
-    for person in people:
-        if lifecycle.is_open(person):
-            open_now += 1
-        if lifecycle.is_busy(person):
-            busy += 1
+    from core import retention
+    from core.recordings import summed_disk_bytes
 
-    scratch = Path(django_settings.SCRATCH_DIR)
-    size = 0
-    if scratch.is_dir():
-        size = sum(path.stat().st_size for path in scratch.rglob("*") if path.is_file())
+    # Who is open and who is busy, for everyone at once (v1.134.0): the page
+    # had asked four questions of each person with a recording.
+    people = set(
+        Recording.objects.order_by().values_list("user_id", flat=True).distinct()
+    )
+    open_now = len(
+        people
+        & set(
+            LoginSession.objects.filter(ended__isnull=True)
+            .order_by()
+            .values_list("user_id", flat=True)
+            .distinct()
+        )
+    )
+    busy = len(people & _busy_people())
+
+    # The session folder's size from the kept figures, never a walk
+    # (v1.134.0): every recording in no case.
+    size = summed_disk_bytes(Recording.objects.filter(case__isnull=True))
     # The panel chapter's Cases line: "Cases: N, X GB; M expiring; K in the
     # recycle bin, Y GB". The live ones and the binned ones are counted apart,
     # because the bin is disk an owner can free at once.
-    from core import retention
-
     live = Case.objects.filter(deleted_on__isnull=True)
     binned = Case.objects.filter(deleted_on__isnull=False)
-    cases_size = sum(one.disk_bytes() for one in live)
-    binned_size = sum(one.disk_bytes() for one in binned)
+    cases_size = _cases_disk_bytes(live)
+    binned_size = _cases_disk_bytes(binned)
     expiring = sum(1 for one in live if retention.is_warned(retention.days_left(one)))
     since = cases.off_since()
     return {
@@ -385,6 +432,50 @@ def _workspaces() -> dict:
         # and for how long it has been out of reach.
         "cases_off_since": f"{since:%d %B %Y}" if since else "",
     }
+
+
+def _busy_people() -> set:
+    """The ids of everyone whose Workspace is busy, in three grouped
+    queries: lifecycle.is_busy's three questions, asked of everyone."""
+    from core.recordings import MediaState
+
+    workspace = Recording.objects.filter(case__isnull=True, is_dictation=False)
+    found = set(
+        workspace.filter(media_state__in=lifecycle.BUSY_MEDIA)
+        .order_by()
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    found |= set(
+        Job.objects.filter(
+            recording__case__isnull=True,
+            recording__is_dictation=False,
+            state__in=JobState.LIVE,
+        )
+        .order_by()
+        .values_list("recording__user_id", flat=True)
+        .distinct()
+    )
+    found |= set(
+        workspace.filter(media_state=MediaState.READY, jobs__isnull=True)
+        .order_by()
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    return found
+
+
+def _cases_disk_bytes(these) -> int:
+    """These cases' recordings' kept sizes and their documents', in three
+    queries for all of them (v1.134.0)."""
+    from core.documents import Document
+    from core.recordings import summed_disk_bytes
+
+    recordings = summed_disk_bytes(Recording.objects.filter(case__in=these))
+    documents = Document.objects.filter(case__in=these).aggregate(
+        total=models.Sum("size_bytes")
+    )["total"]
+    return recordings + (documents or 0)
 
 
 def _media() -> dict:
@@ -412,12 +503,19 @@ def _directory() -> dict:
     if not directory.is_on():
         return {"on": False, "says": "switched off: local admins only"}
 
-    try:
-        held = directory.connect()
-    except directory.Unreachable as problem:
-        return {"on": True, "reachable": False, "says": str(problem)}
-    with contextlib.suppress(Exception):
-        held.unbind_s()
+    def bind() -> str:
+        """ "" when the bind works, else what went wrong."""
+        try:
+            held = directory.connect()
+        except directory.Unreachable as problem:
+            return str(problem) or "unreachable"
+        with contextlib.suppress(Exception):
+            held.unbind_s()
+        return ""
+
+    problem = _remembered("directory", bind, directory.connect)
+    if problem:
+        return {"on": True, "reachable": False, "says": problem}
 
     last = (
         audit.Row.objects.filter(event__startswith="Directory check")
@@ -463,11 +561,24 @@ def queue_page(request: HttpRequest) -> HttpResponse:
 
 @admins_only
 def queue_state(request: HttpRequest) -> JsonResponse:
+    from django.db.models import Prefetch
+
+    from core import pages
+    from core.jobs import Run
+
     rows = []
-    for job in Job.objects.select_related(
-        "recording", "recording__user", "batch"
-    ).order_by("-created")[:100]:
-        run = job.runs.order_by("side__number").first()
+    # The Runs with their Sides in one query for the hundred Jobs (v1.134.0),
+    # and the step read from them: the poll had asked three per Job.
+    for job in (
+        Job.objects.select_related("recording", "recording__user")
+        .prefetch_related(
+            Prefetch(
+                "runs", Run.objects.select_related("side").order_by("side__number")
+            )
+        )
+        .order_by("-created")[:100]
+    ):
+        run = pages._first_run(job)
         rows.append(
             {
                 "id": str(job.pk),
@@ -477,7 +588,7 @@ def queue_state(request: HttpRequest) -> JsonResponse:
                 "started": job.created.isoformat(),
                 "minutes": round((job.recording.duration_seconds or 0) / 60, 1),
                 "state": job.state,
-                "step": job.step,
+                "step": pages.step_of(job),
                 "position": run.position if run else None,
                 "live": job.is_live,
             }
@@ -556,24 +667,25 @@ def users(request: HttpRequest) -> HttpResponse:
     people = User.objects.order_by("username")
     if no_email:
         people = people.filter(email="")
+    # Everyone's figures in a few grouped queries (v1.134.0): the page had
+    # walked each person's folders and asked a handful of questions per row.
+    figures = _people_figures()
     for person in people:
-        theirs = Recording.objects.filter(user=person, case__isnull=True)
-        size = sum(one.disk_bytes() for one in theirs)
-        their_cases = Case.objects.filter(owner=person)
-        in_cases = sum(one.recordings.count() for one in their_cases)
-        cases_size = sum(one.disk_bytes() for one in their_cases)
+        mine = figures["workspace"].get(person.pk, (0, 0))
+        theirs = figures["cases"].get(person.pk, (0, 0))
+        cases_size = theirs[1] + figures["documents"].get(person.pk, 0)
         rows.append(
             {
                 "user": person,
                 "condition": lifecycle.condition(person),
-                "recordings": theirs.count(),
+                "recordings": mine[0],
                 # Reads "3 in session, 41 in cases". The Cases half is kept
                 # even while Folder management is off, so IT can see what is
                 # parked.
-                "in_session": theirs.count(),
-                "in_cases": in_cases,
+                "in_session": mine[0],
+                "in_cases": theirs[0],
                 "cases_gigabytes": f"{cases_size / 1024**3:.1f}",
-                "gigabytes": f"{size / 1024**3:.1f}",
+                "gigabytes": f"{mine[1] / 1024**3:.1f}",
                 "quota": (
                     f"{person.quota_gb} GB"
                     if person.quota_gb
@@ -597,6 +709,37 @@ def users(request: HttpRequest) -> HttpResponse:
             "without_email": mail.people_without_email(),
         },
     )
+
+
+def _people_figures() -> dict:
+    """Every person's recordings in no case (how many, their kept bytes) by
+    user id, the recordings in the cases they own by owner id, and their
+    cases' documents' bytes, in four queries for the whole page."""
+    from core.documents import Document
+
+    for one in Recording.objects.filter(on_disk_bytes__isnull=True):
+        one.measure_disk()
+    workspace = {
+        row["user_id"]: (row["n"], row["total"] or 0)
+        for row in Recording.objects.filter(case__isnull=True)
+        .order_by()
+        .values("user_id")
+        .annotate(n=models.Count("id"), total=models.Sum("on_disk_bytes"))
+    }
+    in_cases = {
+        row["case__owner_id"]: (row["n"], row["total"] or 0)
+        for row in Recording.objects.filter(case__isnull=False)
+        .order_by()
+        .values("case__owner_id")
+        .annotate(n=models.Count("id"), total=models.Sum("on_disk_bytes"))
+    }
+    documents = {
+        row["case__owner_id"]: row["total"] or 0
+        for row in Document.objects.order_by()
+        .values("case__owner_id")
+        .annotate(total=models.Sum("size_bytes"))
+    }
+    return {"workspace": workspace, "cases": in_cases, "documents": documents}
 
 
 SOURCES = {"local": "Local", "group": "Admin group", "manual": "Manual"}
@@ -1024,6 +1167,15 @@ def _tell(request, message: str) -> None:
 
 # A page is 100 rows, newest first, as the specification fixes.
 A_PAGE = 100
+# How many rows the audit viewer counts before it says "more than".
+COUNTED_MOST = 10_000
+
+
+def _local_midnight(day):
+    """The start of that day in the office's own zone, as an aware moment."""
+    import datetime as dt
+
+    return timezone.make_aware(dt.datetime.combine(day, dt.time.min))
 
 
 def group_divides(rows) -> list[dict]:
@@ -1084,10 +1236,16 @@ def audit_log(request: HttpRequest) -> HttpResponse:
     for key in ("since", "until"):
         if asked[key] and _a_date(asked[key]) is None:
             asked[key] = ""
+    # Filtered on moments, not on dates (v1.134.0): a date comparison made
+    # PostgreSQL cast every row's moment to the office's day before it
+    # could compare, past the index; local midnight of since to local
+    # midnight after until compares the column as it is.
     if asked["since"]:
-        rows = rows.filter(at__date__gte=_a_date(asked["since"]))
+        rows = rows.filter(at__gte=_local_midnight(_a_date(asked["since"])))
     if asked["until"]:
-        rows = rows.filter(at__date__lte=_a_date(asked["until"]))
+        rows = rows.filter(
+            at__lt=_local_midnight(_a_date(asked["until"]) + timedelta(days=1))
+        )
     if asked["actor"]:
         rows = rows.filter(actor_username__icontains=asked["actor"])
     if asked["affected"]:
@@ -1112,9 +1270,15 @@ def audit_log(request: HttpRequest) -> HttpResponse:
             client_text=Cast("client_address", models.CharField())
         ).filter(client_text__icontains=asked["client"])
 
-    found = rows.count()
+    # Counted up to the first ten thousand and one (v1.134.0): the page says
+    # "more than 10,000 rows" past that rather than count a year's rows for
+    # every page turn, and the deepest page offered is the last counted.
+    found = len(rows.values_list("pk", flat=True)[: COUNTED_MOST + 1])
+    more = found > COUNTED_MOST
+    found = min(found, COUNTED_MOST)
+    pages = max(1, (found + A_PAGE - 1) // A_PAGE)
     try:
-        page = max(1, int(request.GET.get("page", "1") or 1))
+        page = max(1, min(pages, int(request.GET.get("page", "1") or 1)))
     except ValueError:
         page = 1
     start = (page - 1) * A_PAGE
@@ -1129,10 +1293,13 @@ def audit_log(request: HttpRequest) -> HttpResponse:
             **furniture(request, "panel-audit"),
             "entries": group_divides(rows[start : start + A_PAGE]),
             "found": found,
+            # Past the counted rows, "more than 10,000"; the template prints
+            # the figure as a number, so the words wait on the template.
+            "more_than_counted": more,
             # Not "page": the nav uses that word for which page of the app
             # this is.
             "page_number": page,
-            "pages": max(1, (found + A_PAGE - 1) // A_PAGE),
+            "pages": pages,
             "asked": asked,
             "carried": query.urlencode(),
             "categories": [
@@ -1147,22 +1314,22 @@ def audit_log(request: HttpRequest) -> HttpResponse:
 @admins_only
 @require_POST
 def integrity_check(request: HttpRequest) -> JsonResponse:
-    """Walk the chain, say what it found, and write that as a row of its own."""
-    from core import audit as audit_log_module
+    """Start the walk of the chain on the worker (v1.134.0) and say so; the
+    result lands in the audit log as a row of its own, in this Admin's name.
+    The walk used to run inside the request, which read the whole log."""
+    from core import tasks
 
-    result = audit_log_module.check_integrity()
-    audit.write(
-        audit.Category.ADMIN,
-        "Integrity check run",
-        actor=request.user,
-        request=request,
-        outcome=(
-            audit.Outcome.SUCCESS if result["unbroken"] else audit.Outcome.FAILURE
-        ),
-        rows=result["rows"],
-        message=result["message"],
+    tasks.check_audit_integrity.defer(by_id=str(request.user.pk))
+    return JsonResponse(
+        {
+            "ok": True,
+            "queued": True,
+            "says": (
+                "The check is running; its result lands in the audit log "
+                "within a few minutes."
+            ),
+        }
     )
-    return JsonResponse(result)
 
 
 # The directory ----------------------------------------------------------------

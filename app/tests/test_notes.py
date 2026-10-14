@@ -338,19 +338,24 @@ def test_gideon_is_told_the_notes_as_the_offices_own_words(
     turn = CaseChatTurn.objects.create(chat=chat, number=2, question="And?")
     asked = engine_answering(monkeypatch, ["Yes [Recording 1, 00:00:30]."])
     case_chat.answer_case_turn(turn.pk)
-    user = asked[0]["messages"][-1]["content"]
+    # The reading, notes included, ends the system message since v1.134.0
+    # (ADR 0020); the last message is the question alone.
+    reading = asked[0]["messages"][0]["content"]
     assert (
         "The office's notes on this recording:\n[00:00:30] asker: Check the footage."
-        in user
+        in reading
     )
-    assert user.index("I got gun") < user.index("The office's notes on this recording")
+    assert reading.index("I got gun") < reading.index(
+        "The office's notes on this recording"
+    )
     assert notes.RULE in asked[0]["messages"][0]["content"]
     # The incident's Gideon: the note on the incident clock, with its camera.
     inc_chat = incident_chat.new_chat(incident, by=person)
     turn = CaseChatTurn.objects.create(chat=inc_chat, number=1, question="Gun?")
     asked = engine_answering(monkeypatch, ["Yes [21:56:47]."])
     incident_chat.answer_incident_turn(turn.pk)
-    user = asked[0]["messages"][-1]["content"]
+    # The record ends the system message since v1.134.0 (ADR 0020).
+    user = asked[0]["messages"][0]["content"]
     # Chapter 11: the note is on the chronology, read as an event that is
     # the office's own note; the separate block of notes is gone.
     assert (

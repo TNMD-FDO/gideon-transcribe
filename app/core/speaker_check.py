@@ -43,6 +43,8 @@ FEATURE = "speaker_check"
 # The lines a window carries over from the one before it, so a line at the
 # edge still has its question or its answer in view.
 OVERLAP_LINES = 6
+# The most windows' worth of time a whole read is given (v1.134.0).
+WHOLE_READ_WINDOWS = 4
 
 
 # The switch and the offer -----------------------------------------------------------
@@ -234,10 +236,12 @@ def sketch_of(
         return "", cut, {}
     user = prompts.speaker_sketch_input(kept, speakers, cut)
     try:
+        # Never thinking (v1.134.0), as the proposals are not: the sketch is
+        # a reading of the words, and a small model thinks the cap away.
         answer = engine.complete(
             assistant._messages(system, user),
             max_completion_tokens=cap,
-            thinking=assistant.thinking(),
+            thinking=False,
             timeout=assistant.time_limit(FEATURE),
             **assistant.SUGGESTION_SAMPLING,
         )
@@ -425,8 +429,12 @@ def run(check_id, attempt: int = 1) -> None:
         spans = [(0, len(lines))] if whole else sliced
         # Read whole, one call does the work of every window it replaced, so
         # it is given their time (v1.100.1: a busy engine timed the whole
-        # read out at one window's limit).
-        limit = assistant.time_limit(FEATURE) * (max(1, len(sliced)) if whole else 1)
+        # read out at one window's limit), up to WHOLE_READ_WINDOWS of it
+        # (v1.134.0: three hours of windows made a limit of 54 minutes, and
+        # a call that has not answered in four windows' time is not coming).
+        limit = assistant.time_limit(FEATURE) * (
+            min(max(1, len(sliced)), WHOLE_READ_WINDOWS) if whole else 1
+        )
         for start, end in spans:
             window = lines[start:end]
             user = prompts.speaker_check_input(window, speakers, sketch)
@@ -434,10 +442,12 @@ def run(check_id, attempt: int = 1) -> None:
                 system, user, answer_cap=answer_cap, window=assistant.window()
             ):
                 raise engine.Problem(engine.TOO_LONG, "a window is too long")
+            # Never thinking (v1.134.0), as the proposals are not: the answer
+            # is a schema's worth of moves, and the cap is the moves' room.
             answer = engine.complete(
                 assistant._messages(system, user),
                 max_completion_tokens=answer_cap,
-                thinking=assistant.thinking(),
+                thinking=False,
                 timeout=limit,
                 schema=prompts.speaker_check_schema(speakers),
                 **assistant.SUGGESTION_SAMPLING,

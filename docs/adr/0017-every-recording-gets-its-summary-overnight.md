@@ -42,3 +42,5 @@ the next night, as a video is. Nothing of this runs in the daytime.
 - A reviewer opening any call finds its summary already written.
 - The Overview becomes something the app reads (ADR 0018). It is still
   the Summary's first part, kept for its own sake, and not an index.
+
+**Noted 2026-10-14.** The arithmetic above assumed the hand-over kept the lanes full. Until v1.134.0 the minute tick handed over one summary a tick, so at most 600 could start in the ten-hour window whatever the setting said; since v1.134.0 the tick hands over as many as the setting allows and a finished summary starts the next at once, and the setting's ceiling is four.

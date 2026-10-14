@@ -151,7 +151,11 @@
       newSummary.textContent = answersUseMoments() ? "Summarise this video" : "New summary";
     }
     var templateChoice = document.getElementById("summary-template");
-    if (templateChoice) {
+    // The choice of template is built again only when the templates changed
+    // (v1.134.0): built on every poll, it took the person's pick with it.
+    var templatesKey = JSON.stringify([state.templates, state.default_template, state.type_line]);
+    if (templateChoice && templatesKey !== drawnTemplates) {
+      drawnTemplates = templatesKey;
       templateChoice.innerHTML = state.templates.map(function (one) {
         return "<option value='" + one.id + "'" +
           (one.id === state.default_template ? " selected" : "") + ">" +
@@ -165,6 +169,15 @@
         typeLine.hidden = !state.type_line;
       }
     }
+    // The list is built again only when a summary's id, state, stage or
+    // words changed (v1.134.0), not by innerHTML on every poll.
+    var summariesKey = JSON.stringify([state.reachable, state.unavailable_line, describedCount(), answersUseMoments(),
+      state.summaries.map(function (one) {
+        return [one.id, one.state, one.stage, one.when, one.written_from, one.moments_used, one.cut_short,
+          one.earlier, one.notice, one.text ? one.text.length : 0, one.expectation];
+      })]);
+    if (summariesKey === drawnSummaries) { return; }
+    drawnSummaries = summariesKey;
     if (!state.summaries.length) {
       summaryList.innerHTML = answersUseMoments()
         ? "<p class='muted small'>No summaries yet. Summarise this video looks at the picture at intervals, then writes from the words and the moments together.</p>"
@@ -229,6 +242,8 @@
   // A search hit opens a summary at a paragraph (Phase 7 chapter 3): the
   // page's ?summary=&para= light that block once, the first time it is drawn.
   var litOnce = false;
+  var drawnTemplates = "";
+  var drawnSummaries = "";
   function lightAskedParagraph() {
     if (litOnce) { return; }
     var asked = new URLSearchParams(window.location.search);
@@ -605,20 +620,49 @@
   }
 
   function refresh() {
-    return fetch("/recording/" + recording + "/assistant")
+    // Not while the tab is hidden (v1.134.0): the ask waits for it to come back.
+    return window.UI.whenVisible().then(function () { return fetch("/recording/" + recording + "/assistant"); })
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         state = body;
+        busySince = 0;
         draw();
-        window.clearTimeout(timer);
-        if (state.busy || (chat && chat.pendingCount())) {
-          timer = window.setTimeout(refresh, EVERY);
-        }
+        askLater();
       })
       .catch(function () {
         window.clearTimeout(timer);
         timer = window.setTimeout(refresh, EVERY * 3);
       });
+  }
+
+  // While something is at work the page asks only whether it still is
+  // (v1.134.0): `?what=busy` is a small answer every two seconds, where the
+  // whole state carried every summary's text and every answer each time.
+  // The whole state comes back when busy turns false or the work's stage
+  // changes, and every 30 s meanwhile in case something landed without
+  // ending the work; a question just asked is followed by the whole state,
+  // which is what shows its turn. An app that does not know the question
+  // answers with the whole state, which is taken as before.
+  var busySince = 0;
+  function askLater() {
+    window.clearTimeout(timer);
+    if (!state) { return; }
+    var pending = chat && chat.pendingCount();
+    if (!state.busy && !pending) { return; }
+    timer = window.setTimeout(pending ? refresh : askIfBusy, EVERY);
+  }
+  function askIfBusy() {
+    if (!busySince) { busySince = Date.now(); }
+    else if (Date.now() - busySince >= 30000) { refresh(); return; }
+    window.UI.whenVisible().then(function () { return fetch("/recording/" + recording + "/assistant?what=busy"); })
+      .then(function (answer) { return answer.ok ? answer.json() : null; })
+      .then(function (said) {
+        if (said && said.summaries) { state = said; busySince = 0; draw(); askLater(); return; }
+        if (!said || typeof said.busy !== "boolean" || !said.busy || said.stage !== state.stage) { refresh(); return; }
+        window.clearTimeout(timer);
+        timer = window.setTimeout(askIfBusy, EVERY);
+      })
+      .catch(function () { window.clearTimeout(timer); timer = window.setTimeout(askIfBusy, EVERY * 3); });
   }
 
   // The transcript rows are drawn by viewer.js once the segments arrive; the

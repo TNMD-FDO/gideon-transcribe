@@ -46,7 +46,7 @@ Every setting has a table in the settings catalogue in the repository (`docs/spe
 
 ## The Status page
 
-Everything on it is read again every five seconds. It has these blocks.
+Everything on it is read again every five seconds while you are looking at it, less often once the page is left alone (every fifteen seconds after a minute, every minute after ten), not at all while its tab is hidden, and paused after an hour until you click. It has these blocks.
 
 **Pieces**: the optional parts of this installation (Transcription, the Fast lane, the Engine, the Directory, Mail, the Backup), each on, off, not installed or not answering, with the one command IT runs on the server to add it (`./transcribe add transcription` and the rest). A row that is off says what it would take (v1.92.0): whether the card has room for the fast lane or the Local engine, or that the Local engine needs a card of 44 GB and an engine on the LAN needs none. The page runs nothing: the app is never given the Docker socket (ADR 0009). A piece that is not installed is a plain pill, never red; a piece that is installed and does not answer is red. `./transcribe pieces` on the server prints the same list.
 

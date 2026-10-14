@@ -1010,13 +1010,15 @@ def without_clashes(taken: set[str], name: str) -> str:
 # Many at once -----------------------------------------------------------------
 
 
-def transcripts_zip(recordings) -> tuple[bytes, list]:
+def transcripts_zip(recordings) -> tuple:
     """One plain-text file per Done Recording, and which ones went in.
 
     Recordings not yet Done are left out. The caller writes the audit rows: a
-    zip writes one row per file inside it.
+    zip writes one row per file inside it. The zip is built in a spool file
+    (v1.134.0), not in memory, and the caller hands it over with
+    hand_over_file so the response streams it.
     """
-    holder = io.BytesIO()
+    holder = spool()
     taken: set[str] = set()
     included = []
     with zipfile.ZipFile(holder, "w", zipfile.ZIP_DEFLATED) as bundle:
@@ -1026,21 +1028,23 @@ def transcripts_zip(recordings) -> tuple[bytes, list]:
             name = without_clashes(taken, export_name(recording, "transcript.txt"))
             bundle.writestr(name, plain_text(recording).encode("utf-8"))
             included.append(recording)
-    return holder.getvalue(), included
+    return holder, included
 
 
-def everything_zip(recordings, exported_by: str) -> tuple[bytes, list, list]:
+def everything_zip(recordings, exported_by: str) -> tuple:
     """For every Done Recording, its Word document and its plain-text file.
 
     In Phase 1 the Word document is the Word Transcript; the combined document
     gains the Summaries and Chats when those are built. Every Ready Clip goes
     in beside its Recording's two files, with its excerpt and captions. The
     shape inside is flat, because a Workspace is a holding area rather than a
-    filing system and folders would only add a level to click through.
+    filing system and folders would only add a level to click through. Built
+    in a spool file (v1.134.0): a Workspace's clips can be gigabytes, and the
+    zip used to be held whole in the request's memory.
     """
     from core import clip_work
 
-    holder = io.BytesIO()
+    holder = spool()
     taken: set[str] = set()
     made = []
     clips = []
@@ -1060,7 +1064,7 @@ def everything_zip(recordings, exported_by: str) -> tuple[bytes, list, list]:
             for clip in _clips_of(recording):
                 clip_work.add_to_zip(bundle, clip, taken)
                 clips.append(clip)
-    return holder.getvalue(), made, clips
+    return holder, made, clips
 
 
 def _clips_of(recording):
@@ -1225,11 +1229,11 @@ def batch_download(request: HttpRequest, batch_id) -> HttpResponse:
     if not cases.folder_management_on():
         wanted = wanted.filter(case__isnull=True)
 
-    body, included = transcripts_zip(wanted)
+    bundle, included = transcripts_zip(wanted)
     for recording in included:
         record_export(request, recording, "transcript text")
 
-    return hand_over(body, zip_name(), "application/zip")
+    return hand_over_file(bundle, zip_name(), "application/zip")
 
 
 @login_required
@@ -1248,17 +1252,17 @@ def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
     )
 
     if shape == "everything":
-        body, made, clips = everything_zip(recordings, request.user.username)
+        bundle, made, clips = everything_zip(recordings, request.user.username)
         for recording, kind in made:
             record_export(request, recording, kind)
         for clip in clips:
             _record_clip(request, clip)
-        return hand_over(body, zip_name("Everything"), "application/zip")
+        return hand_over_file(bundle, zip_name("Everything"), "application/zip")
 
-    body, included = transcripts_zip(recordings)
+    bundle, included = transcripts_zip(recordings)
     for recording in included:
         record_export(request, recording, "transcript text")
-    return hand_over(body, zip_name(), "application/zip")
+    return hand_over_file(bundle, zip_name(), "application/zip")
 
 
 # The Summary and Chat exports -----------------------------------------------------

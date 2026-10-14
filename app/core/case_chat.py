@@ -51,6 +51,9 @@ READINGS_AT_ONCE = 2
 QUESTION_LIMIT = 15 * 60
 PART_CAP = 1500
 COMBINED_CAP = 2000
+# Room kept in the fit for the part line a Reading of several carries
+# (v1.134.0): "This is part 2 of 3, recordings 3 to 4 of 6."
+PART_LINE_TOKENS = 60
 
 CASE_TOO_LARGE = engine.CASE_TOO_LARGE
 
@@ -417,6 +420,25 @@ def answer_case_turn(turn_id) -> None:
     calls = {"readings": 0, "read": 0, "model": "", "selections": 0}
     from core import case_scope
 
+    # Each transcript fetched and rendered once for the life of the question
+    # (v1.134.0): the size for the picks, the starts for the citations, the
+    # text of the Reading and the fit all read the same rendering, where
+    # each used to render the transcript again.
+    renderings: dict = {}
+
+    def rendering_of(recording) -> dict:
+        found = renderings.get(recording.pk)
+        if found is None:
+            lines = prompts.lines_of(recording.transcript)
+            found = renderings[recording.pk] = {
+                "lines": lines,
+                "rendered": prompts.render(lines),
+                # The office's notes on the lines, after the words (Phase 8
+                # chapter 2).
+                "noted": notes.recording_block(recording) or "",
+            }
+        return found
+
     def one_call(
         messages,
         answer_cap: int,
@@ -478,9 +500,9 @@ def answer_case_turn(turn_id) -> None:
             templates_line += f"; case-chat-select v{found['template_version']}"
 
             def size_of(recording) -> int:
-                body = prompts.render(prompts.lines_of(recording.transcript))
-                return prompts.tokens(body) + prompts.tokens(
-                    notes.recording_block(recording) or ""
+                found = rendering_of(recording)
+                return prompts.tokens(found["rendered"]) + prompts.tokens(
+                    found["noted"]
                 )
 
             kept = case_scope.fitting(
@@ -596,19 +618,18 @@ def answer_case_turn(turn_id) -> None:
             transcript = recording.transcript
             header = header_line(number, total, recording, transcript)
             digest = prompts.digest_block(digests[recording.pk])
-            # The office's notes on the lines, after the words (Phase 8 chapter 2).
-            noted = notes.recording_block(recording)
-            after = "\n\n" + noted if noted else ""
+            found = rendering_of(recording)
+            after = "\n\n" + found["noted"] if found["noted"] else ""
             if alone and digest:
                 return header + "\n" + digest + after
-            body = header + "\n" + prompts.render(prompts.lines_of(transcript))
+            body = header + "\n" + found["rendered"]
             return body + ("\n\n" + digest if digest else "") + after
 
         for number, recording in enumerate(read, start=1):
             transcript = recording.transcript
             starts: dict[int, float] = {}
             last = 0.0
-            for line in prompts.lines_of(transcript):
+            for line in rendering_of(recording)["lines"]:
                 starts.setdefault(int(line.start), line.start)
                 last = max(last, float(line.start or 0.0))
             starts_by_number[number] = {
@@ -659,17 +680,32 @@ def answer_case_turn(turn_id) -> None:
         history_text = "\n".join(q + "\n" + a for q, a in history)
 
         part_cap = settings_store.case_chat_part_cap()
+        # The reports in the case (Phase 8 chapter 4, part 2), read with every
+        # part, whole under the ceiling and by matching paragraphs past it.
+        # Read before the fit (v1.134.0), since every Reading carries them.
+        papers, papers_note, named = documents.reading_block(
+            documents.of_case(case), turn.question, heading="The reports in this case:"
+        )
 
-        def fits_alone(body: str) -> bool:
+        def fits_request(*bodies: str) -> bool:
+            # The whole request as it will be sent: the system message, the
+            # people, the transcripts, the papers, the chat so far, the
+            # question and the answer's room; PART_LINE_TOKENS for the part
+            # line a Reading of several carries.
             return prompts.fits(
                 system,
                 people,
-                body,
+                *bodies,
+                papers,
                 history_text,
                 turn.question,
                 answer_cap=cap(part_cap),
                 window=engine.window(),
+                extra=PART_LINE_TOKENS,
             )
+
+        def fits_alone(body: str) -> bool:
+            return fits_request(body)
 
         # A Transcript that would not fit the window even alone falls back to
         # its Digest when it has one, and names itself otherwise.
@@ -695,8 +731,15 @@ def answer_case_turn(turn_id) -> None:
                 number, total, recording, recording.transcript
             ),
         )
-        groups = pack(rendered, settings_store.reading_tokens())
         by_number = dict(rendered)
+        # Every Reading, not only one of a single transcript, is checked as
+        # the whole request it will be (v1.134.0): the Reading size is the
+        # transcripts' alone, and the people, the papers, the chat so far and
+        # the question come on top of it.
+        groups = regroup(
+            pack(rendered, settings_store.reading_tokens()),
+            lambda group: fits_request(*(by_number[number] for number in group)),
+        )
         for group in groups:
             if len(group) == 1 and not fits_alone(by_number[group[0]]):
                 which = read[group[0] - 1]
@@ -708,12 +751,6 @@ def answer_case_turn(turn_id) -> None:
         turn.parts = len(groups) if len(groups) > 1 else 0
         turn.save(update_fields=["skipped", "readings", "parts"])
 
-        # The reports in the case (Phase 8 chapter 4, part 2), read with every
-        # part, whole under the ceiling and by matching paragraphs past it.
-        papers, papers_note, named = documents.reading_block(
-            documents.of_case(case), turn.question, heading="The reports in this case:"
-        )
-
         def ask_reading(group: list[int], answer_cap: int) -> str:
             # A part is told which recordings it holds (v1.87.0).
             told = []
@@ -721,16 +758,21 @@ def answer_case_turn(turn_id) -> None:
                 part = groups.index(group) + 1
                 numbers = [n for key in group for n in holds.get(key, [key])]
                 told.append(prompts.part_line(part, len(groups), numbers, total))
-            user = "\n\n".join(
+            # The part line and the people ahead of the transcripts, the
+            # papers after them, all ahead of the chat so far; the question
+            # is the last message alone (v1.134.0, ADR 0020).
+            reading = "\n\n".join(
                 [
                     *told,
                     people,
                     *(by_number[number] for number in group),
                     *([papers] if papers else []),
-                    turn.question,
                 ]
             )
-            answer = one_call(_messages(system, user, history), answer_cap)
+            answer = one_call(
+                _messages(system, turn.question, history, reading=reading),
+                answer_cap,
+            )
             calls["readings"] += 1
             if len(groups) == 1:
                 turn.cut_short = answer["finish_reason"] == "length"
@@ -952,13 +994,36 @@ def _incident_block(incident, record: dict, read: list, header) -> str:
     return "\n".join(lines)
 
 
-def _messages(system: str, user: str, history: list[tuple[str, str]]):
-    messages = [{"role": "system", "content": system}]
-    for question, answer in history:
-        messages.append({"role": "user", "content": question})
-        messages.append({"role": "assistant", "content": answer})
-    messages.append({"role": "user", "content": user})
-    return messages
+def _messages(
+    system: str, user: str, history: list[tuple[str, str]], *, reading: str = ""
+):
+    """The one shape every chat sends (v1.134.0, ADR 0020): the reading at
+    the end of the system message, ahead of the history."""
+    from core import assistant
+
+    return assistant._messages(system, user, history, reading=reading)
+
+
+def regroup(groups: list[list[int]], fits) -> list[list[int]]:
+    """Each Reading checked as the whole request it will be (v1.134.0):
+    `fits` is given a Reading's numbers and says whether the request fits.
+    A Reading that does not fit moves its last transcript to the front of the
+    next Reading, making one when there is none, and is checked again; a
+    Reading of one that does not fit is left for the caller's refusal."""
+    pending = [list(group) for group in groups]
+    out: list[list[int]] = []
+    index = 0
+    while index < len(pending):
+        group = pending[index]
+        while len(group) > 1 and not fits(group):
+            moved = group.pop()
+            if index + 1 < len(pending):
+                pending[index + 1].insert(0, moved)
+            else:
+                pending.append([moved])
+        out.append(group)
+        index += 1
+    return out
 
 
 def _record(

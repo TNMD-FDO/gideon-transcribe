@@ -231,10 +231,12 @@ def acting_as(role: str):
             cursor.execute("SET LOCAL ROLE NONE")
 
 
-def _previous() -> tuple[str, int]:
-    """The hash of the newest row, and how many rows there are."""
+def _previous() -> str:
+    """The hash of the newest row. It used to count the rows beside it
+    (v1.134.0), a COUNT of the whole log under the write lock on every
+    write, and nothing read the count."""
     newest = Row.objects.order_by("-id").values("row_hash").first()
-    return (newest["row_hash"] if newest else FIRST_LINK), Row.objects.count()
+    return newest["row_hash"] if newest else FIRST_LINK
 
 
 @transaction.atomic
@@ -302,7 +304,7 @@ def write(
     # and linked to under the lock, so the row after this one links to it.
     with connection.cursor() as cursor:
         cursor.execute("SELECT pg_advisory_xact_lock(%s)", [WRITE_LOCK])
-    row.previous_hash, _ = _previous()
+    row.previous_hash = _previous()
     row.row_hash = row.compute_hash()
 
     with acting_as(WRITER_ROLE):

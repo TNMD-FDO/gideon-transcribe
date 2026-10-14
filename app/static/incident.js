@@ -233,10 +233,7 @@
     var readingClock = S.cameras.some(function (cam) { return cam.clock_reading; });
     if (layerOf("sync") && !layerOf("sync").hidden) { drawSync(); }
     drawProposals();
-    if (S.proposals.busy || S.memo.busy || rendering || matching || readingClock) {
-      window.clearTimeout(pollTimer);
-      pollTimer = window.setTimeout(refresh, 3000);
-    }
+    if (S.proposals.busy || S.memo.busy || rendering || matching || readingClock) { askLater(); }
   }
 
   var STILL_PROPOSING = "The assistant is still proposing; accept or dismiss once it has finished";
@@ -432,15 +429,25 @@
     var entry = players[focusCamera];
     var bar = entry.tile.querySelector(".player-bar");
     if (!bar) { return; }
+    // The bar's parts found once per bar (v1.134.0), not a dozen times a tick.
+    if (!entry.barParts || entry.barParts.bar !== bar) {
+      entry.barParts = {
+        bar: bar, played: bar.querySelector(".played"), knob: bar.querySelector(".knob"), own: bar.querySelector(".own"),
+        marks: bar.querySelector(".marks"), clipping: bar.querySelector(".clipping"), time: bar.querySelector(".time"),
+        playUse: bar.querySelector("[data-bar='play'] use"), sound: bar.querySelector("[data-bar='sound']"),
+        soundUse: bar.querySelector("[data-bar='sound'] use"), speedPick: bar.querySelector("[data-bar='speed']")
+      };
+    }
+    var parts = entry.barParts;
     var range = span(), width = range[1] - range[0];
     var cam = entry.cam;
-    bar.querySelector(".played").style.width = percent(m, range);
-    bar.querySelector(".knob").style.left = percent(m, range);
-    var own = bar.querySelector(".own");
+    parts.played.style.width = percent(m, range);
+    parts.knob.style.left = percent(m, range);
+    var own = parts.own;
     var ownFrom = Math.max(range[0], cam.starts_at), ownTo = Math.min(range[1], cam.starts_at + cam.length);
     own.style.left = percent(ownFrom, range);
     own.style.width = (ownTo > ownFrom ? ((ownTo - ownFrom) / width) * 100 : 0) + "%";
-    var marks = bar.querySelector(".marks");
+    var marks = parts.marks;
     var key = keptEvents().map(function (one) { return one.id + "@" + one.at; }).join(",");
     if (marks.dataset.key !== key) {
       marks.dataset.key = key;
@@ -448,19 +455,19 @@
         return "<span class='ev' data-event-card='" + one.id + "' style='left: " + percent(one.at, range) + "'></span>";
       }).join("");
     }
-    var clipping = bar.querySelector(".clipping");
+    var clipping = parts.clipping;
     if (marking) {
       var low = Math.min(marking.from, m), high = Math.max(marking.from, m);
       clipping.hidden = false;
       clipping.style.left = percent(low, range);
       clipping.style.width = (((high - low) / width) * 100) + "%";
     } else { clipping.hidden = true; }
-    bar.querySelector(".time").textContent = clockSmall.textContent;
-    bar.querySelector("[data-bar='play'] use").setAttribute("href", playing ? "#i-pause" : "#i-play");
-    var sound = bar.querySelector("[data-bar='sound']");
+    parts.time.textContent = clockSmall.textContent;
+    parts.playUse.setAttribute("href", playing ? "#i-pause" : "#i-play");
+    var sound = parts.sound;
     sound.classList.toggle("on", soundCamera === cam.id);
-    sound.querySelector("use").setAttribute("href", soundCamera === cam.id ? "#i-sound" : "#i-muted");
-    var speedPick = bar.querySelector("[data-bar='speed']");
+    parts.soundUse.setAttribute("href", soundCamera === cam.id ? "#i-sound" : "#i-muted");
+    var speedPick = parts.speedPick;
     if (speedPick.value !== speedBox.value) { speedPick.value = speedBox.value; }
   }
 
@@ -839,11 +846,16 @@
       .catch(function () { lines[id] = { segments: [], moments: [] }; });
   }
 
+  // The line at a moment: the last line that has started, by a binary
+  // search as the viewer follows (v1.134.0). A camera is thousands of lines
+  // and this ran five times a second for every tile on the wall.
   function lineAt(list, at) {
-    for (var i = 0; i < list.length; i += 1) {
-      if (list[i].start <= at && at < list[i].end) { return list[i]; }
+    var low = 0, high = list.length - 1, found = -1;
+    while (low <= high) {
+      var middle = (low + high) >> 1;
+      if (list[middle].start <= at) { found = middle; low = middle + 1; } else { high = middle - 1; }
     }
-    return null;
+    return found !== -1 && at < list[found].end ? list[found] : null;
   }
 
   function sayLines(entry, local) {
@@ -851,6 +863,12 @@
     var got = lines[entry.cam.id];
     if (!got) { return; }
     var said = lineAt(got.segments, local);
+    // Written only when the line changes (v1.134.0): the same words were
+    // set again five times a second. A tile built anew is written again.
+    var shown = said || (local < 0 || local > entry.cam.length ? "off" : "quiet");
+    if (entry.shownLine === shown && entry.shownIn === box) { return; }
+    entry.shownLine = shown;
+    entry.shownIn = box;
     var who = box.querySelector(".who"), txt = box.querySelector(".txt");
     var addSaid = box.querySelector(".said .add-line");
     if (said) {
@@ -927,9 +945,30 @@
     drawSaid(m);
     drawPlayerBar(m);
     if (marking) { drawMarking(m); }
+    tickedAt = m;
   }
 
-  window.setInterval(tick, 200);
+  // The interval's tick (v1.134.0): paused, the clock stands still and so
+  // does everything the tick draws, so one tick after the pause settles the
+  // display and then nothing is drawn until the clock, a choice on the page
+  // (the sound, the speed, the layout, a clip being marked) or the lines
+  // arriving moves it; a seek, a Play and a fresh state call tick() themselves.
+  // A hidden tab draws nothing and catches up when it comes back.
+  var tickedAt = null;
+  var tickedKey = "";
+  function tickKey() {
+    return [playing ? 1 : 0, soundCamera, speed, layout, focusCamera, marking ? 1 : 0, followBox.checked ? 1 : 0,
+      speedBox.value, zoom, panFrom, Object.keys(players).length, Object.keys(lines).length].join("|");
+  }
+  function tickIfMoved() {
+    if (document.hidden) { return; }
+    var key = tickKey();
+    if (!playing && now() === tickedAt && key === tickedKey) { return; }
+    tickedKey = key;
+    tick();
+  }
+  window.setInterval(tickIfMoved, 200);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { tick(); } });
 
   function play() {
     anchorMoment = now();
@@ -2218,11 +2257,41 @@
     box.innerHTML = html;
     var pending = S.cameras.some(function (cam) { return cam.clock_reading || (cam.match && (cam.match.state === "queued" || cam.match.state === "running")); });
     window.clearTimeout(pollTimer);
-    if (pending) { pollTimer = window.setTimeout(refresh, 3000); }
+    if (pending) { askLater(); }
   }
 
+  // The whole state, drawn by take(); not while the tab is hidden (v1.134.0).
   function refresh() {
-    fetch(C.state).then(function (answer) { return answer.json(); }).then(take).catch(function () { pollTimer = window.setTimeout(refresh, 6000); });
+    window.clearTimeout(pollTimer);
+    busySince = 0;
+    window.UI.whenVisible().then(function () { return fetch(C.state); })
+      .then(function (answer) { return answer.json(); }).then(take)
+      .catch(function () { pollTimer = window.setTimeout(refresh, 6000); });
+  }
+
+  // While something is at work (a proposal run, the memo, a clip rendering,
+  // a match, a clock read) the page asks only whether it still is
+  // (v1.134.0): `?what=busy` is a small answer every three seconds, where
+  // the whole state drew every tab again each time. The whole state comes
+  // back when busy turns false, and every 30 s meanwhile in case something
+  // landed without ending the work. An app that does not know the question
+  // (a 400, or an answer without `busy`) is asked for the whole state as before.
+  var busySince = 0;
+  function askLater() {
+    window.clearTimeout(pollTimer);
+    pollTimer = window.setTimeout(askIfBusy, 3000);
+  }
+  function askIfBusy() {
+    if (!busySince) { busySince = Date.now(); }
+    else if (Date.now() - busySince >= 30000) { refresh(); return; }
+    window.UI.whenVisible().then(function () { return fetch(C.state + "?what=busy"); })
+      .then(function (answer) { return answer.ok ? answer.json() : null; })
+      .then(function (said) {
+        if (said && said.cameras) { busySince = 0; take(said); return; }
+        if (!said || typeof said.busy !== "boolean" || !said.busy) { refresh(); return; }
+        askLater();
+      })
+      .catch(function () { pollTimer = window.setTimeout(askIfBusy, 6000); });
   }
 
   function flashRow(id) {

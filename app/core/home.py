@@ -175,33 +175,53 @@ def running_now(user) -> list[dict]:
     return out
 
 
-def incident_lines(case) -> list[dict]:
+def incident_lines(case, counts: dict, incidents_of: list, cameras: dict) -> list[dict]:
     """The case's incidents for the line under its row on Home (v1.115.0):
     each a link to its page with its cameras, where its cameras stand on
-    the clock, and its own pills."""
+    the clock, and its own pills. Everything from what case_rows loaded for
+    every case at once (v1.134.0): nothing is asked of the database here."""
     from core import incidents
 
     if not incidents.on():
         return []
     out = []
-    # The pills' counts for the whole case at once (v1.124.0).
-    counts = dashboard.incident_counts(case)
-    empty = {"unsynced": 0, "to_check": 0, "proposals": 0, "writing": 0, "stale": 0}
-    for incident in case.incidents.all():
-        placed, tone = incidents.placed_words(incident)
+    by_incident = counts.get("by_incident", {})
+    for incident in incidents_of:
+        own = cameras.get(incident.pk, [])
+        placed, tone = incidents.placed_words(incident, own)
         out.append(
             {
                 "incident": incident,
                 "url": incident.url(),
-                "cameras": incident.cameras.count(),
+                "cameras": len(own),
                 "placed": placed,
                 "tone": tone,
                 "pills": dashboard.incident_pills(
-                    incident, counts.get(incident.pk, empty)
+                    incident,
+                    by_incident.get(incident.pk, dict(dashboard.NO_INCIDENT_COUNTS)),
                 ),
             }
         )
     return out
+
+
+def _incidents_in(cases_shown) -> tuple[dict, dict]:
+    """Every incident of these cases by case id, and every camera by incident
+    id, in two queries (v1.134.0): what the lines under the rows read."""
+    from core import incidents
+
+    if not incidents.on() or not cases_shown:
+        return {}, {}
+    ids = [one.pk for one in cases_shown]
+    incidents_of: dict = {}
+    for incident in incidents.Incident.objects.filter(case_id__in=ids).select_related(
+        "case"
+    ):
+        incidents_of.setdefault(incident.case_id, []).append(incident)
+    cameras: dict = {}
+    for camera in incidents.IncidentCamera.objects.filter(incident__case_id__in=ids):
+        cameras.setdefault(camera.incident_id, []).append(camera)
+    return incidents_of, cameras
 
 
 def case_rows(user) -> tuple[list[dict], list[dict]]:
@@ -209,18 +229,36 @@ def case_rows(user) -> tuple[list[dict], list[dict]]:
     dashboard pills and its incidents; and, apart, the ones with something
     to settle (a pill in the warning tone on the case or on one of its
     incidents). The incidents' own pills sit on the incident's line, so the
-    case's row keeps only the pills that are the case's."""
-    from core import case_pages
+    case's row keeps only the pills that are the case's. The counts for all
+    the cases are asked for at once (v1.134.0): Home had asked about thirty
+    questions of each case, and twenty cases made six hundred."""
+    from core import case_pages, sharing
 
     rows, needs = [], []
-    mine = cases.cases_for(user).select_related("owner").order_by("-last_activity")
+    mine = list(
+        cases.cases_for(user).select_related("owner").order_by("-last_activity")
+    )
+    counts = dashboard.counts_for(mine, user)
+    shares = case_pages.shares_of(user, mine)
+    incidents_of, cameras = _incidents_in(mine)
+    sharing_on = sharing.on()
     for case in mine:
-        row = case_pages._as_row(case, user)
+        row = case_pages._as_row(case, user, counts.get(case.pk), shares.get(case.pk))
         incidents_tab = reverse("case", args=[case.pk]) + "?tab=incidents"
-        row["incidents"] = incident_lines(case)
+        row["incidents"] = incident_lines(
+            case, counts.get(case.pk, {}), incidents_of.get(case.pk, []), cameras
+        )
+        # The person's role from what is loaded: cases_for gave only their
+        # own and the ones shared with them, so a case not theirs is shared.
+        if case.owner_id == user.pk:
+            role = "owner"
+        elif sharing_on and case.pk in shares:
+            role = "collaborator"
+        else:
+            role = case.role_of(user)
         row["pills"] = [
             one
-            for one in dashboard.pills(case, case.role_of(user), user)
+            for one in dashboard.pills(case, role, user, counts.get(case.pk))
             if not (row["incidents"] and one["href"] == incidents_tab)
         ]
         rows.append(row)

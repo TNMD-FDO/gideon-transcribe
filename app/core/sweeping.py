@@ -33,6 +33,20 @@ PIECES_KEPT = timedelta(hours=24)
 DISCARDING_TOO_LONG = timedelta(hours=1)
 
 
+def measure_disks() -> int:
+    """Every Recording's kept size walked again, once a night (v1.134.0), so a
+    file written or removed outside the paths that measure is caught up with.
+    Returns how many rows changed."""
+    changed = 0
+    for recording in Recording.objects.only(
+        "id", "user_id", "case_id", "on_disk_bytes"
+    ).iterator(chunk_size=500):
+        before = recording.on_disk_bytes
+        if recording.measure_disk() != before:
+            changed += 1
+    return changed
+
+
 def sweep() -> dict:
     """Run all three, count what went, and write the row."""
     from core import reports

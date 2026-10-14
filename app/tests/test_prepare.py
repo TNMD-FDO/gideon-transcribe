@@ -352,20 +352,59 @@ def test_a_chat_question_waits_for_a_preparation_already_running(
     transcript.prepare_state = assistant.PREPARING
     transcript.save(update_fields=["prepare_state"])
     asked = engine_answering(monkeypatch, ["An answer."])
-    slept = []
-
-    def sleep(seconds):
-        slept.append(seconds)
-        # The other lane finishes: prepared, with a Digest.
-        transcript.prepare_state = assistant.DONE
-        transcript.save(update_fields=["prepare_state"])
-
-    monkeypatch.setattr(assistant.time, "sleep", sleep)
+    # Without Digests, prepared means the record done, so the next go answers.
+    settings_store.set_to("digests_available", False)
+    # Never a sleep in a lane (v1.134.0): the question gives the lane back
+    # and is queued again a minute later, until the other lane finishes.
+    later = queued_later(monkeypatch, tasks.answer_turn)
+    monkeypatch.setattr(assistant.time, "sleep", lambda seconds: pytest.fail("slept"))
     chat = Chat.objects.create(recording=ready, asked_by=person)
     turn = ChatTurn.objects.create(chat=chat, number=1, question="what happened?")
     assistant.answer_turn(turn.pk)
     turn.refresh_from_db()
-    assert turn.state == assistant.DONE and slept == [5] and len(asked) == 1
+    assert turn.state == assistant.RUNNING and asked == []
+    assert later == [(assistant.PREPARE_RETRY_SECONDS, {"turn_id": str(turn.pk)})]
+    # The other lane finishes: prepared, with a Digest; the next go answers.
+    transcript.prepare_state = assistant.DONE
+    transcript.save(update_fields=["prepare_state"])
+    assistant.answer_turn(turn.pk, attempt=2)
+    turn.refresh_from_db()
+    assert turn.state == assistant.DONE and len(asked) == 1 and len(later) == 1
+
+
+@pytest.mark.django_db
+def test_the_wait_for_a_preparation_ends_after_three_hours_of_re_queues(
+    ready, person, monkeypatch
+):
+    """The three-hour limit on the wait is kept as a count of re-queues
+    (v1.134.0), and as the age of the row for a task layer that does not
+    pass the count back."""
+    import datetime as dt
+
+    from core.assistant import Chat, ChatTurn
+    from django.utils import timezone
+
+    transcript = ready.transcript
+    transcript.prepare_state = assistant.PREPARING
+    transcript.save(update_fields=["prepare_state"])
+    asked = engine_answering(monkeypatch, ["never"])
+    later = queued_later(monkeypatch, tasks.answer_turn)
+    chat = Chat.objects.create(recording=ready, asked_by=person)
+    turn = ChatTurn.objects.create(chat=chat, number=1, question="what happened?")
+    assistant.answer_turn(turn.pk, attempt=assistant.PREPARE_RETRIES + 1)
+    turn.refresh_from_db()
+    assert turn.state == assistant.FAILED and turn.reason_class == engine.TIMEOUT
+    assert later == [] and asked == []
+    # By age alone: a row older than the limit is not queued again either.
+    old = ChatTurn.objects.create(chat=chat, number=2, question="still?")
+    ChatTurn.objects.filter(pk=old.pk).update(
+        asked_at=timezone.now()
+        - dt.timedelta(seconds=assistant.PREPARE_WAIT_SECONDS + 60)
+    )
+    assistant.answer_turn(old.pk)
+    old.refresh_from_db()
+    assert old.state == assistant.FAILED and old.reason_class == engine.TIMEOUT
+    assert later == []
 
 
 @pytest.mark.django_db
@@ -375,21 +414,44 @@ def test_a_summary_deleted_while_the_video_is_prepared_is_not_written(
     """A summary asked for before the video was prepared waits for the
     preparation; deleted meanwhile, it is neither written nor brought back
     by a save on a row that is gone (v1.53.1). The preparation itself stands:
-    it is the transcript's."""
+    it is the transcript's. Since v1.134.0 the wait is a re-queue, its stage
+    "preparing" kept for the card."""
     transcript = ready.transcript
     transcript.prepare_state = assistant.PREPARING
     transcript.save(update_fields=["prepare_state"])
     asked = engine_answering(monkeypatch, ["never written"])
+    later = queued_later(monkeypatch, tasks.write_summary)
     summary = Summary.objects.create(
         recording=ready, asked_by=person, template_name="Video summary", length="short"
     )
-
-    def sleep(seconds):
-        Summary.objects.filter(pk=summary.pk).delete()
-
-    monkeypatch.setattr(assistant.time, "sleep", sleep)
     assistant.write_summary(summary.pk)
+    summary.refresh_from_db()
+    assert summary.state == assistant.RUNNING and summary.stage == "preparing"
+    assert later == [(assistant.PREPARE_RETRY_SECONDS, {"summary_id": str(summary.pk)})]
+    Summary.objects.filter(pk=summary.pk).delete()
+    assistant.write_summary(summary.pk, attempt=2)
     assert asked == [] and not Summary.objects.filter(pk=summary.pk).exists()
+
+
+def queued_later(monkeypatch, task) -> list:
+    """What a task queued itself again as: (seconds, fields), without the
+    attempt number, which the task layer carries when it takes one."""
+    later = []
+
+    class Configured:
+        def __init__(self, seconds):
+            self.seconds = seconds
+
+        def defer(self, **fields):
+            fields.pop("attempt", None)
+            later.append((self.seconds, fields))
+
+    monkeypatch.setattr(
+        task,
+        "configure",
+        lambda **options: Configured(options["schedule_in"]["seconds"]),
+    )
+    return later
 
 
 @pytest.mark.django_db

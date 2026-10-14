@@ -138,6 +138,7 @@ def render(clip: Clip) -> Clip:
             # A wall that timed out leaves a part-written file; it must not
             # count against anybody's quota.
             clip.path.unlink(missing_ok=True)
+            clip.recording.measure_disk()
         return _failed(clip, "clip_render_failed", "the render failed")
     finally:
         if written is not None:
@@ -152,6 +153,9 @@ def render(clip: Clip) -> Clip:
     clip.first_downloaded = None
     clip.downloads = 0
     clip.save()
+    # The Recording's figure on disk, now that a file landed in its folder
+    # (v1.134.0).
+    clip.recording.measure_disk()
 
     log.info(
         "clip %s rendered: %.1f s, %d bytes", clip.id, clip.seconds, clip.size_bytes
@@ -322,9 +326,12 @@ def add_to_zip(bundle: zipfile.ZipFile, clip: Clip, taken: set[str]) -> None:
     """One Ready Clip inside a bigger zip, flat, with its two files beside it."""
     if clip.state != RenderState.READY or not clip.path.exists():
         return
-    bundle.writestr(
+    # Copied from the file into the zip (v1.134.0), never read whole; and
+    # stored, not deflated, because a media file does not compress.
+    bundle.write(
+        clip.path,
         exports.without_clashes(taken, file_name(clip, clip.suffix)),
-        clip.path.read_bytes(),
+        compress_type=zipfile.ZIP_STORED,
     )
     if clip.include_excerpt and hasattr(clip.recording, "transcript"):
         bundle.writestr(

@@ -223,9 +223,13 @@ def take_state_from(
     """Bring one Job up to date from what the service just said.
 
     The service is asked once for everything, so this reads from that one
-    answer rather than asking again per Run.
+    answer rather than asking again per Run. The Runs are read once too
+    (v1.134.0; live_jobs prefetches them), and a Run is written only when
+    something about it changed, with the fields that did: ten queued Jobs
+    used to cost thirty queries a poll with nothing to say.
     """
-    for run in job.runs.all():
+    runs = list(job.runs.all())
+    for run in runs:
         state = service_jobs.get(run.service_job_id)
         if state is None:
             if run.lane in silent_lanes:
@@ -234,31 +238,27 @@ def take_state_from(
                 continue
             if run.service_job_id and run.state not in ("done", "failed", "cancelled"):
                 # The service does not list it (v1.131.0): its store was
-                # recreated, its token changed, or the job aged out. A few
-                # polls' grace for a slow answer, then the Job fails plainly
-                # rather than staying queued for ever.
-                run.missing_polls += 1
-                run.save(update_fields=["missing_polls"])
-                if run.missing_polls >= POLLS_BEFORE_MISSING:
-                    run.failure_class = Reason.SERVICE_RESTARTED
-                    run.save(update_fields=["failure_class"])
-                    return fail(job, Reason.SERVICE_RESTARTED)
-            continue
+                # recreated, its token changed, or the job aged out. Before
+                # a miss is counted the service is asked for that one Run
+                # (v1.134.0): an answer is its state, and only a service
+                # that has no such job, or none, counts against it. A few
+                # polls' grace, then the Job fails plainly rather than
+                # staying queued for ever.
+                state = _asked_for(run)
+                if state is None:
+                    run.missing_polls += 1
+                    run.save(update_fields=["missing_polls"])
+                    if run.missing_polls >= POLLS_BEFORE_MISSING:
+                        run.failure_class = Reason.SERVICE_RESTARTED
+                        run.save(update_fields=["failure_class"])
+                        return fail(job, Reason.SERVICE_RESTARTED)
+                    continue
+            else:
+                continue
 
-        if run.missing_polls:
-            run.missing_polls = 0
-        run.state = str(state.get("state") or run.state)
-        run.stage = str(state.get("stage") or "")
-        run.percent = _number(state.get("percent"))
-        run.position = _whole(state.get("position"))
-        run.audio_minutes_ahead = _number(state.get("audio_minutes_ahead"))
-
-        if state["state"] in ("failed", "cancelled") and not run.failure_class:
-            failure = state.get("failure") or {}
-            run.failure_class = failure.get("reason_class") or Reason.INTERNAL
-        run.save()
-
-    runs = list(job.runs.all())
+        changed = _take(run, state)
+        if changed:
+            run.save(update_fields=sorted(changed))
 
     if job.open:
         # A stretch that fails while the recording continues does not fail
@@ -277,7 +277,7 @@ def take_state_from(
             if run.service_job_id:
                 whisperx.delete(run.service_job_id, run.lane)
             run.delete()
-        runs = list(job.runs.all())
+            runs.remove(run)
 
     failed = next((run for run in runs if run.failure_class), None)
     if failed is not None:
@@ -289,13 +289,14 @@ def take_state_from(
                 whisperx.delete(run.service_job_id, run.lane)
         return fail(job, failed.failure_class)
 
-    if any(run.state == "running" for run in runs) and job.started is None:
-        job.started = timezone.now()
-        job.state = JobState.RUNNING
-        job.save(update_fields=["started", "state"])
-    elif any(run.state == "running" for run in runs):
-        job.state = JobState.RUNNING
-        job.save(update_fields=["state"])
+    if any(run.state == "running" for run in runs):
+        if job.started is None:
+            job.started = timezone.now()
+            job.state = JobState.RUNNING
+            job.save(update_fields=["started", "state"])
+        elif job.state != JobState.RUNNING:
+            job.state = JobState.RUNNING
+            job.save(update_fields=["state"])
 
     if runs and all(run.state == "done" for run in runs) and not job.open:
         return relabel(job) if job.kind == SPEAKERS else merge(job)
@@ -303,13 +304,53 @@ def take_state_from(
     return job
 
 
-@transaction.atomic
+def _asked_for(run: Run) -> dict | None:
+    """The service's own answer for one Run the list left out, or None when
+    it has no such job or cannot say (v1.134.0)."""
+    try:
+        return whisperx.status_of(run.service_job_id, run.lane)
+    except whisperx.ServiceError as problem:
+        log.warning("run %s could not be asked for: %s", run.pk, problem)
+        return None
+
+
+def _take(run: Run, state: dict) -> set[str]:
+    """Put one status body on a Run; the names of the fields that changed."""
+    before = {
+        name: getattr(run, name)
+        for name in (
+            "missing_polls",
+            "state",
+            "stage",
+            "percent",
+            "position",
+            "audio_minutes_ahead",
+            "failure_class",
+        )
+    }
+    run.missing_polls = 0
+    run.state = str(state.get("state") or run.state)
+    run.stage = str(state.get("stage") or "")
+    run.percent = _number(state.get("percent"))
+    run.position = _whole(state.get("position"))
+    run.audio_minutes_ahead = _number(state.get("audio_minutes_ahead"))
+    if state["state"] in ("failed", "cancelled") and not run.failure_class:
+        failure = state.get("failure") or {}
+        run.failure_class = failure.get("reason_class") or Reason.INTERNAL
+    return {name for name, was in before.items() if getattr(run, name) != was}
+
+
 def merge(job: Job) -> Job:
     """Turn the Runs' results into the one Transcript.
 
     Segments are merged by time. Speaker labels arrive per Run as SPEAKER_00
     and on, which mean nothing to a person and nothing across Sides, so they
     are renamed before anybody sees them.
+
+    Not one transaction any more (v1.134.0): the results are fetched from the
+    service first, which can take minutes for a long recording, and only the
+    storing runs inside a transaction. A transaction held open across the
+    fetch kept locks and a connection busy for nothing.
     """
     job.merging = True
     job.save(update_fields=["merging"])
@@ -327,9 +368,9 @@ def merge(job: Job) -> Job:
         return fail(job, Reason.INTERNAL)
 
     try:
-        # A savepoint (v1.131.0): the old Transcript is deleted before the new
-        # one is built, so a failure here rolls back to before the delete and
-        # the person keeps what they had; the failure is then written.
+        # One transaction (v1.131.0): the old Transcript is deleted before the
+        # new one is built, so a failure here rolls back to before the delete
+        # and the person keeps what they had; the failure is then written.
         with transaction.atomic():
             transcript = _store(job, results)
     except Exception:  # noqa: BLE001 - anything here is the same failure
@@ -414,10 +455,14 @@ def merge(job: Job) -> Job:
 MACHINE_NAME = re.compile(r"^(?:.+ )?Speaker \d+$")
 
 
-@transaction.atomic
 def relabel(job: Job) -> Job:
     """The pass landed: the Transcript's Segments take the whole recording's
-    speakers. A pass that fails leaves the stretches' labels as they were."""
+    speakers. A pass that fails leaves the stretches' labels as they were.
+
+    The results are fetched before any transaction is opened (v1.134.0), as
+    in merge; the relabelling itself is one transaction, so a pass that
+    fails half-way leaves every label as it was.
+    """
     from core import live
 
     recording = job.recording
@@ -442,23 +487,36 @@ def relabel(job: Job) -> Job:
     many_sides = len({run.side_id for run in runs.values()}) > 1
     count: dict = {}
     changed = 0
-    for run_id, result in results.items():
-        turns = (result.get("speakers") or {}).get("turns") or []
-        changed += apply_turns(transcript, runs[run_id].side, turns, many_sides, count)
+    with transaction.atomic():
+        for run_id, result in results.items():
+            turns = (result.get("speakers") or {}).get("turns") or []
+            changed += apply_turns(
+                transcript, runs[run_id].side, turns, many_sides, count
+            )
 
-    if recording.speaker_taps:
-        try:
-            live.name_from_taps(recording, transcript)
-        except Exception:  # noqa: BLE001 - a naming that fails leaves the labels
-            log.exception("the taps of recording %s could not be applied", recording.pk)
+        if recording.speaker_taps:
+            try:
+                live.name_from_taps(recording, transcript)
+            except Exception:  # noqa: BLE001 - a naming that fails leaves the labels
+                log.exception(
+                    "the taps of recording %s could not be applied", recording.pk
+                )
 
-    for run_id, result in results.items():
-        run = runs[run_id]
-        run.settings_used = result.get("settings_used", {})
-        run.service_versions = result.get("service", {})
-        run.timings = result.get("timings_seconds", {})
-        run.finished = timezone.now()
-        run.save()
+        for run_id, result in results.items():
+            run = runs[run_id]
+            run.settings_used = result.get("settings_used", {})
+            run.service_versions = result.get("service", {})
+            run.timings = result.get("timings_seconds", {})
+            run.finished = timezone.now()
+            run.save(
+                update_fields=[
+                    "settings_used",
+                    "service_versions",
+                    "timings",
+                    "finished",
+                ]
+            )
+    for run in runs.values():
         whisperx.delete(run.service_job_id, run.lane)
 
     job.state = JobState.DONE
@@ -504,7 +562,7 @@ def apply_turns(transcript, side, turns: list, many_sides: bool, count: dict) ->
         key=lambda one: (one["start"], one["end"]),
     )
     named: dict[str, str] = {}
-    changed = 0
+    changed = []
     for segment in transcript.segments.filter(side=side).order_by("start", "pk"):
         best, most = None, 0.0
         for turn in ordered:
@@ -531,9 +589,11 @@ def apply_turns(transcript, side, turns: list, many_sides: bool, count: dict) ->
             continue
         segment.speaker = name
         segment.speaker_label = best
-        segment.save(update_fields=["speaker", "speaker_label"])
-        changed += 1
-    return changed
+        changed.append(segment)
+    # Written in batches (v1.134.0) rather than one UPDATE per line: a long
+    # recording's pass used to hold its transaction through thousands.
+    Segment.objects.bulk_update(changed, ["speaker", "speaker_label"], batch_size=500)
+    return len(changed)
 
 
 def _store(job: Job, results: dict) -> Transcript:
@@ -687,21 +747,34 @@ def _the_stretch_on_both_sides(segments: list, recording) -> int:
     # text "10" sorts before "9".
     first, second = (by_side[key] for key in sorted(by_side))
 
+    # Side 2 in start order with each text made plain once (v1.134.0): the
+    # match used to visit every Side 2 line for every long Side 1 line and
+    # make the text plain on each visit. A pointer walks Side 2 instead, as
+    # the Side 1 lines are in start order too, and only the lines within a
+    # second of the Side 1 line's start are looked at.
+    second = sorted(second, key=lambda one: one.start)
+    plain = [_plainly(other.text) for other in second]
     pairs = []
     taken = set()
-    for one in first:
+    pointer = 0
+    for one in sorted(first, key=lambda one: one.start):
         words = _plainly(one.text)
         if len(words) < LONG_ENOUGH:
             continue
-        for other in second:
-            if id(other) in taken:
+        while pointer < len(second) and (
+            second[pointer].start < one.start - SAME_MOMENT_SECONDS
+        ):
+            pointer += 1
+        for index in range(pointer, len(second)):
+            other = second[index]
+            if other.start - one.start > SAME_MOMENT_SECONDS:
+                break
+            if index in taken:
                 continue
-            if abs(other.start - one.start) > SAME_MOMENT_SECONDS:
-                continue
-            if _plainly(other.text) != words:
+            if plain[index] != words:
                 continue
             pairs.append((one, other))
-            taken.add(id(other))
+            taken.add(index)
             break
 
     if len(pairs) < A_STRETCH:
@@ -848,7 +921,20 @@ def fail(job: Job, reason_class: str) -> Job:
 
 def live_jobs():
     """Every Job that is still at the service, or on its way there."""
-    return Job.objects.filter(state__in=JobState.LIVE).select_related("recording")
+    # The Runs come with the Jobs (v1.134.0): the poll reads each Job's Runs
+    # once, from here, rather than querying per Job.
+    return (
+        Job.objects.filter(state__in=JobState.LIVE)
+        .select_related("recording")
+        .prefetch_related("runs")
+    )
+
+
+def something_is_running() -> bool:
+    """Whether any Run of a live Job is running at the service (v1.134.0):
+    the poll asks every three seconds while one is, every thirty while
+    everything is still waiting its turn."""
+    return Run.objects.filter(job__state__in=JobState.LIVE, state="running").exists()
 
 
 def ready_without_a_job():

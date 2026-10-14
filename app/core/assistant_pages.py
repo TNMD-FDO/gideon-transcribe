@@ -267,13 +267,83 @@ def _moments_and_runs(recording, transcript, features) -> tuple[list, dict]:
     return [_moment_json(one) for one in moments], runs
 
 
+BUSY = (assistant.QUEUED, assistant.RUNNING)
+
+
+def _at_work(recording, transcript, moments_on: bool) -> list[str]:
+    """What the assistant is doing for this Recording now, as short words
+    (v1.134.0): each busy summary with its stage, each chat answering, the
+    names run, each moment being described, the whole-recording run.
+
+    The page asks for this every two seconds while anything is at work and
+    for the whole state only when the list changes or empties, so it must
+    say the same things the whole state's `busy` is made of, in a handful
+    of queries rather than every summary's text and every answer; it does
+    not ask after the engine, which the whole state's features do."""
+    doing = [
+        f"summary {pk} {stage}"
+        for pk, stage in recording.summaries.filter(state__in=BUSY).values_list(
+            "pk", "stage"
+        )
+    ]
+    doing += [
+        f"chat {pk}"
+        for pk in recording.chats.filter(turns__state__in=BUSY)
+        .distinct()
+        .values_list("pk", flat=True)
+    ]
+    if transcript is not None:
+        last = transcript.suggestion_runs.first()
+        if last is not None and last.state in BUSY:
+            doing.append(f"names {last.state}")
+        if moments_on:
+            doing += [
+                f"moment {pk}"
+                for pk in transcript.moments.filter(state__in=BUSY).values_list(
+                    "pk", flat=True
+                )
+            ]
+            record_run = transcript.cue_runs.filter(source=CueRun.INTERVAL).first()
+            if record_run is not None and record_run.state in BUSY:
+                doing.append(f"describing {record_run.state}")
+    return doing
+
+
+def _doing_from(summaries, chats, run, moments, cue_runs) -> list[str]:
+    """The same words as _at_work, from the whole state's lists."""
+    doing = [
+        f"summary {one['id']} {one['stage']}"
+        for one in summaries
+        if one["state"] in BUSY
+    ]
+    doing += [f"chat {one['id']}" for one in chats if one["busy"]]
+    if run is not None and run["state"] in BUSY:
+        doing.append(f"names {run['state']}")
+    doing += [f"moment {one['id']}" for one in moments if one["state"] in BUSY]
+    record_run = cue_runs.get("interval")
+    if record_run is not None and record_run["state"] in BUSY:
+        doing.append(f"describing {record_run['state']}")
+    return doing
+
+
 @login_required
 def state(request: HttpRequest, recording_id) -> JsonResponse:
-    """Everything the tabs and the Speakers panel show, in one answer."""
+    """Everything the tabs and the Speakers panel show, in one answer.
+
+    With `?what=busy` (v1.134.0), only whether anything is at work and what,
+    as the page's small question while it waits."""
     recording = _recording(request, recording_id)
     if recording is None:
         return JsonResponse({"error": "no such recording"}, status=404)
     transcript = getattr(recording, "transcript", None)
+
+    if request.GET.get("what") == "busy":
+        moments_on = bool(settings_store.get("assistant_available")) and bool(
+            settings_store.get("moments_available")
+        )
+        doing = _at_work(recording, transcript, moments_on)
+        return JsonResponse({"busy": bool(doing), "stage": "; ".join(doing)})
+
     features = assistant.features()
 
     summaries = [_summary_json(one, transcript) for one in recording.summaries.all()]
@@ -338,26 +408,16 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
         )
     elif chosen is not None and chosen.key == "video" and len(templates) > 1:
         type_line = f"This is a video, so the {chosen.name} is chosen."
-    busy = any(
-        one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in summaries
-    )
-    busy = busy or any(one["busy"] for one in chats)
-    busy = busy or (
-        run is not None and run["state"] in (assistant.QUEUED, assistant.RUNNING)
-    )
-    busy = busy or any(
-        one["state"] in (assistant.QUEUED, assistant.RUNNING) for one in moments
-    )
-    record_run = cue_runs.get("interval")
-    busy = busy or (
-        record_run is not None
-        and record_run["state"] in (assistant.QUEUED, assistant.RUNNING)
-    )
+    # Busy, and what is at work in words (v1.134.0): the page asks the
+    # small question while these words stand, and for everything again
+    # when they change.
+    doing = _doing_from(summaries, chats, run, moments, cue_runs)
 
     return JsonResponse(
         {
             **features,
-            "busy": busy,
+            "busy": bool(doing),
+            "stage": "; ".join(doing),
             "summaries": summaries,
             "chats": chats,
             # What the camera showed, and the lines that point at something.

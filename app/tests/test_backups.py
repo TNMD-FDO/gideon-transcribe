@@ -256,3 +256,77 @@ def test_the_preflight_command_exits_one_when_off(monkeypatch):
     with pytest.raises(SystemExit):
         call_command("backup_preflight", stdout=out)
     assert "off" in out.getvalue()
+
+
+# The file-hash cache (v1.134.0) -----------------------------------------------------
+
+
+def test_an_unchanged_file_is_not_read_again_the_next_night(tmp_path, monkeypatch):
+    """The manifest used to hash every byte under cases/ every night. A cache
+    beside it remembers each file's size, time and hash; a file with the same
+    size and time keeps its hash and is not opened."""
+    from pathlib import Path
+
+    root = tmp_path / "cases"
+    (root / "1" / "2").mkdir(parents=True)
+    big = root / "1" / "2" / "original.m4a"
+    big.write_bytes(b"sound" * 1000)
+    small = root / "1" / "2" / "probe.json"
+    small.write_text("{}")
+    cache = tmp_path / "backup" / "file-hashes.json"
+    cache.parent.mkdir()
+
+    opened = []
+    real_open = Path.open
+
+    def counting(self, *args, **kwargs):
+        if args and args[0] == "rb":
+            opened.append(self.name)
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", counting)
+
+    first = backups.file_hashes(root, cache=cache)
+    assert sorted(opened) == ["original.m4a", "probe.json"]
+    assert set(first) == {"1/2/original.m4a", "1/2/probe.json"}
+    assert cache.exists()
+
+    # The second night: the same hashes, and nothing read.
+    opened.clear()
+    second = backups.file_hashes(root, cache=cache)
+    assert second == first and opened == []
+
+    # A file that changed is read again; the other still is not.
+    small.write_text('{"changed": true}')
+    opened.clear()
+    third = backups.file_hashes(root, cache=cache)
+    assert opened == ["probe.json"]
+    assert third["1/2/probe.json"] != first["1/2/probe.json"]
+    assert third["1/2/original.m4a"] == first["1/2/original.m4a"]
+
+    # Without a cache every file is read, as it always was.
+    opened.clear()
+    assert backups.file_hashes(root) == third
+    assert sorted(opened) == ["original.m4a", "probe.json"]
+
+
+@pytest.mark.django_db
+def test_the_manifest_keeps_its_cache_beside_it_and_out_of_the_files(
+    on, owner, tmp_path
+):
+    case = Case.objects.create(owner=owner, name="Okafor")
+    recording = Recording.objects.create(
+        batch=Batch.objects.create(user=owner),
+        user=owner,
+        case=case,
+        title="Call",
+        original_filename="call.m4a",
+        media_state=MediaState.READY,
+    )
+    recording.folder.mkdir(parents=True)
+    (recording.folder / "original.m4a").write_bytes(b"sound")
+    manifest = backups.write_manifest()
+    assert (tmp_path / "backup" / "file-hashes.json").exists()
+    assert list(manifest["files"]) == [f"{case.pk}/{recording.pk}/original.m4a"]
+    # The same manifest the next night, from the cache.
+    assert backups.write_manifest()["files"] == manifest["files"]

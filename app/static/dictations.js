@@ -35,6 +35,8 @@
   function watch(recordingId, cell, ended, startedAt) {
     var tries = 0;
     var timer = window.setInterval(function () {
+      // A hidden tab skips its turn (v1.134.0); the next one asks.
+      if (!window.UI.pollingAllowed()) { return; }
       tries += 1;
       fetch("/dictation/" + recordingId + "/state", { cache: "no-store" })
         .then(function (answer) { return answer.json(); })

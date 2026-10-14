@@ -58,16 +58,20 @@ def used_bytes(user: User) -> int:
     against its owner even while Folder management is off, because it is still
     on the disk.
     """
-    from core.cases import Case
-
     # Workspace only here: a Recording in a Case is counted with the Case,
-    # once, against whoever owns it rather than whoever uploaded it.
-    mine = sum(
-        recording.disk_bytes()
-        for recording in user.recordings.filter(case__isnull=True)
+    # once, against whoever owns it rather than whoever uploaded it. Kept
+    # sizes summed, never a walk (v1.134.0).
+    from django.db.models import Sum
+
+    from core.documents import Document
+    from core.recordings import Recording, summed_disk_bytes
+
+    mine = summed_disk_bytes(user.recordings.filter(case__isnull=True))
+    theirs = summed_disk_bytes(Recording.objects.filter(case__owner=user))
+    papers = Document.objects.filter(case__owner=user).aggregate(
+        total=Sum("size_bytes")
     )
-    theirs = sum(case.disk_bytes() for case in Case.objects.filter(owner=user))
-    return mine + theirs
+    return mine + theirs + (papers["total"] or 0)
 
 
 def quota_bytes(user: User) -> int:
@@ -542,6 +546,7 @@ def take_in(recording: Recording, arrived: Path) -> bool:
     try:
         recording.folder.mkdir(parents=True, exist_ok=True)
         shutil.move(str(arrived), recording.original_path)
+        recording.measure_disk()
         arrived.with_name(f"{arrived.name}.info").unlink(missing_ok=True)
         recording.size_bytes = recording.original_path.stat().st_size
     except OSError:

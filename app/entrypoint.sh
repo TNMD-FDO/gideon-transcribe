@@ -41,7 +41,11 @@ case "${1:-web}" in
   worker)
     # A finished job's row carries its arguments, and a mail's arguments are
     # the message; a successful job is deleted as it ends (v1.130.0).
-    exec python manage.py procrastinate worker --queues default --concurrency 1 \
+    # Two jobs at a time (v1.134.0): a hand-over sending a large file to the
+    # WhisperX service, up to ten minutes, used to hold the poll, the mails
+    # and the minute sweeps behind it. The poll itself stays single: its
+    # lock in core/tasks.py keeps two from running at once.
+    exec python manage.py procrastinate worker --queues default --concurrency 2 \
       --delete-jobs=successful \
       --shutdown-graceful-timeout 540
     ;;

@@ -27,6 +27,10 @@ log = logging.getLogger("transcribe.media")
 # original is not downloadable, and keeping the media means making a Clip.
 SERVABLE = ("playback.mp4", "playback.m4a", "waveform.json")
 CLIPS = "clips/"
+# Where the session keeps the recordings an Admin's looking in has been
+# written down for, and how many it keeps.
+RECORDED_KEY = "admin_served"
+RECORDED_MOST = 50
 
 
 def _wanted(request: HttpRequest) -> tuple[str, str, str] | None:
@@ -68,6 +72,15 @@ def media_root(recording) -> str:
     if recording.case_id:
         return f"/case-media/{recording.case_id}/{recording.pk}"
     return f"/media/{recording.user_id}/{recording.pk}"
+
+
+def playback_url(recording) -> str:
+    """The playback copy's URL from the record alone (v1.134.0): the root
+    and the name the probe gives it; "" until the copy is ready."""
+    from core import incidents
+
+    name = incidents.playback_name(recording)
+    return f"{media_root(recording)}/{name}" if name else ""
 
 
 def holder_of(recording) -> str:
@@ -130,6 +143,15 @@ def may_serve(request: HttpRequest) -> HttpResponse:
         return HttpResponse(status=404)
     if standing == "own":
         return HttpResponse(status=200)
+
+    # One row per recording per Login session (v1.134.0): the player asks
+    # for a byte range at a time, and each range had written a row, so one
+    # scrub wrote dozens. The session remembers which recordings it has
+    # recorded; a new sign-in starts afresh and writes again.
+    recorded = request.session.get(RECORDED_KEY) or []
+    if str(recording.pk) in recorded:
+        return HttpResponse(status=200)
+    request.session[RECORDED_KEY] = (recorded + [str(recording.pk)])[-RECORDED_MOST:]
 
     audit.write(
         audit.Category.ADMIN,

@@ -53,7 +53,7 @@
     <div class="pane-list">
 
   <p class="muted small">
-    {{ found }} row{{ found|pluralize }}, newest first. Page {{ page_number }} of {{ pages }}.
+    {% if more_than_counted %}More than {{ found|add:'-1' }} rows{% else %}{{ found }} row{{ found|pluralize }}{% endif %}, newest first. Page {{ page_number }} of {{ pages }}.
   </p>
 
   <div class="card">

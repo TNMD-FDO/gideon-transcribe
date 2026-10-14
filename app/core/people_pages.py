@@ -21,21 +21,32 @@ from core.people import Person
 
 
 def tab_context(case) -> dict:
-    """What the tab shows: the People with where they appear, and the unnamed."""
+    """What the tab shows: the People with where they appear, and the
+    unnamed. A handful of queries for the case (v1.134.0): the People, every
+    Speaker's recordings grouped, the recordings' rows once."""
+    from core.recordings import Recording
+
+    everyone = list(case.people.all())
+    spoken = people.speakers_in(case)
+    wanted = {
+        recording_id
+        for person in everyone
+        for recording_id in spoken.get(person.name.strip().casefold(), {})
+    }
+    recordings = {one.pk: one for one in Recording.objects.filter(pk__in=list(wanted))}
     rows = []
-    for person in case.people.all():
-        where = person.recordings()
+    for person in everyone:
         rows.append(
             {
                 "person": person,
                 "first_line": (person.notes or "").strip().splitlines()[0]
                 if (person.notes or "").strip()
                 else "",
-                "recordings": where,
-                "others": [one for one in case.people.all() if one.pk != person.pk],
+                "recordings": person.recordings(spoken, recordings),
+                "others": [one for one in everyone if one.pk != person.pk],
             }
         )
-    unnamed = people.unnamed_by_recording(case)
+    unnamed = people.unnamed_by_recording(case, spoken)
     return {
         "people": rows,
         "unnamed": unnamed,

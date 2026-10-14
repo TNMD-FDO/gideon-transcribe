@@ -251,5 +251,98 @@
     if (event.target.closest("[data-go-back]")) { window.history.back(); }
   });
 
-  window.UI = { confirm: confirm, prompt: prompt, alert: alert, toast: showToast, icon: icon, showHints: showHints };
+  // Polling (v1.134.0) -----------------------------------------------------------------
+  //
+  // Every page that asks the server again on a timer goes through here, so
+  // the one rule is kept once: a hidden tab asks nothing. A poller that keeps
+  // its own timer puts its fetch behind UI.whenVisible(), a promise that is
+  // settled at once while the tab is in view and the moment it comes back
+  // otherwise, so a tab left behind for an hour asks once on return and not
+  // seven hundred times meanwhile; UI.pollingAllowed() is the same question
+  // for a setInterval that would rather skip a turn.
+  //
+  // UI.poll(ask, every, options) is the whole thing for a page that only
+  // reads (the Status and Queue pages): ask is called, and called again
+  // `every` milliseconds after its promise settles. The wait grows as the
+  // page is left alone: 15 s after a minute without a touch, 60 s after ten,
+  // and after an hour the poll stops and options.paused(true) lets the page
+  // say so; any click, key or scroll puts it back to `every` and asks at
+  // once. The handle's now() asks straight away, and stop() ends it.
+
+  var visibleWaiters = [];
+
+  function pollingAllowed() { return !document.hidden; }
+
+  function whenVisible() {
+    if (!document.hidden) { return Promise.resolve(); }
+    return new Promise(function (resolve) { visibleWaiters.push(resolve); });
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { return; }
+    var waiting = visibleWaiters;
+    visibleWaiters = [];
+    waiting.forEach(function (go) { go(); });
+  });
+
+  var A_MINUTE = 60 * 1000;
+
+  function poll(ask, every, options) {
+    options = options || {};
+    var lastTouch = Date.now();
+    var timer = null;
+    var stopped = false;
+    var paused = false;
+
+    function wait() {
+      var alone = Date.now() - lastTouch;
+      if (alone >= 60 * A_MINUTE) { return -1; }
+      if (alone >= 10 * A_MINUTE) { return Math.max(every, 60000); }
+      if (alone >= A_MINUTE) { return Math.max(every, 15000); }
+      return every;
+    }
+
+    function next() {
+      if (stopped || paused) { return; }
+      var gap = wait();
+      window.clearTimeout(timer);
+      if (gap < 0) {
+        paused = true;
+        if (options.paused) { options.paused(true); }
+        return;
+      }
+      timer = window.setTimeout(turn, gap);
+    }
+
+    function turn() {
+      if (stopped) { return; }
+      whenVisible()
+        .then(function () { if (!stopped) { return ask(); } })
+        .catch(function () { /* the next turn will find it */ })
+        .then(next);
+    }
+
+    function touched() {
+      lastTouch = Date.now();
+      if (!paused) { return; }
+      paused = false;
+      if (options.paused) { options.paused(false); }
+      turn();
+    }
+
+    ["click", "keydown", "scroll", "pointerdown", "wheel", "touchstart"].forEach(function (name) {
+      document.addEventListener(name, touched, { passive: true, capture: true });
+    });
+
+    turn();
+    return {
+      now: turn,
+      stop: function () { stopped = true; window.clearTimeout(timer); }
+    };
+  }
+
+  window.UI = {
+    confirm: confirm, prompt: prompt, alert: alert, toast: showToast, icon: icon, showHints: showHints,
+    pollingAllowed: pollingAllowed, whenVisible: whenVisible, poll: poll
+  };
 })();
