@@ -218,9 +218,9 @@ LOGGING = {
         # are the address, the subject and the body; the engine client prints
         # the whole prompt at DEBUG. Neither follows LOG_LEVEL: nothing a
         # person typed, and no transcript, is for the journal at any level.
-        "procrastinate": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "openai": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "httpx": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "httpcore": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        **{
+            name: {"handlers": ["console"], "level": "WARNING", "propagate": False}
+            for name in ("procrastinate", "openai", "httpx", "httpcore")
+        },
     },
 }

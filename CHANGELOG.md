@@ -21,6 +21,17 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.130.1, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+One line in the logging settings folded to the length the linter allows;
+v1.130.0's CI went red on it while its Release build was green. Nothing
+else changes.
+
 ## v1.130.0, 2026-10-14
 
 ```
