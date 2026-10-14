@@ -317,7 +317,10 @@ def test_find_answers_moments_on_the_incident_clock(person, a_case, incident, cl
     )
     signed_in(client, person)
     url = f"/case/{a_case.pk}/incident/{incident.pk}/find"
-    got = client.get(url, {"q": "gun"}).json()
+    # The words are posted (v1.130.0), never in a URL the front door's record
+    # would keep; an older page's GET is read still.
+    got = client.post(url, json.dumps({"q": "gun"}), "application/json").json()
+    assert got == client.get(url, {"q": "gun"}).json()
     kinds = [(h["kind"], h["at"]) for h in got["hits"]]
     # The memo's citation [21:56:49] is 32 seconds on the clock (the first
     # camera starts at 21:56:17).
@@ -345,3 +348,28 @@ def test_find_answers_moments_on_the_incident_clock(person, a_case, incident, cl
         f"/case/{a_case.pk}/incident/{incident.pk}?tab=nonsense&para=x"
     ).content.decode()
     assert 'openTab: ""' in page and 'para: ""' in page
+
+
+def test_a_cited_line_reaches_the_event_box_by_its_moment_not_its_words(
+    person, a_case, incident, client
+):
+    """v1.130.0: the all-cameras link had carried up to 500 characters of the
+    cited line in its query string. It names the cited recording now, and the
+    incident page reads the line at that moment from the record."""
+    cams = {one.camera_id(): one for one in incident.cameras.all()}
+    camera = cams["BWC2-1"]
+    signed_in(client, person)
+    at = camera.starts_at + 30.0
+    page = client.get(
+        f"{incident.url()}?t={at}&cite={camera.recording_id}"
+    ).content.decode()
+    assert "I got, I got gun, I got gun." in page
+    # A recording that is not a camera of this incident, or no id at all, gives nothing.
+    other = video(person, a_case, "other")
+    page = client.get(f"{incident.url()}?t={at}&cite={other.pk}").content.decode()
+    assert "I got gun" not in page
+    page = client.get(f"{incident.url()}?t={at}&cite=nonsense").content.decode()
+    assert "I got gun" not in page
+    # An older link's words are read as before.
+    page = client.get(f"{incident.url()}?t={at}&event=Old%20words").content.decode()
+    assert "Old words" in page

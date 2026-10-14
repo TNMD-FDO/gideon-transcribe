@@ -389,3 +389,15 @@ def test_a_document_read_by_an_older_splitter_is_read_again(
     assert report.state == "ready" and report.read_version == documents.READ_VERSION
     assert settings_store.definition("documents_reading_most").page == "documents"
     assert json.dumps(documents.as_json(report))
+
+
+def test_a_pages_picture_is_never_kept_by_the_browser(person, a_case, client):
+    """v1.130.0: the pictures had a one-hour cache lifetime where every other
+    privileged stream is no-store."""
+    first = video(person, a_case, "first", stamp=stamp("21:56:19", "BWC2-1"))
+    report = a_report(person, a_case, recording=first)
+    signed_in(client, person)
+    got = client.get(f"/case/{a_case.pk}/document/{report.pk}/state").json()
+    served = client.get(got["pages_rows"][0]["picture"])
+    assert served.status_code == 200
+    assert served["Cache-Control"] == "private, no-store"

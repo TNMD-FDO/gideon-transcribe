@@ -321,4 +321,6 @@ def find(request: HttpRequest, case_id) -> JsonResponse:
     """The Find box: the case's notes and the recordings' words. Never logged."""
     _on_or_404()
     case = _their_case(request, case_id)
-    return JsonResponse(case_search.find_notes(case, request.GET.get("q", "")[:200]))
+    from core.viewer import asked_words
+
+    return JsonResponse(case_search.find_notes(case, asked_words(request)))

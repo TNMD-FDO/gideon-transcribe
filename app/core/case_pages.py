@@ -692,15 +692,15 @@ def recordings_csv(request: HttpRequest, case_id) -> HttpResponse:
     for the office's own spreadsheet, oldest added first, UTF-8 with a byte
     order mark so a desktop spreadsheet keeps the accents. One audit row with
     the count, never a title."""
-    import csv
-
     from django.utils import timezone
+
+    from core import chronology
 
     _on_or_404()
     case = _their_case(request, case_id)
     rows = list(reversed(_rows_for(case)))
     holder = io.StringIO()
-    writer = csv.writer(holder)
+    writer = chronology.Rows(holder)
     writer.writerow(
         [
             "Title",

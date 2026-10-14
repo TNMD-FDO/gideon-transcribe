@@ -10,9 +10,8 @@
   "use strict";
 
   function escape(text) {
-    var holder = document.createElement("span");
-    holder.textContent = text === null || text === undefined ? "" : text;
-    return holder.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function cookie(name) {
@@ -181,7 +180,7 @@
             (where.all ? " data-all='" + escape(where.all) + "'" : "") + title + ">" +
             "<svg class='i' aria-hidden='true'><use href='#i-" + (where.camera ? "camera" : "play") + "'></use></svg> " + label + "</a>" +
             // All cameras (Phase 6 chapter 1): the incident page at that moment.
-            (where.all ? " <a href='" + escape(where.all + (where.line ? "&event=" + encodeURIComponent(where.line.slice(0, 500)) : "")) + "' class='cite all' title='Every camera of the incident at this moment, with this line ready as an event'>all cameras</a>" : "");
+            (where.all ? " <a href='" + escape(where.all + (where.line ? "&cite=" + encodeURIComponent(where.recording) : "")) + "' class='cite all' title='Every camera of the incident at this moment, with this line ready as an event'>all cameras</a>" : "");
         });
       };
     }

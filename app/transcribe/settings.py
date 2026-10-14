@@ -213,5 +213,14 @@ LOGGING = {
         # ids, never file names, but the request log adds nothing the Caddy
         # access log does not already have.
         "django.request": {"handlers": ["console"], "level": "ERROR"},
+        # Libraries that print what they are handed (v1.130.0). The queue
+        # prints every task's arguments at INFO, and a mail task's arguments
+        # are the address, the subject and the body; the engine client prints
+        # the whole prompt at DEBUG. Neither follows LOG_LEVEL: nothing a
+        # person typed, and no transcript, is for the journal at any level.
+        "procrastinate": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "openai": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "httpx": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "httpcore": {"handlers": ["console"], "level": "WARNING", "propagate": False},
     },
 }

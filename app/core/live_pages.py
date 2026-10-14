@@ -138,7 +138,8 @@ def start(request: HttpRequest) -> JsonResponse:
 def note_upload(request: HttpRequest, recording_id) -> JsonResponse:
     """The sidecar upload the pieces go into, so an early end can take them."""
     recording = _their_live_recording(request, recording_id)
-    live.note_upload(recording, str(_body(request).get("tus") or ""))
+    if not live.note_upload(recording, str(_body(request).get("tus") or "")):
+        return JsonResponse({"ok": False, "why": "That is not an upload."}, status=400)
     return JsonResponse({"ok": True})
 
 

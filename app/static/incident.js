@@ -130,9 +130,8 @@
   }
 
   function escape(text) {
-    var box = document.createElement("div");
-    box.textContent = text === null || text === undefined ? "" : text;
-    return box.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function quoted(text) { return escape(text).replace(/'/g, "&#39;"); }
@@ -2784,7 +2783,11 @@
       var asked = findBox.value.trim();
       if (asked.length < 2) { findHits.innerHTML = ""; findList = []; if (layerStack[layerStack.length - 1] === "find") { closeLayer(); } return; }
       findTimer = window.setTimeout(function () {
-        fetch(C.find + "?q=" + encodeURIComponent(asked), { credentials: "same-origin" })
+        fetch(C.find, {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+          body: JSON.stringify({ q: asked })
+        })
           .then(function (answer) { return answer.ok ? answer.json() : { hits: [] }; })
           .then(drawFind)
           .catch(function () { /* the next keystroke asks again */ });

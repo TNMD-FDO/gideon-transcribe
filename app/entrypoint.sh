@@ -30,13 +30,18 @@ case "${1:-web}" in
   media-worker)
     exec python manage.py procrastinate worker \
       --queues media \
-      --concurrency "${MEDIA_CONCURRENT_JOBS:-4}"
+      --concurrency "${MEDIA_CONCURRENT_JOBS:-4}" \
+      --delete-jobs=successful
     ;;
   worker)
-    exec python manage.py procrastinate worker --queues default --concurrency 1
+    # A finished job's row carries its arguments, and a mail's arguments are
+    # the message; a successful job is deleted as it ends (v1.130.0).
+    exec python manage.py procrastinate worker --queues default --concurrency 1 \
+      --delete-jobs=successful
     ;;
   llm-worker)
-    exec python manage.py procrastinate worker --queues llm --concurrency 4
+    exec python manage.py procrastinate worker --queues llm --concurrency 4 \
+      --delete-jobs=successful
     ;;
   *)
     # Anything else is a Django management command. The guides write these

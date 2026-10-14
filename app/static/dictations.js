@@ -23,9 +23,8 @@
   }
 
   function escaped(text) {
-    var box = document.createElement("div");
-    box.textContent = text === null || text === undefined ? "" : text;
-    return box.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   // Rows still on their way, or writing a memo, ask where they stand. The

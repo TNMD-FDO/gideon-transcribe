@@ -51,9 +51,8 @@
   }
 
   function escape(text) {
-    var holder = document.createElement("span");
-    holder.textContent = text === null || text === undefined ? "" : text;
-    return holder.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function ink(name) {
@@ -1701,7 +1700,11 @@
     });
     if (!findMore || wanted.length < 2) { return; }
     furtherTimer = window.setTimeout(function () {
-      fetch("/recording/" + window.VIEWER.recording + "/find?q=" + encodeURIComponent(wanted), { credentials: "same-origin" })
+      fetch("/recording/" + window.VIEWER.recording + "/find", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+        body: JSON.stringify({ q: wanted })
+      })
         .then(function (answer) { return answer.ok ? answer.json() : null; })
         .then(function (got) {
           if (!got || search.value.trim().toLowerCase() !== wanted) { return; }

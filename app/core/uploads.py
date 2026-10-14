@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 import time
 from dataclasses import dataclass
@@ -292,6 +293,45 @@ def _session_of(event: dict) -> LoginSession | None:
     )
 
 
+# The sidecar names each upload by an id of its own making: letters, digits
+# and a few plain marks, never a path. Anything else is not the sidecar's and
+# is never joined onto a folder (v1.130.0).
+UPLOAD_ID = re.compile(r"^[A-Za-z0-9+_-]{1,80}$")
+
+
+def arrived_file(upload_id: str) -> Path | None:
+    """The sidecar's file for an upload id, or None for an id that is not one.
+
+    The id is accepted in the sidecar's own shape only, and the path it makes
+    has to resolve to a file directly inside the uploads folder; a climbing
+    id, an absolute one, or a folder is refused before anything is moved.
+    """
+    if not upload_id or not UPLOAD_ID.match(upload_id):
+        return None
+    folder = Path(settings.UPLOADS_DIR)
+    arrived = folder / upload_id
+    try:
+        inside = arrived.resolve().parent == folder.resolve()
+    except OSError:
+        return None
+    if not inside or not arrived.is_file():
+        return None
+    return arrived
+
+
+def through_the_front_door(request: HttpRequest) -> bool:
+    """Did this request come through Caddy rather than from the sidecar?
+
+    The reverse proxy marks every request it forwards; the sidecar's hook call
+    reaches the app on the project network directly and carries no such mark.
+    The Caddyfile refuses the hook's path as well; this is the second lock.
+    """
+    return bool(
+        request.headers.get("X-Forwarded-For")
+        or request.headers.get("X-Forwarded-Host")
+    )
+
+
 @csrf_exempt
 def hook(request: HttpRequest) -> JsonResponse:
     """The sidecar's two questions, on one endpoint.
@@ -301,6 +341,9 @@ def hook(request: HttpRequest) -> JsonResponse:
     """
     if request.method != "POST":
         return JsonResponse({}, status=405)
+    if through_the_front_door(request):
+        # Only the sidecar asks these questions; a browser is told nothing.
+        return JsonResponse({}, status=404)
 
     try:
         body = json.loads(request.body or b"{}")
@@ -429,8 +472,8 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
         log.info("an upload finished for recording %s, already taken", recording.id)
         return JsonResponse({})
 
-    arrived = Path(settings.UPLOADS_DIR) / f"{upload.get('ID', '')}"
-    if not arrived.exists():
+    arrived = arrived_file(str(upload.get("ID") or ""))
+    if arrived is None:
         recording.media_state = MediaState.FAILED
         recording.failure_message = "The upload did not arrive."
         recording.save()
@@ -438,7 +481,7 @@ def _post_finish(event: dict, upload: dict, metadata: dict) -> JsonResponse:
 
     recording.folder.mkdir(parents=True, exist_ok=True)
     shutil.move(str(arrived), recording.original_path)
-    (arrived.parent / f"{upload.get('ID', '')}.info").unlink(missing_ok=True)
+    arrived.with_name(f"{arrived.name}.info").unlink(missing_ok=True)
 
     recording.size_bytes = recording.original_path.stat().st_size
     recording.media_state = MediaState.CHECKING

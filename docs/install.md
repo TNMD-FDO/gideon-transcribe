@@ -637,7 +637,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 
 | Key | Meaning |
 |---|---|
-| `LOG_LEVEL` | `INFO` says what happened, to which id, and how long it took. It never prints transcript text, file names, or anything a user typed. |
+| `LOG_LEVEL` | `INFO` says what happened, to which id, and how long it took. It never prints transcript text, file names, or anything a user typed, and the libraries that would (the queue, the engine client) are held at WARNING whatever this says. |
 | `MEDIA_THREADS_PER_JOB` | How many processor threads one piece of media work may use. Media work never uses the card. |
 | `MEDIA_CONCURRENT_JOBS` | How many pieces of media work run at once. These two are how you keep some of the server for everything else. |
 | `RELEASE_TAG` | The Release this server is running. Written by `./transcribe upgrade`, never by hand. Empty on a first install. |

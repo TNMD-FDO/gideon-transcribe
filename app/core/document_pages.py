@@ -306,7 +306,9 @@ def picture(request: HttpRequest, case_id, document_id, number: int) -> HttpResp
         raise Http404("no such page")
     # FileResponse closes the file itself once the picture has gone out.
     answer = FileResponse(open(path, "rb"), content_type="image/png")  # noqa: SIM115
-    answer["Cache-Control"] = "private, max-age=3600"
+    # Never kept on the disk of the machine that looked (v1.130.0): a report's
+    # pages are privileged, like every playback copy.
+    answer["Cache-Control"] = "private, no-store"
     return answer
 
 

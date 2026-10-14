@@ -537,3 +537,112 @@ def test_the_provenance_says_recorded_live(on, person, a_case, client):
     signed_in(client, person)
     page = client.get(reverse("case", args=[a_case.pk])).content.decode()
     assert "Preparing the sound." in page
+
+
+def test_the_hook_moves_only_the_sidecars_own_file(
+    on, person, a_case, client, tmp_path, monkeypatch
+):
+    """v1.130.0: the finish handler joined the upload id straight onto the
+    uploads folder, so an id that climbed would have moved another
+    recording's bytes into this one. A climbing id is not an upload."""
+    from core import tasks
+
+    deferred = []
+    monkeypatch.setattr(
+        tasks.prepare_recording, "defer", lambda **f: deferred.append(f)
+    )
+    signed_in(client, person)
+    recording = live.start(person, a_case)
+    theirs = tmp_path / "scratch" / "9" / "other"
+    theirs.mkdir(parents=True)
+    (theirs / "original.m4a").write_bytes(b"x" * 400)
+    session_key = client.session.session_key
+    body = {
+        "Type": "post-finish",
+        "Event": {
+            "Upload": {
+                "ID": "../scratch/9/other/original.m4a",
+                "MetaData": {"recording": str(recording.pk)},
+            },
+            "HTTPRequest": {
+                "Header": {
+                    "Cookie": [f"{django_settings.SESSION_COOKIE_NAME}={session_key}"]
+                }
+            },
+        },
+    }
+    client.post(
+        "/upload-hook/",
+        json.dumps(body),
+        "application/json",
+        HTTP_HOOK_NAME="post-finish",
+    )
+    assert (theirs / "original.m4a").exists() and not deferred
+    recording.refresh_from_db()
+    assert recording.media_state == MediaState.FAILED
+    assert not recording.original_path.exists()
+
+
+def test_the_hook_answers_nobody_who_came_through_the_front_door(
+    on, person, a_case, client
+):
+    """The reverse proxy marks what it forwards; the sidecar's own call does
+    not carry the mark. A browser's post to the hook is told nothing."""
+    signed_in(client, person)
+    recording = live.start(person, a_case)
+    session_key = client.session.session_key
+    body = {
+        "Type": "pre-create",
+        "Event": {
+            "Upload": {
+                "ID": "abc123",
+                "Size": 0,
+                "MetaData": {"recording": str(recording.pk), "live": "1"},
+            },
+            "HTTPRequest": {
+                "Header": {
+                    "Cookie": [f"{django_settings.SESSION_COOKIE_NAME}={session_key}"]
+                }
+            },
+        },
+    }
+    told = client.post(
+        "/upload-hook/",
+        json.dumps(body),
+        "application/json",
+        HTTP_HOOK_NAME="pre-create",
+        HTTP_X_FORWARDED_FOR="10.0.0.9",
+    )
+    assert told.status_code == 404
+    told = client.post(
+        "/upload-hook/",
+        json.dumps(body),
+        "application/json",
+        HTTP_HOOK_NAME="pre-create",
+        HTTP_X_FORWARDED_HOST="testserver",
+    )
+    assert told.status_code == 404
+
+
+def test_the_record_page_keeps_only_an_upload_id_in_the_sidecars_shape(
+    on, person, a_case, client, tmp_path
+):
+    signed_in(client, person)
+    recording = live.start(person, a_case)
+    for bad in ("../scratch/9/other/original.m4a", "/srv/data/cases", "a/b", ""):
+        told = client.post(
+            reverse("record-upload", args=[recording.pk]),
+            json.dumps({"tus": bad}),
+            "application/json",
+        )
+        assert told.status_code == 400, bad
+        recording.refresh_from_db()
+        assert not (recording.live or {}).get("tus_id")
+    told = client.post(
+        reverse("record-upload", args=[recording.pk]),
+        json.dumps({"tus": "abc123"}),
+        "application/json",
+    )
+    assert told.status_code == 200
+    recording.refresh_from_db()
+    assert recording.live["tus_id"] == "abc123"

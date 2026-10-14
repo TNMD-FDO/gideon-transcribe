@@ -21,6 +21,63 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.130.0, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The security pass of the code audit: the High and Medium findings fixed,
+each with a test that keeps the rule. Nothing changes on a page; an upgrade
+restarts Caddy for the two Caddyfile changes, and the stack now refuses to
+start without `ALLOWED_CLIENT_CIDRS` in `.env` (the install has always
+written it).
+
+- **The upload sidecar's hook is the sidecar's alone.** The front door
+  answers 404 for its path, the app refuses a call that came through the
+  proxy, and an upload id is taken only in the sidecar's own shape and only
+  when it names a file directly inside the uploads folder. The finish
+  handler had joined the id straight onto the folder and moved whatever it
+  named. The Record page's upload id is held to the same shape.
+- **A served clip name is one file under clips/.** A name that climbs is
+  refused by the media gate before anything is looked up.
+- **Every page script escapes both quotes.** Fifteen scripts had escaped
+  angle brackets and ampersands and left quotes alone, then put titles and
+  document text inside single-quoted attributes.
+- **The journal holds nothing a library would print.** The queue library's
+  and the engine client's loggers are held at WARNING whatever `LOG_LEVEL`
+  says, and the workers delete a successful job's row as it ends, so a
+  sent message's address and words stay out of the journal and the job
+  table.
+- **The request record keeps no query string.** The Find boxes post their
+  words, the all-cameras link from a chat citation names the recording and
+  the moment rather than the line's words, and Caddy's log cuts every URI
+  at its question mark.
+- **A blank client allow-list stops the stack** with a message instead of
+  letting everyone in.
+- **The directory connection demands a valid certificate** in the app's
+  own code, not by the client library's default.
+- **The script's files are born private**: `umask 077`, and a dump or a
+  configuration archive on its way to the backup folder is written in a
+  folder of the run's own, mode 0700, removed when the script ends. It had
+  passed through the shared temporary folder at the caller's umask.
+- **The engine address stays in the building.** The setting refuses a
+  public address or name with the reason.
+- **Spreadsheet cells are text.** A chronology or recordings list cell
+  that opens with =, +, -, @ or a tab is given a leading apostrophe, so a
+  desktop spreadsheet never runs it as a formula.
+- **A document page's picture is sent no-store** like every playback copy;
+  it had carried a one-hour cache lifetime.
+
+Left for a follow-up at the maintainer's word: the project networks marked
+internal with a second network for the services that reach the office (a
+change to the shared server that wants a ledger line), the Low findings,
+and the two policy questions.
+
+Phase 1 chapters 3 and 4's amendments, the catalogue's Engine address row,
+the admin guide and the install guide's `LOG_LEVEL` line say so.
+
 ## v1.129.3, 2026-10-08
 
 ```

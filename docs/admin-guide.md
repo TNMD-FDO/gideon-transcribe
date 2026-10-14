@@ -177,7 +177,7 @@ Once Folder management is on, the app deletes cases by itself, on one rule for t
 
 The AI assistant, Summary, Chat, Speaker suggestions and Moments, talks to a language-model engine through the engine's own API. The app never runs a model itself. Which engine is yours to say, on the panel's **AI assistant** settings page:
 
-- **Engine address**: the engine's base URL, for example `http://gideon-generator:8000/v1`. The defaults are the Local engine's.
+- **Engine address**: the engine's base URL, for example `http://gideon-generator:8000/v1`. The defaults are the Local engine's. The engine has to be in the building: a container's name on the project network, a private address, or a name under the office's own domain. A public address is refused with the reason, because everything the app reads goes to the engine.
 - **Model name**: the served name the engine expects, exactly as it lists it.
 - **Model display name**: optional; what the AI notice prints instead of the served name.
 - **Token**: shown as set or missing and never editable here. It lives in a file on the server, `secrets/llm_api_token`, written by `./transcribe engine`.

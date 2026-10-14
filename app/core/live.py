@@ -18,7 +18,6 @@ import logging
 import shutil
 from pathlib import Path
 
-from django.conf import settings as django_settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -314,9 +313,7 @@ def _source_for_stretches(recording: Recording) -> Path | None:
     the original once it has ended and been taken."""
     if recording.original_path.exists():
         return recording.original_path
-    tus_id = (recording.live or {}).get("tus_id", "")
-    arrived = Path(django_settings.UPLOADS_DIR) / tus_id if tus_id else None
-    return arrived if arrived is not None and arrived.exists() else None
+    return _arrived(recording)
 
 
 def cut_stretch(recording: Recording, number: int) -> str:
@@ -458,9 +455,25 @@ def finish_stretches(recording: Recording):
     return job
 
 
-def note_upload(recording: Recording, tus_id: str) -> None:
-    """The sidecar upload this recording's pieces go into, remembered."""
-    change_live(recording, lambda live: live.update(tus_id=(tus_id or "")[:80]))
+def note_upload(recording: Recording, tus_id: str) -> bool:
+    """The sidecar upload this recording's pieces go into, remembered.
+
+    Only an id in the sidecar's own shape is kept (v1.130.0): the id is later
+    joined onto the uploads folder and moved, so a path is never one.
+    """
+    from core.uploads import UPLOAD_ID
+
+    if not UPLOAD_ID.match(tus_id or ""):
+        return False
+    change_live(recording, lambda live: live.update(tus_id=tus_id))
+    return True
+
+
+def _arrived(recording: Recording) -> Path | None:
+    """The sidecar's file this recording's pieces went into, if it is there."""
+    from core.uploads import arrived_file
+
+    return arrived_file((recording.live or {}).get("tus_id", ""))
 
 
 # The speakers pass (v1.94.0) --------------------------------------------------------
@@ -697,16 +710,15 @@ def _take_what_arrived(recording: Recording) -> None:
     """
     from core.tasks import prepare_recording
 
-    tus_id = (recording.live or {}).get("tus_id", "")
-    arrived = Path(django_settings.UPLOADS_DIR) / tus_id if tus_id else None
-    if arrived is None or not arrived.exists() or arrived.stat().st_size == 0:
+    arrived = _arrived(recording)
+    if arrived is None or arrived.stat().st_size == 0:
         recording.media_state = MediaState.FAILED
         recording.failure_message = "The recording ended before any sound arrived."
         recording.save(update_fields=["media_state", "failure_message"])
         return
     recording.folder.mkdir(parents=True, exist_ok=True)
     shutil.move(str(arrived), recording.original_path)
-    (arrived.parent / f"{tus_id}.info").unlink(missing_ok=True)
+    arrived.with_name(f"{arrived.name}.info").unlink(missing_ok=True)
     recording.size_bytes = recording.original_path.stat().st_size
     recording.media_state = MediaState.CHECKING
     recording.save(update_fields=["size_bytes", "media_state"])

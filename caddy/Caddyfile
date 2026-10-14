@@ -55,9 +55,18 @@ https://{$APP_HOSTNAME}:443 {
 	#
 	# The health check is left out. Four lines a minute, for ever, saying
 	# nothing.
+	#
+	# The query string is cut from the record (v1.130.0). The app's paths
+	# carry ids, but a Find box's words and a search ride in the query, and
+	# search terms are never logged.
 	log {
 		output stdout
-		format json
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "[?].*" "?"
+			}
+		}
 	}
 	log_skip /healthz
 
@@ -141,6 +150,14 @@ https://{$APP_HOSTNAME}:443 {
 			uri strip_prefix /case-media
 			file_server
 		}
+	}
+
+	# The sidecar's hook is the app's own business with its sidecar on the
+	# project network. It is a path on the app all the same, and without this
+	# block the catch-all below would carry a browser's post to it. Nobody
+	# outside is told it is there.
+	handle /upload-hook* {
+		respond 404
 	}
 
 	handle {

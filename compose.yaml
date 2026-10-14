@@ -27,9 +27,10 @@ services:
         condition: service_healthy
     environment:
       APP_HOSTNAME: "${APP_HOSTNAME:?set APP_HOSTNAME in .env}"
-      # Empty would be a Caddyfile error rather than a wide-open door, so an
-      # office that means everyone says so in full.
-      ALLOWED_CLIENT_CIDRS: "${ALLOWED_CLIENT_CIDRS:-0.0.0.0/0 ::/0}"
+      # The office's own networks, and nothing else is let in. A missing
+      # value stops the stack with this message rather than letting everyone
+      # in (v1.130.0); an office that means everyone says so in full.
+      ALLOWED_CLIENT_CIDRS: "${ALLOWED_CLIENT_CIDRS:?set ALLOWED_CLIENT_CIDRS in .env}"
       TZ: "${TZ:-UTC}"
     ports:
       # The address as well as the port: the server's own LAN address keeps

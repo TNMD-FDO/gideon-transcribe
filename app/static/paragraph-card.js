@@ -20,9 +20,8 @@
   var opener = null;
 
   function escape(text) {
-    var box = document.createElement("div");
-    box.textContent = text === null || text === undefined ? "" : text;
-    return box.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function pct(value, whole) { return whole ? (value / whole) * 100 : 0; }

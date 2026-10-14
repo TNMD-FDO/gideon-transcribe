@@ -89,3 +89,25 @@ def test_a_recording_in_a_case_hangs_off_case_media():
 def test_the_holder_is_the_case_once_there_is_one():
     assert media_access.holder_of(Standing()) == "6"
     assert media_access.holder_of(Standing(case_id="c-9")) == "c-9"
+
+
+def test_a_clip_name_is_one_file_under_clips_and_nothing_climbs():
+    """v1.130.0: any name beginning with clips/ had been allowed, and Caddy's
+    file server resolves ".." inside its root, which holds every recording."""
+    assert media_access.servable("playback.mp4")
+    assert media_access.servable("clips/c23a9213.mp4")
+    assert not media_access.servable("clips/")
+    assert not media_access.servable("clips/..")
+    assert not media_access.servable("clips/../playback.mp4")
+    assert not media_access.servable("clips/../../7/other/playback.mp4")
+    assert not media_access.servable("clips/sub/c23a9213.mp4")
+    assert not media_access.servable("original.mp4")
+    # The path reader refuses dots and backslashes before anything is looked up.
+    assert (
+        media_access._wanted(Request("/media/6/095f0352/clips/../../7/x/playback.mp4"))
+        is None
+    )
+    assert (
+        media_access._wanted(Request("/media/6/095f0352/%2e%2e/playback.mp4")) is None
+    )
+    assert media_access._wanted(Request("/media/6/095f0352/clips\\..\\x.mp4")) is None

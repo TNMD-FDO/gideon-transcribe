@@ -46,8 +46,31 @@
 
 set -euo pipefail
 
+# Nothing this script writes is for anybody else on the server: a dump, a
+# secret, a configuration archive. Files are born private (v1.130.0).
+umask 077
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
+
+# A folder of this run's own, mode 0700, for a dump or an archive on its way
+# to the backup folder; removed when the script ends however it ends.
+PRIVATE_FOLDERS=()
+private_folder() {
+  local made
+  made="$(mktemp -d)"
+  chmod 700 "$made"
+  PRIVATE_FOLDERS+=("$made")
+  printf '%s\n' "$made"
+}
+forget_private_folders() {
+  local one
+  for one in "${PRIVATE_FOLDERS[@]:-}"; do
+    if [ -n "$one" ]; then rm -rf "$one"; fi
+  done
+  return 0
+}
+trap forget_private_folders EXIT
 
 ENV_FILE="$HERE/.env"
 SECRETS="$HERE/secrets"
@@ -1992,13 +2015,15 @@ cmd_backup_db() {
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
 
   echo "Taking a dump into $folder/$name.dump"
+  local work
+  work="$(private_folder)"
   compose exec -T postgres pg_dump \
     -U "$(env_value POSTGRES_USER)" \
     -d "$(env_value POSTGRES_DB)" \
-    --format=custom >"/tmp/$name.dump"
+    --format=custom >"$work/$name.dump"
 
-  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "/tmp/$name.dump" "$folder/$name.dump"
-  rm -f "/tmp/$name.dump"
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "$work/$name.dump" "$folder/$name.dump"
+  rm -rf "$work"
   green "Done: $(sudo du -h "$folder/$name.dump" | cut -f1)"
 }
 
@@ -2153,12 +2178,14 @@ cmd_backup() {
   step=dump
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder" 2>/dev/null || true
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder/.restic-cache" 2>/dev/null || true
-  if ! compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom >"/tmp/$dump"; then
-    rm -f "/tmp/$dump"
+  local work
+  work="$(private_folder)"
+  if ! compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom >"$work/$dump"; then
+    rm -rf "$work"
     record_backup_failure "$step" "dump_failed"
   fi
-  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "/tmp/$dump" "$folder/$dump"
-  rm -f "/tmp/$dump"
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "$work/$dump" "$folder/$dump"
+  rm -rf "$work"
   local dump_bytes
   dump_bytes="$(sudo stat -c %s "$folder/$dump")"
 
@@ -3098,11 +3125,13 @@ keep_the_configuration() {
   local folder
   folder="$(env_value APP_DATA_DIR)/backup"
   echo "Keeping this office's configuration in $folder/config-pre-$tag.tar"
-  tar -cf "/tmp/config-pre-$tag.tar" -C "$HERE" \
+  local work
+  work="$(private_folder)"
+  tar -cf "$work/config-pre-$tag.tar" -C "$HERE" \
     .env secrets tls ca whisperx-service/.env whisperx-service/secrets 2>/dev/null || true
   sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 \
-    "/tmp/config-pre-$tag.tar" "$folder/config-pre-$tag.tar"
-  rm -f "/tmp/config-pre-$tag.tar"
+    "$work/config-pre-$tag.tar" "$folder/config-pre-$tag.tar"
+  rm -rf "$work"
 }
 
 read_the_release_lines() {

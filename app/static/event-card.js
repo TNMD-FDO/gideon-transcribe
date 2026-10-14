@@ -38,9 +38,8 @@
   var noHover = window.matchMedia ? window.matchMedia("(hover: none)") : null;
 
   function escape(text) {
-    var box = document.createElement("div");
-    box.textContent = text === null || text === undefined ? "" : text;
-    return box.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function touchOnly() { return !!(noHover && noHover.matches); }

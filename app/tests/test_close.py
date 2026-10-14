@@ -211,7 +211,8 @@ def test_the_recording_page_is_answered_the_close_lines_and_the_picture(
 ):
     signed_in(client, person)
     url = f"/recording/{camera.pk}/find"
-    got = client.get(url, {"q": "pill"}).json()
+    got = client.post(url, json.dumps({"q": "pill"}), "application/json").json()
+    assert got == client.get(url, {"q": "pill"}).json()
     second = lines_of(camera).get(start=20.0)
     assert got["close"] == [
         {"id": second.pk, "html": "There were <mark>pills</mark> on the seat."}

@@ -98,9 +98,13 @@ def connect():
 
     if _has_something(where["ca_file"]):
         ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, where["ca_file"])
-        # Without this, OpenLDAP keeps the TLS context it already built and
-        # the CA file above is ignored on every connection after the first.
-        ldap.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
+    # A valid certificate is demanded here, in the app, and not left to the
+    # client library's own default (v1.130.0): people's directory passwords
+    # cross this connection. Without the new context, OpenLDAP keeps the TLS
+    # context it already built and the options above are ignored on every
+    # connection after the first.
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_DEMAND)
+    ldap.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
     ldap.set_option(ldap.OPT_NETWORK_TIMEOUT, NETWORK_TIMEOUT_SECONDS)
     ldap.set_option(ldap.OPT_TIMEOUT, NETWORK_TIMEOUT_SECONDS)
 

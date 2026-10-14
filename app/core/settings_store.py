@@ -2918,6 +2918,51 @@ def memo(key: str, make):
     return kept[name]
 
 
+def outside_the_building(address: str) -> str:
+    """Why an engine address is refused, or "" when it stays inside.
+
+    Everything the app reads goes to the engine, so the engine has to be in
+    the building: a container's bare name on the project network, a private
+    address, or a name under a private domain (v1.130.0). A public address
+    is refused with the reason, whoever types it.
+    """
+    import ipaddress
+    from urllib.parse import urlsplit
+
+    try:
+        parts = urlsplit(address)
+    except ValueError:
+        return "that is not an address"
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        return "an engine address starts with http:// or https:// and names a host"
+    host = parts.hostname
+    if host == "localhost" or host.endswith(".localhost"):
+        return ""
+    try:
+        where = ipaddress.ip_address(host)
+    except ValueError:
+        # A name. A bare one is a container on the project network; a dotted
+        # one is reached through the office's own resolver, and the public
+        # suffixes that could not be the office's are refused outright.
+        if "." not in host:
+            return ""
+        if host.endswith((".local", ".internal", ".lan", ".home", ".corp", ".private")):
+            return ""
+        public = (".com", ".net", ".org", ".io", ".ai", ".dev", ".app", ".cloud", ".co")
+        if host.endswith(public):
+            return (
+                f"{host} is a public name; the engine has to be in the building, "
+                "on the project network or a private address"
+            )
+        return ""
+    if where.is_private or where.is_loopback or where.is_link_local:
+        return ""
+    return (
+        f"{host} is a public address; the engine has to be in the building, "
+        "on the project network or a private address"
+    )
+
+
 def check(key: str, value):
     """The value this setting would take, or a refusal saying why not.
 
@@ -2955,6 +3000,11 @@ def check(key: str, value):
         return wanted
 
     text = str(value)
+    if key == "engine_address":
+        why = outside_the_building(text.strip())
+        if why:
+            raise ValueError(f"{known.name}: {why}")
+        return text.strip()
     if key in ("vision_window_start", "vision_window_end"):
         text = text.strip()
         if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", text):

@@ -738,10 +738,32 @@ def _rows(incident) -> list[dict]:
     return rows
 
 
+def cell(value) -> str:
+    """A spreadsheet cell that is text and nothing else (v1.130.0).
+
+    A desktop spreadsheet runs a cell that opens with =, +, -, @ or a tab as
+    a formula. An event's line comes from a colleague or from the engine, so
+    such a cell is given a leading apostrophe, which the spreadsheet reads as
+    "text follows" and does not show.
+    """
+    text = "" if value is None else str(value)
+    return f"'{text}" if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
+
+class Rows:
+    """A csv writer whose every cell is text (see cell)."""
+
+    def __init__(self, holder):
+        self.writer = csv.writer(holder)
+
+    def writerow(self, row):
+        self.writer.writerow([cell(one) for one in row])
+
+
 def spreadsheet(incident) -> bytes:
     """One row per Event, UTF-8 with a byte order mark for desktop spreadsheets."""
     holder = io.StringIO()
-    writer = csv.writer(holder)
+    writer = Rows(holder)
     writer.writerow(
         [
             "Number",

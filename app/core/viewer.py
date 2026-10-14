@@ -404,7 +404,21 @@ def find(request: HttpRequest, recording_id) -> JsonResponse:
         return JsonResponse({"error": "no such recording"}, status=404)
     from core import case_search
 
-    return JsonResponse(case_search.find_in(recording, request.GET.get("q", "")[:200]))
+    return JsonResponse(case_search.find_in(recording, asked_words(request)))
+
+
+def asked_words(request: HttpRequest) -> str:
+    """The Find box's words, from a posted body (v1.130.0) so that they never
+    ride in a URL the front door's request record would keep; a GET with
+    ?q= is read still, for an older page."""
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body or b"{}")
+        except json.JSONDecodeError:
+            body = {}
+        typed = body.get("q", "") if isinstance(body, dict) else ""
+        return str(typed or "")[:200]
+    return request.GET.get("q", "")[:200]
 
 
 # The Preview (v1.98.0): how far each side of the moment its lines reach.

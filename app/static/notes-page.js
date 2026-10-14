@@ -640,7 +640,11 @@
     var typed = findBox.value.trim();
     if (typed.length < 2) { if (!typed) { findLayer.hidden = true; panels.hidden = false; } return; }
     findTimer = window.setTimeout(function () {
-      fetch(desk.dataset.find + "?q=" + encodeURIComponent(typed), { credentials: "same-origin" })
+      fetch(desk.dataset.find, {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+        body: JSON.stringify({ q: typed })
+      })
         .then(function (answer) { return answer.ok ? answer.json() : null; })
         .then(function (got) { if (got && findBox.value.trim() === typed) { drawFind(got); } })
         .catch(function () { /* the hits stay */ });

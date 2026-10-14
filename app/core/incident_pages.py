@@ -8,6 +8,8 @@ step; this side keeps the rows and says what each camera is.
 
 from __future__ import annotations
 
+import uuid
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
@@ -82,8 +84,10 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             ),
             "at": _asked_moment(request, incident, state),
             "others": _others(case, incident),
-            # A citation's words, for the event box to open with (chapter 2).
-            "event_words": request.GET.get("event", "")[: chronology.TEXT_MOST],
+            # A citation's words, for the event box to open with (chapter 2):
+            # the line at the moment of the cited recording, read again here
+            # by its id (v1.130.0) rather than carried in the URL.
+            "event_words": _cited_words(request, incident),
             # A search hit opens on a tab, at a paragraph (Phase 7 chapter 3).
             "open_tab": request.GET.get("tab", "")
             if request.GET.get("tab") in ("chronology", "memo", "cameras", "details")
@@ -123,13 +127,40 @@ def _number(text: str) -> str:
 
 
 @login_required
+def _cited_words(request: HttpRequest, incident) -> str:
+    """The cited line for the event box: ?cite=<recording> names a camera of
+    this incident and ?t= its moment on the incident clock; the line is read
+    from the record. An older link's ?event= words are read as before."""
+    from core.case_chat_pages import _line_at
+
+    cited = request.GET.get("cite", "")
+    if cited:
+        try:
+            uuid.UUID(cited)
+        except ValueError:
+            return ""
+        camera = incident.cameras.filter(recording_id=cited).first()
+        if camera is None or camera.starts_at is None:
+            return ""
+        try:
+            at = float(request.GET.get("t", ""))
+        except ValueError:
+            return ""
+        return _line_at(camera.recording, max(0.0, at - camera.starts_at))[
+            : chronology.TEXT_MOST
+        ]
+    return request.GET.get("event", "")[: chronology.TEXT_MOST]
+
+
 def find(request: HttpRequest, case_id, incident_id) -> JsonResponse:
     """Find on the incident page (Phase 7 chapter 3): the hits as moments.
     The term is never logged."""
     from core import case_search
 
     _, incident = _incident(request, case_id, incident_id)
-    return JsonResponse(case_search.find(incident, request.GET.get("q", "")[:200]))
+    from core.viewer import asked_words
+
+    return JsonResponse(case_search.find(incident, asked_words(request)))
 
 
 def _asked_moment(request, incident: Incident, state: dict) -> float:

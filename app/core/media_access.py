@@ -44,7 +44,11 @@ def _wanted(request: HttpRequest) -> tuple[str, str, str] | None:
     path = request.headers.get("X-Forwarded-Uri") or request.META.get("PATH_INFO", "")
     path = unquote(urlparse(path).path)
 
+    if "\x00" in path or "\\" in path:
+        return None
     parts = [piece for piece in path.split("/") if piece]
+    if any(piece in (".", "..") for piece in parts):
+        return None
     if parts and parts[0] in ("media", "case-media"):
         parts = parts[1:]
 
@@ -75,6 +79,24 @@ def holder_of(recording) -> str:
     return str(recording.case_id) if recording.case_id else str(recording.user_id)
 
 
+def servable(name: str) -> bool:
+    """One of the three fixed names, or one file directly under clips/.
+
+    Nothing that climbs (v1.130.0): Caddy's file server resolves ".." inside
+    its root, which is every holder's folder, so a clip name that climbed out
+    of its recording would have been approved here for a recording the
+    session had and served from one it did not.
+    """
+    if name in SERVABLE:
+        return True
+    if not name.startswith(CLIPS):
+        return False
+    rest = name[len(CLIPS) :]
+    return (
+        bool(rest) and "/" not in rest and rest not in (".", "..") and "\\" not in rest
+    )
+
+
 def may_serve(request: HttpRequest) -> HttpResponse:
     """Caddy's question: may this session have this file?
 
@@ -89,7 +111,7 @@ def may_serve(request: HttpRequest) -> HttpResponse:
         return HttpResponse(status=404)
     owner_id, recording_id, name = asked
 
-    if name not in SERVABLE and not name.startswith(CLIPS):
+    if not servable(name):
         # The uploaded bytes and the audio the model heard are not for
         # anybody: what a person keeps, they keep as a Clip or an export.
         return HttpResponse(status=404)

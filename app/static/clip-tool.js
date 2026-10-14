@@ -26,9 +26,8 @@
   var cookie = window.VIEWER.cookie;
 
   function escape(text) {
-    var holder = document.createElement("span");
-    holder.textContent = text === null || text === undefined ? "" : text;
-    return holder.innerHTML;
+    return String(text === undefined || text === null ? "" : text)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function seconds(typed) {
