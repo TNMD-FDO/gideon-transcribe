@@ -22,6 +22,10 @@ docs/research/
 docs/adr/
 
 app/tests/
+# A workstation's collected static files and rendered guides (both ignored
+# by git) would otherwise ride into the context and the image.
+app/static-collected/
+docs/*.rendered.json
 **/__pycache__/
 **/*.py[cod]
 **/.pytest_cache/

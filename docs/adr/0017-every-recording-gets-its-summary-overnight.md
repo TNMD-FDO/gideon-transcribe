@@ -1,7 +1,6 @@
 # 17. Every recording gets its summary overnight
 
-Date: 2026-10-04. Status: accepted. Release: the Phase 9 release that
-builds its chapter 5.
+Date: 2026-10-04. Status: accepted. Release: v1.120.0 (Phase 9 chapter 5).
 
 ## Context
 

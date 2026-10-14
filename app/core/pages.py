@@ -77,7 +77,6 @@ def recordings(request: HttpRequest) -> HttpResponse:
             # Grouped by batch (Phase 8 chapter 13), each with its download.
             "groups": batch_groups(rows),
             "standing_line": standing_line(),
-            "storage_warning": uploads.storage_warning(request.user),
             "recorded_here": bool(recorded_here),
             **recorded_here,
         },

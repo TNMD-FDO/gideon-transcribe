@@ -31,6 +31,18 @@ def test_the_script_parses():
     assert done.returncode == 0, done.stderr
 
 
+@needs_bash
+def test_the_help_prints_every_command_in_the_header():
+    """v1.133.0: the help had printed the header's first 32 lines while the
+    command list ran to 41, so six commands never showed."""
+    done = subprocess.run(
+        [BASH, str(SCRIPT), "help"], capture_output=True, text=True, cwd=HERE
+    )
+    shown = set(re.findall(r"^\s*\./transcribe ([a-z-]+)", done.stdout, re.M))
+    listed = set(re.findall(r"^#   \./transcribe ([a-z-]+)", text(), re.M))
+    assert listed - shown == set(), f"in the header, not in the help: {listed - shown}"
+
+
 def test_every_usage_line_is_dispatched_and_the_other_way_round():
     usage = set(re.findall(r"^#   \./transcribe ([a-z-]+)", text(), re.M))
     dispatch = set(re.findall(r"^([a-z-]+)\) (?:shift && )?cmd_", text(), re.M))
@@ -40,7 +52,7 @@ def test_every_usage_line_is_dispatched_and_the_other_way_round():
     )
     # Commands an operator is not told about are allowed only when they are
     # what the timers call or a step of another command.
-    quiet = {"backup-weekly", "install-timers", "restore-dump", "upgrade-finish"}
+    quiet = {"backup-weekly", "upgrade-finish"}
     assert dispatch - usage - quiet == set(), (
         f"dispatched, not in the usage block: {dispatch - usage - quiet}"
     )

@@ -324,10 +324,6 @@ NO_TIME = "no time on the clock"
 NO_CLAIM = "no claim"
 TWIN = "said twice"
 TWIN_MOMENT = "same moment told twice"
-# What the model says the record does about a claim (v1.103.0): shows or
-# says something else in its place, or nothing. A differs on nothing is not
-# on camera, whatever the why argues.
-SHOWN_OTHERWISE = "otherwise"
 SHOWN_NOTHING = "nothing"
 # What a finding turns on (v1.103.0). A finding that turns on one of these
 # alone is dropped and counted: a vision model's colours, makes and counts

@@ -9,3 +9,5 @@ The app is written by employees of the Office of the Federal Public Defender for
 ## Consequences
 
 Any office can clone, change, and run the app without asking anyone, and nothing in the repository needs a copyright header. Everything shipped beside the code keeps its own licence and is listed in `THIRD_PARTY_LICENSES.md`: the Whisper models (MIT), the diarization model (CC-BY-4.0 behind a licence gate that each office accepts itself), the pinned Python and Docker components, and ffmpeg as Debian builds it. A licence on released code cannot be taken back, so this decision holds for every Release once the repository is public; a later effort could only add terms to new versions. If the pending Community Defender Organization reply on that contribution term is ever answered differently, this repository's `CONTRIBUTING.md` follows the answer.
+
+**Noted 2026-10-14.** The diarization model is Nemotron 3 by default since v1.80.0 (ADR 0014), under OpenMDW 1.1; pyannote's model, CC-BY-4.0 behind its licence gate, stays as the other choice. `THIRD_PARTY_LICENSES.md` lists both.

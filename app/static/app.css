@@ -265,7 +265,7 @@ h3 { font-size: var(--t-body); }
 p { margin: 0 0 8px; }
 
 /* Digits that line up: every time, count and size. */
-.num, time, kbd, .t { font-variant-numeric: tabular-nums; }
+time, kbd, .t { font-variant-numeric: tabular-nums; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 
@@ -1233,22 +1233,10 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .caselist li.here { border-left: 4px solid var(--accent); background: var(--surface); }
 .caselist li.here b { color: var(--accent); }
 
-/* Below this there is not room for three columns, so the rail starts closed
-   and opens over the page rather than squeezing the transcript to nothing.
-   The button in the head is always there, so there is always a way in. */
+/* Below this there is not room for three columns, so the frame is one
+   column; the case rail itself folds by its own button (viewer.js). */
 @media (max-width: 1100px), (min-width: 1280px) and (max-width: 1499px) {
   .body.with-case { grid-template-columns: minmax(0, 1fr); }
-  .body.with-case > .caserail { display: none; }
-  .body.with-case.case-shown .caserail {
-    display: block;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 232px;
-    z-index: 5;
-    box-shadow: var(--shadow);
-  }
 }
 
 /* The cast: the speakers at the head of the transcript, stuck under the tab
@@ -1312,7 +1300,7 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .find-more .find-seen { display: block; padding: 3px 0; color: inherit; text-decoration: none; border-top: 1px solid var(--line); }
 .find-more .find-seen:hover { background: var(--surface); }
 .find-more mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
-.search-close, .inc-find-close { margin: 10px 0 2px; }
+.inc-find-close { margin: 10px 0 2px; }
 .inc-find-hits .inc-find-close { margin: 8px 12px 2px; }
 
 /* Marking a clip from the transcript is two steps, and the button says which
@@ -1792,8 +1780,6 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 .marks li { padding: 2px 0; }
 .marks .cite { font-family: var(--mono); }
 /* The viewer's crumb: the case a recording belongs to, beside the back arrow. */
-.dockhead .crumb { white-space: nowrap; margin-right: 4px; }
-.dockhead .crumb a { color: inherit; }
 /* A row that is itself a link: the name reads as one, quietly. */
 .tbl tr.goes a.plain { color: inherit; text-decoration: none; }
 /* v1.111.0 (the walk's item 15): a row's name is the door too, on the rows
@@ -2415,8 +2401,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 /* Incidents (Phase 6 chapter 1): the case page's strip, and the Incident page
    in the Speakers page's shape: the Wall, the transport, the parked tiles,
    the Cameras and Details tabs, and the strip of lanes. */
-.inc-strip-card { margin-top: 10px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 16px; align-items: center; border-left: 4px solid var(--accent); }
-.inc-strip-card .pill.offer, .inc-offer .pill.offer { background: var(--accent-soft); color: var(--accent); }
+.inc-offer .pill.offer { background: var(--accent-soft); color: var(--accent); }
 .inc-offer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; border-left: 4px solid var(--accent); }
 .inc-checks { border: 1px solid var(--line); border-radius: var(--radius); max-height: 330px; overflow: auto; }
 .inc-check { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; padding: 8px 8px; border-top: 1px solid var(--line); font-size: var(--t-small); cursor: pointer; }
@@ -2426,16 +2411,12 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-desk { display: grid; grid-template-columns: minmax(0, 1fr) 12px var(--work, 460px); gap: 0 6px; padding: 12px 16px 0; align-items: start; }
 .inc-stage { display: flex; flex-direction: column; min-width: 0; }
 .inc-wall { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.inc-wall.count-1 { grid-template-columns: minmax(0, 1fr); }
-.inc-wall.count-2, .inc-wall.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.inc-wall.count-7, .inc-wall.count-8, .inc-wall.count-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .inc-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .inc-tile.sound { outline: 2px solid var(--accent); outline-offset: -1px; }
 .inc-tile-head { display: flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: var(--t-small); border-bottom: 1px solid var(--line); min-width: 0; }
 .inc-tile-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--speaker, var(--muted)); flex: none; }
 .inc-tile-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.inc-tile-head .pill { margin-left: auto; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; }
-.inc-tile-head .sound-pick { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.inc-tile-head .pill { margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
 .inc-well { position: relative; background: var(--well); aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .inc-well video { width: 100%; height: 100%; object-fit: contain; }
 .inc-well .state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); color: var(--knob); font-weight: 500; }
@@ -2444,9 +2425,6 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-lines .who { font-weight: 600; }
 .inc-lines .cam::before { content: "Camera: "; font-weight: 500; }
 .inc-transport { padding: 8px 0 0; }
-.inc-parked { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--t-small); margin-top: 8px; }
-.inc-parked .tile { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--line); border-radius: var(--radius); padding: 3px 8px; }
-.inc-parked .tile .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--speaker, var(--muted)); }
 .inc-work { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: 80vh; }
 .inc-work .panels .panel { padding: 12px 14px; }
 /* One sitting (Phase 8 chapter 9): the bar on the Cameras tab and the Add cameras dialog. */
@@ -2481,7 +2459,6 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-offer .sitting-mini { display: grid; margin-top: 6px; max-width: 420px; }
 .inc-cameras td { vertical-align: top; overflow-wrap: anywhere; }
 .inc-cameras .acts, .inc-cameras td.acts { white-space: normal; }
-.inc-place summary { cursor: pointer; color: var(--accent); }
 .inc-place-box { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
 .inc-nudge { display: inline-flex; gap: 3px; }
 .inc-match { display: inline-flex; gap: 4px; align-items: center; }
@@ -2503,7 +2480,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 @media (max-width: 1279px) {
   .inc-desk { grid-template-columns: minmax(0, 1fr); }
   .inc-desk .workgrip { display: none; }
-  .inc-wall, .inc-wall.count-7, .inc-wall.count-8, .inc-wall.count-9 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inc-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inc-work { max-height: none; }
 }
 
@@ -2522,7 +2499,6 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-event-cams label { display: inline-flex; align-items: center; gap: 3px; color: var(--speaker, inherit); font-weight: 500; }
 .inc-lines .add-line { visibility: hidden; padding: 0 5px; }
 .inc-tile:hover .inc-lines .add-line:not([hidden]) { visibility: visible; }
-.inc-lines .cam-line { display: flex; gap: 6px; align-items: baseline; }
 .inc-strip .lane.events .track .mk-ev { position: absolute; top: 1px; bottom: 1px; width: 4px; background: var(--accent); border-radius: 2px; cursor: pointer; opacity: 0.85; }
 .inc-strip .lane.events .track .mk-ev::before { content: ""; position: absolute; left: -5px; right: -5px; top: -4px; bottom: -4px; }
 .inc-strip .lane.events .track .mk-ev.proposed { background: var(--warn); }
@@ -2530,7 +2506,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-strip .lane.events .track .mk-ev.here { opacity: 1; box-shadow: 0 0 0 2px var(--accent-soft); }
 .inc-strip .lane.events .track .mk-ev:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .inc-events { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
-.inc-events td { padding: 6px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.inc-events td { border-top: 1px solid var(--line); vertical-align: top; }
 /* Phase 7 chapter 2: why a proposal matters, in the assistant's words, and
    the pill of an event a watch phrase found. */
 .inc-events .why { font-style: italic; color: var(--text); opacity: 0.85; }
@@ -2551,8 +2527,7 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .inc-events .line { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: var(--t-body); color: inherit; text-align: left; cursor: pointer; white-space: normal; }
 .inc-events .line:hover, .inc-events .line:focus-visible { text-decoration: underline dotted; outline: none; }
 .inc-events .tell { margin-left: 6px; }
-.pill.src { font-size: 0.85em; font-weight: 400; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; line-height: 1.6; }
-.pill.src { white-space: nowrap; }
+.pill.src { white-space: nowrap; font-size: 0.85em; font-weight: 400; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; line-height: 1.6; }
 .pill.src.src-assistant, .pill.src.src-report { background: var(--accent-soft); color: var(--accent); }
 .pill.src.src-note { background: var(--surface-2); color: var(--muted); font-style: italic; }
 .pill.src.src-watch { color: var(--accent); border: 1px solid var(--accent); background: transparent; }
@@ -2664,7 +2639,6 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .caselist .case-more { background: none; border: 0; padding: 6px 10px; cursor: pointer; color: var(--muted); font: inherit; font-size: var(--t-small); text-decoration: underline; }
 .seg .moment-note.lit { outline: 2px solid var(--accent); outline-offset: 1px; }
 .seg .moment-note textarea { width: 100%; box-sizing: border-box; }
-.moment-notes-first { list-style: none; margin: 0 0 6px; padding: 0; }
 .preview-foot { flex: none; display: flex; gap: 6px; padding: 8px 10px; flex-wrap: wrap; align-items: center; }
 .preview-note { flex: none; display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .preview-note textarea { width: 100%; box-sizing: border-box; resize: vertical; }
@@ -2794,11 +2768,6 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .inc-strip .ruler, .inc-strip .lane, .inc-strip .clip-track-row { grid-template-columns: 150px minmax(0, 1fr); }
 .inc-strip .lane .head .swap { padding: 0 5px; font-size: 10px; flex: none; }
 .incident-page main.wide { position: relative; }
-.inc-sheets { position: absolute; right: 16px; top: 58px; z-index: 6; width: min(760px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); background: var(--bg); overflow: hidden; }
-.inc-sheets .inc-event-box:last-child, .inc-sheets .inc-event-box[hidden] + .inc-clip-box { border-bottom: 0; }
-@media (max-width: 1279px) {
-  .inc-sheets { left: 16px; right: 16px; width: auto; }
-}
 /* The clip box (Phase 7 chapter 1): under the event box, its cameras as
    tiles in the picture's order, the first the large one in Focus. */
 .inc-clip-box { display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 12px; border-top: 1px solid var(--line); }
@@ -3085,7 +3054,6 @@ body.gideon-window .gideon-grip { display: none; }
 .np-event-note { margin: 2px 10px 8px 4.6rem; padding: 6px 10px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: var(--radius); font-size: var(--t-small); }
 .preview-card.mounted .preview-head { display: none; }
 .preview-card.mounted .preview-lines { max-height: none; flex: 1 1 auto; }
-.preview-card.mounted .preview-media audio { padding: 0 14px; box-sizing: border-box; }
 .np-foot { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .np-overview { flex-basis: 100%; }
 .np-overview p { margin: 4px 0 0; max-width: 70ch; }

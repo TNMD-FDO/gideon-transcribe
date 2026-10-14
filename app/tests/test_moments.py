@@ -23,8 +23,9 @@ from core import assistant, engine, exports, media, prompts, settings_store
 from core.assistant import Moment, PromptTemplate, Summary
 from core.audit import Row
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 CATALOGUE = (
@@ -329,12 +330,6 @@ def a_recording(person, tmp_path, settings, video=True):
 @pytest.fixture
 def ready(person, tmp_path, settings):
     return a_recording(person, tmp_path, settings)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def reachable(monkeypatch, answer_text, finish="stop"):

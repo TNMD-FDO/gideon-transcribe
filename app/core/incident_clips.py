@@ -23,9 +23,6 @@ from core.chronology import Event
 from core.clips import SHORTEST_SECONDS, Clip
 from core.incidents import DAY, Incident, IncidentCamera
 
-# The span the box offers: ten seconds either side of the event.
-AROUND_SECONDS = 10
-
 # The ways into the clip box (Phase 8 chapter 5), as the audit row says them.
 WAYS = {
     "button": "from the button",
@@ -94,10 +91,12 @@ def picture_for(
 
 
 def _number(value, fallback=None):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return fallback
+    """A finite time, or the fallback (v1.133.0: the one time parser the NaN
+    rule of v1.132.0 had missed)."""
+    from core import numbers
+
+    found = numbers.finite(value, least=0.0, most=numbers.A_DAY_AND_MORE)
+    return fallback if found is None else found
 
 
 def keeps_in_case(recording) -> str:

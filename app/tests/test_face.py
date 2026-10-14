@@ -14,8 +14,9 @@ import pytest
 from core import branding, exports, settings_store
 from core.audit import Row
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -49,12 +50,6 @@ def test_a_logo_is_known_by_its_first_bytes():
 @pytest.fixture
 def admin(db):
     return User.objects.create_local_admin("the-admin", PASSWORD)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 @pytest.mark.django_db

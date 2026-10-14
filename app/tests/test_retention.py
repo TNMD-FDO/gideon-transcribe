@@ -12,20 +12,13 @@ from datetime import timedelta
 import pytest
 from core import audit, cases, retention, settings_store
 from core.cases import Case, OffSpell
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
 from django.utils import timezone
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -86,12 +79,6 @@ def binned_for(case: Case, days: int) -> Case:
     )
     case.refresh_from_db()
     return case
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def rows(event: str):

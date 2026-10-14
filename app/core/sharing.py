@@ -127,11 +127,6 @@ def collaborators(case):
     return case.shares.select_related("person", "added_by").order_by("added_on")
 
 
-def shares_of(user):
-    """The Shares this person holds, for their Cases page's New marks."""
-    return Share.objects.filter(person=user)
-
-
 def note_opened(case, user) -> None:
     """A Collaborator opened the Case: the Share remembers when."""
     Share.objects.filter(case=case, person_id=user.pk).update(

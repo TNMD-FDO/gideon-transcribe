@@ -18,13 +18,12 @@ from pathlib import Path
 import pytest
 from core import chronology, media, settings_store
 from core.audit import Row
+from tests.helpers import signed_in
 from tests.test_incident_assistant import (  # noqa: F401 - fixtures
     a_case,
     incident,
-    its_own_disk,
     no_tasks,
     person,
-    signed_in,
     switched_on,
 )
 

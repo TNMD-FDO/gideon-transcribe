@@ -16,7 +16,6 @@ import json
 import os
 import subprocess
 import time
-import wave
 from datetime import timedelta
 from pathlib import Path
 
@@ -45,18 +44,10 @@ from core.recordings import Batch, MediaState, Recording, Refusal, Side
 from django.conf import settings as django_settings
 from django.test import RequestFactory
 from django.utils import timezone
+from tests.helpers import signed_in, write_wav
 
 PASSWORD = "a-long-enough-password"
 HERE = Path(__file__).resolve().parent.parent.parent
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    (tmp_path / "uploads").mkdir()
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -79,12 +70,6 @@ def person(db):
 @pytest.fixture
 def a_case(person):
     return Case.objects.create(owner=person, name="Harbour")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_recording(person, case=None, *, state=MediaState.READY, live=None, **more):
@@ -113,14 +98,6 @@ def with_lines(recording, texts=("one", "two", "three")):
             speaker="Speaker 1",
         )
     return transcript
-
-
-def write_wav(path: Path, samples: np.ndarray, rate: int = 16000) -> None:
-    with wave.open(str(path), "wb") as sound:
-        sound.setnchannels(1)
-        sound.setsampwidth(2)
-        sound.setframerate(rate)
-        sound.writeframes(np.clip(samples, -32767, 32767).astype(np.int16).tobytes())
 
 
 # 1. The live recording the sweep leaves alone --------------------------------

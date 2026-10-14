@@ -72,10 +72,6 @@
             <a class="btn small" id="all-cameras" href="{{ all_cameras.url }}" data-starts="{{ all_cameras.starts_at }}"
                title="Every camera of {{ all_cameras.name }} at this moment">{% icon "camera" %} All cameras</a>
           {% endif %}
-          {% if in_case %}
-            <button type="button" class="tiny" id="show-case" hidden
-                    title="Show or hide the rest of the case">{% icon "menu" %} Case</button>
-          {% endif %}
           {% if clips_available and media_url %}
             <button type="button" class="primary small" id="new-clip"
                     title="Mark a start and an end, then save (I and O while playing, a drag on the timeline, or clip start on a line)">{% icon "clip" %} New clip</button>
@@ -499,12 +495,11 @@
       hasTranscript: {% if transcript %}true{% else %}false{% endif %},
       canPlay: {% if media_url %}true{% else %}false{% endif %},
       clips: {% if clips_available %}true{% else %}false{% endif %},
-      twoChannel: {% if recording.is_two_channel_call %}true{% else %}false{% endif %},
       batch: {% if job %}"{{ job.batch_id }}"{% else %}null{% endif %},
       inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %},
       caseChatUrl: {% if case_chat_url %}"{{ case_chat_url }}"{% else %}null{% endif %},
       isVideo: {% if is_video %}true{% else %}false{% endif %},
-      assistant: {% if assistant.assistant and transcript %}{ summary: {% if assistant.summary %}true{% else %}false{% endif %}, chat: {% if assistant.chat %}true{% else %}false{% endif %}, suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, moments: {% if assistant.moments %}true{% else %}false{% endif %} }{% else %}null{% endif %}
+      assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, moments: {% if assistant.moments %}true{% else %}false{% endif %} }{% else %}null{% endif %}
     };
   </script>
   <script src="{% static 'recordings.js' %}"></script>

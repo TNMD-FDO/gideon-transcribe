@@ -153,7 +153,6 @@ def cases_page(request: HttpRequest) -> HttpResponse:
             "expiring": expiring,
             "owner_deactivated": owner_deactivated,
             "binned": binned,
-            "storage_warning": uploads.storage_warning(request.user),
         },
     )
 
@@ -429,16 +428,13 @@ def _sharing_context(
     also-owner may add people; the owner and an Admin may mark an also-owner.
     Nothing while Sharing is off: the Shares are kept and not shown."""
     if not sharing.on():
-        return {"sharing_on": False, "shares": [], "colleagues": [], "team": []}
-    shares = list(sharing.collaborators(case))
+        return {"sharing_on": False, "team": []}
     may_direct = viewer is not None and case.may_direct(viewer)
     return {
         "sharing_on": True,
         "may_share": may_direct,
         "may_mark_owner": role in ("owner", "admin"),
         "may_transfer": role == "owner",
-        "shares": shares,
-        "colleagues": [one for one in shares],
         "team": assignments.team(case, viewer, names),
         "share_words": sharing.WORDS,
         "transfer_words": sharing.TRANSFER_WORDS,

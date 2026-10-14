@@ -66,3 +66,5 @@ then asked whether simpler meant accepting too much inaccuracy.
 - Not built, and still the maintainer's to decide: per-line acoustic
   scores or voice prints from the service, and splitting a mixed line at
   the word.
+
+**Noted 2026-10-14.** v1.129.0 reshaped decisions 3 and 4: the check is shown as a list of proposals under the cards, a pending correction follows a merge made from a card, and the sketch is kept off the page.

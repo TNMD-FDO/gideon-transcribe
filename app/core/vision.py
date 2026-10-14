@@ -182,12 +182,6 @@ def mark_tonight(transcript, reason: str = "") -> None:
     )
 
 
-def back_to_tonight(transcript) -> None:
-    """The engine went away during the night: the video waits for the next
-    window rather than failing."""
-    mark_tonight(transcript, NOT_REACHED)
-
-
 def waiting_tonight():
     from core.jobs import Transcript
 

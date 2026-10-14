@@ -10,8 +10,9 @@ Case would mean losing it.
 import pytest
 from core import pipeline, tasks, whisperx
 from core.jobs import Job, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -36,12 +37,6 @@ def done(person, tmp_path, settings):
     )
     Transcript.objects.create(recording=recording, language="en")
     return recording
-
-
-def signed_in(client, person):
-    client.force_login(person)
-    LoginSession.objects.create(user=person, session_key=client.session.session_key)
-    return client
 
 
 def test_it_prepares_the_audio_again_before_making_a_job(

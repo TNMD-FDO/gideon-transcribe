@@ -15,16 +15,11 @@ from core.assistant import SummaryTemplate
 from core.audit import Row
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
 
 
 @pytest.fixture
@@ -53,12 +48,6 @@ def a_recording(person, recording_type="", case=None):
         transcript=transcript, start=0, end=1, text="Hi", speaker="A"
     )
     return recording
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def test_the_shipped_templates_are_there_enabled_and_for_their_types(db):

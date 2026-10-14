@@ -16,9 +16,10 @@ import json
 import pytest
 from core import pieces, tasks, whisperx
 from core.jobs import Job
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -41,12 +42,6 @@ def admin(db):
     who.admin_flag = True
     who.save()
     return who
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def test_a_process_not_given_the_list_has_the_piece(monkeypatch):

@@ -54,3 +54,5 @@ would do anyway.
 If a later phase needs restart counts or a container's own health output on
 the page, the smaller trade is a socket proxy pinned to the one read-only
 endpoint, never the socket itself.
+
+**Noted 2026-10-14.** The worker row the Consequences describe, read from the event each worker wrote when it finished, went in v1.132.0: the Status page reads the queue's own worker heartbeats instead ("N of 3 alive"), still without the socket.

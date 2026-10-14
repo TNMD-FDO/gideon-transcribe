@@ -18,9 +18,10 @@ from core import live, settings_store, uploads
 from core.audit import Row
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -43,12 +44,6 @@ def owner(db):
 @pytest.fixture
 def somebody_else(db):
     return User.objects.create_local_admin("another-admin", PASSWORD)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_recording(owner, speakers=("Speaker 1", "Speaker 2", "Speaker 3")):

@@ -84,7 +84,6 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
                 )
             ),
             "at": _asked_moment(request, incident, state),
-            "others": _others(case, incident),
             # A citation's words, for the event box to open with (chapter 2):
             # the line at the moment of the cited recording, read again here
             # by its id (v1.130.0) rather than carried in the URL.
@@ -127,11 +126,10 @@ def _number(text: str) -> str:
         return ""
 
 
-@login_required
 def _cited_words(request: HttpRequest, incident) -> str:
     """The cited line for the event box: ?cite=<recording> names a camera of
     this incident and ?t= its moment on the incident clock; the line is read
-    from the record. An older link's ?event= words are read as before."""
+    from the record."""
     from core.case_chat_pages import _line_at
 
     cited = request.GET.get("cite", "")
@@ -151,7 +149,7 @@ def _cited_words(request: HttpRequest, incident) -> str:
         if own < 0:
             return ""
         return _line_at(camera.recording, own)[: chronology.TEXT_MOST]
-    return request.GET.get("event", "")[: chronology.TEXT_MOST]
+    return ""
 
 
 def find(request: HttpRequest, case_id, incident_id) -> JsonResponse:

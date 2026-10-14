@@ -29,17 +29,6 @@ from core import audit, settings_store
 SNAPSHOT_OVERDUE = timedelta(hours=26)
 DRILL_OVERDUE_DAYS = 3
 
-REASONS = (
-    "disk_full",
-    "dump_failed",
-    "manifest_failed",
-    "target_unreachable",
-    "snapshot_failed",
-    "prune_failed",
-    "check_failed",
-    "drill_failed",
-)
-
 
 class BackupStatus(models.Model):
     """One row: the last Snapshot and the last drill, for the Status page."""

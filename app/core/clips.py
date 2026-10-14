@@ -117,10 +117,6 @@ class Clip(models.Model):
         return max(0.0, self.end - self.start)
 
     @property
-    def is_incident_clip(self) -> bool:
-        return self.picture is not None
-
-    @property
     def is_video(self) -> bool:
         if self.picture is not None:
             return True

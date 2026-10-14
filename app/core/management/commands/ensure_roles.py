@@ -20,8 +20,6 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-APP_ROLE = "transcribe_app"
-
 
 class Command(BaseCommand):
     help = "Make the app's own database role and give it what it needs."

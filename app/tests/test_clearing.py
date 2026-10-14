@@ -12,36 +12,18 @@ owner's quota until it goes.
 
 import pytest
 from core import audit, cases, lifecycle, settings_store
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    """A fresh App data folder for each test, as the Cases tests have.
-
-    The database rolls back at the end of a test and the disk does not.
-    """
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
-
-
 def a_person(name="pat"):
     return User.objects.create_local_admin(name, PASSWORD)
-
-
-def signed_in(client, person):
-    """A browser with a Login session behind it, which the middleware wants."""
-    client.force_login(person)
-    LoginSession.objects.create(user=person, session_key=client.session.session_key)
-    return client
 
 
 def a_recording(person, batch, name="one.mp3", case=None):

@@ -17,9 +17,6 @@
   var summaryList = document.getElementById("summary-list");
   var suggestLine = document.getElementById("suggest-line");
   var suggestionList = document.getElementById("suggestions");
-  var describeIntervals = document.getElementById("describe-intervals");
-  var intervalsSaid = document.getElementById("intervals-said");
-  var intervalsNote = document.getElementById("intervals-note");
 
   var state = null;
   var timer = null;

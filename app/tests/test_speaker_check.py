@@ -15,8 +15,9 @@ from core import assistant, engine, prompts, settings_store, speaker_check, task
 from core.assistant import PromptTemplate, SpeakerCheck, SpeakerCorrection
 from core.audit import Row
 from core.jobs import Segment
-from core.models import LoginSession, User
+from core.models import User
 from django.utils import timezone
+from tests.helpers import signed_in
 from tests.test_prepare import a_recording, engine_answering
 
 PASSWORD = "a-long-enough-password"
@@ -26,12 +27,6 @@ DOCS = Path(__file__).resolve().parents[2] / "docs"
 @pytest.fixture
 def admin(db):
     return User.objects.create_local_admin("adm", PASSWORD)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def switched_on():

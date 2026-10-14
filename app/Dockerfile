@@ -83,7 +83,7 @@ RUN apt-get update \
       libsasl2-dev \
  && pip install --no-cache-dir -r /tmp/requirements.txt \
  && apt-get purge -y --auto-remove build-essential python3-dev libldap-dev \
-      libsasl2-dev \
+      libsasl2-dev curl \
  && rm -rf /var/lib/apt/lists/*
 
 # The directory library must import in the finished image, so that a missing

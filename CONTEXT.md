@@ -180,7 +180,7 @@ One stretch of speech by one Side in a Session, ended by the pause, with its lan
 _Avoid_: utterance, message
 
 **Readback**:
-A person's own Turn shown back to them in their own language, as heard, beside its translation, so a misheard word is seen and said again. Phase 3.
+A person's own Turn shown back to them in their own language, as heard, beside its translation, so a misheard word is seen and said again. Phase 3. Withdrawn with the Interpreter in v1.35.0; the word stays for Phase 3 chapter 3.
 _Avoid_: echo, confirmation
 
 **Fast lane**:
@@ -192,7 +192,7 @@ A text-to-speech voice installed on the server for one language, fetched at inst
 _Avoid_: TTS model (in pages), speaker (taken)
 
 **Quick phrase**:
-A ready-made line on the Staff side of a Session, translated once and shown or spoken with one press. Phase 3.
+A ready-made line on the Staff side of a Session, translated once and shown or spoken with one press. Phase 3. Withdrawn with the Interpreter in v1.35.0; the word stays for Phase 3 chapter 3.
 _Avoid_: canned response, macro
 
 **My clips**:
@@ -247,7 +247,7 @@ The plain-word stage a Running Job shows: loading the model, transcribing, align
 _Avoid_: stage, status (a Step is what the user reads)
 
 **Estimated wait**:
-The app's figure for how long until a Job starts, worked out from the audio ahead of it and the WhisperX service's measured speed.
+The app's figure for how long until a Job starts, worked out from the audio ahead of it and the WhisperX service's measured speed. No page prints the words since the Expectation (v1.95.0) took over the wait lines; the entry stays for the Phase 1 chapter that names it.
 
 **Expectation**:
 The app's figure for how long a written output (a memo, proposed events, a comparison, a summary, a chat answer) usually takes, from the office's own last runs of that output scaled to what this run is given, shown under the output with the step it is on and how long it has been: "usually about 4 minutes" once the office has three runs behind it, "roughly 4 minutes" until then. Past the figure the page says the run is working normally and why it can take longer; it never stops a run. From v1.95.0.
@@ -303,7 +303,7 @@ The admin toggle that enables Cases. Off: Workspaces only; every Case is hidden 
 
 **Case**:
 A named page of retained Recordings for one legal matter, owned by one user, kept under the App data folder, shareable with named colleagues, and subject to the Retention policy. Exists only when Folder management is on. Nothing but the name is typed; users never see the folder behind it, and nothing inside a shared Case is private to one person.
-_Avoid_: folder, project, matter (in the UI)
+_Avoid_: folder, project, matter (in the UI, for a Case itself; the Rail's line "Kept for a matter, after sign-out" names what a Case is for)
 
 **Add to case**:
 The Upload page choice that puts a Recording into an existing Case from the start. A Recording added this way is never in the Workspace.
@@ -637,7 +637,7 @@ _Avoid_: profile, persona, dossier, character list, summary (that is a Summary),
 The AI assistant reading a Transcript whose Speakers were told apart for lines whose words show they belong to a different Speaker than the voice split gave them (Phase 5 chapter 3): since v1.100.0 it first reads the whole Transcript once and writes a Sketch of who is who, then reads the lines in one window when the whole fits the engine and in windows of a few minutes otherwise, each given the Sketch. It runs by itself as the Transcript lands, when the office has it on, or from Check the speakers on the Speakers page. It proposes and never applies: its findings are Speaker corrections. It never adds or merges a Speaker and never changes a word. Words to avoid: relabel, re-diarize, auto-correct.
 
 **Speaker correction**:
-One line the Speaker check says belongs to another Speaker already on the Transcript: the line's words, its time, who it is labelled as, who it should be, and the assistant's reason in a few words. Listed under Suggested corrections on the Speakers page until a person accepts or dismisses it. Accepting moves the line exactly as the number keys do, with the same audit row and the same Undo; a correction whose line changed since the check is dismissed rather than applied. Words to avoid: reassignment, fix, auto-fix.
+One line the Speaker check says belongs to another Speaker already on the Transcript: the line's words, its time, who it is labelled as, who it should be, and the assistant's reason in a few words. Listed under Suggested corrections on the Speakers page until a person accepts or dismisses it. Accepting moves the line exactly as the number keys do, with the same audit row and the same Undo; a correction whose line changed since the check is dismissed rather than applied. Since v1.129.0 the page lists them as the check's proposals under the Speaker cards, and a pending one follows a merge made from a card. Words to avoid: reassignment, fix, auto-fix.
 
 **Speaker card**:
 What the Speaker check found about one Speaker label (v1.128.0): that a share of its lines read as another Speaker's, with the share, what the voice step heard on them (two voices, one voice, silent), three moments to hear and one of the label's own. Since v1.129.0 it is drawn as a question, "Is Speaker 5 the same voice as Speaker 2?", with one line under it ("About a third of Speaker 5's lines read like Speaker 2. Yes settles 58 lines."), **Yes, the same voice** (the page's Merge, with Undo; the pending Speaker corrections follow the merge) and **No**; a card the voice step argues against has no yes. Under the cards, one card per **stretch**, a run of Speaker corrections between the same two Speakers close together, drawn as the same kind of question ("Are these 5 lines Speaker 1's?") with **Yes, move them** and **No**; the voice-backed first, the ones the voice could not judge and the ones a speaker question would settle under folds with their counts. Everything the check found is a **proposal**, the biggest first, and a count of found, settled and left goes down as the person answers. Phase 5 chapter 3. _Avoid_: suggestion, confidence score, verdict, approval, step
@@ -648,11 +648,11 @@ Retired in v1.128.0: on the office's recordings it backed 1 proposal in 179 and 
 _Avoid_: verification, validation, confidence score, veto, reject (a correction set aside is not rejected)
 
 **Moment**:
-A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it, or its answer to a question about the picture from a few close frames. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4.
+A model's description of what the camera showed at one chosen time of a video Recording, made on request from a short clip around that time and the words spoken in it, or its answer to a question about the picture from a few close frames. It hangs on the Transcript, is shown beside the Transcript at its time, in Details and in the exports, and, labelled, is handed to Summary and Chat. Always a description and never the Transcript; the clip is never kept. Phase 4. Since v1.54.0 the feature is Vision and the pages say Description: a Moment is one description of the Picture record, and no clip is cut for it.
 _Avoid_: frame, snapshot, scene, screenshot
 
 **Finder**:
-One of the two ways Cues are found: the engine reading the whole Transcript for the lines worth seeing, or ffmpeg scanning the picture for sharp changes and the sound for raised voices. Each has its own switch; neither runs by itself.
+One of the two ways Cues are found: the engine reading the whole Transcript for the lines worth seeing, or ffmpeg scanning the picture for sharp changes and the sound for raised voices. Each has its own switch; neither runs by itself. Withdrawn in v1.51.0 with Find moments; the Picture record's scan of the picture and the sound (Phase 4 chapter 6) is what finds the spans now.
 _Avoid_: detector, classifier
 
 **Camera line**:

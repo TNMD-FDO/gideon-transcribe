@@ -19,10 +19,11 @@ import pytest
 from core import chronology, home, incidents, settings_store, sharing
 from core.cases import Case
 from core.jobs import Job, JobState, Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.test import Client
 from django.urls import reverse
+from tests.helpers import signed_in
 
 APP = Path(__file__).resolve().parent.parent
 ROOT = APP.parent
@@ -48,12 +49,6 @@ def ana(db):
 @pytest.fixture
 def cases_on(db):
     settings_store.set_to("folder_management", True)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_recording(

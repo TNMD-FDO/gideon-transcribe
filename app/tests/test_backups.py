@@ -26,14 +26,6 @@ from django.utils import timezone
 PASSWORD = "a-long-enough-password"
 
 
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
-
-
 @pytest.fixture
 def on(monkeypatch):
     monkeypatch.setenv("BACKUP_TARGET", "sftp:backup@store:/gideon-backup")

@@ -10,20 +10,13 @@ import pytest
 from core import audit, notes
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.notes import MomentNote
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a long enough password 1"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -77,12 +70,6 @@ def a_call(owner, case, title, kind="Jail call", words=True):
             speaker="Speaker 2",
         )
     return recording
-
-
-def signed_in(client, person):
-    """A browser with a Login session behind it, which the middleware wants."""
-    client.force_login(person)
-    LoginSession.objects.create(user=person, session_key=client.session.session_key)
 
 
 # The queries --------------------------------------------------------------------

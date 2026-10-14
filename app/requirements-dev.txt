@@ -4,6 +4,9 @@
 Django==6.1.1
 psycopg[binary]==3.3.5
 procrastinate==3.9.0
+# Read by one test of the engine's compose file; the service's own list
+# carries the same pin.
+PyYAML==6.0.3
 whitenoise==6.12.0
 pytest==9.1.1
 pytest-django==4.14.0

@@ -10,25 +10,12 @@ worked out afterwards.
 import pytest
 from core import cases, lifecycle, settings_store, sweeping, uploads
 from core.cases import Case, OffSpell
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.conf import settings
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    """A fresh App data folder for each test.
-
-    The database rolls back at the end of a test and the disk does not, so
-    without this the folders one test writes are still there for the next one,
-    and a sweeper counting orphans counts everybody's.
-    """
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture
@@ -169,13 +156,6 @@ def test_turning_it_off_twice_leaves_one_spell(db):
     settings_store.set_to("folder_management", False)
     settings_store.set_to("folder_management", False)
     assert OffSpell.objects.count() == 1
-
-
-def signed_in(client, person):
-    """A browser with a Login session behind it, which the middleware wants."""
-    client.force_login(person)
-    LoginSession.objects.create(user=person, session_key=client.session.session_key)
-    return client
 
 
 def test_the_pages_are_gone_while_it_is_off(person, a_case, client):

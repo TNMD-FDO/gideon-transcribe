@@ -2583,7 +2583,9 @@
     var player = document.getElementById("player");
     var at = parseFloat(link.dataset.starts || "0") + (player ? player.currentTime : 0);
     var said = document.getElementById("now-text");
-    var words = said && said.textContent.trim() ? "&event=" + encodeURIComponent(said.textContent.trim().slice(0, 500)) : "";
-    link.href = link.href.split("?")[0] + "?t=" + at.toFixed(2) + words;
+    // The cited line travels by the recording's id (v1.133.0), as the chat's
+    // citations have since v1.130.0, never as words in the address.
+    var cite = said && said.textContent.trim() ? "&cite=" + encodeURIComponent(window.VIEWER.recording) : "";
+    link.href = link.href.split("?")[0] + "?t=" + at.toFixed(2) + cite;
   });
 })();

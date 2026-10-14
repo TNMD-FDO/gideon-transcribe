@@ -21,6 +21,77 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.133.0, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The leftovers pass of the code audit: what the iterations left behind,
+removed where removing it changes nothing a person sees. The page the pass
+produced lists twelve decisions for the maintainer; none of them is made
+here.
+
+**Five slips of the audit's own releases.** The incident clips' time
+parser takes a finite number like every other time site (v1.132.0 had
+missed it); the recording page's All cameras link carries the recording's
+id and the time, not the spoken words, and the older `?event=` address is
+no longer read; the dead worker row left behind by v1.132.0's heartbeat row
+is gone; a sign-in decorator on a helper that no request reaches is gone;
+the app's development requirements name PyYAML, which one test imports.
+
+**Dead code.** About a hundred lines of Python nobody calls, found by
+reading every module's names against every caller: unused helpers and
+keys in the case, incident, notes, panel and clip pages, in backups, case
+search, sharing, assignments, the overnight summaries, vision, the Speaker
+check, the assistant, the comparison, dictation and the live pages. In the
+front end, the case rail's hide and show, whose buttons no template has
+carried since the rail learnt to fold, the lane and layer tables
+nothing reads, three icons no page draws, the stylesheet's rules for
+classes no template carries, and the viewer's flags for sides and panels
+that every page already knows.
+
+**The tests.** Fifty-five test files carried the same sign-in helper, ten
+the same camera stamp, two the same WAV writer, and forty-seven the same
+data-folder fixture in ten slightly different copies. They live once now,
+in `tests/helpers.py` and in `conftest.py`, where the data-folder fixture
+runs for every test; the few files that also stub the free-disk reading
+keep their own. A duplicate script test is gone and two docstrings name
+the release they cover. About a thousand lines fewer, the same tests.
+
+**CI and the images.** The eight "does this file exist yet" guards from
+the build's first weeks are gone, the Caddy check adapts the file with the
+image compose.yaml pins rather than a floating tag, the secret scanner's
+comment says the truth (its tag is still "latest"; pinning it is the
+dependencies pass's), the release workflow says three images, the app
+image no longer keeps curl, and the build contexts leave out the collected
+static files, the rendered guides and the service's tests.
+
+**The documents.** The guides said twenty-four things the app no longer
+does: the install guide's Uninstall section now removes the three backup
+timers the install writes (a real omission); the admin guide points at the
+Vision page instead of naming seventeen settings withdrawn in v1.51.0 and
+v1.54.0, and counts the templates, the starter lists, the failure kinds,
+the mail kinds and the Email page's switches as they are; the user guide
+names the viewer's tabs, the eight recording types, the eight kinds of
+mail and the clean-up line as the pages have them; the README counts the
+settings and the specifications. The settings catalogue has the Longest
+Clip's real ceiling, the eight recording types, the thirteen templates,
+the Vision page's rows marked, and the Incidents page's later rows named.
+The glossary notes which words were withdrawn with the Interpreter, Find
+moments and Moments, and how the Speaker correction and the Case entry's
+"matter" stand since v1.129.0 and the rail. Nine decision records carry a
+Noted line where a later release moved past them, and two name the
+release that built them. `THIRD_PARTY_LICENSES.md` names the diarizer's
+licence.
+
+Left as it was, on purpose: the CI step that touches empty secret files
+before `docker compose config` (the pass had it as needless; it cannot be
+tried on a workstation without Docker, so it stays until CI itself can
+prove it), the diarizer image's ffmpeg (NeMo's WAV path first), and
+everything on the pass's list of decisions.
+
 ## v1.132.3, 2026-10-14
 
 ```

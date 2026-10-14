@@ -29,8 +29,6 @@ log = logging.getLogger(__name__)
 # The service's priority for a Live recording: ahead of every uploaded one.
 PRIORITY = 100
 
-# What the browser records in, and the piece it sends.
-MIME = "audio/webm"
 FILENAME_SUFFIX = ".webm"
 
 # Until twenty jobs have been measured, the published figure: about sixty
@@ -201,7 +199,6 @@ def start(
 # a Side is, and sent to the service as a Run of the Recording's one open Job
 # at the live priority. Nothing is shown until the Transcript is whole.
 
-STRETCH_SECONDS = 300
 # A pause closes a stretch only when it is long enough to be worth a job of
 # its own; a shorter one runs on into the next.
 SHORTEST_STRETCH = 20.0
@@ -490,8 +487,6 @@ def _arrived(recording: Recording) -> Path | None:
 # gave cannot be matched by voice and every stretch numbers its own speakers.
 # One diarize-only pass over the whole recording at Stop, on the fast lane,
 # matches them: queue.relabel gives each line the whole recording's speaker.
-
-SPEAKERS_PASS_STATES = ("waiting", "running", "done", "failed")
 
 
 def wants_speakers_pass(recording: Recording, results: dict) -> bool:

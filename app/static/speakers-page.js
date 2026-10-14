@@ -85,7 +85,6 @@
   function cards() { return cardsBox ? Array.prototype.slice.call(cardsBox.querySelectorAll(".sp-card")) : []; }
   function names() { return cards().map(function (card) { return card.dataset.name; }); }
   function cardOf(name) { return cardsBox ? cardsBox.querySelector('.sp-card[data-name="' + CSS.escape(name) + '"]') : null; }
-  function laneOf(name) { return lanesBox ? lanesBox.querySelector('.lane[data-name="' + CSS.escape(name) + '"]') : null; }
 
   // The last segment that has started at a time.
   function at(when) {

@@ -390,10 +390,6 @@ class Recording(models.Model):
                 return candidate
         return None
 
-    @property
-    def is_ready(self) -> bool:
-        return self.media_state == MediaState.READY
-
     def disk_bytes(self) -> int:
         """Everything on disk for this Recording, which is what a quota counts."""
         if not self.folder.exists():

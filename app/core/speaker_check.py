@@ -248,11 +248,6 @@ def sketch_of(
     return words[: 400 * max(1, len(speakers)) + 400], cut, answer
 
 
-# The voice and the second reading (v1.105.0) ----------------------------------------
-#
-# A line of this many words or fewer is never offered for a move on the
-# words alone ("yeah", "okay, sir"): the words cannot settle it.
-SHORT_LINE_WORDS = 3
 # A line of this many timed words, every one given to its own Speaker by the
 # voice step, is one the voice was firm on.
 FIRM_WORDS = 12
@@ -271,7 +266,6 @@ MERGE_SHARE = 0.5
 MERGE_VOICE_SHARE = 0.3
 MERGE_VOICE_LEAST = 3
 STRETCH_GAP = 20.0
-BACKED, ASIDE = SpeakerCorrection.BACKED, SpeakerCorrection.ASIDE
 VOICE_AGREES = SpeakerCorrection.VOICE_AGREES
 VOICE_AGAINST = SpeakerCorrection.VOICE_AGAINST
 

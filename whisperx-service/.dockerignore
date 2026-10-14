@@ -5,3 +5,7 @@
 !.env.example
 secrets/
 README.md
+tests/
+diarizer/
+requirements-dev.txt
+**/__pycache__/

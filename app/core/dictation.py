@@ -24,7 +24,6 @@ from core.recordings import Recording
 log = logging.getLogger(__name__)
 
 CATEGORY = audit.Category.RECORDINGS
-TYPE = "Dictation"
 
 # The words a person reads before sending, fixed in the app.
 SEND_WORDS = (

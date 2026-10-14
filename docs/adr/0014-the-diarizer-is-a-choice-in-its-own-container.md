@@ -27,3 +27,5 @@ Three things made the shape a decision rather than a swap:
 - A new office needs no Hugging Face token for diarization; the token becomes what an office gives to have pyannote as well.
 - About 2 GB more of the Transcribe card while a job diarizes, and a third image on the Docker volume: a line in the box ledger at the release.
 - The pinned-stack discipline applies to a third stack: a research note records what the diarizer image holds and why, and a bump is a research ticket first.
+
+**Noted 2026-10-14.** The figures above are the probe's of 2026-09-24. `docs/research/nemotron-3-diarization.md` and `docs/research/diarizer-pinned-stack.md` hold what was measured since and what the image holds.

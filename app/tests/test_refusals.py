@@ -16,28 +16,16 @@ from pathlib import Path
 import pytest
 from core import media, settings_store
 from core.cases import Case
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording, Refusal
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture
 def admin(db):
     return User.objects.create_local_admin("asker", PASSWORD)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_probe_that_fails(monkeypatch, stderr):

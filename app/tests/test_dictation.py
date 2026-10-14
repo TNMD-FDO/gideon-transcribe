@@ -18,10 +18,11 @@ from core.assistant import Summary, SummaryTemplate
 from core.audit import Row
 from core.dictation import DictationShare
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import MediaState, Recording
 from django.urls import reverse
 from django.utils import timezone
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -73,12 +74,6 @@ def ana(db):
 @pytest.fixture
 def ben(db):
     return person("ben", "Ben Cole", "ben@example.org")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_dictation(who, ready=True):

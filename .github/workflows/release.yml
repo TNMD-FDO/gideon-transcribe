@@ -34,8 +34,8 @@ name: Release
 #
 # The images are built only while the repository variable PUBLISH_IMAGES is
 # "yes". While the repository is private its packages are private too, and a
-# server cannot pull them without a token it does not have, so it builds both
-# images itself and the two builds here (a quarter of an hour of the
+# server cannot pull them without a token it does not have, so it builds the
+# three images itself and the builds here (a quarter of an hour of the
 # organisation's free minutes per tag) serve nobody. The Release itself, with
 # its notes, is made either way; without images it says so, and
 # ./transcribe upgrade, finding no digest record, says to build.
@@ -230,7 +230,7 @@ jobs:
             echo
             echo "None published for this release: the repository builds its"
             echo "images only when PUBLISH_IMAGES is set. Install or upgrade"
-            echo "with \`--build\`, which builds both from this tag's source."
+            echo "with \`--build\`, which builds all three from this tag's source."
           } >> /tmp/notes.md
 
       - name: Leave the record where a server can fetch it

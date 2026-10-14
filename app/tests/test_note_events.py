@@ -31,17 +31,11 @@ from core.cases import Case
 from core.chronology import Event
 from core.jobs import Segment, Transcript
 from core.models import User
-from tests.test_notes import PASSWORD, gun_line, post_note, signed_in, stamp, video
+from tests.helpers import signed_in, stamp
+from tests.test_notes import PASSWORD, gun_line, post_note, video
 
 APP = Path(__file__).resolve().parent.parent
 ROOT = APP.parent
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture(autouse=True)

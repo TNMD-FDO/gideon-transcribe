@@ -32,17 +32,11 @@ from core.assistant import DONE, PromptTemplate, Summary
 from core.audit import Row
 from core.case_chat import CaseChat, CaseChatTurn
 from core.cases import Case
-from core.models import LoginSession, User
+from core.models import User
+from tests.helpers import signed_in
 from tests.test_case_chat import a_recording
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture
@@ -55,12 +49,6 @@ def a_case(owner):
     settings_store.set_to("folder_management", True)
     settings_store.set_to("assistant_available", True)
     return Case.objects.create(owner=owner, name="Pike calls")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def summarised(recording, overview: str):

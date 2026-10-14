@@ -90,3 +90,5 @@ published digest checked at upgrade where it cannot.
 - An upgrade that finds nothing in the registry builds from the tag's own
   source on the server, which is the other way of getting exactly the tag's
   bytes.
+
+**Noted 2026-10-14.** Three images since ADR 0014 (the diarizer); every rule here covers the third as it covers the two.

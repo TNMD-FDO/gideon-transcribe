@@ -680,15 +680,6 @@
   })();
   window.addEventListener("resize", drawWave);
 
-  // Ask Gideon, from the head.
-  var askGideon = document.getElementById("gideon-open-np");
-  if (askGideon) {
-    askGideon.addEventListener("click", function () {
-      var button = document.getElementById("gideon-open");
-      if (button) { button.click(); }
-    });
-  }
-
   // The player's Play and the note button (v1.127.0).
   document.getElementById("np-play").addEventListener("click", function () {
     var player = left.media();

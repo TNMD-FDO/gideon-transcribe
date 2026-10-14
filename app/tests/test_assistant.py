@@ -14,8 +14,9 @@ from core import assistant, engine, prompts, settings_store
 from core.assistant import Chat, ChatTurn, PromptTemplate, Suggestion, Summary
 from core.audit import Row
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -256,12 +257,6 @@ def ready(person, tmp_path, settings):
     # Suggestions start Off; these tests exercise them, so they turn it on.
     settings_store.set_to("suggestions_available", True)
     return recording
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def reachable(monkeypatch, answer_text, finish="stop"):

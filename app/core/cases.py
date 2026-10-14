@@ -354,11 +354,6 @@ def cases_for(user):
     )
 
 
-def own_cases_for(user):
-    """This person's own Cases, out of the Recycle bin."""
-    return Case.objects.filter(owner=user, deleted_on__isnull=True)
-
-
 def binned_for(user):
     """This person's Cases in the Recycle bin."""
     return Case.objects.filter(owner=user, deleted_on__isnull=False)

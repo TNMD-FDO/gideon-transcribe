@@ -20,19 +20,13 @@ from core import chronology, incidents, settings_store
 from core.audit import Row
 from core.cases import Case
 from core.chronology import Event
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in, stamp
 
 APP = Path(__file__).resolve().parent.parent
 ROOT = APP.parent
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture(autouse=True)
@@ -49,22 +43,6 @@ def person(db):
 @pytest.fixture
 def a_case(person):
     return Case.objects.create(owner=person, name="Traffic stop")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
-
-
-def stamp(time: str, camera: str):
-    return {
-        "date": "06/07/2025",
-        "time": time,
-        "camera": camera,
-        "at": 2.0,
-        "checked": True,
-    }
 
 
 def video(person, case, title, *, seconds=600.0, stamp=None):
@@ -210,7 +188,10 @@ def test_the_page_and_the_act_endpoint_carry_the_events(
     assert said["state"]["events"][0]["at"] == 40.0
     assert said["state"]["events"][0]["cameras"] == []
     page = client.get(incident.url() + "?t=40&event=Step%20out").content.decode()
-    assert "Add event here" in page and "Chronology" in page and "Step out" in page
+    assert "Add event here" in page and "Chronology" in page
+    # Words in the address are not read since v1.133.0: a citation names the
+    # camera (?cite=<recording>) and the line is read from the record.
+    assert "Step out" not in page
     said = client.post(act, {"action": "event_remove", "event": event_id}).json()
     assert said["state"]["events"] == []
 

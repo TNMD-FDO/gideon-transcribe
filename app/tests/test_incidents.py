@@ -15,7 +15,6 @@ glossary, the guide and the catalogue.
 from __future__ import annotations
 
 import json
-import wave
 from pathlib import Path
 
 import numpy as np
@@ -24,19 +23,13 @@ from core import cases, incidents, settings_store, sound_match
 from core.cases import Case
 from core.incidents import Incident
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording, Side
+from tests.helpers import signed_in, write_wav
 
 APP = Path(__file__).resolve().parent.parent
 ROOT = APP.parent
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture(autouse=True)
@@ -53,12 +46,6 @@ def person(db):
 @pytest.fixture
 def a_case(person):
     return Case.objects.create(owner=person, name="Traffic stop")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def stamp(time: str, date: str = "06/07/2025", camera: str = "BWC2-1", checked=True):
@@ -567,14 +554,6 @@ def test_the_clocks_own_camera_read_again_corrects_the_clock(person, a_case):
 
 
 # The sound match ----------------------------------------------------------------------
-
-
-def write_wav(path: Path, samples: np.ndarray, rate: int = 16000) -> None:
-    with wave.open(str(path), "wb") as sound:
-        sound.setnchannels(1)
-        sound.setsampwidth(2)
-        sound.setframerate(rate)
-        sound.writeframes(np.clip(samples, -32767, 32767).astype(np.int16).tobytes())
 
 
 def test_the_sound_match_finds_a_known_shift(tmp_path):

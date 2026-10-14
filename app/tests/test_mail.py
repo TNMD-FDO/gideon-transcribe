@@ -20,10 +20,11 @@ from core.audit import Row
 from core.cases import Case
 from core.jobs import Job, JobState
 from core.mail import MailStatus
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
 from django.utils import timezone
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -74,13 +75,6 @@ class FakeRelay:
             return 554, b"rejected"
         FakeRelay.sent.append(message.decode("utf-8", "replace"))
         return 250, b"2.0.0 OK queued as 12345"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture(autouse=True)
@@ -140,12 +134,6 @@ def friend(db):
 def cases_on(db):
     settings_store.set_to("folder_management", True)
     settings_store.set_to("sharing", True)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def rows(event):

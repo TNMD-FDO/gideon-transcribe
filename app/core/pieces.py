@@ -314,10 +314,6 @@ def listed() -> list[dict]:
 
 # The words the pages use when the transcription piece is absent.
 WAITING = "Waiting for the card"
-NOT_INSTALLED_NOTICE = (
-    "Transcription is not installed on this server yet. Recordings you upload "
-    "are kept and transcribed when the card arrives."
-)
 NEEDS_THE_PIECE = (
     "Recording needs the transcription piece, which is not installed on this "
     "server yet. Ask IT."

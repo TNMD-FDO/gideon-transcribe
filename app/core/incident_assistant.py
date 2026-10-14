@@ -46,8 +46,6 @@ FEATURE_MEMO = "incident_memo"
 # A proposal within this many seconds of an Event or another proposal on the
 # same camera is the same thing said twice, and is dropped.
 NEAR_SECONDS = 5.0
-# The most proposals kept from one camera in one run.
-PROPOSALS_MOST = 30
 # Phase 7 chapter 2: proposals kept a window (the first and the second look
 # together), and how long a watch phrase heard again joins its first hit.
 WINDOW_MOST = 12
@@ -64,8 +62,6 @@ RESTS_CHECK = 40
 
 CLOCK_TIME_IN = re.compile(r"\[(\d{1,2}):(\d{2}):(\d{2})\]")
 DIGEST_NUMBER = re.compile(r"^\s*\d+[.)]\s*")
-EVENT_MARK = re.compile(r"\(Event (\d+)\)")
-
 
 # The switches -------------------------------------------------------------------
 

@@ -119,14 +119,6 @@ def test_a_release_with_no_record_is_said_so_and_goes_on():
 
 
 @needs_bash
-def test_the_script_parses():
-    done = subprocess.run(
-        [BASH, "-n", SCRIPT.as_posix()], capture_output=True, text=True
-    )
-    assert done.returncode == 0, done.stderr
-
-
-@needs_bash
 def test_a_secret_is_written_and_seen_through_one_helper(tmp_path):
     """Every secret goes through write_secret and secret_present.
 

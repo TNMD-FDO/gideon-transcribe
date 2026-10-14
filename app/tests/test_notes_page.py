@@ -9,20 +9,13 @@ from core import assignments, assistant, case_search, settings_store, sharing
 from core.assistant import DONE, Summary
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.notes import MomentNote
 from core.recordings import Batch, MediaState, Recording
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a long enough password 1"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -97,11 +90,6 @@ def note_on(recording, index, words, by):
     line.note_changed = timezone.now()
     line.save()
     return line
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
 
 
 # Who may open it, and the door -------------------------------------------------------

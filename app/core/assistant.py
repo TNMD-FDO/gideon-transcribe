@@ -43,7 +43,6 @@ TIME_LIMITS = {
 SAMPLING = {"temperature": 0.3, "top_p": 0.9}
 SUGGESTION_SAMPLING = {"temperature": 0.0, "top_p": 1.0}
 
-CUT_SHORT = "The answer was cut short."
 # While the model may think, its thinking is billed against the same answer
 # budget, so the cap is raised by this much to leave the answer its room: about
 # a minute and a half of thinking on the Local engine, inside the doubled time
@@ -57,8 +56,6 @@ THOUGHT_IT_AWAY = (
     'Turn off "Let the model think before answering" on the AI assistant '
     "settings page, or try again."
 )
-SPOKEN = "the transcript"  # never logged; a placeholder for messages only
-
 
 # Templates ---------------------------------------------------------------------------
 

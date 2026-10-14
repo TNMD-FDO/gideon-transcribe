@@ -18,15 +18,13 @@ from core import engine, incident_assistant, incidents, prompts, settings_store,
 from core.assistant import DigestPart
 from core.audit import Row
 from django.urls import reverse
+from tests.helpers import signed_in, stamp
 from tests.test_incident_assistant import (  # noqa: F401 - fixtures
     a_case,
     cameras_of,
     incident,
-    its_own_disk,
     no_tasks,
     person,
-    signed_in,
-    stamp,
     switched_on,
     video,
 )

@@ -35,7 +35,7 @@ plain-language recovery when something fails.
 - Cases: named pages of recordings for one matter that outlive the session
   that uploaded them, behind an admin toggle, with a search across each case.
 - An admin panel: status, queue, users, audit log with a hash chain and an
-  integrity check, an installation page, and about thirty settings that apply
+  integrity check, an installation page, and some 160 settings that apply
   through a tray with an audit note.
 - Three guides: the user guide and the admin guide are rendered into the app
   itself, so nobody needs this repository to read them; the install guide is
@@ -44,12 +44,16 @@ plain-language recovery when something fails.
 Everything a user does not put in a case is removed when their login
 session ends, by design.
 
-Also built: the AI assistant, summaries, a chat over the transcript and
-speaker name suggestions, against an office's own vLLM or a small Local
-engine the stack runs itself, and the retention policy with its recycle bin.
-Sharing a case with colleagues, the speakers tab, chat across a case,
-email notifications and backups are built too. The
-specification for all of it is in `docs/spec/`, and the changelog says
+Also built, phase by phase: the AI assistant (summaries, a chat over a
+transcript or a case, speaker name suggestions and the Speaker check),
+against an office's own vLLM or a small Local engine the stack runs itself;
+the retention policy with its recycle bin; cases shared with colleagues,
+email notifications and backups; recording in the browser and dictation;
+Vision, the descriptions of what a camera showed; the Speakers page;
+Incidents, several cameras of one event aligned on a chronology, with the
+memo, the comparison against a report and the Timeline report; documents
+read beside the recordings; and the review of many recordings by a team.
+The specification for all of it is in `docs/spec/`, and the changelog says
 exactly what each Release holds.
 
 ## The state of this repository
@@ -71,7 +75,7 @@ whether the database migrates.
 | `whisperx-service/` | the transcription service: Dockerfile, compose file, models list, README |
 | `transcribe` | the one script an Admin runs on the server: install, check, upgrade, and the rest |
 | `compose.yaml` | the whole stack |
-| `docs/spec/` | the two build specifications and the settings catalogue, which the code answers to |
+| `docs/spec/` | the nine build specifications and the settings catalogue, which the code answers to |
 | `docs/whisperx-api.md` | the WhisperX service's API and operating contract, for any consumer |
 | `CONTEXT.md` | the vocabulary the app, its pages, and its documents use |
 | `docs/adr/` | the decisions that are hard to reverse, and why |

@@ -19,13 +19,6 @@ from django.urls import reverse
 PASSWORD = "a-long-enough-password"
 
 
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-
-
 @pytest.fixture
 def person(db):
     return User.objects.create_local_admin("asker", PASSWORD)

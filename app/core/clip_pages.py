@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
 import zipfile
 
 from django.contrib.auth.decorators import login_required
@@ -561,12 +560,5 @@ def clips_page(request: HttpRequest) -> HttpResponse:
             "groups": groups,
             "total": f"{total / 1024 / 1024:.1f} MB",
             "any_ready": any(one.state == RenderState.READY for one in clips),
-            "standing_line": standing_line(),
         },
     )
-
-
-# Used by the Recording's own deletion, so that a render in flight leaves
-# nothing behind.
-def remove_files_of(recording) -> None:
-    shutil.rmtree(recording.folder / "clips", ignore_errors=True)

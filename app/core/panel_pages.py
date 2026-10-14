@@ -331,49 +331,6 @@ def _when(moment) -> str:
     return f"{local:%d %b %H:%M}"
 
 
-def _worker(queue: str) -> dict:
-    """A worker is alive if its queue has run something lately.
-
-    Neither worker listens on anything, so this is what there is to read: the
-    last job on that queue to succeed. The `default` queue runs something
-    every minute, so silence there means the worker is gone. The `media`
-    queue runs only when there is media to work on, so silence there means
-    nothing more than a quiet afternoon.
-    """
-    from django.db import connection
-    from django.utils import timezone
-
-    # Procrastinate's own event log is what says when, because a periodic
-    # job's row carries no time of its own.
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT max(event.at) FROM procrastinate_events event "
-            "JOIN procrastinate_jobs job ON job.id = event.job_id "
-            "WHERE job.queue_name = %s AND event.type = 'succeeded'",
-            [queue],
-        )
-        row = cursor.fetchone()
-
-    last = row[0] if row else None
-    name = "worker" if queue == "default" else "media-worker"
-    # In the office's own time, with the day when it is not today (v1.93.0);
-    # the row had printed the database's UTC hour, five hours out.
-    when = _when(last) if last else ""
-
-    if queue == "default":
-        alive = last is not None and (timezone.now() - last).total_seconds() < 300
-        return {
-            "name": name,
-            "state": "healthy" if alive else "not running",
-            "says": f"last ran {when}" if last else "nothing has run yet",
-        }
-    return {
-        "name": name,
-        "state": "healthy",
-        "says": f"last media job {when}" if last else "no media job yet",
-    }
-
-
 def _whisperx(lane: str = "") -> dict:
     """The service's own status endpoint, rendered for an Admin."""
     if not pieces.transcription_installed():
@@ -925,7 +882,6 @@ def workspace(request: HttpRequest, username: str) -> HttpResponse:
             "recordings": rows,
             "groups": batch_groups(rows),
             "standing_line": standing_line(),
-            "storage_warning": "",
             "someone_elses": person,
         },
     )

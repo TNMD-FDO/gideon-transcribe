@@ -1,7 +1,7 @@
 # 18. Over the ceiling, the Case Chat reads the overviews first
 
-Date: 2026-10-04. Status: accepted. Release: the Phase 9 release that
-builds its chapter 6, after the probe its chapter names.
+Date: 2026-10-04. Status: accepted. Release: v1.121.0 (Phase 9 chapter 6),
+after the probe its chapter names.
 
 ## Context
 

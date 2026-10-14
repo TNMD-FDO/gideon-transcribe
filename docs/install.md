@@ -422,7 +422,7 @@ Leave the relay empty to run without mail. The install says what that loses: no 
 
 | Line | What it means |
 |---|---|
-| every container is running | All seven parts are up and healthy. A failure names the one that is not; `./transcribe logs <name>` shows why. |
+| every container is running | Every part of the stack is up and healthy. A failure names the one that is not; `./transcribe logs <name>` shows why. |
 
 **The directory**
 
@@ -454,7 +454,7 @@ The last line is either `Everything checked passed.` or a count of what did not.
 ## 5. First sign-in
 
 1. **Open the address** in a browser on an office computer: `https://<hostname>:<port>/`. The port is 8443 unless you changed it. The sign-in page appears with no certificate warning; a warning means the CA root is not trusted by that computer, which is a workstation matter and not the server's.
-2. **Sign in as the Local admin** you made. You land on the Upload page. **Panel** at the top opens the Admin panel; its **Status** page should be green all the way down. **Test directory connection** on that page runs the directory checks from inside the app.
+2. **Sign in as the Local admin** you made. You land on Home. **Panel** in the rail opens the Admin panel; its **Status** page should be green all the way down. **Test directory connection** on that page runs the directory checks from inside the app.
 3. **Sign out and sign in as an ordinary user**: somebody in the Sign-in group who is not in the Admin group. This matters, because it is the only way to see that ordinary sign-in works and that a user sees no Panel link. If you have no such person yet, add one to the group for the test.
 4. **Upload one recording** as that user, a short one, and watch it through: the Batch page shows it uploading, prepared, in line, transcribing, and done. Open it in the viewer, play it, and download the transcript. That is the whole app, once round.
 5. Sign out. The dialog says the recording will go, and it does. That is by design: nothing a user does not put in a case outlives their session.
@@ -547,7 +547,11 @@ It asks you to type `yes`, because it replaces everything in the database with w
 
 ## 9. Uninstall
 
-Nothing was installed outside the install home and the App data folder, and no system services were added: Docker's own restart policy is what brings the app back after a reboot.
+Nothing was installed outside the install home and the App data folder except three backup timers: Docker's own restart policy is what brings the app back after a reboot, and the install wrote `transcribe-backup`, `transcribe-backup-weekly` and `transcribe-backup-drill` (a service and a timer each) into `/etc/systemd/system/`, enabled only while a backup target is named. Stop and remove them first:
+
+```bash
+sudo systemctl disable --now transcribe-backup.timer transcribe-backup-weekly.timer transcribe-backup-drill.timer; sudo rm -f /etc/systemd/system/transcribe-backup*.service /etc/systemd/system/transcribe-backup*.timer; sudo systemctl daemon-reload
+```
 
 Stop and remove the containers and their networks, from the install home:
 

@@ -9,23 +9,16 @@ import pytest
 from core import close, lifecycle, notes, people, settings_store, sharing, vocabulary
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
+from tests.helpers import signed_in
 
 PASSWORD = "a long enough password 1"
 APP = __import__("pathlib").Path(__file__).resolve().parent.parent
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -85,11 +78,6 @@ def a_call(owner, case, title, lines=()):
             speaker="Pike",
         )
     return recording
-
-
-def signed_in(client, person):
-    client.force_login(person)
-    LoginSession.objects.create(user=person, session_key=client.session.session_key)
 
 
 # Settings read once per request ------------------------------------------------------

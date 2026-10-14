@@ -17,20 +17,12 @@ import pytest
 from core import live, media, pipeline, queue, settings_store, tasks, uploads, whisperx
 from core.cases import Case
 from core.jobs import Job, JobState, Run, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import MediaState
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    (tmp_path / "uploads").mkdir()
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -98,12 +90,6 @@ class FakeMedia:
         self.cuts.append((Path(source).name, Path(target).name, channel, span))
         Path(target).parent.mkdir(parents=True, exist_ok=True)
         Path(target).write_text(f"{got:.1f}", encoding="utf-8")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_live_recording(person, a_case, tmp_path, with_computer=False):

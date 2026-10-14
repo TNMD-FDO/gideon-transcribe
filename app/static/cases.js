@@ -732,50 +732,6 @@
     picker(move.dataset.recording, move.dataset.title, caseId);
   });
 
-  // The case rail in the viewer -----------------------------------------------
-
-  var rail = document.getElementById("caserail");
-  // The rail without its frame (a page that carries the rail's markup but
-  // not the viewer's body) has nothing to open or shut; until v1.87.3 the
-  // script threw on such a page and took the rest of its work with it.
-  var body = rail ? rail.closest(".body") : null;
-  if (rail && body) {
-    var hide = document.getElementById("hide-case");
-    var reopen = document.getElementById("show-case");
-
-    // Two classes rather than one, because the width alone decides what the
-    // rail does by default and a person's choice has to be able to say either
-    // thing: case-hidden closes it on a wide screen, case-shown opens it on a
-    // narrow one, where it lies over the page rather than squeezing it.
-    function draw(shut) {
-      body.classList.toggle("case-hidden", shut);
-      body.classList.toggle("case-shown", !shut);
-      try {
-        window.localStorage.setItem("case-rail", shut ? "hidden" : "shown");
-      } catch (ignored) { /* a browser that forbids storage forgets it */ }
-    }
-
-    function open() {
-      return !body.classList.contains("case-hidden")
-        && window.getComputedStyle(rail).display !== "none";
-    }
-
-    // Both answers are applied, not just "hidden": a person who opened the
-    // rail on a narrow screen, where it starts closed, would otherwise lose
-    // it at the next page. With nothing stored the screen's width decides.
-    var chosen = null;
-    try {
-      chosen = window.localStorage.getItem("case-rail");
-    } catch (ignored) { /* the rail then follows the screen's width */ }
-    if (chosen === "hidden") { draw(true); }
-    else if (chosen === "shown") { draw(false); }
-
-    hide.addEventListener("click", function () { draw(true); });
-    // Shut it when it is open and open it when it is not: draw() takes
-    // "shut", so the button hands it the state it is in now.
-    reopen.addEventListener("click", function () { draw(open()); });
-  }
-
   // Ask for it now (Phase 4 chapter 5): a button that carries data-prompt
   // opens one box for the optional line of why, then submits its form with
   // the line in a hidden field; Cancel submits nothing.

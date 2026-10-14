@@ -10,8 +10,6 @@ name: CI
 # real PostgreSQL, because it is a database application and testing it against
 # anything else would be pretence.
 #
-# Each step that needs code runs only once that code exists, because the build
-# arrives one slice at a time.
 
 # On every branch push and pull request, and not on a tag: the commit a tag
 # marks has already had this run, and a tag's own work is the Release workflow.
@@ -61,7 +59,6 @@ jobs:
       # ones was renamed, so both names are offered and whichever the runner
       # knows is taken.
       - name: Install the headers python-ldap builds against
-        if: hashFiles('app/requirements-dev.txt') != ''
         run: |
           # The runner image carries package sources this build never uses
           # (Google Chrome's among them), and one of them failing to download
@@ -80,13 +77,11 @@ jobs:
           done
 
       - name: Lint (ruff)
-        if: hashFiles('**/*.py') != ''
         run: |
           ruff check .
           ruff format --check .
 
       - name: Unit tests
-        if: hashFiles('whisperx-service/tests/**', 'app/tests/**') != ''
         env:
           POSTGRES_HOST: 127.0.0.1
           POSTGRES_USER: postgres
@@ -97,7 +92,6 @@ jobs:
       # A model changed without its migration migrates green and then fails
       # on the first query; the check makes it a build failure instead.
       - name: Every model change has its migration
-        if: hashFiles('app/manage.py') != ''
         working-directory: app
         env:
           POSTGRES_HOST: 127.0.0.1
@@ -108,7 +102,6 @@ jobs:
         run: python manage.py makemigrations --check --dry-run
 
       - name: The WhisperX service's compose file is valid
-        if: hashFiles('whisperx-service/compose.yaml') != ''
         run: |
           cp whisperx-service/.env.example whisperx-service/.env
           mkdir -p whisperx-service/secrets
@@ -126,7 +119,6 @@ jobs:
           docker compose -f whisperx-service/compose.yaml --profile fast config --quiet
 
       - name: The whole stack's compose file is valid
-        if: hashFiles('compose.yaml') != ''
         run: |
           cp .env.example .env
           mkdir -p secrets
@@ -162,7 +154,6 @@ jobs:
           rm -rf .env secrets whisperx-service/.env whisperx-service/secrets
 
       - name: The Caddyfile asks before it serves
-        if: hashFiles('caddy/Caddyfile') != ''
         # A Caddyfile is not run in the order it is written: Caddy sorts the
         # directives inside a handle block into its own order. That once put
         # the strip_prefix ahead of the forward_auth, so the app was asked
@@ -170,7 +161,7 @@ jobs:
         # was refused, silently. This adapts the file the way Caddy does and
         # fails if the media route ever serves a file before it has asked.
         run: |
-          docker run --rm -v "$GITHUB_WORKSPACE/caddy:/etc/caddy:ro"             -e APP_HOSTNAME=example.internal -e ALLOWED_CLIENT_CIDRS=10.0.0.0/8             caddy:2.11-alpine caddy adapt --config /etc/caddy/Caddyfile             > /tmp/caddy.json
+          docker run --rm -v "$GITHUB_WORKSPACE/caddy:/etc/caddy:ro"             -e APP_HOSTNAME=example.internal -e ALLOWED_CLIENT_CIDRS=10.0.0.0/8             caddy:2.11-alpine@sha256:$(grep -o 'caddy:2.11-alpine@sha256:[0-9a-f]*' compose.yaml | head -1 | cut -d: -f3) caddy adapt --config /etc/caddy/Caddyfile             > /tmp/caddy.json
           python3 - <<'CHECK'
           import json
           import sys
@@ -216,14 +207,14 @@ jobs:
       # for a hundred bytes plays a video and cannot scrub it, and looks from
       # the page like a broken page.
       - name: A browser can jump about in a recording
-        if: hashFiles('caddy/Caddyfile') != ''
         run: bash ./caddy/check-ranges.sh
 
       - name: Secret scan (gitleaks)
         # The gitleaks command-line tool is MIT and needs no licence key. The
         # gitleaks GitHub Action is not used: since its version 2 it needs a
-        # key for organisation accounts. The image tag is pinned at the first
-        # public Release, as everything else in this repository is.
+        # key for organisation accounts. The image tag is "latest" for now,
+        # the one unpinned image in this repository; pinning it by digest is
+        # the dependencies pass's to do.
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" \
             zricethezav/gitleaks:latest dir /repo --redact --verbose

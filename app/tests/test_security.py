@@ -27,7 +27,8 @@ STATIC = HERE / "app" / "static"
 
 def test_an_upload_id_is_the_sidecars_shape_and_nothing_else(tmp_path, settings):
     settings.UPLOADS_DIR = tmp_path / "uploads"
-    (tmp_path / "uploads").mkdir()
+    # conftest's disk fixture has made the folder already (v1.133.0).
+    (tmp_path / "uploads").mkdir(exist_ok=True)
     (tmp_path / "uploads" / "abc123").write_bytes(b"x")
     (tmp_path / "other").mkdir()
     (tmp_path / "other" / "theirs.mp4").write_bytes(b"y")

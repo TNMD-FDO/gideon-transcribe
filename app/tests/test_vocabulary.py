@@ -8,20 +8,13 @@ import pytest
 from core import audit, case_chat, case_search, people, queue, vocabulary
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.people import CaseTerm, Person
 from core.recordings import Batch, MediaState, Recording, Side
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a long enough password 1"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -79,11 +72,6 @@ def a_call(owner, case, title, lines, two_channel=True):
         )
         at += 5
     return recording
-
-
-def signed_in(client, person):
-    client.force_login(person)
-    LoginSession.objects.create(user=person, session_key=client.session.session_key)
 
 
 # The list ------------------------------------------------------------------------

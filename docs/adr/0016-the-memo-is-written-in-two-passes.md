@@ -72,3 +72,5 @@ The memo is written in two passes.
 - **A larger answer cap**: it lets the copying run longer.
 - **Strip the labels from the record before the call**: hides one symptom;
   the folded parts and the trailing story remain.
+
+**Noted 2026-10-14.** The Facts sheet answer cap is 12,000 tokens since v1.91.1 (8,000 in v1.91.0): the sheet ran out of room on a long incident.

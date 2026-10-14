@@ -233,12 +233,6 @@ def heard_only(queryset, fields: list[str], words, also, heard: list[str]):
     return rows
 
 
-def is_heard(text: str, words, also, heard: list[str]) -> bool:
-    return (
-        bool(heard) and not matches(text, words, also) and matches(text, Phrase(heard))
-    )
-
-
 def marked(text: str, words, also, near, heard: list[str] | None = None):
     """The text with its hit lit: the spelling for an also-heard-as hit, the
     words or their close forms for the rest."""

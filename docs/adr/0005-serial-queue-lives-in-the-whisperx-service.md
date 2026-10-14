@@ -9,3 +9,5 @@ The requirement list asks for a queue so that only one transcription runs at a t
 ## Consequences
 
 Two lines exist by design and their units differ: the app's Job is one Recording, the service's job is one Side, which the app calls a Run. The service is the only place the GPU rule is enforced, so no consumer can bypass it, and a future move to parallel transcription (a second worker or a second GPU) is a change to the service that every consumer inherits without code changes of its own. The service therefore needs a durable job store and a status surface (position, audio ahead, measured speed) that a bare transcription engine would not, and the service's serial behaviour is part of its published contract, not an internal detail.
+
+**Noted 2026-10-14.** The one-at-a-time rule is the batch service's own. Since the Fast lane (ADR 0015) a second copy of the service runs beside it for what must not wait, and the app's queue puts a recording made in the app at the front of its line; each copy still enforces the GPU rule for itself.

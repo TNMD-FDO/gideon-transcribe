@@ -18,9 +18,10 @@ from datetime import timedelta
 import pytest
 from core import mail, reports, settings_store, sweeping
 from core.audit import Row
-from core.models import LoginSession, User
+from core.models import User
 from core.reports import Report
 from django.utils import timezone
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 CHROME = (
@@ -28,13 +29,6 @@ CHROME = (
     "Gecko) Chrome/129.0.0.0 Safari/537.36"
 )
 EDGE = CHROME + " Edg/128.0.0.0"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture
@@ -56,12 +50,6 @@ def operator_mail(monkeypatch):
         lambda kind, subject, body, **d: sent.append((kind, subject, body)) or True,
     )
     return sent
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def send(client, **fields):

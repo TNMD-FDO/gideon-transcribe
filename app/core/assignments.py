@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import uuid
 
-from django.db.models import Q
 from django.utils import timezone
 
 from core import audit
@@ -406,7 +405,3 @@ def find_member(case, typed: str):
         if wanted in (person.username.casefold(), person.shown_name.casefold()):
             return person
     return None
-
-
-def with_assignee_q(user) -> Q:
-    return Q(assigned_to=user)

@@ -19,32 +19,20 @@ import pytest
 from core import settings_store, speakers_page
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.people import Person
 from core.recordings import Batch, MediaState, Recording
 from core.speakers_page import Line
+from tests.helpers import signed_in
 
 APP = Path(__file__).resolve().parent.parent
 ROOT = APP.parent
 PASSWORD = "a-long-enough-password"
 
 
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-
-
 @pytest.fixture
 def person(db):
     return User.objects.create_local_admin("asker", PASSWORD)
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 LINES = (

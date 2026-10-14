@@ -74,10 +74,6 @@ def waiting():
     )
 
 
-def tonight_for(recording):
-    return Summary.objects.filter(recording=recording, state=TONIGHT).first()
-
-
 def has_one(recording) -> bool:
     """Whether the recording has, or is getting, a summary of its current
     transcript: done for this transcript, running, or waiting for tonight."""

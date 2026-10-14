@@ -29,9 +29,10 @@ from core import (
 from core.assistant import DONE, QUEUED, TONIGHT, Summary
 from core.audit import Row
 from core.cases import Case
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch
 from django.utils import timezone
+from tests.helpers import signed_in
 from tests.test_prepare import a_recording
 
 PASSWORD = "a-long-enough-password"
@@ -58,12 +59,6 @@ def deferred(monkeypatch):
     )
     monkeypatch.setattr(engine, "is_reachable", lambda: True)
     return queued
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_call(admin, tmp_path, settings, case, title="Call", batch=None, wanted=True):

@@ -20,8 +20,9 @@ from core.audit import Row
 from core.case_chat import CaseChat, CaseChatTurn
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 
@@ -106,14 +107,6 @@ def test_the_not_read_line_counts_each_reason():
 # Against a fake engine ----------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
-
-
 @pytest.fixture
 def owner(db):
     return User.objects.create_local_admin("case-owner", PASSWORD)
@@ -157,12 +150,6 @@ def a_recording(owner, case, title, *, hours=0.25, transcript=True, translate=Fa
                 speaker_label=speaker.upper().replace(" ", "_"),
             )
     return recording
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def reachable(monkeypatch, answers):
@@ -331,7 +318,8 @@ def a_synced_incident(owner, a_case, *, digest_lines=2):
     the second with its words alone; the second starts 281 s after the first."""
     from core import incidents
     from core.assistant import DigestPart
-    from tests.test_incident_assistant import stamp, video
+    from tests.helpers import stamp
+    from tests.test_incident_assistant import video
 
     settings_store.set_to("incidents", True)
     settings_store.set_to("moments_available", True)

@@ -1777,7 +1777,6 @@
     }
   }
   function closeLayers() { while (layerStack.length) { closeLayer(); } }
-  window.INCIDENT_LAYERS = { open: openLayer, close: closeLayer, stack: function () { return layerStack.slice(); } };
   document.querySelector(".inc-work").addEventListener("click", function (event) {
     if (event.target.closest("[data-back]")) { closeLayer(); }
   });

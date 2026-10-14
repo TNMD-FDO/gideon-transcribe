@@ -104,5 +104,6 @@ image is proprietary in that respect and is listed as such.
 No model weights ship with the app. The WhisperX service downloads them on
 first use: the Whisper model from its public repository, and the diarization
 model from behind a Hugging Face gate that each installing office accepts
-itself with its own account and token. The diarization model is CC-BY-4.0 and
-requires attribution.
+itself with its own account and token. The pyannote diarization model is
+CC-BY-4.0 and requires attribution; the default diarizer since v1.80.0,
+Nemotron, is under OpenMDW-1.1 and needs no gate (see above).

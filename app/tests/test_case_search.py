@@ -28,17 +28,11 @@ from core.audit import Row
 from core.cases import Case
 from core.clips import Clip
 from core.jobs import Job, JobState, Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in, stamp
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture(autouse=True)
@@ -57,22 +51,6 @@ def person(db):
 @pytest.fixture
 def a_case(person):
     return Case.objects.create(owner=person, name="Traffic stop")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
-
-
-def stamp(time: str, camera: str):
-    return {
-        "date": "06/07/2025",
-        "time": time,
-        "camera": camera,
-        "at": 2.0,
-        "checked": True,
-    }
 
 
 def video(person, case, title, *, seconds=600.0, stamp=None, lines=()):
@@ -370,6 +348,6 @@ def test_a_cited_line_reaches_the_event_box_by_its_moment_not_its_words(
     assert "I got gun" not in page
     page = client.get(f"{incident.url()}?t={at}&cite=nonsense").content.decode()
     assert "I got gun" not in page
-    # An older link's words are read as before.
+    # Words in the address are never read (v1.133.0).
     page = client.get(f"{incident.url()}?t={at}&event=Old%20words").content.decode()
-    assert "Old words" in page
+    assert "Old words" not in page

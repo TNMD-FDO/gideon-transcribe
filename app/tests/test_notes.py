@@ -32,18 +32,12 @@ from core.audit import Row
 from core.case_chat import CaseChat, CaseChatTurn
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording
+from tests.helpers import signed_in, stamp
 from tests.test_prepare import engine_answering
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
 
 
 @pytest.fixture(autouse=True)
@@ -70,22 +64,6 @@ def stranger(db):
 @pytest.fixture
 def a_case(person):
     return Case.objects.create(owner=person, name="Traffic stop")
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
-
-
-def stamp(time: str, camera: str):
-    return {
-        "date": "06/07/2025",
-        "time": time,
-        "camera": camera,
-        "at": 2.0,
-        "checked": True,
-    }
 
 
 LINES = (

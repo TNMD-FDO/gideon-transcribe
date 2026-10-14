@@ -15,21 +15,14 @@ import pytest
 from core import audit, cases, retention, settings_store, sharing, uploads
 from core.cases import Case
 from core.jobs import Segment, Transcript
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch, MediaState, Recording, Refusal
 from core.sharing import Share
 from django.urls import reverse
 from django.utils import timezone
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
-
-
-@pytest.fixture(autouse=True)
-def its_own_disk(tmp_path, settings):
-    settings.DATA_DIR = tmp_path
-    settings.SCRATCH_DIR = tmp_path / "scratch"
-    settings.UPLOADS_DIR = tmp_path / "uploads"
-    return tmp_path
 
 
 @pytest.fixture(autouse=True)
@@ -86,12 +79,6 @@ def a_recording(person, case, size=16, with_transcript=True):
             transcript=transcript, start=0, end=1, text="Hi", speaker="A"
         )
     return recording
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def rows(event: str):

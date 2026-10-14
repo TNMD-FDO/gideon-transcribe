@@ -75,15 +75,7 @@
       to.value = clock(end);
       say();
     },
-    preview: preview,
-    addSegment: function (segment) {
-      // Extends the range to include that segment rather than replacing it.
-      // Kept for I and O while playing, which build a range as they go.
-      var span = range();
-      var start = span ? Math.min(span.from, segment.start) : segment.start;
-      var end = span ? Math.max(span.to, segment.end) : segment.end;
-      window.CLIPS.mark(start, end);
-    }
+    preview: preview
   };
 
   from.addEventListener("input", say);

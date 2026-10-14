@@ -15,8 +15,9 @@ from pathlib import Path
 
 import pytest
 from core import assistant, case_chat, prompts, settings_store
-from core.models import LoginSession, User
+from core.models import User
 from django.urls import reverse
+from tests.helpers import signed_in
 
 PASSWORD = "a-long-enough-password"
 CATALOGUE = (
@@ -49,12 +50,6 @@ PAIRS = {
     "digest_window_tokens": prompts.DIGEST_WINDOW_TOKENS,
     "digest_part_tokens": prompts.DIGEST_CAP,
 }
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 # The definitions ----------------------------------------------------------------------

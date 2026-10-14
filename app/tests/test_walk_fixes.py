@@ -1,5 +1,5 @@
-"""v1.75.1: the fix release from the walk of 2026-09-22, the parts a test
-can hold: the Start tile's line for an Admin who owns nothing, the
+"""The walks' fix releases (v1.75.1, then v1.106.0 to v1.115.0): the parts
+a test can hold: the Start tile's line for an Admin who owns nothing, the
 sign-out page's line, a Search hit cut to the sentence with the words,
 and nothing that needs a recording (the Report tab's switch is in
 test_documents_read)."""

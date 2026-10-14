@@ -24,9 +24,10 @@ from core import assistant, engine, mail, settings_store, vision
 from core.assistant import Summary
 from core.audit import Row
 from core.cases import Case
-from core.models import LoginSession, User
+from core.models import User
 from core.recordings import Batch
 from django.utils import timezone
+from tests.helpers import signed_in
 from tests.test_prepare import a_recording, engine_answering, no_ffmpeg
 
 PASSWORD = "a-long-enough-password"
@@ -46,12 +47,6 @@ def person(db):
     who.last_sign_in = timezone.now()
     who.save()
     return who
-
-
-def signed_in(client, who):
-    client.force_login(who)
-    LoginSession.objects.create(user=who, session_key=client.session.session_key)
-    return client
 
 
 def a_case_video(owner, tmp_path, settings, title="Cam", ticked=True):
