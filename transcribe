@@ -35,6 +35,10 @@
 #   ./transcribe install-backup
 #                             the backup questions, keys, repository and timers again
 #   ./transcribe install-mail the mail questions again: relay, sender, Operator address
+#   ./transcribe install-timers
+#                             write the backup timers again (after a change to .env)
+#   ./transcribe restore-dump FILE
+#                             put one database dump back, for a rollback
 #   ./transcribe upgrade TAG  fetch a release, take a dump, and bring it up
 #   ./transcribe tidy         remove this project's old images and build cache
 #   ./transcribe rollback TAG go back to a release, restoring the dump if need be
@@ -46,9 +50,11 @@
 
 set -euo pipefail
 
-# Nothing this script writes is for anybody else on the server: a dump, a
-# secret, a configuration archive. Files are born private (v1.130.0).
-umask 077
+# A dump, a secret and a configuration archive are born private: each is
+# written under its own tight umask or into a 0700 folder (v1.132.1). Never
+# a script-wide umask: v1.130.0 had one, and the upgrade's checkout under it
+# wrote every changed file unreadable to the app's own account, so the image
+# built from that checkout could not even open its entrypoint.
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
@@ -1538,7 +1544,7 @@ write_secret() {
   folder="$(dirname "$path")"
   mkdir -p "$folder" 2>/dev/null || true
   if [ -w "$folder" ]; then
-    printf '%s' "$value" >"$path"
+    (umask 077; printf '%s' "$value" >"$path")
     chmod 600 "$path"
   else
     printf '%s' "$value" | sudo tee "$path" >/dev/null
@@ -2026,10 +2032,10 @@ cmd_backup_db() {
   echo "Taking a dump into $folder/$name.dump"
   local work
   work="$(private_folder)"
-  compose exec -T postgres pg_dump \
+  (umask 077; compose exec -T postgres pg_dump \
     -U "$(env_value POSTGRES_USER)" \
     -d "$(env_value POSTGRES_DB)" \
-    --format=custom >"$work/$name.dump"
+    --format=custom >"$work/$name.dump")
 
   sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 "$work/$name.dump" "$folder/$name.dump"
   rm -rf "$work"
@@ -2189,7 +2195,7 @@ cmd_backup() {
   sudo install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$folder/.restic-cache" 2>/dev/null || true
   local work
   work="$(private_folder)"
-  if ! compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom >"$work/$dump"; then
+  if ! (umask 077; compose exec -T postgres pg_dump -U "$(env_value POSTGRES_USER)" -d "$(env_value POSTGRES_DB)" --format=custom >"$work/$dump"); then
     rm -rf "$work"
     record_backup_failure "$step" "dump_failed"
   fi
@@ -3068,8 +3074,21 @@ cmd_upgrade_finish() {
   finish_the_upgrade "$1" "$2" "$3"
 }
 
+# The files git wrote are readable by everyone on the box and the image's
+# build copies them as they are (v1.132.1). A checkout made under a tight
+# umask (v1.130.0's script had one) had left every changed file 0600, and
+# the app's own account in the container could not open them. Tracked
+# files and folders only; secrets, tls and ca are untracked and untouched.
+repair_the_checkout() {
+  git -C "$HERE" ls-files -z | (cd "$HERE" && xargs -0 chmod go+r) 2>/dev/null || true
+  git -C "$HERE" ls-files -s | awk '$1 == "100755" {print $4}' | (cd "$HERE" && xargs -r chmod go+rx) 2>/dev/null || true
+  git -C "$HERE" ls-tree -r -d --name-only HEAD | (cd "$HERE" && xargs -r chmod go+rx) 2>/dev/null || true
+  chmod go+rx "$HERE" 2>/dev/null || true
+}
+
 finish_the_upgrade() {
   local tag="$1" before="$2" build="$3"
+  repair_the_checkout
 
   # What the app says it is running. Written here rather than typed, because a
   # figure somebody typed would be a guess about the checkout rather than a
@@ -3109,7 +3128,10 @@ finish_the_upgrade() {
   # end the script with the site down and no next step.
   echo
   echo "Migrating the database"
-  if ! compose run --rm --no-deps app python manage.py migrate --no-input; then
+  # Through the image's own entrypoint, which turns the first word into the
+  # manage.py command (v1.132.1: "python manage.py migrate" had been handed
+  # to the entrypoint whole and refused).
+  if ! compose run --rm --no-deps app migrate --no-input; then
     echo
     red "The database migration failed, so the upgrade stops here."
     echo "  The old containers are still running and nothing was replaced."
@@ -3157,8 +3179,8 @@ keep_the_configuration() {
   echo "Keeping this office's configuration in $folder/config-pre-$tag.tar"
   local work
   work="$(private_folder)"
-  tar -cf "$work/config-pre-$tag.tar" -C "$HERE" \
-    .env secrets tls ca whisperx-service/.env whisperx-service/secrets 2>/dev/null || true
+  (umask 077; tar -cf "$work/config-pre-$tag.tar" -C "$HERE" \
+    .env secrets tls ca whisperx-service/.env whisperx-service/secrets 2>/dev/null || true)
   sudo install -o "$APP_USER" -g "$APP_USER" -m 0600 \
     "$work/config-pre-$tag.tar" "$folder/config-pre-$tag.tar"
   rm -rf "$work"
@@ -3247,6 +3269,7 @@ cmd_rollback() {
   cmd_backup_db "pre-rollback-$tag"
   echo "Rolling back to $tag"
   git -C "$HERE" checkout --quiet "$tag"
+  repair_the_checkout
   # The release the stack runs is the one checked out (v1.132.0): the
   # rollback had left RELEASE_TAG at the newer tag, so the newer images kept
   # running under the older compose file.
@@ -3294,7 +3317,9 @@ cmd_restore_dump() {
 # ------------------------------------------------------------------------------
 
 usage() {
-  sed -n '3,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  # The whole header comment, to its first blank line, however long the
+  # command list grows (v1.132.1: a fixed line range had cut six commands off).
+  awk 'NR >= 3 { if ($0 == "") exit; print }' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in

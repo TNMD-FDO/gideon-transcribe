@@ -186,7 +186,10 @@ def test_a_spreadsheet_cell_is_text_and_never_a_formula():
 
 def test_the_scripts_files_are_born_private():
     script = (HERE / "transcribe").read_text(encoding="utf-8")
-    assert "\numask 077\n" in script
+    # Never a script-wide umask (v1.132.1): it reached the upgrade's checkout.
+    assert "\numask 077\n" not in script
+    assert "repair_the_checkout" in script
+    assert script.count("(umask 077;") == 4
     assert '>"/tmp/' not in script
     assert 'tar -cf "/tmp/' not in script
     assert script.count('work="$(private_folder)"') == 3

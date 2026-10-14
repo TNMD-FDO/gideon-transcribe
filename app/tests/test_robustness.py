@@ -554,7 +554,7 @@ def test_the_script_and_the_stack_keep_their_rules():
     rollback = rollback[: rollback.index("cmd_restore_dump() {")]
     assert 'set_env RELEASE_TAG "$tag"' in rollback
     assert "compose up -d --remove-orphans" in rollback and "running_jobs" in rollback
-    assert "compose run --rm --no-deps app python manage.py migrate" in script
+    assert "compose run --rm --no-deps app migrate --no-input" in script
     assert "status = 'doing'" in script
     compose = (HERE / "compose.yaml").read_text(encoding="utf-8")
     assert compose.count("stop_grace_period: 10m") == 3

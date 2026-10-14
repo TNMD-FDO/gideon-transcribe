@@ -21,6 +21,33 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.132.1, 2026-10-14
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The upgrade to v1.132.0 stopped at its new migration step with "Permission
+denied" on the image's entrypoint. Two faults in the install script, both
+from this audit's own releases:
+
+- **v1.130.0's script-wide `umask 077`** reached the upgrade's git checkout,
+  so every file that changed between the two releases was written readable
+  by the installing account alone, and the image built from that checkout
+  carried the modes: the app's own account inside the container could not
+  open the entrypoint or the changed code. The umask is gone; a dump, a
+  secret and a configuration archive are each written under their own
+  tight umask or into a 0700 folder instead. And the upgrade repairs the
+  checkout's modes before anything is built (tracked files and folders
+  only; secrets, certificates and the CA root are untracked and untouched),
+  so a checkout made by the previous release's script is put right.
+- **v1.132.0's migration step** handed "python manage.py migrate" to the
+  image's entrypoint whole, which turns the first word into the manage.py
+  command and would have refused it. It hands over "migrate" now.
+
+Nothing else changes. An office on v1.131.0 upgrades straight to this tag.
+
 ## v1.132.0, 2026-10-14
 
 ```
