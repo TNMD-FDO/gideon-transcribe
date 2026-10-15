@@ -2,7 +2,7 @@
 Description=Gideon Transcribe nightly backup, at BACKUP_TIME
 
 [Timer]
-OnCalendar=*-*-* __BACKUP_TIME__:00
+OnCalendar=*-*-* __BACKUP_TIME__:00 __TZ__
 Persistent=true
 
 [Install]

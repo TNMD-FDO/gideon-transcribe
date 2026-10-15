@@ -202,8 +202,61 @@ on_the_os_drive() {
   [ -n "$here" ] && [ "$here" = "$root" ]
 }
 
+data_volume_present() {
+  # Whether the box has a data volume mounted at /data (the box ledger's
+  # §2 and §6, v1.137.0): then a data folder on the OS drive is refused
+  # outright rather than asked about, since the root filesystem is the
+  # operating system's.
+  mountpoint -q /data 2>/dev/null
+}
+
+# The shared-engine overlay names GIDEON's network as external, so a start
+# with the overlay fails whole while that network is absent: before GIDEON
+# is installed, or after it is removed. The overlay is left out for that
+# start (v1.137.0, the ledger's v0.3.135 line 3) and the assistant shows as
+# unreachable on the Status page; once the network is back, a start run
+# again (./transcribe bring-up, or docker compose up -d) rejoins it.
+OVERLAY_SAID=no
+overlay_without_its_network() {
+  local network
+  grep -q '^COMPOSE_FILE=.*shared-engine' "$ENV_FILE" 2>/dev/null || return 1
+  network="$(env_value LLM_NETWORK 2>/dev/null || true)"
+  [ -n "$network" ] && [ "$network" != "transcribe-llm" ] || return 1
+  ! docker network inspect "$network" >/dev/null 2>&1
+}
+
 compose() {
-  docker compose "$@"
+  if overlay_without_its_network; then
+    if [ "$OVERLAY_SAID" = "no" ]; then
+      # To the terminal's error stream: a compose call's standard output is
+      # often captured and read.
+      amber "The engine's network '$(env_value LLM_NETWORK)' is not on this server; starting without it (the AI assistant is unreachable until it returns and the stack is started again)." >&2
+      OVERLAY_SAID=yes
+    fi
+    COMPOSE_FILE=compose.yaml docker compose "$@"
+  else
+    docker compose "$@"
+  fi
+}
+
+# The images are built through a builder of this project's own (v1.137.0,
+# the ledger's v0.3.135 line 4 and §5's third rule): its cache sits apart
+# from every other tenant's, so the prune after a build touches nothing of
+# theirs and nothing of ours is pruned by them. The builder's own image is
+# pinned by tag and digest like every other (Docker Hub, 2026-10-15).
+BUILDER="transcribe"
+BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
+ensure_the_builder() {
+  docker buildx inspect "$BUILDER" >/dev/null 2>&1 && return 0
+  docker buildx create --name "$BUILDER" --driver docker-container \
+    --driver-opt "image=$BUILDKIT_IMAGE" >/dev/null
+}
+
+build_with_our_builder() {
+  # `compose build` through the named builder; the built image is loaded
+  # into the daemon by Compose itself.
+  ensure_the_builder || { red "The project's builder could not be made (docker buildx create failed; see above)."; return 1; }
+  compose build --builder "$BUILDER" "$@"
 }
 
 # The Compose profiles in .env are a comma-separated list: `llm` for the
@@ -250,6 +303,21 @@ card_memory_gb() {
   local mb
   mb="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits -i "$1" 2>/dev/null | head -1 | tr -dc '0-9')"
   [ -n "$mb" ] && mib_to_gb "$mb"
+}
+
+card_free_gb() {
+  # The card's free memory now, in whole gigabytes, by UUID (v1.137.0):
+  # another tenant may hold part of a card the ledger shares.
+  local mb
+  mb="$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i "$1" 2>/dev/null | head -1 | tr -dc '0-9')"
+  [ -n "$mb" ] && mib_to_gb "$mb"
+}
+
+card_in_the_cdi_spec() {
+  # Whether the container toolkit's CDI spec names this UUID (v1.137.0): a
+  # spec from before a driver change or a card change does not, and the
+  # container then starts without its card. The fix is the regenerate.
+  command -v nvidia-ctk >/dev/null 2>&1 && nvidia-ctk cdi list 2>/dev/null | grep -q "$1"
 }
 
 shared_engine_is_on() {
@@ -437,6 +505,7 @@ WORDS
   if [ "$enabled" != "true" ]; then
     echo
     amber "Directory sign-in is off. Only local admins can sign in."
+    ensure_the_directory_files
     return 0
   fi
 
@@ -523,6 +592,21 @@ WORDS
 
 # check ------------------------------------------------------------------------
 
+check_the_containerd_root() {
+  # containerd's image store belongs on the Docker volume, set while it is
+  # still at the package default and before the first image (v1.137.0; the
+  # box ledger's §2 box-wide table and §5): a store populated at the default
+  # moves only by hand in an announced window. A note, never a stop: the
+  # setting is the box's and the fix is the guide's Step 0.
+  local root
+  root="$(grep -E '^\s*root\s*=' /etc/containerd/config.toml 2>/dev/null | head -1 | sed 's/.*=\s*//; s/"//g')"
+  if [ -z "$root" ] || [ "$root" = "/var/lib/containerd" ]; then
+    note "containerd's image store is at its package default (/var/lib/containerd); the shared box's rule puts it on the Docker volume at /var/lib/docker/containerd before the first image (the install guide's Step 0)"
+  else
+    pass "containerd's image store is at $root"
+  fi
+}
+
 cmd_check() {
   need_env
   FAILURES=0
@@ -593,8 +677,13 @@ cmd_check() {
     fail "the disk has only ${free:-?} GB free"
   fi
   if on_the_os_drive "$data"; then
-    note "the app data folder is on the same drive as the operating system"
+    if data_volume_present; then
+      fail "the app data folder is on the operating system's drive while this server has a data volume at /data; move it under /data (the box ledger's §6 gives the root filesystem to the operating system)"
+    else
+      note "the app data folder is on the same drive as the operating system"
+    fi
   fi
+  check_the_containerd_root
 
   echo
   echo "The name and the certificate"
@@ -676,6 +765,20 @@ raise SystemExit(0 if whisperx.is_alive() else 1)
       note "the card has ${gb_now} GB, room for batch size $fit_now (it is set to $batch_now): ./transcribe add transcription refits it"
     fi
   fi
+  # Every card the stack names must be in the CDI spec (v1.137.0; the
+  # ledger's v0.3.135 line 5): a spec from before a driver or card change is
+  # not, and the container starts without its card.
+  if transcription_is_on && have_a_card; then
+    local named
+    for named in "$(service_env_value WHISPERX_GPU_UUID)" "$(service_env_value WHISPERX_FAST_GPU_UUID 2>/dev/null || true)" "$(env_value LLM_LOCAL_GPU_UUID)"; do
+      case "$named" in ""|"<GPU UUID>") continue ;; esac
+      if card_in_the_cdi_spec "$named"; then
+        pass "the CDI spec names $named"
+      else
+        fail "the CDI spec does not name $named; regenerate it and recreate the container: sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml, then docker compose up -d"
+      fi
+    done
+  fi
   if ! transcription_is_on; then
     :
   elif fast_lane_is_on; then
@@ -719,7 +822,7 @@ raise SystemExit(0 if whisperx.is_alive(whisperx.FAST) else 1)
     if docker network inspect "$network" >/dev/null 2>&1; then
       pass "the engine's network '$network' exists"
     else
-      fail "the engine's network '$network' does not exist; is the engine's stack running?"
+      note "the engine's network '$network' is not on this server (its stack is not installed or is down): the stack starts without it and the AI assistant is unreachable; when it returns, ./transcribe bring-up (or docker compose up -d) rejoins it"
     fi
     if compose ps --status running --services 2>/dev/null | grep -qx llm-worker; then
       if docker inspect "$(compose ps -q llm-worker)"         --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null | grep -qw "$network"; then
@@ -796,6 +899,14 @@ cmd_install() {
 
   [ -f "$ENV_FILE" ] || cp "$HERE/.env.example" "$ENV_FILE"
   [ -f "$SERVICE_ENV" ] || cp "$HERE/whisperx-service/.env.example" "$SERVICE_ENV"
+  # The release this checkout is, as the upgrade writes it (v1.137.0; the
+  # ledger's v0.3.141 line 6): left empty, Compose resolved the images to
+  # :dev and a fresh install could not start a release's images.
+  local checked_out
+  checked_out="$(git -C "$HERE" describe --tags --exact-match 2>/dev/null || true)"
+  if [ -n "$checked_out" ] && [ -z "$(env_value RELEASE_TAG)" ]; then
+    set_env RELEASE_TAG "$checked_out"
+  fi
 
   ask_the_office_facts
   ask_the_certificate
@@ -807,6 +918,9 @@ cmd_install() {
     ask_the_fast_lane
   fi
   ask_the_backup
+  # Without a target the units are still written, disabled (v1.137.0; the
+  # ledger's v0.3.141 line 7), so a later target has them to enable.
+  backup_on || install_timers
   ask_the_mail
   ensure_the_token_file
   ensure_the_service_env
@@ -839,12 +953,12 @@ cmd_bring_up() {
   echo
   if [ "$build" = "--build" ]; then
     echo "$n. Building the images here (twenty to forty minutes the first time)."
-    compose build || { red "The build failed; the message above says why, usually a host in the guide's appendix the server could not reach. When it is fixed: ./transcribe bring-up --build"; exit 1; }
+    build_with_our_builder || { red "The build failed; the message above says why, usually a host in the guide's appendix the server could not reach. When it is fixed: ./transcribe bring-up --build"; exit 1; }
   else
     echo "$n. Pulling the images."
     if ! compose pull --quiet; then
       amber "The images could not be pulled; building them here instead (twenty to forty minutes)."
-      compose build || { red "The build failed; the message above says why. When it is fixed: ./transcribe bring-up --build"; exit 1; }
+      build_with_our_builder || { red "The build failed; the message above says why. When it is fixed: ./transcribe bring-up --build"; exit 1; }
     fi
   fi
   n=$((n + 1))
@@ -948,6 +1062,9 @@ ask_the_card() {
     echo "transcription is not installed now. Everything else works: cases,"
     echo "incidents, notes, clips, documents. Recordings people upload are kept"
     echo "and transcribed when the card arrives:   ./transcribe add transcription"
+    # The example's profile is for a server with a card (v1.137.0): left on,
+    # the start would ask for a service this server cannot run.
+    profile_remove transcription
     return 0
   fi
   echo "Transcription needs one card with $((TRANSCRIPTION_GB + DIARIZER_GB)) GB of memory to spare ($TRANSCRIPTION_GB GB for"
@@ -958,6 +1075,7 @@ ask_the_card() {
   else
     echo "  Transcription is not installed now. When it should be:"
     echo "  ./transcribe add transcription"
+    profile_remove transcription
   fi
 }
 
@@ -988,7 +1106,15 @@ configure_transcription() {
   ask_the_gpu
   local gpu gb batch
   gpu="$(service_env_value WHISPERX_GPU_UUID)"
-  gb="$(card_memory_gb "$gpu")"
+  gb="$(card_memory_gb "$gpu" || true)"
+  if ! card_in_the_cdi_spec "$gpu"; then
+    amber "The container toolkit's CDI spec does not name this card; regenerate it before the stack starts: sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml"
+  fi
+  local free
+  free="$(card_free_gb "$gpu" || true)"
+  if [ -n "$free" ] && [ "$free" -lt $((TRANSCRIPTION_GB + DIARIZER_GB)) ]; then
+    amber "The card has only ${free} GB free right now (another tenant holds the rest); the service and the diarizer want about $((TRANSCRIPTION_GB + DIARIZER_GB)) GB. They start when it is free."
+  fi
   if [ -n "$gb" ]; then
     batch="$(fit_the_card "$gb")"
     if [ -z "$batch" ]; then
@@ -1028,7 +1154,9 @@ ask_the_engine() {
   local gpu="" gb="" room=no suggested=none choices="shared|none"
   if transcription_is_on; then
     gpu="$(service_env_value WHISPERX_GPU_UUID)"
-    gb="$(card_memory_gb "$gpu")"
+    # Guarded (v1.137.0): under set -e an absent card ended the install here
+    # without a word (the ledger's v0.3.141 line 2).
+    gb="$(card_memory_gb "$gpu" || true)"
     if [ -n "$gb" ] && [ $((gb - TRANSCRIPTION_GB - DIARIZER_GB)) -ge "$ENGINE_GB" ]; then
       room=yes
       suggested=local
@@ -1111,18 +1239,30 @@ make_a_self_signed_certificate() {
     red "The app's address is not set yet (APP_HOSTNAME in .env). Nothing was written."
     return 1
   fi
+  # A common name is 64 characters at most, and the root's fixed words take
+  # 18 of them (v1.137.0; the ledger's v0.3.141 line 1).
+  if [ "${#hostname}" -gt 46 ]; then
+    red "The app's address is ${#hostname} characters, too long for a self-signed root's name (46 at most). Use a shorter name, or the office's own certificate."
+    return 1
+  fi
   mkdir -p "$HERE/tls"
   if [ ! -s "$HERE/tls/self-signed-root.key" ] || [ ! -s "$HERE/tls/self-signed-root.pem" ]; then
     openssl ecparam -name prime256v1 -genkey -noout -out "$HERE/tls/self-signed-root.key"
     chmod 600 "$HERE/tls/self-signed-root.key"
     openssl req -x509 -new -key "$HERE/tls/self-signed-root.key" -sha256 -days 3650 \
-      -subj "/CN=Gideon Transcribe at $hostname (self-signed root)" \
+      -subj "/CN=Transcribe root ($hostname)" \
       -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign" \
       -out "$HERE/tls/self-signed-root.pem"
     green "A self-signed root was made: tls/self-signed-root.pem (ten years)."
   fi
   openssl ecparam -name prime256v1 -genkey -noout -out "$HERE/tls/key.pem"
   chmod 600 "$HERE/tls/key.pem"
+  # Caddy runs as the app's account and reads the key (v1.137.0; the
+  # ledger's v0.3.141 line 4): handed over at 0400, as a placed key is.
+  if id "$APP_USER" >/dev/null 2>&1; then
+    sudo chown "$APP_USER:$APP_USER" "$HERE/tls/key.pem" 2>/dev/null && sudo chmod 400 "$HERE/tls/key.pem" 2>/dev/null \
+      || amber "Could not hand tls/key.pem to $APP_USER; run: sudo chown $APP_USER:$APP_USER tls/key.pem && sudo chmod 400 tls/key.pem"
+  fi
   openssl req -new -key "$HERE/tls/key.pem" -subj "/CN=$hostname" \
     -addext "subjectAltName=DNS:$hostname" -out "$HERE/tls/self-signed.csr"
   printf 'subjectAltName=DNS:%s\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n' "$hostname" >"$HERE/tls/self-signed.ext"
@@ -1212,10 +1352,10 @@ WORDS
   configure_transcription || exit 1
   echo
   if [ "$build" = "--build" ]; then
-    compose --profile transcription build whisperx diarizer
+    ensure_the_builder && compose --profile transcription build --builder "$BUILDER" whisperx diarizer
   elif ! compose --profile transcription pull --quiet whisperx diarizer 2>/dev/null; then
     echo "  The images could not be pulled; building them here instead."
-    compose --profile transcription build whisperx diarizer
+    ensure_the_builder && compose --profile transcription build --builder "$BUILDER" whisperx diarizer
   fi
   compose run --rm whisperx selftest || { red "The service's self-test failed on this card; see above. Nothing was started."; exit 1; }
   compose run --rm whisperx pull
@@ -1320,6 +1460,7 @@ prerequisites() {
     fail "there is no $APP_USER account; the install guide's Step 1 makes it"
     ok=no
   fi
+  check_the_containerd_root
 
   echo
   [ "$ok" = "yes" ]
@@ -1338,8 +1479,19 @@ ask_the_office_facts() {
   set_env HTTPS_PORT "${value:-8443}"
 
   echo
-  value="$(ask "The server's own LAN address to listen on, so this is off
-  every other interface the machine has" "$(env_value BIND_ADDRESS)")"
+  # The LAN address, suggested from the server itself and never every
+  # interface (v1.137.0; the ledger's §4 and its v0.3.135 line 7).
+  local suggested
+  suggested="$(env_value BIND_ADDRESS)"
+  case "$suggested" in ""|0.0.0.0) suggested="$(hostname -I 2>/dev/null | awk '{print $1}')" ;; esac
+  while true; do
+    value="$(ask "The server's own LAN address to listen on, so this is off
+  every other interface the machine has" "$suggested")"
+    case "$value" in
+      ""|0.0.0.0|::) echo "  The LAN address itself, please (0.0.0.0 would listen on every interface)." >&2 ;;
+      *) break ;;
+    esac
+  done
   set_env BIND_ADDRESS "$value"
 
   echo
@@ -1354,6 +1506,13 @@ ask_the_office_facts() {
       amber "  $value is on the same drive as the operating system."
       echo "  Recordings fill a drive (a six-hour body-camera export is about 13 GB)"
       echo "  and a full OS drive stops the whole server, not only the app."
+      if data_volume_present; then
+        # Refused outright (v1.137.0): the box has a data volume, and the root
+        # filesystem is the operating system's (the ledger's §6).
+        echo "  This server has a data volume at /data: use a folder under it, for"
+        echo "  example /data/transcribe."
+        continue
+      fi
       if ask_yes_no "  Use it anyway?" no; then break; fi
     else
       break
@@ -1365,6 +1524,7 @@ ask_the_office_facts() {
   value="$(ask "The time zone" "$(env_value TZ)")"
   set_env TZ "${value:-UTC}"
   set_service_env TZ "${value:-UTC}"
+  write_the_cpu_limit
 
   # The app runs as its own account, and compose needs its numbers; the
   # service's own compose reads them under its own names (v1.82.1).
@@ -1467,10 +1627,24 @@ ask_the_gpu() {
   set_service_env WHISPERX_GPU_UUID "$value"
 }
 
+ensure_the_directory_files() {
+  # The compose file names the bind password and the office root as secrets
+  # whether or not directory sign-in is on, and Compose refuses to start on
+  # a missing file (v1.137.0; the ledger's v0.3.141 line 3). Both exist
+  # empty when nothing was given, as the mail and backup secrets do.
+  mkdir -p "$CA_DIR" "$SECRETS" 2>/dev/null || true
+  [ -e "$CA_DIR/office-root.pem" ] || : >"$CA_DIR/office-root.pem"
+  if ! secret_exists "$SECRETS/ldap_bind_password"; then
+    write_secret "$SECRETS/ldap_bind_password" ""
+    own_the_secrets
+  fi
+}
+
 make_the_secrets() {
   echo
   mkdir -p "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null || true
   chmod 700 "$SECRETS" "$SERVICE_SECRETS" 2>/dev/null || true
+  ensure_the_directory_files
 
   # The random ones are made here and never typed by anybody.
   random_secret "$SECRETS/django_secret_key" "the Django key"
@@ -2697,7 +2871,11 @@ install_timers() {
   # The three timers and their services, from the repository's unit files
   # with the install home and the times filled in. Nothing else is put on the
   # host: the tool is a container.
-  local backup_time drill_time drill_plus
+  local backup_time drill_time drill_plus zone
+  # Each timer states the office zone (v1.137.0; the ledger's §7): the host's
+  # zone is a box-wide setting another tenant may set, and a timer without
+  # one fires in whatever the host holds.
+  zone="$(env_value TZ)"; zone="${zone:-UTC}"
   backup_time="$(env_value BACKUP_TIME)"; backup_time="${backup_time:-02:00}"
   drill_time="$(env_value DRILL_TIME)"; drill_time="${drill_time:-04:00}"
   drill_plus="$(date -d "today $drill_time 30 minutes" +%H:%M 2>/dev/null || echo "04:30")"
@@ -2706,6 +2884,7 @@ install_timers() {
     for kind in service timer; do
       sed -e "s|__INSTALL_HOME__|$HERE|g" -e "s|__BACKUP_TIME__|$backup_time|g" \
           -e "s|__DRILL_TIME__|$drill_time|g" -e "s|__DRILL_PLUS_30__|$drill_plus|g" \
+          -e "s|__TZ__|$zone|g" \
           "$HERE/systemd/$unit.$kind" | sudo tee "/etc/systemd/system/$unit.$kind" >/dev/null
     done
   done
@@ -2886,7 +3065,6 @@ verify_the_pull() {
 # records, and no other project's Dockerfile does: the cache is shared with the
 # rest of the server (box ledger, section 5), so only records carrying one of
 # these are pruned, never the whole cache.
-BUILD_CACHE_WORDS="requirements|audiowaveform|g729|/opt/app|/opt/service|/opt/diarizer|collectstatic|user-guide|VIRTUAL_ENV|python3-venv|libsasl2|ldap|torchcodec|SortformerEncLabelModel|libsndfile1"
 
 # A WhisperX build needs room for its 13.8 GB image and about as much cache
 # again on the root filesystem, where the image store lives (box ledger, open
@@ -2917,25 +3095,17 @@ tidy_the_images() {
       | grep -v -e ":${keep}\$" -e ":${previous}\$" -e ':dev$' -e ':<none>$' \
       | xargs -r docker image rm >/dev/null 2>&1 || true
   done
-  # A bare `docker builder prune -f` removes only what buildx calls dangling,
-  # and the records that matter (the torch install, 11.5 GB per WhisperX
-  # build) are not dangling: nine of them sat on the root filesystem until it
-  # filled. Pruned by this project's own words instead, through `docker buildx
-  # prune`: the older `docker builder prune` takes the same flag, says
-  # nothing, and prunes only the dangling records anyway (v1.36.4 used it and
-  # freed nothing); `buildx` reads the pattern, as `docker buildx du` does.
-  # `-a` because the records are marked shared with the image store, and
-  # without it a filtered prune keeps every shared record and frees nothing
-  # either; with the filter, `-a` still touches nothing outside it. The
-  # records of the build just done go too: a later build was seen not to
-  # reuse them (nine copies of one install), and the images carry the layers.
-  # The pattern is quoted inside the filter: buildx 0.36 reads an unquoted
-  # `|` or `/` as the end of the value, matches nothing, and says nothing
-  # (six torch installs, 69 GB, sat through the v1.52.0 upgrade's tidy). The
-  # words include every image's last step (the ldap and torchcodec checks):
-  # a record is pruned only once nothing built on it remains, so a topmost
-  # step the pattern misses pins the whole stack beneath it.
-  docker buildx prune -a -f --filter "description~=\"${BUILD_CACHE_WORDS}\"" >/dev/null 2>&1 || true
+  # The build cache is this project's own builder's (v1.137.0; the ledger's
+  # §5 and its v0.3.135 line 4), so the prune reaches nothing another
+  # tenant built and nothing of ours waits on their prune. `-a`: the records
+  # that matter are marked shared with the image store, and a plain prune
+  # keeps them; the images carry the layers, so nothing is lost. Until this
+  # release the prune ran on the daemon's shared cache with a filter of this
+  # project's own words, which met any record carrying one of them, whoever
+  # built it.
+  if docker buildx inspect "$BUILDER" >/dev/null 2>&1; then
+    docker buildx prune -a -f --builder "$BUILDER" >/dev/null 2>&1 || true
+  fi
 }
 
 build_the_images() {
@@ -2954,7 +3124,7 @@ build_the_images() {
     echo "  To put the checkout back: ./transcribe rollback"
     exit 1
   fi
-  if ! compose build; then
+  if ! build_with_our_builder; then
     echo
     red "The build failed, so the upgrade stops here."
     echo "  The old containers are still running and nothing was replaced."
@@ -3079,6 +3249,7 @@ finish_the_upgrade() {
   ensure_the_service_env
   migrate_the_profiles
   migrate_the_card_memory
+  write_the_cpu_limit
   make_the_data_folders
   ensure_the_token_file
 
@@ -3184,6 +3355,18 @@ migrate_the_profiles() {
   if ! transcription_is_on && [ -n "$gpu" ] && [ "$gpu" != "<GPU UUID>" ]; then
     profile_add transcription
     pass "added transcription to COMPOSE_PROFILES (the service is behind a profile from v1.83.0)"
+  fi
+}
+
+write_the_cpu_limit() {
+  # The media worker's CPU limit from the host it runs on (v1.137.0; the
+  # ledger's v0.3.141 line 5): forty at most, as before, and never more than
+  # the host has, since Docker refuses a limit above its count.
+  local cores
+  cores="$(nproc 2>/dev/null || echo 4)"
+  [ "$cores" -gt 40 ] 2>/dev/null && cores=40
+  if [ "$(env_value MEDIA_WORKER_CPUS)" != "$cores" ]; then
+    set_env MEDIA_WORKER_CPUS "$cores"
   fi
 }
 

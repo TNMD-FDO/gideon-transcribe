@@ -50,14 +50,15 @@ class Command(BaseCommand):
         # The directory is not connected yet, so there is nothing to check
         # against; when it is, this is where that check belongs.
 
-        if not sys.stdin.isatty():
-            raise CommandError(
-                "This command asks for a password, so it needs a terminal. Run it "
-                "with `docker compose run --rm app create-local-admin`."
-            )
-
-        password = getpass.getpass("Password: ")
-        again = getpass.getpass("Password again: ")
+        if sys.stdin.isatty():
+            password = getpass.getpass("Password: ")
+            again = getpass.getpass("Password again: ")
+        else:
+            # An automated install hands the password on standard input, one
+            # line, and nothing is echoed (v1.137.0; the box ledger's
+            # v0.3.141 line 8). Until then a pipe was refused.
+            password = sys.stdin.readline().rstrip("\r\n")
+            again = password
         if password != again:
             raise CommandError("The two passwords are not the same. Nothing was made.")
         if len(password) < LEAST_PASSWORD:

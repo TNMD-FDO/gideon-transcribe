@@ -174,10 +174,10 @@ sudo ubuntu-drivers install --gpgpu
 
 Then reboot. Check: `nvidia-smi` prints the card and a driver of 570 or newer. If it prints an older driver, `sudo ubuntu-drivers list --gpgpu` shows the ones on offer, and `sudo apt install nvidia-driver-<version>-server` picks a newer one.
 
-**The NVIDIA container toolkit with CDI** (only with a card), from NVIDIA's own repository:
+**The NVIDIA container toolkit with CDI** (only with a card), from NVIDIA's CUDA repository, the one source the shared box's recipe uses for the driver's tools too (the box ledger's §2). The `cuda-keyring` package writes the apt source and its keyring together:
 
 ```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
+cd /tmp && curl -fsSLO "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu$(. /etc/os-release && echo "${VERSION_ID//./}")/x86_64/cuda-keyring_1.1-1_all.deb" && sudo dpkg -i cuda-keyring_1.1-1_all.deb
 ```
 
 ```bash
@@ -185,14 +185,18 @@ sudo apt update && sudo apt install -y nvidia-container-toolkit
 ```
 
 ```bash
-sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-```
-
-```bash
 sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
 ```
 
-Check: `nvidia-ctk cdi list` prints a line beginning `nvidia.com/gpu=` for the card. `./transcribe install` runs the same check and says so when it is missing. After a driver upgrade, run the `cdi generate` line again.
+Check: `nvidia-ctk cdi list` prints a line beginning `nvidia.com/gpu=` for the card. `./transcribe install` runs the same check and says so when it is missing, and `./transcribe check` says when a card the stack names has gone from the list. After a driver upgrade, run the `cdi generate` line again and start the stack again, so each container is recreated with the new device nodes. Nothing here runs `nvidia-ctk runtime configure` or restarts Docker: CDI needs neither, and a Docker restart reaches every container on the server, another application's included.
+
+**containerd's image store on the Docker volume** (before the first image is pulled or built). The shared box keeps Docker's images under `/var/lib/docker/containerd`, on the Docker volume rather than the root filesystem, and the setting can only be made while the store is still empty; once populated it moves by hand in an announced window. Set it now, while nothing has been pulled:
+
+```bash
+sudo mkdir -p /etc/containerd && (containerd config default | sudo tee /etc/containerd/config.toml >/dev/null) && sudo sed -i 's|^root = .*|root = "/var/lib/docker/containerd"|' /etc/containerd/config.toml && sudo systemctl restart containerd docker
+```
+
+Check: `grep '^root' /etc/containerd/config.toml` prints the Docker volume's path. `./transcribe check` notes when the store is still at the package default. A server that is this app's alone may leave it, which the note then repeats at every check.
 
 ### Step 1: prepare the server
 
@@ -303,6 +307,8 @@ docker compose run --rm whisperx pull
 ```bash
 docker compose up -d
 ```
+
+With a shared engine named, the stack joins that engine's Docker network at every start. While that network is absent (its stack not installed yet, or removed), `./transcribe bring-up` starts the stack without it and says so; the AI assistant shows as unreachable on the Status page until the network is back and the stack is started again, which rejoins it (v1.137.0).
 
 **Make the Local admin.** An Admin account kept inside the app, for reaching the Admin panel when the directory is down. Give it a long password and keep that where the office keeps such things:
 
@@ -591,7 +597,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 |---|---|
 | `APP_HOSTNAME` | The app's name in your DNS, which is also the name on its certificate. |
 | `HTTPS_PORT` | The port it answers on. 8443 by default, so it can share a server with something on 443. |
-| `BIND_ADDRESS` | The server address the port is published on. The LAN address keeps it off other interfaces the machine has. |
+| `BIND_ADDRESS` | The server's own LAN address, which the port is published on; the install suggests it. Never empty and never every interface: the stack refuses to start without one (v1.137.0). |
 | `ALLOWED_CLIENT_CIDRS` | The client networks allowed in, separated by spaces. Everyone else gets 403 with no page. |
 
 **The folder and the account**
@@ -644,6 +650,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `LOG_LEVEL` | `INFO` says what happened, to which id, and how long it took. It never prints transcript text, file names, or anything a user typed, and the libraries that would (the queue, the engine client) are held at WARNING whatever this says. |
 | `MEDIA_THREADS_PER_JOB` | How many processor threads one piece of media work may use. Media work never uses the card. |
 | `MEDIA_CONCURRENT_JOBS` | How many pieces of media work run at once. These two are how you keep some of the server for everything else. |
+| `MEDIA_WORKER_CPUS` | The most processors the media worker may use, written by the install and the upgrade from the host's own count, forty at most (v1.137.0). |
 | `RELEASE_TAG` | The Release this server is running. Written by `./transcribe upgrade`, never by hand. Empty on a first install. |
 
 **The AI assistant's engine.** The assistant talks to a language-model engine that is either one your office already runs or one this stack starts. Without either, the assistant stays off and everything else works.

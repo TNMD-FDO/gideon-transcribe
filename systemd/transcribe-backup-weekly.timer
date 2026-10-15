@@ -2,7 +2,7 @@
 Description=Gideon Transcribe weekly repository prune and check, Sundays at DRILL_TIME
 
 [Timer]
-OnCalendar=Sun *-*-* __DRILL_TIME__:00
+OnCalendar=Sun *-*-* __DRILL_TIME__:00 __TZ__
 Persistent=true
 
 [Install]

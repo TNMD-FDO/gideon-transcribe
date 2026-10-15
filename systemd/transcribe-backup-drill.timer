@@ -5,7 +5,7 @@ Description=Gideon Transcribe monthly restore drill, the first Sunday at DRILL_T
 # The first Sunday of the month: a Sunday falling on the 1st to the 7th. Thirty
 # minutes after the weekly prune and check, which the service is also ordered
 # after, so the two never overlap.
-OnCalendar=Sun *-*-01..07 __DRILL_PLUS_30__:00
+OnCalendar=Sun *-*-01..07 __DRILL_PLUS_30__:00 __TZ__
 Persistent=true
 
 [Install]

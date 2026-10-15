@@ -21,6 +21,64 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.137.0, 2026-10-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Transcribe's half of the shared box's rules: the directions in the box
+ledger's v0.3.135 entry and the install defects its v0.3.141 pair proof
+found, answered by number in the ledger's log. Nothing a user sees
+changes; the install, the check and the start fit a server shared with
+another application, and an install on a fresh server succeeds where the
+proof found it stopping.
+
+- **The install guide's Step 0** follows the shared recipe: the container
+  toolkit from NVIDIA's CUDA repository, no runtime-configure line and no
+  Docker restart, containerd's image store set onto the Docker volume
+  before the first image. `./transcribe check` and the install note a
+  store still at the package default.
+- **The data folder** is refused on the operating system's drive when the
+  server has a data volume at `/data`, with the fix named; the question
+  and its warning stay for a server with no data volume.
+- **The stack starts without the engine's network.** With a shared engine
+  named and its Docker network absent, `./transcribe bring-up` and the
+  upgrade start the stack without the overlay and say so; the assistant
+  shows as unreachable until the network is back and the stack is started
+  again.
+- **A builder of this project's own.** The images build through a named
+  Docker builder, its buildkit image pinned by tag and digest, and the
+  prune after a build runs on that builder alone; the word filter that
+  could meet another tenant's cache records is gone.
+- **The card's room and its name.** The install and `add transcription`
+  read the card's free memory against the service's need and say when
+  another tenant holds it; the check fails when a card the stack names is
+  missing from the container toolkit's CDI spec, naming the fix.
+- **Timers that state the zone**: each backup timer's calendar carries the
+  office time zone from `.env`, written at install and at every upgrade.
+- **Caddy on the LAN address**: the example environment leaves the bind
+  address empty, the install suggests the server's own address and refuses
+  empty or every-interface, and the compose file refuses to start without
+  one. This server already binds its LAN address, so nothing moves on it.
+- **The pair proof's eight install defects**: the self-signed root's name
+  fits a hostname up to 46 characters and refuses a longer one; a server
+  without a card takes the transcription profile out and the engine
+  question no longer dies reading an absent card; the directory's two
+  secret files exist empty when sign-in is off; the self-signed key is
+  handed to the app's account; the media worker's CPU limit comes from the
+  host's own count, forty at most; the install writes `RELEASE_TAG` from
+  the tag checked out; the backup timers are written disabled without a
+  target; `create-local-admin` reads the password from a pipe.
+
+Not in this release, on purpose: the firewall rules for port 8443 in the
+shape the ledger's v0.3.76 entry gives, which get their own release and a
+window with the operator present, and the worker's move to the engine's
+new network, which is an operator's action at an hour agreed with the
+other project. The ledger's rules version is 2026-10-15.2 with §2's
+Transcribe ownership line completed.
+
 ## v1.136.1, 2026-10-15
 
 ```
