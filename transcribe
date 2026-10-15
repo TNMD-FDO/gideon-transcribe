@@ -607,6 +607,26 @@ check_the_containerd_root() {
   fi
 }
 
+check_the_timers() {
+  # The timers state the office zone from v1.137.0. The units are written by
+  # the install and by `./transcribe install-timers`, both with sudo, and not
+  # by the upgrade, which runs without it; a unit from before fires in the
+  # host's zone until the command is run once (v1.137.2).
+  local zone unit calendar seen=0
+  zone="$(env_value TZ)"; zone="${zone:-UTC}"
+  for unit in transcribe-backup transcribe-backup-weekly transcribe-backup-drill; do
+    [ -f "/etc/systemd/system/$unit.timer" ] || continue
+    seen=1
+    calendar="$(grep -m1 '^OnCalendar=' "/etc/systemd/system/$unit.timer" 2>/dev/null)"
+    case "$calendar" in
+      *" $zone") ;;
+      *) note "$unit.timer does not state the zone $zone, so it fires in the host's zone: ./transcribe install-timers"; return 0 ;;
+    esac
+  done
+  [ "$seen" = 1 ] && pass "the timers state the zone $zone"
+  return 0
+}
+
 cmd_check() {
   need_env
   FAILURES=0
@@ -684,6 +704,7 @@ cmd_check() {
     fi
   fi
   check_the_containerd_root
+  check_the_timers
 
   echo
   echo "The name and the certificate"
@@ -3061,10 +3082,20 @@ verify_the_pull() {
 # keeps two tags of each of this repository's images, the one it starts and
 # the one it left, and prunes the build cache it made. "dev" is kept for a
 # checkout that is not at a Release.
-# The words this repository's two Dockerfiles leave in the build cache's
-# records, and no other project's Dockerfile does: the cache is shared with the
-# rest of the server (box ledger, section 5), so only records carrying one of
-# these are pruned, never the whole cache.
+# The strings this repository's Dockerfiles left in the daemon's shared build
+# cache before v1.137.0, when the images were built on the daemon's own
+# builder: each is from a RUN or COPY line of ours (three of them from the
+# diarizer's install line before v1.135.0) and none is in GIDEON's three
+# Dockerfiles, read at the 2026-10-15 fetch. prune_the_old_records prunes
+# those records once, by this filter, and never runs again (v1.137.2; the
+# ledger's §5). Every build since v1.137.0 goes through this project's own
+# builder and leaves nothing in the daemon's cache.
+OLD_CACHE_STRINGS="audiowaveform|pytesseract|import ldap|g729|requirements-torch|punkt_tab|libpython3.12t64|nemo-toolkit|download.pytorch.org|torchcodec|/opt/service|/opt/diarizer|/opt/app|tesseract-ocr|libboost-program-options|libldap-dev|fonts-dejavu-core|Cython packaging|collectstatic|user-guide|VIRTUAL_ENV|python3-venv"
+
+# How much build cache this project's builder keeps between upgrades when
+# .env says nothing (v1.137.2): one build of the three images leaves about
+# 40 GB of records, and the newest are kept up to this ceiling.
+BUILD_CACHE_GB_DEFAULT=60
 
 # A WhisperX build needs room for its 13.8 GB image and about as much cache
 # again on the root filesystem, where the image store lives (box ledger, open
@@ -3097,15 +3128,37 @@ tidy_the_images() {
   done
   # The build cache is this project's own builder's (v1.137.0; the ledger's
   # §5 and its v0.3.135 line 4), so the prune reaches nothing another
-  # tenant built and nothing of ours waits on their prune. `-a`: the records
-  # that matter are marked shared with the image store, and a plain prune
-  # keeps them; the images carry the layers, so nothing is lost. Until this
-  # release the prune ran on the daemon's shared cache with a filter of this
-  # project's own words, which met any record carrying one of them, whoever
-  # built it.
+  # tenant built and nothing of ours waits on their prune. It is kept up to
+  # BUILD_CACHE_GB (v1.137.2): the newest records stay, so an upgrade that
+  # builds rebuilds only what changed, and the least recently used go first
+  # once the ceiling is passed. v1.137.0 emptied the cache after every build
+  # (`prune -a`), which built all three images from nothing at every
+  # building upgrade. `--max-used-space` is the ceiling; `--reserved-space`
+  # is a floor and would keep everything.
+  local ceiling
+  ceiling="$(env_value BUILD_CACHE_GB)"
+  case "$ceiling" in ''|*[!0-9]*) ceiling="$BUILD_CACHE_GB_DEFAULT" ;; esac
   if docker buildx inspect "$BUILDER" >/dev/null 2>&1; then
-    docker buildx prune -a -f --builder "$BUILDER" >/dev/null 2>&1 || true
+    docker buildx prune -f --builder "$BUILDER" --max-used-space "${ceiling}gb" >/dev/null 2>&1 || true
   fi
+  prune_the_old_records
+}
+
+prune_the_old_records() {
+  # Once: the records this project's builds left in the daemon's shared
+  # cache before v1.137.0, on the daemon's own builder, by OLD_CACHE_STRINGS
+  # (645 records, 168 GB, on the office's server at 2026-10-15: the filtered
+  # prune of v1.36.5 had stopped freeing them). Marked done in .env so the
+  # filter never runs again: a word filter is no lasting way to tell our
+  # records from another tenant's (the ledger's v0.3.135 line 4), and from
+  # v1.137.0 our builds leave nothing there.
+  [ "$(env_value OLD_CACHE_PRUNED)" = "yes" ] && return 0
+  local before after
+  before="$(docker buildx du --builder default 2>/dev/null | awk '/^Total:/{print $2}')"
+  docker buildx prune -a -f --builder default --filter "description~=\"$OLD_CACHE_STRINGS\"" >/dev/null 2>&1 || true
+  after="$(docker buildx du --builder default 2>/dev/null | awk '/^Total:/{print $2}')"
+  set_env OLD_CACHE_PRUNED yes
+  echo "The daemon's build cache held ${before:-?} and holds ${after:-?} now that this project's records from before v1.137.0 are pruned (once; never again)."
 }
 
 build_the_images() {

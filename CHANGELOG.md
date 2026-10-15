@@ -21,6 +21,43 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.137.2, 2026-10-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The build cache kept between upgrades, the records left behind on the
+shared daemon pruned once, and the timers' zone told the truth. Nothing a
+user sees changes.
+
+- **The build cache is kept, up to a ceiling.** v1.137.0 emptied this
+  project's builder after every build, so every upgrade that built an image
+  built all three from nothing (twenty to forty minutes). The builder now
+  keeps its newest records up to `BUILD_CACHE_GB` (60 as shipped, a `.env`
+  value with a row in the install guide's appendix; one build of the three
+  images leaves about 40 GB), and the least recently used go first past the
+  ceiling, so an upgrade rebuilds only what changed. A fresh install's first
+  build is as long as before: it starts with nothing either way.
+- **The old records pruned, once.** Before v1.137.0 the images were built
+  on the daemon's own builder, and the tidy step's filtered prune had
+  stopped freeing their records at some tag: on the office's server 645 of
+  them stood, 168 GB of the daemon's 175 GB cache, beside 20 of GIDEON's at
+  0.8 GB. The first tidy after this upgrade prunes them by a filter of
+  strings from this project's own Dockerfiles, checked against GIDEON's
+  three (none carries one), says what the cache held before and after, and
+  writes `OLD_CACHE_PRUNED=yes` to `.env` so the filter never runs again.
+  Every build since v1.137.0 leaves nothing in the daemon's cache.
+- **The check reads the timers.** `./transcribe check` says when an
+  installed timer does not state the office zone and names
+  `./transcribe install-timers`, which writes the units with sudo. The
+  v1.137.0 section's "at every upgrade" is corrected: the upgrade runs
+  without sudo and leaves the units alone.
+- **The ledger**: the figures above, §6's observed use of the Docker volume
+  (261 GB, most of it those records), and the corrected timer answer, in
+  this project's subsection for GIDEON to fold.
+
 ## v1.137.1, 2026-10-15
 
 ```
@@ -69,7 +106,10 @@ proof found it stopping.
   another tenant holds it; the check fails when a card the stack names is
   missing from the container toolkit's CDI spec, naming the fix.
 - **Timers that state the zone**: each backup timer's calendar carries the
-  office time zone from `.env`, written at install and at every upgrade.
+  office time zone from `.env`, written at install and by
+  `./transcribe install-timers`. (Corrected at v1.137.2: this section said
+  "at every upgrade", but the upgrade runs without sudo and does not rewrite
+  the units; an existing install runs the command once.)
 - **Caddy on the LAN address**: the example environment leaves the bind
   address empty, the install suggests the server's own address and refuses
   empty or every-interface, and the compose file refuses to start without

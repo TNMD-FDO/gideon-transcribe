@@ -5,6 +5,7 @@ or the guide carries it."""
 from __future__ import annotations
 
 import io
+import re
 import sys
 from pathlib import Path
 
@@ -60,9 +61,58 @@ def test_the_images_build_and_prune_through_our_own_builder():
     assert 'BUILDER="transcribe"' in SCRIPT
     assert "moby/buildkit:v0.34.0@sha256:" in SCRIPT
     assert "BUILD_CACHE_WORDS" not in SCRIPT
-    assert 'docker buildx prune -a -f --builder "$BUILDER"' in SCRIPT
     assert SCRIPT.count('build --builder "$BUILDER"') >= 3
     assert "compose build ||" not in SCRIPT
+
+
+def test_the_build_cache_is_kept_up_to_a_ceiling():
+    # v1.137.2: the newest records stay between upgrades; `--reserved-space`
+    # is a floor, not a ceiling, and `prune -a` on our builder emptied it.
+    tidy = between(SCRIPT, "tidy_the_images() {")
+    assert (
+        'docker buildx prune -f --builder "$BUILDER" --max-used-space "${ceiling}gb"'
+        in tidy
+    )
+    assert 'docker buildx prune -a -f --builder "$BUILDER"' not in SCRIPT
+    assert not re.search(r"^\s*docker .*--reserved-space", SCRIPT, re.M)
+    assert 'ceiling="$(env_value BUILD_CACHE_GB)"' in tidy
+    assert "BUILD_CACHE_GB_DEFAULT=60" in SCRIPT
+    assert "\nBUILD_CACHE_GB=60\n" in EXAMPLE
+    assert "| `BUILD_CACHE_GB` |" in GUIDE
+
+
+def test_the_old_records_are_pruned_once_by_our_own_strings():
+    # v1.137.2: the records left on the daemon's builder before v1.137.0 go
+    # once, by strings from our Dockerfiles, and the filter never runs again.
+    assert "prune_the_old_records" in between(SCRIPT, "tidy_the_images() {")
+    once = between(SCRIPT, "prune_the_old_records() {")
+    assert '[ "$(env_value OLD_CACHE_PRUNED)" = "yes" ] && return 0' in once
+    assert "set_env OLD_CACHE_PRUNED yes" in once
+    assert "docker buildx prune -a -f --builder default --filter" in once
+    assert '--filter "description~=\\"$OLD_CACHE_STRINGS\\""' in once
+    assert "\nOLD_CACHE_PRUNED=\n" in EXAMPLE
+    strings = between(SCRIPT, 'OLD_CACHE_STRINGS="', '"\n').split("|")
+    ours = "".join(
+        (HERE / path).read_text(encoding="utf-8")
+        for path in (
+            "app/Dockerfile",
+            "whisperx-service/Dockerfile",
+            "whisperx-service/diarizer/Dockerfile",
+        )
+    )
+    # Three are from the diarizer's install line before v1.135.0.
+    gone_from_the_files = {"nemo-toolkit", "download.pytorch.org", "Cython packaging"}
+    assert len(strings) == 22
+    for one in strings:
+        assert one in gone_from_the_files or one in ours, one
+
+
+def test_the_check_reads_the_timers_for_the_zone():
+    # v1.137.2: the upgrade runs without sudo and never rewrites the units.
+    assert "check_the_timers" in between(SCRIPT, "cmd_check() {")
+    check = between(SCRIPT, "check_the_timers() {")
+    assert "./transcribe install-timers" in check and '*" $zone")' in check
+    assert "install_timers" not in between(SCRIPT, "finish_the_upgrade() {")
 
 
 def test_the_card_is_checked_for_room_and_for_its_cdi_name():
@@ -138,3 +188,7 @@ def test_the_ledger_answers_the_directions_by_number():
     assert "Your **v0.3.135**: 1. Done" in ours and "10. Done at this fetch." in ours
     assert "Your **v0.3.141**: 1. Done" in ours
     assert "its named Docker builder `transcribe`" in ledger
+    assert "at v1.137.2 (the build cache kept to a ceiling" in ours
+    assert "written at install and at every upgrade" not in (
+        HERE / "CHANGELOG.md"
+    ).read_text(encoding="utf-8")
