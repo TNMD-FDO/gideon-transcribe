@@ -155,6 +155,8 @@ def cut_stills(
         target.mkdir(parents=True, exist_ok=True)
         try:
             written = media.grab_frames(Path(source), target, [into], height=height)
+            if written:
+                _as_jfif(written[0])
         except Exception:  # noqa: BLE001 - a still is never worth failing the report
             return index, None
         return index, (written[0] if written else None)
@@ -163,6 +165,21 @@ def cut_stills(
         return {}
     with ThreadPoolExecutor(max_workers=CUTTERS) as pool:
         return dict(pool.map(one, plan))
+
+
+def _as_jfif(still: Path) -> None:
+    """Rewrite a still so the Word library takes it (v1.136.1).
+
+    ffmpeg writes a JPEG that opens with a comment segment and carries no
+    JFIF marker; python-docx knows a JPEG only by "JFIF" or "Exif" at its
+    sixth byte, so it refused every still and the report printed none, while
+    the guard around the picture swallowed the refusal. Pillow writes the
+    marker.
+    """
+    from PIL import Image
+
+    with Image.open(still) as picture:
+        picture.convert("RGB").save(still, "JPEG", quality=90)
 
 
 # The document -----------------------------------------------------------------------

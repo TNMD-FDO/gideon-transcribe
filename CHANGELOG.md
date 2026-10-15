@@ -21,6 +21,23 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.136.1, 2026-10-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Timeline report's Word export prints its stills. It never had: the
+stills were cut from every camera at every event, as the foot's count
+showed, but the picture ffmpeg writes opens with a comment segment and
+carries no JFIF marker, and the Word library knows a JPEG only by that
+marker, so it refused every still, and the guard around the picture
+swallowed the refusal. Each still is now rewritten with the marker before
+it goes into the document. The report's tests draw their stills the way
+ffmpeg does from here on, so the shape is covered. Found by the
+maintainer's own export; nothing else changes.
+
 ## v1.136.0, 2026-10-15
 
 ```

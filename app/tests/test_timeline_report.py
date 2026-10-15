@@ -35,18 +35,41 @@ def fake_frames(monkeypatch):
     cut = []
 
     def grab(source, folder, times, *, height, timeout=0):
-        from PIL import Image
-
         out = []
         for number, at in enumerate(times, start=1):
             target = folder / f"frame-{number}.jpg"
-            Image.new("RGB", (32, 18), "grey").save(target)
+            target.write_bytes(a_jpeg_as_ffmpeg_writes_it())
             out.append(target)
             cut.append((Path(source).name, round(at, 1), height))
         return out
 
     monkeypatch.setattr(media, "grab_frames", grab)
     return cut
+
+
+def a_jpeg_as_ffmpeg_writes_it() -> bytes:
+    """A small grey JPEG with ffmpeg's shape: a comment segment first and no
+    JFIF marker, which is what the Word library refused until v1.136.1."""
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (32, 18), "grey").save(buffer, "JPEG")
+    data = buffer.getvalue()
+    assert data[2:4] == b"\xff\xe0" and data[6:10] == b"JFIF"
+    app0_length = int.from_bytes(data[4:6], "big")
+    comment = b"Lavc61.19.100"
+    segment = b"\xff\xfe" + (len(comment) + 2).to_bytes(2, "big") + comment
+    return data[:2] + segment + data[4 + app0_length :]
+
+
+def test_a_still_is_rewritten_with_the_marker_the_word_library_wants(tmp_path):
+    from core import timeline_report
+
+    still = tmp_path / "frame-1.jpg"
+    still.write_bytes(a_jpeg_as_ffmpeg_writes_it())
+    assert still.read_bytes()[6:10] != b"JFIF"
+    timeline_report._as_jfif(still)
+    assert still.read_bytes()[6:10] == b"JFIF"
 
 
 def with_events(incident, person):
