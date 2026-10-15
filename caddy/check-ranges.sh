@@ -15,9 +15,11 @@
 #   ./caddy/check-ranges.sh
 set -euo pipefail
 
-CADDY_IMAGE="${CADDY_IMAGE:-caddy:2.11-alpine}"
-PORT="${PORT:-8443}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# The Caddy the stack runs, read from compose.yaml (v1.135.0): until then
+# the check pulled whatever the floating tag held that day.
+CADDY_IMAGE="${CADDY_IMAGE:-$(grep -o 'caddy:[^ @]*@sha256:[0-9a-f]*' "$HERE/compose.yaml" | head -1)}"
+PORT="${PORT:-8443}"
 
 WORK="$(mktemp -d)"
 NAME="caddy-range-check-$$"

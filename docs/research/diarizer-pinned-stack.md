@@ -18,7 +18,7 @@ Research date: 2026-09-24, the day the diarizer chapter (Phase 5 chapter 4) was 
 | soundfile, librosa | 0.14.0, 1.0.0 | NeMo reads the WAV through soundfile (`libsndfile1` from apt) | the probe's freeze |
 | FastAPI / uvicorn | 0.141.1 / 0.52.4 | The container's small HTTP face, the same versions as the WhisperX service's | `whisperx-service/requirements.txt` |
 | Cython, packaging | 3.3.0, 24.2 | NeMo's build needs them present before its own install | the probe's freeze |
-| everything else | `whisperx-service/diarizer/constraints.txt` | 147 pins, the probe's `pip freeze` on the cu128 image, so a rebuild resolves to the same tree | |
+| everything else | `whisperx-service/diarizer/constraints.txt` | 153 pins: the probe's `pip freeze` on the cu128 image, plus the six the web face (FastAPI and uvicorn) pulls in, which the freeze predated and the second pip step had left to the day's resolve until v1.135.0; so a rebuild resolves to the same tree | |
 
 ## Why a container of its own
 

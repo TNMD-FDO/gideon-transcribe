@@ -178,6 +178,10 @@ services:
       DIARIZER_CHUNK_LEN: "${DIARIZER_CHUNK_LEN:-340}"
       DIARIZER_RIGHT_CONTEXT: "${DIARIZER_RIGHT_CONTEXT:-40}"
       DIARIZER_UPDATE_PERIOD: "${DIARIZER_UPDATE_PERIOD:-300}"
+      # NeMo's install brings experiment-tracking libraries the diarizer
+      # never calls; these switches make sure of it (v1.135.0).
+      WANDB_MODE: disabled
+      WANDB_DISABLED: "true"
       TZ: "${TZ:-UTC}"
     networks:
       - whisperx

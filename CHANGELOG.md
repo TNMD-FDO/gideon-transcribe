@@ -21,6 +21,42 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.135.0, 2026-10-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The pins release from the dependencies pass: versions and one-line
+changes, no behaviour change. Every new pin was read from its source on
+2026-10-15.
+
+- **Caddy 2.11.4 to 2.11.7**, by its full tag and the digest that tag
+  holds. The two releases in between fixed the connection pooling of the
+  front door's authorisation check and the path handling after a prefix
+  is stripped, the directives the media route is built on.
+- **Django 6.1.1 to 6.1.2**, a patch release: a slow path in header
+  parsing that any request could reach before signing in.
+- **The secret scanner pinned**: gitleaks by tag and digest instead of
+  "latest", and it now walks the whole history rather than the files as
+  they are, since a secret committed and then removed is still in every
+  clone. CI fetches the whole history for it.
+- **The two GitHub Actions by commit** instead of the moving major tag,
+  the version kept beside each as a comment.
+- **CI's range check runs the Caddy the stack runs**, read from the
+  compose file, instead of whatever the floating tag held that day.
+- **Six diarizer constraints** the second install step had left to the
+  day's resolve (the web face's own dependencies), pinned like the other
+  147; and two environment switches that make the experiment-tracking
+  libraries NeMo installs inert by setting rather than by luck.
+- **The driver floor** in the WhisperX image's own comment says 570, as
+  the research notes, the install guide and the self-test do.
+
+On the server the upgrade pulls the new Caddy and rebuilds the app image
+for Django; the diarizer image rebuilds for its constraints. The GPU
+stacks are otherwise untouched.
+
 ## v1.134.1, 2026-10-14
 
 ```

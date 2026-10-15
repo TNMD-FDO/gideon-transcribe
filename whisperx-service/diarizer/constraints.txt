@@ -2,14 +2,9 @@
 # pinned to what the probe of 2026-09-24 resolved on torch 2.8.0+cu128
 # (docs/research/diarizer-pinned-stack.md). pip reads this as constraints:
 # nothing here is installed on its own, but whatever NeMo pulls in lands at
-# exactly this version.
-Jinja2==3.1.6
-Markdown==3.10.3
-MarkupSafe==3.0.3
-PyYAML==6.0.3
-Pygments==2.21.0
-StrEnum==0.4.15
-Werkzeug==3.1.8
+# exactly this version. The six the web face pulls in (starlette, httptools,
+# python-dotenv, uvloop, watchfiles, websockets) were resolved against this
+# file on 2026-10-15 (v1.135.0); the probe's freeze predated that face.
 absl-py==2.5.0
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
@@ -43,6 +38,7 @@ grpcio==1.84.0
 h11==0.16.0
 hf-xet==1.6.0
 httpcore==1.0.9
+httptools==0.9.0
 httpx==0.28.1
 huggingface_hub==1.33.0
 humanize==4.16.0
@@ -50,16 +46,19 @@ hydra-core==1.3.2
 idna==3.20
 indic_numtowords==1.1.0
 intervaltree==3.2.1
+Jinja2==3.1.6
 joblib==1.6.0
 kaldialign==0.12.0
 lazy-loader==0.6
 lhotse==2.0.0a6
 librosa==1.0.0
-lightning-utilities==0.15.3
 lightning==2.4.0
+lightning-utilities==0.15.3
 llvmlite==0.49.0
 lxml==6.1.3
+Markdown==3.10.3
 markdown-it-py==4.2.0
+MarkupSafe==3.0.3
 mdurl==0.1.2
 ml_dtypes==0.6.0
 more-itertools==11.1.0
@@ -109,8 +108,11 @@ pyarrow==25.0.1
 pycparser==3.0
 pydantic==2.13.5
 pydantic_core==2.46.5
+Pygments==2.21.0
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.4
 pytorch-lightning==2.6.6
+PyYAML==6.0.3
 regex==2026.9.10
 requests==2.34.2
 rich==15.0.0
@@ -125,11 +127,13 @@ smart_open==8.0.1
 sortedcontainers==2.4.0
 soundfile==0.14.0
 soxr==1.1.0
+starlette==1.8.0
+StrEnum==0.4.15
 sympy==1.14.0
 tabulate==0.10.0
 tenacity==9.1.4
-tensorboard-data-server==0.7.2
 tensorboard==2.21.0
+tensorboard-data-server==0.7.2
 text-unidecode==1.3
 text2num==3.1.0
 threadpoolctl==3.7.0
@@ -144,8 +148,12 @@ typer==0.27.2
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 urllib3==2.8.0
+uvloop==0.23.0
 wandb==0.30.0
+watchfiles==1.3.0
 webdataset==1.0.2
+websockets==17.2
+Werkzeug==3.1.8
 whisper_normalizer==0.1.15
 wrapt==2.4.1
 xxhash==3.5.0

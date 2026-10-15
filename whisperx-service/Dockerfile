@@ -7,9 +7,10 @@
 # docs/whisperx-api.md. Do not bump anything casually.
 #
 # The base is pinned by tag and by digest. The digest is what actually fixes it;
-# the tag is there so that a person can read which one it is. CUDA 12.x runs on
-# any driver from 525 up, and the torch cu128 wheels bring their own CUDA
-# libraries, so the small "base" variant is enough.
+# the tag is there so that a person can read which one it is. The host needs a
+# driver of 570 or newer (docs/research/graphics-cards.md: the floor for the
+# card generation this stack was pinned for), and the torch cu128 wheels bring
+# their own CUDA libraries, so the small "base" variant is enough.
 FROM nvidia/cuda:12.8.2-base-ubuntu24.04@sha256:b382332b575435b081b805b15b3aa1779a350a4e513f4d0449b4d7ad098e94ff
 
 LABEL org.opencontainers.image.title="Gideon Transcribe WhisperX service"

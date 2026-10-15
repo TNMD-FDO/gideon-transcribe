@@ -19,7 +19,10 @@ services:
   caddy:
     # The front door. It publishes the one port this stack has, and it is the
     # only thing that talks to the app.
-    image: caddy:2.11-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    # 2.11.7 (v1.135.0): 2.11.5 and 2.11.6 fixed forward_auth's connection
+    # pooling and strip_prefix's path handling, the directives the media
+    # route is built on. Read from Docker Hub on 2026-10-15.
+    image: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
     restart: unless-stopped
     user: "${APP_UID:?set APP_UID in .env}:${APP_GID:?set APP_GID in .env}"
     depends_on:

@@ -79,7 +79,8 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7
+        # By commit, not by the moving v7 tag (v1.135.0).
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # First, before anything is pulled or built.
       - name: Make room on the runner
@@ -141,7 +142,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7
+        # By commit, not by the moving v7 tag (v1.135.0).
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The notes are this version's section of CHANGELOG.md and nothing else.
       # Two fixed lines open every section, saying whether the models change

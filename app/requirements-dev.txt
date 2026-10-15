@@ -1,7 +1,7 @@
 # What the tests need. They run on a hosted runner with no database and no
 # media tools, so anything that needs either is exercised behind a boundary
 # the tests can replace.
-Django==6.1.1
+Django==6.1.2
 psycopg[binary]==3.3.5
 procrastinate==3.9.0
 # Read by one test of the engine's compose file; the service's own list
