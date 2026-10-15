@@ -37,9 +37,13 @@ service pins, and both pins are deliberate.
 None of the reported paths is one this service uses. They are
 `save_pretrained` with chat-template names, the LightGlue model loader, the
 `Trainer` class, and three torch functions (`torch.jit.script`,
-`torch.lstm_cell`, `unpack_sequence`). The service loads two pinned local
-models, runs inference, and trains nothing. It also runs offline after the
-model pull, on an internal Docker network, with no published port.
+`torch.lstm_cell`, `unpack_sequence`). The service loads its pinned models
+from the folders they were fetched into, runs inference, and trains nothing.
+It also runs offline after the model pull, on an internal Docker network,
+with no published port. (Until service 0.5.0 one path was not offline: a
+recording in a language outside the pulled alignment list fetched that
+language's aligner from the hub by name, through the `from_pretrained`
+loader that CVE-2026-4372 concerns. That fetch is withdrawn.)
 
 This is written down so that the answer is on the record rather than worked
 out again each time the alerts are looked at. When whisperx releases a version

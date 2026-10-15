@@ -182,7 +182,23 @@ def _pull_alignment(pins: dict[str, Any], languages: list[str]) -> list[str]:
     return problems
 
 
-def _warm_the_kernel_cache(default_model: str) -> list[str]:
+def _snapshot_folder(model: dict[str, Any]) -> str | None:
+    """Where the pinned revision just fetched sits, for a load by folder."""
+    home = os.environ.get("HF_HOME")
+    revision = model.get("revision")
+    if not home or not revision:
+        return None
+    folder = (
+        Path(home)
+        / "hub"
+        / ("models--" + model["repository"].replace("/", "--"))
+        / "snapshots"
+        / revision
+    )
+    return str(folder) if folder.is_dir() else None
+
+
+def _warm_the_kernel_cache(default_model: str, folder: str | None = None) -> list[str]:
     """Load the default model once, so the driver's compiled kernels are kept.
 
     CTranslate2's wheels carry no code for this generation of card, so the
@@ -203,8 +219,11 @@ def _warm_the_kernel_cache(default_model: str) -> list[str]:
     try:
         import whisperx
 
+        # By the folder the pull fetched (service 0.5.0): by name, with the
+        # offline switch off for the pull, the hub would resolve the branch
+        # afresh and could fetch past the pin.
         model = whisperx.load_model(
-            default_model,
+            folder or default_model,
             device="cuda",
             compute_type="float16",
         )
@@ -271,7 +290,9 @@ def pull() -> int:
         (name for name, model in models["asr"].items() if model.get("default")),
         "large-v3",
     )
-    problems += _warm_the_kernel_cache(default_model)
+    problems += _warm_the_kernel_cache(
+        default_model, _snapshot_folder(models["asr"].get(default_model) or {})
+    )
     _say()
 
     if not problems:

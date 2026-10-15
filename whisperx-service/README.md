@@ -108,10 +108,9 @@ docker compose up -d
 ```
 
 `docker compose ps` shows it healthy once the API is up. After this the service
-makes no network call at all, with one exception the contract describes: a job
-in a language whose alignment model was never fetched makes one attempt to
-fetch it, and finishes with sentence timing rather than word timing if that
-fails.
+makes no network call at all. A job in a language whose alignment model was
+never fetched finishes with sentence timing rather than word timing; add the
+language to `WHISPERX_ALIGN_LANGUAGES` and run the pull again to have it.
 
 ## Using it
 

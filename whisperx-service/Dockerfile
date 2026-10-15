@@ -63,6 +63,16 @@ RUN pip install --no-cache-dir -r /tmp/requirements-torch.txt
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
+# The sentence splitter whisperx's aligner uses reads an nltk data table,
+# punkt_tab. It is fetched here, at build, into the image (v1.136.0): before
+# that the aligner fetched it from GitHub on the first job after every
+# container start, which no document named, and where egress was closed the
+# job failed outright. The second line is the aligner's own call, so a wrong
+# table name fails the build and not the first recording.
+ENV NLTK_DATA=/opt/venv/nltk_data
+RUN python -c "import nltk, sys; sys.exit(0 if nltk.download('punkt_tab', download_dir='/opt/venv/nltk_data', quiet=True) else 1)" \
+ && python -c "from nltk.data import load; load('tokenizers/punkt_tab/english.pickle')"
+
 # faster-whisper loads cuBLAS and cuDNN from the wheels torch brought with it,
 # and its README says to put those two folders on the library path.
 ENV LD_LIBRARY_PATH="/opt/venv/lib/python3.12/site-packages/nvidia/cublas/lib:/opt/venv/lib/python3.12/site-packages/nvidia/cudnn/lib:/opt/venv/lib/python3.12/site-packages/nvidia/npp/lib"

@@ -238,6 +238,8 @@ class Runner:
             "vad_onset": self.settings.vad_onset,
             "vad_offset": self.settings.vad_offset,
             "diarization_model": self._diarization_model(),
+            # Each ASR model's pinned folder, for the loader (service 0.5.0).
+            "model_folders": self._model_folders(),
             "model_revisions": {
                 model.name: model.revision for model in self.models.models
             },
@@ -248,6 +250,16 @@ class Runner:
                 self.models.diarizer.revision if self.models.diarizer else None
             ),
         }
+
+    def _model_folders(self) -> dict[str, str]:
+        """Each ASR model's pinned snapshot folder, by name, where it is on
+        disk; a model not yet pulled is left out and loaded by name."""
+        found = {}
+        for model in self.models.models:
+            snapshot = self.models.snapshot(model)
+            if snapshot is not None:
+                found[model.name] = str(snapshot)
+        return found
 
     def _diarization_model(self) -> str:
         """The pinned diarization model, as a path when it is on disk."""

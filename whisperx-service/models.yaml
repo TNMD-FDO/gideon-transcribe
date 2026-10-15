@@ -2,9 +2,9 @@
 #
 # `pull` fetches exactly what is listed here, checks each download against its
 # pin, and reports. After the pull the service runs offline, so anything not
-# listed here is not available to a job, with one exception the contract names:
-# a transcribe job in a language whose alignment model is not cached makes one
-# fetch attempt for it and completes with segment timing only if that fails.
+# listed here is not available to a job: a language whose alignment model was
+# not pulled completes with segment timing only (until service 0.5.0 a job in
+# such a language made one fetch attempt at run time; it no longer does).
 #
 # The revisions and checksums below are the ones the specification left to the
 # build. The diarization model's revision was fixed by the planning tickets;

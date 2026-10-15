@@ -44,6 +44,10 @@ those comes from anywhere but this repository:
   models are named in the service's own code and fetched once at install into
   the model cache; the service never fetches a model at run time and never
   loads one a person chose (`docs/research/whisperx-pinned-stack.md`).
+  Corrected 2026-10-15: until service 0.5.0 one run-time fetch existed, the
+  aligner for a language outside the pulled list, by name and unpinned;
+  the dependencies pass found it and v1.136.0 withdrew it, so the sentence
+  above is true from that release on.
 - **Nothing is trained, saved or scripted.** The service never calls
   `Trainer`, never calls `save_pretrained`, never loads a LightGlue model, and
   never compiles TorchScript. The three torch flaws are in functions the

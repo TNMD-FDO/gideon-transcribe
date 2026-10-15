@@ -63,8 +63,13 @@ class Engine:
         if self.pipeline is not None and self.model_name == model_name:
             return self.pipeline
 
+        # By the folder its pinned revision was fetched into when there is one
+        # (service 0.5.0), as the diarization model always was: a lookup by name
+        # reads the hub's note of where a branch points, which a fetch of one
+        # revision never writes, and would reach for the network to find out.
+        source = self.settings.get("model_folders", {}).get(model_name, model_name)
         self.pipeline = whisperx.load_model(
-            model_name,
+            source,
             device="cuda",
             compute_type="float16",
             vad_options={
@@ -87,20 +92,20 @@ class Engine:
 
         import whisperx
 
-        offline = os.environ.get("HF_HUB_OFFLINE")
+        # Offline, always (service 0.5.0). Until then a language outside the
+        # pulled list made one fetch from the hub at run time, by repository
+        # name and with no revision, through a model loader with a published
+        # flaw; the one path on which something not pinned could have reached
+        # the service. A language that was not pulled completes with segment
+        # timing (no_alignment_model); an office that needs it adds the
+        # language to WHISPERX_ALIGN_LANGUAGES and pulls.
         try:
-            os.environ["HF_HUB_OFFLINE"] = "0"
             model, metadata = whisperx.load_align_model(
                 language_code=language, device="cuda"
             )
             self.aligners[language] = (model, metadata)
         except Exception:  # noqa: BLE001 - any failure here is the same failure
             self.aligners[language] = None
-        finally:
-            if offline is None:
-                os.environ.pop("HF_HUB_OFFLINE", None)
-            else:
-                os.environ["HF_HUB_OFFLINE"] = offline
         return self.aligners[language]
 
     def diarization(self):

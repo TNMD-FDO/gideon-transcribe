@@ -21,6 +21,44 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.136.0, 2026-10-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The transcription service's edges, from the dependencies pass: after this
+release it reaches nothing outside the building at run time, and every pin
+binds when a job runs. The service is 0.5.0; its contract
+(`docs/whisperx-api.md`) records the three changes.
+
+- **No fetch at run time.** A recording in a language whose alignment
+  model was not pulled used to make one fetch for it from the hub, by
+  repository name and without a revision, through a model loader with a
+  published flaw; the one path on which something not pinned could reach
+  the service. That fetch is withdrawn. Such a recording completes with
+  segment timing, as it did when the fetch failed; an office that needs
+  the language adds it to `WHISPERX_ALIGN_LANGUAGES` and runs the pull.
+- **The sentence-splitting table is in the image.** The aligner's sentence
+  splitter reads an nltk data table that the image never carried, so it
+  was fetched from GitHub on the first job after every container start,
+  which no document named, and where egress was closed the job failed.
+  The table is fetched at image build and the build proves the aligner's
+  own call finds it.
+- **The models are loaded by their pinned folders.** The two Whisper
+  models were loaded by name, which asks the hub where a branch points, a
+  note a fetch of one revision never writes: a moved branch upstream would
+  have been fetched and run while every result still reported the pinned
+  revision, and a fresh install could not switch models offline. The
+  model process and the pull's warm-up load each model from the folder its
+  revision was fetched into, as the diarization model always was.
+
+The security note, the advisory research note, the service's README and
+the models file say the same. The WhisperX image rebuilds on upgrade; the
+diarizer and the app do not. After the upgrade, one recording through the
+service proves the three on the server.
+
 ## v1.135.0, 2026-10-15
 
 ```
