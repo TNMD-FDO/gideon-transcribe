@@ -21,6 +21,18 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.137.1, 2026-10-15
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+CI's compose check copies the example environment, whose bind address
+v1.137.0 left empty on purpose, so the check refused as a start would.
+The check now gives it an example address, as the install does. Nothing
+else changes; the release itself is unchanged.
+
 ## v1.137.0, 2026-10-15
 
 ```

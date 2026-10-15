@@ -125,6 +125,10 @@ jobs:
       - name: The whole stack's compose file is valid
         run: |
           cp .env.example .env
+          # The example leaves the bind address empty on purpose (v1.137.0), and
+          # the stack refuses to start without one; the check gives it an
+          # example address, as the install would.
+          sed -i 's/^BIND_ADDRESS=$/BIND_ADDRESS=10.0.0.5/' .env
           mkdir -p secrets
           : > secrets/django_secret_key
           : > secrets/postgres_password
