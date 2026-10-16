@@ -95,6 +95,13 @@ def test_the_clips_page_is_one_table_with_a_player():
     assert 'class="clipplayer" src="{{ clip.url }}"' in clips
     # One table still: the places are heading rows inside it, not tables.
     assert clips.count("<table") == 1 and 'class="group"' in clips
+    # v1.137.3: the table scrolls inside its column instead of running under
+    # the pane, and beside the pane the columns the detail repeats are hidden.
+    assert '<div class="tbl-wrap">' in clips
+    assert '<table class="tbl as-cards clips" id="recordings">' in clips
+    assert 'class="muted cameras"' in clips and 'class="muted saved"' in clips
+    css = script("app.css")
+    assert ".panes.benched .tbl.clips .acts { display: none; }" in css
     js = script("clips.js")
     assert 'new Event("rows-changed")' in js
 

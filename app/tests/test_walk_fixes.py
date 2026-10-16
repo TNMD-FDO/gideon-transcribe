@@ -314,7 +314,7 @@ def test_the_list_tables_card_class_matches_no_other_rule():
     assert ".tbl.cards" not in css
     for name in ("cases.html", "case.html", "clips.html", "recordings.html"):
         page = (APP / "templates" / name).read_text(encoding="utf-8")
-        assert 'class="tbl as-cards"' in page and 'class="tbl cards"' not in page, name
+        assert 'class="tbl as-cards' in page and 'class="tbl cards"' not in page, name
 
 
 def test_wide_screens_are_used():

@@ -652,7 +652,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `MEDIA_CONCURRENT_JOBS` | How many pieces of media work run at once. These two are how you keep some of the server for everything else. |
 | `MEDIA_WORKER_CPUS` | The most processors the media worker may use, written by the install and the upgrade from the host's own count, forty at most (v1.137.0). |
 | `BUILD_CACHE_GB` | How much build cache this project's own Docker builder keeps between upgrades, in gigabytes; the newest records up to this, so an upgrade that builds rebuilds only what changed. One build of the three images leaves about 40 GB; 60 as shipped. Lower it on a small Docker disk (v1.137.2). |
-| `OLD_CACHE_PRUNED` | Written once by the upgrade when the records this project's builds left in the daemon's shared build cache before v1.137.0 have been pruned. Leave it. |
+| `OLD_CACHE_PRUNED` | Written by the upgrade when the records this project's builds left in the daemon's shared build cache before v1.137.0 have been pruned: the round of the prune that ran (2 at v1.137.3). Leave it. |
 | `RELEASE_TAG` | The Release this server is running. Written by `./transcribe upgrade`, never by hand. Empty on a first install. |
 
 **The AI assistant's engine.** The assistant talks to a language-model engine that is either one your office already runs or one this stack starts. Without either, the assistant stays off and everything else works.

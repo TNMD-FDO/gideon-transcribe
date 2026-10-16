@@ -1849,6 +1849,15 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
      case page has no pane and its fold opens under the row at every
      width (v1.54.2). */
   .panes.benched .tbl tr.detail-row { display: none; }
+  /* The Clips page's eight columns ran under the pane beside them: the
+     cell may be narrower than the table, and a table does not shrink
+     (v1.137.3). Beside the pane the three columns the detail repeats
+     (Cameras, Saved, the row's Download) are left to it, and a recording's
+     one-word title may break. Below 1280 the rows are cards and show all. */
+  .panes.benched .tbl.clips .cameras,
+  .panes.benched .tbl.clips .saved,
+  .panes.benched .tbl.clips .acts { display: none; }
+  .panes.benched .tbl.clips td.recording { overflow-wrap: anywhere; }
 
   /* The Upload page: the three steps at once, Choose files on the left and
      Settings over Check and start on the right. Next and Back have nothing

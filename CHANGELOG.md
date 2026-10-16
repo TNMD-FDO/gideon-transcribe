@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.137.3, 2026-10-16
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Clips page's table kept inside its column, and the second round of the
+one-time prune.
+
+- **The Clips page no longer runs under its pane.** Beside the pane the
+  table's eight columns were wider than the column holding them, and a
+  table does not shrink, so its last columns and their Download buttons
+  showed through the clip's player and details. The table now scrolls
+  inside its column if it ever outgrows it, and beside the pane the three
+  columns the details repeat (Cameras, Saved, the row's Download) are left
+  to the pane; a recording's one-word title may break. Below 1280 pixels
+  the rows are cards and show everything, as before.
+- **The one-time prune, round two.** v1.137.2's pass freed 35 GB of the
+  169 it named: a cache record goes only when no later step of its build
+  still points to it, and the filter named neither the COPY of the
+  requirements file nor the plain requirements install, so the big layers
+  above them stood (140 GB of the daemon's cache on the office's server).
+  Two strings cover those links, the prune runs twice, and `.env` records
+  the round that ran (`OLD_CACHE_PRUNED=2`), so it runs once more at this
+  upgrade and never again. Left to the daemon's own collection on purpose:
+  the base-image pulls and the build contexts, about 2 GB, shared with
+  other builds.
+- **The ledger**: the figures after round one, the upgrade's last build
+  from nothing (the builder keeps 29 GB now), and the timers rewritten.
+
 ## v1.137.2, 2026-10-15
 
 ```

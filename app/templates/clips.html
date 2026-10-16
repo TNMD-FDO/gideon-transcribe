@@ -40,11 +40,17 @@
       {% endcomment %}
       <div class="panes benched">
         <div class="pane-list">
-          <table class="tbl as-cards" id="recordings">
+          {% comment %}
+            The wrap scrolls a table wider than its column instead of letting
+            it run under the pane beside it (v1.137.3), and beside the pane
+            the three columns the detail repeats are hidden by the stylesheet.
+          {% endcomment %}
+          <div class="tbl-wrap">
+          <table class="tbl as-cards clips" id="recordings">
             <thead>
               <tr>
-                <th>Clip</th><th>Recording</th><th>Cameras</th><th>Span</th><th>Length</th>
-                <th>Status</th><th>Saved</th><th></th>
+                <th>Clip</th><th class="recording">Recording</th><th class="cameras">Cameras</th><th>Span</th><th>Length</th>
+                <th>Status</th><th class="saved">Saved</th><th class="acts"></th>
               </tr>
             </thead>
             <tbody>
@@ -65,8 +71,8 @@
                     data-of="{{ group.key }}"
                     data-open="{% if clip.picture %}{% if clip.incident %}{{ clip.incident.url }}{% endif %}{% else %}{% url 'viewer' clip.recording.pk %}?t={{ clip.start|floatformat:0 }}&clip={{ clip.pk }}{% endif %}">
                   <td><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}</td>
-                  <td class="muted">{{ clip.recording.title }}</td>
-                  <td class="muted">{{ clip.cameras_line }}</td>
+                  <td class="muted recording">{{ clip.recording.title }}</td>
+                  <td class="muted cameras">{{ clip.cameras_line }}</td>
                   <td class="mono">{{ clip.span }}</td>
                   <td>{{ clip.length }}</td>
                   <td>
@@ -80,7 +86,7 @@
                       <span class="pill translate">Rendering</span>
                     {% endif %}
                   </td>
-                  <td class="muted">{{ clip.created|date:"d M H:i" }}</td>
+                  <td class="muted saved">{{ clip.created|date:"d M H:i" }}</td>
                   <td class="acts">
                     {% if clip.state == "ready" %}
                       <a href="{% url 'download-clip' clip.pk %}" class="btn small">Download</a>
@@ -143,6 +149,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
           <div class="hint" data-hint="clips-table" hidden>
             {% icon "info" %}
             <span class="grow">Click a clip to play it and see its details beside the table. The arrow keys move, Enter opens it in the viewer.</span>

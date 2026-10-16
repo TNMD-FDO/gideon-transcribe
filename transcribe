@@ -3087,10 +3087,16 @@ verify_the_pull() {
 # builder: each is from a RUN or COPY line of ours (three of them from the
 # diarizer's install line before v1.135.0) and none is in GIDEON's three
 # Dockerfiles, read at the 2026-10-15 fetch. prune_the_old_records prunes
-# those records once, by this filter, and never runs again (v1.137.2; the
-# ledger's §5). Every build since v1.137.0 goes through this project's own
-# builder and leaves nothing in the daemon's cache.
-OLD_CACHE_STRINGS="audiowaveform|pytesseract|import ldap|g729|requirements-torch|punkt_tab|libpython3.12t64|nemo-toolkit|download.pytorch.org|torchcodec|/opt/service|/opt/diarizer|/opt/app|tesseract-ocr|libboost-program-options|libldap-dev|fonts-dejavu-core|Cython packaging|collectstatic|user-guide|VIRTUAL_ENV|python3-venv"
+# those records in one round, by this filter, and never runs again (v1.137.2;
+# the ledger's §5). Every build since v1.137.0 goes through this project's
+# own builder and leaves nothing in the daemon's cache.
+# A record goes only when no later step of its build still points to it, so
+# every link of a build's chain has to carry a string: v1.137.2's list left
+# out the COPY of the requirements file and the plain requirements install,
+# and the big layers above them stood (140 GB of 175 on the office's server).
+# `/tmp/requirements` and `libsndfile1` cover those links; this is round 2.
+OLD_CACHE_STRINGS="audiowaveform|pytesseract|import ldap|g729|requirements-torch|punkt_tab|libpython3.12t64|nemo-toolkit|download.pytorch.org|torchcodec|/opt/service|/opt/diarizer|/opt/app|tesseract-ocr|libboost-program-options|libldap-dev|fonts-dejavu-core|Cython packaging|collectstatic|user-guide|VIRTUAL_ENV|python3-venv|/tmp/requirements|libsndfile1"
+OLD_CACHE_PRUNE_ROUND="2"
 
 # How much build cache this project's builder keeps between upgrades when
 # .env says nothing (v1.137.2): one build of the three images leaves about
@@ -3152,13 +3158,16 @@ prune_the_old_records() {
   # filter never runs again: a word filter is no lasting way to tell our
   # records from another tenant's (the ledger's v0.3.135 line 4), and from
   # v1.137.0 our builds leave nothing there.
-  [ "$(env_value OLD_CACHE_PRUNED)" = "yes" ] && return 0
+  [ "$(env_value OLD_CACHE_PRUNED)" = "$OLD_CACHE_PRUNE_ROUND" ] && return 0
   local before after
   before="$(docker buildx du --builder default 2>/dev/null | awk '/^Total:/{print $2}')"
+  # Twice: the first pass takes each chain's end, the second what it freed
+  # above; a third pass has found nothing.
+  docker buildx prune -a -f --builder default --filter "description~=\"$OLD_CACHE_STRINGS\"" >/dev/null 2>&1 || true
   docker buildx prune -a -f --builder default --filter "description~=\"$OLD_CACHE_STRINGS\"" >/dev/null 2>&1 || true
   after="$(docker buildx du --builder default 2>/dev/null | awk '/^Total:/{print $2}')"
-  set_env OLD_CACHE_PRUNED yes
-  echo "The daemon's build cache held ${before:-?} and holds ${after:-?} now that this project's records from before v1.137.0 are pruned (once; never again)."
+  set_env OLD_CACHE_PRUNED "$OLD_CACHE_PRUNE_ROUND"
+  echo "The daemon's build cache held ${before:-?} and holds ${after:-?} now that this project's records from before v1.137.0 are pruned (round $OLD_CACHE_PRUNE_ROUND; never again)."
 }
 
 build_the_images() {

@@ -86,8 +86,14 @@ def test_the_old_records_are_pruned_once_by_our_own_strings():
     # once, by strings from our Dockerfiles, and the filter never runs again.
     assert "prune_the_old_records" in between(SCRIPT, "tidy_the_images() {")
     once = between(SCRIPT, "prune_the_old_records() {")
-    assert '[ "$(env_value OLD_CACHE_PRUNED)" = "yes" ] && return 0' in once
-    assert "set_env OLD_CACHE_PRUNED yes" in once
+    assert 'OLD_CACHE_PRUNE_ROUND="2"' in SCRIPT
+    assert (
+        '[ "$(env_value OLD_CACHE_PRUNED)" = "$OLD_CACHE_PRUNE_ROUND" ] && return 0'
+        in once
+    )
+    assert 'set_env OLD_CACHE_PRUNED "$OLD_CACHE_PRUNE_ROUND"' in once
+    # Twice: a record goes only once nothing later points to it (v1.137.3).
+    assert once.count("docker buildx prune -a -f --builder default --filter") == 2
     assert "docker buildx prune -a -f --builder default --filter" in once
     assert '--filter "description~=\\"$OLD_CACHE_STRINGS\\""' in once
     assert "\nOLD_CACHE_PRUNED=\n" in EXAMPLE
@@ -102,7 +108,9 @@ def test_the_old_records_are_pruned_once_by_our_own_strings():
     )
     # Three are from the diarizer's install line before v1.135.0.
     gone_from_the_files = {"nemo-toolkit", "download.pytorch.org", "Cython packaging"}
-    assert len(strings) == 22
+    assert len(strings) == 24
+    # The two links v1.137.2's list left out, which held the chains in place.
+    assert "/tmp/requirements" in strings and "libsndfile1" in strings
     for one in strings:
         assert one in gone_from_the_files or one in ours, one
 
@@ -189,6 +197,7 @@ def test_the_ledger_answers_the_directions_by_number():
     assert "Your **v0.3.141**: 1. Done" in ours
     assert "its named Docker builder `transcribe`" in ledger
     assert "at v1.137.2 (the build cache kept to a ceiling" in ours
+    assert "at v1.137.3 (the one-time prune's second round" in ours
     assert "written at install and at every upgrade" not in (
         HERE / "CHANGELOG.md"
     ).read_text(encoding="utf-8")
