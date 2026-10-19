@@ -116,3 +116,13 @@ the words and the switches below on the same day.
 - Not decided here, and never by default: accepting voice-backed moves by
   themselves (V5, an office switch after months of watching); Accept all
   for names or matches; prints across Cases; any print from the picture.
+
+**Noted 2026-10-19, later the same day.** The pages were drawn and the
+maintainer chose review as reading (`docs/spec/mockups/phase-5-review-as-reading.html`):
+the run's output shown as a proposed version of the transcript with each
+change in place and its three sounds, one primary button for the changes the
+voice backs, names accepted one at a time on their cards. Decision 2's floor
+and cap are the build's constants rather than Panel settings, and the Panel
+gains three rows in all (Voices help the check, Remember voices across a
+case, Call system phrases), at the maintainer's wish for no overlapping
+settings.
