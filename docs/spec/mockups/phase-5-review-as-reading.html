@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review as reading</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp1-soft: #e3eef8; --sp2: #c2410c; --sp2-soft: #fbe9e1; --sp3: #2e7d32; --sp3-soft: #e4f2e9; --sp5: #8e24aa; --sp5-soft: #f2e4f7; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp1-soft: #1c2f40; --sp2: #f0956a; --sp2-soft: #3a2418; --sp3: #7bc67e; --sp3-soft: #1c3526; --sp5: #c77ddb; --sp5-soft: #33203a; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp1-soft: #1c2f40; --sp2: #f0956a; --sp2-soft: #3a2418; --sp3: #7bc67e; --sp3-soft: #1c3526; --sp5: #c77ddb; --sp5-soft: #33203a; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* the mocked work page */
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .page-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .page-head .titles { flex: 1; min-width: 240px; }
+  .page-head h3 { font-size: 22px; margin: 2px 0 0; font-weight: 600; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.big { min-height: 34px; padding: 6px 14px; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.ok { color: var(--ok); border-color: var(--ok); }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .state { font-size: 13px; color: var(--muted); } .state b { color: var(--text); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 11px; background: var(--surface); }
+  .play.sm { width: 22px; height: 20px; font-size: 10px; }
+
+  /* the cast */
+  .cast { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .who { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px 8px 0; display: flex; gap: 10px; }
+  .who .lane { width: 6px; border-radius: 0 3px 3px 0; flex: none; }
+  .who .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .who .name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .who .facts { font-size: 12px; color: var(--muted); }
+  .who .prop { font-size: 13px; padding: 6px 8px; border-radius: var(--radius); background: var(--surface-2); display: flex; flex-direction: column; gap: 4px; }
+  .who .prop .acts { display: flex; gap: 6px; align-items: center; }
+  .l1 { background: var(--sp1); } .l2 { background: var(--sp2); } .l3 { background: var(--sp3); } .l5 { background: var(--sp5); } .lsys { background: var(--sys); }
+  .c1 { color: var(--sp1); } .c2 { color: var(--sp2); } .c3 { color: var(--sp3); } .c5 { color: var(--sp5); } .csys { color: var(--sys); }
+
+  /* the lanes */
+  .lanes { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 2px; }
+  .lane-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; font-size: 12px; }
+  .lane-row .label { color: var(--muted); text-align: right; }
+  .track { position: relative; height: 14px; background: var(--surface-2); border-radius: 3px; }
+  .track i { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; opacity: 0.9; }
+  .track .ghost { opacity: 0.35; }
+  .track .mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--bad); }
+  .track .tag { position: absolute; top: -22px; transform: translateX(-50%); font-size: 11px; color: var(--bad); white-space: nowrap; background: var(--surface); padding: 0 4px; border-radius: 3px; }
+  .ticks { display: grid; grid-template-columns: 96px 1fr; gap: 10px; font-size: 11px; color: var(--muted); }
+  .ticks .scale { display: flex; justify-content: space-between; font-family: var(--mono); }
+  .handover { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: var(--radius-lg); }
+
+  /* the transcript spine */
+  .spine { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; }
+  .ln { display: grid; grid-template-columns: 26px 46px 150px 1fr auto; gap: 8px; align-items: center; padding: 5px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .ln .t { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .ln .lab { font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ln .lab s { color: var(--muted); font-weight: 400; }
+  .ln .w { min-width: 0; }
+  .ln .right { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+  .ln.change { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .ln.change.soft { background: transparent; border-left: 3px solid var(--line); }
+  .ln.change.against { background: var(--bad-soft); border-left: 3px solid var(--bad); }
+  .ln.sys .w, .ln.sys .lab { color: var(--sys); font-style: italic; font-weight: 400; }
+  .ln.done { opacity: 0.75; }
+  .block { border: 1px solid var(--accent); border-radius: var(--radius-lg); margin: 6px 0; overflow: hidden; }
+  .block .bh { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 10px; background: var(--accent-soft); font-size: 13px; }
+  .block .bh b { font-size: 13px; }
+  .block .ln { border-left: 0; background: transparent; }
+  .block .ln:last-child { border-bottom: 0; }
+  .fold { font-size: 13px; color: var(--muted); padding: 10px 4px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .gap { text-align: center; font-size: 12px; color: var(--muted); padding: 4px; }
+  .foot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+  .foot b { color: var(--text); }
+
+  /* the case tab */
+  .person { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .person .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .person .top b { font-size: 15px; }
+  .rec { display: grid; grid-template-columns: 26px 1fr auto auto; gap: 10px; align-items: center; padding: 6px 4px; border-top: 1px solid var(--line); font-size: 13px; }
+  .rec .acts { display: flex; gap: 6px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>Review as reading: the Speakers page after one run</h1>
+    <p class="lede">The run's output drawn as a proposed version of the transcript, read once from top to bottom, every judgement with its sound and its lines under the eye. Nothing on the page is a question that needs the person to go elsewhere. Every name and line is made up; the colours are the Speakers' own.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The Speakers page after a run (a 15-minute call, two voices and the call system)</div><h2>The cast with its sound, the lanes with the hand-over, the transcript with the changes marked</h2></div>
+    <div class="work">
+      <div class="page-head">
+        <div class="titles">
+          <div class="eyebrow">Harbour Street stop · Call 1</div>
+          <h3>Speakers</h3>
+          <div class="state">Checked today 17:42, the whole call. <b>14 changes proposed</b>, 9 of them backed by the voice; <b>1 hand-over</b>; <b>1 name</b>. Read down; accept or leave each as you go.</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <span class="btn primary big">Accept the 9 changes the voice backs</span>
+          <span class="btn ghost">Run again</span>
+        </div>
+      </div>
+
+      <div class="eyebrow">The voices</div>
+      <div class="cast">
+        <div class="who"><i class="lane l1"></i><div class="body">
+          <div class="name"><span class="play">▶</span><span class="c1">Speaker 1</span></div>
+          <div class="facts">96 lines · the person who answered</div>
+          <div class="prop"><span><b>Another voice from 14:03</b> under this label, 31 lines.</span><div class="acts"><span class="play sm">▶</span><span class="tiny muted">before</span><span class="play sm">▶</span><span class="tiny muted">after</span><span class="btn tiny" style="margin-left: auto">Split here</span></div></div>
+        </div></div>
+        <div class="who"><i class="lane l2"></i><div class="body">
+          <div class="name"><span class="play">▶</span><span class="c2">Speaker 2</span></div>
+          <div class="facts">73 lines · the caller</div>
+          <div class="prop"><span>Introduces himself as <b>"Dana"</b> at 0:48 <span class="play sm">▶</span>. Also called Dana on two other calls in this case.</span><div class="acts"><span class="btn tiny ok">Name: Dana Reyes</span><span class="btn tiny">Not him</span></div></div>
+        </div></div>
+        <div class="who"><i class="lane lsys"></i><div class="body">
+          <div class="name"><span class="play">▶</span><span class="csys">Call system</span></div>
+          <div class="facts">4 lines · the recorded announcements · not a person</div>
+        </div></div>
+      </div>
+
+      <div class="eyebrow" style="margin-top: 4px">When each voice speaks</div>
+      <div class="lanes">
+        <div class="lane-row"><span class="label c1">Speaker 1</span><div class="track">
+          <i class="l1" style="left: 2%; width: 9%"></i><i class="l1" style="left: 14%; width: 12%"></i><i class="l1" style="left: 30%; width: 7%"></i><i class="l1" style="left: 41%; width: 10%"></i><i class="l1" style="left: 55%; width: 6%"></i><i class="l1" style="left: 64%; width: 14%"></i><i class="l1" style="left: 82%; width: 9%"></i>
+          <i class="l5 ghost" style="left: 94%; width: 5%"></i>
+          <span class="mark" style="left: 93.5%"></span><span class="tag" style="left: 93.5%">another voice from 14:03</span>
+        </div></div>
+        <div class="lane-row"><span class="label c2">Speaker 2</span><div class="track">
+          <i class="l2" style="left: 11%; width: 3%"></i><i class="l2" style="left: 26%; width: 4%"></i><i class="l2" style="left: 37%; width: 4%"></i><i class="l2" style="left: 51%; width: 4%"></i><i class="l2" style="left: 61%; width: 3%"></i><i class="l2" style="left: 78%; width: 4%"></i><i class="l2" style="left: 91%; width: 2%"></i>
+          <i class="l2 ghost" style="left: 63%; width: 3%"></i>
+        </div></div>
+        <div class="lane-row"><span class="label csys">Call system</span><div class="track"><i class="lsys" style="left: 0; width: 2%"></i><i class="lsys" style="left: 99%; width: 1%"></i></div></div>
+        <div class="ticks"><span></span><div class="scale"><span>0:00</span><span>5:00</span><span>10:00</span><span>15:00</span></div></div>
+      </div>
+      <div class="handover">
+        <span class="pill bad">hand-over</span>
+        <span><b>Speaker 1 sounds like a different person from 14:03</b>, in the last 31 lines. Hear the voice before and after:</span>
+        <span class="play sm">▶</span><span class="tiny muted">13:52</span><span class="play sm">▶</span><span class="tiny muted">14:06</span>
+        <span style="flex: 1"></span>
+        <span class="btn tiny">Split Speaker 1 at 14:03</span><span class="btn ghost tiny">Not a different person</span>
+      </div>
+
+      <div class="eyebrow" style="margin-top: 4px">The transcript, with the proposed changes</div>
+      <div class="spine">
+        <div class="ln sys"><span class="play sm">▶</span><span class="t">0:04</span><span class="lab">Call system</span><span class="w">This call is from a correctional facility and may be monitored and recorded.</span><span class="right"></span></div>
+        <div class="ln"><span class="play sm">▶</span><span class="t">0:19</span><span class="lab c1">Speaker 1</span><span class="w">Hello?</span><span class="right"></span></div>
+        <div class="ln"><span class="play sm">▶</span><span class="t">0:20</span><span class="lab c2">Speaker 2</span><span class="w">Hey, it's me. Can you hear me?</span><span class="right"></span></div>
+        <div class="ln"><span class="play sm">▶</span><span class="t">0:48</span><span class="lab c2">Speaker 2</span><span class="w">Yeah, this is Dana. Did you get the papers?</span><span class="right"><span class="pill acc">name</span></span></div>
+        <div class="gap">… 6:40 to 9:30, no changes</div>
+
+        <div class="ln change done"><span class="play sm">▶</span><span class="t">9:31</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span><span class="w">No, I told him Tuesday.</span><span class="right"><span class="pill ok">accepted</span><span class="btn ghost tiny">Undo</span></span></div>
+
+        <div class="block">
+          <div class="bh"><span class="play sm">▶</span><b>9:40 to 9:58, 4 lines</b> <span class="muted">shown as Speaker 1, read as Speaker 2's</span> <span class="pill ok">the voice agrees</span><span style="flex: 1"></span><span class="btn primary tiny">Accept all 4</span><span class="btn tiny">Leave</span></div>
+          <div class="ln"><span class="play sm">▶</span><span class="t">9:40</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span><span class="w">Because he never called back.</span><span class="right"><span class="btn ghost tiny">Leave this one</span></span></div>
+          <div class="ln"><span class="play sm">▶</span><span class="t">9:45</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span><span class="w">I waited all afternoon.</span><span class="right"><span class="btn ghost tiny">Leave this one</span></span></div>
+          <div class="ln"><span class="play sm">▶</span><span class="t">9:51</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span><span class="w">You know how he is.</span><span class="right"><span class="btn ghost tiny">Leave this one</span></span></div>
+          <div class="ln"><span class="play sm">▶</span><span class="t">9:58</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span><span class="w">Anyway. What did she say?</span><span class="right"><span class="btn ghost tiny">Leave this one</span></span></div>
+        </div>
+        <div class="ln"><span class="play sm">▶</span><span class="t">10:02</span><span class="lab c1">Speaker 1</span><span class="w">She said she'd come by Friday.</span><span class="right"></span></div>
+        <div class="gap">… 10:02 to 17:19, 3 more changes the voice backs</div>
+
+        <div class="ln change against"><span class="play sm">▶</span><span class="t">17:20</span><span class="lab"><s>Speaker 2</s> <span class="c1">Speaker 1</span></span><span class="w">Put your hands where I can see them.</span><span class="right"><span class="pill bad">the voice disagrees, listen first</span><span class="btn tiny">Accept</span><span class="btn ghost tiny">Leave</span></span></div>
+        <div class="ln"><span class="play sm">▶</span><span class="t">17:24</span><span class="lab c2">Speaker 2</span><span class="w">Okay, okay.</span><span class="right"></span></div>
+
+        <div class="fold">▸ <b>86 more lines</b> the check was unsure about: the words lean one way, the voice could not judge (short lines). <span class="btn ghost tiny">Show them in place</span></div>
+      </div>
+
+      <div class="foot"><b>Decided so far</b> on this call: 3 accepted (2 the voice backed, 1 you chose), 1 left · 10 to go <span style="flex: 1"></span><span class="btn ghost tiny">Undo the last</span></div>
+    </div>
+
+    <div class="caption">
+      <p><b>The cast first, with sound.</b> One card per voice: Play its sample, see its colour, read what the run thinks of it. A proposed name sits on the card with the quote that gave rise to it and Play on the quote; the hand-over sits on Speaker 1's card with Play before and after. Nothing to look up.</p>
+      <p><b>The lanes show the whole call at a glance</b>, as the page does today. The hand-over is a red marker on Speaker 1's lane at 14:03, with the stretch after it shown in the colour the new Speaker would get. Lines the run would move are shown faintly in their proposed lane, so you see the shape of the change before you read a word.</p>
+      <p><b>The transcript is the spine.</b> You read down once. An ordinary line is plain. A proposed change keeps its line in place with the old label struck through and the new one beside it in that Speaker's colour, Play on the line, and Accept or Leave on the right. A run of lines moving together is one block with one Accept all and a quiet Leave this one on each line.</p>
+      <p><b>The voice's word is a colour, not a sentence.</b> Backed by the voice: the accent tint, and the one big button at the top takes all of these in a press. The voice against: a red tint and "listen first", never in the one-press path. Unsure: folded, with a button to show them in place for the person who wants to go that far. Unchanged stretches collapse to "no changes" so a 600-line call reads as its 14 marks.</p>
+      <p><b>Accepted changes stay where they are</b>, tinted and marked accepted, with Undo beside them, so the reading never jumps. Decided so far counts at the foot. The Call system's lines are in the spine in grey, where they were said, and never marked for anything.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · The Case's Speakers tab, drawn the same way (the plan's fourth release)</div><h2>The Person with their sample, the recordings they are heard on, Play and Accept beside each</h2></div>
+    <div class="cols">
+      <div class="work">
+        <div class="state"><b>Dana Reyes</b> is heard on 3 more recordings, by the voice. Voice prints are on for this case.</div>
+        <div class="person">
+          <div class="top"><span class="play">▶</span><b>Dana Reyes</b> <span class="pill acc">Defendant</span> <span class="muted small">named on 3 recordings, by hand on 1</span><span style="flex: 1"></span><span class="btn ghost tiny">Also called, also heard as</span></div>
+          <div class="rec"><span class="play sm">▶</span><span>Call 4 · Side 2 · 41 lines</span><span class="pill ok">high</span><span class="acts"><span class="btn tiny ok">It is Dana</span><span class="btn ghost tiny">Not her</span></span></div>
+          <div class="rec"><span class="play sm">▶</span><span>Call 5 · Side 2 · 60 lines</span><span class="pill ok">high</span><span class="acts"><span class="btn tiny ok">It is Dana</span><span class="btn ghost tiny">Not her</span></span></div>
+          <div class="rec"><span class="play sm">▶</span><span>Call 6 · Speaker 2 · 12 lines</span><span class="pill warn">medium, a short recording</span><span class="acts"><span class="btn tiny">It is Dana</span><span class="btn ghost tiny">Not her</span></span></div>
+          <div class="rec" style="border-top: 1px solid var(--line)"><span class="play sm">▶</span><span>Call 7 · Side 1 <span class="muted">named Dana by the case rule</span></span><span class="pill bad">does not sound like her</span><span class="acts"><span class="btn tiny">Not Dana on this call</span><span class="btn ghost tiny">It is her</span></span></div>
+          <div class="foot" style="border-top: 0; padding-top: 2px"><span class="btn tiny ok">It is Dana on the 2 rated high</span><span style="flex: 1"></span><span class="btn ghost tiny" style="color: var(--bad)">Unlearn the voice</span></div>
+        </div>
+      </div>
+      <div class="caption" style="margin-top: 0; grid-template-columns: 1fr">
+        <p><b>Same idea, one level up.</b> The Person is the spine here: their sample at the top, then one row per recording the voice found them on, each with Play, the rating as a pill, and It is Dana or Not her. The medium one is a plain button; the high ones get the green button and the one-press line at the foot.</p>
+        <p><b>The Side rule's alarm</b> is a row like the others, red: the case rule named Side 1 as Dana on Call 7 and the voice says it does not sound like her. Nothing is renamed; the row asks, with Play.</p>
+        <p><b>Unlearn the voice</b> stands last in the foot, red text, and says before it acts which recordings it will return to unnamed. The two lists (Also called, Also heard as) open from the row's quiet button rather than crowding it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">To confirm</div><h2>Is this the shape?</h2></div>
+    <p class="lede">If so, chapter 3's page section is rewritten to it (the cast, the lanes with the hand-over marker, the transcript with changes in place, the fold, the one big button) and the question cards go. What would still need drawing: the same page on a phone, and the viewer's own Speakers strip when changes are pending.</p>
+  </section>
+</div>
+</body>
+</html>
