@@ -1017,12 +1017,79 @@ def _clock(seconds: float) -> str:
     return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
 
 
+def next_label(transcript) -> str:
+    """The next free "Speaker N" on this Transcript, for a split (ADR 0021)."""
+    import re
+
+    taken = 0
+    for name in transcript.segments.values_list("speaker", flat=True).distinct():
+        found = re.fullmatch(r"(?:Side \d+ )?Speaker (\d+)", name or "")
+        if found:
+            taken = max(taken, int(found.group(1)))
+    return f"Speaker {taken + 1}"
+
+
+def split_speaker(transcript, name: str, at: float, *, by, request=None) -> str:
+    """A Hand-over accepted (ADR 0021): every line of `name` from `at` on
+    becomes a new Speaker's, as one change Undo puts back. Returns the new
+    Speaker's name, or "" when nothing lay after the time."""
+    from core.jobs import Transcript
+
+    with transaction.atomic():
+        Transcript.objects.select_for_update().get(pk=transcript.pk)
+        transcript.refresh_from_db()
+        moved = list(
+            transcript.segments.filter(speaker=name, start__gte=at).values_list(
+                "pk", flat=True
+            )
+        )
+        if not moved:
+            return ""
+        made = next_label(transcript)
+        transcript.segments.filter(pk__in=moved).update(speaker=made)
+        changes = list(transcript.speaker_changes or [])
+        changes.append(
+            {
+                "from": name,
+                "to": made,
+                "segments": moved,
+                "merged": False,
+                "split": True,
+                "at_seconds": at,
+                "at": timezone.now().isoformat(),
+            }
+        )
+        transcript.speaker_changes = changes[-20:]
+        transcript.save(update_fields=["speaker_changes"])
+    recording = transcript.recording
+    audit.write(
+        audit.Category.EDITS,
+        "Speakers split",
+        actor=by,
+        request=request,
+        affected_user=(
+            recording.user if by is not None and recording.user_id != by.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        lines=len(moved),
+        at_seconds=round(at, 1),
+    )
+    return made
+
+
 def last_change_line(transcript) -> str:
     """What Undo would undo, in words, or nothing."""
     changes = transcript.speaker_changes or []
     if not changes:
         return ""
     last = changes[-1]
+    if last.get("split"):
+        return (
+            f"splitting {last['from']} at {_clock(last.get('at_seconds', 0))} "
+            f"into {last['to']}"
+        )
     if last.get("swap"):
         return (
             f"swapping {last['a']} and {last['b']} between "

@@ -229,6 +229,33 @@ def submit(audio: Path, request: dict[str, Any], lane: str = "") -> Submitted:
     raise ServiceError(f"the service answered {status}", "service_refused")
 
 
+# The voices (ADR 0021): answered in the request, in seconds; the limit is
+# for a long call's upload and read.
+VOICES_TIMEOUT = 600
+
+
+def voices(audio: Path, request: dict[str, Any], lane: str = "") -> dict[str, Any]:
+    """The prepared WAV and the stretches to the service's voices request;
+    one vector per stretch and one per label back (`docs/whisperx-api.md`).
+    Raises ServiceError with the service's reason class when it refuses."""
+    body, content_type = _multipart(audio, request)
+    status, answer = _request(
+        "POST", "/v1/voices", body, content_type, timeout=VOICES_TIMEOUT, lane=lane
+    )
+    if status == 200 and isinstance(answer, dict):
+        return answer
+    if status == 401:
+        raise ServiceError(
+            "the service does not know this app's token", "service_refused"
+        )
+    if status in (400, 413, 503) and isinstance(answer, dict):
+        raise ServiceError(
+            answer.get("error", "the service refused the voices request"),
+            answer.get("reason_class", "service_refused"),
+        )
+    raise ServiceError(f"the service answered {status}", "service_refused")
+
+
 def jobs(lane: str = "") -> list[dict[str, Any]]:
     """Every one of this app's own jobs at one service, in one call.
 

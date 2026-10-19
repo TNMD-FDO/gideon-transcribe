@@ -561,6 +561,10 @@ class SpeakerCheck(models.Model):
     # {"rows", "backed", "aside", "short", "voice_against", "apart",
     #  "unread", "calls"}. Empty on a run before it.
     second_look = models.JSONField(default=dict, blank=True)
+    # The voice step's vectors by line (ADR 0021, v1.139.0), kept while the
+    # run's proposals are pending so an acceptance re-scores the rest, and
+    # emptied when the check is done. Content, never logged or exported.
+    voices = models.JSONField(default=dict, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
@@ -608,6 +612,10 @@ class SpeakerCorrection(models.Model):
     second = models.CharField(max_length=10, blank=True, default="")
     aside_why = models.CharField(max_length=120, blank=True, default="")
     voice = models.CharField(max_length=10, blank=True, default="")
+    # Who proposed it (ADR 0021, v1.139.0): the words (the engine's reading)
+    # or the voice (a line far from its own print and near another's).
+    WORDS, VOICE = "words", "voice"
+    source = models.CharField(max_length=10, default=WORDS)
     state = models.CharField(max_length=10, default=PENDING)
     decided_by = models.ForeignKey(
         "core.User",
@@ -621,6 +629,51 @@ class SpeakerCorrection(models.Model):
 
     class Meta:
         ordering = ["start", "created"]
+
+
+class Handover(models.Model):
+    """A Hand-over (ADR 0021, v1.139.0): the voice step's finding that a
+    second voice takes over under one Speaker's label from a time. A
+    proposal, never applied: a person's Yes splits the label at that time
+    into a new Speaker, with Undo; No puts it away. Hangs on the Transcript
+    as a correction does."""
+
+    PENDING, ACCEPTED, DISMISSED = "pending", "accepted", "dismissed"
+
+    id = models.AutoField(primary_key=True)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="handovers"
+    )
+    # The run that found it; `run`, since `check` is a name Django's models
+    # keep for themselves.
+    run = models.ForeignKey(
+        SpeakerCheck, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    speaker = models.CharField(max_length=60)
+    side = models.IntegerField(null=True, blank=True)
+    # The time the second voice takes over, in seconds of the recording.
+    at = models.FloatField()
+    lines_after = models.IntegerField(default=0)
+    voices = models.IntegerField(default=2)
+    loudness_gap_db = models.FloatField(default=0.0)
+    # Held by the loudness guard: the two clusters differ mainly in how
+    # loud they are, and a shout is not a second voice. Counted, not shown.
+    held = models.BooleanField(default=False)
+    state = models.CharField(max_length=10, default=PENDING)
+    # The Speaker the split made, once accepted.
+    made = models.CharField(max_length=60, blank=True, default="")
+    decided_by = models.ForeignKey(
+        "core.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["at", "created"]
 
 
 class Moment(models.Model):

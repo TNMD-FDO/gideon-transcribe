@@ -743,6 +743,44 @@ def decide_correction(
 
 @login_required
 @require_POST
+def decide_handover(
+    request: HttpRequest, handover_id: int, verdict: str
+) -> JsonResponse:
+    """A Hand-over's Yes or No (ADR 0021): Yes splits the label at the time
+    into a new Speaker, with Undo; No puts the finding away."""
+    from core.assistant import Handover
+    from core.viewer import being_replaced, last_change_line
+
+    handover = get_object_or_404(
+        Handover.objects.select_related("transcript"),
+        pk=handover_id,
+        state=Handover.PENDING,
+    )
+    recording = _recording(request, handover.transcript.recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if verdict not in ("accept", "dismiss"):
+        return JsonResponse({"error": "accept or dismiss"}, status=400)
+    if being_replaced(recording):
+        return JsonResponse({"error": "This transcript is being replaced."}, status=409)
+    cases.used(recording, by=request.user)
+    made = ""
+    if verdict == "accept":
+        made = speaker_check.accept_handover(handover, by=request.user, request=request)
+    else:
+        speaker_check.dismiss_handover(handover, by=request.user, request=request)
+    return JsonResponse(
+        {
+            "ok": True,
+            "made": made,
+            "stale": verdict == "accept" and not made,
+            "undo": last_change_line(handover.transcript),
+        }
+    )
+
+
+@login_required
+@require_POST
 def accept_corrections(request: HttpRequest, recording_id) -> JsonResponse:
     """Accept every voice-backed stretch (v1.128.0): the pending corrections
     the voice step itself heard the other Speaker on, each through the same

@@ -145,6 +145,12 @@ SHIPPED_CALL_SYSTEM_PHRASES = "\n".join(
         "for english, press",
         "for a collect call, press",
         "thank you for using",
+        "please hold",
+        "please enter",
+        "please wait while",
+        "subject to monitoring",
+        "the call is now connected",
+        "you may begin speaking",
     )
 )
 
@@ -2254,6 +2260,29 @@ def _rows() -> list[Definition]:
                 "may think."
             ),
             when_changed="The next check.",
+        ),
+        # The voice step (ADR 0021, the voice plan's second release, v1.139.0).
+        Definition(
+            key="voices_types",
+            page=SPEAKERS,
+            group="The voice",
+            name="Voices help the check",
+            kind=TEXT,
+            default="Jail call",
+            lines=4,
+            needs="speaker_check_available",
+            what_it_does=(
+                "The Recording types, one per line, on which the check also "
+                "listens: each line's own words are read by the diarizer "
+                "container's voice model, each speaker gets a voice print "
+                "from the recording itself, and the voice says of every "
+                "proposed move whether it agrees, is against or cannot tell, "
+                "proposes moves of its own, and finds a second voice under "
+                "one label. A type not listed, or a recording with no type, "
+                "is checked on words alone. Shipped for jail calls, which the "
+                "office's measurement passed; add a type after judging it."
+            ),
+            when_changed="The next check. Nothing already checked changes.",
         ),
         # The Call system (ADR 0021, the voice plan's first release, v1.138.0).
         Definition(

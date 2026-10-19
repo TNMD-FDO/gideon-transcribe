@@ -337,28 +337,155 @@ def voice_of(heard: Counter, from_: str, to: str) -> tuple[str, str]:
     return "", ""
 
 
-def _voice_notes(transcript, kept: dict) -> dict:
-    """What the voice step heard on each proposed line (v1.105.0), kept as
-    the one measure beside the words (v1.128.0): the blind second reading
-    is retired, since on the office's recordings it backed almost nothing
-    and overruled the voice. Nothing is dropped; every move is a person's
-    to decide, drawn as cards."""
-    summary = {"rows": len(kept), "voice_agrees": 0, "voice_against": 0, "silent": 0}
-    if not kept:
-        return summary
-    heard = voices_heard(transcript)
+def _voice_notes(transcript, kept: dict, check=None) -> dict:
+    """The voice's word on each proposed line, and its own proposals.
+
+    With the voice on for the Recording's type (ADR 0021, v1.139.0) the
+    service reads every line's own words and the voice says agrees, against
+    or nothing (cannot tell) of each move the words made, calibrated on the
+    recording's own lines; lines far from their own Speaker's print and near
+    another's join the proposals as the voice's own, under a cap; a second
+    voice under one label is kept as a Hand-over for the run to store. The
+    vectors are kept on the run while its proposals are pending. With the
+    voice off, or the service unable to answer, the word labels of v1.105.0
+    are the one measure, as before, and the summary says so."""
+    from core import voices
+
+    summary = {
+        "rows": len(kept),
+        "voice_agrees": 0,
+        "voice_against": 0,
+        "silent": 0,
+        "voice": "words",
+        "voice_proposals": 0,
+        "handovers": [],
+    }
+    recording = transcript.recording
+    judge = None
+    if voices.on_for(recording):
+        try:
+            answer = voices.ask(transcript)
+            judge = voices.Judge(
+                transcript, answer["stretches"], voices.floor_for(recording)
+            )
+            if check is not None:
+                check.voices = voices.dump(answer)
+            summary["voice"] = "titanet"
+            summary["cost"] = answer["cost"]
+            summary.update(voices.counts(judge))
+        except voices.Unavailable as why:
+            summary["voice"] = "unavailable"
+            summary["voice_unavailable"] = str(why)[:120]
+            log.warning(
+                "speaker check for %s: the voices could not be read: %s",
+                transcript.pk,
+                why,
+            )
+    heard = voices_heard(transcript) if judge is None and kept else {}
     for one in kept.values():
         one["second"], one["aside_why"] = "", ""
-        one["voice"], _ = voice_of(
-            heard.get(one["segment_id"]) or Counter(), one["from"], one["to"]
-        )
-        if one["voice"] == VOICE_AGREES:
+        one.setdefault("source", SpeakerCorrection.WORDS)
+        if judge is not None:
+            word, _note = judge.word(one["segment_id"], one["from"], one["to"])
+            one["voice"] = "" if word == voices.CANNOT else word
+        else:
+            one["voice"], _ = voice_of(
+                heard.get(one["segment_id"]) or Counter(), one["from"], one["to"]
+            )
+    if judge is not None:
+        from core.jobs import Segment
+
+        proposals = judge.own_proposals(set(kept), voices.CAP)
+        lines = {
+            seg.pk: seg
+            for seg in Segment.objects.filter(
+                pk__in=[p["segment_id"] for p in proposals]
+            )
+        }
+        for one in proposals:
+            seg = lines.get(one["segment_id"])
+            if seg is None or seg.speaker != one["from"]:
+                continue
+            kept[one["segment_id"]] = {
+                "segment_id": one["segment_id"],
+                "start": seg.start,
+                "quote": (seg.text or "")[:300],
+                "from": one["from"],
+                "to": one["to"],
+                "reason": f"the voice sounds like {one['to']}",
+                "voice": VOICE_AGREES,
+                "source": SpeakerCorrection.VOICE,
+            }
+            summary["voice_proposals"] += 1
+        summary["handovers"] = judge.handovers()
+    for one in kept.values():
+        if one.get("voice") == VOICE_AGREES:
             summary["voice_agrees"] += 1
-        elif one["voice"] == VOICE_AGAINST:
+        elif one.get("voice") == VOICE_AGAINST:
             summary["voice_against"] += 1
         else:
             summary["silent"] += 1
+    summary["rows"] = len(kept)
     return summary
+
+
+def _store_handovers(transcript, check, found: list) -> None:
+    """This run's Hand-overs in place of the pending ones (ADR 0021)."""
+    from core.assistant import Handover
+
+    with transaction.atomic():
+        transcript.handovers.filter(state=Handover.PENDING).delete()
+        dismissed = {
+            (one.speaker, round(one.at))
+            for one in transcript.handovers.filter(state=Handover.DISMISSED)
+        }
+        for one in found:
+            if (one["speaker"], round(one["at"])) in dismissed:
+                continue
+            Handover.objects.create(
+                transcript=transcript,
+                run=check,
+                speaker=one["speaker"],
+                side=one.get("side"),
+                at=one["at"],
+                lines_after=one["lines_after"],
+                voices=one["voices"],
+                loudness_gap_db=one["loudness_gap_db"],
+                held=one["held"],
+            )
+
+
+def rescore(transcript) -> int:
+    """After a move (ADR 0021: accept re-scores the rest): the voice's word
+    on every pending correction, from the vectors the last run kept and the
+    Speakers as they stand now. Returns how many words changed. When nothing
+    is pending any more the vectors are deleted."""
+    from core import voices
+    from core.assistant import Handover
+
+    last = transcript.speaker_checks.exclude(voices={}).first()
+    if last is None:
+        return 0
+    pending = list(transcript.corrections.filter(state=SpeakerCorrection.PENDING))
+    open_handovers = transcript.handovers.filter(
+        state=Handover.PENDING, held=False
+    ).exists()
+    if not pending and not open_handovers:
+        last.voices = {}
+        last.save(update_fields=["voices"])
+        return 0
+    judge = voices.judge_from(transcript, last.voices)
+    if judge is None:
+        return 0
+    changed = 0
+    for one in pending:
+        word, _ = judge.word(one.segment_id, one.speaker_from, one.speaker_to)
+        word = "" if word == voices.CANNOT else word
+        if word != one.voice:
+            one.voice = word
+            one.save(update_fields=["voice"])
+            changed += 1
+    return changed
 
 
 def run(check_id, attempt: int = 1) -> None:
@@ -478,9 +605,12 @@ def run(check_id, attempt: int = 1) -> None:
                 continue
             for one in prompts.keep_corrections(raw, window, speakers):
                 kept.setdefault(one["segment_id"], one)
-        # The voice step's note on each move (v1.105.0, alone since v1.128.0).
-        check.second_look = _voice_notes(transcript, kept)
+        # The voice's word on each move, its own proposals and the
+        # Hand-overs (ADR 0021, v1.139.0); the word labels alone before it.
+        check.second_look = _voice_notes(transcript, kept, check)
         _store(transcript, kept)
+        _store_handovers(transcript, check, check.second_look.get("handovers") or [])
+        check.second_look["handovers"] = len(check.second_look.get("handovers") or [])
         check.found = len(kept)
         check.windows = calls
         check.cut_short = cut
@@ -569,7 +699,50 @@ def _store_under_the_lock(transcript, kept: dict) -> None:
             second=one.get("second", ""),
             aside_why=one.get("aside_why", ""),
             voice=one.get("voice", ""),
+            source=one.get("source", SpeakerCorrection.WORDS),
         )
+
+
+# Hand-overs (ADR 0021) ---------------------------------------------------------------
+
+
+def accept_handover(handover, *, by, request=None) -> str:
+    """A person's Yes: the label is split at the time into a new Speaker, as
+    one change with Undo. Returns the new Speaker's name, or "" when no line
+    of the label lies after the time any more."""
+    from core import viewer
+
+    made = viewer.split_speaker(
+        handover.transcript, handover.speaker, handover.at, by=by, request=request
+    )
+    handover.state = handover.ACCEPTED if made else handover.DISMISSED
+    handover.made = made or ""
+    handover.decided_by = by
+    handover.decided_at = timezone.now()
+    handover.save(update_fields=["state", "made", "decided_by", "decided_at"])
+    rescore(handover.transcript)
+    return made or ""
+
+
+def dismiss_handover(handover, *, by, request=None) -> None:
+    handover.state = handover.DISMISSED
+    handover.decided_by = by
+    handover.decided_at = timezone.now()
+    handover.save(update_fields=["state", "decided_by", "decided_at"])
+    rescore(handover.transcript)
+    recording = handover.transcript.recording
+    audit.write(
+        audit.Category.EDITS,
+        "Hand-over dismissed",
+        actor=by,
+        request=request,
+        affected_user=(
+            recording.user if by is not None and recording.user_id != by.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+    )
 
 
 # What the pages read ----------------------------------------------------------------
@@ -821,7 +994,10 @@ def state_json(transcript) -> dict:
             "to": one.speaker_to,
             "reason": one.reason,
             "voice": one.voice,
+            "source": one.source,
         }
+
+    from core.assistant import Handover
 
     return {
         "offered": offered(transcript),
@@ -829,6 +1005,24 @@ def state_json(transcript) -> dict:
         "speakers": cards,
         "stretches": stretches(rows, cards),
         "score": score(transcript),
+        # The Hand-overs waiting (ADR 0021): the held ones are counted, not shown.
+        "handovers": [
+            {
+                "id": one.pk,
+                "speaker": one.speaker,
+                "at": one.at,
+                "clock": exports.clock(one.at),
+                "lines_after": one.lines_after,
+                "voices": one.voices,
+            }
+            for one in transcript.handovers.filter(state=Handover.PENDING, held=False)
+        ],
+        "handovers_held": transcript.handovers.filter(
+            state=Handover.PENDING, held=True
+        ).count(),
+        "voice": (last.second_look or {}).get("voice", "words")
+        if last is not None
+        else "words",
         "run": (
             {
                 "state": last.state,
@@ -898,6 +1092,9 @@ def _accept_under_the_lock(correction, *, by, request, viewer) -> int:
     correction.decided_by = by
     correction.decided_at = timezone.now()
     correction.save(update_fields=["state", "decided_by", "decided_at"])
+    # The moved line joins the other Speaker's print and the rest are
+    # scored again (ADR 0021).
+    rescore(transcript)
     return changed
 
 
@@ -906,6 +1103,7 @@ def dismiss(correction: SpeakerCorrection, *, by, request=None) -> None:
     correction.decided_by = by
     correction.decided_at = timezone.now()
     correction.save(update_fields=["state", "decided_by", "decided_at"])
+    rescore(correction.transcript)
     recording = correction.transcript.recording
     audit.write(
         audit.Category.EDITS,

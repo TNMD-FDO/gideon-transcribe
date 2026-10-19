@@ -212,6 +212,11 @@ urlpatterns = [
         name="accept-corrections",
     ),
     path(
+        "handover/<int:handover_id>/<str:verdict>",
+        assistant_pages.decide_handover,
+        name="decide-handover",
+    ),
+    path(
         "recording/<uuid:recording_id>/corrections/<str:verdict>-many",
         assistant_pages.decide_corrections,
         name="decide-corrections",

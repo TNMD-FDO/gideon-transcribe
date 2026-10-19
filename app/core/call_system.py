@@ -35,6 +35,15 @@ NAME = "Call system"
 # beside the two-channel calls the app finds itself.
 JAIL_CALL_TYPE = "jail call"
 
+# The opening stretch fills in (v1.139.0): a short line, or one that begins
+# with "please", between two Call system lines within this many seconds of
+# each is the system's too. The recogniser cuts the announcements into
+# fragments ("Please...", "Please enter the...") that no phrase list can
+# name; a party's "Hello?" after the connection has no system line after it
+# within the gap, and a single announcement mid-call has none either side.
+FILL_GAP_SECONDS = 15.0
+FILL_SHORT_WORDS = 6
+
 
 def is_system(name: str | None) -> bool:
     return (name or "").strip().casefold() == NAME.casefold()
@@ -73,6 +82,33 @@ def says_a_phrase(text: str, made_phrases: list[str]) -> bool:
     return any(phrase in words for phrase in made_phrases)
 
 
+def fill_in(rows: list, system: set) -> list:
+    """The lines between two of the system's lines, close to both, that are
+    short or begin with "please": the system's too, applied until nothing
+    more changes. `system` grows as lines join."""
+    added = []
+    changed = True
+    while changed:
+        changed = False
+        for index, segment in enumerate(rows):
+            if segment.pk in system:
+                continue
+            before = next((r for r in reversed(rows[:index]) if r.pk in system), None)
+            after = next((r for r in rows[index + 1 :] if r.pk in system), None)
+            if before is None or after is None:
+                continue
+            if segment.start - before.end > FILL_GAP_SECONDS:
+                continue
+            if after.start - segment.end > FILL_GAP_SECONDS:
+                continue
+            words = plain(segment.text).split()
+            if len(words) <= FILL_SHORT_WORDS or (words and words[0] == "please"):
+                system.add(segment.pk)
+                added.append(segment.pk)
+                changed = True
+    return added
+
+
 def mark(transcript) -> int:
     """Give the Call system its lines on a Transcript that has just landed.
 
@@ -88,12 +124,20 @@ def mark(transcript) -> int:
     from core.queue import BOTH_SIDES
 
     made_phrases = phrases()
+    rows = list(
+        transcript.segments.only("id", "text", "speaker", "start", "end").order_by(
+            "start", "id"
+        )
+    )
+    system = {row.pk for row in rows if is_system(row.speaker)}
     marked = []
-    for segment in transcript.segments.only("id", "text", "speaker"):
-        if is_system(segment.speaker):
+    for segment in rows:
+        if segment.pk in system:
             continue
         if segment.speaker == BOTH_SIDES or says_a_phrase(segment.text, made_phrases):
             marked.append(segment.pk)
+    system.update(marked)
+    marked += fill_in(rows, system)
     if marked:
         transcript.segments.filter(pk__in=marked).update(speaker=NAME)
     provenance = dict(transcript.provenance or {})
