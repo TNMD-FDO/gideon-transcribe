@@ -114,6 +114,10 @@ The rows from Vision to Digest part cap, and every row marked (Vision page), sit
 | Speaker check window | 120 to 1,800 seconds; greyed while Speaker check is Off | 600 | 5 (v1.55.0) | How much talk one engine call reads at a time. A shorter window means more calls, each with less to hold in view. | The next check. |
 | Speaker check answer cap | 500 to 16,000 tokens; greyed while Speaker check is Off | 3,000 | 5 (v1.55.0) | The most one window's answer, a JSON list of moves, may run to; an answer cut off at the cap keeps the moves that were finished. | The next check. |
 | Speaker check time limit | 30 to 3,600 seconds; greyed while Speaker check is Off | 180 | 5 (v1.55.0) | How long one window's call may take. Doubled while the model may think. Plus one second for every 500 tokens the call sends (v1.87.0). | The next check. |
+| Voice step | On or Off per Recording type (and for recordings with no type); greyed while Speaker check is Off | On for the kinds the measurement passed, Off for the rest (`docs/research/speaker-verification.md`) | 5 (ADR 0021; the voice plan's V2, not built) | Whether the check asks the diarizer container for each line's voice and gives its word (agrees, against, cannot tell) on every proposal, makes proposals of its own and looks for a Hand-over. Off runs the check on words alone, with the word labels as today. | The next check. |
+| Voice floor | 0.5 to 5 seconds per Recording type; greyed while Voice step is Off | 1.5 | 5 (ADR 0021, not built) | Under this much speech in a line the voice says cannot tell. Lower finds more on a call; on a body camera the measurement found 1 second over-reached. | The next check. |
+| Voice proposals cap | 0 to 100; greyed while Voice step is Off | 15 | 5 (ADR 0021, not built) | The most moves the voice may propose on its own in one run, lines the words never flagged. | The next check. |
+| Call system phrases | a list, one phrase per line | the shipped list of a prepaid-call system's announcements and prompts, in generic form | 5 (ADR 0021; the voice plan's V1, not built) | A line of a jail call whose words carry one of these is the Call system's, a Speaker of its own; the voice step adds lines that sound unlike every party. Edit for the office's vendor; Reset to default restores the shipped list. | The next transcript. |
 
 ## Incidents (Phase 6 chapter 1)
 
@@ -273,6 +277,8 @@ Fixed in code or in `.env`, and listed at the foot of the Settings pages so nobo
 Admin settings catalogue and panel (its Answer; the facts it carries from the LDAP, media handling, audit log, WhisperX contract, translation, queue, Workspace lifecycle, Phase 1 LLM features, Word export, deployment topology, Case folder, GitHub distribution, and directory objects tickets; and every amendment recorded on it); the glossary.
 
 ## Amendments applied
+
+- 2026-10-19, not yet built (ADR 0021; the voice plan, stage two), to the Speakers group: Voice step (per Recording type), Voice floor, Voice proposals cap and Call system phrases; the Voice prints switch of Phase 5 chapter 2 (Admin, Off, turning it off deletes every print) joins the Cases group when its release is specified.
 
 - From the Case folder ticket, to the Cases group and the Limits group: Recording types added; the quota's Phase 2 description.
 - From the sharing ticket, to the Cases group: Sharing fixed (On or Off, default Off, greyed while Folder management is Off, Off hiding and never deleting).

@@ -24,7 +24,7 @@ Chapter 1 adds no admin setting, no audit row, no table, and no environment key.
 ## Contents
 
 1. The Speakers page
-2. Voice prints (deferred; the reservation and the rules)
+2. Voice prints (coming into force with the voice plan's V4; the rules)
 3. The Speaker check
 4. The diarizer
 5. Deferred and ruled out
@@ -131,9 +131,9 @@ None new. Speaker suggestions (Phase 1) governs Suggest names on the page; Speak
 - The narrow-window arrangement below 1280 pixels, within the rule that the cards go above the Lanes and the picture gives way first.
 - The exact wording of the fragment hint and the "not this speaker" list, within the words fixed here.
 
-## 2. Voice prints (deferred; the reservation and the rules)
+## 2. Voice prints (coming into force with the voice plan's V4; the rules)
 
-Not built. The maintainer chose on 2026-09-12 to build the page first and voice prints in a later release, and this chapter is the reservation the page keeps and the rules the release will have to meet, so that the page is not redesigned when it comes. Nothing here is in force, and Phase 1's ruled-out item 12 and Phase 2's Principle 4 stand until an amendment moves this chapter into force.
+Not yet built. The maintainer chose on 2026-09-12 to build the page first and voice prints in a later release, and this chapter was the reservation the page keeps and the rules the release would have to meet. On 2026-10-19, after the measurement in `docs/research/speaker-verification.md`, the maintainer decided (ADR 0021) that the chapter comes into force as written, with the additions under "What the voice plan adds", in the voice plan's fourth release. Until that release lands nothing here is in force, and Phase 1's ruled-out item 12 and Phase 2's Principle 4 stand; the release's amendment moves them.
 
 ### What it is
 
@@ -141,7 +141,7 @@ Recognising a Speaker by sound: the app noticing that the voice of an unnamed Sp
 
 ### What the app already has
 
-The WhisperX service returns, on request, one vector per Speaker from its diarization model (`docs/whisperx-api.md`, `return_speaker_embeddings`). The app asks for them today for the stretches of a Live recording and matches labels across stretches by a same-voice threshold (Phase 3, the Live recording chapter), then discards them. Nothing is kept. From chapter 4 (v1.80.0) the vectors are pyannote's alone: the Nemotron diarizer, the default, returns spans and no embeddings, so voice prints will need an embedding step of their own before this chapter can come into force.
+The WhisperX service returns, on request, one vector per Speaker from its diarization model (`docs/whisperx-api.md`, `return_speaker_embeddings`). The app asks for them today for the stretches of a Live recording and matches labels across stretches by a same-voice threshold (Phase 3, the Live recording chapter), then discards them. Nothing is kept. From chapter 4 (v1.80.0) the vectors are pyannote's alone: the Nemotron diarizer, the default, returns spans and no embeddings, so voice prints need an embedding step of their own. That step is the diarizer container's second duty (chapter 4, ADR 0021): TitaNet-large, a speaker verification model loaded through the NeMo the container already pins, returning one vector per stretch and one per label on request.
 
 ### The rules it will have to meet
 
@@ -151,9 +151,19 @@ The WhisperX service returns, on request, one vector per Speaker from its diariz
 4. **Off by default.** An admin setting turns it on, and turning it off deletes every Voice print the Case holds; the pages say so before the switch is thrown.
 5. **Honest wording.** "Sounds like" and never "is"; the card keeps the Samples beside it so a person listens before accepting.
 
+### What the voice plan adds (ADR 0021, 2026-10-19)
+
+- **Learnt from acceptances only.** A Person's print is made when a person accepts a match or names a Speaker inside the Case, from that Speaker's vector, and refined by each later recording a person accepts a match on; nothing a person has not accepted teaches it. A print taught by one recording rates no higher than medium.
+- **Two acts, recorded apart.** The run may propose both on one card, but the app records "this voice is the same as that Speaker" and "that Speaker is this Person" as two facts, so a wrong name is one rename and a wrong grouping is one unlearn.
+- **Unlearn**, on the Case's Speakers tab beside the Person: deletes the Person's print and returns every Speaker it matched to unnamed and marked, with the chain of what it undid shown before it is pressed.
+- **Sounds like, rated by the weakest link.** A match's rating is the lowest of the print's own confidence, the recording's calibration and the stretch's length, in the AI chapter's three words; only the two upper ones show; the card keeps the samples beside it.
+- **The Case's Speakers tab** gains the run's proposals grouped by Person, conflicts (two People matched to one voice), the chain on every name, Unlearn, and Decided so far per Person and per source; a dismissal alarm when a Person's matches are dismissed again and again.
+- **The Side rule's check.** On a two-channel call named across the Case (Phase 9 chapter 2), a Side whose voice does not sound like its Person is flagged on the card, never renamed.
+- **The Call system has no print**, anywhere: it is found by its phrases and by sounding unlike every party on the recording itself.
+
 ### What it will change
 
-Phase 1's ruled-out item 12 and Phase 2's Principle 4 (an amendment to each, recorded here and there); `return_speaker_embeddings` requested on every diarized job inside a Case while the setting is On; a field on the Person and a migration; the reservation line on the card drawn; an audit row for a match accepted and rejected (no name); the catalogue's row for the setting; the decision record in `docs/adr/` that says what is kept and why.
+Phase 1's ruled-out item 12 and Phase 2's Principle 4 (an amendment to each, recorded here and there); the diarizer container's voices request on every diarized job inside a Case while the setting is On (in place of pyannote's `return_speaker_embeddings`); a field on the Person and a migration; the reservation line on the card drawn; an audit row for a match accepted, rejected and unlearnt (no name, no vector); the catalogue's row for the setting; ADR 0021 says what is kept and why.
 
 ## 3. The Speaker check
 
@@ -163,8 +173,8 @@ Written 2026-09-14 from the maintainer's ask, after a run of the office's engine
 
 1. **Separation, not naming.** Suggest names says who a Speaker is. The check says which lines are whose. They sit side by side on the Speakers page and never overlap: the check works on the labels as they stand, and a Speaker already named is proposed by that name.
 2. **It proposes; a person moves.** Nothing changes when the check runs. A Speaker correction is a proposal on the page until somebody presses Accept, and an accepted correction is a line move like any other: the viewer's own function, the viewer's own audit row, the viewer's own Undo.
-3. **Only among the Speakers there are.** A line may be moved only to a Speaker already on the Transcript. The engine is given that list and may answer with nothing else; the app checks every answer again. The check never adds a Speaker, never merges two, and never touches a word.
-4. **What the words give.** The check finds the moves the words make plain: a question and its answer under one label, a person addressed by name answering under the asker's label, a command under the label of the one it was given to. Where either Speaker could have said a line, nothing is proposed. The fine separations the words cannot settle are a voice question, chapter 2's, not this chapter's.
+3. **Only among the Speakers there are, and one more by a person's Yes.** A line may be moved only to a Speaker already on the Transcript. The engine is given that list and may answer with nothing else; the app checks every answer again. The check never merges two Speakers and never touches a word. From the voice plan's V2 (ADR 0021) it may propose a Hand-over, a second voice under one label from a time, which a person's Yes turns into a new Speaker by splitting the label there; the check itself adds nothing.
+4. **What the words give, and what the voice says of it.** The check finds the moves the words make plain: a question and its answer under one label, a person addressed by name answering under the asker's label, a command under the label of the one it was given to. Where either Speaker could have said a line, nothing is proposed. From V2 the voice step gives its word on every proposal (agrees, against, cannot tell) and may propose a move the words never made; the fine separations neither can settle stay a person's.
 5. **Off until judged.** Shipped Off. An office turns it on after seeing it do well on its own recordings, as with Suggest names.
 
 ### Words
@@ -191,11 +201,24 @@ The app then checks every move: the line is one of the window's, the Speaker is 
 - Accept moves the line at once on the page, in the Lanes, the counts and the reading pane, and the Undo line says so. A correction whose line changed hands since the check is dismissed rather than applied, and the page says so.
 - On the recording page's Speakers strip, a pill, **3 speaker corrections**, while any wait; a press opens the Speakers page.
 
+### The voice step and the one run (ADR 0021, 2026-10-19; the voice plan's V2 and V3, not built)
+
+Decided from the measurement in `docs/research/speaker-verification.md`: on the office's recordings the diarizer's labels were wrong on a quarter of judged call lines and a fifth of camera lines, the check's own proposals were right on 3 of 26 the maintainer could judge, and the voice was right on 85 to 100 per cent of the lines it spoke on.
+
+- **The voice's word on every proposal.** As the check runs, the WhisperX service's diarizer container is asked for one vector per line (the line's own words, minus the words the diarizer gave to another label; a mixed line split at the word where the label changes) and one per Speaker. A Speaker's print on the recording is the mean of every line of its label of two seconds or more, outliers dropped and the mean re-taken until it settles. Calibrated on the recording's own lines, each proposal carries **agrees**, **against** or **cannot tell**; cannot tell under the floor (**Voice floor**, per Recording type, 1.5 seconds as shipped) and wherever a print is missing. A proposal the voice is against is shown as such and never in the one-press path; the words "the voice step heard both" and "the voice step was firm" of v1.105.0 give way to these three.
+- **The voice's own proposals.** A line far from its own Speaker's print and near another's, that the words never flagged, becomes a correction with the reason "the voice sounds like Speaker 2", under **Voice proposals cap** per run, drawn as the stretch cards are.
+- **A Hand-over.** Within one label, two or three voices apart by the recording's own measure that also separate in time are one question: "From 6:12, is this a different person under Speaker 2?", with the moment to hear, **Yes** (the label is split at that time into a new Speaker, with Undo) and **No**. Never proposed where the clusters differ mainly in loudness: a shout is not a second voice.
+- **The Call system is carved out.** Its lines (chapter 4 of Phase 1's two-channel call rule, the shipped phrase list) join no print and get no proposal; an announcement spoken over a party's words is split from them at the word.
+- **Accept re-scores.** When a person accepts a correction the moved line joins the other Speaker's print and every pending proposal is scored again, so one listened-to decision tidies the rest. The vectors live on the run and are deleted when the check is done; nothing is kept on the Transcript.
+- **One run (V3).** The check and Suggest names become one job, automatic as the Transcript lands or overnight under the check's position, with **Run again** on the page; one list of cards (moves, Hand-overs, names, and from V4 "Sounds like"); a name addressed or introduced by any form of a Person's Also called list reaches the Person with the form as the reason; a suggestion resting on a form two People share is withheld or rated low. The run keeps the name Speaker check; the page says that it also suggests names.
+- **Per kind.** The voice step is switched on per Recording type (**Voice step** in the catalogue), shipped on for the kinds the measurement passed and off for the rest; with it off the check runs on words alone, with `voice_of` from the word labels as today.
+- **Decided so far** counts per source (the words, the voice, a Hand-over, a name) what people accepted and dismissed, which is the measure after each release.
+
 ### What changes from earlier phases
 
 - **Phase 1, the Transcript viewer and player chapter, Speaker changed on a line**: the move a line makes by the number keys is one function, and an accepted correction goes through it. The row it writes for a correction is Speaker correction accepted, with the same details.
 - **Phase 4 chapter 5, Vision**: the overnight position's window is read by the check too, as the time its day-queued runs wait for. Nothing else in the Vision flow changes; the check is never a stage the batch page or the mail waits for.
-- Nothing changes for Suggest names, the Speakers tab on the Case page, exports, Clips, Summary, or Chat.
+- Nothing changes for exports, Clips, Summary, or Chat. From the voice plan's V3, Suggest names is a part of the check's run; from V4 the Speakers tab on the Case page carries the run's proposals (chapter 2).
 
 ### Audit rows
 
@@ -203,14 +226,14 @@ Speaker check queued (how: landed or pressed; the wait in seconds under overnigh
 
 ### Settings
 
-A **Speakers** page in the Panel's Settings group: Speaker check (Off); Speaker check runs (as each transcript lands; overnight); Speaker check window (600 seconds); Speaker check answer cap (3,000 tokens); Speaker check time limit (180 seconds). The wording lives as the **Speaker check** template on the Templates page, editable and resettable, following the shipped wording while unedited.
+A **Speakers** page in the Panel's Settings group: Speaker check (Off); Speaker check runs (as each transcript lands; overnight); Speaker check window (600 seconds); Speaker check answer cap (3,000 tokens); Speaker check time limit (180 seconds). The wording lives as the **Speaker check** template on the Templates page, editable and resettable, following the shipped wording while unedited. From the voice plan's V2 (ADR 0021): Voice step (per Recording type), Voice floor (per Recording type, 1.5 seconds), Voice proposals cap (15), Call system phrases (the shipped list, editable); from V4: Voice prints (Admin, Off), in chapter 2.
 
 ### Not in this phase
 
-- Accepting the sure ones automatically. A later switch, once an office has watched the check for a while.
-- Splitting a line between two Speakers at a word.
+- Accepting the sure ones automatically. A later switch, once an office has watched the check for a while (the voice plan's V5, never on by default).
+- Splitting a line between two Speakers at a word, except where the voice step splits a mixed line or a Call system announcement spoken over a party (V2).
 - A check across a Case, or on a Recording whose Speakers were not told apart.
-- Any listening: the check reads words only. Voice prints are chapter 2.
+- Any listening by the engine: the check's words come from the engine, its voice from the diarizer container (V2); nothing of a voice is sent to the engine or anywhere else. Voice prints across recordings are chapter 2.
 
 ### Left to the build
 
@@ -243,8 +266,9 @@ Added to `CONTEXT.md` with this chapter. **Diarizer**: the model that tells a Re
 
 - **A second container, `diarizer`**, in the WhisperX service's Compose file, built from this repository as the third image (`ghcr.io/tnmd-fdo/gideon-transcribe-diarizer`, tagged with `RELEASE_TAG` like the other two, its digest recorded and checked as ADR 0013 has it). It holds NeMo's ASR extra at the pinned source commit, torch 2.8.0 with CUDA 12.8 (the WhisperX stack's own, confirmed by the probe on 2026-09-24 to load and run the model with the same output), the model's weights from the shared model cache, and a small HTTP API on the `whisperx` network with no published port. It reserves the same card as the WhisperX service by the same UUID and holds about 2 GB of it while a job diarizes.
 - **Its API**, for the WhisperX service alone: `POST /v1/diarize` with the prepared WAV, returning the spans as a list of `{start, end, speaker}` in seconds, with the model's name and version; `GET /healthz`. The Consumer never calls it; the WhisperX service's contract is the only one Consumers hold.
+- **A second duty (ADR 0021; the voice plan's V2, not built)**: `POST /v1/voices` with the prepared WAV and a list of stretches (start, end, label), returning one vector per stretch and one per label, from NVIDIA's TitaNet-large (`nvidia/speakerverification_en_titanet_large`, revision pinned, CC-BY-4.0, about 100 MB, trained on telephone and wideband speech) loaded through the same NeMo commit beside Nemotron, under a gigabyte more of the card. Reached by the WhisperX service's contract as a request of its own (`docs/whisperx-api.md`); nothing stored in the container; the service version moves. The measurement that chose the model and its rules is `docs/research/speaker-verification.md`.
 - **The WhisperX service's contract** (`docs/whisperx-api.md`, amended with this chapter) gains one request field, `diarizer`: `nemotron` or `pyannote`, default `nemotron` from service 0.3.0. With `nemotron` the service transcribes and aligns as today, asks the diarizer container for the spans, and gives each word its Speaker by WhisperX's own `assign_word_speakers`, so both diarizers attribute words the same way. With `pyannote` nothing changes from today. A `speakers` hint or `return_speaker_embeddings` with `diarizer=nemotron` is refused, `400` with a `reason_class`, under the same rule that refuses a hint without `diarize`: a Consumer that sends one has a bug. The result's `settings_used` names the diarizer and its version; `speakers.labels` are `speaker_0`, `speaker_1` and on for Nemotron, which the app renames to Speaker 1 and on as it does pyannote's `SPEAKER_00`.
-- **The pins.** `models.yaml` gains a `diarizer` entry: `nvidia/Nemotron-3-Diarization`, revision pinned, licence OpenMDW-1.1, not gated, size recorded; `pull` fetches it into the shared cache like the others and the diarizer container reads it offline. pyannote's entry stays; when no Hugging Face token is given, `pull` skips the gated model, says so, and the Panel greys the `pyannote` choice.
+- **The pins.** `models.yaml` gains a `diarizer` entry: `nvidia/Nemotron-3-Diarization`, revision pinned, licence OpenMDW-1.1, not gated, size recorded; `pull` fetches it into the shared cache like the others and the diarizer container reads it offline. pyannote's entry stays; when no Hugging Face token is given, `pull` skips the gated model, says so, and the Panel greys the `pyannote` choice. With the second duty (V2) `models.yaml` gains a `voices` entry for TitaNet-large by revision, fetched and checked the same way, and `THIRD_PARTY_LICENSES.md` its attribution.
 - **The diarizer's own settings**, in the service's environment file with the WhisperX service's fixed rules: the offline chunking configuration from the model card (spkcache 264, fifo 40, chunk 340, right context 40, update period 300 frames of 80 ms) and the batch size. Not Panel settings.
 - **The benchmark gate** runs once on the server before the tag, as for every model change: the diarizer's time per hour of audio and card memory, written into the research note.
 
@@ -324,6 +348,8 @@ And the Speaker check prompt template on the Templates page. None in chapter 1.
 The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose from ("the line-up with lanes"); the Phase 1 Transcript viewer and player chapter (the Speakers panel, the Speakers window, Speaker suggestions) and AI assistant chapter; the Phase 2 People chapter; the Phase 3 Live recording chapter's use of embeddings across stretches; `docs/whisperx-api.md`. For chapter 3: the maintainer's questions and decisions of 2026-09-14 and the probe recorded in `docs/research/speaker-check-probe.md`.
 
 ## Amendments applied
+
+- **2026-10-19, not yet built (ADR 0021; the voice plan, stage two).** From the measurement in `docs/research/speaker-verification.md` and the maintainer's decisions of the same day. **Chapter 2** comes into force with the voice plan's fourth release, its rules as written plus "What the voice plan adds": prints learnt from acceptances only, two acts recorded apart, Unlearn, Sounds like rated by the weakest link, the Case's Speakers tab, the Side rule's check, no print of the Call system; the embedding step is chapter 4's second duty. **Chapter 3**: Principle 3 lets a person's Yes to a Hand-over add a Speaker; Principle 4 gives the voice its word; the new section "The voice step and the one run" (the voice's three words calibrated on the recording, prints from every line of a label of two seconds or more, the floor per Recording type, the voice's own proposals under a cap, the Hand-over with its loudness guard, the Call system carved out, accept re-scores, vectors deleted with the run, one run with Suggest names as a part, per kind, Decided so far per source); the settings rows named. **Chapter 4**: the diarizer container's second duty, `/v1/voices` with TitaNet-large, and its pin. The glossary gains Call system, Also called and Hand-over. Nothing is built; each release lands with its switch off.
 
 - **2026-10-02, v1.107.1.** Chapter 1's Speakers page under 600 wide: v1.107.0's rule named the line's words by the wrong part and did nothing on the server; corrected, the words take their own line under the time and the name.
 

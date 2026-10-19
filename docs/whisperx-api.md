@@ -479,6 +479,7 @@ Nemotron 3 Diarization does not run inside the WhisperX image: the model needs N
 - **Its stack**: torch 2.8.0 with CUDA 12.8 (the WhisperX image's wheels, so the driver requirement does not rise), NeMo's ASR extra from a source archive of one commit checked by sha256, the offline chunking from the model card in its environment file (spkcache 264, fifo 40, chunk 340, right context 40, update period 300, in frames of 80 ms), batch size 1. The pins and the reasons are in `docs/research/nemotron-3-diarization.md`.
 - **Its weights** are the `diarizer` entry of `models.yaml`, fetched by `pull` into the shared model cache and read offline; not gated, so an office that never gives a HuggingFace token still diarizes.
 - **Two copies on one card** (below) applies to the WhisperX service; the diarizer runs once and serves both lanes in arrival order.
+- **A second duty, the voices (ADR 0021; the voice plan's V2, not built; the service version moves when it lands).** The container loads NVIDIA's TitaNet-large beside Nemotron (`nvidia/speakerverification_en_titanet_large`, revision pinned in `models.yaml` under `voices`, CC-BY-4.0, about 100 MB, under a gigabyte of the card) and answers `POST /v1/voices`: the prepared WAV and a JSON list of stretches `[{"start", "end", "label"}]` in; `{"stretches": [{"start", "end", "label", "vector"}], "labels": [{"label", "vector", "stretches"}], "model": {"name", "revision", "nemo"}, "seconds"}` out, each vector 192 numbers of unit length, a label's vector the mean of its stretches of two seconds or more with outliers dropped. A stretch under half a second is answered with no vector. Nothing is stored. The WhisperX service exposes it to the Consumer as a request of its own under the same token, `POST /v1/voices` with the job's audio or the prepared WAV, since a Consumer never reaches the container; the shape and the refusals are left to the build. The measurement behind the model and its rules is `docs/research/speaker-verification.md`.
 
 ## Left to the build
 
@@ -522,6 +523,8 @@ and not a history. What was decided, on 2026-09-03:
 - The debug log level is described in the service README.
 
 ## Amendments applied
+
+- 2026-10-19, not yet built (ADR 0021; the voice plan, stage two): the diarizer container's second duty, `POST /v1/voices` with TitaNet-large, and the Consumer-facing request the WhisperX service will carry for it; the shape as drafted here, the refusals left to the build.
 
 - v1.134.0 (2026-10-14): `GET /v1/jobs` lists every queued and running job of the caller and caps only the ended ones at 200; the app asks `GET /v1/jobs/{id}` for a Run it does not find in the list before it takes it for lost.
 - Service 0.4.0 (2026-09-26): the `diarize` task and the result's `speakers.turns`, for the app's Live recordings, whose stretches are diarized one by one and, under Nemotron, carried no voice prints to match their speakers by; one pass over the whole file at Stop matches them instead.

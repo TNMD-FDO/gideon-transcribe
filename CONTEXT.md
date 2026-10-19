@@ -55,6 +55,10 @@ One timed span of a Transcript attributed to one Speaker.
 **Speaker**:
 A voice label in one Transcript, optionally given a name. Diarization creates Speakers, and the Sides of a Two-channel call are Speakers too. Inside a Case, Speakers given the same name are one Person.
 
+**Call system**:
+The recorded voice of a prepaid-call system on a jail call, as a Speaker of its own on the Transcript: its announcements ("this call is from...", "you have one minute remaining") and prompts, found by a shipped, editable list of phrases and, from the voice step on, by sounding unlike every party (ADR 0021; the voice plan's V1, not built). It has no Role, no name and no Voice print; the Speaker check and Suggest names never see it; its lines stay under its own label and colour, and the memo says "the call system announced".
+_Avoid_: the system (alone), the recording (that is the Recording), IVR, announcement voice, the operator
+
 **Diarizer**:
 The model that tells a Recording's voices apart: Nemotron 3 Diarization (the default from v1.80.0, up to eight voices, no token) or pyannote community-1 (the diarizer until then, kept reachable). One Panel setting on the Transcription defaults page names it; a Recording's Details tab says which split it. Phase 5 chapter 4.
 _Avoid_: engine (the AI assistant's word), model alone, "speaker separation model"
@@ -101,8 +105,12 @@ The list a Case keeps of names and places, each with its Also heard as spellings
 _Avoid_: alias list, dictionary, glossary (this file is the glossary), find and replace
 
 **Also heard as**:
-The spellings the engine has been heard to give a name or place, listed on its Case vocabulary entry; a Search hit by one is marked so, after the exact hits. Phase 9 chapter 2.
+The spellings the engine has been heard to give a name or place, listed on its Case vocabulary entry; a Search hit by one is marked so, after the exact hits. Phase 9 chapter 2. Never sent to recognition.
 _Avoid_: alias, nickname, misspelling, variant
+
+**Also called**:
+The names people use for a Person on the recordings ("Mama", "Coach", a first name where the Role has the full name), listed where the Person is identified, beside Also heard as (ADR 0021; the voice plan's V3, not built). Each goes to recognition as vocabulary, to the name rules of Suggest names, to Search and to Gideon; a name reached through one carries it as the reason on the card. Neither list labels a Speaker or rewrites a word: the label on every page is the Person's name.
+_Avoid_: alias, nickname (as the field's name), AKA, variant
 
 **Follow mode**:
 The viewer behaviour that keeps the current Segment in view while the Recording plays. On by default; pauses while the user scrolls the Transcript by hand and resumes on request.
@@ -138,7 +146,7 @@ One of up to three lines of a Speaker that the Speakers page offers to play to h
 Exchanging two Speakers for a stretch of a Recording on the Speakers page, from one time to another: every line of the first in the stretch becomes the second's and the other way round, in one press, remembered for Undo. The shape a diarizer's error takes when it confuses two voices for a passage, and what the Suggested corrections offer when a run of them lies between the same two Speakers. Since v1.56.0. Avoid: flip, exchange, relabel.
 
 **Voice print**:
-Phase 5 chapter 2, not built: one vector per Person in a Case, made from a Speaker's voice when the Speaker is named, that lets the app say an unnamed Speaker in another Recording of the Case "sounds like" that Person. Content, never logged or exported, deleted with the Person. Until the chapter is in force the app keeps no such thing. Avoid: embedding (on a page; the service's word), voice signature, biometric.
+Phase 5 chapter 2, coming into force with the voice plan's V4 (ADR 0021, 2026-10-19; not built): one vector per Person in a Case, learnt from the matches a person accepts and refined by each recording, that lets the app say an unnamed Speaker in another Recording of the Case "sounds like" that Person. Content, never logged or exported, never across Cases, deleted with the Person, by Unlearn, or when the Admin's switch goes off. Until that release lands the app keeps no such thing; the voice step's vectors live on a Speaker check's run and are deleted when it is done. Avoid: embedding (on a page; the service's word), voice signature, biometric.
 
 **Boost**:
 The viewer's volume control above 100%, for quiet Recordings such as jail calls.
@@ -634,7 +642,11 @@ The Speaker check's reading of who is who across the whole Transcript, written b
 _Avoid_: profile, persona, dossier, character list, summary (that is a Summary), cast
 
 **Speaker check**:
-The AI assistant reading a Transcript whose Speakers were told apart for lines whose words show they belong to a different Speaker than the voice split gave them (Phase 5 chapter 3): since v1.100.0 it first reads the whole Transcript once and writes a Sketch of who is who, then reads the lines in one window when the whole fits the engine and in windows of a few minutes otherwise, each given the Sketch. It runs by itself as the Transcript lands, when the office has it on, or from Check the speakers on the Speakers page. It proposes and never applies: its findings are Speaker corrections. It never adds or merges a Speaker and never changes a word. Words to avoid: relabel, re-diarize, auto-correct.
+The AI assistant reading a Transcript whose Speakers were told apart for lines whose words show they belong to a different Speaker than the voice split gave them (Phase 5 chapter 3): since v1.100.0 it first reads the whole Transcript once and writes a Sketch of who is who, then reads the lines in one window when the whole fits the engine and in windows of a few minutes otherwise, each given the Sketch. It runs by itself as the Transcript lands, when the office has it on, or from Check the speakers on the Speakers page. It proposes and never applies: its findings are Speaker corrections. It never merges a Speaker and never changes a word; from the voice plan's V2 (ADR 0021, not built) the voice step gives its word on every proposal and may propose a Hand-over, which a person's Yes turns into a new Speaker, and from V3 Suggest names is a part of the same run, which keeps this name. Words to avoid: relabel, re-diarize, auto-correct.
+
+**Hand-over**:
+A finding of the Speaker check (ADR 0021; the voice plan's V2, not built): a second voice taking over under one Speaker's label from a time, found by the voice step clustering the label's lines, shown as a question on the Speakers page ("From 6:12, is this a different person under Speaker 2?") with Yes, which splits the label at that time into a new Speaker, and No. Never proposed where the two clusters differ mainly in loudness. On the office's recordings it caught what a Voice print could not: a phone passed from hand to hand under one label.
+_Avoid_: speaker change (that is every turn), split (the act, not the finding), hand-off, new speaker
 
 **Speaker correction**:
 One line the Speaker check says belongs to another Speaker already on the Transcript: the line's words, its time, who it is labelled as, who it should be, and the assistant's reason in a few words. Listed under Suggested corrections on the Speakers page until a person accepts or dismisses it. Accepting moves the line exactly as the number keys do, with the same audit row and the same Undo; a correction whose line changed since the check is dismissed rather than applied. Since v1.129.0 the page lists them as the check's proposals under the Speaker cards, and a pending one follows a merge made from a card. Words to avoid: reassignment, fix, auto-fix.
