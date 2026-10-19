@@ -23,6 +23,7 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | pyannote/speaker-diarization-community-1 (weights) | CC-BY-4.0 | behind a Hugging Face gate that each office accepts itself; attribution required; never redistributed with the app; one of the two diarizers from v1.80.0, fetched only when a token is given |
 | NVIDIA NeMo (`nemo-toolkit[asr]`, code) | Apache-2.0 | the diarizer image's toolkit, from a pinned source archive of the NeMo Speech repository checked by hash at build; `docs/research/diarizer-pinned-stack.md` is the list of what it brings |
 | nvidia/Nemotron-3-Diarization (weights) | OpenMDW-1.1 | the default diarizer from v1.80.0; open weights, not gated, commercial use allowed; fetched by the model pull into the model folder, never shipped in an image |
+| nvidia/speakerverification_en_titanet_large (weights) | CC-BY-4.0 | TitaNet-large, the voices in the diarizer container (ADR 0021, v1.139.0); attribution required and given here; not gated; fetched by the model pull into the model folder, never shipped in an image; `docs/research/speaker-verification.md` is the measurement that chose it |
 | every other component pinned on the diarizer stack | as pinned | `docs/research/diarizer-pinned-stack.md` is the list |
 | OpenAI Whisper (code and model weights) | MIT | the Hugging Face mirror `openai/whisper-large-v3` is tagged Apache-2.0 and is not gated |
 | PyTorch | BSD-3-Clause | |

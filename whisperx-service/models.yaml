@@ -55,6 +55,21 @@ diarizer:
   gated: false
   size_gb: 0.45
 
+# The voices (ADR 0021, the voice plan's second release): NVIDIA's TitaNet-
+# large speaker verification model, loaded in the diarizer container beside
+# Nemotron through the same pinned NeMo. One file of the repository is
+# fetched; its sample recordings are not. The revision is the repository's
+# only commit (2023-11-14); the measurement that chose the model is
+# `docs/research/speaker-verification.md`. CC-BY-4.0, attributed in the
+# third-party licences file.
+voices:
+  repository: nvidia/speakerverification_en_titanet_large
+  revision: 0dc382f40121a5fbd34db10a2bb04d826c2be6a8
+  file: speakerverification_en_titanet_large.nemo
+  licence: CC-BY-4.0
+  gated: false
+  size_gb: 0.10
+
 # The alignment models for the languages in WHISPERX_ALIGN_LANGUAGES, so that
 # those languages are aligned offline from the first run. Both come from
 # torchaudio's own bundles, which torch fetches by URL rather than from a

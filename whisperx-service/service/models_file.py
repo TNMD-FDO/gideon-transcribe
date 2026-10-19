@@ -17,19 +17,28 @@ class Model:
     revision: str | None
     licence: str
     default: bool = False
+    # The one file to fetch, for a repository that carries more than its
+    # weights (the voices model's sample WAVs are not wanted).
+    file: str = ""
 
 
 class Models:
     """What may be asked for, and whether it is already on the server."""
 
     def __init__(
-        self, models: list[Model], diarization: Model, diarizer: Model | None = None
+        self,
+        models: list[Model],
+        diarization: Model,
+        diarizer: Model | None = None,
+        voices: Model | None = None,
     ) -> None:
         self.models = models
         self.diarization = diarization
         # Nemotron 3 Diarization, served by the diarizer container (Phase 5
         # chapter 4); None for a models file from before it.
         self.diarizer = diarizer
+        # TitaNet-large, the voices, in the same container (ADR 0021).
+        self.voices = voices
 
     @classmethod
     def load(cls, path: Path = MODELS_FILE) -> Models:
@@ -60,7 +69,16 @@ class Models:
                 revision=raw["diarizer"].get("revision"),
                 licence=raw["diarizer"].get("licence", ""),
             )
-        return cls(models, diarization, diarizer)
+        voices = None
+        if raw.get("voices"):
+            voices = Model(
+                name="voices",
+                repository=raw["voices"]["repository"],
+                revision=raw["voices"].get("revision"),
+                licence=raw["voices"].get("licence", ""),
+                file=raw["voices"].get("file", ""),
+            )
+        return cls(models, diarization, diarizer, voices)
 
     @property
     def names(self) -> tuple[str, ...]:

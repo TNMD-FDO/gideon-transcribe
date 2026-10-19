@@ -40,10 +40,11 @@ COPY constraints.txt requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
  && pip install --no-cache-dir -c /tmp/constraints.txt "fastapi==0.141.1" "uvicorn[standard]==0.52.4"
 
-# The model must load, not merely install: a NeMo that lacks the model's
+# The models must load, not merely install: a NeMo that lacks the model's
 # encoder fails here, at build, and not at the first recording. The weights are
-# not in the image, so this imports the class alone.
-RUN python -c "from nemo.collections.asr.models import SortformerEncLabelModel"
+# not in the image, so this imports the classes alone (the diarizer's and the
+# voices', ADR 0021).
+RUN python -c "from nemo.collections.asr.models import SortformerEncLabelModel, EncDecSpeakerLabelModel"
 
 # The container runs as the office's own account (Compose's `user:`), which
 # has no entry in the image's passwd file. torch's compile machinery, which
@@ -63,7 +64,7 @@ ENV HF_HOME=/models/hf \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-COPY server.py /opt/diarizer/server.py
+COPY server.py centroids.py /opt/diarizer/
 WORKDIR /opt/diarizer
 EXPOSE 8100
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8100", "--workers", "1"]

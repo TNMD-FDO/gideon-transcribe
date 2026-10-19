@@ -493,4 +493,4 @@ def test_a_nemotron_job_needs_the_diarizer_container(client, runner):
     assert submit(client).status_code == 202
     assert submit(client, diarize=True, diarizer="pyannote").status_code == 202
     told = client.get("/v1/status", headers=headers()).json()
-    assert told["diarizers"] == {"nemotron": False, "pyannote": True}
+    assert told["diarizers"] == {"nemotron": False, "pyannote": True, "voices": False}

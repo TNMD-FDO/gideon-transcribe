@@ -143,9 +143,10 @@ services:
   # The diarizer (Phase 5 chapter 4, ADR 0014): Nemotron 3 Diarization on
   # NeMo, in a container of its own so the WhisperX image's pinned stack is
   # not disturbed. The WhisperX service calls it at http://diarizer:8100 for
-  # the spans and attributes words itself; nothing else calls it, and it has
-  # no token. It reads the model folder offline, on the same card as the
-  # WhisperX service, and holds about 2 GB of it while a job diarizes.
+  # the spans and attributes words itself, and for the voices (ADR 0021);
+  # nothing else calls it, and it has no token. It reads the model folder
+  # offline, on the same card as the WhisperX service, and holds about 2 GB
+  # of it while a job diarizes, under a gigabyte more for the voices.
   diarizer:
     image: ghcr.io/tnmd-fdo/gideon-transcribe-diarizer:${RELEASE_TAG:-dev}
     build:
@@ -178,6 +179,12 @@ services:
       DIARIZER_CHUNK_LEN: "${DIARIZER_CHUNK_LEN:-340}"
       DIARIZER_RIGHT_CONTEXT: "${DIARIZER_RIGHT_CONTEXT:-40}"
       DIARIZER_UPDATE_PERIOD: "${DIARIZER_UPDATE_PERIOD:-300}"
+      # The voices (ADR 0021): TitaNet-large beside Nemotron, by revision,
+      # read from the same model folder; optional, a folder without it still
+      # diarizes.
+      VOICES_MODEL: nvidia/speakerverification_en_titanet_large
+      VOICES_REVISION: 0dc382f40121a5fbd34db10a2bb04d826c2be6a8
+      VOICES_FILE: speakerverification_en_titanet_large.nemo
       # NeMo's install brings experiment-tracking libraries the diarizer
       # never calls; these switches make sure of it (v1.135.0).
       WANDB_MODE: disabled

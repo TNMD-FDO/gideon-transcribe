@@ -261,6 +261,33 @@ def _pull_diarizer(model: dict[str, Any] | None) -> list[str]:
     return []
 
 
+def _pull_voices(model: dict[str, Any] | None) -> list[str]:
+    """TitaNet-large, the voices in the diarizer container (ADR 0021): not
+    gated, so no token; one file fetched by revision, the repository's sample
+    recordings left behind."""
+    from huggingface_hub import hf_hub_download
+
+    _say("The voices model")
+    if not model:
+        _say("  none listed in models.yaml")
+        return []
+    repository = model["repository"]
+    pinned = model.get("revision")
+    filename = model.get("file") or "model.nemo"
+    try:
+        path = hf_hub_download(repository, filename, revision=pinned)
+    except Exception as exc:  # noqa: BLE001 - the message is the report
+        _say("  COULD NOT BE FETCHED")
+        _say(f"    {exc}")
+        return ["the voices model could not be fetched; is the server online?"]
+    got = Path(path).resolve().parent.name
+    if pinned and got != pinned:
+        _say(f"  revision {got}, but models.yaml pins {pinned}")
+        return ["the voices model is not at the revision it is pinned to"]
+    _say(f"  {filename} at its pinned revision {got}")
+    return []
+
+
 def pull() -> int:
     """Fetch and check every model. Returns 0 when everything is in place."""
     import yaml
@@ -282,6 +309,8 @@ def pull() -> int:
     problems += _pull_diarization(models["diarization"], token)
     _say()
     problems += _pull_diarizer(models.get("diarizer"))
+    _say()
+    problems += _pull_voices(models.get("voices"))
     _say()
     problems += _pull_alignment(models.get("alignment") or {}, languages)
     _say()

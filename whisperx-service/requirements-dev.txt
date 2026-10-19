@@ -11,6 +11,9 @@ pydantic==2.13.5
 python-multipart==0.0.32
 PyYAML==6.0.3
 httpx==0.28.1
+# The voices' arithmetic in the diarizer folder is plain numpy (ADR 0021),
+# tested here without torch; the pin is the diarizer stack's.
+numpy==2.5.3
 pytest==9.1.1
 
 # The linter and formatter, pinned like everything else.

@@ -89,7 +89,7 @@ docker compose run --rm whisperx pull
 ```
 
 This is the only time the service reaches the network on purpose. It fetches
-the two transcription models, the Nemotron diarizer's weights, pyannote's
+the two transcription models, the Nemotron diarizer's weights, the voices model's one file (TitaNet-large, ADR 0021), pyannote's
 diarization model when a token is stored (without one it says that model was
 skipped and goes on), and the alignment models for the languages in
 `WHISPERX_ALIGN_LANGUAGES`, checks each against the revision it is pinned to

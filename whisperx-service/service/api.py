@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import time
+import urllib.error
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
@@ -30,6 +31,8 @@ from service.tokens import Consumer
 from service.version import API_VERSION, SERVICE_VERSION
 
 # How much of an upload is read at a time.
+# A minute of the prepared audio (16 kHz, mono, 16-bit), for the voices' timeout.
+RATE_BYTES_PER_MINUTE = 16000 * 2 * 60
 CHUNK = 1024 * 1024
 
 
@@ -105,6 +108,10 @@ def create_app(
     runner: Runner,
     probe_audio: Callable[[Path], Audio] = probe,
     diarizer_up: Callable[[], bool] = diarizer_client.is_up,
+    voices_up: Callable[[], bool] = diarizer_client.voices_up,
+    voices_call: Callable[
+        [Path, dict[str, Any], float], dict[str, Any]
+    ] = diarizer_client.voices,
 ) -> FastAPI:
     """Build the app.
 
@@ -204,6 +211,74 @@ def create_app(
                 "audio_minutes_ahead": round(minutes_ahead, 2),
             },
         )
+
+    # The voices (ADR 0021, the voice plan's second release) -------------------
+    #
+    # Not a job: the answer comes back in the request, in seconds, from the
+    # diarizer container's second model. The audio is the prepared WAV the
+    # Consumer already holds for the job; the stretches are the Consumer's.
+
+    @app.post("/v1/voices")
+    async def voices(
+        request: Request,
+        audio: UploadFile = File(...),
+        payload: str = Form(alias="request"),
+    ) -> JSONResponse:
+        caller(request)
+        try:
+            asked = json.loads(payload)
+        except json.JSONDecodeError:
+            raise errors.invalid("the request part is not JSON") from None
+        stretches = asked.get("stretches") if isinstance(asked, dict) else None
+        if not isinstance(stretches, list) or not stretches:
+            raise errors.invalid("the request needs a list of stretches")
+        for one in stretches:
+            if not isinstance(one, dict) or "label" not in one:
+                raise errors.invalid("every stretch needs a label and its spans")
+            spans = one.get("spans")
+            if spans is None and ("start" not in one or "end" not in one):
+                raise errors.invalid("every stretch needs spans, or a start and an end")
+        sure = asked.get("sure_seconds", 2.0)
+        if not isinstance(sure, (int, float)) or not 0.5 <= float(sure) <= 10:
+            raise errors.invalid("sure_seconds must be between 0.5 and 10")
+        if not diarizer_up():
+            raise errors.diarizer_unavailable(
+                "the diarizer container is not answering, so the voices cannot be read"
+            )
+        if not voices_up():
+            raise errors.model_unavailable(
+                "the voices model is not in the model folder. Run the pull command "
+                "and restart the diarizer container"
+            )
+        path = settings.audio_dir / f"voices-{time.time_ns()}"
+        await _receive(audio, path, settings.max_upload_bytes)
+        try:
+            minutes = max(1.0, path.stat().st_size / (RATE_BYTES_PER_MINUTE))
+            answer = voices_call(
+                path,
+                {"stretches": stretches, "sure_seconds": float(sure)},
+                60.0 + 10.0 * minutes,
+            )
+        except urllib.error.HTTPError as error:
+            if error.code == 503:
+                raise errors.model_unavailable(
+                    "the voices model is not loaded in the diarizer container"
+                ) from None
+            if error.code == 400:
+                raise errors.bad_input(
+                    "the diarizer container refused the audio or the stretches"
+                ) from None
+            raise errors.ServiceError(
+                502, "the diarizer container failed on the voices"
+            ) from None
+        except (urllib.error.URLError, OSError, ValueError):
+            raise errors.diarizer_unavailable(
+                "the diarizer container did not answer the voices request"
+            ) from None
+        finally:
+            path.unlink(missing_ok=True)
+        answer["service"] = {"version": SERVICE_VERSION, "api": API_VERSION}
+        return JSONResponse(status_code=200, content=answer)
 
     # Poll, fetch, delete, list ----------------------------------------------
 
@@ -305,10 +380,12 @@ def create_app(
                 "api": API_VERSION,
                 "pins": pins.versions(),
             },
-            # Which diarizers a job may ask for right now (Phase 5 chapter 4).
+            # Which diarizers a job may ask for right now (Phase 5 chapter 4),
+            # and whether the voices answer (ADR 0021).
             "diarizers": {
                 "nemotron": diarizer_up(),
                 "pyannote": models.is_cached(models.diarization),
+                "voices": voices_up(),
             },
             "uptime_seconds": round(time.monotonic() - started_at),
             "last_failure": (
