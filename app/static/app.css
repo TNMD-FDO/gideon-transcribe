@@ -2385,6 +2385,24 @@ button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: 
 .sp-read .seg.dim { color: var(--muted); }
 .sp-read .seg.dim .who { color: var(--muted); }
 .sp-read .seg.mine { border-left-width: 4px; }
+/* The changes in place (ADR 0021, v1.139.0): the voice's word as a tint, the old label struck, the proposed one in its colour, three sounds and two buttons. */
+.sp-read .seg.change { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+.sp-read .seg.change.against { background: var(--danger-soft); border-left-color: var(--danger); }
+.sp-read .seg.change.quiet { background: transparent; border-left-color: var(--line); }
+.sp-read .seg.change .who .name s { color: var(--muted); font-weight: 400; }
+.sp-read .seg.change .who .name .to { color: var(--speaker, inherit); font-weight: 600; }
+.sp-read .seg.change .actions { visibility: visible; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.hear3 { display: inline-flex; gap: 3px; align-items: center; }
+.hear3 .k { font-size: 11px; color: var(--muted); margin-right: 2px; }
+.hear3 button { font-size: 11px; min-height: 22px; min-width: 24px; padding: 0 6px; border: 1px solid var(--speaker, var(--accent)); border-radius: var(--radius); background: var(--surface-1); color: var(--speaker, var(--accent)); cursor: pointer; }
+.sp-read .block-head { list-style: none; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0 2px; padding: 6px 10px; border: 1px solid var(--accent); border-radius: var(--radius) var(--radius) 0 0; background: var(--accent-soft); font-size: var(--t-small); }
+.sp-read .seg.gapped { margin-top: 26px; position: relative; }
+.sp-read .seg.gapped::before { content: attr(data-gap); position: absolute; top: -22px; left: 0; right: 0; text-align: center; font-size: var(--t-small); color: var(--muted); }
+.sp-read .seg.change.near, .sp-read .seg.near { color: inherit; }
+.sp-filter .views { display: inline-flex; gap: 6px; align-items: center; margin-left: 10px; }
+.sp-card .handover-box { margin: 6px 0 0 16px; font-size: var(--t-small); }
+.sp-card .handover { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); }
+.sp-lanes .lane .track .hmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--danger); z-index: 1; }
 .sp-read .seg .actions { visibility: hidden; }
 .sp-read .seg.here .actions { visibility: visible; }
 @media (max-width: 1499px) {

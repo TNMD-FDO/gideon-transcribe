@@ -412,12 +412,18 @@ def test_the_check_says_the_big_thing_first_and_the_voice_is_the_one_measure(
     assert check.state == assistant.DONE and check.found == 6
     # The sketch and the one window: no reading after them.
     assert len(asked) == 2
-    assert check.second_look == {
+    # The word labels alone on a recording of no type (v1.139.0: the voice
+    # step listens only on the types the Admin lists).
+    assert {
+        k: check.second_look[k]
+        for k in ("rows", "voice_agrees", "voice_against", "silent")
+    } == {
         "rows": 6,
         "voice_agrees": 1,
         "voice_against": 1,
         "silent": 4,
     }
+    assert check.second_look["voice"] == "words"
     by_start = {one.start: one for one in SpeakerCorrection.objects.all()}
     assert by_start[30.0].voice == "agrees" and by_start[25.0].voice == "against"
     assert all(one.second == "" for one in by_start.values())
@@ -469,7 +475,9 @@ def test_the_check_says_the_big_thing_first_and_the_voice_is_the_one_measure(
     assert "two voices heard" in script and "the voice is silent" in script
     # Every finding is a question with a yes and a no (v1.129.0).
     assert "the same voice as" in script and "Yes, the same voice" in script
-    assert "Yes, move " in script and "Yes to all " in script
+    # The changes sit in the transcript (v1.139.0): a block's Accept all and
+    # the one button for the changes the voice backs.
+    assert "Accept all " in script and "the voice backs" in script
     assert "after listening" not in script and "secondWords" not in script
 
     # A stretch accepted at once moves its lines; a card dismissed at once

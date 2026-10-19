@@ -30,7 +30,7 @@ The error rates are within a hair of each other on clean studio speech, so the c
 | Time | 0.7 to 0.9 s to embed a whole case's clips (22 minutes of speech), 6 s with the load and the file reads |
 | The diarizer's frame doubt | Yes: at this commit `SortformerEncLabelModel.diarize(..., include_tensor_outputs=True)` returns the spans and, beside them, the per-frame speaker probabilities, a tensor of 6,000 frames by 8 speaker slots for 60 seconds of audio; `forward` returns the same. The run on a 6-second stretch failed inside a Triton template compile and ran with `TORCH_COMPILE_DISABLE=1`; a free second signal exists, with that caveat |
 
-Well inside the diarizer's 4 GB of host memory and Transcribe's 24 GB card reserve; nothing for the box ledger beyond the line the probe left.
+Well inside the diarizer's 4 GB of host memory and Transcribe's 24 GB card reserve; nothing for the box ledger beyond the line the probe left. Shipped as the diarizer container's second duty in v1.139.0 (`models.yaml`, `voices`; service 0.6.0), with one change to the calibration from what the probe measured: the firm threshold is the tenth percentile of a right line's margin but never more than half the typical margin, so two voices far apart do not ask for a flip as big as the whole separation.
 
 ## Part 3. How the probe measured
 

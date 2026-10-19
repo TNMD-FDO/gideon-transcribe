@@ -37,6 +37,13 @@
   var zoom = 0;             // seconds in view, 0 for the whole recording
   var windowFrom = 0;       // the lanes' first second when zoomed
   var colours = {};
+  // The proposed changes by segment id and the Hand-overs waiting (ADR
+  // 0021, v1.139.0): drawn in the transcript where each line is, and on
+  // the cards and the lanes.
+  var changes = {};
+  var handovers = [];
+  var viewMode = "changes";   // "changes" collapses the quiet stretches
+  var showQuiet = false;      // the proposals the voice could not judge, folded
   var stored = document.getElementById("speaker-colours");
   if (stored) {
     JSON.parse(stored.textContent).forEach(function (one) { colours[one.name] = one.colour; });
@@ -243,7 +250,37 @@
   function draw() {
     if (!column) { return; }
     column.innerHTML = "";
+    // Runs of changes between the same two speakers, close together, get
+    // one head with Accept all (the block of the chosen mock-up).
+    var runStart = {};
+    var runIds = {};
+    var previous = null;
     segments.forEach(function (segment, index) {
+      var change = drawnChange(segment);
+      if (change && previous && previous.change.from === change.from && previous.change.to === change.to && segment.start - previous.end <= 20) {
+        runIds[previous.head].push(change.id);
+        previous = { change: change, end: segment.end, head: previous.head };
+      } else if (change) {
+        runStart[index] = true;
+        runIds[index] = [change.id];
+        previous = { change: change, end: segment.end, head: index };
+      } else {
+        previous = null;
+      }
+    });
+    segments.forEach(function (segment, index) {
+      var change = drawnChange(segment);
+      if (change && runStart[index] && runIds[index].length > 1) {
+        var head = document.createElement("li");
+        head.className = "block-head";
+        head.dataset.index = index;
+        head.dataset.ids = runIds[index].join(",");
+        head.innerHTML = "<b>" + runIds[index].length + " lines</b> <span class='muted'>shown as " + escape(change.from) + ", read as " + escape(change.to) + "'s</span> " + changePill(change) +
+          "<span class='grow'></span>" + hearThree(change) +
+          "<button type='button' class='tiny" + (change.voice === "agrees" ? " primary" : "") + " block-accept'>Accept all " + runIds[index].length + "</button>" +
+          "<button type='button' class='ghost tiny block-leave'>Leave</button>";
+        column.appendChild(head);
+      }
       var row = document.createElement("li");
       row.className = "seg";
       row.dataset.index = index;
@@ -251,15 +288,28 @@
         row.style.setProperty("--speaker", colours[segment.speaker] || "");
         row.style.borderLeftColor = colours[segment.speaker] || "transparent";
       }
-      if (index > 0 && segments[index - 1].speaker === segment.speaker) { row.classList.add("cont"); }
-      row.innerHTML =
-        "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
-        "<div class='who'><span class='name'>" + escape(segment.speaker) + "</span><span class='tags'></span></div>" +
-        "<div class='words'><p class='txt'>" + escape(segment.text) + "</p></div>" +
-        "<span class='actions'>" +
-        "<button type='button' class='ghost tiny play-row' title='Play this line'>play</button>" +
-        "<button type='button' class='ghost tiny give-row' title='Give this line to another speaker'>not this speaker</button>" +
-        "</span>";
+      if (index > 0 && segments[index - 1].speaker === segment.speaker && !change) { row.classList.add("cont"); }
+      if (change) {
+        row.classList.add("change", change.voice || "quiet");
+        row.dataset.correction = change.id;
+        row.innerHTML =
+          "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
+          "<div class='who'><span class='name'><s>" + escape(change.from) + "</s> <span class='to' style='--speaker: " + (colours[change.to] || "") + "'>" + escape(change.to) + "</span></span><span class='tags'></span></div>" +
+          "<div class='words'><p class='txt'>" + escape(segment.text) + "</p></div>" +
+          "<span class='actions change-acts'>" + changePill(change) + hearThree(change) +
+          "<button type='button' class='tiny" + (change.voice === "agrees" ? " primary" : "") + " accept-change' title='Move this line to " + escape(change.to) + "'>Accept</button>" +
+          "<button type='button' class='ghost tiny leave-change' title='Leave the line as it is and put the proposal away'>Leave</button>" +
+          "</span>";
+      } else {
+        row.innerHTML =
+          "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
+          "<div class='who'><span class='name'>" + escape(segment.speaker) + "</span><span class='tags'></span></div>" +
+          "<div class='words'><p class='txt'>" + escape(segment.text) + "</p></div>" +
+          "<span class='actions'>" +
+          "<button type='button' class='ghost tiny play-row' title='Play this line'>play</button>" +
+          "<button type='button' class='ghost tiny give-row' title='Give this line to another speaker'>not this speaker</button>" +
+          "</span>";
+      }
       column.appendChild(row);
     });
     filter();
@@ -268,12 +318,31 @@
     document.dispatchEvent(new CustomEvent("transcript-drawn"));
   }
 
+  function anyChangesDrawn() {
+    return segments.some(function (segment) { return !!drawnChange(segment); });
+  }
+
   function filter() {
     if (!column) { return; }
-    var rows = column.children;
+    var rows = Array.prototype.filter.call(column.children, function (row) { return row.classList.contains("seg"); });
+    var heads = Array.prototype.filter.call(column.children, function (row) { return row.classList.contains("block-head"); });
     var count = 0;
     var keep = null;
-    if (!showAll && picked) {
+    var changesOn = anyChangesDrawn();
+    var views = document.getElementById("views");
+    if (views) { views.hidden = !changesOn; }
+    if (changesOn && viewMode === "changes") {
+      // Changes only: a marked line and its neighbours; the quiet stretches
+      // between them collapse to one line saying so.
+      keep = {};
+      segments.forEach(function (segment, index) {
+        if (drawnChange(segment)) {
+          keep[index - 1] = keep[index - 1] || "near";
+          keep[index] = "mine";
+          keep[index + 1] = keep[index + 1] || "near";
+        }
+      });
+    } else if (!showAll && picked) {
       keep = {};
       segments.forEach(function (segment, index) {
         if (segment.speaker === picked) {
@@ -283,13 +352,32 @@
         }
       });
     }
+    var hiddenFrom = -1;
     for (var i = 0; i < rows.length; i += 1) {
       var how = keep ? keep[i] : "all";
       rows[i].hidden = !how;
       rows[i].classList.toggle("dim", how === "dim");
       rows[i].classList.toggle("mine", how === "mine");
+      rows[i].classList.remove("gapped");
+      rows[i].removeAttribute("data-gap");
+      if (!how) { if (hiddenFrom < 0) { hiddenFrom = i; } }
+      else {
+        if (hiddenFrom >= 0 && changesOn && viewMode === "changes") {
+          rows[i].classList.add("gapped");
+          rows[i].dataset.gap = clock(segments[hiddenFrom].start) + " to " + clock(segments[i - 1].end) + ", no changes";
+        }
+        hiddenFrom = -1;
+      }
       if (how === "mine" || (!keep && segments[i].speaker === picked)) { count += 1; }
     }
+    heads.forEach(function (head) {
+      var first = rows[parseInt(head.dataset.index, 10)];
+      head.hidden = !first || first.hidden;
+    });
+    var viewChanges = document.getElementById("view-changes");
+    var viewWhole = document.getElementById("view-whole");
+    if (viewChanges) { viewChanges.classList.toggle("on", viewMode === "changes"); }
+    if (viewWhole) { viewWhole.classList.toggle("on", viewMode !== "changes"); }
     var one = document.getElementById("filter-one");
     var all = document.getElementById("filter-all");
     if (one) {
@@ -302,8 +390,16 @@
     if (said) { said.textContent = picked ? count + (count === 1 ? " line" : " lines") : ""; }
   }
 
-  document.getElementById("filter-one") && document.getElementById("filter-one").addEventListener("click", function () { showAll = false; filter(); });
-  document.getElementById("filter-all") && document.getElementById("filter-all").addEventListener("click", function () { showAll = true; filter(); });
+  document.getElementById("filter-one") && document.getElementById("filter-one").addEventListener("click", function () { showAll = false; viewMode = "whole"; filter(); });
+  document.getElementById("filter-all") && document.getElementById("filter-all").addEventListener("click", function () { showAll = true; viewMode = "whole"; filter(); });
+  document.getElementById("view-changes") && document.getElementById("view-changes").addEventListener("click", function () { viewMode = "changes"; filter(); });
+  document.getElementById("view-whole") && document.getElementById("view-whole").addEventListener("click", function () { viewMode = "whole"; showAll = true; filter(); });
+  document.getElementById("show-quiet") && document.getElementById("show-quiet").addEventListener("click", function () {
+    showQuiet = !showQuiet;
+    var quietCount = Object.keys(changes).filter(function (id) { return !changes[id].voice; }).length;
+    this.textContent = showQuiet ? "Hide the " + quietCount + " the voice could not judge" : quietCount + " more the voice could not judge: show them in place";
+    draw();
+  });
 
   if (column) {
     column.addEventListener("click", function (event) {
@@ -313,8 +409,44 @@
       if (!segment) { return; }
       if (event.target.closest(".give-row")) { giveLine(segment); return; }
       if (event.target.closest(".play-row")) { playLine(segment); return; }
+      var voice = event.target.closest(".hear-voice");
+      if (voice) { playSample(voice.dataset.voice); return; }
+      if (event.target.closest(".accept-change")) { decideChange(row.dataset.correction, true, segment); return; }
+      if (event.target.closest(".leave-change")) { decideChange(row.dataset.correction, false, segment); return; }
       seek(segment.start);
       play();
+    });
+    column.addEventListener("click", function (event) {
+      var head = event.target.closest(".block-head");
+      if (!head) { return; }
+      var change = changes[String(segments[parseInt(head.dataset.index, 10)].id)];
+      var voice = event.target.closest(".hear-voice");
+      if (voice) { playSample(voice.dataset.voice); return; }
+      if (event.target.closest(".play-row") && change) { playLine(segments[parseInt(head.dataset.index, 10)]); return; }
+      var accept = event.target.closest(".block-accept");
+      var leave = event.target.closest(".block-leave");
+      if (!accept && !leave) { return; }
+      send("/recording/" + V.recording + "/corrections/" + (accept ? "accept" : "dismiss") + "-many", { ids: head.dataset.ids }).then(function (answer) {
+        if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+        if (accept && answer.said.undo) { sayUndo(answer.said.undo); }
+        load().then(refreshSuggestions);
+      });
+    });
+  }
+
+  // One change accepted or left (ADR 0021): the line moves here as a
+  // correction's Accept always has, with the same Undo; Leave puts the
+  // proposal away and the line stays.
+  function decideChange(correctionId, accept, segment) {
+    if (!correctionId) { return; }
+    var change = changes[String(segment.id)];
+    send("/correction/" + correctionId + "/" + (accept ? "accept" : "dismiss")).then(function (answer) {
+      if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+      if (accept) {
+        if (answer.said.stale) { UI.toast("This line changed since the check, so it was left as it is.", { icon: "info" }); }
+        else { sayUndo(answer.said.undo); if (change) { moved(segment.id, change.to); } }
+      }
+      refreshSuggestions();
     });
   }
 
@@ -385,6 +517,49 @@
     play();
   }
 
+  function playRange(start, end) {
+    seek(Math.max(0, start));
+    stopAt = end;
+    play();
+  }
+
+  // A speaker's sample: the first on its card (its surest line).
+  function sampleOf(name) {
+    var card = cardOf(name);
+    var button = card ? card.querySelector(".sample") : null;
+    if (!button) { return null; }
+    return { start: parseFloat(button.dataset.start), end: parseFloat(button.dataset.end) };
+  }
+
+  function playSample(name) {
+    var sample = sampleOf(name);
+    if (sample) { playRange(sample.start, sample.end); }
+  }
+
+  // A change's voice word as a pill, in the pills' colours.
+  function changePill(change) {
+    if (change.voice === "agrees") { return "<span class='pill small ok' title='The voice on this line sounds like " + escape(change.to) + ".'>the voice agrees</span>"; }
+    if (change.voice === "against") { return "<span class='pill small danger' title='The voice on this line sounds like " + escape(change.from) + ", not " + escape(change.to) + ". Listen before you accept.'>the voice disagrees, listen first</span>"; }
+    return "<span class='pill small' title='The line is short, or the two speakers sound alike on it; the words alone propose this.'>the voice could not judge</span>";
+  }
+
+  function drawnChange(segment) {
+    var change = changes[String(segment.id)];
+    if (!change) { return null; }
+    if (!change.voice && !showQuiet) { return null; }
+    return change;
+  }
+
+  // The three sounds: the line, the voice it has, the voice proposed.
+  function hearThree(change) {
+    var k1 = names().indexOf(change.from) + 1;
+    var k2 = names().indexOf(change.to) + 1;
+    return "<span class='hear3'><span class='k'>hear</span>" +
+      "<button type='button' class='play-row' title='Play this line'>" + UI.icon("play") + "</button>" +
+      "<button type='button' class='hear-voice' data-voice='" + escape(change.from) + "' style='--speaker: " + (colours[change.from] || "") + "' title='Play " + escape(change.from) + " as a whole'>" + (k1 || "?") + "</button>" +
+      "<button type='button' class='hear-voice' data-voice='" + escape(change.to) + "' style='--speaker: " + (colours[change.to] || "") + "' title='Play " + escape(change.to) + " as a whole'>" + (k2 || "?") + "</button></span>";
+  }
+
   // The lanes -------------------------------------------------------------------
   //
   // A block for every stretch a speaker talks, lines of one speaker less than
@@ -426,6 +601,12 @@
         var left = Math.max(0, percent(block.start, span));
         var right = Math.min(100, percent(block.end, span));
         drawn.push("<i style='left:" + left.toFixed(3) + "%;width:" + Math.max(0.15, right - left).toFixed(3) + "%' data-start='" + block.start + "' title='" + clock(block.start) + " to " + clock(block.end) + "'></i>");
+      });
+      // A Hand-over waiting (ADR 0021): the time another voice takes over
+      // under this label, as a marker on its lane.
+      handovers.forEach(function (one) {
+        if (one.speaker !== lane.dataset.name || one.at < span.from || one.at > span.to) { return; }
+        drawn.push("<b class='hmark' style='left:" + percent(one.at, span).toFixed(3) + "%' title='Another voice from " + clock(one.at) + "'></b>");
       });
       // The picked speaker's samples, as ticks on its lane.
       if (lane.dataset.name === picked) {
@@ -830,17 +1011,25 @@
       "<div class='row acts'>" + yes + "<button type='button' class='ghost tiny not-same'>No</button></div></div>";
   }
 
-  function stretchCard(one) {
-    var span = one.count > 1 ? escape(one.clock) + " to " + escape(one.clock_end) : escape(one.clock);
-    var question = one.count > 1 ? "Are these " + one.count + " lines " + escape(one.to) + "'s?" : "Is this line " + escape(one.to) + "'s?";
-    return "<div class='found-card stretch " + one.voice + "' data-ids='" + one.ids.join(",") + "'>" +
-      "<div class='title'><b>" + question + "</b> <span class='muted'>" + span + ", labelled " + escape(one.from) + "</span> " + voicePill(one.voice, 0) + "</div>" +
-      "<div class='hear small muted'>" + cite(one) + (one.quote ? " <span class='quote'>&ldquo;" + escape(one.quote) + "&rdquo;</span>" : "") + "</div>" +
-      "<div class='row acts'><button type='button' class='tiny accept-stretch" + (one.voice === "agrees" ? " primary" : "") + "'>Yes, move " + (one.count > 1 ? "them" : "it") + "</button> " +
-      "<button type='button' class='ghost tiny dismiss-stretch'>No</button></div></div>";
-  }
-
   function plural(count, word) { return count + " " + word + (count === 1 ? "" : "s"); }
+
+  // A Hand-over on its speaker's card (ADR 0021): another voice from a
+  // time, Play before and after, Split here or not a different person.
+  function drawHandovers() {
+    cards().forEach(function (card) {
+      var box = card.querySelector(".handover-box");
+      if (!box) { return; }
+      var mine = handovers.filter(function (one) { return one.speaker === card.dataset.name; });
+      box.hidden = !mine.length;
+      box.innerHTML = mine.map(function (one) {
+        return "<div class='handover' data-handover='" + one.id + "' data-at='" + one.at + "'>" +
+          "<b>Another voice from " + escape(one.clock) + "</b> under this label, " + plural(one.lines_after, "line") + (one.voices === 3 ? ", a third voice later" : "") + ". " +
+          "<span class='hear3'><button type='button' class='hear-before' title='Play the six seconds before'>" + UI.icon("play") + " before</button><button type='button' class='hear-after' title='Play the six seconds after'>" + UI.icon("play") + " after</button></span> " +
+          "<button type='button' class='tiny split-handover'>Split here</button> " +
+          "<button type='button' class='ghost tiny dismiss-handover'>Not a different person</button></div>";
+      }).join("");
+    });
+  }
 
   function drawCorrections(body) {
     if (!checkLine || !correctionsBox || !V.assistant.speakerCheck) { return false; }
@@ -876,34 +1065,43 @@
     // The one explanation on the page, and the count that goes down. Once
     // everything is settled the count stays, so the page says it is done.
     var found = run && run.found ? run.found : (check.pending || []).length;
-    var left = (check.pending || []).length;
+    var pending = check.pending || [];
+    var left = pending.length;
     var settled = Math.max(0, found - left);
-    correctionsBox.hidden = !cards.length && !all.length && !settled;
+    var waitingHandovers = check.handovers || [];
+    var backedLines = pending.filter(function (one) { return one.voice === "agrees"; }).length;
+    var quietLines = pending.filter(function (one) { return !one.voice; }).length;
+    var byVoice = pending.filter(function (one) { return one.source === "voice"; }).length;
+    correctionsBox.hidden = !cards.length && !pending.length && !settled && !waitingHandovers.length;
+    var how2 = check.voice === "titanet" ? " The voice listened to every line." : (check.voice === "unavailable" ? " The voice could not listen this time; the words alone proposed these." : "");
     document.getElementById("corrections-state").textContent = !left && settled
-      ? "The check found " + plural(found, "line") + " that read like another speaker's; every one is settled."
-      : "The check found " + plural(found, "line") + " that read like another speaker's. Each card below is a proposal: play the moments and say yes or no. Yes moves the lines." +
-        (cards.length && (backed.length || quiet.length) ? " The biggest come first." : "");
+      ? "The check found " + plural(found, "change") + "; every one is settled."
+      : "The check found " + plural(found, "change") + (backedLines ? ", " + backedLines + " backed by the voice" : "") + (byVoice ? ", " + byVoice + " the voice found on its own" : "") +
+        (waitingHandovers.length ? "; " + plural(waitingHandovers.length, "hand-over") : "") + "." + how2 + " Read down; accept or leave each as you go.";
     var progress = document.getElementById("corrections-progress");
     progress.hidden = !found;
     progress.querySelector(".track i").style.width = (found ? Math.round((settled / found) * 100) : 0) + "%";
-    document.getElementById("corrections-found").textContent = plural(found, "line") + " found";
+    document.getElementById("corrections-found").textContent = plural(found, "change") + " found";
     document.getElementById("corrections-left").textContent = settled ? settled + " settled, " + left + " left" : "0 settled";
     document.getElementById("speaker-cards").innerHTML = cards.map(speakerCard).join("");
-    document.getElementById("stretches").innerHTML = backed.map(stretchCard).join("");
+    // The changes live in the transcript now (ADR 0021): by segment id.
+    changes = {};
+    pending.forEach(function (one) { changes[String(one.segment)] = one; });
+    handovers = waitingHandovers;
     var acceptBacked = document.getElementById("accept-corrections");
-    acceptBacked.hidden = backed.length < 2;
-    acceptBacked.textContent = "Yes to all " + backed.length + " the voice backs";
-    var quietFold = document.getElementById("stretches-quiet");
-    quietFold.hidden = !quiet.length;
-    document.getElementById("stretches-quiet-title").textContent =
-      (quiet.length === 1 ? "1 proposal" : quiet.length + " proposals") + " the voice could not judge" + (backed.length || cards.length ? "" : "; the words alone decide");
-    document.getElementById("stretches-quiet-list").innerHTML = quiet.map(stretchCard).join("");
-    var fold = document.getElementById("stretches-covered");
-    fold.hidden = !covered.length;
-    document.getElementById("stretches-covered-title").textContent =
-      (covered.length === 1 ? "1 proposal" : covered.length + " proposals") + " inside the speaker questions above; a yes there answers them";
-    document.getElementById("stretches-covered-list").innerHTML = covered.map(stretchCard).join("");
-    document.getElementById("corrections-actions").hidden = backed.length < 2;
+    acceptBacked.hidden = backedLines < 1;
+    acceptBacked.textContent = "Accept the " + backedLines + " change" + (backedLines === 1 ? "" : "s") + " the voice backs";
+    document.getElementById("corrections-where").hidden = !pending.length;
+    var quietButton = document.getElementById("show-quiet");
+    if (quietButton) {
+      quietButton.hidden = !quietLines;
+      quietButton.textContent = showQuiet ? "Hide the " + quietLines + " the voice could not judge" : quietLines + " more the voice could not judge: show them in place";
+    }
+    document.getElementById("stretches-quiet").hidden = true;
+    document.getElementById("stretches-covered").hidden = true;
+    document.getElementById("corrections-actions").hidden = backedLines < 1;
+    drawHandovers();
+    if (segments.length) { draw(); drawLanes(); }
     var again = document.getElementById("check-again-why");
     if (again) { again.hidden = !settled; }
     // The finding on the speaker's own card, where the person already looks.
@@ -1067,6 +1265,28 @@
     cardsBox.addEventListener("click", function (event) {
       var cite = event.target.closest(".cite");
       if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.seconds)); play(); }
+    });
+  }
+  if (cardsBox) {
+    cardsBox.addEventListener("click", function (event) {
+      var box = event.target.closest(".handover");
+      if (!box) { return; }
+      var at = parseFloat(box.dataset.at);
+      if (event.target.closest(".hear-before")) { playRange(at - 6, at); return; }
+      if (event.target.closest(".hear-after")) { playRange(at, at + 6); return; }
+      var split = event.target.closest(".split-handover");
+      var dismiss = event.target.closest(".dismiss-handover");
+      if (!split && !dismiss) { return; }
+      send("/handover/" + box.dataset.handover + "/" + (split ? "accept" : "dismiss")).then(function (answer) {
+        if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+        if (split) {
+          if (answer.said.stale) { UI.toast("No line of that speaker lies after the time any more.", { icon: "info" }); refreshSuggestions(); return; }
+          tell({ kind: "speakers-changed" });
+          reloadHere(answer.said.made || picked);
+          return;
+        }
+        refreshSuggestions();
+      });
     });
   }
 

@@ -98,6 +98,8 @@
               <div class="hint-line">{{ card.lines }} short line{{ card.lines|pluralize }}, never over anyone else's; see the lanes.</div>
             {% endif %}
             <div class="suggested" hidden></div>
+            {% comment %}A Hand-over on the card (ADR 0021, v1.139.0): another voice from a time under this label, Play before and after, Split here.{% endcomment %}
+            <div class="handover-box" hidden></div>
             <div class="namebox"{% if card.named or card.system %} hidden{% endif %}>
               <div class="row">
                 <input type="text" class="name-input grow" maxlength="60" autocomplete="off" placeholder="Who is this?"{% if card.named %} value="{{ card.name }}"{% endif %}>
@@ -148,10 +150,11 @@
               <span id="corrections-left"></span>
             </div>
             <div id="speaker-cards" class="found-cards"></div>
-            <div id="stretches" class="found-cards"></div>
+            <div id="stretches" class="found-cards" hidden></div>
             <div class="row acts" id="corrections-actions" style="gap: 6px; margin-top: 8px" hidden>
-              <button type="button" class="tiny" id="accept-corrections" hidden>Yes to all the voice backs</button>
+              <button type="button" class="small primary" id="accept-corrections" hidden>Accept the changes the voice backs</button>
             </div>
+            <p class="small muted" id="corrections-where" hidden>The changes are marked in the transcript, each where its line is: play the line, play the two voices, accept or leave it.</p>
             <details id="stretches-quiet" class="small" hidden>
               <summary id="stretches-quiet-title"></summary>
               <div id="stretches-quiet-list" class="found-cards"></div>
@@ -184,6 +187,12 @@
           <button type="button" class="sw on" id="filter-one"></button>
           <button type="button" class="sw" id="filter-all">Everyone</button>
           <span class="small muted" id="filter-count"></span>
+          {% comment %}The two views while changes wait (ADR 0021, v1.139.0): the quiet stretches collapsed, or every line with the same marks.{% endcomment %}
+          <span class="views" id="views" hidden>
+            <button type="button" class="sw on" id="view-changes" title="The lines with a proposed change and their neighbours; the quiet stretches collapsed">Changes only</button>
+            <button type="button" class="sw" id="view-whole" title="Every line, with the same marks">Whole transcript</button>
+            <button type="button" class="ghost tiny" id="show-quiet" hidden></button>
+          </span>
           <span class="grow"></span>
           <span id="follow-pill" class="pill followpill" hidden>
             Following paused while you read.

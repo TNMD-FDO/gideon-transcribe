@@ -21,6 +21,66 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.139.0, 2026-10-19
+
+```
+Models: changed
+Database: migrates
+```
+
+The voice step: the Speaker check hears the recording. The voice plan's
+second release (ADR 0021). Off for every Recording type but Jail call as
+shipped; nothing changes for an office that lists no type.
+
+- **The diarizer container's second duty.** NVIDIA's TitaNet-large speaker
+  verification model loads beside Nemotron from the same pinned NeMo; the
+  model pull fetches its one file by revision (`models.yaml`, `voices`,
+  CC-BY-4.0, about 100 MB) into the same folder, and `POST /v1/voices`
+  answers one vector per stretch and one per label. The WhisperX service
+  carries the request to the app under the token; service 0.6.0. The
+  upgrade rebuilds the diarizer image and fetches the model.
+- **The voice's word on every proposal.** With the Recording's type on the
+  Admin's list **Voices help the check**, the check asks for each line's
+  own words, builds each speaker's voice print from the recording itself
+  (every line of two seconds or more, outliers dropped) and says of each
+  move the words proposed: the voice agrees, the voice disagrees, or
+  nothing when it cannot tell (under 1.5 seconds of speech, 1 second on a
+  call). Calibrated on the recording's own lines. When the service cannot
+  answer, the word labels speak as before and the page says so.
+- **The voice's own proposals.** Lines far from their own speaker's print
+  and near another's, which the words never flagged, join the proposals
+  (up to fifteen a run) with the reason "the voice sounds like Speaker 2".
+- **Hand-overs.** Two or three voices under one label, apart and in time
+  order, are proposed on the speaker's card: "another voice from 14:03",
+  Play before and after, **Split here**, which makes the lines from that
+  time a new Speaker with Undo, or Not a different person. Never proposed
+  where the two differ mainly in loudness: a shout is not a second voice.
+- **The Speakers page, read once from top to bottom.** The proposals leave
+  the list under the cards and sit in the transcript where their lines
+  are: the old label struck through, the proposed one in its colour, a
+  tint for the voice's word, three sounds (the line, the voice it has, the
+  voice proposed) and Accept or Leave; a run of lines moving together has
+  one head with Accept all. **Changes only** collapses the quiet stretches
+  to "6:40 to 9:30, no changes"; **Whole transcript** shows every line with
+  the same marks; the proposals the voice could not judge are folded until
+  asked for. One primary button, **Accept the N changes the voice backs**,
+  and the Hand-over's marker on its lane. Accepting a change re-scores the
+  rest; the vectors live on the run and are deleted when nothing is pending.
+- **The Call system's opening stretch fills in** (owed from v1.138.0): a
+  short line, or one beginning with "please", between two Call system lines
+  within fifteen seconds of each is the system's too, so the fragments the
+  recogniser cuts ("Please...", "Please enter the...") follow the
+  announcements they belong to; six phrases join the shipped list.
+- **Settings**: **Voices help the check**, the Recording types the voice
+  listens on, one per line, shipped with Jail call (the kind the office's
+  measurement passed) and greyed while the Speaker check is off. The floor
+  and the cap are the build's constants.
+- **Database**: migration 0081 adds the Hand-over table, the correction's
+  source (words or voice) and the run's vectors.
+- Not in this release, and said so: splitting a mixed line at the word
+  where the voice changes, and a Call system announcement spoken over a
+  party's words; Voice prints across a Case (the plan's fourth release).
+
 ## v1.138.0, 2026-10-19
 
 ```
