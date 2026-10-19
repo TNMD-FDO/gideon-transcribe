@@ -314,7 +314,7 @@
               {% if speakers %}
                 <ul id="speakers" class="speakerchips grow">
                   {% for speaker in speakers %}
-                    <li class="speakerchip" draggable="true"
+                    <li class="speakerchip{% if speaker.system %} system{% endif %}" draggable="{% if speaker.system %}false{% else %}true{% endif %}"
                         data-name="{{ speaker.name }}"
                         style="--speaker: {{ speaker.colour }}">
                       <span class="dot"></span>{{ speaker.name }}{% if speaker.role %} <span class="pill role">{{ speaker.role }}</span>{% endif %}

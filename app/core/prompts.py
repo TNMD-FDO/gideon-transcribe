@@ -73,7 +73,8 @@ def text_hash(text: str) -> str:
 SHIPPED_HISTORY = {
     "standard": ("77493e20d40da8c2", "f76d2d1e0c15c0de"),
     "video": ("2e247929fe7a40eb", "29aa0cb5855e3303", "4ed91dd19571870e"),
-    "jail_call": ("05d6764a931302ea",),
+    # v1.138.0 (ADR 0021): the call system announced, never a party's words.
+    "jail_call": ("05d6764a931302ea", "b474e18291ff6ac1"),
     "body_camera": (
         "c7815e388b0aa161",
         "4f92a41fd993cfd1",
@@ -104,6 +105,8 @@ SHIPPED_HISTORY = {
         "734fc73038b5e895",
         # v1.117.0 (Phase 9 chapter 2): a listed spelling is the same person.
         "67add4e32513325c",
+        # v1.138.0 (ADR 0021): a Call system line is the system's announcement.
+        "e172afc0410f24af",
     ),
     # v1.121.0 (Phase 9 chapter 6): the overviews read once, into picks.
     "prompt:case_chat_select": (),
@@ -151,7 +154,9 @@ SHIPPED_HISTORY = {
 SHIPPED_SUMMARIES = {
     "jail_call": (
         "Write a summary of this recorded jail call with these parts, in this "
-        "order, using these headings.\n"
+        "order, using these headings. A line labelled Call system is the phone "
+        "system's recorded announcement and never a party's words: say that "
+        "the call system announced it, and never count it among the people.\n"
         "Overview: one short paragraph. Who is speaking, how they know each "
         "other as far as the call says, and what the call is about.\n"
         "What is discussed: a bulleted list in the order things come up. Each "
@@ -414,7 +419,9 @@ CASE_CHAT = (
     "had not started or had stopped. Names and places may be misheard by the "
     "transcription: a spelling the case lists as also heard as is the same "
     "person or place as the name it is listed under, and a name spelt a "
-    "little differently from one recording to the next is one person."
+    "little differently from one recording to the next is one person. A line "
+    "labelled Call system is the phone system's recorded announcement and "
+    "never a party's words; say that the call system announced it."
 )
 
 # Pass one of a question over the ceiling (Phase 9 chapter 6, ADR 0018): the
@@ -1315,7 +1322,9 @@ NARRATIVE_RULES = (
     "as a conclusion; say what was done and said. A stretch the camera could "
     "not make out is reported as not visible, not filled in. A time is "
     "[hh:mm:ss] copied from the record, given only where a reader would want "
-    "to check."
+    "to check. A line labelled Call system is the phone system's recorded "
+    "announcement and never a party's words: say that the call system "
+    "announced it, and never count the call system among the people."
 )
 
 # The most the camera block may cost a Summary or a Chat without a Digest,
@@ -1874,13 +1883,17 @@ class Line:
     text: str
 
 
-def lines_of(transcript) -> list[Line]:
-    """One line per Segment, numbered from 1, the second Side's copies left out."""
+def lines_of(transcript, without_system: bool = False) -> list[Line]:
+    """One line per Segment, numbered from 1, the second Side's copies left out;
+    the Call system's lines left out too when asked (the Speaker check and
+    Suggest names never see them, ADR 0021)."""
+    from core import call_system
+
+    rows = transcript.segments.filter(same_as_other_side=False)
+    if without_system:
+        rows = rows.exclude(speaker=call_system.NAME)
     lines = []
-    for number, segment in enumerate(
-        transcript.segments.filter(same_as_other_side=False).order_by("start", "id"),
-        start=1,
-    ):
+    for number, segment in enumerate(rows.order_by("start", "id"), start=1):
         lines.append(
             Line(
                 number=number,

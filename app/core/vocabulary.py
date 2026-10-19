@@ -264,9 +264,15 @@ def apply_side_rule(recording) -> int:
     rule = side_rule(case)
     if rule is None or not hasattr(recording, "transcript"):
         return 0
-    lines = Segment.objects.filter(
-        transcript=recording.transcript, side__number=rule["side"]
-    ).exclude(speaker="")
+    from core import call_system
+
+    lines = (
+        Segment.objects.filter(
+            transcript=recording.transcript, side__number=rule["side"]
+        )
+        .exclude(speaker="")
+        .exclude(speaker=call_system.NAME)
+    )
     labels = {one for one in lines.values_list("speaker", flat=True).distinct()}
     worn = [one for one in labels if _is_a_label(one)]
     if not worn:

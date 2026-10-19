@@ -159,6 +159,8 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
         lines.setdefault(name, []).append(Line(start, end))
         labels.setdefault(name, label)
 
+    from core import call_system
+
     looks = {one["name"]: one for one in speakers}
     made = []
     for name in sorted(lines, key=lambda one: lines[one][0].start):
@@ -181,7 +183,9 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
                 "colour": looks.get(name, {}).get("colour", ""),
                 "role": looks.get(name, {}).get("role", ""),
                 "label": labels.get(name, ""),
-                "named": is_named(name),
+                "named": is_named(name) and not call_system.is_system(name),
+                # The Call system (ADR 0021): no name box, no merge, a pill.
+                "system": call_system.is_system(name),
                 "lines": len(mine),
                 "talking": round(talking, 1),
                 "talking_text": talking_text(talking),

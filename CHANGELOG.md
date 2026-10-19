@@ -21,6 +21,46 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.138.0, 2026-10-19
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Call system: the phone system's recorded voice as a Speaker of its own
+on a jail call. The voice plan's first release (ADR 0021); off by default.
+
+- **A Speaker called Call system.** With the Admin's switch on, as a
+  Transcript lands on a jail call (the Recording type, or a two-channel call
+  the app found) the lines whose words carry one of the phrases on the
+  Admin's list, or that both Sides heard, become the Call system's. Nothing
+  is deleted and no word changes: the line keeps its time, its words and the
+  engine's own label; only the Speaker shown changes. The count goes in the
+  Transcript's provenance.
+- **Never a person.** The Call system cannot be renamed, named or merged
+  (the Speakers page's card has no name box and says "not a person"; the
+  endpoint refuses with 409); it never becomes a Person in a Case; the rule
+  that names a Side across a Case names the party and leaves its lines
+  alone; the Speaker check and Suggest names never see its lines or offer
+  it as a Speaker.
+- **On the pages and in the exports.** Its lines are grey italics in the
+  viewer, its chip grey on the recording's Speakers strip, its card without
+  controls on the Speakers page; the Word export's Appearances table says
+  "the phone system's recorded voice, not a person" in the Role column.
+- **The memo and the chat.** The narrative rules, the Jail call summary
+  template and the Case chat's rules gain one sentence: a line labelled Call
+  system is the phone system's recorded announcement and never a party's
+  words, said as "the call system announced"; an unedited Jail call template
+  follows the new wording by itself.
+- **Settings**, on the Speakers page of the Panel: **Call system** (Off) and
+  **Call system phrases**, the shipped list of a prepaid-call system's
+  announcements and prompts in generic form, one per line, matched as words
+  inside a line, editable for the office's vendor and greyed while the
+  switch is off. Decisions left to the build and taken here: the marking
+  runs on a Recording whose type is Jail call or that the app found to be a
+  two-channel call; capitals and punctuation do not count in a match.
+
 ## v1.137.3, 2026-10-16
 
 ```

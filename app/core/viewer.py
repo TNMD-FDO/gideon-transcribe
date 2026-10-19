@@ -244,12 +244,20 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         )
         # The Case's People once (v1.134.0), for the roles and the rename box.
         roles = {one["name"].strip().casefold(): one["role"] for one in case_people}
+        from core import call_system
+
         speakers = [
             {
                 "name": name,
-                "colour": colour_for(number),
+                # The Call system (ADR 0021) is grey, not a Speaker's colour.
+                "colour": (
+                    "var(--muted)"
+                    if call_system.is_system(name)
+                    else colour_for(number)
+                ),
                 # The Role badge, inside a Case, when the name is a Person's.
                 "role": roles.get(name.strip().casefold(), ""),
+                "system": call_system.is_system(name),
             }
             for number, name in enumerate(names)
         ]
@@ -819,6 +827,16 @@ def speakers(request: HttpRequest, recording_id) -> JsonResponse:
     now = (wanted.get("to") or "").strip()
     if not was or not now:
         return JsonResponse({"error": "both names are needed"}, status=400)
+    from core import call_system
+
+    if call_system.is_system(was) or call_system.is_system(now):
+        return JsonResponse(
+            {
+                "error": "The call system is the phone system's recorded voice, "
+                "not a person: it cannot be renamed, named or merged."
+            },
+            status=409,
+        )
     # The Speakers page names a new Person with a Role at once (v1.50.0). A
     # Role not on the Admin's list is ignored; a Person that exists keeps its own.
     from core import people

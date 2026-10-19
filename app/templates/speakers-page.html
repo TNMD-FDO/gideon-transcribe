@@ -70,13 +70,13 @@
     <div class="sp-desk{% if not is_video %} sound{% endif %}">
       <div class="sp-cards" id="cards">
         {% for card in cards %}
-          <div class="sp-card{% if not card.named %} unnamed{% endif %}" data-name="{{ card.name }}" data-index="{{ forloop.counter }}" style="--speaker: {{ card.colour }}">
+          <div class="sp-card{% if not card.named and not card.system %} unnamed{% endif %}{% if card.system %} system{% endif %}" data-name="{{ card.name }}" data-index="{{ forloop.counter }}" style="--speaker: {{ card.colour }}">
             <div class="h">
               <kbd class="k">{{ forloop.counter }}</kbd>
               <span class="dot"></span>
               <b class="name">{{ card.name }}</b>
               {% if card.role %}<span class="pill role">{{ card.role }}</span>{% endif %}
-              <span class="pill state">{% if card.named %}named{% else %}unnamed{% endif %}</span>
+              {% if card.system %}<span class="pill state" title="The phone system's recorded announcements and prompts; nobody on the call said them">not a person</span>{% else %}<span class="pill state">{% if card.named %}named{% else %}unnamed{% endif %}</span>{% endif %}
               <span class="label" title="The engine's own label for this voice">{{ card.label }}</span>
             </div>
             <div class="stats"><span class="count">{{ card.lines }} line{{ card.lines|pluralize }}</span>, <span class="talking">{{ card.talking_text }}</span> talking, first at {{ card.first_clock }}</div>
@@ -84,8 +84,10 @@
               {% for sample in card.samples %}
                 <button type="button" class="tiny sample" data-start="{{ sample.start }}" data-end="{{ sample.end }}" title="Play this line on its own">{% icon "play" %} {{ sample.clock }}</button>
               {% endfor %}
+              {% if not card.system %}
               <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
               <button type="button" class="ghost tiny same-as" title="Merge this speaker into another">same person as...</button>
+              {% endif %}
             </div>
             {% comment %}The merge hint (Phase 8 chapter 8): a fragment with a neighbour is offered the merge; one without is said to be alone.{% endcomment %}
             {% if card.hint_other %}
@@ -96,7 +98,7 @@
               <div class="hint-line">{{ card.lines }} short line{{ card.lines|pluralize }}, never over anyone else's; see the lanes.</div>
             {% endif %}
             <div class="suggested" hidden></div>
-            <div class="namebox"{% if card.named %} hidden{% endif %}>
+            <div class="namebox"{% if card.named or card.system %} hidden{% endif %}>
               <div class="row">
                 <input type="text" class="name-input grow" maxlength="60" autocomplete="off" placeholder="Who is this?"{% if card.named %} value="{{ card.name }}"{% endif %}>
                 <button type="button" class="primary small name-save">Name</button>

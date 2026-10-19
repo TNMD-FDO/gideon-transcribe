@@ -113,6 +113,41 @@ SHIPPED_WATCH_PHRASES = "\n".join(
 )
 WATCH_PHRASES_MOST = 200
 
+# The Call system's shipped phrases (ADR 0021, v1.138.0): a prepaid-call
+# system's announcements and prompts in generic form, one per line, matched
+# as words inside a line. An office edits the list for its vendor.
+SHIPPED_CALL_SYSTEM_PHRASES = "\n".join(
+    (
+        "this call is from",
+        "this is a call from",
+        "you have a call from",
+        "a prepaid call from",
+        "a prepaid debit call from",
+        "an inmate at",
+        "a correctional facility",
+        "to accept this call",
+        "to refuse this call",
+        "to decline this call",
+        "to block this call",
+        "subject to monitoring and recording",
+        "may be monitored and recorded",
+        "this call is being recorded",
+        "you have one minute remaining",
+        "your call will be disconnected",
+        "this call will be disconnected",
+        "please wait while your call is being connected",
+        "please wait while your call is being processed",
+        "it may take several minutes to connect",
+        "your current balance is",
+        "this call will cost you",
+        "for each additional minute",
+        "the maximum call duration",
+        "for english, press",
+        "for a collect call, press",
+        "thank you for using",
+    )
+)
+
 SHIPPED_RECORDING_TYPES = "\n".join(
     [
         "Body camera",
@@ -2219,6 +2254,46 @@ def _rows() -> list[Definition]:
                 "may think."
             ),
             when_changed="The next check.",
+        ),
+        # The Call system (ADR 0021, the voice plan's first release, v1.138.0).
+        Definition(
+            key="call_system_available",
+            page=SPEAKERS,
+            group="Call system",
+            name="Call system",
+            kind=TOGGLE,
+            default=False,
+            what_it_does=(
+                "On a jail call (the Recording type, or a two-channel call the "
+                "app found), the lines that carry one of the phrases below, or "
+                "that both sides heard, become the Call system's: a speaker of "
+                "its own for the phone system's recorded announcements, never "
+                "a person. The Speaker check and the name suggestions leave "
+                "those lines alone, and the memo says the call system "
+                "announced them. Off by default."
+            ),
+            when_changed=(
+                "The next transcript. Nothing already transcribed changes; "
+                "Process again applies the setting as it stands."
+            ),
+        ),
+        Definition(
+            key="call_system_phrases",
+            page=SPEAKERS,
+            group="Call system",
+            name="Call system phrases",
+            kind=TEXT,
+            default=SHIPPED_CALL_SYSTEM_PHRASES,
+            lines=12,
+            needs="call_system_available",
+            what_it_does=(
+                "One phrase per line, as the phone system says it; a line of "
+                "the call whose words carry one of them is the Call system's. "
+                "The shipped list is a prepaid-call system's wording in generic "
+                "form; edit it for the office's vendor. Capitals and "
+                "punctuation do not matter."
+            ),
+            when_changed="The next transcript.",
         ),
         Definition(
             key="vision_runs",

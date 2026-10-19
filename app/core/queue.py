@@ -388,6 +388,12 @@ def merge(job: Job) -> Job:
                 "the taps of recording %s could not be applied", job.recording_id
             )
 
+    # The Call system's lines (ADR 0021, v1.138.0), before anything reads the
+    # Speakers: the check, the names and the side rule never see them.
+    from core import call_system
+
+    call_system.on_landed(transcript)
+
     for run in job.runs.all():
         whisperx.delete(run.service_job_id, run.lane)
 

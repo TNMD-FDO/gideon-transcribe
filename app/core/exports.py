@@ -529,6 +529,12 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
 
         for one in who:
             one.role = people.role_of(recording, one.name)
+    # The Call system (ADR 0021) is said for what it is, in or out of a Case.
+    from core import call_system
+
+    for one in who:
+        if call_system.is_system(one.name):
+            one.role = "the phone system's recorded voice, not a person"
     corrections = sum(1 for segment in segments if segment.corrected)
     title = title_of(recording)
     kind = kind_line(transcript) + (", with notes" if with_notes else "")

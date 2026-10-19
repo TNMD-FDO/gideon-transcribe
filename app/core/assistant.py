@@ -2769,7 +2769,11 @@ def unnamed_speakers(transcript) -> list[str]:
         .values_list("speaker", flat=True)
         .distinct()
     )
-    return [name for name in names if _is_a_label(name)]
+    from core import call_system
+
+    return [
+        name for name in names if _is_a_label(name) and not call_system.is_system(name)
+    ]
 
 
 def _is_a_label(name: str) -> bool:
@@ -2802,7 +2806,7 @@ def suggest_names(run_id) -> None:
         problem = _unreachable()
         if problem:
             raise problem
-        lines = prompts.lines_of(transcript)
+        lines = prompts.lines_of(transcript, without_system=True)
         unnamed = unnamed_speakers(transcript)
         if len(unnamed) < 2:
             raise engine.Problem(engine.ERROR, "fewer than two unnamed speakers")

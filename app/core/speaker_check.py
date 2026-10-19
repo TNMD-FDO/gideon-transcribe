@@ -62,9 +62,12 @@ def speakers_of(transcript) -> list[str]:
     """The Speakers a line may be moved among: every name on the Transcript."""
     # Ordered by the name before distinct, or the Segment's own ordering
     # would make every line its own row.
+    from core import call_system
+
     return sorted(
         transcript.segments.filter(same_as_other_side=False)
         .exclude(speaker="")
+        .exclude(speaker=call_system.NAME)
         .order_by("speaker")
         .values_list("speaker", flat=True)
         .distinct()
@@ -215,7 +218,7 @@ def sketch_of(
     the transcript had to be cut to fit, and the engine's answer for the
     run's count of tokens. A problem gives an empty sketch and the check
     goes on without one."""
-    lines = prompts.lines_of(transcript)
+    lines = prompts.lines_of(transcript, without_system=True)
     system = prompts.system_message(ground_text, prompts.SPEAKER_SKETCH, "")
     cap = prompts.sketch_cap(speakers)
     room = assistant.window()
@@ -405,7 +408,7 @@ def run(check_id, attempt: int = 1) -> None:
         speakers = speakers_of(transcript)
         if len(speakers) < 2:
             raise engine.Problem(engine.ERROR, "fewer than two speakers")
-        lines = prompts.lines_of(transcript)
+        lines = prompts.lines_of(transcript, without_system=True)
         system = prompts.system_message(
             ground.text, template.text, prompts.SPEAKER_CHECK_FORMAT
         )

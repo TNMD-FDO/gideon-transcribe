@@ -471,6 +471,7 @@ No wording ships untried, the repository's rule. From `llm-worker` on the office
 
 ## Amendments applied
 
+- 2026-10-19, v1.138.0 (ADR 0021): the Side rule now leaves the Call system's lines alone on a call it names.
 - 2026-10-19, not yet built (ADR 0021; the voice plan, stage two): chapter 2's words gain **Also called**, a Person's second list beside Also heard as, which goes to recognition, to Suggest names' name rules, to Search and to Gideon, with the shared-form warning; the Side rule names the party and never the Call system, and from the plan's fourth release a Side whose voice does not sound like its Person is flagged, never renamed.
 - 2026-10-07, v1.127.0: chapter 4's panes swapped and its head and player bar made one line each, the maintainer's pick B of three mock-ups drawn against the page's dead space at 1366 by 768 (docs/spec/mockups/phase-9-notes-page-b.html); nothing the page does changed.
 - 2026-10-07, v1.125.1: chapter 3's Team block no longer carries an Add people button of its own; Share, among the case's actions, is the one way to add people (its dialog is titled Add people to this case). The maintainer's word: one button is less confusing, and the second had taken the first's id and never worked.

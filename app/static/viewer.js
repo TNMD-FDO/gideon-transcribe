@@ -24,6 +24,8 @@
   var wordTiming = false;
   var here = -1;
   var colours = {};
+  // The Call system's name (ADR 0021): its rows are drawn in grey italics.
+  var systemNames = {};
   var peaks = null;
   var duration = 0;
   var following = true;
@@ -35,6 +37,7 @@
   if (stored) {
     JSON.parse(stored.textContent).forEach(function (one) {
       colours[one.name] = one.colour;
+      if (one.system) { systemNames[one.name] = true; }
     });
   }
 
@@ -195,6 +198,7 @@
       if (segment.speaker) {
         row.style.setProperty("--speaker", colours[segment.speaker] || "");
         row.style.borderLeftColor = colours[segment.speaker] || "transparent";
+        if (systemNames[segment.speaker]) { row.classList.add("system"); }
       }
 
       var when = document.createElement("button");

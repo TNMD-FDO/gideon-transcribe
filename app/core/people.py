@@ -190,9 +190,10 @@ def on_named(
     """
     if recording.case_id is None or not (name or "").strip():
         return None
+    from core import call_system
     from core.assistant import _is_a_label
 
-    if _is_a_label(name):
+    if _is_a_label(name) or call_system.is_system(name):
         return None
     person, _ = join_or_create(
         recording.case, name, by=by, how=how, request=request, role=role
@@ -213,9 +214,11 @@ def moved_in(recording, *, by, request=None) -> int:
         .values_list("speaker", flat=True)
         .distinct()
     )
+    from core import call_system
+
     made = 0
     for name in names:
-        if _is_a_label(name):
+        if _is_a_label(name) or call_system.is_system(name):
             continue
         _, created = join_or_create(
             recording.case, name, by=by, how="moved in", request=request

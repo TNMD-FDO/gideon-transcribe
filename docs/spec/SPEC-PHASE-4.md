@@ -325,6 +325,7 @@ The maintainer's asks and decisions of 2026-09-11 (Moments), 2026-09-12 (the rec
 
 ## Amendments applied
 
+- **2026-10-19, v1.138.0 (ADR 0021).** The sentence below is shipped in the narrative rules, the Jail call summary template (an unedited one follows the wording by itself) and the Case chat's rules.
 - **2026-10-19, not yet built (ADR 0021; the voice plan, stage two).** Chapter 4's narrative rules, the Jail call template and the Case chat's rules gain one sentence for the voice plan's first release: a line of the Call system is the system's recorded announcement and never a party's words, said as "the call system announced".
 
 - **2026-09-25, v1.90.0.** The Body camera summary template is re-shipped in the investigator's voice the office wrote for itself and had run on its own copy for nine versions, generalised for any office: the working kept out of the memo; no tables, speaker lists or transcript labels; Summary, Breakdown in phases with their spans, Questioning and rights, Searches and force, Points for counsel as questions with the doctrine in plain terms and no cases cited; a private checklist; six hundred to eleven hundred words. An office with its own wording keeps it, marked "shipped wording changed". The model's headings are read whether or not it wrote the colon, in bold or in capitals.

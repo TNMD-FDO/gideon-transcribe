@@ -1,7 +1,8 @@
 # 21. The voice step hears the recording, and the Case remembers a voice only when told
 
-Date: 2026-10-19. Status: accepted. Release: the voice plan's V1 to V4,
-not yet built; nothing below is in force until each release lands with its
+Date: 2026-10-19. Status: accepted. Release: the voice plan's V1 to V4;
+V1 (decision 4, the Call system) landed in v1.138.0; the rest is not yet
+built and nothing of it is in force until its release lands with its
 switch.
 
 ## Context

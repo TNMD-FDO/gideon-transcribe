@@ -56,7 +56,7 @@ One timed span of a Transcript attributed to one Speaker.
 A voice label in one Transcript, optionally given a name. Diarization creates Speakers, and the Sides of a Two-channel call are Speakers too. Inside a Case, Speakers given the same name are one Person.
 
 **Call system**:
-The recorded voice of a prepaid-call system on a jail call, as a Speaker of its own on the Transcript: its announcements ("this call is from...", "you have one minute remaining") and prompts, found by a shipped, editable list of phrases and, from the voice step on, by sounding unlike every party (ADR 0021; the voice plan's V1, not built). It has no Role, no name and no Voice print; the Speaker check and Suggest names never see it; its lines stay under its own label and colour, and the memo says "the call system announced".
+The recorded voice of a prepaid-call system on a jail call, as a Speaker of its own on the Transcript: its announcements ("this call is from...", "you have one minute remaining") and prompts, found by a shipped, editable list of phrases (v1.138.0, the voice plan's first release, behind the Admin's switch Call system) and, from the voice step on, by sounding unlike every party (ADR 0021). It has no Role, no name and no Voice print; the Speaker check and Suggest names never see it; its lines stay under its own label and colour, and the memo says "the call system announced".
 _Avoid_: the system (alone), the recording (that is the Recording), IVR, announcement voice, the operator
 
 **Diarizer**:

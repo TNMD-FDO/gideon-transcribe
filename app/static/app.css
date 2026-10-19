@@ -1325,6 +1325,10 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
   cursor: pointer;
 }
 .seg.here .t { color: inherit; }
+/* The Call system (ADR 0021, v1.138.0): the phone system's recorded voice, in grey italics wherever it speaks. */
+.seg.system .who, .seg.system .words { color: var(--muted); font-style: italic; }
+.seg.here.system .who, .seg.here.system .words { color: inherit; }
+.speakerchip.system, .sp-card.system .name { font-style: italic; }
 .seg .who .corrected-mark { margin-left: 4px; color: var(--muted); }
 .seg .who {
   font-weight: 600;
