@@ -1,9 +1,10 @@
 # 21. The voice step hears the recording, and the Case remembers a voice only when told
 
 Date: 2026-10-19. Status: accepted. Release: the voice plan's V1 to V4;
-V1 (decision 4, the Call system) landed in v1.138.0 and V2 (decisions 1 to
-3 and 5, the voice step) in v1.139.0; V3 and V4 are not yet built and
-nothing of them is in force until their releases land with their switches.
+V1 (decision 4, the Call system) landed in v1.138.0, V2 (decisions 1 to
+3 and 5, the voice step) in v1.139.0 and V3 (decision 6's one run and
+decision 7's Also called) in v1.140.0; V4 (Voice prints) is not yet built
+and nothing of it is in force until its release lands with its switch.
 
 ## Context
 

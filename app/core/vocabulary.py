@@ -55,6 +55,8 @@ def entries(case) -> list[dict]:
                 "name": person.name,
                 "role": person.role,
                 "spellings": list(person.also_heard_as or []),
+                # The names people use for them (ADR 0021, v1.140.0).
+                "called": list(person.also_called or []),
             }
         )
     for term in CaseTerm.objects.filter(case=case).order_by("term"):
@@ -65,9 +67,24 @@ def entries(case) -> list[dict]:
                 "name": term.term,
                 "role": "",
                 "spellings": list(term.also_heard_as or []),
+                "called": [],
             }
         )
+    shared = shared_forms(case)
+    for row in rows:
+        row["shared"] = [one for one in row["called"] if one.casefold() in shared]
     return rows
+
+
+def shared_forms(case) -> set[str]:
+    """The Also called forms, casefolded, that two or more People of the
+    Case carry: Suggest names withholds a name reached through one, and the
+    page says so beside the form."""
+    seen: dict[str, int] = {}
+    for person in Person.objects.filter(case=case):
+        for form in {str(one).casefold() for one in (person.also_called or [])}:
+            seen[form] = seen.get(form, 0) + 1
+    return {form for form, count in seen.items() if count > 1}
 
 
 def names_in(case) -> list[str]:
@@ -75,7 +92,12 @@ def names_in(case) -> list[str]:
     never a spelling (a spelling is what the engine got wrong)."""
     if case is None:
         return []
-    names = list(Person.objects.filter(case=case).values_list("name", flat=True))
+    names = []
+    for person in Person.objects.filter(case=case):
+        names.append(person.name)
+        # Also called (ADR 0021, v1.140.0): a name people use is a word the
+        # engine should know, unlike a spelling it got wrong.
+        names.extend(str(one) for one in (person.also_called or []))
     names += list(CaseTerm.objects.filter(case=case).values_list("term", flat=True))
     out: list[str] = []
     seen: set[str] = set()
@@ -120,7 +142,7 @@ def heard_as(case, words) -> list[str]:
             found.append(" ".join(phrase.split()))
 
     for entry in entries(case):
-        forms = [entry["name"], *entry["spellings"]]
+        forms = [entry["name"], *entry["spellings"], *entry.get("called", [])]
         keys = {" ".join(one.split()).casefold() for one in forms}
         squeezed = {_squeezed(one) for one in forms}
         # One word of a name of several (v1.123.0): a reviewer types the
@@ -202,9 +224,18 @@ def remove_term(term: CaseTerm, *, by, request=None) -> None:
 
 
 def set_person_spellings(
-    person: Person, spellings, *, by, request=None, add: bool = False
+    person: Person,
+    spellings,
+    *,
+    by,
+    request=None,
+    add: bool = False,
+    called=None,
 ) -> None:
-    """A Person's Also heard as spellings; `add` keeps the ones there."""
+    """A Person's Also heard as spellings; `add` keeps the ones there. With
+    `called` (ADR 0021, v1.140.0), the Also called list is set in the same
+    change: the names people use for the Person, parsed as the spellings
+    are, never one that is the Person's own name."""
     heard = parse_spellings(spellings) if isinstance(spellings, str) else spellings
     if add:
         merged = list(person.also_heard_as or [])
@@ -213,7 +244,14 @@ def set_person_spellings(
                 merged.append(one)
         heard = merged[:SPELLINGS_MOST]
     person.also_heard_as = heard
-    person.save(update_fields=["also_heard_as"])
+    fields = ["also_heard_as"]
+    if called is not None:
+        forms = parse_spellings(called) if isinstance(called, str) else called
+        person.also_called = [
+            one for one in forms if one.casefold() != person.name.casefold()
+        ]
+        fields.append("also_called")
+    person.save(update_fields=fields)
     _row("case vocabulary changed", person.case, by, request)
 
 

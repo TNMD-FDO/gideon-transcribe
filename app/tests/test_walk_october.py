@@ -442,7 +442,9 @@ def test_the_word_mark_leaves_with_the_line_and_the_check_stands_first():
     assert 'was.querySelectorAll(".word.now")' in viewer
     page = (APP / "templates" / "speakers-page.html").read_text(encoding="utf-8")
     assert page.index('id="check-line"') < page.index('id="suggest-line"')
-    assert "For the best names, check the speakers first" in page
+    # Since v1.140.0 the check suggests the names in the same run (ADR 0021),
+    # and the line says so in place of the advice.
+    assert "The check also suggests names" in page
     for name in ("speakers-page.js", "assistant.js"):
         script = (APP / "static" / name).read_text(encoding="utf-8")
         assert "works either way" in script, name

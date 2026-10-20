@@ -44,6 +44,8 @@ def term_action(request: HttpRequest, case_id) -> HttpResponse:
                 request.POST.get("spellings", ""),
                 by=request.user,
                 request=request,
+                # The Also called box beside it (ADR 0021, v1.140.0).
+                called=request.POST.get("called") if "called" in request.POST else None,
             )
         else:
             term = get_object_or_404(CaseTerm, pk=request.POST.get("id", ""), case=case)

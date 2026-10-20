@@ -21,6 +21,64 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.140.0, 2026-10-20
+
+```
+Models: unchanged
+Database: migrates
+```
+
+The one run: the voice plan's third release (ADR 0021). The Speaker check
+and Suggest names are one job, a Person's Also called list reaches the
+name rules, and the Speakers page is drawn for a phone.
+
+- **One run.** With Speaker suggestions on, the check's job goes on to
+  suggest the names for the same transcript: the moves land in the
+  transcript and a name for each voice on its card, from one press or as
+  the transcript lands. The run keeps the name Speaker check; its line on
+  the page says "It also suggested 2 names, on the cards". Where the check
+  is offered the Suggest names button is folded into it; it stays only on
+  a transcript the check cannot read. **Run again** replaces Check again.
+- **Also called.** On the case page's Case vocabulary, a Person gains a
+  second box beside Also heard as: the names people use for them on the
+  recordings ("Mama", "Coach", a first name). Each goes to recognition as
+  vocabulary, to Suggest names, to Search and to Gideon. A name heard on a
+  recording that is one Person's form reaches that Person, with the form
+  as the reason on the card ("Probably Dana Reyes, known here as "Mama",
+  called that by another speaker at 3:12"); a form two People share is
+  marked on the page and withheld from the suggestions; the label on every
+  page stays the Person's name.
+- **A click lit the line above.** On the Speakers page, since v1.139.0 the
+  transcript column held a head above each run of changes, and the row to
+  light was found by counting the column's children from the top, so every
+  head above the clicked line shifted the highlight up one. The row is now
+  found by its line number.
+- **Moot proposals are closed.** A pending proposal whose line changed
+  hands since the run (a hand move, a merge, a swap, a split) is closed as
+  dismissed with no decider, so the count reads right and the run's
+  vectors are let go once nothing waits; before this such rows were left
+  out of the page but stayed pending for good.
+- **The Speakers page on a phone** (the drawing the maintainer chose,
+  `docs/spec/mockups/phase-5-phone-and-strip.html`): under 600 wide the
+  voice cards sit in a row that scrolls sideways so the transcript begins
+  within a screen's height, each lane's label sits above its track, a line
+  is three rows with the sounds and Accept or Leave on the third, the two
+  views are one segmented control at the full width with the fold under
+  them, and a bar fixed at the foot carries Run again, what is left and
+  Done.
+- **The strip's pill.** On the recording page the Speakers strip shows
+  "14 changes proposed" while any wait, with "another voice under Speaker
+  1" on the same pill when a hand-over was found; a press opens the
+  Speakers page. While the run reads it says "checking the speakers..."
+  and is not a button. On a phone the strip takes four rows.
+- Each line of a run of changes carries its own Accept beside Leave this
+  one, as it did since v1.139.0; the mock-ups now show it, after the
+  maintainer's ask of 2026-10-20.
+- **Database**: migration 0082 adds the Person's Also called list and the
+  form a suggested name came through.
+- Not in this release: Voice prints across a Case and the Case tab's
+  proposals (the plan's fourth release).
+
 ## v1.139.2, 2026-10-20
 
 ```

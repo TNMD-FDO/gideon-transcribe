@@ -36,6 +36,12 @@ class Person(models.Model):
     # The spellings the engine has been heard to give this name (Phase 9
     # chapter 2, Also heard as): a list of strings, never sent to recognition.
     also_heard_as = models.JSONField(default=list, blank=True)
+    # The names people use for this Person on the recordings ("Mama",
+    # "Coach", a first name; ADR 0021, Also called; v1.140.0): a list of
+    # strings. Each goes to recognition as vocabulary, to Suggest names'
+    # name rules, to Search and to Gideon. Neither list labels a Speaker:
+    # the label on every page is the Person's name.
+    also_called = models.JSONField(default=list, blank=True)
     added_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -393,6 +399,21 @@ def _in_a_case(recording) -> bool:
     from core import cases
 
     return recording.case_id is not None and cases.folder_management_on()
+
+
+def by_also_called(case) -> dict[str, list[Person]]:
+    """Each Also called form in the Case, casefolded, with the People that
+    carry it (ADR 0021, v1.140.0). A form on two People is the shared form
+    the name rules withhold a suggestion on."""
+    out: dict[str, list[Person]] = {}
+    if case is None:
+        return out
+    for person in Person.objects.filter(case=case):
+        for form in person.also_called or []:
+            key = " ".join(str(form).split()).casefold()
+            if key:
+                out.setdefault(key, []).append(person)
+    return out
 
 
 def known_names(recording) -> list[str]:

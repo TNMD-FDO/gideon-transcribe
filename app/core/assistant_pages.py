@@ -364,6 +364,8 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
                 # How the transcript backs the name (v1.105.0): said of
                 # themselves, or called that by another speaker.
                 "basis": one.basis,
+                # The Also called form the name came through (v1.140.0).
+                "form": one.form,
                 "quote": one.quote,
                 "start": one.start,
                 "clock": exports.clock(one.start),

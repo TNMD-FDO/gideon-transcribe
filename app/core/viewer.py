@@ -867,6 +867,7 @@ def _speakers_under_the_lock(request, recording, transcript, was, now, role):
     from core import speaker_check
 
     followed = speaker_check.follow(transcript, was, now, by=request.user)
+    speaker_check.rescore(transcript)
     # Remembered on the Transcript, so a merge made by mistake can be undone
     # later, exactly: these Segments go back to that name and no others do.
     changes = list(transcript.speaker_changes or [])
@@ -1005,6 +1006,9 @@ def speakers_swap(request: HttpRequest, recording_id) -> JsonResponse:
         segments_changed=len(were_a) + len(were_b),
         seconds=round(end - start),
     )
+    from core import speaker_check
+
+    speaker_check.rescore(transcript)
     return JsonResponse(
         {"changed": len(were_a) + len(were_b), "undo": last_change_line(transcript)}
     )
@@ -1191,6 +1195,12 @@ def move_line(
         segments_changed=1,
         **details,
     )
+    # A hand move closes the proposals it made moot and re-scores the rest
+    # (v1.140.0); an accepted correction re-scores after its own bookkeeping.
+    if details.get("how") != "check":
+        from core import speaker_check
+
+        speaker_check.rescore(transcript)
     return 1
 
 
@@ -1262,6 +1272,9 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
         was_merge=bool(last.get("merged")),
         was_swap=bool(last.get("swap")),
     )
+    from core import speaker_check
+
+    speaker_check.rescore(transcript)
     return JsonResponse({"restored": restored, "undo": last_change_line(transcript)})
 
 

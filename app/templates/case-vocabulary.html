@@ -14,7 +14,8 @@
           <details>
             <summary>
               <b>{{ one.name }}</b>{% if one.role %} <span class="muted small">({{ one.role }})</span>{% endif %}{% if one.kind == "person" %} <span class="muted small">from the Speakers tab</span>{% endif %}
-              <div class="muted small">{% if one.spellings %}also heard as {{ one.spellings|join:", " }}{% else %}no other spelling yet{% endif %}</div>
+              <div class="muted small">{% if one.spellings %}also heard as {{ one.spellings|join:", " }}{% else %}no other spelling yet{% endif %}{% if one.called %} · also called {{ one.called|join:", " }}{% endif %}</div>
+              {% if one.shared %}<div class="small" style="color: var(--warn)">{{ one.shared|join:", " }}: also on another person here, so Suggest names will not use {% if one.shared|length == 1 %}it{% else %}them{% endif %}.</div>{% endif %}
             </summary>
             <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
               {% csrf_token %}
@@ -22,6 +23,7 @@
               <input type="hidden" name="kind" value="{{ one.kind }}">
               <input type="hidden" name="id" value="{{ one.id }}">
               <input type="text" name="spellings" value="{{ one.spellings|join:", " }}" maxlength="2500" class="grow" placeholder="Also heard as, with commas" aria-label="Also heard as">
+              {% if one.kind == "person" %}<input type="text" name="called" value="{{ one.called|join:", " }}" maxlength="2500" class="grow" placeholder="Also called, with commas" aria-label="Also called" title="The names people use for this person on the recordings: Mama, Coach, a first name. Each goes to recognition, to Suggest names, to Search and to Gideon.">{% endif %}
               <button type="submit" class="small">Save</button>
             </form>
             {% if one.kind == "term" and may_remove_terms %}

@@ -34,6 +34,7 @@ from core.assistant import (
     PromptTemplate,
     SpeakerCheck,
     SpeakerCorrection,
+    SuggestionRun,
 )
 
 log = logging.getLogger(__name__)
@@ -463,6 +464,7 @@ def rescore(transcript) -> int:
     from core import voices
     from core.assistant import Handover
 
+    settle_moot(transcript)
     last = transcript.speaker_checks.exclude(voices={}).first()
     if last is None:
         return 0
@@ -486,6 +488,54 @@ def rescore(transcript) -> int:
             one.save(update_fields=["voice"])
             changed += 1
     return changed
+
+
+def settle_moot(transcript) -> int:
+    """A pending correction whose line no longer carries the label the check
+    saw (moved by hand, a merge, a swap or a split since) is moot: it is
+    closed as dismissed with no decider, so the page's count reads right
+    and the run's vectors are let go once nothing waits (v1.140.0; before
+    it such rows were left out of the page and stayed pending for good)."""
+    stamp = timezone.now()
+    closed = 0
+    for one in transcript.corrections.filter(
+        state=SpeakerCorrection.PENDING
+    ).select_related("segment"):
+        if one.segment is not None and one.segment.speaker == one.speaker_from:
+            continue
+        one.state = SpeakerCorrection.DISMISSED
+        one.aside_why = "the line moved since the check"
+        one.decided_at = stamp
+        one.save(update_fields=["state", "aside_why", "decided_at"])
+        closed += 1
+    return closed
+
+
+def _names_pass(check) -> None:
+    """The one run (ADR 0021; v1.140.0): with Speaker suggestions on, the
+    check's job goes on to Suggest names for the same Transcript, so one
+    press, or the landing, proposes the moves and the names together. The
+    names are a second engine call with their own audit row; what they
+    found is counted on the check so the page's line can say so. A problem
+    with the names never fails the check."""
+    transcript = check.transcript
+    try:
+        if not assistant.features()["suggestions"]:
+            return
+        if len(assistant.unnamed_speakers(transcript)) < 2:
+            return
+        if transcript.suggestion_runs.filter(state__in=(QUEUED, RUNNING)).exists():
+            return
+        names = SuggestionRun.objects.create(
+            transcript=transcript, asked_by=check.asked_by
+        )
+        assistant.suggest_names(names.pk)
+        names.refresh_from_db()
+        check.second_look["names"] = names.found if names.state == DONE else None
+        check.second_look["names_state"] = names.state
+        check.save(update_fields=["second_look"])
+    except Exception:  # noqa: BLE001 - the check is done whatever the names did
+        log.exception("speaker check for %s: the names pass failed", transcript.pk)
 
 
 def run(check_id, attempt: int = 1) -> None:
@@ -636,6 +686,8 @@ def run(check_id, attempt: int = 1) -> None:
             voice_agrees=check.second_look.get("voice_agrees", 0),
             voice_against=check.second_look.get("voice_against", 0),
         )
+        # The one run (ADR 0021, V3): the names, in the same job.
+        _names_pass(check)
     except engine.Problem as problem:
         # What was found before the problem is kept: every one passed the checks.
         if kept:
@@ -1035,6 +1087,10 @@ def state_json(transcript) -> dict:
                 "whole": last.whole,
                 # What the voice step heard of the proposals (v1.128.0).
                 "voice_notes": last.second_look or {},
+                # The names the same run suggested (v1.140.0): a count, None
+                # when the names pass did not run or failed.
+                "names": (last.second_look or {}).get("names"),
+                "names_state": (last.second_look or {}).get("names_state", ""),
                 "said": assistant.what_to_say(last.reason_class)
                 if last.reason_class
                 else "",

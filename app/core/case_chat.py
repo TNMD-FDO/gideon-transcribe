@@ -246,12 +246,16 @@ def people_line(case) -> str:
     spellings, and the places and other names after the people."""
     from core.people import CaseTerm
 
-    def with_spellings(name: str, spellings) -> str:
+    def with_spellings(name: str, spellings, called=None) -> str:
         heard = [one for one in (spellings or []) if one]
-        return f"{name}, also heard as {', '.join(heard)}" if heard else name
+        out = f"{name}, also heard as {', '.join(heard)}" if heard else name
+        # Also called (ADR 0021, v1.140.0): the names people use for them.
+        used = [one for one in (called or []) if one]
+        return f"{out}, also called {', '.join(used)}" if used else out
 
     people = [
-        with_spellings(one.shown(), one.also_heard_as) for one in case.people.all()
+        with_spellings(one.shown(), one.also_heard_as, one.also_called)
+        for one in case.people.all()
     ]
     line = "People in this case: " + (", ".join(people) if people else "none yet")
     terms = [

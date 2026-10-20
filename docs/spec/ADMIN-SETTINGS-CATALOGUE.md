@@ -109,7 +109,7 @@ The rows from Vision to Digest part cap, and every row marked (Vision page), sit
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
-| Speaker check | On or Off; greyed while AI assistant is Off | Off | 5 (v1.55.0) | After a transcript lands with its speakers told apart, the engine reads it in windows and proposes the lines whose words show they belong to another speaker. Nothing moves until a person accepts a correction on the Speakers page. Off by default: an office tries it and judges before leaving it on (`docs/research/speaker-check-probe.md`). | Off runs no check and hides the corrections; what was found stays and is hidden, not deleted. |
+| Speaker check | On or Off; greyed while AI assistant is Off | Off | 5 (v1.55.0) | After a transcript lands with its speakers told apart, the engine reads it in windows and proposes the lines whose words show they belong to another speaker. Nothing moves until a person accepts a correction on the Speakers page. With Speaker suggestions on, the same run suggests the speakers' names (v1.140.0, the one run). Off by default: an office tries it and judges before leaving it on (`docs/research/speaker-check-probe.md`). | Off runs no check and hides the corrections; what was found stays and is hidden, not deleted. |
 | Speaker check runs | as each transcript lands; overnight; greyed while Speaker check is Off | as each transcript lands | 5 (v1.55.0) | When a check queued as a transcript lands runs: at once, or when the Vision page's overnight window opens. Check the speakers on the Speakers page runs at once either way. | The next transcript. |
 | Speaker check window | 120 to 1,800 seconds; greyed while Speaker check is Off | 600 | 5 (v1.55.0) | How much talk one engine call reads at a time. A shorter window means more calls, each with less to hold in view. | The next check. |
 | Speaker check answer cap | 500 to 16,000 tokens; greyed while Speaker check is Off | 3,000 | 5 (v1.55.0) | The most one window's answer, a JSON list of moves, may run to; an answer cut off at the cap keeps the moves that were finished. | The next check. |
@@ -279,6 +279,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 
 ## Amendments applied
 
+- 2026-10-20, v1.140.0: no new row; Speaker check's wording says that with Speaker suggestions on the same run suggests the names (the one run, ADR 0021).
 - 2026-10-19, v1.139.0, to the Speakers group: Voices help the check built as a list of Recording types (one row, as decided), shipped with Jail call.
 - 2026-10-19, v1.138.0, to the Speakers group: Call system (the switch, Off) and Call system phrases built; the phrases row greys while the switch is off.
 - 2026-10-19, later, to the Speakers group: the five rows cut to three at the maintainer's wish for no overlapping settings: Voices help the check (per Recording type), Remember voices across a case (Admin; chapter 2's switch, here rather than in the Cases group so the voice's rows sit together), Call system phrases; the floor and the cap are the build's constants.

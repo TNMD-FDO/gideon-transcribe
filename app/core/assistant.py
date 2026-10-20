@@ -508,6 +508,10 @@ class Suggestion(models.Model):
     )
     start = models.FloatField(default=0.0)
     quote = models.CharField(max_length=300, blank=True, default="")
+    # The Also called form the name was reached through (ADR 0021,
+    # v1.140.0): "Mama" when the Person is Dana Reyes; empty when the name
+    # itself was heard.
+    form = models.CharField(max_length=60, blank=True, default="")
     state = models.CharField(max_length=10, default=PENDING)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -2834,6 +2838,33 @@ def _is_a_label(name: str) -> bool:
     return bool(parts) and parts[0] in ("Speaker", "Side") and parts[-1].isdigit()
 
 
+def through_also_called(kept: list[dict], recording, taken: set[str]) -> list[dict]:
+    """The name rule of Also called (ADR 0021, v1.140.0): a name heard on
+    the recording that is a form on one of the Case's People reaches that
+    Person, with the form kept as the reason; a form two People share is
+    withheld, and a Person already named on this Transcript is not offered
+    again under a form."""
+    if not getattr(recording, "case_id", None):
+        return kept
+    from core import people
+
+    by_form = people.by_also_called(recording.case)
+    if not by_form:
+        return kept
+    out = []
+    held = {name.casefold() for name in taken}
+    for one in kept:
+        owners = by_form.get(" ".join(one["name"].split()).casefold(), [])
+        if len(owners) > 1:
+            continue
+        if len(owners) == 1 and owners[0].name.casefold() != one["name"].casefold():
+            if owners[0].name.casefold() in held:
+                continue
+            one = dict(one, form=one["name"], name=owners[0].name)
+        out.append(one)
+    return out
+
+
 def suggest_names(run_id) -> None:
     """One call for the whole Transcript, replacing every pending suggestion."""
     run = (
@@ -2920,6 +2951,7 @@ def suggest_names(run_id) -> None:
                         engine.BAD_OUTPUT, "invalid suggestion JSON twice"
                     ) from bad
         kept = prompts.keep_suggestions(raw or [], unnamed, taken, lines, found)
+        kept = through_also_called(kept, recording, taken)
 
         transcript.suggestions.filter(state=Suggestion.PENDING).delete()
         for one in kept:
@@ -2930,6 +2962,7 @@ def suggest_names(run_id) -> None:
                 kind=one["kind"],
                 confidence=one["confidence"],
                 basis=one.get("basis", ""),
+                form=one.get("form", ""),
                 line=one["line"],
                 segment_id=one["segment_id"],
                 start=one["start"],

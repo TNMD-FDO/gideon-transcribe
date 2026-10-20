@@ -599,9 +599,18 @@
     var pill = document.getElementById("corrections-pill");
     if (!pill || !state) { return; }
     var check = state.speaker_check || {};
+    var run = check.run;
+    var busy = run && (run.state === "queued" || run.state === "running");
+    // While the run reads (v1.140.0, the chosen drawing): the pill says so
+    // and is not a button.
+    if (busy) { pill.hidden = false; pill.disabled = true; pill.textContent = "checking the speakers..."; return; }
+    pill.disabled = false;
     var count = (check.pending || []).length;
-    pill.hidden = !count;
-    pill.textContent = count + " speaker correction" + (count === 1 ? "" : "s");
+    var handovers = check.handovers || [];
+    pill.hidden = !count && !handovers.length;
+    var text = count ? count + (count === 1 ? " change proposed" : " changes proposed") : "";
+    if (handovers.length) { text += (text ? " \u00b7 " : "") + "another voice under " + handovers[0].speaker; }
+    pill.textContent = text;
   }
   var correctionsPill = document.getElementById("corrections-pill");
   if (correctionsPill) {

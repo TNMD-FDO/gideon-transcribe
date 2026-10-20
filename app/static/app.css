@@ -2350,6 +2350,9 @@ details.inline[open] summary::after { content: ": "; }
 
 /* The strip's count of corrections waiting (Phase 5 chapter 3). */
 button.corrections-pill { cursor: pointer; border: 0; font: inherit; font-size: var(--t-small); min-height: 0; line-height: 1.4; padding: 2px 8px; }
+button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
+/* The bar at the foot of the Speakers page on a phone (v1.140.0): drawn only under 600 wide. */
+.sp-foot { display: none; }
 .sp-right { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .sp-player { flex: none; }
 .sp-player video { display: block; width: 100%; max-height: 36vh; background: var(--well); }
@@ -2988,6 +2991,37 @@ body.gideon-window .gideon-grip { display: none; }
   .sp-read .seg .who { text-align: left; }
   .sp-read .seg .words { grid-column: 1 / -1; }
   .sp-read .seg .actions { grid-column: 3; }
+  /* v1.140.0 (ADR 0021; the drawing phase-5-phone-and-strip.html): the
+     Speakers page under 600 is the desktop page in one column. The voice
+     cards sit in a row that scrolls sideways so the transcript begins
+     within a screen's height; the check's section stays under the row at
+     the full width, its one primary button at the full width. */
+  .sp-cards { max-height: none; overflow: visible; }
+  .sp-cards .sp-cast { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; scrollbar-width: thin; }
+  .sp-cards .sp-cast .sp-card { flex: none; width: 236px; scroll-snap-align: start; }
+  .sp-corrections .acts .primary { width: 100%; }
+  /* The lanes keep their shape with each label above its track. */
+  .sp-lanes .ruler, .sp-lanes .lane { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .sp-lanes .ruler .head { display: none; }
+  .sp-lanes .foot, .sp-lanes .swap-form { margin-left: 0; }
+  /* A line is three rows: the time and the labels, the words, then the
+     three sounds with Accept or Leave on a row of their own. */
+  .sp-read .seg.change .actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+  /* The two views are one segmented control at the full width, the fold
+     one full-width button under them. */
+  .sp-filter { flex-wrap: wrap; }
+  .sp-filter .views { display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%; margin-left: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .sp-filter .views .sw { border: 0; border-radius: 0; min-height: 28px; }
+  .sp-filter .views #show-quiet { grid-column: 1 / -1; border-top: 1px solid var(--line); border-radius: 0; min-height: 28px; }
+  /* The bar fixed at the foot: Run again, what is left, Done. */
+  .sp-foot { display: flex; gap: 8px; align-items: center; position: sticky; bottom: 0; z-index: 3; padding: 8px 12px; background: var(--surface); border-top: 1px solid var(--line); }
+  .sp-foot[hidden] { display: none; }
+  /* The recording page's Speakers strip takes four rows (figure 2 of the
+     same drawing): the head, the chips, the pill at its full width, then
+     the tools. */
+  .cast .row { flex-wrap: wrap; }
+  .cast .cast-tools { margin-left: 0; padding-left: 0; border-left: 0; width: 100%; flex-wrap: wrap; }
+  .cast .cast-tools .corrections-pill { width: 100%; text-align: left; white-space: normal; }
 }
 
 /* 4. Tables with a row for each thing (cases, recordings, incidents,

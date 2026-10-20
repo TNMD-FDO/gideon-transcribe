@@ -34,7 +34,7 @@
           the whole transcript; nothing moves until a correction is accepted.
         {% endcomment %}
         <span id="check-line" hidden>
-          <button type="button" class="small" id="check-speakers" title="Ask the AI assistant which lines the words show were given to the wrong speaker">Check the speakers</button>
+          <button type="button" class="small" id="check-speakers" title="Ask the AI assistant which lines were given to the wrong speaker and, with Speaker suggestions on, who the speakers are: one run, the moves in the transcript and the names on the cards">Check the speakers</button>
           <span id="check-said" class="small muted"></span>
         </span>
       {% endif %}
@@ -45,11 +45,14 @@
         </span>
       {% endif %}
       {% comment %}
-        v1.127.1: Check the speakers stands before Suggest names, and one line
-        says why, as advice; neither is ever withheld for the other.
+        v1.127.1: Check the speakers stood before Suggest names with one line
+        of advice. Since v1.140.0 (ADR 0021, the one run) the check also
+        suggests the names, so the Suggest names button is hidden by the
+        script wherever the check is offered and the line says what the one
+        run does.
       {% endcomment %}
       {% if assistant.suggestions and assistant.speaker_check %}
-        <span class="small muted" id="speakers-practice" style="flex-basis: 100%">For the best names, check the speakers first: a name rests on the lines a speaker has, so a moved line can change who it points to.</span>
+        <span class="small muted" id="speakers-practice" style="flex-basis: 100%">The check also suggests names: the moves first, then a name for each voice on its card, since a name rests on the lines a speaker has.</span>
       {% endif %}
     {% endif %}
     <span class="small muted" id="win-state"></span>
@@ -69,6 +72,8 @@
   {% else %}
     <div class="sp-desk{% if not is_video %} sound{% endif %}">
       <div class="sp-cards" id="cards">
+        {% comment %}The cards in a row of their own (v1.140.0): on a phone the row scrolls sideways and the check's section stays under it.{% endcomment %}
+        <div class="sp-cast">
         {% for card in cards %}
           <div class="sp-card{% if not card.named and not card.system %} unnamed{% endif %}{% if card.system %} system{% endif %}" data-name="{{ card.name }}" data-index="{{ forloop.counter }}" style="--speaker: {{ card.colour }}">
             <div class="h">
@@ -129,6 +134,7 @@
             </div>
           </div>
         {% endfor %}
+        </div>
         {% if assistant.speaker_check %}
           {% comment %}
             What the check found (Phase 5 chapter 3, v1.128.0): the big thing
@@ -164,7 +170,7 @@
               <div id="stretches-covered-list" class="found-cards"></div>
             </details>
             <div class="row acts" style="gap: 8px; margin-top: 8px; align-items: baseline">
-              <button type="button" class="ghost tiny" id="check-again">Check again</button>
+              <button type="button" class="ghost tiny" id="check-again">Run again</button>
               <span class="small muted" id="check-again-why" hidden>the speakers changed; a fresh read usually leaves less</span>
             </div>
             <p class="small muted" id="corrections-score" hidden></p>
@@ -276,6 +282,18 @@
 
       </div>
     </div>
+    {% comment %}
+      The bar fixed at the foot on a phone (v1.140.0, the chosen drawing):
+      Run again, what is left, and the way out, so neither scrolls away.
+      Drawn only under 600 wide, by the stylesheet.
+    {% endcomment %}
+    {% if assistant.speaker_check %}
+      <div class="sp-foot" id="sp-foot" hidden>
+        <button type="button" class="ghost small" id="foot-run-again">Run again</button>
+        <span class="small muted grow" id="foot-left"></span>
+        {% if not in_window %}<a class="button small" href="{{ back_url }}">Done</a>{% endif %}
+      </div>
+    {% endif %}
   {% endif %}
 
   {{ speakers|json_script:"speaker-colours" }}

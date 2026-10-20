@@ -452,6 +452,14 @@
 
   // Following: the line being spoken lights and stays in view, scrolled only
   // once it has left the middle of the column, as on the recording page.
+  // The row of a line, by the number the row carries (v1.140.0): since
+  // v1.139.0 the column holds a head above each run of changes too, so
+  // counting the column's children from the top lit the line above.
+  function rowAt(index) {
+    if (!column || index < 0) { return null; }
+    return column.querySelector(".seg[data-index='" + index + "']");
+  }
+
   function outOfTheMiddle(row) {
     if (!reading) { return true; }
     var box = reading.getBoundingClientRect();
@@ -467,7 +475,7 @@
     if (index !== here) {
       var was = column ? column.querySelector(".seg.here") : null;
       if (was) { was.classList.remove("here"); }
-      var row = column ? column.children[index] : null;
+      var row = rowAt(index);
       if (row) {
         row.classList.add("here");
         if (following && !paused && !row.hidden && outOfTheMiddle(row)) {
@@ -499,7 +507,7 @@
     if (!paused) { return; }
     paused = false;
     if (pill) { pill.hidden = true; }
-    var row = column ? column.children[here] : null;
+    var row = rowAt(here);
     if (row && !row.hidden) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
   if (reading) {
@@ -824,7 +832,7 @@
         var keep = here;
         draw();
         here = keep;
-        var row = column ? column.children[keep] : null;
+        var row = rowAt(keep);
         if (row) { row.classList.add("here"); }
         drawLanes();
         tell({ kind: "segments-changed" });
@@ -932,7 +940,11 @@
   function drawNameSuggestions(body) {
     if (!suggestLine || !V.assistant.suggestions) { return false; }
     var unnamed = body.unnamed || [];
-    suggestLine.hidden = unnamed.length < 2;
+    // The one run (v1.140.0): where the check is offered it suggests the
+    // names too, so the button of its own is kept for a transcript the
+    // check cannot read (fewer than two speakers told apart).
+    var oneRun = !!(V.assistant.speakerCheck && (body.speaker_check || {}).offered);
+    suggestLine.hidden = unnamed.length < 2 || oneRun;
     var button = document.getElementById("suggest-names");
     var said = document.getElementById("suggest-said");
     var run = body.suggestion_run;
@@ -965,7 +977,10 @@
       // Which way the line points (v1.105.0): the app says whether the
       // speaker gave the name themselves or was called by it.
       var basis = one.basis === "introduces" ? ", who says so themselves at " : (one.basis === "addressed" ? ", called that by another speaker at " : ", from ");
-      box.innerHTML = "Probably <b>" + escape(one.name) + "</b>" + (one.role ? " (" + escape(one.role) + ")" : "") +
+      // A name reached through an Also called form (v1.140.0): the form is
+      // the reason, said before the line.
+      var through = one.form ? ", known here as \u201c" + escape(one.form) + "\u201d" : "";
+      box.innerHTML = "Probably <b>" + escape(one.name) + "</b>" + (one.role ? " (" + escape(one.role) + ")" : "") + through +
         basis + "<a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>: “" + escape(one.quote) + "” " +
         "<button type='button' class='tiny accept' data-suggestion='" + one.id + "' data-name='" + escape(one.name) + "'>Accept</button> " +
         "<button type='button' class='ghost tiny reject' data-suggestion='" + one.id + "'>Reject</button>";
@@ -1054,6 +1069,11 @@
     else if (run && run.state === "done" && !cards.length && !all.length) { said.textContent = "Checked " + run.when + how + "; nothing to move."; }
     else if (run && run.state === "done") { said.textContent = "Checked " + run.when + how + "."; }
     else { said.textContent = ""; }
+    // The names the same run suggested (v1.140.0, the one run).
+    if (run && run.state === "done" && V.assistant.suggestions) {
+      if (typeof run.names === "number") { said.textContent += run.names ? " It also suggested " + plural(run.names, "name") + ", on the cards." : " Nothing in the transcript shows who the speakers are."; }
+      else if (run.names_state === "failed") { said.textContent += " The names could not be suggested this time."; }
+    }
     if (run && run.cut_short) {
       // A window's list ran past the answer cap (v1.56.0): the run did not
       // see everything, and the page says so rather than looking finished.
@@ -1104,6 +1124,13 @@
     if (segments.length) { draw(); drawLanes(); }
     var again = document.getElementById("check-again-why");
     if (again) { again.hidden = !settled; }
+    // The bar at the foot on a phone (v1.140.0): what is left, and Run again.
+    var foot = document.getElementById("sp-foot");
+    if (foot) {
+      foot.hidden = !run;
+      document.getElementById("foot-left").textContent = busy ? "reading..." : (left ? left + " left" : (settled ? "all settled" : ""));
+      document.getElementById("foot-run-again").disabled = !body.reachable || !!busy;
+    }
     // The finding on the speaker's own card, where the person already looks.
     Array.prototype.forEach.call(document.querySelectorAll(".sp-card .check-hint"), function (pill) { pill.remove(); });
     cards.forEach(function (card) {
@@ -1203,11 +1230,13 @@
     var keep = here;
     draw();
     here = keep;
-    var row = column ? column.children[keep] : null;
+    var row = rowAt(keep);
     if (row) { row.classList.add("here"); }
     drawLanes();
     tell({ kind: "segments-changed" });
   }
+  var footRun = document.getElementById("foot-run-again");
+  if (footRun) { footRun.addEventListener("click", function () { var button = document.getElementById("check-speakers"); if (button) { button.click(); } }); }
   if (checkLine) {
     document.getElementById("check-speakers").addEventListener("click", function () {
       var button = this;

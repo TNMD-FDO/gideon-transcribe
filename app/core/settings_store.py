@@ -2184,8 +2184,10 @@ def _rows() -> list[Definition]:
                 "After a transcript lands with its speakers told apart, the "
                 "engine reads it in windows and proposes the lines whose words "
                 "show they belong to another speaker. Nothing moves until a "
-                "person accepts a correction on the Speakers page. Off by "
-                "default: an office tries it and judges before leaving it on."
+                "person accepts a correction on the Speakers page. With "
+                "Speaker suggestions on, the same run suggests the speakers' "
+                "names (v1.140.0). Off by default: an office tries it and "
+                "judges before leaving it on."
             ),
             when_changed=(
                 "Off runs no check and hides the corrections; what was found "
