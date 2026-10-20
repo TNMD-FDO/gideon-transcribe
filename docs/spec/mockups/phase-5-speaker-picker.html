@@ -90,6 +90,12 @@
   .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
   .cols .picker { max-width: 100%; }
   .play3 { display: inline-flex; gap: 4px; align-items: center; }
+  .samples { display: flex; flex-direction: column; gap: 4px; }
+  .sample { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; font-size: 13px; padding: 4px 6px; border-radius: var(--radius); background: var(--surface-2); }
+  .sample .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sample .near { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .manage { font-size: 12px; color: var(--muted); padding-top: 4px; border-top: 1px dashed var(--line); }
+  .manage a { color: var(--accent); }
   .play3 .n { font-size: 10px; color: var(--muted); font-family: var(--mono); }
   .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; color: var(--accent); white-space: nowrap; }
   .preview { border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; max-width: 380px; font-size: 13px; }
@@ -123,7 +129,7 @@
     <h1>The speaker picker: whose is this line?</h1>
     <p class="lede"><b>Drawn 2026-10-20</b> for the maintainer to pick (the voice plan's section 13). Today "not this speaker" opens a box that asks for a typed number, and the recording page answers only to the number keys. One control instead, wherever the app asks whose a line or a voice is, and never a typed answer unless the person is new. Every name and line is made up.</p>
     <p class="lede">The same list, in the same order, everywhere: <b>On this call</b>, <b>In this case</b>, <b>Someone new</b>. Picking a person from the case puts them on the call as a speaker; Someone new makes the person in the case and the speaker on the call in one step. Number keys, arrows and Enter work as before.</p>
-    <p class="lede"><b>Added 2026-10-20, after the maintainer's question "what if the sample is wrong?"</b>: where the voice step has run, a speaker's samples are the lines nearest their voice print, never a length-chosen line that may be mislabelled; the play button cycles the three with a count; a person's sample from another recording opens in the floating Preview with that recording's title.</p>
+    <p class="lede"><b>Added 2026-10-20, after the maintainer's question "what if the sample is wrong?"</b>: where the voice step has run, a speaker's samples are the lines nearest their voice print, never a length-chosen line that may be mislabelled; the play button cycles the three with a count; a person's sample from another recording opens in the floating Preview with that recording's title. <b>And the maintainer's placing of the correction</b>: a wrong sample is fixed on the Speakers page's card, where the three samples live ("not this voice", figure 6), never inside the picker, which only chooses; away from that page the picker carries one quiet line, "Doesn't sound right? Manage speakers".</p>
   </header>
 
   <!-- Figure 1 -->
@@ -236,6 +242,7 @@
                 <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="prev"><span class="play">▶</span>Preview</span></div>
               </div>
               <div class="add"><span class="plus">+</span><span><b>Someone new</b></span></div>
+              <div class="manage">Doesn't sound right? <a href="#">Manage speakers</a> opens the Speakers page at this speaker's card, where a sample can be corrected.</div>
             </div>
           </div>
           <div class="ln"><span class="t">9:40</span><span class="lab c1">Speaker 1</span><span class="w">Because he never called back.</span><span class="right"></span></div>
@@ -271,6 +278,43 @@
       <div class="caption" style="margin-top: 0">
         <p><b>Nothing new to learn.</b> The Preview is the card that plays a case chat citation or a Search hit without leaving the page (v1.98.0). Here it plays a person's sample from the recording the sample is in, named at the top, and cycles the three as the picker does.</p>
         <p><b>Outside a case</b> there is no second group and no Preview; the picker is the call's speakers and Someone new.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 6: the card, where a wrong sample is fixed -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 6 · The Speakers page's card: where a wrong sample is fixed</div><h2>"Not this voice" beside each sample opens the picker for that line</h2></div>
+    <div class="cols">
+      <div class="who c1"><i class="lane"></i><div class="body">
+        <div class="name"><span class="c1">Speaker 1</span> <span class="pill">unnamed</span></div>
+        <div class="facts">96 lines · 4 min talking · first at 0:19 · samples are the lines nearest this voice</div>
+        <div class="samples">
+          <div class="sample"><span class="play">▶</span><span class="near">1:04 · 1/3</span><span class="q">“Hello? Yeah, I can hear you now.”</span><span class="btn ghost tiny">not this voice</span></div>
+          <div class="sample"><span class="play">▶</span><span class="near">6:12 · 2/3</span><span class="q">“I told him to call the office first.”</span><span class="btn ghost tiny">not this voice</span></div>
+          <div class="sample" style="outline: 1px solid var(--accent)"><span class="play">▶</span><span class="near">12:40 · 3/3</span><span class="q">“Put her on, then.”</span><span class="btn tiny on">not this voice</span></div>
+        </div>
+        <div class="picker" style="max-width: none">
+          <div class="q"><b>Whose line is this?</b><span class="muted small">“Put her on, then.” 12:40</span><span class="x">Esc</span></div>
+          <div class="grp">
+            <div class="gh">On this call</div>
+            <div class="opt now"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1 <span class="pill">has it now</span></span><span class="facts"></span><span></span></div>
+            <div class="opt focus"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="facts">73 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+            <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+          </div>
+          <div class="grp">
+            <div class="gh">In this case, not yet on this call</div>
+            <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="prev"><span class="play">▶</span>Preview</span></div>
+          </div>
+          <div class="add"><span class="plus">+</span><span><b>Someone new</b></span></div>
+        </div>
+        <div class="small muted">If none of the three is this voice, this label mixes people: <a href="#" style="color: var(--accent)">open the Speaker check</a>.</div>
+        <div class="facts" style="display: flex; gap: 8px"><span class="btn ghost tiny">rename</span><span class="btn ghost tiny">same person as...</span></div>
+      </div></div>
+      <div class="caption" style="margin-top: 0">
+        <p><b>The card is where the samples live</b>, so the card is where a wrong one is fixed. "Not this voice" opens the same picker for that sample's line, with the speaker it has now struck through. One pick moves the line, with Undo.</p>
+        <p><b>What follows the move.</b> The speaker's three samples are chosen again, so the next-nearest line to the voice print takes the wrong one's place; the moved line joins the other speaker's print and the pending proposals are re-scored, as any accepted move does; the move counts in Decided so far as the person's, since it is one.</p>
+        <p><b>Three wrong is a different thing.</b> When none of the three is the voice the label mixes people, which is the Speaker check's business; the card says so and points there. The picker itself never corrects: on the recording page and the case tab it only chooses, and says "Manage speakers" for the rest.</p>
       </div>
     </div>
   </section>
