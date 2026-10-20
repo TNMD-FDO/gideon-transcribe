@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.142.2, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **One sound at a time** (the maintainer's find on v1.142.1). On the
+  recording page a sample played from the speaker picker only sought and
+  played, so the recording ran on from there; it now stops at the sample's
+  end, with the half-second margin, as the Speakers page's samples do. The
+  floating Preview, a person's voice from another recording, a case chat
+  citation or a Search hit, played over the page's own player; opening it
+  now pauses the page's player first, on the recording page and the
+  Speakers page alike, and leaves it paused when the Preview closes.
+
 ## v1.142.1, 2026-10-20
 
 ```

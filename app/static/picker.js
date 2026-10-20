@@ -127,7 +127,8 @@
     if (!card || !card.samples || !card.samples.length || !opened.options.play) { return; }
     var n = (opened.cycle[name] || 0) % card.samples.length;
     var sample = card.samples[n];
-    opened.options.play(sample.start, sample.end);
+    // Half a second either side (v1.141.0), on both pages alike.
+    opened.options.play(Math.max(0, sample.start - 0.5), sample.end + 0.5);
     opened.cycle[name] = n + 1;
     var count = opt.querySelector(".n");
     if (count) { count.textContent = ((n + 1) % card.samples.length + 1) + "/" + card.samples.length; }

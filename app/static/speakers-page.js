@@ -141,6 +141,8 @@
   }
   function play() { if (player) { player.play(); } else { tell({ kind: "play" }); } }
   function pause() { if (player) { player.pause(); } else { tell({ kind: "pause" }); } }
+  // The Preview pauses this page's player before it plays (v1.142.2).
+  V.pause = pause;
 
   if (player) {
     var lastTold = -1;

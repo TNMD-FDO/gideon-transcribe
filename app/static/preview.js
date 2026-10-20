@@ -434,6 +434,9 @@
 
     function open(given) {
       if (!given || !given.recording) { return; }
+      // One sound at a time (v1.142.2): the page's own player pauses before
+      // the Preview plays, and stays paused when the Preview closes.
+      if (window.VIEWER && typeof window.VIEWER.pause === "function") { window.VIEWER.pause(); }
       var seconds = Math.max(0, parseFloat(given.seconds) || 0);
       var same = card && asked && asked.recording === given.recording;
       if (asked && asked.from && asked.from !== given.from) { asked.from.classList.remove("previewing"); }

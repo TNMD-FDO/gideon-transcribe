@@ -217,3 +217,17 @@ def test_the_pages_hold_still_while_a_picker_is_open():
         assert 'addEventListener("picker-open"' in script, name
         assert 'addEventListener("picker-close"' in script, name
         assert "!holding" in script, name
+
+
+def test_one_sound_at_a_time():
+    """v1.142.2: a sample on the recording page stops at its end, and a
+    Preview pauses the page's player before it plays."""
+    viewer = (HERE / "static" / "viewer.js").read_text(encoding="utf-8")
+    assert "window.VIEWER.playRange = function (start, end)" in viewer
+    assert "window.VIEWER.playRange(start, end); }" in viewer
+    page = (HERE / "static" / "speakers-page.js").read_text(encoding="utf-8")
+    assert "V.pause = pause;" in page
+    preview = (HERE / "static" / "preview.js").read_text(encoding="utf-8")
+    assert 'typeof window.VIEWER.pause === "function"' in preview
+    picker = (HERE / "static" / "picker.js").read_text(encoding="utf-8")
+    assert "sample.start - 0.5" in picker and "sample.end + 0.5" in picker

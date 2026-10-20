@@ -181,6 +181,21 @@
   };
   window.VIEWER.play = function () { if (player) { player.play(); } };
   window.VIEWER.pause = function () { if (player) { player.pause(); } };
+  // A stretch played on its own (v1.142.2): a sample from the speaker
+  // picker plays from its start and pauses at its end, as the Speakers
+  // page's samples do, instead of the recording running on from there.
+  var stopAt = null;
+  window.VIEWER.playRange = function (start, end) {
+    if (!player) { return; }
+    window.VIEWER.seek(start);
+    stopAt = end;
+    player.play();
+  };
+  if (player) {
+    player.addEventListener("timeupdate", function () {
+      if (stopAt !== null && player.currentTime >= stopAt) { stopAt = null; player.pause(); }
+    });
+  }
   window.VIEWER.segments = function () { return segments; };
   // A citation clicked: the transcript scrolls to the line that starts in
   // that second and lights it for a moment, so the eye lands where the ear does.
@@ -2120,7 +2135,7 @@
       question: "Whose line is this?",
       quote: "“" + (segment.text || "").slice(0, 80) + "”",
       current: segment.speaker,
-      play: function (start) { window.VIEWER.seek(start); window.VIEWER.play(); },
+      play: function (start, end) { window.VIEWER.playRange(start, end); },
       manageUrl: manage ? manage.dataset.href : "",
       onPick: function (name, role) {
         return fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id + "/speaker", {
