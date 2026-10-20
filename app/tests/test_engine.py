@@ -248,9 +248,9 @@ def test_llm_worker_is_the_fourth_service_on_its_own_queue():
     services = compose_services()
     worker = services["llm-worker"]
     assert worker["command"] == ["llm-worker"]
-    assert worker["networks"] == ["transcribe"], (
-        "only the shared-engine file adds another"
-    )
+    # The project's two networks, the service's for the voices (v1.139.2);
+    # only the shared-engine file adds one outside the project.
+    assert worker["networks"] == ["transcribe", "whisperx"]
     assert "llm_api_token" in worker["secrets"]
     assert "--queues llm" in ENTRYPOINT.read_text(encoding="utf-8")
 

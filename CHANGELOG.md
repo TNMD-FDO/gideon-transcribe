@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.139.2, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The voice step reaches the service.** The Speaker check runs in the
+  `llm-worker` container, which sat on the project's own network only, so
+  the voices request of v1.139.0 could not resolve the WhisperX service's
+  name and every check ran on words alone with "the voice could not be
+  read". The container now joins the service's network too, as the web app
+  and the transcription worker already do. The upgrade recreates the
+  container; nothing else changes. Run Check again on a recording checked
+  under v1.139.0 or v1.139.1 to get the voice's word.
+
 ## v1.139.1, 2026-10-20
 
 ```

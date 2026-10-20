@@ -435,6 +435,10 @@ services:
           memory: 2G
     networks:
       - transcribe
+      # The Speaker check runs here, and since v1.139.0 it asks the WhisperX
+      # service for the voices (v1.139.2): on the transcribe network alone the
+      # service's name did not resolve and every check ran on words alone.
+      - whisperx
     logging:
       driver: journald
 
