@@ -854,11 +854,15 @@
   }
 
   // One line given to another speaker: the number keys, or the row's button.
-  function give(segment, name) {
+  function give(segment, name, role) {
     if (!segment || !name || segment.speaker === name) { return; }
-    send("/recording/" + V.recording + "/segment/" + segment.id + "/speaker", { speaker: name })
+    var known = names().indexOf(name) >= 0;
+    return send("/recording/" + V.recording + "/segment/" + segment.id + "/speaker", { speaker: name, role: role || "" })
       .then(function (answer) {
         if (!answer.ok) { UI.toast(answer.said.error || "That line was not changed.", { problem: true, icon: "warning" }); return; }
+        // A person from the case, or someone new (v1.142.0): a speaker this
+        // page has no card for yet, so the page loads again at this moment.
+        if (!known) { tell({ kind: "speakers-changed" }); reloadHere(name); return; }
         segment.speaker = name;
         sayUndo(answer.said.undo);
         buildBlocks();
@@ -873,9 +877,24 @@
       });
   }
 
-  function giveLine(segment) {
-    askWhich("Whose line is this?", "“" + segment.text.slice(0, 80) + "”", segment.speaker)
-      .then(function (name) { if (name) { give(segment, name); } });
+  // The speaker picker (v1.142.0): never a typed number. Opened under the
+  // line's row, or under the card a sample sits on.
+  function giveLine(segment, anchor) {
+    if (!window.Picker) {
+      askWhich("Whose line is this?", "“" + segment.text.slice(0, 80) + "”", segment.speaker)
+        .then(function (name) { if (name) { give(segment, name); } });
+      return;
+    }
+    var index = segments.indexOf(segment);
+    window.Picker.open({
+      recording: V.recording,
+      anchor: anchor || rowAt(index) || null,
+      question: "Whose line is this?",
+      quote: "“" + segment.text.slice(0, 80) + "”",
+      current: segment.speaker,
+      play: playRange,
+      onPick: function (name, role) { return give(segment, name, role); }
+    });
   }
 
   function currentSegment() { return here >= 0 ? segments[here] : null; }
@@ -889,6 +908,15 @@
       if (sample) {
         pick(name);
         playLine({ start: parseFloat(sample.dataset.start), end: parseFloat(sample.dataset.end) });
+        return;
+      }
+      // Not this voice (v1.142.0): a sample that is not this speaker is a
+      // line like any other, moved by the picker, from the card it sits on.
+      var wrong = event.target.closest(".not-voice");
+      if (wrong) {
+        var line = segments.filter(function (one) { return String(one.id) === String(wrong.dataset.segment); })[0];
+        if (line) { giveLine(line, card); }
+        else { UI.toast("That line is not in the transcript any more; the page loads again.", { icon: "info" }); reloadHere(name); }
         return;
       }
       if (event.target.closest(".name-speaker")) {
@@ -1341,15 +1369,30 @@
       var split = event.target.closest(".split-handover");
       var dismiss = event.target.closest(".dismiss-handover");
       if (!split && !dismiss) { return; }
-      send("/handover/" + box.dataset.handover + "/" + (split ? "accept" : "dismiss")).then(function (answer) {
-        if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
-        if (split) {
-          if (answer.said.stale) { UI.toast("No line of that speaker lies after the time any more.", { icon: "info" }); refreshSuggestions(); return; }
-          tell({ kind: "speakers-changed" });
-          reloadHere(answer.said.made || picked);
-          return;
-        }
-        refreshSuggestions();
+      function decide(into) {
+        return send("/handover/" + box.dataset.handover + "/" + (split ? "accept" : "dismiss"), split ? { into: into || "" } : {}).then(function (answer) {
+          if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+          if (split) {
+            if (answer.said.stale) { UI.toast("No line of that speaker lies after the time any more.", { icon: "info" }); refreshSuggestions(); return; }
+            tell({ kind: "speakers-changed" });
+            reloadHere(answer.said.made || picked);
+            return;
+          }
+          refreshSuggestions();
+        });
+      }
+      if (!split || !window.Picker) { decide(""); return; }
+      // Split, into whom (v1.142.0): a known speaker or person, or a new
+      // speaker as before, which stays the lit default.
+      var card = box.closest(".sp-card");
+      window.Picker.open({
+        recording: V.recording,
+        anchor: box,
+        question: "From " + clock(at) + " the voice is",
+        current: card ? card.dataset.name : "",
+        newSpeaker: true,
+        play: playRange,
+        onPick: function (name) { return decide(name); }
       });
     });
   }

@@ -226,6 +226,17 @@
       editButton.innerHTML = icon("correct") + " edit";
       actions.appendChild(editButton);
 
+      // Whose line is this (v1.142.0): the speaker picker on the line, where
+      // the number keys of the Speakers window never reached.
+      if (window.Picker && segment.speaker) {
+        var speakerButton = document.createElement("button");
+        speakerButton.type = "button";
+        speakerButton.className = "ghost tiny speaker-row";
+        speakerButton.title = "Give this line to another speaker";
+        speakerButton.innerHTML = icon("person") + " speaker";
+        actions.appendChild(speakerButton);
+      }
+
       // A note on the line (Phase 8 chapter 2), beside edit and clip start.
       var noteButton = document.createElement("button");
       noteButton.type = "button";
@@ -1140,6 +1151,7 @@
       if (event.target.closest(".clip-row")) { markFrom(index); return; }
       if (event.target.closest("[data-note-act='remove']")) { removeNote(index); return; }
       if (event.target.closest(".note-row") || event.target.closest(".note-line")) { noteOn(index); return; }
+      if (event.target.closest(".speaker-row")) { pickSpeakerFor(index); return; }
       if (row.querySelector("textarea")) { return; }
       window.VIEWER.seek(segments[index].start);
     });
@@ -2080,6 +2092,34 @@
 
   // The transcript fetched again after a line changed hands in a window:
   // the rows redrawn, the highlight and any search put back.
+  // The speaker picker on a line (v1.142.0).
+  function pickSpeakerFor(index) {
+    var segment = segments[index];
+    var row = column ? column.children[index] : null;
+    if (!segment || !window.Picker) { return; }
+    var manage = document.getElementById("manage-speakers");
+    window.Picker.open({
+      recording: window.VIEWER.recording,
+      anchor: row,
+      question: "Whose line is this?",
+      quote: "“" + (segment.text || "").slice(0, 80) + "”",
+      current: segment.speaker,
+      play: function (start) { window.VIEWER.seek(start); window.VIEWER.play(); },
+      manageUrl: manage ? manage.dataset.href : "",
+      onPick: function (name, role) {
+        return fetch("/recording/" + window.VIEWER.recording + "/segment/" + segment.id + "/speaker", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
+          body: JSON.stringify({ speaker: name, role: role || "" })
+        }).then(function (answer) { return answer.json(); }).then(function (said) {
+          if (said.error) { UI.toast(said.error, { problem: true, icon: "warning" }); return; }
+          reloadSegments();
+          window.location.reload();
+        });
+      }
+    });
+  }
+
   function reloadSegments() {
     if (!window.VIEWER.hasTranscript) { return; }
     fetch("/recording/" + window.VIEWER.recording + "/segments")

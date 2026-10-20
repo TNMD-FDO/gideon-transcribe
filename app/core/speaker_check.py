@@ -374,6 +374,7 @@ def _voice_notes(transcript, kept: dict, check=None) -> dict:
             summary["voice"] = "titanet"
             summary["cost"] = answer["cost"]
             summary.update(voices.counts(judge))
+            _write_fits(transcript, judge)
         except voices.Unavailable as why:
             summary["voice"] = "unavailable"
             summary["voice_unavailable"] = str(why)[:120]
@@ -476,9 +477,18 @@ def rescore(transcript) -> int:
         last.voices = {}
         last.save(update_fields=["voices"])
         return 0
-    judge = voices.judge_from(transcript, last.voices)
+    try:
+        judge = voices.judge_from(transcript, last.voices)
+    except Exception:  # noqa: BLE001 - a run's vectors never break a person's move
+        log.exception(
+            "speaker check for %s: the run's vectors could not be read; "
+            "the move stands and the proposals keep their words",
+            transcript.pk,
+        )
+        return 0
     if judge is None:
         return 0
+    _write_fits(transcript, judge)
     changed = 0
     for one in pending:
         word, _ = judge.word(one.segment_id, one.speaker_from, one.speaker_to)
@@ -488,6 +498,28 @@ def rescore(transcript) -> int:
             one.save(update_fields=["voice"])
             changed += 1
     return changed
+
+
+def _write_fits(transcript, judge) -> int:
+    """Each line's closeness to its own speaker's print (v1.142.0), kept on
+    the line as a score so the Speakers page's samples are the lines the
+    recording itself agrees are that voice. A line the voice could not
+    measure is cleared. Returns how many lines got a score."""
+    from core.jobs import Segment
+
+    fits: dict[int, float | None] = {}
+    for sid in judge.stretches:
+        try:
+            pk = int(sid)
+        except (TypeError, ValueError):
+            continue
+        own = judge.name_of(sid)
+        fits[pk] = judge.cos_to(sid, own) if own else None
+    rows = list(transcript.segments.filter(same_as_other_side=False))
+    for seg in rows:
+        seg.voice_fit = fits.get(seg.pk)
+    Segment.objects.bulk_update(rows, ["voice_fit"], batch_size=500)
+    return sum(1 for one in fits.values() if one is not None)
 
 
 def settle_moot(transcript) -> int:
@@ -762,14 +794,20 @@ def _store_under_the_lock(transcript, kept: dict) -> None:
 # Hand-overs (ADR 0021) ---------------------------------------------------------------
 
 
-def accept_handover(handover, *, by, request=None) -> str:
-    """A person's Yes: the label is split at the time into a new Speaker, as
-    one change with Undo. Returns the new Speaker's name, or "" when no line
-    of the label lies after the time any more."""
+def accept_handover(handover, *, by, request=None, into: str = "") -> str:
+    """A person's Yes: the label is split at the time into a new Speaker, or
+    into the speaker or person they picked (v1.142.0), as one change with
+    Undo. Returns the Speaker's name, or "" when no line of the label lies
+    after the time any more."""
     from core import viewer
 
     made = viewer.split_speaker(
-        handover.transcript, handover.speaker, handover.at, by=by, request=request
+        handover.transcript,
+        handover.speaker,
+        handover.at,
+        by=by,
+        request=request,
+        into=into,
     )
     handover.state = handover.ACCEPTED if made else handover.DISMISSED
     handover.made = made or ""

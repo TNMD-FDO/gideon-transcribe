@@ -139,8 +139,11 @@ The Speakers page opened in a window of its own by Open in a window (from v1.50.
 **Lane**:
 One Speaker's row on the Speakers page's timeline: the Speaker's name at the left and, across the width of the Recording, a block for every stretch that Speaker talks. The Lanes are the page's scrub bar: a press seeks there, and dragging one Lane's head onto another merges the two Speakers. Avoid: track, swimlane, timeline row.
 
+**Speaker picker**:
+The one control the app shows wherever it asks whose a line or a voice is (v1.142.0; the voice plan's section 13): the speakers on this Recording with a play for their Samples, the Case's People not yet on it with a Preview of their voice, and Someone new. It chooses and never corrects: a wrong Sample is fixed on the Speakers page's card ("not this voice"). Avoid: dropdown, speaker menu, chooser.
+
 **Sample**:
-One of up to three lines of a Speaker that the Speakers page offers to play to hear the voice, chosen from the first, middle and last thirds of that Speaker's lines and a few seconds long, never a line whose timing is a guess (v1.141.0). Playing a Sample plays the Recording from half a second before the line's start and pauses half a second after its end. Avoid: snippet, excerpt (that is a Clip's), clip.
+One of up to three lines of a Speaker that the Speakers page offers to play to hear the voice, chosen from the first, middle and last thirds of that Speaker's lines and a few seconds long, never a line whose timing is a guess (v1.141.0); where the voice step has run, the lines nearest the Speaker's voice print (v1.142.0). Playing a Sample plays the Recording from half a second before the line's start and pauses half a second after its end. A Sample that is not the Speaker is given to whoever it is with "not this voice" on the card, through the Speaker picker. Avoid: snippet, excerpt (that is a Clip's), clip.
 
 **Swap**:
 Exchanging two Speakers for a stretch of a Recording on the Speakers page, from one time to another: every line of the first in the stretch becomes the second's and the other way round, in one press, remembered for Undo. The shape a diarizer's error takes when it confuses two voices for a passage, and what the Suggested corrections offer when a run of them lies between the same two Speakers. Since v1.56.0. Avoid: flip, exchange, relabel.

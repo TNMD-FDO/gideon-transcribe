@@ -21,6 +21,48 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.142.0, 2026-10-20
+
+```
+Models: unchanged
+Database: migrates
+```
+
+The speaker picker (the voice plan's section 13, the maintainer's ask of
+2026-10-20; drawn in `docs/spec/mockups/phase-5-speaker-picker.html` and
+chosen the same day). One control wherever the app asks whose a line or a
+voice is, and never a typed answer unless the person is new.
+
+- **The picker.** Three groups in the same order everywhere: **On this
+  call**, the recording's speakers with their colours, number keys and a
+  play button that cycles their three samples (1/3, 2/3, 3/3); **In this
+  case, not yet on this call**, the case's People with no lines here, with
+  role, where they appear and their Also called names, and a Preview that
+  plays their voice from the recording it is in; and **Someone new**, the
+  name and role box, which makes the person in the case and the speaker on
+  the call in one step. Picking a person from the case puts them on the
+  call. Arrows, Enter and Esc work; the number keys do what they did and
+  now reach the case's people too. On a phone it rises from the foot.
+- **Where it is.** The Speakers page's "not this speaker" on a row (until
+  now a box that asked for a typed number); a hand-over's **Split here**,
+  which asks whom the lines go to, a known speaker or person or a new
+  speaker as before; and the recording page's lines, which gain a
+  **speaker** button beside edit and note, with one quiet line, "Doesn't
+  sound right? Manage speakers". The picker only chooses.
+- **Samples by the voice.** Where the voice step has run, each speaker's
+  three samples are the lines nearest their voice print, one from each
+  third of the recording, feeding the cards, the picker's play and a
+  proposal's "hear" buttons alike; a mislabelled line sits far from the
+  print and is never one. Each line keeps its closeness as a score, written
+  by the check and cleared when the line changes hands by hand. Where the
+  voice step has not run the length rule stands.
+- **A wrong sample is fixed on the card.** On the Speakers page each sample
+  carries **not this voice**, which opens the picker for that line; the
+  move re-picks the samples and re-scores the proposals, with Undo. When
+  none of the three is the voice, the card says the label mixes people and
+  points at the Speaker check.
+- **Database**: migration 0083 adds the line's voice fit.
+
 ## v1.141.1, 2026-10-20
 
 ```

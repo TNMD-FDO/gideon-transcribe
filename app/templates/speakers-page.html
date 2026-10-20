@@ -85,9 +85,12 @@
               <span class="label" title="The engine's own label for this voice">{{ card.label }}</span>
             </div>
             <div class="stats"><span class="count">{{ card.lines }} line{{ card.lines|pluralize }}</span>, <span class="talking">{{ card.talking_text }}</span> talking, first at {{ card.first_clock }}</div>
-            <div class="samples">
+            <div class="samples"{% if card.by_voice %} title="The samples are the lines nearest this voice's print"{% endif %}>
               {% for sample in card.samples %}
-                <button type="button" class="tiny sample" data-start="{{ sample.start }}" data-end="{{ sample.end }}" title="Play this line on its own">{% icon "play" %} {{ sample.clock }}</button>
+                <span class="sample-pair">
+                  <button type="button" class="tiny sample" data-start="{{ sample.start }}" data-end="{{ sample.end }}" data-segment="{{ sample.id }}" title="Play this line on its own{% if sample.quote %}: {{ sample.quote }}{% endif %}">{% icon "play" %} {{ sample.clock }}</button>
+                  {% if not card.system %}<button type="button" class="ghost tiny not-voice" data-segment="{{ sample.id }}" title="This sample is not this speaker: give the line to whoever it is">not this voice</button>{% endif %}
+                </span>
               {% endfor %}
               {% if not card.system %}
               <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
@@ -101,6 +104,9 @@
               </div>
             {% elif card.fragment %}
               <div class="hint-line">{{ card.lines }} short line{{ card.lines|pluralize }}, never over anyone else's; see the lanes.</div>
+            {% endif %}
+            {% if card.by_voice and not card.system and card.samples|length > 1 %}
+              <div class="small muted mixed-line">If none of the three is this voice, this label mixes people: <a href="#corrections" class="open-check">open the Speaker check</a>.</div>
             {% endif %}
             <div class="suggested" hidden></div>
             {% comment %}A Hand-over on the card (ADR 0021, v1.139.0): another voice from a time under this label, Play before and after, Split here.{% endcomment %}
@@ -312,5 +318,7 @@
       windowUrl: "{{ window_url }}"
     };
   </script>
+  <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'picker.js' %}"></script>
   <script src="{% static 'speakers-page.js' %}"></script>
 {% endblock %}

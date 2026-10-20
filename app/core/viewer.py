@@ -41,6 +41,61 @@ SPEAKER_COLOURS = [
 ]
 
 
+def speakers_of(transcript, case_people: list[dict]) -> list[dict]:
+    """The Speakers on a Transcript as every page names and colours them:
+    name, colour, Role and whether it is the Call system. Shared by the
+    recording page, the Speakers page and the picker (v1.142.0)."""
+    if transcript is None:
+        return []
+    # order_by("speaker") is not for the order: it clears the Segment's own
+    # ordering, which is by start and id. Without that, Django puts those
+    # two columns in the SELECT to order by them, DISTINCT then sees every
+    # row as different, and the panel shows one chip per segment instead of
+    # one per speaker.
+    names = list(
+        transcript.segments.filter(same_as_other_side=False)
+        .exclude(speaker="")
+        .order_by("speaker")
+        .values_list("speaker", flat=True)
+        .distinct()
+    )
+    # The Case's People once (v1.134.0), for the roles and the rename box.
+    roles = {one["name"].strip().casefold(): one["role"] for one in case_people}
+    from core import call_system
+
+    return [
+        {
+            "name": name,
+            # The Call system (ADR 0021) is grey, not a Speaker's colour.
+            "colour": (
+                "var(--muted)" if call_system.is_system(name) else colour_for(number)
+            ),
+            # The Role badge, inside a Case, when the name is a Person's.
+            "role": roles.get(name.strip().casefold(), ""),
+            "system": call_system.is_system(name),
+        }
+        for number, name in enumerate(names)
+    ]
+
+
+@login_required
+def picker(request: HttpRequest, recording_id) -> JsonResponse:
+    """What the speaker picker offers (v1.142.0): the speakers on this
+    recording with their samples, the Case's People not yet on it with
+    where their voice can be heard, and the Admin's roles for someone new."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        empty = {"on_call": [], "people": [], "roles": [], "in_case": False}
+        return JsonResponse(empty)
+    from core import speakers_page
+
+    speakers = speakers_of(transcript, _people_of(recording))
+    return JsonResponse(speakers_page.picker(recording, transcript, speakers))
+
+
 def colour_for(index: int) -> str:
     return SPEAKER_COLOURS[index % len(SPEAKER_COLOURS)]
 
@@ -228,39 +283,7 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
     playback = recording.playback_path() if recording.playback_ready else None
 
     case_people = _people_of(recording)
-    speakers = []
-    if transcript is not None:
-        # order_by("speaker") is not for the order: it clears the Segment's own
-        # ordering, which is by start and id. Without that, Django puts those
-        # two columns in the SELECT to order by them, DISTINCT then sees every
-        # row as different, and the panel shows one chip per segment instead of
-        # one per speaker.
-        names = list(
-            transcript.segments.filter(same_as_other_side=False)
-            .exclude(speaker="")
-            .order_by("speaker")
-            .values_list("speaker", flat=True)
-            .distinct()
-        )
-        # The Case's People once (v1.134.0), for the roles and the rename box.
-        roles = {one["name"].strip().casefold(): one["role"] for one in case_people}
-        from core import call_system
-
-        speakers = [
-            {
-                "name": name,
-                # The Call system (ADR 0021) is grey, not a Speaker's colour.
-                "colour": (
-                    "var(--muted)"
-                    if call_system.is_system(name)
-                    else colour_for(number)
-                ),
-                # The Role badge, inside a Case, when the name is a Person's.
-                "role": roles.get(name.strip().casefold(), ""),
-                "system": call_system.is_system(name),
-            }
-            for number, name in enumerate(names)
-        ]
+    speakers = speakers_of(transcript, case_people)
 
     job = recording.jobs.order_by("-created").first()
     from core import incidents
@@ -1057,12 +1080,19 @@ def next_label(transcript) -> str:
     return f"Speaker {taken + 1}"
 
 
-def split_speaker(transcript, name: str, at: float, *, by, request=None) -> str:
+def split_speaker(
+    transcript, name: str, at: float, *, by, request=None, into: str = ""
+) -> str:
     """A Hand-over accepted (ADR 0021): every line of `name` from `at` on
-    becomes a new Speaker's, as one change Undo puts back. Returns the new
-    Speaker's name, or "" when nothing lay after the time."""
+    becomes another Speaker's, as one change Undo puts back: a new Speaker,
+    or the speaker or person picked (`into`, v1.142.0), who inside a Case
+    is joined as a Person as any naming is. Returns that Speaker's name, or
+    "" when nothing lay after the time."""
     from core.jobs import Transcript
 
+    into = " ".join((into or "").split())
+    if into.casefold() == name.casefold():
+        return ""
     with transaction.atomic():
         Transcript.objects.select_for_update().get(pk=transcript.pk)
         transcript.refresh_from_db()
@@ -1073,7 +1103,7 @@ def split_speaker(transcript, name: str, at: float, *, by, request=None) -> str:
         )
         if not moved:
             return ""
-        made = next_label(transcript)
+        made = into or next_label(transcript)
         transcript.segments.filter(pk__in=moved).update(speaker=made)
         changes = list(transcript.speaker_changes or [])
         changes.append(
@@ -1090,6 +1120,12 @@ def split_speaker(transcript, name: str, at: float, *, by, request=None) -> str:
         transcript.speaker_changes = changes[-20:]
         transcript.save(update_fields=["speaker_changes"])
     recording = transcript.recording
+    if into:
+        from core import people
+
+        people.on_named(
+            recording, made, by=by, how="named in the viewer", request=request
+        )
     audit.write(
         audit.Category.EDITS,
         "Speakers split",
@@ -1165,7 +1201,14 @@ def line_speaker(request: HttpRequest, recording_id, segment_id) -> JsonResponse
         return JsonResponse({"error": "no such line"}, status=404)
     if segment.speaker == now:
         return JsonResponse({"changed": 0, "undo": last_change_line(transcript)})
-    move_line(transcript, segment, now, by=request.user, request=request)
+    # Someone new from the picker brings a Role (v1.142.0); one not on the
+    # Admin's list is ignored, as the Speakers page's name box does.
+    from core import people
+
+    role = (wanted.get("role") or "").strip()
+    if role not in people.roles():
+        role = ""
+    move_line(transcript, segment, now, by=request.user, request=request, role=role)
     return JsonResponse({"changed": 1, "undo": last_change_line(transcript)})
 
 
@@ -1177,6 +1220,7 @@ def move_line(
     by,
     request=None,
     event: str = "Speaker changed on a line",
+    role: str = "",
     **details,
 ) -> int:
     """One line given to a Speaker: the change, remembered for Undo, the
@@ -1188,7 +1232,10 @@ def move_line(
     if was == now:
         return 0
     segment.speaker = now
-    segment.save(update_fields=["speaker"])
+    # The fit was to the old speaker's print (v1.142.0); the re-score below
+    # fills it again while the run's vectors last.
+    segment.voice_fit = None
+    segment.save(update_fields=["speaker", "voice_fit"])
     changes = list(transcript.speaker_changes or [])
     changes.append(
         {
@@ -1204,7 +1251,11 @@ def move_line(
     transcript.save(update_fields=["speaker_changes"])
     from core import people
 
-    people.on_named(recording, now, by=by, how="named in the viewer", request=request)
+    # Someone new from the picker (v1.142.0) brings a Role; a Person that
+    # exists keeps their own.
+    people.on_named(
+        recording, now, by=by, how="named in the viewer", request=request, role=role
+    )
     audit.write(
         audit.Category.EDITS,
         event,

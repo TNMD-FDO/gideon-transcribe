@@ -61,6 +61,10 @@ class Line:
     start: float
     end: float
     guess: bool = False
+    id: int = 0
+    text: str = ""
+    # The line's closeness to its speaker's voice print (v1.142.0), or None.
+    fit: float | None = None
 
     @property
     def length(self) -> float:
@@ -140,6 +144,11 @@ def pick_samples(lines: list[Line]) -> list[Line]:
         lines = sure
     if len(lines) <= SAMPLES:
         return list(lines)
+    # By the voice (v1.142.0): where the voice step scored the lines, the
+    # sample from each third is the line nearest the speaker's print among
+    # those of a sample's length, else the nearest of the third. A
+    # mislabelled line sits far from the print and is never one.
+    by_voice = any(one.fit is not None for one in lines)
     chosen = []
     step = len(lines) / SAMPLES
     for third in range(SAMPLES):
@@ -147,7 +156,15 @@ def pick_samples(lines: list[Line]) -> list[Line]:
             lines[min(len(lines) - 1, int(third * step))]
         ]
         fits = [one for one in part if SAMPLE_SHORTEST <= one.length <= SAMPLE_LONGEST]
-        if fits:
+        if by_voice:
+            scored = [one for one in (fits or part) if one.fit is not None]
+            pool = scored or fits or part
+
+            def nearest(one):
+                return (one.fit or -2.0, -abs(one.length - SAMPLE_BEST))
+
+            chosen.append(max(pool, key=nearest))
+        elif fits:
             chosen.append(min(fits, key=lambda one: abs(one.length - SAMPLE_BEST)))
         else:
             chosen.append(max(part, key=lambda one: one.length))
@@ -226,13 +243,17 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
     lines: dict[str, list[Line]] = {}
     labels: dict[str, str] = {}
     guessed = guesses(transcript)
-    for pk, start, end, name, label in (
+    for pk, start, end, name, label, text, fit in (
         transcript.segments.filter(same_as_other_side=False)
         .exclude(speaker="")
         .order_by("start", "id")
-        .values_list("id", "start", "end", "speaker", "speaker_label")
+        .values_list(
+            "id", "start", "end", "speaker", "speaker_label", "text", "voice_fit"
+        )
     ):
-        lines.setdefault(name, []).append(Line(start, end, pk in guessed))
+        lines.setdefault(name, []).append(
+            Line(start, end, pk in guessed, id=pk, text=text or "", fit=fit)
+        )
         labels.setdefault(name, label)
 
     from core import call_system
@@ -270,17 +291,105 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
                 "small": talking < SMALL_SECONDS,
                 "samples": [
                     {
+                        "id": one.id,
                         "start": one.start,
                         "end": one.end,
                         "clock": short_clock(one.start),
+                        "quote": one.text[:80],
                     }
                     for one in pick_samples(mine)
                 ],
+                # Whether the samples are the lines nearest the voice print
+                # (v1.142.0), or chosen by length alone.
+                "by_voice": any(one.fit is not None for one in mine),
                 "hint_other": other,
                 "fragment": fragment,
             }
         )
     return made
+
+
+# The speaker picker (v1.142.0) -------------------------------------------------------
+
+
+def heard_elsewhere(recording, name: str) -> dict | None:
+    """Where a Person's voice can be heard in another Recording of the Case:
+    the line nearest their print where the voice step scored one, else a
+    line of a sample's length; None when they speak nowhere else."""
+    from core.jobs import Segment
+
+    if not recording.case_id:
+        return None
+    rows = list(
+        Segment.objects.filter(
+            transcript__recording__case_id=recording.case_id,
+            speaker=name,
+            same_as_other_side=False,
+        )
+        .exclude(transcript__recording_id=recording.pk)
+        .values_list(
+            "transcript__recording_id",
+            "transcript__recording__title",
+            "start",
+            "end",
+            "voice_fit",
+        )[:400]
+    )
+    if not rows:
+        return None
+
+    def rank(row):
+        _, _, start, end, fit = row
+        length = end - start
+        fits_length = SAMPLE_SHORTEST <= length <= SAMPLE_LONGEST
+        near = fit if fit is not None else -2.0
+        return (near, fits_length, -abs(length - SAMPLE_BEST))
+
+    rid, title, start, end, _ = max(rows, key=rank)
+    return {"recording": str(rid), "title": title, "start": start, "end": end}
+
+
+def picker(recording, transcript, speakers: list[dict]) -> dict:
+    """What the picker offers, in its three groups: the speakers on this
+    recording with their samples, the Case's People not yet on it with where
+    their voice can be heard, and the Admin's roles for someone new."""
+    from core import people
+    from core.people import Person
+
+    made = cards(transcript, speakers)
+    here = {card["name"].strip().casefold() for card in made}
+    on_call = [
+        {
+            "name": card["name"],
+            "colour": card["colour"],
+            "role": card["role"],
+            "system": card["system"],
+            "lines": card["lines"],
+            "samples": card["samples"],
+            "by_voice": card["by_voice"],
+        }
+        for card in made
+    ]
+    listed = []
+    if recording.case_id:
+        for person in Person.objects.filter(case_id=recording.case_id).order_by("name"):
+            if person.name.strip().casefold() in here:
+                continue
+            listed.append(
+                {
+                    "name": person.name,
+                    "role": person.role,
+                    "recordings": people.known_in(recording, person.name),
+                    "also_called": list(person.also_called or []),
+                    "sample": heard_elsewhere(recording, person.name),
+                }
+            )
+    return {
+        "in_case": bool(recording.case_id),
+        "on_call": on_call,
+        "people": listed,
+        "roles": people.roles(),
+    }
 
 
 def context(request: HttpRequest, recording: Recording, *, in_window: bool) -> dict:

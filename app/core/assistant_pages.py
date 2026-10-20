@@ -768,7 +768,15 @@ def decide_handover(
     cases.used(recording, by=request.user)
     made = ""
     if verdict == "accept":
-        made = speaker_check.accept_handover(handover, by=request.user, request=request)
+        # Into whom (v1.142.0): a speaker or person the picker gave, or a
+        # new Speaker when nothing was picked.
+        try:
+            into = str((json.loads(request.body or b"{}") or {}).get("into") or "")
+        except ValueError:
+            into = ""
+        made = speaker_check.accept_handover(
+            handover, by=request.user, request=request, into=into[:60]
+        )
     else:
         speaker_check.dismiss_handover(handover, by=request.user, request=request)
     return JsonResponse(

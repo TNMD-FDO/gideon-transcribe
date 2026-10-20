@@ -2407,6 +2407,45 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .sp-card .handover { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); }
 .sp-lanes .lane .track .hmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--danger); z-index: 1; }
 .sp-read .seg .actions { visibility: hidden; }
+/* The speaker picker (v1.142.0): one control wherever the app asks whose a
+   line or a voice is. A sheet under the row or the card; on a phone, from the
+   foot. */
+.picker { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px 10px; margin: 4px 0 8px; display: flex; flex-direction: column; gap: 6px; font-size: var(--t-small); max-width: 520px; list-style: none; }
+.picker.floating { position: fixed; right: 20px; bottom: 76px; z-index: 45; }
+.picker .q { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.picker .q b { font-size: var(--t-body); }
+.picker .q .quote { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.picker .q .x { margin-left: auto; }
+.picker .grp { display: flex; flex-direction: column; gap: 1px; }
+.picker .gh { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding: 4px 0 2px; }
+.picker .opt { display: grid; grid-template-columns: 22px 10px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: var(--radius); cursor: pointer; }
+.picker .opt:hover, .picker .opt.focus { background: var(--accent-soft); }
+.picker .opt.now { color: var(--muted); cursor: default; }
+.picker .opt.now .nm { text-decoration: line-through; }
+.picker .opt kbd { font-size: 11px; justify-self: center; }
+.picker .opt .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--speaker, var(--line)); }
+.picker .opt .nm { font-weight: 600; color: var(--speaker, inherit); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker .opt .nm .pill { font-weight: 400; margin-left: 4px; }
+.picker .opt .facts { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.picker .opt .hear button { font-size: 11px; min-height: 22px; padding: 0 6px; display: inline-flex; gap: 4px; align-items: center; }
+.picker .opt .hear .n { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.picker .opt.add { grid-template-columns: 22px minmax(0, 1fr) auto; border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 8px; border-radius: 0; }
+.picker .opt.add .plus { color: var(--accent); font-weight: 700; text-align: center; }
+.picker .newbox { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; padding: 6px 6px 2px; align-items: center; }
+.picker .newbox .hint { grid-column: 1 / -1; }
+.picker .manage { padding-top: 6px; border-top: 1px dashed var(--line); }
+.picker .manage a { color: var(--accent); }
+.sp-card .sample-pair { display: inline-flex; gap: 2px; align-items: center; }
+.sp-card .not-voice { padding: 0 4px; }
+.sp-card .mixed-line { margin: 6px 0 0 16px; }
+.sp-card .mixed-line a { color: var(--accent); }
+@media (max-width: 599px) {
+  /* On a phone the picker rises from the foot as a sheet (figure 4 of the drawing). */
+  .picker { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-width: none; margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 80vh; overflow-y: auto; z-index: 46; }
+  .picker .opt { grid-template-columns: 10px minmax(0, 1fr) auto auto; }
+  .picker .opt kbd { display: none; }
+}
+
 /* A line whose timing is a guess (v1.141.0): a quiet grey pill, never a sample. */
 .sp-read .seg .pill.guess { background: var(--surface-2); color: var(--muted); font-style: italic; }
 .sp-read .seg.here .actions { visibility: visible; }

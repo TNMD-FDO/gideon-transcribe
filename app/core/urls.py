@@ -125,6 +125,12 @@ urlpatterns = [
         viewer.line_speaker,
         name="line-speaker",
     ),
+    # What the speaker picker offers (v1.142.0).
+    path(
+        "recording/<uuid:recording_id>/picker",
+        viewer.picker,
+        name="picker",
+    ),
     # A tab of the work area, or the Speakers window, in a window of its own.
     path(
         "recording/<uuid:recording_id>/window/<slug:panel>",

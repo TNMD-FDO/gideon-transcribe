@@ -335,6 +335,12 @@ class Segment(models.Model):
     # Somebody changed the text. The viewer marks it and exports say so, so
     # that machine text and human text are never confused for one another.
     corrected = models.BooleanField(default=False)
+    # How near the line's own words sit to its speaker's voice print, a
+    # cosine from the Speaker check's voice step (v1.142.0): the Speakers
+    # page's samples are the nearest lines. A score, never a voice; cleared
+    # when the line changes hands by hand, refilled while the run's vectors
+    # last.
+    voice_fit = models.FloatField(null=True, blank=True)
 
     # A person's own line under this one (Phase 8 chapter 2): the words, who
     # last wrote them, when they last changed. Never the assistant's, never
