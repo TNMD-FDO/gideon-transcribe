@@ -140,7 +140,7 @@ The Speakers page opened in a window of its own by Open in a window (from v1.50.
 One Speaker's row on the Speakers page's timeline: the Speaker's name at the left and, across the width of the Recording, a block for every stretch that Speaker talks. The Lanes are the page's scrub bar: a press seeks there, and dragging one Lane's head onto another merges the two Speakers. Avoid: track, swimlane, timeline row.
 
 **Sample**:
-One of up to three lines of a Speaker that the Speakers page offers to play to hear the voice, chosen from the first, middle and last thirds of that Speaker's lines and a few seconds long. Playing a Sample plays the Recording from the line's start and pauses at its end. Avoid: snippet, excerpt (that is a Clip's), clip.
+One of up to three lines of a Speaker that the Speakers page offers to play to hear the voice, chosen from the first, middle and last thirds of that Speaker's lines and a few seconds long, never a line whose timing is a guess (v1.141.0). Playing a Sample plays the Recording from half a second before the line's start and pauses half a second after its end. Avoid: snippet, excerpt (that is a Clip's), clip.
 
 **Swap**:
 Exchanging two Speakers for a stretch of a Recording on the Speakers page, from one time to another: every line of the first in the stretch becomes the second's and the other way round, in one press, remembered for Undo. The shape a diarizer's error takes when it confuses two voices for a passage, and what the Suggested corrections offer when a run of them lies between the same two Speakers. Since v1.56.0. Avoid: flip, exchange, relabel.

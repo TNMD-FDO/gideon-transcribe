@@ -21,6 +21,40 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.141.0, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The samples' honesty (the voice plan's section 12, the maintainer's ask of
+2026-10-20). On the first real runs a sample pressed at 5:50 was heard
+four seconds late; the measurement showed the clocks right everywhere and
+one line a recogniser's stutter. The page now shows what it knows.
+
+- **Words lit as they play, on the Speakers page too.** The page reads
+  the word timings again (v1.134.0 had left them out to save the answer's
+  size) and the line in hand underlines each word as the voice reaches
+  it, as the recording page has since v1.127.1. A line whose clock is a
+  guess gives itself away, and the words under the mark are the ones a
+  proposal is about.
+- **Half a second either side.** A sample, "Play this line" and the three
+  sounds on a proposal start half a second before the line and run half
+  a second past it, so a line whose clock is a word off is heard whole,
+  in its sentence. The hand-over's before and after are unchanged.
+- **Stuttered lines are never samples, and say so.** A line in which the
+  recogniser repeated a phrase of up to three words three times in a row,
+  or spread its words to under three tenths of the recording's usual pace
+  over three seconds or more, is passed over when a card's three samples
+  are picked while any sure line remains, and carries a quiet grey pill in
+  the transcript, "the timing of these words is a guess", on an ordinary
+  line and on a proposal alike. The lines the pages read carry the flag.
+- **Why no names.** When fewer than two speakers are still unnamed the one
+  run's line says so: "No names were suggested: fewer than two speakers
+  are still unnamed, and the names need two or more to tell apart."
+  Suggest names' two-speaker rule stands.
+
 ## v1.140.0, 2026-10-20
 
 ```

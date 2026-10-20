@@ -366,7 +366,11 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
         return JsonResponse({"segments": []})
     with_words = request.GET.get("words", "1") != "0"
 
-    from core import live
+    from core import live, speakers_page
+
+    # The lines whose timing is a guess (v1.141.0): a phrase the recogniser
+    # repeated, or words spread far thinner than the recording's pace.
+    guessed = speakers_page.guesses(transcript)
 
     return JsonResponse(
         {
@@ -391,6 +395,7 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
                     "text": segment.text,
                     "speaker": segment.speaker,
                     "corrected": segment.corrected,
+                    "guess": segment.pk in guessed,
                     # The word timings, unless ?words=0 asked for the lines
                     # alone (v1.134.0): the Speakers page draws no words,
                     # and they were most of the answer.

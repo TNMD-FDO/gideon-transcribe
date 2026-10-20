@@ -246,6 +246,25 @@
   // the line before and after each dimmed for context, or everyone.
 
   var showAll = false;
+  var wordTiming = false;
+
+  // The words, each with its time, when the Transcript has them (v1.141.0).
+  function wordsOf(segment) {
+    if (!wordTiming || !segment.words || !segment.words.length) { return escape(segment.text); }
+    return segment.words.map(function (word) {
+      var start = word.start === undefined ? "" : word.start;
+      var end = word.end === undefined ? "" : word.end;
+      return "<span class='word' data-start='" + start + "' data-end='" + end + "'>" + escape(word.word) + "</span>";
+    }).join(" ");
+  }
+
+  // The pill on a line whose timing is a guess (v1.141.0): a phrase the
+  // recogniser repeated, or words spread far thinner than the recording's
+  // pace; such a line is never a sample, and its clock is not to be argued with.
+  function guessPill(segment) {
+    if (!segment.guess) { return ""; }
+    return "<span class='pill small guess' title='The recogniser repeated a phrase here, or spread the words far thinner than usual: it was guessing, and the times of these words may be off by a few seconds.'>the timing of these words is a guess</span>";
+  }
 
   function draw() {
     if (!column) { return; }
@@ -294,8 +313,8 @@
         row.dataset.correction = change.id;
         row.innerHTML =
           "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
-          "<div class='who'><span class='name'><s>" + escape(change.from) + "</s> <span class='to' style='--speaker: " + (colours[change.to] || "") + "'>" + escape(change.to) + "</span></span><span class='tags'></span></div>" +
-          "<div class='words'><p class='txt'>" + escape(segment.text) + "</p></div>" +
+          "<div class='who'><span class='name'><s>" + escape(change.from) + "</s> <span class='to' style='--speaker: " + (colours[change.to] || "") + "'>" + escape(change.to) + "</span></span><span class='tags'>" + guessPill(segment) + "</span></div>" +
+          "<div class='words'><p class='txt'>" + wordsOf(segment) + "</p></div>" +
           "<span class='actions change-acts'>" + changePill(change) + hearThree(change) +
           "<button type='button' class='tiny" + (change.voice === "agrees" ? " primary" : "") + " accept-change' title='Move this line to " + escape(change.to) + "'>Accept</button>" +
           "<button type='button' class='ghost tiny leave-change' title='Leave the line as it is and put the proposal away'>Leave</button>" +
@@ -303,8 +322,8 @@
       } else {
         row.innerHTML =
           "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
-          "<div class='who'><span class='name'>" + escape(segment.speaker) + "</span><span class='tags'></span></div>" +
-          "<div class='words'><p class='txt'>" + escape(segment.text) + "</p></div>" +
+          "<div class='who'><span class='name'>" + escape(segment.speaker) + "</span><span class='tags'>" + guessPill(segment) + "</span></div>" +
+          "<div class='words'><p class='txt'>" + wordsOf(segment) + "</p></div>" +
           "<span class='actions'>" +
           "<button type='button' class='ghost tiny play-row' title='Play this line'>play</button>" +
           "<button type='button' class='ghost tiny give-row' title='Give this line to another speaker'>not this speaker</button>" +
@@ -474,7 +493,10 @@
     var index = at(when);
     if (index !== here) {
       var was = column ? column.querySelector(".seg.here") : null;
-      if (was) { was.classList.remove("here"); }
+      if (was) {
+        was.classList.remove("here");
+        Array.prototype.forEach.call(was.querySelectorAll(".word.now"), function (word) { word.classList.remove("now"); });
+      }
       var row = rowAt(index);
       if (row) {
         row.classList.add("here");
@@ -484,6 +506,15 @@
       }
       here = index;
       sayNow(index >= 0 ? segments[index] : null);
+    }
+    // The word being said, underlined (v1.141.0), as on the recording page.
+    var lit = wordTiming ? rowAt(here) : null;
+    if (lit) {
+      Array.prototype.forEach.call(lit.querySelectorAll(".word"), function (word) {
+        var start = parseFloat(word.dataset.start);
+        var end = parseFloat(word.dataset.end);
+        word.classList.toggle("now", !isNaN(start) && when >= start && when <= end);
+      });
     }
     var clockBox = document.getElementById("clock");
     if (clockBox) { clockBox.textContent = clock(when) + " / " + clock(duration); }
@@ -519,9 +550,12 @@
   if (pill) { document.getElementById("resume-follow").addEventListener("click", resumeFollowing); }
 
   // Playing one line and stopping at its end: a sample, or play on a row.
+  // With half a second either side (v1.141.0), so a line whose clock is a
+  // word off is still heard whole, in its sentence.
+  var MARGIN = 0.5;
   function playLine(segment) {
-    seek(segment.start);
-    stopAt = segment.end;
+    seek(Math.max(0, segment.start - MARGIN));
+    stopAt = segment.end + MARGIN;
     play();
   }
 
@@ -1073,6 +1107,7 @@
     if (run && run.state === "done" && V.assistant.suggestions) {
       if (typeof run.names === "number") { said.textContent += run.names ? " It also suggested " + plural(run.names, "name") + ", on the cards." : " Nothing in the transcript shows who the speakers are."; }
       else if (run.names_state === "failed") { said.textContent += " The names could not be suggested this time."; }
+      else if (run.names_state === "too_few") { said.textContent += " No names were suggested: fewer than two speakers are still unnamed, and the names need two or more to tell apart."; }
     }
     if (run && run.cut_short) {
       // A window's list ran past the answer cap (v1.56.0): the run did not
@@ -1383,11 +1418,14 @@
 
   function load() {
     if (!V.hasTranscript) { return Promise.resolve(); }
-    // Without the words (v1.134.0): this page reads lines, speakers and
-    // times and never a word's timing, and the words were most of the answer.
-    return fetch("/recording/" + V.recording + "/segments?words=0")
+    // With the words (v1.141.0; v1.134.0 had left them out): the line in
+    // hand lights each word as the voice reaches it, so a line whose clock
+    // is a guess gives itself away and the words proposed are the ones under
+    // the mark.
+    return fetch("/recording/" + V.recording + "/segments")
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
+        wordTiming = !!body.word_timestamps;
         segments = body.segments || [];
         if (!duration && segments.length) { duration = segments[segments.length - 1].end; }
         buildBlocks();

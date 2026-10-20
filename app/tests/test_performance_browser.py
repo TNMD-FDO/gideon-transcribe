@@ -225,14 +225,17 @@ def test_a_note_or_a_reload_redraws_the_rows_that_changed():
 # The words left out ---------------------------------------------------------------
 
 
-def test_the_speakers_page_and_the_window_read_the_segments_without_words():
-    for name in ("speakers-page.js", "viewer-window.js"):
-        text = script(name)
-        assert '"/segments?words=0"' in text, name
-        assert ".words" not in text, name
-    # The one reader of a segment's words tolerates a segment without them.
-    viewer = script("viewer.js")
-    assert "!wordTiming || !segment.words || !segment.words.length" in viewer
+def test_the_window_reads_the_segments_without_words():
+    # The window still reads lines alone. The Speakers page reads the words
+    # again since v1.141.0 (the plan's section 12): the line in hand lights
+    # each word as the voice reaches it, which v1.134.0's saving had cost.
+    text = script("viewer-window.js")
+    assert '"/segments?words=0"' in text
+    assert ".words" not in text
+    # Every reader of a segment's words tolerates a segment without them.
+    tolerant = "!wordTiming || !segment.words || !segment.words.length"
+    for name in ("viewer.js", "speakers-page.js"):
+        assert tolerant in script(name), name
 
 
 # The front door ---------------------------------------------------------------------

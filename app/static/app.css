@@ -2407,6 +2407,8 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .sp-card .handover { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); }
 .sp-lanes .lane .track .hmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--danger); z-index: 1; }
 .sp-read .seg .actions { visibility: hidden; }
+/* A line whose timing is a guess (v1.141.0): a quiet grey pill, never a sample. */
+.sp-read .seg .pill.guess { background: var(--surface-2); color: var(--muted); font-style: italic; }
 .sp-read .seg.here .actions { visibility: visible; }
 @media (max-width: 1499px) {
   /* A band across the top, the cards beside the player and the lanes, and
@@ -2982,6 +2984,10 @@ body.gideon-window .gideon-grip { display: none; }
      to shrink. */
   .speakers-page .sp-desk { flex: none; }
   .sp-middle { min-height: 50vh; }
+  /* v1.141.0: under 900 a proposal's pill, three sounds and two buttons
+     squeezed the words to one a line; they take a row of their own under
+     the words, as on a phone. */
+  .sp-read .seg.change .actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
 }
 /* v1.107.0: under 600 wide the line's fixed time and name columns left the
    words one a line; the time and the name share the first line, the words

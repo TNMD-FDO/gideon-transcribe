@@ -27,6 +27,18 @@ SAMPLES = 3
 SAMPLE_BEST = 4.0
 SAMPLE_SHORTEST = 2.0
 SAMPLE_LONGEST = 8.0
+# A line whose timing is a guess (v1.141.0): the recogniser repeated a short
+# phrase this many times in a row, or spread its words far thinner than the
+# recording's usual pace, under PACE_FLOOR of it over PACE_SHORTEST seconds
+# or more. Such a line is never a Sample and carries a pill. On the office's
+# two jail calls (3.3 to 3.7 words a second) the floor at 0.4 over two
+# seconds flagged one line in fifteen, too many for a mark that says "the
+# recogniser was guessing"; at 0.3 over three seconds it is the clearly
+# stretched lines alone.
+STUTTER_REPEATS = 3
+STUTTER_PHRASE_WORDS = 3
+PACE_FLOOR = 0.3
+PACE_SHORTEST = 3.0
 # Two lines that touch within this are not an overlap: the engine's edges
 # are not that exact.
 TOUCHING = 0.5
@@ -48,10 +60,68 @@ NEIGHBOUR_SECONDS = 3.0
 class Line:
     start: float
     end: float
+    guess: bool = False
 
     @property
     def length(self) -> float:
         return max(0.0, self.end - self.start)
+
+
+def _tokens(text: str) -> list[str]:
+    return [
+        one.strip(".,;:!?\"'()[]-").casefold()
+        for one in (text or "").split()
+        if one.strip(".,;:!?\"'()[]-")
+    ]
+
+
+def repeated_phrase(text: str) -> bool:
+    """Whether a phrase of up to three words is said STUTTER_REPEATS times in
+    a row: the recogniser's stutter, whose words the aligner then spreads
+    over the whole line."""
+    tokens = _tokens(text)
+    for size in range(1, STUTTER_PHRASE_WORDS + 1):
+        for i in range(0, len(tokens) - size + 1):
+            phrase = tokens[i : i + size]
+            run, j = 1, i + size
+            while tokens[j : j + size] == phrase:
+                run += 1
+                j += size
+                if run >= STUTTER_REPEATS:
+                    return True
+    return False
+
+
+def usual_pace(rows) -> float:
+    """The recording's words a second, the median over lines of a second or
+    more; 0 when there are none to measure."""
+    paces = sorted(
+        len(_tokens(text)) / (end - start)
+        for start, end, text in rows
+        if end - start >= 1.0 and _tokens(text)
+    )
+    return paces[len(paces) // 2] if paces else 0.0
+
+
+def timing_guess(text: str, start: float, end: float, pace: float) -> bool:
+    """The rule above, for one line."""
+    if repeated_phrase(text):
+        return True
+    length = end - start
+    words = len(_tokens(text))
+    thin = bool(words) and words / max(length, 0.001) < PACE_FLOOR * pace
+    return bool(pace) and length >= PACE_SHORTEST and thin
+
+
+def guesses(transcript) -> set:
+    """The ids of the Transcript's lines whose timing is a guess."""
+    rows = list(
+        transcript.segments.filter(same_as_other_side=False).values_list(
+            "id", "start", "end", "text"
+        )
+    )
+    pace = usual_pace((start, end, text) for _, start, end, text in rows)
+    return {pk for pk, start, end, text in rows if timing_guess(text, start, end, pace)}
 
 
 def is_named(name: str) -> bool:
@@ -62,7 +132,12 @@ def is_named(name: str) -> bool:
 
 
 def pick_samples(lines: list[Line]) -> list[Line]:
-    """The Samples of one Speaker, by the rule above; all of them when few."""
+    """The Samples of one Speaker, by the rule above; all of them when few.
+    A line whose timing is a guess (v1.141.0) is passed over while any sure
+    line remains."""
+    sure = [one for one in lines if not one.guess]
+    if sure:
+        lines = sure
     if len(lines) <= SAMPLES:
         return list(lines)
     chosen = []
@@ -150,13 +225,14 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
     """
     lines: dict[str, list[Line]] = {}
     labels: dict[str, str] = {}
-    for start, end, name, label in (
+    guessed = guesses(transcript)
+    for pk, start, end, name, label in (
         transcript.segments.filter(same_as_other_side=False)
         .exclude(speaker="")
         .order_by("start", "id")
-        .values_list("start", "end", "speaker", "speaker_label")
+        .values_list("id", "start", "end", "speaker", "speaker_label")
     ):
-        lines.setdefault(name, []).append(Line(start, end))
+        lines.setdefault(name, []).append(Line(start, end, pk in guessed))
         labels.setdefault(name, label)
 
     from core import call_system

@@ -523,6 +523,10 @@ def _names_pass(check) -> None:
         if not assistant.features()["suggestions"]:
             return
         if len(assistant.unnamed_speakers(transcript)) < 2:
+            # Suggest names' two-speaker rule; the page says so (v1.141.0).
+            check.second_look["names"] = None
+            check.second_look["names_state"] = "too_few"
+            check.save(update_fields=["second_look"])
             return
         if transcript.suggestion_runs.filter(state__in=(QUEUED, RUNNING)).exists():
             return
