@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone and strip</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp1-soft: #e3eef8; --sp2: #c2410c; --sp2-soft: #fbe9e1; --sp3: #2e7d32; --sp3-soft: #e4f2e9; --sp5: #8e24aa; --sp5-soft: #f2e4f7; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp1-soft: #1c2f40; --sp2: #f0956a; --sp2-soft: #3a2418; --sp3: #7bc67e; --sp3-soft: #1c3526; --sp5: #c77ddb; --sp5-soft: #33203a; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp1-soft: #1c2f40; --sp2: #f0956a; --sp2-soft: #3a2418; --sp3: #7bc67e; --sp3-soft: #1c3526; --sp5: #c77ddb; --sp5-soft: #33203a; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.big { min-height: 36px; padding: 6px 14px; font-size: 14px; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.ok { color: var(--ok); border-color: var(--ok); }
+  .btn.wide { width: 100%; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 11px; background: var(--surface); flex: none; }
+  .play.sm { width: 22px; height: 20px; font-size: 10px; }
+  .play.sm.c1 { border-color: var(--sp1); color: var(--sp1); } .play.sm.c2 { border-color: var(--sp2); color: var(--sp2); }
+  .hear3 { display: inline-flex; gap: 3px; align-items: center; }
+  .hear3 .k { font-size: 10px; color: var(--muted); margin-right: 3px; }
+  .l1 { background: var(--sp1); } .l2 { background: var(--sp2); } .l3 { background: var(--sp3); } .l5 { background: var(--sp5); } .lsys { background: var(--sys); }
+  .c1 { color: var(--sp1); } .c2 { color: var(--sp2); } .c3 { color: var(--sp3); } .c5 { color: var(--sp5); } .csys { color: var(--sys); }
+
+  /* the phone frame: 375 wide, the page scrolling as a whole (chapter 1, v1.106.1) */
+  .phones { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .phone { width: 375px; flex: none; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.06); overflow: hidden; }
+  .phone .bar { height: 22px; background: var(--surface-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 10px; color: var(--muted); font-family: var(--mono); }
+  .phone .screen { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .phone h3 { font-size: 20px; margin: 0; font-weight: 600; }
+  .phone .crumb { font-size: 12px; color: var(--muted); }
+  .phone .state { font-size: 13px; color: var(--muted); } .phone .state b { color: var(--text); }
+  .phone .heads { display: flex; flex-direction: column; gap: 8px; }
+  .phone .transport { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .phone .transport .bar2 { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; }
+  .phone .transport .bar2 i { position: absolute; left: 0; top: 0; bottom: 0; width: 62%; background: var(--accent); border-radius: 3px; }
+
+  /* the voices, one row that scrolls sideways; the card in hand is first */
+  .cast-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 0 -16px; padding-inline: 16px; scroll-snap-type: x mandatory; }
+  .who { flex: none; width: 236px; scroll-snap-align: start; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px 8px 0; display: flex; gap: 8px; }
+  .who.narrow { width: 150px; }
+  .who .lane { width: 6px; border-radius: 0 3px 3px 0; flex: none; }
+  .who .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .who .name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .who .facts { font-size: 12px; color: var(--muted); }
+  .who .prop { font-size: 12px; padding: 6px 8px; border-radius: var(--radius); background: var(--surface-2); display: flex; flex-direction: column; gap: 4px; }
+  .who .prop .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .peek { font-size: 11px; color: var(--muted); text-align: right; margin-top: -8px; }
+
+  /* the lanes on a phone: the label above its track, the scale once */
+  .lanes { display: flex; flex-direction: column; gap: 8px; }
+  .lane-row { display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
+  .lane-row .label { color: var(--muted); }
+  .track { position: relative; height: 12px; background: var(--surface-2); border-radius: 3px; }
+  .track i { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; opacity: 0.9; }
+  .track .ghost { opacity: 0.35; }
+  .track .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--bad); }
+  .scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-family: var(--mono); }
+  .handover { display: flex; flex-direction: column; gap: 6px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: var(--radius-lg); }
+  .handover .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  /* the transcript on a phone: time and name on the first line, the words on the second, the judgement on a third (chapter 1, v1.107.0) */
+  .views { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 13px; }
+  .views span { padding: 5px 8px; text-align: center; color: var(--muted); } .views span.on { background: var(--accent-soft); color: var(--accent); }
+  .spine { display: flex; flex-direction: column; margin: 0 -16px; }
+  .ln { display: flex; flex-direction: column; gap: 3px; padding: 7px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .ln .top { display: flex; gap: 8px; align-items: center; }
+  .ln .t { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .ln .lab { font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ln .lab s { color: var(--muted); font-weight: 400; }
+  .ln .w { min-width: 0; }
+  .ln .judge { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-top: 2px; }
+  .ln .judge .sp { flex: 1; }
+  .ln.change { background: var(--accent-soft); border-left: 3px solid var(--accent); padding-left: 13px; }
+  .ln.change.against { background: var(--bad-soft); border-left: 3px solid var(--bad); }
+  .ln.change.quiet { background: transparent; border-left: 3px solid var(--line); }
+  .ln.sys .w, .ln.sys .lab { color: var(--sys); font-style: italic; font-weight: 400; }
+  .ln.done { opacity: 0.75; }
+  .ln.here { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .block { border-top: 1px solid var(--accent); border-bottom: 1px solid var(--accent); margin: 6px 0; }
+  .block .bh { display: flex; flex-direction: column; gap: 6px; padding: 8px 16px; background: var(--accent-soft); font-size: 13px; }
+  .block .bh .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .block .ln { border-left: 0; background: transparent; padding-left: 16px; }
+  .block .ln:last-child { border-bottom: 0; }
+  .fold { padding: 10px 16px; }
+  .gap { text-align: center; font-size: 12px; color: var(--muted); padding: 6px 16px; }
+  .foot { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+  .foot b { color: var(--text); }
+  .sticky { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px; margin: 0 -16px -16px; display: flex; gap: 8px; align-items: center; }
+
+  /* the viewer's Speakers strip (the cast at the head of the transcript) */
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .work.narrow { width: 343px; }
+  .cast { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .cast .row { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 10px 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--speaker); }
+  .chip.system { color: var(--sys); font-style: italic; }
+  .tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  .pill.btnlike { border: 1px solid transparent; padding: 2px 10px; font-size: 13px; }
+  .pill.warn.btnlike { border-color: var(--warn); }
+  .read-lines { display: flex; flex-direction: column; font-size: 14px; }
+  .read-lines .rl { display: grid; grid-template-columns: 46px 90px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .read-lines .rl .t { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .read-lines .rl .lab { font-size: 13px; font-weight: 600; }
+  .work.narrow .read-lines .rl { grid-template-columns: 46px 1fr; }
+  .work.narrow .read-lines .rl .w { grid-column: 1 / -1; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .strip-states { display: flex; flex-direction: column; gap: 10px; }
+  .strip-states .cast { padding: 6px 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The Speakers page on a phone, and the viewer's Speakers strip while changes wait</h1>
+    <p class="lede">The two drawings the review-as-reading mock-up left owed (<b>2026-10-19</b>). Same run, same made-up call as that mock-up: a 15-minute call, two voices and the call system, 14 changes proposed, 9 backed by the voice, one hand-over, one name. Every name and line is made up; the colours are the Speakers' own.</p>
+    <p class="lede">The rules already in force stay: one column under 900 wide with the cards first and the page scrolling as a whole (v1.106.1); under 600 the time and the name share a line's first row and the words take the second at the full width (v1.107.0); one primary button a page; two button sizes.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The Speakers page at 375 wide</div><h2>Head, voices, lanes, hand-over, then the transcript with the changes in place</h2></div>
+    <div class="phones">
+
+      <div class="phone">
+        <div class="bar"><span>9:41</span><span>Gideon Transcribe</span></div>
+        <div class="screen">
+          <div class="heads">
+            <div class="crumb">Harbour Street stop · Call 1 · <span style="color: var(--accent)">Done</span></div>
+            <h3>Speakers</h3>
+            <div class="state">Checked today 17:42, the whole call. <b>14 changes</b>, 9 backed by the voice; <b>1 hand-over</b>; <b>1 name</b>. Read down; accept or leave each as you go.</div>
+            <span class="btn primary big wide">Accept the 9 changes the voice backs</span>
+            <div class="tiny muted" style="text-align: center">The lines first, then the names on the cards; either order is safe.</div>
+          </div>
+
+          <div class="transport"><span class="play">▶</span><div class="bar2"><i></i></div><span class="mono">9:31 / 15:12</span></div>
+
+          <div class="eyebrow">The voices <span class="tiny" style="text-transform: none; letter-spacing: 0; font-weight: 400">· swipe</span></div>
+          <div class="cast-row">
+            <div class="who"><i class="lane l1"></i><div class="body">
+              <div class="name"><span class="play">▶</span><span class="c1">Speaker 1</span></div>
+              <div class="facts">96 lines · the person who answered</div>
+              <div class="prop"><span><b>Another voice from 14:03</b>, 31 lines.</span><div class="acts"><span class="play sm">▶</span><span class="tiny muted">before</span><span class="play sm">▶</span><span class="tiny muted">after</span><span class="btn tiny" style="margin-left: auto">Split here</span></div></div>
+            </div></div>
+            <div class="who"><i class="lane l2"></i><div class="body">
+              <div class="name"><span class="play">▶</span><span class="c2">Speaker 2</span></div>
+              <div class="facts">73 lines · the caller</div>
+              <div class="prop"><span>Introduces himself as <b>"Dana"</b> at 0:48 <span class="play sm">▶</span>.</span><div class="acts"><span class="btn tiny ok">Name: Dana Reyes</span><span class="btn tiny">Not him</span></div></div>
+            </div></div>
+            <div class="who narrow"><i class="lane lsys"></i><div class="body">
+              <div class="name"><span class="play">▶</span><span class="csys">Call system</span></div>
+              <div class="facts">4 lines · not a person</div>
+            </div></div>
+          </div>
+
+          <div class="eyebrow">When each voice speaks</div>
+          <div class="lanes">
+            <div class="lane-row"><span class="label c1">Speaker 1</span><div class="track">
+              <i class="l1" style="left: 2%; width: 9%"></i><i class="l1" style="left: 14%; width: 12%"></i><i class="l1" style="left: 30%; width: 7%"></i><i class="l1" style="left: 41%; width: 10%"></i><i class="l1" style="left: 55%; width: 6%"></i><i class="l1" style="left: 64%; width: 14%"></i><i class="l1" style="left: 82%; width: 9%"></i>
+              <i class="l5 ghost" style="left: 94%; width: 5%"></i><span class="mark" style="left: 93.5%"></span>
+            </div></div>
+            <div class="lane-row"><span class="label c2">Speaker 2</span><div class="track">
+              <i class="l2" style="left: 11%; width: 3%"></i><i class="l2" style="left: 26%; width: 4%"></i><i class="l2" style="left: 37%; width: 4%"></i><i class="l2" style="left: 51%; width: 4%"></i><i class="l2" style="left: 61%; width: 3%"></i><i class="l2" style="left: 78%; width: 4%"></i><i class="l2" style="left: 91%; width: 2%"></i>
+              <i class="l2 ghost" style="left: 63%; width: 3%"></i>
+            </div></div>
+            <div class="lane-row"><span class="label csys">Call system</span><div class="track"><i class="lsys" style="left: 0; width: 2%"></i><i class="lsys" style="left: 99%; width: 1%"></i></div></div>
+            <div class="scale"><span>0:00</span><span>5:00</span><span>10:00</span><span>15:00</span></div>
+          </div>
+          <div class="handover">
+            <span><span class="pill bad">hand-over</span> <b>Speaker 1 sounds like a different person from 14:03</b>, the last 31 lines.</span>
+            <div class="acts"><span class="tiny muted">hear</span><span class="play sm">▶</span><span class="tiny muted">13:52</span><span class="play sm">▶</span><span class="tiny muted">14:06</span></div>
+            <div class="acts"><span class="btn tiny">Split Speaker 1 at 14:03</span><span class="btn ghost tiny">Not a different person</span></div>
+          </div>
+
+          <div class="eyebrow">The transcript, with the proposed changes</div>
+          <div class="views"><span class="on">Changes only</span><span>Whole transcript</span></div>
+          <div class="spine">
+            <div class="ln sys"><div class="top"><span class="play sm">▶</span><span class="t">0:04</span><span class="lab">Call system</span></div><span class="w">This call is from a correctional facility and may be monitored and recorded.</span></div>
+            <div class="ln"><div class="top"><span class="play sm">▶</span><span class="t">0:48</span><span class="lab c2">Speaker 2</span><span class="pill acc">name</span></div><span class="w">Yeah, this is Dana. Did you get the papers?</span></div>
+            <div class="gap">… 6:40 to 9:30, no changes</div>
+
+            <div class="ln change done here"><div class="top"><span class="play sm">▶</span><span class="t">9:31</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span></div><span class="w">No, I told him Tuesday.</span><div class="judge"><span class="hear3"><span class="k">hear</span><span class="play sm">▶</span><span class="play sm c1">1</span><span class="play sm c2">2</span></span><span class="sp"></span><span class="pill ok">accepted</span><span class="btn ghost tiny">Undo</span></div></div>
+
+            <div class="block">
+              <div class="bh"><span><b>9:40 to 9:58, 4 lines</b> <span class="muted">shown as Speaker 1, read as Speaker 2's</span> <span class="pill ok">the voice agrees</span></span><div class="acts"><span class="hear3"><span class="k">hear</span><span class="play sm">▶</span><span class="play sm c1">1</span><span class="play sm c2">2</span></span><span style="flex: 1"></span><span class="btn primary tiny">Accept all 4</span><span class="btn tiny">Leave</span></div></div>
+              <div class="ln"><div class="top"><span class="play sm">▶</span><span class="t">9:40</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span></div><span class="w">Because he never called back.</span><div class="judge"><span class="play sm">▶</span><span class="sp"></span><span class="btn ghost tiny">Leave this one</span></div></div>
+              <div class="ln"><div class="top"><span class="play sm">▶</span><span class="t">9:46</span><span class="lab"><s>Speaker 1</s> <span class="c2">Speaker 2</span></span></div><span class="w">I waited by the phone the whole afternoon.</span><div class="judge"><span class="play sm">▶</span><span class="sp"></span><span class="btn ghost tiny">Leave this one</span></div></div>
+              <div class="gap">… 2 more lines in this run</div>
+            </div>
+
+            <div class="ln change against"><div class="top"><span class="play sm">▶</span><span class="t">10:12</span><span class="lab"><s>Speaker 2</s> <span class="c1">Speaker 1</span></span><span class="pill bad">the voice disagrees</span></div><span class="w">Put her on, then.</span><div class="judge"><span class="hear3"><span class="k">hear</span><span class="play sm">▶</span><span class="play sm c2">2</span><span class="play sm c1">1</span></span><span class="sp"></span><span class="btn tiny">Accept</span><span class="btn tiny">Leave</span></div></div>
+
+            <div class="gap">… 10:20 to 13:50, no changes</div>
+            <div class="fold"><span class="btn wide">3 more the voice could not judge: show them in place</span></div>
+          </div>
+
+          <div class="foot">
+            <span><b>Decided so far</b> on this call: 5 accepted, 1 left · the words 3, the voice 2.</span>
+            <span class="btn ghost tiny" style="align-self: flex-start">Undo the last</span>
+          </div>
+          <div class="sticky"><span class="btn ghost">Run again</span><span style="flex: 1"></span><span class="small muted">9 left</span><span class="btn">Done</span></div>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-width: 280px; max-width: 46ch" class="caption">
+        <p><b>One column, the page scrolls.</b> Head, the primary button at the full width, the player as one row, the voices, the lanes, the hand-over, the transcript. Nothing is a second page or a sheet; it is the desktop page folded.</p>
+        <p><b>The voices swipe sideways.</b> The cards keep their samples and their proposal, but sit in one row that scrolls, so the transcript starts within one screen's height. The card in hand comes first.</p>
+        <p><b>The lanes keep their shape.</b> The label moves above its track, the scale is drawn once under them, the hand-over marker stays on its lane. The hand-over row's buttons wrap to their own line.</p>
+        <p><b>A line is three rows.</b> Play, time and the labels on the first; the words on the second at the full width; the three sounds and Accept or Leave on the third. A run of lines moving together has its head with Accept all, and each line only Leave this one. The disagreed tint and the pill stay.</p>
+        <p><b>The two views are one segmented control</b> at the full width. The fold is one full-width button. The foot keeps Decided so far.</p>
+        <p><b>A bottom bar</b> carries Run again, the count left, and Done, so the way out and the way back never scroll away. The one primary stays at the head.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · The recording page's Speakers strip while changes wait</div><h2>One pill with the count, a press opens the Speakers page; the hand-over named in the strip's line</h2></div>
+    <div class="cols">
+      <div class="work">
+        <div class="eyebrow">At desk width</div>
+        <div class="strip-states">
+          <div class="cast">
+            <div class="row">
+              <span class="small muted">Speakers</span>
+              <ul class="chips">
+                <li class="chip" style="--speaker: var(--sp1)"><span class="dot"></span>Speaker 1</li>
+                <li class="chip" style="--speaker: var(--sp2)"><span class="dot"></span>Speaker 2</li>
+                <li class="chip system" style="--speaker: var(--sys)"><span class="dot"></span>Call system <span class="pill">not a person</span></li>
+              </ul>
+              <span class="small muted">3 speakers</span>
+              <span class="tools">
+                <span class="btn ghost tiny">Manage speakers</span>
+                <span class="pill warn btnlike">14 changes proposed · another voice under Speaker 1</span>
+                <span class="btn ghost tiny">hide</span><span class="btn ghost tiny">fold</span>
+              </span>
+            </div>
+          </div>
+          <div class="tiny muted">The same strip once everything on the Speakers page is settled: the pill is gone, nothing else moves.</div>
+          <div class="cast">
+            <div class="row">
+              <span class="small muted">Speakers</span>
+              <ul class="chips">
+                <li class="chip" style="--speaker: var(--sp1)"><span class="dot"></span>Speaker 1</li>
+                <li class="chip" style="--speaker: var(--sp2)"><span class="dot"></span>Dana Reyes <span class="pill">the caller</span></li>
+                <li class="chip" style="--speaker: var(--sp5)"><span class="dot"></span>Speaker 3</li>
+                <li class="chip system" style="--speaker: var(--sys)"><span class="dot"></span>Call system <span class="pill">not a person</span></li>
+              </ul>
+              <span class="small muted">4 speakers</span>
+              <span class="tools"><span class="btn ghost tiny">Manage speakers</span><span class="btn ghost tiny">hide</span><span class="btn ghost tiny">fold</span></span>
+            </div>
+          </div>
+          <div class="tiny muted">While the run is still reading: the pill says so and is not a button.</div>
+          <div class="cast">
+            <div class="row">
+              <span class="small muted">Speakers</span>
+              <ul class="chips">
+                <li class="chip" style="--speaker: var(--sp1)"><span class="dot"></span>Speaker 1</li>
+                <li class="chip" style="--speaker: var(--sp2)"><span class="dot"></span>Speaker 2</li>
+                <li class="chip system" style="--speaker: var(--sys)"><span class="dot"></span>Call system <span class="pill">not a person</span></li>
+              </ul>
+              <span class="small muted">3 speakers</span>
+              <span class="tools"><span class="btn ghost tiny">Manage speakers</span><span class="pill">checking the speakers…</span><span class="btn ghost tiny">hide</span><span class="btn ghost tiny">fold</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="read-lines">
+          <div class="rl"><span class="t">0:04</span><span class="lab csys" style="font-style: italic; font-weight: 400">Call system</span><span class="w" style="color: var(--sys); font-style: italic">This call is from a correctional facility and may be monitored and recorded.</span></div>
+          <div class="rl"><span class="t">0:19</span><span class="lab c1">Speaker 1</span><span class="w">Hello?</span></div>
+          <div class="rl"><span class="t">0:20</span><span class="lab c2">Speaker 2</span><span class="w">Hey, it's me. Can you hear me?</span></div>
+        </div>
+      </div>
+
+      <div class="work narrow">
+        <div class="eyebrow">At 375 wide</div>
+        <div class="cast">
+          <div class="row">
+            <span class="small muted">Speakers</span>
+            <span class="small muted" style="margin-left: auto">3 speakers</span>
+            <span class="btn ghost tiny">fold</span>
+          </div>
+          <div class="row">
+            <ul class="chips">
+              <li class="chip" style="--speaker: var(--sp1)"><span class="dot"></span>Speaker 1</li>
+              <li class="chip" style="--speaker: var(--sp2)"><span class="dot"></span>Speaker 2</li>
+              <li class="chip system" style="--speaker: var(--sys)"><span class="dot"></span>Call system</li>
+            </ul>
+          </div>
+          <div class="row">
+            <span class="pill warn btnlike">14 changes proposed · another voice under Speaker 1</span>
+          </div>
+          <div class="row">
+            <span class="btn ghost tiny">Manage speakers</span><span class="btn ghost tiny">hide</span>
+          </div>
+        </div>
+        <div class="read-lines">
+          <div class="rl"><span class="t">0:04</span><span class="lab csys" style="font-style: italic; font-weight: 400">Call system</span><span class="w" style="color: var(--sys); font-style: italic">This call is from a correctional facility and may be monitored and recorded.</span></div>
+          <div class="rl"><span class="t">0:19</span><span class="lab c1">Speaker 1</span><span class="w">Hello?</span></div>
+          <div class="rl"><span class="t">0:20</span><span class="lab c2">Speaker 2</span><span class="w">Hey, it's me. Can you hear me?</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One pill, in the strip's tools, while anything waits.</b> "14 changes proposed", and when a hand-over was found, "· another voice under Speaker 1" on the same pill. It is a button: a press opens the Speakers page. The count goes down as things are settled and the pill goes when nothing waits.</p>
+      <p><b>Nothing else on the strip moves.</b> The chips, the count, Manage speakers, hide and fold are as Phase 1 and chapter 1 have them; the Call system chip keeps its grey italics. A line a change would move is not marked in the viewer; the reading stays clean, and the Speakers page is where the proposed version lives.</p>
+      <p><b>While the run reads</b>, the pill says "checking the speakers…" and is not a button; the Speakers page's own state line says more.</p>
+      <p><b>On a phone the strip takes four rows</b>: the head with the count and fold, the chips, the pill at its full width, then Manage speakers and hide. Folded, it is the head row alone.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What the drawings decide</div><h2>For chapter 3's "The Speakers page", under Phone and narrow screens, and "The strip"</h2></div>
+    <div class="caption">
+      <p>Under 600 wide the Speakers page is the desktop page in one column with the voices in a row that scrolls sideways, a line in three rows, the views as one segmented control, the fold as one full-width button, and a bottom bar with Run again, the count left and Done. The one primary stays at the head.</p>
+      <p>The strip's pill carries the count and, when one was found, the hand-over, and is the one way from the recording page to the proposed version. The viewer's lines are not marked. On a phone the strip takes four rows and folds to one.</p>
+    </div>
+  </section>
+</div>
+</body>
+</html>
