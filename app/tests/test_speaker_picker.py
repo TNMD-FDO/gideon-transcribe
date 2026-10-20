@@ -231,3 +231,25 @@ def test_one_sound_at_a_time():
     assert 'typeof window.VIEWER.pause === "function"' in preview
     picker = (HERE / "static" / "picker.js").read_text(encoding="utf-8")
     assert "sample.start - 0.5" in picker and "sample.end + 0.5" in picker
+
+
+def test_the_speakers_page_breathes():
+    """v1.143.0 (the drawing phase-5-speakers-page-breathes.html): the slim
+    card, the picker beside the card, the hand-over on two lines, and the
+    proposal rows measured on the reading pane."""
+    template = (HERE / "templates" / "speakers-page.html").read_text(encoding="utf-8")
+    assert 'class="sample-line"' in template and "name-or-merge" in template
+    assert "namebox" not in template and "same person as" not in template
+    assert 'data-quote="{{ sample.quote }}"' in template
+    page = (HERE / "static" / "speakers-page.js").read_text(encoding="utf-8")
+    assert "function nameOrMerge" in page and 'question: name + " is"' in page
+    assert "beside: card" in page and "split-from" in page
+    assert "<div class='acts'>" in page and "Split here..." in page
+    picker = (HERE / "static" / "picker.js").read_text(encoding="utf-8")
+    assert "function place()" in page or "function place()" in picker
+    assert 'box.classList.toggle("beside", beside)' in picker
+    assert "suggestedPill(options, one.name)" in picker
+    css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".picker.beside, .picker.below { position: fixed" in css
+    assert "@container reading (max-width: 1299px)" in css
+    assert ".sp-card .sample-line" in css

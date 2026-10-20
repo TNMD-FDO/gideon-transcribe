@@ -2316,7 +2316,15 @@ details.inline[open] summary::after { content: ": "; }
 .sp-card .pill.state { font-size: 0.72em; }
 .sp-card.unnamed .pill.state { background: var(--warn-soft, var(--surface-2)); color: var(--warn, var(--muted)); }
 .sp-card .stats { font-size: var(--t-small); color: var(--muted); margin: 2px 0 6px 16px; }
-.sp-card .samples { display: flex; flex-wrap: wrap; gap: 4px; margin-left: 16px; align-items: center; }
+/* The samples one to a line (v1.143.0): play, the time, the start of the
+   words, and "not this voice"; the card never grows past them and one
+   line of actions. */
+.sp-card .samples { display: flex; flex-direction: column; gap: 3px; margin-left: 16px; }
+.sp-card .sample-line { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.sp-card .sample-line .quote { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; font-size: 12px; color: var(--muted); }
+.sp-card .acts-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0 0 16px; font-size: var(--t-small); }
+.sp-card .acts-line .suggested { margin: 0; }
+.sp-card .pill.split-from { background: var(--accent-soft); color: var(--accent); font-size: 0.72em; }
 .sp-card .hint-line, .sp-card .suggested { margin: 6px 0 0 16px; font-size: var(--t-small); }
 .sp-card .hint-line { color: var(--warn, var(--muted)); }
 .sp-card .suggested { color: var(--accent); }
@@ -2383,7 +2391,17 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .sp-filter { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex: none; font-size: var(--t-small); }
 .sp-filter .sw { border: 1px solid var(--line); border-radius: 999px; padding: 0 10px; min-height: 22px; background: none; color: inherit; }
 .sp-filter .sw.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-.sp-read { flex: 1; min-height: 0; overflow-y: auto; }
+.sp-read { flex: 1; min-height: 0; overflow-y: auto; container-type: inline-size; container-name: reading; }
+/* A proposal row keeps its words whole (v1.143.0): under 1300 wide,
+   measured on the reading pane itself and not the window, the pill, the
+   sounds and the buttons take a row of their own under the words. The
+   transcript's reading width is capped at 1040, so beside the controls
+   the words would have about 440 at most; on every common screen the
+   controls sit under the words, and only an ultra-wide pane keeps them
+   on the right. */
+@container reading (max-width: 1299px) {
+  .sp-read .seg.change .actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+}
 .sp-read .transcript { max-width: var(--reading, 1040px); width: 100%; margin: 0 auto; font-size: 16px; list-style: none; padding: 8px 10px 40vh; }
 .sp-read .seg.dim { color: var(--muted); }
 .sp-read .seg.dim .who { color: var(--muted); }
@@ -2404,7 +2422,8 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .sp-read .seg.change.near, .sp-read .seg.near { color: inherit; }
 .sp-filter .views { display: inline-flex; gap: 6px; align-items: center; margin-left: 10px; }
 .sp-card .handover-box { margin: 6px 0 0 16px; font-size: var(--t-small); }
-.sp-card .handover { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); }
+.sp-card .handover { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); }
+.sp-card .handover .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sp-lanes .lane .track .hmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--danger); z-index: 1; }
 .sp-read .seg .actions { visibility: hidden; }
 /* The speaker picker (v1.142.0): one control wherever the app asks whose a
@@ -2412,6 +2431,12 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
    foot. */
 .picker { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px 10px; margin: 4px 0 8px; display: flex; flex-direction: column; gap: 6px; font-size: var(--t-small); max-width: 520px; list-style: none; }
 .picker.floating { position: fixed; right: 20px; bottom: 76px; z-index: 45; }
+/* Beside its card (v1.143.0): fixed, at the picker's full width, with a
+   pointer at the card; under the card on a laptop with the pointer up. */
+.picker.beside, .picker.below { position: fixed; z-index: 45; margin: 0; width: 460px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; }
+.picker.beside::before, .picker.below::before { content: ""; position: absolute; width: 12px; height: 12px; background: var(--surface); border-left: 1px solid var(--accent); transform: rotate(45deg); }
+.picker.beside::before { left: -7px; top: 22px; border-bottom: 1px solid var(--accent); }
+.picker.below::before { top: -7px; left: 28px; border-top: 1px solid var(--accent); }
 .picker .q { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .picker .q b { font-size: var(--t-body); }
 .picker .q .quote { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }

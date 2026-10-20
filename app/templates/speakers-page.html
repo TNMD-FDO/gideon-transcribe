@@ -85,17 +85,20 @@
               <span class="label" title="The engine's own label for this voice">{{ card.label }}</span>
             </div>
             <div class="stats"><span class="count">{{ card.lines }} line{{ card.lines|pluralize }}</span>, <span class="talking">{{ card.talking_text }}</span> talking, first at {{ card.first_clock }}</div>
+            {% comment %}The samples one to a line (v1.143.0, the drawing phase-5-speakers-page-breathes.html): play, the time, the start of the words, and "not this voice".{% endcomment %}
             <div class="samples"{% if card.by_voice %} title="The samples are the lines nearest this voice's print"{% endif %}>
               {% for sample in card.samples %}
-                <span class="sample-pair">
-                  <button type="button" class="tiny sample" data-start="{{ sample.start }}" data-end="{{ sample.end }}" data-segment="{{ sample.id }}" title="Play this line on its own{% if sample.quote %}: {{ sample.quote }}{% endif %}">{% icon "play" %} {{ sample.clock }}</button>
+                <div class="sample-line">
+                  <button type="button" class="tiny sample" data-start="{{ sample.start }}" data-end="{{ sample.end }}" data-segment="{{ sample.id }}" data-quote="{{ sample.quote }}" title="Play this line on its own">{% icon "play" %} {{ sample.clock }}</button>
+                  <span class="quote" title="{{ sample.quote }}">{% if sample.quote %}&ldquo;{{ sample.quote }}&rdquo;{% endif %}</span>
                   {% if not card.system %}<button type="button" class="ghost tiny not-voice" data-segment="{{ sample.id }}" title="This sample is not this speaker: give the line to whoever it is">not this voice</button>{% endif %}
-                </span>
+                </div>
               {% endfor %}
-              {% if not card.system %}
-              <button type="button" class="ghost tiny name-speaker" title="Give this speaker a name on every line">rename</button>
-              <button type="button" class="ghost tiny same-as" title="Merge this speaker into another">same person as...</button>
-              {% endif %}
+            </div>
+            {% comment %}One line of actions (v1.143.0): Name or merge... opens the speaker picker beside the card asking "<speaker> is"; the suggested name sits on the same line.{% endcomment %}
+            <div class="acts-line">
+              {% if not card.system %}<button type="button" class="{% if card.named %}ghost {% else %}primary {% endif %}tiny name-or-merge" title="Say who this speaker is: a person of the case, another speaker on this call, or someone new">Name or merge...</button>{% endif %}
+              <span class="suggested" hidden></span>
             </div>
             {% comment %}The merge hint (Phase 8 chapter 8): a fragment with a neighbour is offered the merge; one without is said to be alone.{% endcomment %}
             {% if card.hint_other %}
@@ -108,36 +111,8 @@
             {% if card.by_voice and not card.system and card.samples|length > 1 %}
               <div class="small muted mixed-line">If none of the three is this voice, this label mixes people: <a href="#corrections" class="open-check">open the Speaker check</a>.</div>
             {% endif %}
-            <div class="suggested" hidden></div>
             {% comment %}A Hand-over on the card (ADR 0021, v1.139.0): another voice from a time under this label, Play before and after, Split here.{% endcomment %}
             <div class="handover-box" hidden></div>
-            <div class="namebox"{% if card.named or card.system %} hidden{% endif %}>
-              <div class="row">
-                <input type="text" class="name-input grow" maxlength="60" autocomplete="off" placeholder="Who is this?"{% if card.named %} value="{{ card.name }}"{% endif %}>
-                <button type="button" class="primary small name-save">Name</button>
-                {% if card.named %}<button type="button" class="ghost small name-cancel">Cancel</button>{% endif %}
-              </div>
-              {% if in_case %}
-                <div class="known">
-                  {% if people %}
-                    <p class="q">Known in this case</p>
-                    <ul class="people-pick">
-                      {% for one in people %}
-                        <li><button type="button" class="pick" data-name="{{ one.name }}">{{ one.name }}{% if one.role %} <span class="pill role">{{ one.role }}</span>{% endif %}{% if one.count %} <span class="muted">in {{ one.count }} recording{{ one.count|pluralize }}</span>{% endif %}</button></li>
-                      {% endfor %}
-                    </ul>
-                    <p class="small muted people-none" hidden>Nobody in this case matches; Name makes a new person.</p>
-                  {% endif %}
-                  <div class="row newname">
-                    <span class="small muted">New name takes the role</span>
-                    <select class="role-pick small" title="The role of a new person; a person already in the case keeps theirs">
-                      <option value="">no role</option>
-                      {% for role in speaker_roles %}<option>{{ role }}</option>{% endfor %}
-                    </select>
-                  </div>
-                </div>
-              {% endif %}
-            </div>
           </div>
         {% endfor %}
         </div>

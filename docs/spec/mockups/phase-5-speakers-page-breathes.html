@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speakers page breathes</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sp5: #0e7490; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #67c3d6; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #67c3d6; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--muted); background: var(--surface); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .c4 { --c: var(--sp4); color: var(--sp4); } .csys { --c: var(--sys); color: var(--sys); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .label.bad { color: var(--bad); } .label.ok { color: var(--ok); }
+
+  /* the card, at the width it really has: 340 px column, 10 px padding, 10 px card padding */
+  .col { width: 320px; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: var(--radius-lg); position: relative; }
+  .col .colnote { position: absolute; top: -9px; left: 12px; background: var(--surface); padding: 0 6px; font-size: 11px; color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; background: var(--surface); }
+  .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .card .h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card .h .nm { font-weight: 600; }
+  .card .h .lab { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .card .stats { font-size: 12px; color: var(--muted); margin-left: 15px; }
+  .card .samples { display: flex; flex-direction: column; gap: 3px; margin-left: 15px; }
+  .card .sp { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .card .sp .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .card .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card .old-samples { display: flex; flex-wrap: wrap; gap: 4px; margin-left: 15px; align-items: center; }
+  .card .acts { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 11px; }
+  .card .sug { color: var(--accent); font-size: 12px; margin-left: 15px; }
+  .card .namebox { margin-left: 15px; display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+  .card .namebox input, .card .namebox select, .picker .newbox input, .picker .newbox select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); min-width: 0; }
+  .card .known { margin-left: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .card .chips { margin-left: 15px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .card .rolerow { margin-left: 15px; display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .card .ho { margin-left: 15px; border: 1px solid var(--bad); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .card .ho .acts2 { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0; }
+  .card .ho.old { display: block; }
+  .card .ho.old .acts2 { display: inline-flex; }
+  .card .line1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: 15px; font-size: 12px; }
+  .card .line1 .lead { color: var(--muted); }
+  .squeeze { outline: 2px solid var(--bad); outline-offset: 2px; border-radius: var(--radius); }
+  .note { font-size: 12px; color: var(--bad); margin-left: 15px; }
+
+  /* the picker, 460 wide, floating */
+  .picker { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; width: 460px; max-width: 100%; font-size: 13px; box-sizing: border-box; }
+  .picker.inside { width: 100%; }
+  .picker .q { display: flex; gap: 8px; align-items: baseline; }
+  .picker .q b { font-size: 14px; }
+  .picker .q .quote { color: var(--muted); font-style: italic; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker .q .x { margin-left: auto; color: var(--muted); }
+  .picker .grp { display: flex; flex-direction: column; gap: 2px; }
+  .picker .grp .gh { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding: 4px 0 2px; }
+  .picker .opt { display: grid; grid-template-columns: 22px 10px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: var(--radius); }
+  .picker .opt.focus { background: var(--accent-soft); }
+  .picker .opt.now { color: var(--muted); }
+  .picker .opt.now .nm { text-decoration: line-through; }
+  .picker .opt .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker .opt .facts { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .picker.inside .opt .facts { overflow: visible; }
+  .picker .opt .hear { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; color: var(--accent); white-space: nowrap; }
+  .picker .add { display: flex; gap: 8px; align-items: center; padding: 6px; border-top: 1px dashed var(--line); margin-top: 4px; }
+  .picker .add .plus { width: 22px; text-align: center; color: var(--accent); font-weight: 700; }
+  .picker .newbox { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; padding: 6px 6px 2px; }
+  .picker .foot { font-size: 11px; color: var(--muted); padding-top: 2px; }
+  .clip { overflow: hidden; }
+
+  /* the page shape */
+  .desk { display: grid; grid-template-columns: 340px 1fr 300px; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; height: 420px; position: relative; background: var(--surface); }
+  .desk > div { padding: 10px; min-width: 0; }
+  .desk .cards { border-right: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+  .desk .cards .card { font-size: 12px; }
+  .desk .read { border-right: 1px solid var(--line); font-size: 12px; }
+  .desk .side { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
+  .desk .player { height: 70px; border-radius: var(--radius); background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
+  .desk .lanes { flex: 1; border-radius: var(--radius); background: var(--surface-2); }
+  .desk .float { position: absolute; left: 352px; top: 40px; }
+  .desk .float::before { content: ""; position: absolute; left: -7px; top: 22px; width: 12px; height: 12px; background: var(--surface); border-left: 1px solid var(--accent); border-bottom: 1px solid var(--accent); transform: rotate(45deg); }
+  .desk.narrow { grid-template-columns: 1fr 1fr; grid-template-rows: 160px 1fr; }
+  .desk.narrow .cards { grid-row: 1; grid-column: 1; border-bottom: 1px solid var(--line); }
+  .desk.narrow .side { grid-row: 1; grid-column: 2; border-bottom: 1px solid var(--line); }
+  .desk.narrow .read { grid-row: 2; grid-column: 1 / -1; border-right: 0; }
+  .desk.narrow .float { left: 24px; top: 150px; }
+  .desk.narrow .float::before { left: 40px; top: -7px; border-left: 1px solid var(--accent); border-bottom: 0; border-top: 1px solid var(--accent); }
+  .dim { opacity: .55; }
+
+  /* proposal rows */
+  .read-rows { border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: 40px auto minmax(0, 1fr) auto; gap: 6px 10px; align-items: start; padding: 7px 6px; border-bottom: 1px solid var(--line); font-size: 13px; background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .row .t { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 3px; }
+  .row .who { font-size: 12px; font-weight: 600; white-space: nowrap; padding-top: 2px; }
+  .row .who s { color: var(--muted); font-weight: 400; }
+  .row .w { min-width: 0; }
+  .row .ctl { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: nowrap; white-space: nowrap; }
+  .row.wide .w { grid-column: 3; }
+  .row.under .ctl { grid-column: 2 / -1; justify-content: flex-start; flex-wrap: wrap; }
+  .row.under .w { grid-column: 3 / -1; }
+  .n { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  .w780 { width: 780px; max-width: 100%; }
+  .w560 { width: 560px; max-width: 100%; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The Speakers page breathes: the card, the picker and the proposal rows</h1>
+    <p class="lede"><b>Drawn 2026-10-20</b> after the maintainer's walk of v1.142.2: separating a speaker from a card unfolded into the picker inside the card, and the page bunched up with the words squeezed. Measured on the local copy: the cards column is 340 px wide, the picker was drawn for 460 to 520, and on a proposal row 780 px wide the words had 117 px while the controls took 372. Every name and line here is made up.</p>
+    <p class="lede">Three changes, no new page shape. The picker floats beside the card at its full width instead of opening inside it; the card slims to its samples and one <b>Name or merge</b> line, so every "whose is this" question goes through the one picker; and a proposal row keeps its words whole, with the controls under them when the column is narrow. The line-up with lanes, the number keys and the phone sheet stay as they are.</p>
+    <p class="lede"><b>Added 2026-10-20, after the maintainer's first look</b>: figure 4 draws the Split here flow in full, from the hand-over on the card to the picker's question, the lit "new speaker" row, Someone new with a name and a role, and the cards after.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The card, today and after, at the width it really has</div><h2>Today the card stacks nine controls and then opens the picker inside itself</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div>
+          <div class="label bad">Today (v1.142.2), after "not this voice" on a sample</div>
+          <div class="col"><span class="colnote">cards column, 340 px</span>
+            <div class="card on">
+              <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+              <div class="stats">14 lines, 1 min 51 s talking, first at 0:12</div>
+              <div class="old-samples">
+                <span class="play">&#9654;</span><span class="mono tiny">1:36</span><span class="btn quiet">not this voice</span>
+                <span class="play">&#9654;</span><span class="mono tiny">2:04</span><span class="btn quiet">not this voice</span>
+                <span class="play">&#9654;</span><span class="mono tiny">6:58</span><span class="btn quiet">not this voice</span>
+              </div>
+              <div class="acts"><span class="btn ghost tiny">rename</span><span class="btn ghost tiny">same person as...</span></div>
+              <div class="sug">Probably <b>Riley</b>, called that by another speaker at 00:05:09 <span class="btn tiny">Accept</span> <span class="btn ghost tiny">Reject</span></div>
+              <div class="namebox"><input value="Who is this?"><span class="btn tiny primary">Name</span></div>
+              <div class="known">Known in this case</div>
+              <div class="chips"><span class="btn tiny">Dana Reyes</span><span class="btn tiny">Lee Ortiz</span></div>
+              <div class="rolerow">New name takes the role <select><option>no role</option></select></div>
+              <div class="ho old">
+                <b>Another voice from 4:12</b> under this label, 8 lines. <span class="acts2"><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span> <span class="btn tiny">Split here</span> <span class="btn ghost tiny">Not a different person</span></span>
+              </div>
+              <div class="picker inside squeeze clip">
+                <div class="q"><b>Whose line is this?</b><span class="quote">"Licence and insurance, please."</span><span class="x">Esc</span></div>
+                <div class="grp"><div class="gh">On this call</div>
+                  <div class="opt now"><kbd>1</kbd><span class="dot c2"></span><span class="nm">Speaker 2 <span class="pill">has it now</span></span><span class="facts">14 lines</span><span class="hear">&#9654; 1/3</span></div>
+                  <div class="opt focus"><kbd>2</kbd><span class="dot c1"></span><span class="nm">Speaker 1</span><span class="facts">31 lines</span><span class="hear">&#9654; 1/3</span></div>
+                </div>
+                <div class="grp"><div class="gh">In this case, not yet on this call</div>
+                  <div class="opt"><kbd>3</kbd><span class="dot"></span><span class="nm">Dana Reyes</span><span class="facts">not heard yet · also called Mama, Coach</span><span class="hear"></span></div>
+                </div>
+              </div>
+              <div class="note">the picker's rows run past the card's edge; "Someone new" is below the fold of the column's scroll box</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="label ok">After: the slim card</div>
+          <div class="col"><span class="colnote">cards column, 340 px</span>
+            <div class="card on">
+              <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+              <div class="stats">14 lines, 1 min 51 s, first at 0:12</div>
+              <div class="samples">
+                <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Licence and insurance, please."</span><span class="btn quiet">not this voice</span></div>
+                <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"Step out of the car for me."</span><span class="btn quiet">not this voice</span></div>
+                <div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Stay where you are, please."</span><span class="btn quiet">not this voice</span></div>
+              </div>
+              <div class="line1"><span class="btn tiny primary">Name or merge...</span><span class="lead">Probably <b>Riley</b></span><span class="btn tiny">Accept</span><span class="btn ghost tiny">Reject</span></div>
+              <div class="ho">
+                <div><b>Another voice from 4:12</b>, 8 lines after it.</div>
+                <div class="acts2"><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny">Split here...</span><span class="btn ghost tiny">Not a different person</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="h"><span class="dot c1"></span><span class="nm c1">Dana Reyes</span><span class="pill">Client</span><span class="lab">SPEAKER_00</span></div>
+              <div class="stats">31 lines, 4 min 02 s, first at 0:04</div>
+              <div class="samples">
+                <div class="sp"><span class="play">&#9654;</span><span class="t">0:48</span><span class="q">"Yeah, it's mine. What's the problem?"</span><span class="btn quiet">not this voice</span></div>
+                <div class="sp"><span class="play">&#9654;</span><span class="t">3:15</span><span class="q">"I was only here for twenty minutes."</span><span class="btn quiet">not this voice</span></div>
+                <div class="sp"><span class="play">&#9654;</span><span class="t">7:30</span><span class="q">"Can I call my sister first?"</span><span class="btn quiet">not this voice</span></div>
+              </div>
+              <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>One line of actions.</b> <b>Name or merge...</b> opens the picker beside the card with the question "Speaker 2 is": an on-call speaker merges them (today's "same person as..."), a person of the case names them (today's name box and known chips), Someone new types a name with a role (today's role list). Rename, same person as, the name box, the known chips and the role list fold into that one button.</p>
+        <p><b>Samples one to a line,</b> each with its play, time, the start of its words, and the quiet "not this voice". Three lines instead of a wrapped row of nine pieces; the words say which sample is which before you press play.</p>
+        <p><b>The suggested name</b> stays on the card as it is, on the same line as the button, since Accept is a one-press answer. <b>The hand-over</b> keeps its words on one line and its buttons on the next, so "Split here..." and "Not a different person" never wrap mid-word. Split here opens the picker beside the card, as today.</p>
+        <p><b>Nothing opens inside the card any more.</b> The card never grows past its samples and two lines; whatever it asks, it asks through the picker floating beside it (figure 2).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · The picker floats beside the card, wide screen (1500 and over)</div><h2>Full width, anchored to the card's edge, over the player and the lanes</h2></div>
+    <div class="work">
+      <div class="desk">
+        <div class="cards">
+          <div class="card on">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">14 lines, 1 min 51 s, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Licence and insurance, please."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"Step out of the car for me."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Stay where you are, please."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn tiny primary">Name or merge...</span></div>
+          </div>
+          <div class="card dim">
+            <div class="h"><span class="dot c1"></span><span class="nm c1">Dana Reyes</span><span class="pill">Client</span><span class="lab">SPEAKER_00</span></div>
+            <div class="stats">31 lines, 4 min 02 s, first at 0:04</div>
+          </div>
+          <div class="card dim">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">6 lines, 0 min 40 s, first at 5:02</div>
+          </div>
+        </div>
+        <div class="read dim">
+          <div class="label">Transcript</div>
+          <div class="read-rows w560">
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:12</span><span class="who c1">Dana Reyes</span><span class="w">Dispatch, unit twelve, we're on scene at the harbour car park.</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:20</span><span class="who c2">Speaker 2</span><span class="w">Evening. Is this your vehicle, sir?</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:26</span><span class="who c1">Dana Reyes</span><span class="w">Yeah, it's mine. What's the problem?</span><span class="ctl"></span></div>
+          </div>
+        </div>
+        <div class="side dim">
+          <div class="player">Play &nbsp; 3s &nbsp; 5s &nbsp; 5s &nbsp; 0:00 / 7:58</div>
+          <div class="lanes"></div>
+        </div>
+        <div class="picker float">
+          <div class="q"><b>Speaker 2 is</b><span class="quote">14 lines, first "Licence and insurance, please."</span><span class="x">Esc</span></div>
+          <div class="grp"><div class="gh">On this call</div>
+            <div class="opt now"><kbd>1</kbd><span class="dot c2"></span><span class="nm">Speaker 2 <span class="pill">this one</span></span><span class="facts">14 lines</span><span class="hear">&#9654; 1/3</span></div>
+            <div class="opt"><kbd>2</kbd><span class="dot c1"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">31 lines · the same person</span><span class="hear">&#9654; 1/3</span></div>
+            <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm">Speaker 3</span><span class="facts">6 lines · the same person</span><span class="hear">&#9654; 1/3</span></div>
+          </div>
+          <div class="grp"><div class="gh">In this case, not yet on this call</div>
+            <div class="opt focus"><kbd>4</kbd><span class="dot"></span><span class="nm">Riley Park <span class="pill acc">suggested</span></span><span class="facts">in 2 recordings</span><span class="hear">&#9654; Preview</span></div>
+            <div class="opt"><kbd>5</kbd><span class="dot"></span><span class="nm">Lee Ortiz <span class="pill">Witness</span></span><span class="facts">not heard yet · also called Mama</span><span class="hear"></span></div>
+          </div>
+          <div class="add"><span class="plus">+</span><span class="nm"><b>Someone new</b></span><span class="facts">a person not yet in the case</span></div>
+          <div class="newbox"><input placeholder="Their name"><select><option>no role</option><option>Client</option><option>Officer</option><option>Witness</option></select><span class="btn tiny primary">Name</span></div>
+          <div class="foot">Doesn't sound right? The samples on the card fix a wrong line.</div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Where it floats.</b> Anchored to the right edge of the card it belongs to, with a small pointer, over the transcript and the player. The picker is 460 px wide wherever it opens, so its names, facts and play buttons have the room they were drawn with. It never scrolls the cards column sideways, and it is never cut off by the column's height.</p>
+        <p><b>The question changes with the button.</b> "Name or merge..." asks <b>Speaker 2 is</b>, with the on-call speakers marked "the same person" since picking one merges. "not this voice" asks <b>Whose line is this?</b> with the sample's words, as today. "Split here..." asks <b>From 4:12 the voice is</b> and lights "A new speaker on this call", as today.</p>
+        <p><b>The suggested name is in the list.</b> When the check proposed a name, that person carries a <span class="pill acc">suggested</span> pill and is lit first, so Accept on the card and the picker agree. The number keys, arrows, Enter and Esc work as before; the page holds still while it is open (v1.142.1) and one sound plays at a time (v1.142.2).</p>
+        <p><b>Someone new</b> stays the last row and unfolds in place: name, role and Name, on one line at this width. Nothing else on the page moves when it unfolds.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · The picker on a laptop (under 1500 wide), the cards in the top band</div><h2>It floats under the card, over the transcript, never inside the 40 % band</h2></div>
+    <div class="work">
+      <div class="desk narrow">
+        <div class="cards">
+          <div class="card on" style="width: 300px;">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">14 lines, 1 min 51 s, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Licence and insurance, please."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn tiny primary">Name or merge...</span></div>
+          </div>
+        </div>
+        <div class="side dim">
+          <div class="player">Play &nbsp; 3s &nbsp; 5s &nbsp; 5s &nbsp; 0:00 / 7:58</div>
+          <div class="lanes"></div>
+        </div>
+        <div class="read dim">
+          <div class="read-rows">
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:12</span><span class="who c1">Dana Reyes</span><span class="w">Dispatch, unit twelve, we're on scene at the harbour car park.</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:20</span><span class="who c2">Speaker 2</span><span class="w">Evening. Is this your vehicle, sir?</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:26</span><span class="who c1">Dana Reyes</span><span class="w">Yeah, it's mine. What's the problem?</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">0:31</span><span class="who c2">Speaker 2</span><span class="w">Licence and insurance, please.</span><span class="ctl"></span></div>
+          </div>
+        </div>
+        <div class="picker float">
+          <div class="q"><b>Speaker 2 is</b><span class="quote">14 lines, first "Licence and insurance, please."</span><span class="x">Esc</span></div>
+          <div class="grp"><div class="gh">On this call</div>
+            <div class="opt now"><kbd>1</kbd><span class="dot c2"></span><span class="nm">Speaker 2 <span class="pill">this one</span></span><span class="facts">14 lines</span><span class="hear">&#9654; 1/3</span></div>
+            <div class="opt"><kbd>2</kbd><span class="dot c1"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">31 lines · the same person</span><span class="hear">&#9654; 1/3</span></div>
+          </div>
+          <div class="grp"><div class="gh">In this case, not yet on this call</div>
+            <div class="opt focus"><kbd>4</kbd><span class="dot"></span><span class="nm">Riley Park <span class="pill acc">suggested</span></span><span class="facts">in 2 recordings</span><span class="hear">&#9654; Preview</span></div>
+          </div>
+          <div class="add"><span class="plus">+</span><span class="nm"><b>Someone new</b></span><span class="facts">a person not yet in the case</span></div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Under 1500 wide</b> the cards sit in a band across the top, 40 % of the height, and the transcript takes the rest. The picker floats under the card it belongs to, over the transcript, with the pointer up. The band never has to scroll to show it, and the transcript holds still behind it.</p>
+        <p><b>On a phone</b> nothing changes: the picker rises from the foot as the sheet drawn in the picker mock-up's figure 4.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · Split here on a hand-over, then naming the other person</div><h2>The picker asks "From 4:12 the voice is"; a new speaker, or someone named now</h2></div>
+    <div class="work">
+      <div class="desk" style="height: 540px;">
+        <div class="cards">
+          <div class="card on">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">14 lines, 1 min 51 s, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Licence and insurance, please."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"Step out of the car for me."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Stay where you are, please."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+            <div class="ho">
+              <div><b>Another voice from 4:12</b>, 8 lines after it.</div>
+              <div class="acts2"><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny on">Split here...</span><span class="btn ghost tiny">Not a different person</span></div>
+            </div>
+          </div>
+          <div class="card dim">
+            <div class="h"><span class="dot c1"></span><span class="nm c1">Dana Reyes</span><span class="pill">Client</span><span class="lab">SPEAKER_00</span></div>
+            <div class="stats">31 lines, 4 min 02 s, first at 0:04</div>
+          </div>
+        </div>
+        <div class="read dim">
+          <div class="label">Transcript</div>
+          <div class="read-rows w560">
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">4:05</span><span class="who c2">Speaker 2</span><span class="w">Wait here, I'll be right back.</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">4:12</span><span class="who c2">Speaker 2</span><span class="w">Are you the owner of the vehicle?</span><span class="ctl"></span></div>
+            <div class="row wide" style="background: transparent; border-left-color: transparent;"><span class="t">4:18</span><span class="who c2">Speaker 2</span><span class="w">We had a report about this car park.</span><span class="ctl"></span></div>
+          </div>
+        </div>
+        <div class="side dim">
+          <div class="player">Play &nbsp; 3s &nbsp; 5s &nbsp; 5s &nbsp; 4:12 / 7:58</div>
+          <div class="lanes"></div>
+        </div>
+        <div class="picker float" style="top: 70px;">
+          <div class="q"><b>From 4:12 the voice is</b><span class="quote">8 lines, "Are you the owner of the vehicle?"</span><span class="x">Esc</span></div>
+          <div class="grp"><div class="gh">On this call</div>
+            <div class="opt now"><kbd>1</kbd><span class="dot c2"></span><span class="nm">Speaker 2 <span class="pill">has it now</span></span><span class="facts">14 lines</span><span class="hear">&#9654; 1/3</span></div>
+            <div class="opt"><kbd>2</kbd><span class="dot c1"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">31 lines</span><span class="hear">&#9654; 1/3</span></div>
+            <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm">Speaker 3</span><span class="facts">6 lines</span><span class="hear">&#9654; 1/3</span></div>
+          </div>
+          <div class="grp"><div class="gh">In this case, not yet on this call</div>
+            <div class="opt"><kbd>4</kbd><span class="dot"></span><span class="nm">Riley Park</span><span class="facts">in 2 recordings</span><span class="hear">&#9654; Preview</span></div>
+            <div class="opt"><kbd>5</kbd><span class="dot"></span><span class="nm">Lee Ortiz <span class="pill">Witness</span></span><span class="facts">not heard yet · also called Mama</span><span class="hear"></span></div>
+          </div>
+          <div class="grp"><div class="gh">Or</div>
+            <div class="opt focus"><kbd>6</kbd><span class="dot c4"></span><span class="nm">A new speaker on this call</span><span class="facts">Speaker 4, named later</span><span class="hear"></span></div>
+          </div>
+          <div class="add"><span class="plus">+</span><span class="nm"><b>Someone new</b></span><span class="facts">a person not yet in the case, named now</span></div>
+          <div class="newbox"><input value="Jordan Blake"><select><option>Officer</option><option>no role</option><option>Client</option><option>Witness</option></select><span class="btn tiny primary">Name</span></div>
+          <div class="foot"><kbd>Enter</kbd> takes the lit row; the name box takes <kbd>Enter</kbd> once you have typed in it.</div>
+        </div>
+      </div>
+      <div class="label ok" style="margin-top: 14px;">After "Someone new" with a name: the cards column</div>
+      <div class="cols">
+        <div class="col"><span class="colnote">cards column, 340 px</span>
+          <div class="card">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">6 lines, 0 min 58 s, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Licence and insurance, please."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"Step out of the car for me."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">3:40</span><span class="q">"Wait here, I'll be right back."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+          <div class="card on">
+            <div class="h"><span class="dot c4"></span><span class="nm c4">Jordan Blake</span><span class="pill">Officer</span><span class="pill acc">split from Speaker 2 at 4:12</span><span class="lab">SPEAKER_03</span></div>
+            <div class="stats">8 lines, 0 min 53 s, first at 4:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">4:12</span><span class="q">"Are you the owner of the vehicle?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">5:30</span><span class="q">"We had a report about this car park."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Stay where you are, please."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Had "A new speaker on this call" been taken instead</div>
+          <div class="col"><span class="colnote">cards column, 340 px</span>
+            <div class="card on">
+              <div class="h"><span class="dot c4"></span><span class="nm c4">Speaker 4</span><span class="pill warn">unnamed</span><span class="pill acc">split from Speaker 2 at 4:12</span><span class="lab">SPEAKER_03</span></div>
+              <div class="stats">8 lines, 0 min 53 s, first at 4:12</div>
+              <div class="samples">
+                <div class="sp"><span class="play">&#9654;</span><span class="t">4:12</span><span class="q">"Are you the owner of the vehicle?"</span><span class="btn quiet">not this voice</span></div>
+              </div>
+              <div class="line1"><span class="btn tiny primary">Name or merge...</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The question comes from the hand-over.</b> "Split here..." opens the picker beside the card asking <b>From 4:12 the voice is</b>, with the count of lines after that time and the first of them. Every line of Speaker 2 from 4:12 on goes to whoever is picked; the lines before stay.</p>
+        <p><b>Three kinds of answer.</b> An on-call speaker or a person of the case takes the lines (Dana Reyes, Riley Park). <b>A new speaker on this call</b> is lit by default, as today: the next free label, to be named later from its card. <b>Someone new</b> names them now: name and role in one step, the person joins the case and the call together.</p>
+        <p><b>The name box takes the keys.</b> The number keys and arrows choose a row until you type in the name box; from then Enter is Name, Esc clears the box first and closes on a second press. "Someone new" with a role is the only place a typed answer is ever needed.</p>
+        <p><b>After.</b> The new speaker's card appears under the one it came from, lit, with a one-time pill saying where it came from, its own three samples by the voice print, and the Undo line at the top of the page reads "Undo: split Speaker 2 at 4:12". Speaker 2 keeps its first lines and loses the hand-over box.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 5 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5 · A proposal row in the transcript, today and after</div><h2>The words keep the row; the controls move under them when the column is narrow</h2></div>
+    <div class="work">
+      <div class="label bad">Today, a 780 px row: the words have 117 px</div>
+      <div class="read-rows w780">
+        <div class="row wide">
+          <span class="t">0:12</span>
+          <span class="who"><span class="c2"><s>Speaker 2</s></span> &rarr; <span class="c1">Speaker 1</span></span>
+          <span class="w squeeze" style="max-width: 117px;">Dispatch, unit twelve, we're on scene at the harbour car park.</span>
+          <span class="ctl"><span class="pill ok">the voice agrees</span><span class="n">2</span><span class="btn quiet">&#9654;</span><span class="btn quiet">&#9654;</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+      </div>
+      <div class="label ok" style="margin-top: 10px;">After, the same 780 px row</div>
+      <div class="read-rows w780">
+        <div class="row under">
+          <span class="t">0:12</span>
+          <span class="who"><span class="c2"><s>Speaker 2</s></span> &rarr; <span class="c1">Speaker 1</span></span>
+          <span class="w">Dispatch, unit twelve, we're on scene at the harbour car park.</span>
+          <span class="ctl"><span class="pill ok">the voice agrees</span><span class="n">2</span><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+        <div class="row under">
+          <span class="t">0:20</span>
+          <span class="who"><span class="c2"><s>Speaker 2</s></span> &rarr; <span class="c1">Speaker 1</span></span>
+          <span class="w">Evening. Is this your vehicle, sir?</span>
+          <span class="ctl"><span class="pill ok">the voice agrees</span><span class="n">2</span><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+      </div>
+      <div class="label ok" style="margin-top: 10px;">After, a row wider than about 1000 px: the controls stay on the right</div>
+      <div class="read-rows">
+        <div class="row wide">
+          <span class="t">0:12</span>
+          <span class="who"><span class="c2"><s>Speaker 2</s></span> &rarr; <span class="c1">Speaker 1</span></span>
+          <span class="w">Dispatch, unit twelve, we're on scene at the harbour car park.</span>
+          <span class="ctl"><span class="pill ok">the voice agrees</span><span class="n">2</span><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The rule follows the column, not the window.</b> Today the controls drop under the words only when the whole window is under 900 px, so on a full-width screen the transcript column can be 780 px and still squeeze. After, the transcript measures its own width: under about 1000 px the controls take their own line under the words, with the words at full width; wider than that they stay on the right as drawn. <b>Built at 1300</b> (v1.143.0): the transcript's reading width is capped at 1040 px, so beside the controls the words would have about 440 px at most; the line was drawn where the words really gain from it, and on every common screen the controls sit under the words.</p>
+        <p><b>The controls do not change,</b> only where they sit: the voice pill, the run number, Play before and after, Accept and Leave, in the same order. The block head's Accept all stays where it is.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What this is not</div><h2>Kept as it is</h2></div>
+    <div class="work">
+      <div class="caption">
+        <p><b>The page shape.</b> The line-up with lanes, the three columns over 1500 and the band and transcript under it, the player and the lanes on the right. Nothing moves columns.</p>
+        <p><b>The keys and the sounds.</b> Number keys, arrows, Enter and Esc in the picker; the page holds still while it is open; one sound at a time.</p>
+        <p><b>The check's strip and the Speaker check panel.</b> Their proposals, Accept all per run and Accept per line are unchanged; only the row's layout is.</p>
+        <p><b>Where it lands in the plan.</b> Phase 5, chapter 3, as an amendment to "The speaker picker" and "The Speakers page": no new chapter, no new words. One release, v1.143.0.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

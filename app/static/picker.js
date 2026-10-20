@@ -13,6 +13,11 @@
 //     exclude: ["Call system"], newSpeaker: true (offer "A new speaker on this call"),
 //     play: function (start, end) {...}  (the host page's player),
 //     manageUrl: "/recording/<id>/speakers" or "",
+//     beside: element (v1.143.0: the sheet floats beside it at its full width,
+//       under it on a screen under 1500 wide; the phone sheet as before),
+//     currentPill: "has it now", merging: true (on-call rows say "the same person"),
+//     suggested: "Riley" (that row carries a pill and is lit first),
+//     newGo: "Add and give this line", newHint: "..." (the Someone new box),
 //     onPick: function (name, role) { return Promise }  (name "" means a new speaker)
 //   })
 (function () {
@@ -35,10 +40,36 @@
 
   function forget(recording) { delete cache[recording]; }
 
+  // Beside its card (v1.143.0, the drawing phase-5-speakers-page-breathes.html):
+  // to the right of the card on a wide screen, under it on a laptop, kept
+  // within the window, and placed again when the page scrolls or resizes.
+  function place() {
+    if (!opened || !opened.placeAt) { return; }
+    var box = opened.box;
+    var r = opened.placeAt.getBoundingClientRect();
+    var w = box.offsetWidth || 460;
+    var h = box.offsetHeight || 0;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var beside = vw >= 1500 && r.right + 12 + w <= vw - 8;
+    box.classList.toggle("beside", beside);
+    box.classList.toggle("below", !beside);
+    var left = beside ? r.right + 12 : Math.max(8, Math.min(r.left, vw - w - 8));
+    var top = beside ? r.top : r.bottom + 10;
+    // Kept within the window, whatever the card's own position: a card
+    // scrolled off the top still gets its picker in view.
+    if (top + h > vh - 8) { top = vh - h - 8; }
+    if (top < 8) { top = 8; }
+    box.style.left = left + "px";
+    box.style.top = top + "px";
+  }
+
   function close() {
     if (!opened) { return; }
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("click", onOutside, true);
+    window.removeEventListener("resize", place);
+    document.removeEventListener("scroll", place, true);
     if (opened.box.parentNode) { opened.box.parentNode.removeChild(opened.box); }
     var anchor = opened.options.anchor || null;
     opened = null;
@@ -102,10 +133,11 @@
     add.outerHTML = "<div class='newbox'>" +
       "<input type='text' maxlength='60' placeholder='Their name' aria-label='Name'>" +
       (opened.data.in_case && roles.length ? "<select aria-label='Role'><option value=''>no role</option>" + roles.map(function (r) { return "<option>" + escape(r) + "</option>"; }).join("") + "</select>" : "") +
-      "<button type='button' class='primary small new-go'>Add and give this line</button>" +
-      "<span class='small muted hint'>" + (opened.data.in_case ? "Makes the person in the case and a speaker on this call. A name already in the case joins that person." : "A new speaker on this recording.") + "</span>" +
+      "<button type='button' class='primary small new-go'>" + escape(opened.options.newGo || "Add and give this line") + "</button>" +
+      "<span class='small muted hint'>" + escape(opened.options.newHint || (opened.data.in_case ? "Makes the person in the case and a speaker on this call. A name already in the case joins that person." : "A new speaker on this recording.")) + "</span>" +
       "</div>";
     var input = box.querySelector(".newbox input");
+    place();
     input.focus();
     box.querySelector(".new-go").addEventListener("click", function () {
       var name = (input.value || "").trim();
@@ -144,6 +176,10 @@
     }
   }
 
+  function suggestedPill(options, name) {
+    return options.suggested && name === options.suggested ? " <span class='pill acc'>suggested</span>" : "";
+  }
+
   function row(entry, key, extra) {
     var pills = (entry.role ? " <span class='pill role'>" + escape(entry.role) + "</span>" : "") +
       (entry.system ? " <span class='pill'>not a person</span>" : "") +
@@ -170,7 +206,8 @@
       var now = one.name === options.current;
       var hear = one.samples && one.samples.length && !one.system ? "<button type='button' class='hear-one' title='Play a sample of this voice; press again for the next'>" + (window.UI && window.UI.icon ? window.UI.icon("play") : "play") + "<span class='n'>1/" + one.samples.length + "</span></button>" : "";
       key += 1;
-      return row({ name: one.name, colour: one.colour, role: one.role, system: one.system, now: now || exclude.indexOf(one.name) >= 0 || one.system, facts: one.lines + (one.lines === 1 ? " line" : " lines") + (now ? "" : ""), hear: hear }, one.system ? "" : String(key), now ? " <span class='pill'>has it now</span>" : "");
+      var facts = one.lines + (one.lines === 1 ? " line" : " lines") + (!now && options.merging && !one.system ? " \u00b7 the same person" : "");
+      return row({ name: one.name, colour: one.colour, role: one.role, system: one.system, now: now || exclude.indexOf(one.name) >= 0 || one.system, facts: facts, hear: hear }, one.system ? "" : String(key), (now ? " <span class='pill'>" + escape(options.currentPill || "has it now") + "</span>" : "") + suggestedPill(options, one.name));
     });
     parts.push("<div class='grp'><div class='gh'>On this call</div>" + (onCall.join("") || "<div class='small muted'>No other speaker on this call yet.</div>") + "</div>");
     if (data.in_case) {
@@ -178,7 +215,7 @@
         key += 1;
         var facts = (one.recordings ? "in " + one.recordings + (one.recordings === 1 ? " recording" : " recordings") : "not heard yet") + (one.also_called && one.also_called.length ? " · also called " + one.also_called.join(", ") : "");
         var hear = one.sample ? "<button type='button' class='hear-else' title='Hear this person in another recording of the case'>" + (window.UI && window.UI.icon ? window.UI.icon("play") : "play") + " Preview</button>" : "";
-        return row({ name: one.name, colour: "", role: one.role, facts: facts, hear: hear }, key <= 9 ? String(key) : "");
+        return row({ name: one.name, colour: "", role: one.role, facts: facts, hear: hear }, key <= 9 ? String(key) : "", suggestedPill(options, one.name));
       });
       parts.push("<div class='grp'><div class='gh'>In this case, not yet on this call</div>" + (people.join("") || "<div class='small muted'>Everyone in the case is on this call already.</div>") + "</div>");
     }
@@ -192,13 +229,26 @@
     box.innerHTML = parts.join("");
     opened = { box: box, options: options, data: data, lit: 0, cycle: {} };
     var anchor = options.anchor;
-    if (anchor && anchor.parentNode) { anchor.parentNode.insertBefore(box, anchor.nextSibling); }
+    var beside = options.beside && window.innerWidth >= 600 ? options.beside : null;
+    if (beside) {
+      document.body.appendChild(box);
+      opened.placeAt = beside;
+      place();
+      window.addEventListener("resize", place);
+      document.addEventListener("scroll", place, true);
+    }
+    else if (anchor && anchor.parentNode) { anchor.parentNode.insertBefore(box, anchor.nextSibling); }
     else { document.body.appendChild(box); box.classList.add("floating"); }
     // The first pickable row is lit; for a Split, "a new speaker" is, so one
-    // Enter does what Split did before the picker.
+    // Enter does what Split did before the picker; a suggested name is lit
+    // first wherever it sits (v1.143.0).
     var all = items();
     var first = all.findIndex(function (one) { return one.dataset.new === "speaker"; });
     if (first < 0) { first = all.findIndex(function (one) { return !one.classList.contains("now"); }); }
+    if (options.suggested) {
+      var hinted = all.findIndex(function (one) { return one.dataset.name === options.suggested && !one.classList.contains("now"); });
+      if (hinted >= 0) { first = hinted; }
+    }
     light(first < 0 ? 0 : first);
     box.addEventListener("click", function (event) {
       var hearOne = event.target.closest(".hear-one");
@@ -215,7 +265,7 @@
     // The page holds still while the picker is open (v1.142.1): following
     // would scroll to a sample as it plays and take the row with it.
     document.dispatchEvent(new CustomEvent("picker-open", { detail: { anchor: anchor || null } }));
-    box.scrollIntoView({ block: "nearest" });
+    if (!beside) { box.scrollIntoView({ block: "nearest" }); }
   }
 
   function open(options) {

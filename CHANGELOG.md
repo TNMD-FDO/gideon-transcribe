@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.143.0, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Speakers page breathes** (the maintainer's walk of v1.142.2:
+  separating a speaker unfolded into the picker inside the card and the
+  page bunched up; drawn in
+  `docs/spec/mockups/phase-5-speakers-page-breathes.html` and chosen). The
+  card slims: its three samples sit one to a line, each with its play, its
+  time, the start of its words and "not this voice"; one line of actions,
+  **Name or merge...**, replaces rename, same person as, the name box, the
+  Known in this case list and the role list. The button opens the speaker
+  picker asking "<speaker> is": another speaker on the call is the same
+  person (the merge, confirmed as before), a person of the case names every
+  line, Someone new names them with a role; the name the check suggested
+  carries a "suggested" pill and is lit first. The picker floats beside the
+  card at its full width on a wide screen, under it on a laptop, and on a
+  phone rises from the foot as before; nothing opens inside the card any
+  more. The hand-over keeps its words on one line and its sounds and
+  buttons on the next; Split here opens the picker the same way, and the
+  new speaker's card says "split from Speaker 2 at 4:12" once. A proposal
+  row's pill, sounds and buttons move under the words when the reading pane
+  is under 1300 wide, measured on the pane and no longer on the window, so
+  a full-width screen with three columns keeps the words whole. (The
+  drawing said "about 1000"; measured on the build, the transcript's
+  reading width is capped at 1040 and beside the controls the words would
+  have about 440 at most, so the line is drawn where the words really gain
+  from it.)
+
 ## v1.142.2, 2026-10-20
 
 ```

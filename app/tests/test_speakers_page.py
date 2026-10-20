@@ -202,8 +202,10 @@ def test_the_page_is_reached_from_the_strip_and_shows_the_cards(person, client):
     assert "SPEAKER_10" in body
     # No Suggest names while the assistant is off; no people box outside a case.
     assert 'id="suggest-names"' not in body and "Known in this case" not in body
-    # A name box on every card, open on the unnamed ones.
-    assert body.count('class="namebox"') == 4 and 'class="namebox" hidden' not in body
+    # Name or merge on every card (v1.143.0), primary on the unnamed ones;
+    # the name box is gone, the picker asks instead.
+    assert body.count("name-or-merge") == 4 and "namebox" not in body
+    assert 'class="primary tiny name-or-merge"' in body
 
     # Sound alone: an audio element and the waveform strip.
     sound = a_recording(person, video=False)
@@ -243,8 +245,10 @@ def test_the_window_route_shows_the_page_and_names_count_as_named(person, client
     )
     body = client.get(f"/recording/{recording.pk}/speakers").content.decode()
     assert "1 of 4 speakers named" in body
-    assert 'data-name="Ofc. Ruiz"' in body and 'class="namebox" hidden' in body
-    assert body.count('class="namebox" hidden') == 1
+    # The named card's Name or merge... is quiet; the unnamed ones' is primary.
+    assert 'data-name="Ofc. Ruiz"' in body
+    assert body.count('class="ghost tiny name-or-merge"') == 1
+    assert body.count('class="primary tiny name-or-merge"') == 3
     assert "Undo" in body and "renaming Speaker 1 to Ofc. Ruiz" in body
 
 
@@ -262,8 +266,12 @@ def test_a_new_person_from_the_page_takes_its_role_and_an_old_one_keeps_it(
     signed_in(client, person)
 
     body = client.get(f"/recording/{recording.pk}/speakers").content.decode()
-    assert "Known in this case" in body and 'data-name="M. Okafor"' in body
-    assert "<option>Officer</option>" in body and "New name takes the role" in body
+    # The case's people and the roles reach the card through the picker
+    # (v1.143.0); the page itself lists neither.
+    assert "Known in this case" not in body and "New name takes the role" not in body
+    offer = client.get(f"/recording/{recording.pk}/picker").json()
+    assert [one["name"] for one in offer["people"]] == ["M. Okafor"]
+    assert offer["roles"] == ["Officer", "Defendant"]
 
     url = f"/recording/{recording.pk}/speakers"
     # A new name with a Role on the list: the Person is made with it.

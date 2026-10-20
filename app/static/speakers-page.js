@@ -897,7 +897,7 @@
 
   // The speaker picker (v1.142.0): never a typed number. Opened under the
   // line's row, or under the card a sample sits on.
-  function giveLine(segment, anchor) {
+  function giveLine(segment, anchor, beside) {
     if (!window.Picker) {
       askWhich("Whose line is this?", "“" + segment.text.slice(0, 80) + "”", segment.speaker)
         .then(function (name) { if (name) { give(segment, name); } });
@@ -907,11 +907,46 @@
     window.Picker.open({
       recording: V.recording,
       anchor: anchor || rowAt(index) || null,
+      beside: beside || null,
       question: "Whose line is this?",
       quote: "“" + segment.text.slice(0, 80) + "”",
       current: segment.speaker,
       play: playRange,
       onPick: function (name, role) { return give(segment, name, role); }
+    });
+  }
+
+  // Name or merge (v1.143.0, the drawing phase-5-speakers-page-breathes.html):
+  // the picker beside the card asks "<speaker> is". Another speaker on the
+  // call is the same person (the merge, confirmed as before); a person of
+  // the case, or someone new with a role, names every line (the rename).
+  function nameOrMerge(card) {
+    var name = card.dataset.name;
+    if (!window.Picker) {
+      askWhich(name + " is the same person as...", "Every line of " + name + " takes that speaker's name.", name)
+        .then(function (onto) { if (onto) { merge(name, onto); } });
+      return;
+    }
+    var first = card.querySelector(".sample");
+    var quote = first && first.dataset.quote ? first.dataset.quote.slice(0, 60) : "";
+    window.Picker.open({
+      recording: V.recording,
+      anchor: card,
+      beside: card,
+      question: name + " is",
+      quote: quote ? "\u201c" + quote + "\u201d" : "",
+      current: name,
+      currentPill: "this one",
+      merging: true,
+      suggested: suggestedFor[name] || "",
+      newGo: "Name",
+      newHint: "Names every line of " + name + "; inside a case it also makes the person, and a name already in the case joins that person.",
+      play: playRange,
+      onPick: function (picked, role) {
+        if (!picked) { return; }
+        if (names().indexOf(picked) >= 0) { return merge(name, picked); }
+        return rename(name, picked, role);
+      }
     });
   }
 
@@ -933,36 +968,13 @@
       var wrong = event.target.closest(".not-voice");
       if (wrong) {
         var line = segments.filter(function (one) { return String(one.id) === String(wrong.dataset.segment); })[0];
-        if (line) { giveLine(line, card); }
+        if (line) { giveLine(line, card, card); }
         else { UI.toast("That line is not in the transcript any more; the page loads again.", { icon: "info" }); reloadHere(name); }
         return;
       }
-      if (event.target.closest(".name-speaker")) {
-        var box = card.querySelector(".namebox");
-        box.hidden = false;
-        var input = box.querySelector(".name-input");
-        input.focus();
-        input.select();
-        showPeople(card);
-        return;
-      }
-      if (event.target.closest(".name-cancel")) {
-        card.querySelector(".namebox").hidden = true;
-        return;
-      }
-      if (event.target.closest(".name-save")) {
-        var typed = card.querySelector(".name-input").value.trim();
-        var role = card.querySelector(".role-pick");
-        rename(name, typed, role ? role.value : "");
-        return;
-      }
-      var pickButton = event.target.closest(".pick");
-      if (pickButton) { rename(name, pickButton.dataset.name, ""); return; }
-      if (event.target.closest(".same-as")) {
-        askWhich(name + " is the same person as...", "Every line of " + name + " takes that speaker's name.", name)
-          .then(function (onto) { if (onto) { merge(name, onto); } });
-        return;
-      }
+      // Name or merge (v1.143.0): the one picker, beside the card, asks
+      // "<speaker> is"; rename, same person as and the name box folded into it.
+      if (event.target.closest(".name-or-merge")) { nameOrMerge(card); return; }
       var mergeInto = event.target.closest(".merge-into");
       if (mergeInto) { merge(name, mergeInto.dataset.onto); return; }
       var accept = event.target.closest(".accept");
@@ -981,39 +993,31 @@
       pick(name);
     });
 
-    cardsBox.addEventListener("keydown", function (event) {
-      if (!event.target.classList.contains("name-input")) { return; }
-      event.stopPropagation();
-      var card = event.target.closest(".sp-card");
-      if (event.key === "Enter") { event.preventDefault(); card.querySelector(".name-save").click(); }
-      if (event.key === "Escape" && !card.classList.contains("unnamed")) { card.querySelector(".namebox").hidden = true; }
-    });
-    cardsBox.addEventListener("input", function (event) {
-      if (event.target.classList.contains("name-input")) { showPeople(event.target.closest(".sp-card")); }
-    });
   }
 
-  // The case's people under the box: all of them until something is typed,
-  // then those that contain what was typed.
-  function showPeople(card) {
-    var list = card.querySelector(".people-pick");
-    if (!list) { return; }
-    var typed = card.querySelector(".name-input").value.trim().toLowerCase();
-    var narrowing = typed && typed !== card.dataset.name.toLowerCase();
-    var shown = 0;
-    Array.prototype.forEach.call(list.querySelectorAll("li"), function (row) {
-      var on = !narrowing || row.querySelector(".pick").dataset.name.toLowerCase().indexOf(typed) !== -1;
-      row.hidden = !on;
-      if (on) { shown += 1; }
-    });
-    var none = card.querySelector(".people-none");
-    if (none) { none.hidden = shown > 0; }
-  }
+  // A speaker split off a moment ago (v1.143.0): its card says where it
+  // came from, once, after the page has loaded again.
+  (function () {
+    var note = null;
+    try {
+      note = JSON.parse(window.sessionStorage.getItem("sp-split") || "null");
+      window.sessionStorage.removeItem("sp-split");
+    } catch (e) { note = null; }
+    if (!note || !note.name) { return; }
+    var card = cardOf(note.name);
+    var head = card ? card.querySelector(".h") : null;
+    if (!head) { return; }
+    var pill = document.createElement("span");
+    pill.className = "pill split-from";
+    pill.textContent = "split from " + note.from + " at " + note.at;
+    head.insertBefore(pill, head.querySelector(".label"));
+  })();
 
   // Suggest names: the AI assistant's feature, from the words, on request.
   // A suggestion lands on its speaker's card with Accept and Reject.
   var suggestLine = document.getElementById("suggest-line");
   var suggestTimer = null;
+  var suggestedFor = {};  // speaker -> the name the check suggested (v1.143.0: lit in the picker)
   var checkLine = document.getElementById("check-line");
   var correctionsBox = document.getElementById("corrections");
 
@@ -1046,13 +1050,17 @@
     }
     cards().forEach(function (card) {
       var box = card.querySelector(".suggested");
+      if (!box) { return; }
       box.hidden = true;
       box.innerHTML = "";
     });
+    suggestedFor = {};
     (body.pending || []).forEach(function (one) {
       var card = cardOf(one.speaker);
       if (!card) { return; }
       var box = card.querySelector(".suggested");
+      if (!box) { return; }
+      suggestedFor[one.speaker] = one.name;
       box.hidden = false;
       // Which way the line points (v1.105.0): the app says whether the
       // speaker gave the name themselves or was called by it.
@@ -1117,11 +1125,12 @@
       var mine = handovers.filter(function (one) { return one.speaker === card.dataset.name; });
       box.hidden = !mine.length;
       box.innerHTML = mine.map(function (one) {
+        // Two lines (v1.143.0): the words, then the sounds and the buttons.
         return "<div class='handover' data-handover='" + one.id + "' data-at='" + one.at + "'>" +
-          "<b>Another voice from " + escape(one.clock) + "</b> under this label, " + plural(one.lines_after, "line") + (one.voices === 3 ? ", a third voice later" : "") + ". " +
-          "<span class='hear3'><button type='button' class='hear-before' title='Play the six seconds before'>" + UI.icon("play") + " before</button><button type='button' class='hear-after' title='Play the six seconds after'>" + UI.icon("play") + " after</button></span> " +
-          "<button type='button' class='tiny split-handover'>Split here</button> " +
-          "<button type='button' class='ghost tiny dismiss-handover'>Not a different person</button></div>";
+          "<div class='said'><b>Another voice from " + escape(one.clock) + "</b> under this label, " + plural(one.lines_after, "line") + " after it" + (one.voices === 3 ? ", a third voice later" : "") + ".</div>" +
+          "<div class='acts'><span class='hear3'><button type='button' class='hear-before' title='Play the six seconds before'>" + UI.icon("play") + " before</button><button type='button' class='hear-after' title='Play the six seconds after'>" + UI.icon("play") + " after</button></span>" +
+          "<button type='button' class='tiny split-handover'>Split here...</button>" +
+          "<button type='button' class='ghost tiny dismiss-handover'>Not a different person</button></div></div>";
       }).join("");
     });
   }
@@ -1392,6 +1401,8 @@
           if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
           if (split) {
             if (answer.said.stale) { UI.toast("No line of that speaker lies after the time any more.", { icon: "info" }); refreshSuggestions(); return; }
+            // The new speaker's card says where it came from, once (v1.143.0).
+            try { window.sessionStorage.setItem("sp-split", JSON.stringify({ name: answer.said.made || "", from: card ? card.dataset.name : "", at: clock(at) })); } catch (e) { /* no storage */ }
             tell({ kind: "speakers-changed" });
             reloadHere(answer.said.made || picked);
             return;
@@ -1405,7 +1416,8 @@
       var card = box.closest(".sp-card");
       window.Picker.open({
         recording: V.recording,
-        anchor: box,
+        anchor: card || box,
+        beside: card || null,
         question: "From " + clock(at) + " the voice is",
         current: card ? card.dataset.name : "",
         newSpeaker: true,
