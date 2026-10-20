@@ -280,7 +280,10 @@ def _pull_voices(model: dict[str, Any] | None) -> list[str]:
         _say("  COULD NOT BE FETCHED")
         _say(f"    {exc}")
         return ["the voices model could not be fetched; is the server online?"]
-    got = Path(path).resolve().parent.name
+    # The snapshot folder's name is the revision; the file inside it is a
+    # link into the blob store, so the path is read as given, not resolved
+    # (v1.139.1: resolving it named the blobs folder and failed every pull).
+    got = Path(path).parent.name
     if pinned and got != pinned:
         _say(f"  revision {got}, but models.yaml pins {pinned}")
         return ["the voices model is not at the revision it is pinned to"]

@@ -21,6 +21,26 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.139.1, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The model pull's check of the voices model, which failed every pull at
+v1.139.0 on the first office server.
+
+- **The pull read the wrong folder's name.** After fetching the voices
+  model's file it compared the pinned revision with the name of the folder
+  the file's path resolves to, which is the hub's blob store, not the
+  snapshot, so every pull ended "the voices model is not at the revision it
+  is pinned to" though the file was fetched at that revision. The path is
+  now read as the hub gives it, and a test holds the rule. The diarizer
+  container asks for the file by revision and was never affected. An office
+  whose upgrade to v1.139.0 stopped at the pull upgrades to this release;
+  the file already fetched is reused.
+
 ## v1.139.0, 2026-10-19
 
 ```
