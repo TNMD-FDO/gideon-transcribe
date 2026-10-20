@@ -89,6 +89,14 @@
   .handover .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
   .cols .picker { max-width: 100%; }
+  .play3 { display: inline-flex; gap: 4px; align-items: center; }
+  .play3 .n { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+  .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; color: var(--accent); white-space: nowrap; }
+  .preview { border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; max-width: 380px; font-size: 13px; }
+  .preview .top { display: flex; gap: 8px; align-items: baseline; }
+  .preview .top .x { margin-left: auto; color: var(--muted); }
+  .preview .bar { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; }
+  .preview .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 35%; background: var(--accent); border-radius: 3px; }
   .cols .ln { grid-template-columns: 46px 90px 1fr auto; }
 
   /* the phone sheet */
@@ -115,6 +123,7 @@
     <h1>The speaker picker: whose is this line?</h1>
     <p class="lede"><b>Drawn 2026-10-20</b> for the maintainer to pick (the voice plan's section 13). Today "not this speaker" opens a box that asks for a typed number, and the recording page answers only to the number keys. One control instead, wherever the app asks whose a line or a voice is, and never a typed answer unless the person is new. Every name and line is made up.</p>
     <p class="lede">The same list, in the same order, everywhere: <b>On this call</b>, <b>In this case</b>, <b>Someone new</b>. Picking a person from the case puts them on the call as a speaker; Someone new makes the person in the case and the speaker on the call in one step. Number keys, arrows and Enter work as before.</p>
+    <p class="lede"><b>Added 2026-10-20, after the maintainer's question "what if the sample is wrong?"</b>: where the voice step has run, a speaker's samples are the lines nearest their voice print, never a length-chosen line that may be mislabelled; the play button cycles the three with a count; a person's sample from another recording opens in the floating Preview with that recording's title.</p>
   </header>
 
   <!-- Figure 1 -->
@@ -130,18 +139,18 @@
             <div class="q"><b>Whose line is this?</b><span class="muted small">“No, I told him Tuesday.”</span><span class="x">Esc</span></div>
             <div class="grp">
               <div class="gh">On this call</div>
-              <div class="opt now"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2 <span class="pill">has it now</span></span><span class="facts">73 lines</span><span class="play">▶</span></div>
-              <div class="opt focus"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="facts">96 lines · the person who answered</span><span class="play">▶</span></div>
-              <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play">▶</span></div>
+              <div class="opt now"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2 <span class="pill">has it now</span></span><span class="facts">73 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+              <div class="opt focus"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="facts">96 lines · the person who answered</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+              <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
               <div class="opt now"><kbd></kbd><span class="dot csys"></span><span class="nm csys">Call system <span class="pill">not a person</span></span><span class="facts">4 lines</span><span></span></div>
             </div>
             <div class="grp">
               <div class="gh">In this case, not yet on this call</div>
-              <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings · also called Mama</span><span class="play">▶</span></div>
-              <div class="opt"><kbd>5</kbd><span class="dot c5"></span><span class="nm">Lee Ortiz</span><span class="facts">in 1 recording</span><span class="play">▶</span></div>
+              <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings · also called Mama</span><span class="prev"><span class="play">▶</span>Preview</span></div>
+              <div class="opt"><kbd>5</kbd><span class="dot c5"></span><span class="nm">Lee Ortiz</span><span class="facts">in 1 recording</span><span class="prev"><span class="play">▶</span>Preview</span></div>
             </div>
             <div class="add"><span class="plus">+</span><span><b>Someone new</b> <span class="muted">· a person not yet in the case</span></span></div>
-            <div class="foot">Enter picks the lit one. A person picked from the case becomes a speaker on this call; the line moves at once, with Undo.</div>
+            <div class="foot">Enter picks the lit one. Play plays the line nearest this voice's print; press again for the next of three (2/3, 3/3). A person picked from the case becomes a speaker on this call; the line moves at once, with Undo.</div>
           </div>
         </div>
         <div class="ln"><span class="t">9:40</span><span class="lab c1">Speaker 1</span><span class="w">Because he never called back.</span><span class="right"></span></div>
@@ -149,7 +158,8 @@
     </div>
     <div class="caption">
       <p><b>On this call</b> lists the speakers as the cards have them, in the cards' order, with their colours, number keys and a play button for the speaker's sample, so a voice can be heard before it is chosen. The one the line has now is struck through and cannot be picked; the Call system is never offered a person's line.</p>
-      <p><b>In this case, not yet on this call</b> lists the Speakers tab's people who have no lines here, with role, where they appear and their Also called names. Picking one gives the line to that person and the person appears as a speaker on this call, with a card and a lane, at once.</p>
+      <p><b>The sample is the voice's, not a guess.</b> Where the voice step has run, each speaker's three samples are the lines nearest their voice print, one from each third of the recording; a mislabelled line sits far from the print and is never one. The same choice feeds the "hear voice 1, hear voice 2" buttons on every proposal. Where the voice step has not run, the length rule stays, with stuttered lines kept out (v1.141.0). The play button cycles the three, 1/3, 2/3, 3/3: three lines that disagree with each other are the sign of a mixed label, which the Speaker check is for.</p>
+      <p><b>In this case, not yet on this call</b> lists the Speakers tab's people who have no lines here, with role, where they appear and their Also called names. Their sample is in another recording, so Play opens the floating Preview (figure 5) with that recording's title, as the case chat's citations do. Picking one gives the line to that person and the person appears as a speaker on this call, with a card and a lane, at once.</p>
       <p><b>Someone new</b> opens the name box the cards already have (figure 2). Outside a case the second group is absent and Someone new makes a plain new speaker, "Speaker 4".</p>
       <p><b>No typing to choose.</b> The keyboard still works: the number keys as today, now including the case's people; arrows move the light; Enter picks; Esc closes. The sheet closes when the line moves.</p>
     </div>
@@ -181,11 +191,11 @@
             <div class="q"><b>From 14:03 the voice is</b><span class="x">Esc</span></div>
             <div class="grp">
               <div class="gh">On this call</div>
-              <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play">▶</span></div>
+              <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
             </div>
             <div class="grp">
               <div class="gh">In this case, not yet on this call</div>
-              <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="play">▶</span></div>
+              <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="prev"><span class="play">▶</span>Preview</span></div>
             </div>
             <div class="grp">
               <div class="gh">Or</div>
@@ -217,13 +227,13 @@
               <div class="q"><b>Whose line is this?</b><span class="x">Esc</span></div>
               <div class="grp">
                 <div class="gh">On this call</div>
-                <div class="opt now"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2 <span class="pill">has it now</span></span><span class="facts"></span><span class="play">▶</span></div>
-                <div class="opt focus"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="facts"></span><span class="play">▶</span></div>
-                <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts"></span><span class="play">▶</span></div>
+                <div class="opt now"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2 <span class="pill">has it now</span></span><span class="facts"></span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+                <div class="opt focus"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="facts"></span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+                <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts"></span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
               </div>
               <div class="grp">
                 <div class="gh">In this case, not yet on this call</div>
-                <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="play">▶</span></div>
+                <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="prev"><span class="play">▶</span>Preview</span></div>
               </div>
               <div class="add"><span class="plus">+</span><span><b>Someone new</b></span></div>
             </div>
@@ -247,6 +257,24 @@
     </div>
   </section>
 
+  <!-- Figure 5 (placed before the phone) -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5 · A person's sample from another recording</div><h2>The floating Preview the case chat already uses, with the recording named</h2></div>
+    <div class="cols">
+      <div class="preview">
+        <div class="top"><b>Dana Reyes</b><span class="muted small">Harbour Street stop · Call 2 · 3:12</span><span class="x">Esc</span></div>
+        <div class="bar"><i></i></div>
+        <div class="small muted">The line nearest her voice in that recording, 4 s. <span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+        <div class="small">“Yeah, this is Dana. Did you get the papers?”</div>
+        <div class="tiny muted">Playing here does not leave this page; the picker stays open behind.</div>
+      </div>
+      <div class="caption" style="margin-top: 0">
+        <p><b>Nothing new to learn.</b> The Preview is the card that plays a case chat citation or a Search hit without leaving the page (v1.98.0). Here it plays a person's sample from the recording the sample is in, named at the top, and cycles the three as the picker does.</p>
+        <p><b>Outside a case</b> there is no second group and no Preview; the picker is the call's speakers and Someone new.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Figure 4 -->
   <section>
     <div class="fig-head"><div class="eyebrow">Figure 4 · On a phone</div><h2>The picker rises from the foot as a sheet</h2></div>
@@ -264,11 +292,11 @@
           <div class="grip"></div>
           <div><b>Whose line is this?</b> <span class="muted small">9:31</span></div>
           <div class="gh">On this call</div>
-          <div class="opt"><span class="dot c1"></span><span><b class="c1">Speaker 1</b></span><span class="small muted">96 lines</span><span class="play">▶</span></div>
-          <div class="opt"><span class="dot c3"></span><span><b class="c3">Marcus Hale</b> <span class="pill">Officer</span></span><span class="small muted">31 lines</span><span class="play">▶</span></div>
+          <div class="opt"><span class="dot c1"></span><span><b class="c1">Speaker 1</b></span><span class="small muted">96 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+          <div class="opt"><span class="dot c3"></span><span><b class="c3">Marcus Hale</b> <span class="pill">Officer</span></span><span class="small muted">31 lines</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
           <div class="gh">In this case</div>
-          <div class="opt"><span class="dot c4"></span><span><b>Dana Reyes</b> <span class="pill">Client</span></span><span class="small muted">3 recordings</span><span class="play">▶</span></div>
-          <div class="opt"><span class="dot c5"></span><span><b>Lee Ortiz</b></span><span class="small muted">1 recording</span><span class="play">▶</span></div>
+          <div class="opt"><span class="dot c4"></span><span><b>Dana Reyes</b> <span class="pill">Client</span></span><span class="small muted">3 recordings</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
+          <div class="opt"><span class="dot c5"></span><span><b>Lee Ortiz</b></span><span class="small muted">1 recording</span><span class="play3"><span class="play">▶</span><span class="n">1/3</span></span></div>
           <div class="opt" style="border-bottom: 0"><span style="color: var(--accent); font-weight: 700">+</span><span><b>Someone new</b></span><span></span><span></span></div>
         </div>
       </div>
