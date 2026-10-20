@@ -40,7 +40,10 @@
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("click", onOutside, true);
     if (opened.box.parentNode) { opened.box.parentNode.removeChild(opened.box); }
+    var anchor = opened.options.anchor || null;
     opened = null;
+    // The page may move again, and returns to the line in hand (v1.142.1).
+    document.dispatchEvent(new CustomEvent("picker-close", { detail: { anchor: anchor } }));
   }
 
   function onOutside(event) {
@@ -208,6 +211,9 @@
     });
     document.addEventListener("keydown", onKey, true);
     window.setTimeout(function () { document.addEventListener("click", onOutside, true); }, 0);
+    // The page holds still while the picker is open (v1.142.1): following
+    // would scroll to a sample as it plays and take the row with it.
+    document.dispatchEvent(new CustomEvent("picker-open", { detail: { anchor: anchor || null } }));
     box.scrollIntoView({ block: "nearest" });
   }
 

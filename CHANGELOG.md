@@ -21,6 +21,21 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.142.1, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The page holds still while a picker is open.** On the recording page a
+  sample played from the speaker picker seeks the player, and following
+  then scrolled the transcript to that line, taking the row being judged
+  and the picker with it (the maintainer's find on v1.142.0); the Speakers
+  page followed the same way. While a picker is open nothing scrolls, the
+  picker stays under its row and the samples play from there; when it
+  closes, following resumes and the page returns to the line in hand.
+
 ## v1.142.0, 2026-10-20
 
 ```

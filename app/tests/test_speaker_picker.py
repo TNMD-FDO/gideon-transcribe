@@ -204,3 +204,16 @@ def test_a_runs_unreadable_vectors_never_break_a_hand_move(
     line.refresh_from_db()
     assert line.speaker == "Speaker 2"
     assert speaker_check.rescore(transcript) == 0
+
+
+def test_the_pages_hold_still_while_a_picker_is_open():
+    """v1.142.1: the picker says when it opens and closes, and neither page
+    scrolls to a playing sample while it is open."""
+    picker = (HERE / "static" / "picker.js").read_text(encoding="utf-8")
+    assert 'new CustomEvent("picker-open"' in picker
+    assert 'new CustomEvent("picker-close"' in picker
+    for name in ("viewer.js", "speakers-page.js"):
+        script = (HERE / "static" / name).read_text(encoding="utf-8")
+        assert 'addEventListener("picker-open"' in script, name
+        assert 'addEventListener("picker-close"' in script, name
+        assert "!holding" in script, name

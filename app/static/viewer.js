@@ -30,6 +30,22 @@
   var duration = 0;
   var following = true;
   var paused = false;
+  // Hold still while a speaker picker is open (v1.142.1): a sample played
+  // from the picker seeks the player, and following had scrolled the page to
+  // that line, taking the row being judged and the picker with it. The
+  // picker says when it opens and closes; while it is open nothing scrolls,
+  // and when it closes the page returns to the line in hand.
+  var holding = false;
+  var holdRow = null;
+  document.addEventListener("picker-open", function (event) {
+    holding = true;
+    holdRow = event.detail && event.detail.anchor ? event.detail.anchor : null;
+  });
+  document.addEventListener("picker-close", function () {
+    holding = false;
+    if (holdRow && holdRow.isConnected) { holdRow.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    holdRow = null;
+  });
   var matches = [];
   var atMatch = -1;
 
@@ -592,7 +608,7 @@
         // Scrolled to the centre only once it has left the middle of the
         // column. Centring every new line made a column of short lines
         // creep and bounce, a glide every second or two.
-        if (following && !paused && !now.querySelector("textarea") && outOfTheMiddle(now)) {
+        if (following && !paused && !holding && !now.querySelector("textarea") && outOfTheMiddle(now)) {
           now.scrollIntoView({ block: "center", behavior: "smooth" });
         }
       }
@@ -663,7 +679,7 @@
     if (followBox) { followBox.checked = true; }
     if (pill) { pill.hidden = true; }
     var row = column ? column.children[here] : null;
-    if (row) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    if (row && !holding) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
 
   if (reading) {

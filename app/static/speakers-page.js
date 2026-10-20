@@ -33,6 +33,22 @@
   var picked = "";
   var following = true;
   var paused = false;
+  // Hold still while a speaker picker is open (v1.142.1): a sample played
+  // from the picker seeks the player, and following had scrolled the page to
+  // that line, taking the row being judged and the picker with it. The
+  // picker says when it opens and closes; while it is open nothing scrolls,
+  // and when it closes the page returns to the line in hand.
+  var holding = false;
+  var holdRow = null;
+  document.addEventListener("picker-open", function (event) {
+    holding = true;
+    holdRow = event.detail && event.detail.anchor ? event.detail.anchor : null;
+  });
+  document.addEventListener("picker-close", function () {
+    holding = false;
+    if (holdRow && holdRow.isConnected) { holdRow.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    holdRow = null;
+  });
   var stopAt = null;        // a sample plays to the end of its line and stops
   var zoom = 0;             // seconds in view, 0 for the whole recording
   var windowFrom = 0;       // the lanes' first second when zoomed
@@ -500,7 +516,7 @@
       var row = rowAt(index);
       if (row) {
         row.classList.add("here");
-        if (following && !paused && !row.hidden && outOfTheMiddle(row)) {
+        if (following && !paused && !holding && !row.hidden && outOfTheMiddle(row)) {
           row.scrollIntoView({ block: "center", behavior: "smooth" });
         }
       }
@@ -539,7 +555,7 @@
     paused = false;
     if (pill) { pill.hidden = true; }
     var row = rowAt(here);
-    if (row && !row.hidden) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    if (row && !row.hidden && !holding) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
   if (reading) {
     window.addEventListener("wheel", function (event) {
@@ -782,7 +798,7 @@
     filter();
     drawLanes();
     var row = column ? column.querySelector(".seg.mine") : null;
-    if (row && following && !paused) { row.scrollIntoView({ block: "center" }); }
+    if (row && following && !paused && !holding) { row.scrollIntoView({ block: "center" }); }
   }
 
   function fillCounts() {
