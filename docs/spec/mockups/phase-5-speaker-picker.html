@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speaker picker</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sp5: #0e7490; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #67c3d6; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #67c3d6; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.on { border-color: var(--accent); color: var(--accent); }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--muted); background: var(--surface); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .c4 { --c: var(--sp4); color: var(--sp4); } .c5 { --c: var(--sp5); color: var(--sp5); } .csys { --c: var(--sys); color: var(--sys); }
+
+  /* the transcript rows */
+  .spine { border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+  .ln { display: grid; grid-template-columns: 46px 150px 1fr auto; gap: 8px; align-items: start; padding: 7px 4px; border-bottom: 1px solid var(--line); font-size: 14px; position: relative; }
+  .ln .t { font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 2px; }
+  .ln .lab { font-size: 13px; font-weight: 600; }
+  .ln .right { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+  .ln.here { background: var(--surface-2); outline: 2px solid var(--accent); outline-offset: -2px; }
+  .ln.sys .w, .ln.sys .lab { color: var(--sys); font-style: italic; font-weight: 400; }
+
+  /* the picker */
+  .picker { grid-column: 2 / -1; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 460px; font-size: 13px; }
+  .picker .q { display: flex; gap: 8px; align-items: baseline; }
+  .picker .q b { font-size: 14px; }
+  .picker .q .x { margin-left: auto; color: var(--muted); }
+  .picker .grp { display: flex; flex-direction: column; gap: 2px; }
+  .picker .grp .gh { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding: 4px 0 2px; }
+  .picker .opt { display: grid; grid-template-columns: 22px 10px 1fr auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: var(--radius); }
+  .picker .opt:hover, .picker .opt.focus { background: var(--accent-soft); }
+  .picker .opt.now { color: var(--muted); }
+  .picker .opt.now .nm { text-decoration: line-through; }
+  .picker .opt .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker .opt .nm .pill { font-weight: 400; margin-left: 6px; }
+  .picker .opt .facts { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .picker .add { display: flex; gap: 8px; align-items: center; padding: 6px; border-top: 1px dashed var(--line); margin-top: 4px; }
+  .picker .add .plus { width: 22px; text-align: center; color: var(--accent); font-weight: 700; }
+  .picker .newbox { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; padding: 6px 6px 2px; }
+  .picker .newbox input, .picker .newbox select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); min-width: 0; }
+  .picker .foot { font-size: 11px; color: var(--muted); padding-top: 2px; }
+
+  /* cards and the hand-over */
+  .who { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px 8px 0; display: flex; gap: 10px; max-width: 420px; }
+  .who .lane { width: 6px; border-radius: 0 3px 3px 0; flex: none; background: var(--c); }
+  .who .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .who .name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .who .facts { font-size: 12px; color: var(--muted); }
+  .handover { display: flex; flex-direction: column; gap: 6px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: var(--radius-lg); }
+  .handover .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
+  .cols .picker { max-width: 100%; }
+  .cols .ln { grid-template-columns: 46px 90px 1fr auto; }
+
+  /* the phone sheet */
+  .phone { width: 375px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); overflow: hidden; position: relative; height: 560px; }
+  .phone .screen { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; filter: brightness(.92); }
+  .phone .ln { grid-template-columns: 46px 1fr; }
+  .phone .ln .w { grid-column: 1 / -1; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--accent); border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,.18); padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .sheet .grip { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 4px; }
+  .sheet .opt { display: grid; grid-template-columns: 10px 1fr auto auto; gap: 10px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .sheet .gh { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding-top: 6px; }
+
+  /* the case tab */
+  .person { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .person .facts { font-size: 12px; color: var(--muted); }
+  .addrow { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; padding-top: 10px; }
+  .addrow input, .addrow select { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The speaker picker: whose is this line?</h1>
+    <p class="lede"><b>Drawn 2026-10-20</b> for the maintainer to pick (the voice plan's section 13). Today "not this speaker" opens a box that asks for a typed number, and the recording page answers only to the number keys. One control instead, wherever the app asks whose a line or a voice is, and never a typed answer unless the person is new. Every name and line is made up.</p>
+    <p class="lede">The same list, in the same order, everywhere: <b>On this call</b>, <b>In this case</b>, <b>Someone new</b>. Picking a person from the case puts them on the call as a speaker; Someone new makes the person in the case and the speaker on the call in one step. Number keys, arrows and Enter work as before.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The Speakers page, "not this speaker" on a row</div><h2>The picker opens under the line, anchored, with the three groups</h2></div>
+    <div class="work">
+      <div class="spine">
+        <div class="ln"><span class="t">9:21</span><span class="lab c1">Speaker 1</span><span class="w">Did you get the papers I sent?</span><span class="right"></span></div>
+        <div class="ln here">
+          <span class="t">9:31</span><span class="lab c2">Speaker 2</span><span class="w">No, I told him Tuesday.</span>
+          <span class="right"><span class="btn ghost tiny">play</span><span class="btn tiny on">not this speaker</span></span>
+          <div class="picker">
+            <div class="q"><b>Whose line is this?</b><span class="muted small">“No, I told him Tuesday.”</span><span class="x">Esc</span></div>
+            <div class="grp">
+              <div class="gh">On this call</div>
+              <div class="opt now"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2 <span class="pill">has it now</span></span><span class="facts">73 lines</span><span class="play">▶</span></div>
+              <div class="opt focus"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="facts">96 lines · the person who answered</span><span class="play">▶</span></div>
+              <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play">▶</span></div>
+              <div class="opt now"><kbd></kbd><span class="dot csys"></span><span class="nm csys">Call system <span class="pill">not a person</span></span><span class="facts">4 lines</span><span></span></div>
+            </div>
+            <div class="grp">
+              <div class="gh">In this case, not yet on this call</div>
+              <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings · also called Mama</span><span class="play">▶</span></div>
+              <div class="opt"><kbd>5</kbd><span class="dot c5"></span><span class="nm">Lee Ortiz</span><span class="facts">in 1 recording</span><span class="play">▶</span></div>
+            </div>
+            <div class="add"><span class="plus">+</span><span><b>Someone new</b> <span class="muted">· a person not yet in the case</span></span></div>
+            <div class="foot">Enter picks the lit one. A person picked from the case becomes a speaker on this call; the line moves at once, with Undo.</div>
+          </div>
+        </div>
+        <div class="ln"><span class="t">9:40</span><span class="lab c1">Speaker 1</span><span class="w">Because he never called back.</span><span class="right"></span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>On this call</b> lists the speakers as the cards have them, in the cards' order, with their colours, number keys and a play button for the speaker's sample, so a voice can be heard before it is chosen. The one the line has now is struck through and cannot be picked; the Call system is never offered a person's line.</p>
+      <p><b>In this case, not yet on this call</b> lists the Speakers tab's people who have no lines here, with role, where they appear and their Also called names. Picking one gives the line to that person and the person appears as a speaker on this call, with a card and a lane, at once.</p>
+      <p><b>Someone new</b> opens the name box the cards already have (figure 2). Outside a case the second group is absent and Someone new makes a plain new speaker, "Speaker 4".</p>
+      <p><b>No typing to choose.</b> The keyboard still works: the number keys as today, now including the case's people; arrows move the light; Enter picks; Esc closes. The sheet closes when the line moves.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · Someone new, and a hand-over's Split</div><h2>The same picker where a new voice gets its name</h2></div>
+    <div class="cols">
+      <div class="work">
+        <div class="eyebrow">Someone new, opened from figure 1</div>
+        <div class="picker" style="max-width: none">
+          <div class="q"><b>Someone new</b><span class="x">back</span></div>
+          <div class="newbox">
+            <input type="text" value="Priya Nair" aria-label="Name">
+            <select aria-label="Role"><option>Client</option><option selected>Family</option><option>Officer</option><option>no role</option></select>
+            <span class="btn primary">Add and give this line</span>
+          </div>
+          <div class="foot">Makes Priya Nair in the case (Family) and a speaker on this call with this one line; the Speakers tab lists her at once. A name already in the case is offered above instead of made twice.</div>
+        </div>
+      </div>
+      <div class="work">
+        <div class="eyebrow">A hand-over on a card: Split, into whom?</div>
+        <div class="handover">
+          <span><span class="pill bad">hand-over</span> <b>Speaker 1 sounds like a different person from 14:03</b>, the last 31 lines.</span>
+          <div class="acts"><span class="tiny muted">hear</span><span class="play">▶</span><span class="tiny muted">13:52</span><span class="play">▶</span><span class="tiny muted">14:06</span></div>
+          <div class="acts"><span class="btn tiny on">Split here</span><span class="btn ghost tiny">Not a different person</span></div>
+          <div class="picker" style="max-width: none; margin-top: 4px">
+            <div class="q"><b>From 14:03 the voice is</b><span class="x">Esc</span></div>
+            <div class="grp">
+              <div class="gh">On this call</div>
+              <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts">31 lines</span><span class="play">▶</span></div>
+            </div>
+            <div class="grp">
+              <div class="gh">In this case, not yet on this call</div>
+              <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="play">▶</span></div>
+            </div>
+            <div class="grp">
+              <div class="gh">Or</div>
+              <div class="opt focus"><kbd></kbd><span class="dot"></span><span class="nm">A new speaker on this call</span><span class="facts">"Speaker 5", to be named later</span><span></span></div>
+            </div>
+            <div class="add"><span class="plus">+</span><span><b>Someone new</b></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Split asks whom the lines go to.</b> Today a split makes "Speaker N" and the naming comes after. With the picker the 31 lines can go straight to a known person, or to a new speaker as now, which stays the lit default so one Enter does what Split did before.</p>
+      <p><b>The name box is the one the cards have</b>, with the Admin's roles. A name typed that is already a person in the case is not made twice: the picker shows the match above the box and Enter picks it.</p>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · The recording page and the case's Speakers tab</div><h2>The same control on the line in hand, and the same box where people are added</h2></div>
+    <div class="cols">
+      <div class="work">
+        <div class="eyebrow">The recording page: the line being played</div>
+        <div class="spine">
+          <div class="ln"><span class="t">9:21</span><span class="lab c1">Speaker 1</span><span class="w">Did you get the papers I sent?</span><span class="right"></span></div>
+          <div class="ln here">
+            <span class="t">9:31</span><span class="lab c2">Speaker 2</span><span class="w">No, I told him Tuesday.</span>
+            <span class="right"><span class="btn ghost tiny">clip</span><span class="btn ghost tiny">note</span><span class="btn tiny on">speaker</span></span>
+            <div class="picker">
+              <div class="q"><b>Whose line is this?</b><span class="x">Esc</span></div>
+              <div class="grp">
+                <div class="gh">On this call</div>
+                <div class="opt now"><kbd>2</kbd><span class="dot c2"></span><span class="nm c2">Speaker 2 <span class="pill">has it now</span></span><span class="facts"></span><span class="play">▶</span></div>
+                <div class="opt focus"><kbd>1</kbd><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="facts"></span><span class="play">▶</span></div>
+                <div class="opt"><kbd>3</kbd><span class="dot c3"></span><span class="nm c3">Marcus Hale <span class="pill">Officer</span></span><span class="facts"></span><span class="play">▶</span></div>
+              </div>
+              <div class="grp">
+                <div class="gh">In this case, not yet on this call</div>
+                <div class="opt"><kbd>4</kbd><span class="dot c4"></span><span class="nm">Dana Reyes <span class="pill">Client</span></span><span class="facts">in 3 recordings</span><span class="play">▶</span></div>
+              </div>
+              <div class="add"><span class="plus">+</span><span><b>Someone new</b></span></div>
+            </div>
+          </div>
+          <div class="ln"><span class="t">9:40</span><span class="lab c1">Speaker 1</span><span class="w">Because he never called back.</span><span class="right"></span></div>
+        </div>
+        <p class="small muted" style="margin: 8px 0 0">A <b>speaker</b> button joins the line's actions beside clip and note; the number keys do what they did. The Speakers strip's chips and Manage speakers are unchanged.</p>
+      </div>
+      <div class="work">
+        <div class="eyebrow">The case page's Speakers tab</div>
+        <div class="person"><span><b>Dana Reyes</b> <span class="pill">Client</span><div class="facts">in 3 recordings · also called Mama</div></span><span class="btn ghost tiny">rename</span></div>
+        <div class="person"><span><b>Lee Ortiz</b><div class="facts">in 1 recording · also called Coach</div></span><span class="btn ghost tiny">rename</span></div>
+        <div class="person"><span><b>Marcus Hale</b> <span class="pill">Officer</span><div class="facts">in 2 recordings</div></span><span class="btn ghost tiny">rename</span></div>
+        <div class="addrow">
+          <input type="text" placeholder="Add a person" aria-label="Add a person">
+          <select aria-label="Role"><option>no role</option><option>Client</option><option>Family</option><option>Officer</option></select>
+          <span class="btn">Add</span>
+        </div>
+        <p class="small muted" style="margin: 8px 0 0">The same name and role box. A person added here is offered on every call of the case from the next picker opened, in the second group.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · On a phone</div><h2>The picker rises from the foot as a sheet</h2></div>
+    <div class="cols">
+      <div class="phone">
+        <div class="screen">
+          <div class="eyebrow">Speakers</div>
+          <div class="spine">
+            <div class="ln"><span class="t">9:21</span><span class="lab c1">Speaker 1</span><span class="w">Did you get the papers I sent?</span></div>
+            <div class="ln here"><span class="t">9:31</span><span class="lab c2">Speaker 2</span><span class="w">No, I told him Tuesday.</span></div>
+            <div class="ln"><span class="t">9:40</span><span class="lab c1">Speaker 1</span><span class="w">Because he never called back.</span></div>
+          </div>
+        </div>
+        <div class="sheet">
+          <div class="grip"></div>
+          <div><b>Whose line is this?</b> <span class="muted small">9:31</span></div>
+          <div class="gh">On this call</div>
+          <div class="opt"><span class="dot c1"></span><span><b class="c1">Speaker 1</b></span><span class="small muted">96 lines</span><span class="play">▶</span></div>
+          <div class="opt"><span class="dot c3"></span><span><b class="c3">Marcus Hale</b> <span class="pill">Officer</span></span><span class="small muted">31 lines</span><span class="play">▶</span></div>
+          <div class="gh">In this case</div>
+          <div class="opt"><span class="dot c4"></span><span><b>Dana Reyes</b> <span class="pill">Client</span></span><span class="small muted">3 recordings</span><span class="play">▶</span></div>
+          <div class="opt"><span class="dot c5"></span><span><b>Lee Ortiz</b></span><span class="small muted">1 recording</span><span class="play">▶</span></div>
+          <div class="opt" style="border-bottom: 0"><span style="color: var(--accent); font-weight: 700">+</span><span><b>Someone new</b></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="caption" style="margin-top: 0">
+        <p><b>A sheet from the foot</b>, as the chat drawer and the Preview already do on a phone, with the same groups and play buttons; the current speaker is left out rather than struck through, to save the room.</p>
+        <p><b>What it decides.</b> One picker everywhere the app asks whose a line or a voice is; a typed name only for someone new; the case's people reachable from any call of the case; a new person made where the voice is heard, not on another page first.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
