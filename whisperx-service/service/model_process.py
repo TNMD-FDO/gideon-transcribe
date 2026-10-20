@@ -13,6 +13,7 @@ is too big to be worth passing through a pipe.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import threading
@@ -303,7 +304,7 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
         _counter(pipeline),
     )
     if prompt.text:
-        pipeline.options = pipeline.options._replace(initial_prompt=prompt.text)
+        pipeline.options = with_prompt(pipeline.options, prompt.text)
 
     # Transcribe --------------------------------------------------------------
 
@@ -564,6 +565,23 @@ def _run_diarize_only(engine: Engine, job: dict[str, Any], outbox, stage) -> Non
             peak_vram_gb=round(peak_used, 2),
         )
     )
+
+
+def with_prompt(options, text: str):
+    """The transcription options with the vocabulary prompt set (v1.141.1).
+
+    faster-whisper 1.2 made TranscriptionOptions a dataclass; before it the
+    options were a NamedTuple with `_replace`. The first service called
+    `_replace`, and from the pins release (v1.135.0) every job that carried a
+    vocabulary or a context failed as internal while a job without one ran,
+    which hid it for five days. Both shapes are taken here, and the
+    self-test proves the shape at bring-up.
+    """
+    if dataclasses.is_dataclass(options):
+        return dataclasses.replace(options, initial_prompt=text)
+    if hasattr(options, "_replace"):
+        return options._replace(initial_prompt=text)
+    raise TypeError("the transcription options take no prompt the service can set")
 
 
 def _counter(pipeline):

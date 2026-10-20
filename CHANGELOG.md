@@ -21,6 +21,29 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.141.1, 2026-10-20
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **A recording with a vocabulary could not be transcribed.** Since the
+  pins release (v1.135.0, 15 October) every transcription that carried a
+  vocabulary or a context failed inside the transcription service as
+  "internal", while one without ran; it came to light today on a Process
+  again of a call in a case with People, whose names go to recognition.
+  faster-whisper 1.2 had made its transcription options a dataclass and the
+  service still set the prompt the NamedTuple way. The service sets it
+  either way now (service 0.6.1), and its self-test proves the options'
+  shape at bring-up, so a pin that changes it fails there and not on the
+  first recording. The upgrade rebuilds the whisperx image.
+- **A failed Process again says so.** When the last Process again of a
+  recording failed, the recording page carries a banner, "The last Process
+  again did not finish: <the reason>. This is the earlier transcript,
+  kept.", in place of looking as if the new transcription had landed with
+  the old speakers and names.
+
 ## v1.141.0, 2026-10-20
 
 ```

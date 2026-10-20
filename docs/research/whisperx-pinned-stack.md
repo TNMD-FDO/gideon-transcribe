@@ -9,7 +9,7 @@ Research date: 2026-09-01. Target: two RTX PRO 6000 Blackwell (sm_120, 96 GB GDD
 | Base image | `nvidia/cuda:12.8.2-base-ubuntu24.04` | CUDA 12.x runs on any driver >= 525 [S2]; driver 595 natively supports CUDA 13.x [S3]. The only ubuntu26.04 images are 13.3.x, which need driver >= 610 [S2][S4]. The torch cu128 wheels bring their own CUDA 12.8 libs, so "base" is enough. | [S4] |
 | Python | 3.12 | whisperx needs `>=3.10,<3.14` [S5]; torch 2.8.0 ships cp39-cp313 [S6]; torchcodec 0.7 is `<=3.13` [S7] | |
 | whisperx | 3.8.6 (2026-05-25) | latest stable; 3.8.7rc1 (2026-06-26) is a prerelease | [S5] |
-| faster-whisper | 1.2.1 (2025-10-31) | latest; Silero VAD v6 | [S8][S9] |
+| faster-whisper | 1.2.1 (2025-10-31) | latest; Silero VAD v6; its TranscriptionOptions is a dataclass from 1.2, where it had been a NamedTuple, so the service sets the vocabulary prompt with `dataclasses.replace` (v1.141.1; the first service's `_replace` failed every prompted job from the pins release until then) | [S8][S9] |
 | ctranslate2 | 4.8.2 (2026-08-31) | latest; includes the sm120 INT8 fix from 4.6.2 and CUDA 12.8 wheels from 4.6.3 | [S10][S11] |
 | torch / torchaudio | 2.8.0+cu128 (2025-08-06) | whisperx pins `torch~=2.8.0`, `torchaudio~=2.8.0` [S5]; install from `download.pytorch.org/whl/cu128` [S12] | [S6] |
 | torchvision | 0.23.0 | whisperx pins `~=0.23.0`; pairs with torch 2.8 [S13] | [S5] |

@@ -9,6 +9,11 @@
     <p class="banner">
       A new transcription is in progress; this transcript will be replaced.
     </p>
+  {% elif replacement_failed %}
+    {% comment %}v1.141.1: a failed Process again had left the earlier transcript looking like the new one.{% endcomment %}
+    <p class="banner">
+      The last Process again did not finish: {{ replacement_failed }} This is the earlier transcript, kept.
+    </p>
   {% endif %}
 
   <div class="desk{% if not is_video %} sound{% endif %}">

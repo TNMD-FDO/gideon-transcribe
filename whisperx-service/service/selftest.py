@@ -104,7 +104,35 @@ def _package_versions() -> list[str]:
         except PackageNotFoundError:
             _line(name, "MISSING")
             problems.append(f"the package {name} is not installed")
+    problems += _options_take_a_prompt()
     return problems
+
+
+def _options_take_a_prompt() -> list[str]:
+    """Whether faster-whisper's transcription options have a shape the
+    service can set the vocabulary prompt on (v1.141.1): a dataclass, or a
+    NamedTuple. A pin that changes the shape fails here, at bring-up, and
+    not on the first recording that carries a vocabulary."""
+    import dataclasses
+
+    try:
+        from faster_whisper.transcribe import TranscriptionOptions
+    except ImportError:
+        # Said by the package check above; nothing more to add.
+        return []
+    shape = (
+        "dataclass"
+        if dataclasses.is_dataclass(TranscriptionOptions)
+        else ("namedtuple" if hasattr(TranscriptionOptions, "_replace") else "unknown")
+    )
+    _line("options shape", shape)
+    if shape == "unknown":
+        return [
+            "faster-whisper's TranscriptionOptions is neither a dataclass nor a "
+            "NamedTuple, so the service cannot set the vocabulary prompt; the "
+            "service's with_prompt needs updating for this pin"
+        ]
+    return []
 
 
 # What the self-test says but does not fail on (v1.84.0).

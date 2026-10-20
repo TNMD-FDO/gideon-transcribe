@@ -320,6 +320,10 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # What Undo in the Speakers panel would undo, in words.
         "last_change": last_change_line(transcript) if transcript else "",
         "being_replaced": being_replaced(recording),
+        # The last Process again failed after this transcript was made
+        # (v1.141.1): said on the page, since the earlier transcript staying
+        # had looked like the new one landing with the old speakers and names.
+        "replacement_failed": replacement_failed(recording),
         # The Export menu's with-notes entries show only while a line has one.
         "has_notes": bool(
             transcript is not None and transcript.segments.exclude(note="").exists()
@@ -674,6 +678,21 @@ def note_at(request: HttpRequest, recording_id) -> JsonResponse:
         return JsonResponse({"saved": True, "on": "line", "line": spoken.pk, **saved})
     saved = notes.note_at(recording, at, words, by=request.user, request=request)
     return JsonResponse({"saved": True, "on": "moment", "moment": saved})
+
+
+def replacement_failed(recording) -> str:
+    """The plain reason when the latest Process again of this Recording
+    failed after its Transcript was made, else "" (v1.141.1)."""
+    from core.jobs import JobState
+
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return ""
+    again = recording.jobs.filter(batch__is_reprocessing=True)
+    last = again.filter(created__gt=transcript.created).order_by("-created").first()
+    if last is None or last.state != JobState.FAILED:
+        return ""
+    return last.failure_message or "the transcription service failed"
 
 
 def being_replaced(recording) -> bool:
