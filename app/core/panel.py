@@ -90,6 +90,19 @@ def tray_rows(tray: dict) -> list[dict]:
     rows = []
     for key, wanted in tray.items():
         known = settings_store.definition(key)
+        note = ""
+        if key == "remember_voices" and not wanted:
+            # The page says what Off deletes before the switch is thrown
+            # (Phase 5 chapter 2 rule 4).
+            from core import voice_prints
+
+            held = voice_prints.counts_for_switch()
+            note = (
+                "Off deletes every voice print the office holds: "
+                f"{held['people']} {'person' if held['people'] == 1 else 'people'} "
+                f"across {held['cases']} case{'' if held['cases'] == 1 else 's'}. "
+                "The names stay; only the voices are forgotten."
+            )
         rows.append(
             {
                 "key": key,
@@ -97,6 +110,7 @@ def tray_rows(tray: dict) -> list[dict]:
                 "page": known.page,
                 "was": settings_store.shown(key),
                 "now": settings_store.shown(key, wanted),
+                "note": note,
             }
         )
     return sorted(rows, key=lambda one: one["name"])

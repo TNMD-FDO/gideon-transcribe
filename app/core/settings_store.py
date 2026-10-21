@@ -2286,6 +2286,31 @@ def _rows() -> list[Definition]:
             ),
             when_changed="The next check. Nothing already checked changes.",
         ),
+        # Voice prints (Phase 5 chapter 2 in force, ADR 0021 decision 6, the
+        # voice plan's fourth release, v1.144.0).
+        Definition(
+            key="remember_voices",
+            page=SPEAKERS,
+            group="The voice",
+            name="Remember voices across a case",
+            kind=TOGGLE,
+            default=False,
+            needs="folder_management",
+            what_it_does=(
+                "Whether a person's voice print is kept inside a case, learnt "
+                "from the names and matches people accept, so a later "
+                'recording in the case can say "sounds like" that person on '
+                "its Speakers page, with the person's voice to play beside it. "
+                "Nothing is named by the voice alone. Content: never logged, "
+                "exported or shared across cases. Works on the recording "
+                "types listed above, where the check listens."
+            ),
+            when_changed=(
+                "On: prints are learnt from the next names and matches people "
+                "accept. Off: every voice print the office holds is deleted at "
+                "once and each case says so; the names stay."
+            ),
+        ),
         # The Call system (ADR 0021, the voice plan's first release, v1.138.0).
         Definition(
             key="call_system_available",
@@ -3198,6 +3223,12 @@ def set_to(key: str, value) -> None:
         )
 
     forget(key)
+
+    if key == "remember_voices" and not wanted:
+        # Off deletes every print (Phase 5 chapter 2 rule 4), at once.
+        from core import voice_prints
+
+        voice_prints.forget_everything()
 
     if key == "folder_management":
         # The days nobody could reach a Case are recorded as they pass,

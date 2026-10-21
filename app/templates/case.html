@@ -374,7 +374,7 @@
           {% if people %}
             <table class="tbl" id="people">
               <thead>
-                <tr><th>Name</th><th>Role</th><th>Notes</th><th>Appears in</th><th></th></tr>
+                <tr><th>Name</th><th>Role</th><th>Notes</th><th>Appears in</th>{% if voice.remember or voice.any_voice %}<th>Voice</th>{% endif %}<th></th></tr>
               </thead>
               <tbody>
                 {% for row in people %}
@@ -396,9 +396,34 @@
                         <span class="muted small">in 0 recordings</span>
                       {% endif %}
                     </td>
+                    {% if voice.remember or voice.any_voice %}
+                      {% comment %}The Voice column (Phase 5 chapter 2, v1.144.0; the drawing phase-5-voice-prints.html, figure 2): the print's state, a play of the voice, the chain, what waits with where it is decided, the dismissal line.{% endcomment %}
+                      <td>
+                        <div class="voice">
+                          {% with v=row.voice %}
+                            {% if v.has_print %}
+                              <span>print from {{ v.parts }} recording{{ v.parts|pluralize }}
+                                {% if v.heard %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ v.heard.recording }}" data-preview-at="{{ v.heard.start }}" title="Hear {{ row.person.name }} on {{ v.heard.title }}">{% icon "play" %} hear them</button>{% endif %}
+                                {% if v.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% endif %}</span>
+                            {% elif v.unlearnt_at %}
+                              <span class="muted small">voice unlearnt {{ v.unlearnt_at|date:"j M" }}{% if v.unlearnt_by %} by {{ v.unlearnt_by }}{% endif %}</span>
+                            {% else %}
+                              <span class="muted small">no print yet: a print is made when a line of theirs is named with the voice on</span>
+                            {% endif %}
+                            {% if v.chain %}<span class="chain">{% for link in v.chain %}{{ link|capfirst }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>{% endif %}
+                            {% if v.called_out %}<span class="called-out">Matches to {{ row.person.name }} were turned down {{ voice.dismissals_to_call_out|default:3 }} times this month. If the print keeps being wrong, unlearn it and name them by hand once more.</span>{% endif %}
+                            {% if v.waiting %}
+                              <span class="waiting">{{ v.waiting|length }} call{{ v.waiting|length|pluralize }} sound{{ v.waiting|length|pluralize:"s," }} like them, waiting:
+                                {% for w in v.waiting %}<a href="{% url 'speakers' w.recording.pk %}?pick={{ w.speaker|urlencode }}">{{ w.recording.title }}, {{ w.speaker }}</a> ({{ w.rating }}){% if w.others %} &middot; and like {{ w.others }} other{{ w.others|pluralize }}: the card offers both{% endif %}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+                              </span>
+                            {% endif %}
+                          {% endwith %}
+                        </div>
+                      </td>
+                    {% endif %}
                     <td>
                       <details class="person-acts">
-                        <summary class="small">Rename, edit, merge, delete</summary>
+                        <summary class="small">Rename, edit, merge, delete{% if row.voice.has_print %}, unlearn{% endif %}</summary>
                         <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
                           {% csrf_token %}
                           <input type="hidden" name="action" value="rename">
@@ -437,6 +462,20 @@
                           <input type="hidden" name="action" value="delete">
                           <button type="submit" class="small ghost danger">Delete person</button>
                         </form>
+                        {% if row.voice.has_print %}
+                          {% comment %}Unlearn (ADR 0021 decision 6; figure 4 of the drawing): the chain above it, the box lists each recording by what happens to it.{% endcomment %}
+                          {% with p=row.voice.preview %}
+                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 10px; align-items: center"
+                                data-confirm-title="Unlearn {{ row.person.name }}'s voice?"
+                                data-confirm="The voice print is deleted and this case stops recognising {{ row.person.name }} by sound until a name is accepted again.{% if p.returned %} The speakers the voice named go back to unnamed and are marked on {{ p.returned|join:", " }}, with the samples kept so they can be named again by ear.{% endif %}{% if p.kept %} Named by hand, {{ p.kept|join:", " }} stay{{ p.kept|length|pluralize:"s," }} {{ row.person.name }}.{% endif %}{% if p.waiting %} {{ p.waiting }} match{{ p.waiting|pluralize:"es" }} waiting {{ p.waiting|pluralize:"is,are" }} withdrawn.{% endif %} Written to the case's audit as counts only."
+                                data-confirm-ok="Unlearn" data-danger>
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="unlearn">
+                            <button type="submit" class="small ghost danger">Unlearn their voice</button>
+                            <span class="muted tiny">the names given by hand stay</span>
+                          </form>
+                          {% endwith %}
+                        {% endif %}
                       </details>
                     </td>
                   </tr>
@@ -445,6 +484,37 @@
             </table>
           {% else %}
             <p class="muted small">No people yet. Name a speaker in a recording's viewer, accept a suggestion, or add one here.</p>
+          {% endif %}
+
+          {% comment %}The Case remembers (v1.144.0): the Side rule's alarm, the forgotten note, and Decided so far per source and per person.{% endcomment %}
+          {% if voice.forgotten_at %}
+            <p class="notice warn" style="margin-top: 10px">Voices were forgotten on {{ voice.forgotten_at|date:"j M Y" }}, when the Admin turned Remember voices off. The names stayed; a print is learnt again from the next name or match accepted while it is on.</p>
+          {% endif %}
+          {% for alarm in voice.side_alarms %}
+            <div class="voice-alarm">
+              <b>{{ alarm.speaker }} on {{ alarm.recording.title }} is {{ alarm.person }} by the case rule, but does not sound like them.</b>
+              <div class="muted">Nothing is renamed. The card on <a href="{% url 'speakers' alarm.recording.pk %}?pick={{ alarm.speaker|urlencode }}">that call's Speakers page</a> plays their voice beside that side and asks whether it is them on this call.</div>
+            </div>
+          {% endfor %}
+          {% if voice.remember and voice.any_voice %}
+            <div class="decided-so-far">
+              <div class="card">
+                <b>Decided so far in this case</b>
+                <table>
+                  <tr><th>Source</th><th>Accepted</th><th>Dismissed</th></tr>
+                  {% for d in voice.decided %}<tr><td>{{ d.source }}</td><td>{{ d.accepted }}</td><td>{{ d.dismissed }}</td></tr>{% endfor %}
+                </table>
+              </div>
+              {% if voice.per_person_counts %}
+              <div class="card">
+                <b>Sounds like, per person</b>
+                <table>
+                  <tr><th>Person</th><th>Accepted</th><th>Dismissed</th><th>Waiting</th></tr>
+                  {% for c in voice.per_person_counts %}<tr><td>{{ c.person.name }}</td><td>{{ c.accepted }}{% if c.unlearnt %} (unlearnt){% endif %}</td><td>{{ c.dismissed }}</td><td>{{ c.waiting }}</td></tr>{% endfor %}
+                </table>
+              </div>
+              {% endif %}
+            </div>
           {% endif %}
 
           <form method="post" action="{% url 'add-person' case.pk %}" class="card row" style="gap: 8px; margin-top: 14px">

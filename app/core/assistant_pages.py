@@ -662,6 +662,11 @@ def decide(request: HttpRequest, suggestion_id, verdict: str) -> JsonResponse:
             how="suggestion accepted",
             request=request,
         )
+        from core import voice_prints
+
+        voice_prints.learn_on_name(
+            recording, suggestion.speaker, suggestion.name, by=request.user
+        )
     else:
         suggestion.state = Suggestion.REJECTED
     suggestion.save(update_fields=["state"])
@@ -677,6 +682,35 @@ def decide(request: HttpRequest, suggestion_id, verdict: str) -> JsonResponse:
         segments_changed=changed,
     )
     return JsonResponse({"ok": True, "changed": changed})
+
+
+# Sounds like (Phase 5 chapter 2, v1.144.0) -----------------------------------
+
+
+@login_required
+@require_POST
+def decide_voice_match(
+    request: HttpRequest, match_id: int, verdict: str
+) -> JsonResponse:
+    """Accept names the Speaker as the Person on every line and teaches the
+    print; dismiss sets the match aside for this recording. On a conflict
+    each Person has a row of its own, so the one pressed is the answer."""
+    from core import voice_prints
+    from core.assistant import VoiceMatch
+
+    row = get_object_or_404(
+        VoiceMatch.objects.select_related("transcript", "person"),
+        pk=match_id,
+        state=VoiceMatch.PENDING,
+    )
+    recording = _recording(request, row.transcript.recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    if verdict == "accept":
+        changed = voice_prints.accept(row, by=request.user, request=request)
+        return JsonResponse({"ok": True, "changed": changed, "made": row.person.name})
+    voice_prints.dismiss(row, by=request.user, request=request)
+    return JsonResponse({"ok": True, "changed": 0})
 
 
 # The Speaker check (Phase 5 chapter 3) ----------------------------------------

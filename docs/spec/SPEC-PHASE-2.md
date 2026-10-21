@@ -911,7 +911,7 @@ Inside a Case, a Speaker's name means a person. This chapter fixes the Person (t
 1. **Inside a Case, a name means a person.** Every Speaker in the Case's Transcripts given the same name is the same Person; the name is the link, and there is no separate "assign this speaker to a person" step.
 2. **People live inside one Case.** Nothing links a name across Cases, and there is no office-wide list.
 3. **The tab manages names; the AI assistant stays in the viewer.** Suggest names remains one Transcript per click, on request, as the Phase 1 AI assistant chapter fixed; inside a Case it is told the Case's People. The Speakers tab shows who is in the Case, where, and which Recordings still have unnamed Speakers.
-4. **Nothing is kept for voice matching.** The app requests and stores no speaker embeddings in either phase; voice matching is out of scope (see the Deferred and ruled out chapter).
+4. **Nothing is kept for voice matching.** The app requests and stores no speaker embeddings in either phase; voice matching is out of scope (see the Deferred and ruled out chapter). **Amended by Phase 5 chapter 2, v1.144.0:** behind the Admin's switch Remember voices across a case, Off as shipped, a Person's Voice print is kept inside its Case, learnt only from the names and matches people accept, under that chapter's rules (content, never logged or exported, never across Cases, deleted with the Person, by Unlearn or by the switch); with the switch off this principle stands as written.
 5. **Everything else follows the Case rules already made**: sharing, Last activity, the Recycle bin, Reassign and Transfer, and the audit log's no-names rule.
 
 ### Words

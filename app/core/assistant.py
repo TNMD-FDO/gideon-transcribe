@@ -569,6 +569,11 @@ class SpeakerCheck(models.Model):
     # run's proposals are pending so an acceptance re-scores the rest, and
     # emptied when the check is done. Content, never logged or exported.
     voices = models.JSONField(default=dict, blank=True)
+    # One vector per Speaker label (v1.144.0, ADR 0021 decision 6): kept
+    # while the Admin's switch Remember voices is on and the recording is in
+    # a Case, so a Speaker named later teaches its Person's print; emptied
+    # when the switch goes off. {label: {"vector", "lines", "seconds"}}.
+    prints = models.JSONField(default=dict, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
@@ -678,6 +683,52 @@ class Handover(models.Model):
 
     class Meta:
         ordering = ["at", "created"]
+
+
+class VoiceMatch(models.Model):
+    """Sounds like (Phase 5 chapter 2, v1.144.0): a Speaker label of one
+    Transcript whose voice print matched a Person's, as a proposal on the
+    card; two rows on one label are a conflict; a SIDE row is the Side
+    rule's alarm (the named Side does not sound like its Person). A row
+    left UNLEARNT marks a label Unlearn returned ("was Dana Reyes, by
+    voice"). Counts only in the audit rows; never a vector here."""
+
+    MATCH, SIDE = "match", "side"
+    PENDING, ACCEPTED, DISMISSED, WITHDRAWN, UNLEARNT = (
+        "pending",
+        "accepted",
+        "dismissed",
+        "withdrawn",
+        "unlearnt",
+    )
+
+    id = models.AutoField(primary_key=True)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="voice_matches"
+    )
+    run = models.ForeignKey(
+        SpeakerCheck, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    speaker = models.CharField(max_length=60)
+    person = models.ForeignKey(
+        "core.Person", on_delete=models.CASCADE, related_name="voice_matches"
+    )
+    kind = models.CharField(max_length=6, default=MATCH)
+    rating = models.CharField(max_length=6, default="medium")
+    score = models.FloatField(default=0.0)
+    state = models.CharField(max_length=10, default=PENDING)
+    decided_by = models.ForeignKey(
+        "core.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["speaker", "-score", "created"]
 
 
 class Moment(models.Model):

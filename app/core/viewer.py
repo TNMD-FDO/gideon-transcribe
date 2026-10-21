@@ -939,6 +939,11 @@ def _speakers_under_the_lock(request, recording, transcript, was, now, role):
         request=request,
         role=role,
     )
+    # The Case remembers the voice (v1.144.0): the label's print on this
+    # recording teaches the Person's, when the Admin's switch is on.
+    from core import voice_prints
+
+    voice_prints.learn_on_name(recording, was, now, by=request.user)
 
     audit.write(
         audit.Category.EDITS,
@@ -1323,7 +1328,7 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
     transcript.speaker_changes = changes
     transcript.save(update_fields=["speaker_changes"])
     if recording.case_id and not last.get("swap"):
-        from core import people
+        from core import people, voice_prints
 
         people.on_named(
             recording,
@@ -1332,6 +1337,8 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
             how="undo in the viewer",
             request=request,
         )
+        # Undo takes the name back and the print forgets this call (v1.144.0).
+        voice_prints.forget_recording(recording, last.get("to", ""))
     audit.write(
         audit.Category.EDITS,
         "Speaker change undone",

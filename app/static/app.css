@@ -2325,6 +2325,25 @@ details.inline[open] summary::after { content: ": "; }
 .sp-card .acts-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0 0 16px; font-size: var(--t-small); }
 .sp-card .acts-line .suggested { margin: 0; }
 .sp-card .pill.split-from { background: var(--accent-soft); color: var(--accent); font-size: 0.72em; }
+/* Sounds like (v1.144.0): the match, the conflict and the Side alarm on the
+   card, each with the Person's voice to play beside this one. */
+.sp-card .sounds-box { margin: 6px 0 0 16px; }
+.sp-card .sounds { border: 1px solid var(--accent); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; font-size: var(--t-small); display: flex; flex-direction: column; gap: 5px; }
+.sp-card .sounds.alarm { border-color: var(--danger); }
+.sp-card .sounds .hear, .sp-card .sounds .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sp-card .sounds .hear .hear-else { font-size: 11px; min-height: 22px; padding: 0 6px; }
+.sp-card .pill.was-voice { background: var(--surface-2); color: var(--muted); font-size: 0.72em; font-style: italic; }
+/* The Case tab's Voice column (v1.144.0). */
+.tbl td .voice { display: flex; flex-direction: column; gap: 3px; min-width: 16rem; }
+.tbl td .voice .chain { font-size: 12px; color: var(--muted); }
+.tbl td .voice .waiting { font-size: 12px; }
+.tbl td .voice .called-out { font-size: 12px; color: var(--warn, var(--muted)); }
+.tbl td .voice .hear-else { font-size: 11px; min-height: 22px; padding: 0 6px; }
+.voice-alarm { border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); padding: 8px 10px; margin: 10px 0; font-size: var(--t-small); }
+.decided-so-far { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+.decided-so-far table { border-collapse: collapse; font-size: 13px; }
+.decided-so-far th, .decided-so-far td { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--line); }
+.decided-so-far th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .sp-card .hint-line, .sp-card .suggested { margin: 6px 0 0 16px; font-size: var(--t-small); }
 .sp-card .hint-line { color: var(--warn, var(--muted)); }
 .sp-card .suggested { color: var(--accent); }

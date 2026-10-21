@@ -21,6 +21,52 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.144.0, 2026-10-21
+
+```
+Models: unchanged
+Database: migrates (0084: the Person's voice print, the run's label
+prints, the Sounds like rows, the Case's forgotten stamp)
+```
+
+- **The Case remembers** (Phase 5 chapter 2 in force; ADR 0021 decision 6;
+  the voice plan's fourth release, drawn in
+  `docs/spec/mockups/phase-5-voice-prints.html` and chosen 2026-10-21).
+  Behind the Admin's new switch **Remember voices across a case** (Off as
+  shipped, greyed while Cases are off): when a speaker is named inside a
+  case, that speaker's voice print on the recording, as the voice step
+  built it, becomes part of the person's print, which is the mean of its
+  parts; each part remembers how it came (by hand, by a match accepted, by
+  the case rule confirmed), who and when, which is the chain the case's
+  Speakers tab shows. After the check's one run on a later recording of the
+  case, each unnamed speaker's voice is compared with every person's print,
+  and the card on that recording's Speakers page says **Sounds like Dana
+  Reyes**, rated high or medium by the weakest link (the score, a print from
+  one recording, the voice heard for under ten seconds), with the person's
+  voice to play from the recordings that taught it beside the card's own
+  samples, and **Accept** or **Not them**; two people over one voice are
+  offered together as a conflict with Neither; on a call named across the
+  case by the Side rule, a side that does not sound like its person carries
+  an alarm that asks and never renames. Accept names every line and teaches
+  the print; Undo takes the name back and the print forgets the call. The
+  picker lights the matched person first with a "suggested" pill, and the
+  recording page's strip pill counts the voices waiting. The case's
+  Speakers tab gains a Voice column (the print's state, a play of the voice,
+  the chain, what waits with a link to the call that decides it, a line
+  when a person's matches were turned down three times in a month),
+  **Unlearn their voice** on a person with a print (the box lists each
+  recording by what happens to it; the voice-named speakers return to
+  unnamed and are marked "was Dana Reyes, by voice"; the names given by hand
+  stay), the Side rule's alarms, and Decided so far per source and per
+  person. Turning the switch off deletes every print, every kept label
+  vector and every waiting match at once, the tray's note says how many
+  before it is thrown, and each case says "voices were forgotten on" until a
+  print is learnt again. Nothing is named by the voice alone; nothing
+  crosses a case; the Call system has no print; nothing of a voice is
+  logged or exported. The print carries a scope ("case") and the person a
+  reserved mark, the hook for the unit's voice book drawn next; both are
+  fixed in this release.
+
 ## v1.143.0, 2026-10-20
 
 ```

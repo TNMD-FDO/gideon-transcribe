@@ -47,15 +47,32 @@ def tab_context(case) -> dict:
             }
         )
     unnamed = people.unnamed_by_recording(case, spoken)
+    # The Case remembers (v1.144.0): the Voice column, the alarms, the counts.
+    from core import voice_prints
+
+    voice = voice_prints.tab_rows(case, everyone)
+    for row in rows:
+        row["voice"] = voice["per_person"].get(row["person"].pk)
+    line = (
+        f"{len(rows)} {'person' if len(rows) == 1 else 'people'}, "
+        f"{len(unnamed)} recording{'' if len(unnamed) == 1 else 's'} "
+        "with unnamed speakers"
+    )
+    if voice["remember"] and voice["any_voice"]:
+        line += (
+            f". Voices are remembered for this case: {voice['with_print']} "
+            f"{'person has' if voice['with_print'] == 1 else 'people have'} a voice "
+            f"print, and {voice['waiting']} "
+            f"voice{'' if voice['waiting'] == 1 else 's'} "
+            f"wait{'s' if voice['waiting'] == 1 else ''} to be decided on "
+            f"{'its call' if voice['waiting'] == 1 else 'their calls'}"
+        )
     return {
         "people": rows,
         "unnamed": unnamed,
         "roles": people.roles(),
-        "people_line": (
-            f"{len(rows)} {'person' if len(rows) == 1 else 'people'}, "
-            f"{len(unnamed)} recording{'' if len(unnamed) == 1 else 's'} "
-            "with unnamed speakers"
-        ),
+        "people_line": line,
+        "voice": voice,
     }
 
 
@@ -114,6 +131,20 @@ def person_action(request: HttpRequest, person_id) -> HttpResponse:
             people.merge(person, survivor, by=request.user, request=request)
         elif action == "delete":
             people.delete(person, by=request.user, request=request)
+        elif action == "unlearn":
+            from core import voice_prints
+
+            done = voice_prints.unlearn(person, by=request.user, request=request)
+            request.session["people_said"] = (
+                f"{person.name}'s voice is unlearnt: "
+                f"{done['segments_returned']} line"
+                f"{'' if done['segments_returned'] == 1 else 's'} on "
+                f"{done['recordings_returned']} recording"
+                f"{'' if done['recordings_returned'] == 1 else 's'} returned to "
+                f"unnamed and marked; {done['matches_withdrawn']} waiting match"
+                f"{'' if done['matches_withdrawn'] == 1 else 'es'} withdrawn. "
+                "The names given by hand stay."
+            )
         else:
             return _back(case)
     except ValueError as refused:

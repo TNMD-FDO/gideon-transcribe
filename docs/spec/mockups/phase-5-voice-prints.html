@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Case remembers</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 14px 0 6px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); border-color: var(--bad); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--accent); white-space: nowrap; border: 1px solid var(--accent); border-radius: var(--radius); padding: 0 6px; min-height: 22px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .c4 { --c: var(--sp4); color: var(--sp4); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .label.ok { color: var(--ok); } .label.bad { color: var(--bad); }
+  a { color: var(--accent); }
+
+  /* the Speakers page card, at its real width */
+  .col { width: 320px; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: var(--radius-lg); position: relative; }
+  .col .colnote { position: absolute; top: -9px; left: 12px; background: var(--surface); padding: 0 6px; font-size: 11px; color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; background: var(--surface); }
+  .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .card .h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card .h .nm { font-weight: 600; }
+  .card .h .lab { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .card .stats { font-size: 12px; color: var(--muted); margin-left: 15px; }
+  .card .samples { display: flex; flex-direction: column; gap: 3px; margin-left: 15px; }
+  .card .sp { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .card .sp .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .card .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card .line1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: 15px; font-size: 12px; }
+  .card .sounds { margin-left: 15px; border: 1px solid var(--accent); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .card .sounds.alarm { border-color: var(--bad); }
+  .card .sounds .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .card .sounds .hear { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--muted); }
+  .card .sounds .ask { color: var(--muted); }
+
+  /* the Case tab */
+  .tab { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .lead { margin: 0; }
+  table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.tbl th, table.tbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.tbl th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  .summ { color: var(--accent); font-size: 13px; }
+  .voice { display: flex; flex-direction: column; gap: 2px; }
+  .chain { font-size: 12px; color: var(--muted); }
+  .acts-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  .alarm { font-size: 12px; color: var(--warn); }
+  .block { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; }
+  .block .t { font-weight: 600; margin-bottom: 6px; }
+  .waits { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; font-size: 13px; }
+  .waits .who { font-weight: 600; }
+  .waits .where { color: var(--muted); }
+  .numbers table { border-collapse: collapse; font-size: 13px; }
+  .numbers th, .numbers td { padding: 3px 12px 3px 0; text-align: left; border-bottom: 1px solid var(--line); }
+  .numbers th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .confirm { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 14px 16px; max-width: 520px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .confirm .t { font-weight: 600; font-size: 15px; }
+  .confirm ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .confirm .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  .setting { display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; gap: 8px 16px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .setting .k { font-weight: 600; }
+  .setting .v { color: var(--muted); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .toggle i { display: inline-block; width: 30px; height: 16px; border-radius: 8px; background: var(--line); position: relative; }
+  .toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); }
+  .toggle.on i { background: var(--accent); } .toggle.on i::after { left: 16px; }
+  .notice { border: 1px solid var(--warn); border-radius: var(--radius); padding: 6px 10px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The Case remembers: voice prints, Sounds like, the chain and Unlearn</h1>
+    <p class="lede"><b>Drawn 2026-10-20</b> for the maintainer to pick before the voice plan's fourth release is built (ADR 0021; Phase 5 chapter 2 comes into force). Every name, call and line here is made up.</p>
+    <p class="lede"><b>Two rules from 2026-10-19 shape it.</b> The recording's Speakers page is the one place a proposal is accepted or declined, and a Sounds like is a proposal, so it sits on the card with the voice under the ear (figures 1 and 3). The Case's Speakers tab is an overview and the home of Unlearn: what the case knows of each voice, what waits and where, and the chain that Unlearn would undo (figures 2 and 4). Nothing on the tab asks a question the card has not already asked.</p>
+    <p class="lede"><b>What a print is.</b> One vector per Person per Case, learnt only from names and matches people accept, kept as a field of the Person, deleted with the Person, with Unlearn, or when the Admin's switch goes off. Never logged, exported, backed up beyond the database dump, or sent anywhere. The Call system has no print. "Sounds like", never "is"; only high and medium are ever shown, and a print taught by one recording rates medium at best.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The call's Speakers page, a card that sounds like someone</div><h2>Sounds like Dana Reyes: her voice beside this one, Accept or Not her, on the card</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="col"><span class="colnote">cards column, 340 px</span>
+          <div class="card on">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">14 lines, 1 min 51 s, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Can I call my sister first?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"I was only there twenty minutes."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Tell him I said it's fine."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds">
+              <div><b>Sounds like Dana Reyes</b> <span class="pill">Client</span> <span class="pill ok">high</span> <span class="muted">· her voice is on 3 calls in this case</span></div>
+              <div class="hear"><span class="prev">&#9654; Dana on Call 1, 0:48</span><span class="prev">&#9654; Dana on Call 3, 4:12</span><span class="muted tiny">the samples above are this voice</span></div>
+              <div class="acts"><span class="btn tiny primary">Accept: Speaker 2 is Dana Reyes</span><span class="btn ghost tiny">Not her</span></div>
+              <div class="ask">Accept names every line of Speaker 2 on this call and teaches her print from it. Undo takes the name back and the print forgets this call.</div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">6 lines, 0 min 40 s, first at 5:02</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">5:02</span><span class="q">"Yeah, this is him."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds">
+              <div><b>Sounds like Tom Hale</b> <span class="pill warn">medium, from one recording</span></div>
+              <div class="hear"><span class="prev">&#9654; Tom on Call 2, 7:15</span></div>
+              <div class="acts"><span class="btn tiny">Accept: Speaker 3 is Tom Hale</span><span class="btn ghost tiny">Not him</span></div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="label">What the card says, and when</div>
+          <div class="block">
+            <div class="t">A Sounds like line appears on an unnamed card when the one run matched its voice to a Person of the case</div>
+            <ul class="small" style="margin: 0; padding-left: 18px;">
+              <li><b>Her voice, beside this one.</b> Preview plays the Person from the recordings that taught her print, as the picker's Preview does; the card's own samples are the voice in question. Nothing to go and find.</li>
+              <li><b>The rating is the weakest link</b> of the print's own confidence, this recording's calibration and the stretch's length: <span class="pill ok">high</span> or <span class="pill warn">medium</span>. Low is never shown; the card stays plain.</li>
+              <li><b>Accept is one press</b> and the button says what it does. Behind it the app records two facts apart: this voice is grouped with hers, and this Speaker is this Person, so a wrong name is one rename and a wrong grouping is one Unlearn.</li>
+              <li><b>Not her</b> dismisses the match for this call; the print is not taught by a refusal. Refused three times for one Person, the tab raises the dismissal line (figure 2).</li>
+              <li><b>Name or merge...</b> stays below: the picker's rows carry the same <span class="pill acc">sounds like</span> pill on Dana, lit first, so either path names her.</li>
+              <li><b>Where it lands.</b> Accepting here names the Speaker on this call and the Case tab counts it under Dana; nothing is named on any other call.</li>
+            </ul>
+          </div>
+          <div class="label" style="margin-top: 14px;">The strip, on the recording page</div>
+          <div class="block small">The check's pill gains the count: <span class="pill acc">14 changes proposed · 2 sound like someone</span>. A press opens this page.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · The Case's Speakers tab, with voices remembered</div><h2>The overview: each Person's voice, what waits and where, the chain, and Unlearn</h2></div>
+    <div class="work">
+      <div class="tab">
+        <p class="lead">4 people in this case, named across 7 recordings. Voices are remembered for this case: 2 people have a voice print, and 3 voices wait to be decided on their calls.</p>
+
+        <table class="tbl">
+          <thead><tr><th>Name</th><th>Role</th><th>Appears in</th><th>Voice</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Dana Reyes</b></td>
+              <td class="muted">Client</td>
+              <td><span class="summ">in 3 recordings</span></td>
+              <td>
+                <div class="voice">
+                  <span>print from 3 recordings <span class="prev">&#9654; hear her</span></span>
+                  <span class="chain">Named by hand on Call 1 (12 Oct, J. Park) · matched by voice on Call 2 and Call 3, accepted by J. Park (14 Oct)</span>
+                  <span class="alarm" style="color: var(--accent);">2 calls sound like her, waiting: <a href="#">Call 4, Speaker 2</a> (high) · <a href="#">Call 5, Side 2</a> (high)</span>
+                </div>
+              </td>
+              <td><span class="summ">Rename, edit, merge, delete, unlearn</span></td>
+            </tr>
+            <tr>
+              <td><b>Tom Hale</b></td>
+              <td class="muted">Witness</td>
+              <td><span class="summ">in 2 recordings</span></td>
+              <td>
+                <div class="voice">
+                  <span>print from 1 recording <span class="prev">&#9654; hear him</span> <span class="pill warn">matches rate medium at best</span></span>
+                  <span class="chain">Named by hand on Call 2 (13 Oct, J. Park) · matched by voice on Interview 1, accepted by R. Diaz (15 Oct)</span>
+                  <span class="alarm">Matches to Tom were turned down 3 times this month. If his print keeps being wrong, unlearn it and name him by hand once more.</span>
+                  <span class="alarm" style="color: var(--accent);">1 call sounds like him, waiting: <a href="#">Call 6, Speaker 3</a> (medium) · and like Marcus Hale: the card on Call 6 offers both</span>
+                </div>
+              </td>
+              <td><span class="summ">Rename, edit, merge, delete, unlearn</span></td>
+            </tr>
+            <tr>
+              <td><b>Marcus Hale</b></td>
+              <td class="muted">Witness</td>
+              <td><span class="summ">in 1 recording</span></td>
+              <td>
+                <div class="voice">
+                  <span class="muted">no print yet: named on one recording before voices were remembered</span>
+                  <span class="chain">Named by hand on Interview 2 (9 Oct, R. Diaz). A print is made when his next line is accepted.</span>
+                </div>
+              </td>
+              <td><span class="summ">Rename, edit, merge, delete</span></td>
+            </tr>
+            <tr>
+              <td><b>Lee Ortiz</b></td>
+              <td class="muted">Officer</td>
+              <td><span class="summ">in 2 recordings</span></td>
+              <td>
+                <div class="voice">
+                  <span class="muted">voice unlearnt 16 Oct by J. Park</span>
+                  <span class="chain">Named by hand on Call 1 and Call 3. Two matches it made were returned to unnamed and are marked on their calls.</span>
+                </div>
+              </td>
+              <td><span class="summ">Rename, edit, merge, delete</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="block">
+          <div class="t">Side 1 on Call 7 is Dana Reyes by the case rule, but does not sound like her</div>
+          <div class="small muted">Nothing is renamed. The card on <a href="#">Call 7's Speakers page</a> plays her voice beside that side and asks whether it is Dana on this call.</div>
+        </div>
+
+        <div class="cols">
+          <div class="block numbers">
+            <div class="t">Decided so far in this case</div>
+            <table>
+              <tr><th>Source</th><th>Accepted</th><th>Dismissed</th></tr>
+              <tr><td>Moves from the words</td><td>14</td><td>9</td></tr>
+              <tr><td>Moves from the voice</td><td>21</td><td>2</td></tr>
+              <tr><td>Hand-overs</td><td>3</td><td>1</td></tr>
+              <tr><td>Names from the words</td><td>6</td><td>1</td></tr>
+              <tr><td>Sounds like</td><td>5</td><td>3</td></tr>
+            </table>
+          </div>
+          <div class="block numbers">
+            <div class="t">Sounds like, per person</div>
+            <table>
+              <tr><th>Person</th><th>Accepted</th><th>Dismissed</th><th>Waiting</th></tr>
+              <tr><td>Dana Reyes</td><td>3</td><td>0</td><td>2</td></tr>
+              <tr><td>Tom Hale</td><td>1</td><td>3</td><td>1</td></tr>
+              <tr><td>Lee Ortiz</td><td>1 (unlearnt)</td><td>0</td><td>0</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>One new column, Voice.</b> Under each Person: the print's state (from N recordings, no print yet, or unlearnt and when), a Preview of the voice, the chain in one muted line, and what waits, each a link to the call's Speakers page where the card decides it. The tab never carries Accept.</p>
+        <p><b>The chain is the record Unlearn reads.</b> "Named by hand" lines stay through an Unlearn; "matched by voice" lines are what it undoes. It is shown here always, and again inside the Unlearn box (figure 4), so nobody presses it blind.</p>
+        <p><b>The dismissal line</b> appears under a Person whose matches were turned down three times in a month, in words, with the way out. <b>The Side alarm</b> is a block of its own because it is about a rule of the case, not a Person's print; it still decides on the call.</p>
+        <p><b>Decided so far per source</b> is the measure the plan judges each release by; the per-person table is the one the dismissal line reads from. Both are counts and never a word of a recording.</p>
+        <p><b>Nothing else on the tab moves.</b> The Side rule's form, Add person, the Unnamed speakers list and the row's Rename, edit, merge and delete are as they are; unlearn joins that summary on a Person who has a print.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · Two harder cards on a call's Speakers page</div><h2>A conflict offers both voices; the Side rule's alarm asks and never renames</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="col"><span class="colnote">Call 6, cards column</span>
+          <div class="card on">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">9 lines, 1 min 05 s, first at 2:02</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:02</span><span class="q">"We were both there that night."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">4:40</span><span class="q">"He's my brother, so yeah."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds">
+              <div><b>Sounds like two people</b> <span class="pill warn">Marcus Hale and Tom Hale</span></div>
+              <div class="ask">Brothers, or one print taught from the wrong call. Nothing is proposed until you have heard all three.</div>
+              <div class="hear"><span class="prev">&#9654; Marcus on Interview 2, 4:40</span><span class="prev">&#9654; Tom on Call 2, 7:15</span></div>
+              <div class="acts"><span class="btn tiny">Marcus Hale</span><span class="btn tiny">Tom Hale</span><span class="btn ghost tiny">Neither</span></div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+        </div>
+        <div class="col"><span class="colnote">Call 7, cards column</span>
+          <div class="card on">
+            <div class="h"><span class="dot c1"></span><span class="nm c1">Dana Reyes</span><span class="pill">Client</span><span class="pill">Side 1, by the case rule</span><span class="lab">SIDE_1</span></div>
+            <div class="stats">22 lines, 3 min 10 s, first at 0:04</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">0:31</span><span class="q">"Is this the right number for Dana?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:50</span><span class="q">"She's not here, she went out."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds alarm">
+              <div><b>Does not sound like Dana Reyes</b> <span class="pill bad">the voice disagrees</span></div>
+              <div class="ask">The case rule names Side 1 Dana on every call. On this call the voice is someone else's. Nothing is renamed until you say.</div>
+              <div class="hear"><span class="prev">&#9654; Dana on Call 1, 0:48</span><span class="muted tiny">the samples above are this call's Side 1</span></div>
+              <div class="acts"><span class="btn tiny">Not Dana on this call...</span><span class="btn ghost tiny">It is Dana</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>A conflict proposes nothing.</b> Two prints both claim the voice; the card plays each Person from the calls that taught them and offers three answers. Picking one names the Speaker and teaches that print; Neither dismisses both for this call. The tab shows the conflict under both People (figure 2) and points here.</p>
+        <p><b>The Side rule's alarm</b> is the one place a named card carries a voice line. "Not Dana on this call..." opens the picker for the whole side, as Name or merge does, and the case rule keeps naming the other calls; "It is Dana" keeps the name and teaches her print from this call. Nothing is renamed by the voice alone.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · Unlearn, from the Case tab</div><h2>The box says what goes and what stays, from the chain, before anything is pressed</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div>
+          <div class="label">The row's actions, opened</div>
+          <div class="block">
+            <div class="acts-row"><span class="btn tiny">Rename everywhere</span><span class="btn tiny">Save</span><span class="btn tiny">Merge</span><span class="btn ghost tiny danger">Delete person</span></div>
+            <div class="chain" style="margin-top: 10px;">Voice print from 3 recordings. Named by hand on Call 1 (12 Oct, J. Park) · matched by voice on Call 2 and Call 3, accepted by J. Park (14 Oct).</div>
+            <div class="acts-row"><span class="btn tiny danger">Unlearn her voice</span><span class="muted tiny">the names given by hand stay</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="label">The confirmation</div>
+          <div class="confirm">
+            <div class="t">Unlearn Dana Reyes's voice?</div>
+            <div class="small">Her voice print is deleted and this case stops recognising her by sound until a name is accepted again.</div>
+            <ul>
+              <li><b>Call 2</b> and <b>Call 3</b>: the speakers her voice named go back to unnamed, marked "was Dana Reyes, by voice" on their cards, with her samples kept beside them so they can be named again by ear.</li>
+              <li><b>Call 1</b>: named by hand, stays Dana Reyes.</li>
+              <li><b>Call 4</b> and <b>Call 5</b>: the two matches waiting are withdrawn.</li>
+            </ul>
+            <div class="small muted">Written to the case's audit as a count: 2 speakers returned, 2 matches withdrawn; no name and no voice.</div>
+            <div class="acts"><span class="btn tiny">Cancel</span><span class="btn tiny danger">Unlearn</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Unlearn is the row's last, danger button</b>, shown only on a Person with a print, with the chain above it. The box lists each recording by what happens to it, taken from the chain, so what is pressed is what is read.</p>
+        <p><b>After.</b> The tab's Voice column reads "voice unlearnt 16 Oct by J. Park" (figure 2, Lee Ortiz). On the returned speakers' cards a quiet pill, "was Dana Reyes, by voice", stays until the speaker is named, and the samples sit where they were. Deleting the Person deletes the print with them, as Phase 2 has it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 5 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5 · The switch, in Admin settings</div><h2>Remember voices across a case: Off as shipped, and Off deletes every print</h2></div>
+    <div class="work">
+      <div class="setting">
+        <div class="k">Remember voices across a case</div>
+        <div class="v">Whether a person's voice print is kept inside a case, learnt from the names and matches people accept, so a later recording in the case can say "sounds like" that person. Content: never logged, exported, or shared across cases. Needs Folder management and the Speaker check.</div>
+        <div class="toggle on"><i></i> On</div>
+      </div>
+      <div class="notice">Turning this off deletes every voice print the office holds: 11 people across 3 cases. The names stay; only the voices are forgotten. The Case tabs say "voices were forgotten on <date>" until a print is learnt again.</div>
+      <div class="setting" style="opacity: .6;">
+        <div class="k">Voices help the check</div>
+        <div class="v">A list of recording types, one per line, on which the check also listens. Jail call as shipped. A Sounds like needs this on for the recording's type: the print is matched by the same voice step.</div>
+        <div class="v mono">Jail call<br>Interview</div>
+      </div>
+      <div class="caption">
+        <p><b>One switch, Admin only</b>, in the Speakers settings beside the voice step's rows, as the 2026-10-19 note asked: no second place to turn voices on or off. Greyed with the reason while Folder management or the Speaker check is Off.</p>
+        <p><b>Off is honest and loud.</b> The warning names the count before the switch is thrown; the prints go at once, the names stay, and the Case tabs say so. Turning it on again starts from nothing: prints are learnt from the next names and matches people accept.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What this is not</div><h2>Left as it is, and what is kept</h2></div>
+    <div class="work">
+      <div class="caption">
+        <p><b>Nothing is named by the voice alone.</b> Every Sounds like, conflict and Side alarm is accepted by a person on the call's card. No Accept all for names or matches, ever.</p>
+        <p><b>Nothing crosses a case.</b> A print lives on a Person of one case and is matched inside that case only. The Call system has no print anywhere.</p>
+        <p><b>What is stored.</b> One vector per Person per case, a field on the Person; the chain is the audit rows the app already writes for a name and a match (counts and who, never a word or a vector); the match's rating and the run that made it, on the proposal, as the check's proposals already carry theirs.</p>
+        <p><b>Phones.</b> The card's Sounds like block wraps as the hand-over does; the tab's table stacks its columns as the case page already does under 600.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

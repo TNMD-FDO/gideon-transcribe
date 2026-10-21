@@ -33,7 +33,7 @@
             <b>{{ tray|length }} change{{ tray|length|pluralize }} waiting</b>
             <ul>
               {% for row in tray %}
-                <li>{{ row.name }}: {{ row.was }} &rarr; <b>{{ row.now }}</b></li>
+                <li>{{ row.name }}: {{ row.was }} &rarr; <b>{{ row.now }}</b>{% if row.note %}<div class="small" style="color: var(--warn, inherit)">{{ row.note }}</div>{% endif %}</li>
               {% endfor %}
             </ul>
           </div>

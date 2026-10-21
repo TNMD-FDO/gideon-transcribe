@@ -223,6 +223,11 @@ urlpatterns = [
         name="decide-handover",
     ),
     path(
+        "voice-match/<int:match_id>/<str:verdict>",
+        assistant_pages.decide_voice_match,
+        name="decide-voice-match",
+    ),
+    path(
         "recording/<uuid:recording_id>/corrections/<str:verdict>-many",
         assistant_pages.decide_corrections,
         name="decide-corrections",

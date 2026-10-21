@@ -975,6 +975,43 @@
       // Name or merge (v1.143.0): the one picker, beside the card, asks
       // "<speaker> is"; rename, same person as and the name box folded into it.
       if (event.target.closest(".name-or-merge")) { nameOrMerge(card); return; }
+      // Sounds like (v1.144.0): Accept names the label as the Person on every
+      // line and teaches the print; Not them sets the match aside; Neither
+      // sets a conflict's rows aside; the Side alarm's "Not X on this call"
+      // opens the picker for the whole side.
+      var matchAccept = event.target.closest(".match-accept");
+      if (matchAccept) {
+        matchAccept.disabled = true;
+        send("/voice-match/" + matchAccept.dataset.match + "/accept").then(function (answer) {
+          if (!answer.ok) { matchAccept.disabled = false; UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+          tell({ kind: "speakers-changed" });
+          if (answer.said.changed) { reloadHere(answer.said.made || name); } else { refreshSuggestions(); }
+        });
+        return;
+      }
+      var matchDismiss = event.target.closest(".match-dismiss");
+      if (matchDismiss) {
+        var ids = (matchDismiss.dataset.matches || matchDismiss.dataset.match || "").split(",").filter(Boolean);
+        Promise.all(ids.map(function (id) { return send("/voice-match/" + id + "/dismiss"); })).then(function () { refreshSuggestions(); });
+        return;
+      }
+      if (event.target.closest(".side-not")) {
+        var sideBox = event.target.closest(".sounds");
+        var who = sideBox ? sideBox.dataset.person : name;
+        window.Picker.open({
+          recording: V.recording,
+          anchor: card,
+          beside: card,
+          question: who + " on this call is",
+          current: who,
+          currentPill: "the case rule's name",
+          newSpeaker: true,
+          newGo: "Name",
+          play: playRange,
+          onPick: function (picked, role) { if (picked) { return rename(who, picked, role); } }
+        });
+        return;
+      }
       var mergeInto = event.target.closest(".merge-into");
       if (mergeInto) { merge(name, mergeInto.dataset.onto); return; }
       var accept = event.target.closest(".accept");
@@ -1074,6 +1111,79 @@
         "<button type='button' class='ghost tiny reject' data-suggestion='" + one.id + "'>Reject</button>";
     });
     return !!busy;
+  }
+
+  // Sounds like (Phase 5 chapter 2, v1.144.0; the drawing
+  // phase-5-voice-prints.html): on an unnamed card, the Person the voice
+  // matched with their voice to play beside this one; two People over one
+  // voice as a conflict; on a Side named by the case rule, the alarm that it
+  // does not sound like its Person. Accepted or declined here and nowhere
+  // else; the Case tab only points back.
+  function previewButtons(person) {
+    return (person.heard || []).slice(0, 2).map(function (one) {
+      return "<button type='button' class='tiny ghost hear-else' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' title='Hear " + escape(person.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " " + escape(person.name.split(" ")[0]) + " on " + escape(one.title.length > 28 ? one.title.slice(0, 26) + "\u2026" : one.title) + ", " + escape(one.clock) + "</button>";
+    }).join("");
+  }
+  function ratingPill(person) {
+    var word = person.rating === "high" ? "high" : "medium";
+    var more = person.rating !== "high" && person.recordings === 1 ? ", from one recording" : "";
+    return "<span class='pill small " + (word === "high" ? "ok" : "") + "'>" + word + more + "</span>";
+  }
+  function drawVoiceMatches(body) {
+    var state = (body.speaker_check || {}).voice_matches || {};
+    var groups = state.matches || [];
+    cards().forEach(function (card) {
+      var box = card.querySelector(".sounds-box");
+      if (box) { box.hidden = true; box.innerHTML = ""; }
+      var old = card.querySelector(".pill.was-voice");
+      if (old) { old.remove(); }
+    });
+    (state.unlearnt || []).forEach(function (one) {
+      var card = cardOf(one.speaker);
+      var head = card ? card.querySelector(".h") : null;
+      if (!head || head.querySelector(".pill.was-voice")) { return; }
+      var pill = document.createElement("span");
+      pill.className = "pill small was-voice";
+      pill.title = "Unlearnt on the case's Speakers tab; name this voice again by ear.";
+      pill.textContent = "was " + one.person + ", by voice";
+      head.insertBefore(pill, head.querySelector(".label"));
+    });
+    groups.forEach(function (group) {
+      var card = cardOf(group.speaker);
+      var box = card ? card.querySelector(".sounds-box") : null;
+      if (!box) { return; }
+      var html = "";
+      if (group.kind === "match") {
+        var person = group.people[0];
+        suggestedFor[group.speaker] = person.name;
+        html = "<div class='sounds'>" +
+          "<div><b>Sounds like " + escape(person.name) + "</b>" + (person.role ? " <span class='pill small role'>" + escape(person.role) + "</span>" : "") + " " + ratingPill(person) +
+          " <span class='muted'>\u00b7 their voice is on " + person.recordings + (person.recordings === 1 ? " recording" : " recordings") + " of this case</span></div>" +
+          "<div class='hear'>" + previewButtons(person) + "<span class='muted tiny'>the samples above are this voice</span></div>" +
+          "<div class='acts'><button type='button' class='tiny primary match-accept' data-match='" + person.id + "'>Accept: " + escape(group.speaker) + " is " + escape(person.name) + "</button>" +
+          "<button type='button' class='ghost tiny match-dismiss' data-match='" + person.id + "'>Not them</button></div>" +
+          "<div class='ask muted tiny'>Accept names every line of " + escape(group.speaker) + " on this call and teaches the print from it. Undo takes the name back and the print forgets this call.</div></div>";
+      } else if (group.kind === "conflict") {
+        var names = group.people.map(function (one) { return escape(one.name); });
+        html = "<div class='sounds'>" +
+          "<div><b>Sounds like two people</b> <span class='pill small warn'>" + names.join(" and ") + "</span></div>" +
+          "<div class='ask muted tiny'>Two voice prints both claim this voice: brothers, or one print taught from the wrong call. Nothing is proposed until you have heard them all.</div>" +
+          "<div class='hear'>" + group.people.map(previewButtons).join("") + "</div>" +
+          "<div class='acts'>" + group.people.map(function (one) { return "<button type='button' class='tiny match-accept' data-match='" + one.id + "'>" + escape(one.name) + "</button>"; }).join("") +
+          "<button type='button' class='ghost tiny match-dismiss' data-matches='" + group.people.map(function (one) { return one.id; }).join(",") + "'>Neither</button></div></div>";
+      } else if (group.kind === "side") {
+        var who = group.people[0];
+        html = "<div class='sounds alarm' data-person='" + escape(who.name) + "'>" +
+          "<div><b>Does not sound like " + escape(who.name) + "</b> <span class='pill small danger'>the voice disagrees</span></div>" +
+          "<div class='ask muted tiny'>The case rule names this side " + escape(who.name) + " on every call. On this call the voice is someone else's. Nothing is renamed until you say.</div>" +
+          "<div class='hear'>" + previewButtons(who) + "<span class='muted tiny'>the samples above are this call's side</span></div>" +
+          "<div class='acts'><button type='button' class='tiny side-not'>Not " + escape(who.name.split(" ")[0]) + " on this call...</button>" +
+          "<button type='button' class='ghost tiny match-accept' data-match='" + who.id + "'>It is " + escape(who.name.split(" ")[0]) + "</button></div></div>";
+      }
+      if (!html) { return; }
+      box.innerHTML = html;
+      box.hidden = false;
+    });
   }
 
   // What the check found (v1.129.0): one list of proposals, each a question
@@ -1296,6 +1406,7 @@
       .then(function (body) {
         var busy = drawNameSuggestions(body);
         busy = drawCorrections(body) || busy;
+        drawVoiceMatches(body);
         if (suggestTimer) { window.clearTimeout(suggestTimer); suggestTimer = null; }
         if (busy) { suggestTimer = window.setTimeout(refreshSuggestions, 2000); }
       })

@@ -2,9 +2,9 @@
 
 Date: 2026-10-19. Status: accepted. Release: the voice plan's V1 to V4;
 V1 (decision 4, the Call system) landed in v1.138.0, V2 (decisions 1 to
-3 and 5, the voice step) in v1.139.0 and V3 (decision 6's one run and
-decision 7's Also called) in v1.140.0; V4 (Voice prints) is not yet built
-and nothing of it is in force until its release lands with its switch.
+3 and 5, the voice step) in v1.139.0, V3 (decision 6's one run and
+decision 7's Also called) in v1.140.0 and V4 (Voice prints, decision 6)
+in v1.144.0 behind the Admin's switch, Off as shipped.
 
 ## Context
 
@@ -128,3 +128,29 @@ and cap are the build's constants rather than Panel settings, and the Panel
 gains three rows in all (Voices help the check, Remember voices across a
 case, Call system phrases), at the maintainer's wish for no overlapping
 settings.
+
+**Noted 2026-10-21, at V4's build (v1.144.0).** The pages were drawn
+(`docs/spec/mockups/phase-5-voice-prints.html`) and chosen: Sounds like,
+the conflict and the Side rule's alarm are accepted on the recording's
+Speakers page card, with the Person's voice to play beside the card's own
+samples; the Case's Speakers tab is an overview (the Voice column with the
+chain, what waits and where, Decided so far) and the home of Unlearn.
+Decision 5 is amended by this: while the switch is on and the recording is
+in a Case, the run keeps one vector per Speaker label (the label's print on
+that recording) so a Speaker named later teaches its Person's print; the
+per-line vectors still go when the check is done, and the switch going off
+empties the label vectors with the prints. The rating's three links are
+build constants (a cosine of 0.65 for high and 0.50 for medium, raised to
+the run's own midpoint between same-voice and other-voice scores where
+that is higher; 0.35 and under for the Side alarm; a print from one
+recording and a voice heard for under ten seconds each cap at medium).
+The same day the maintainer asked for prints beyond one case for the
+people the office meets again and again (officers on body camera and in
+interviews), switchable from the Panel, with a manual check against the
+known voices inside a case, a place that shows the prints, and two units
+(read from the directory's OUs) that never see each other's prints. That
+is a change to "never across Cases" and is decided in its own record when
+it is drawn and built (V4b, the unit's voice book); this release carries
+only the hook: a scope on the print, always "case", and a reserved mark
+on the Person, always off.
+

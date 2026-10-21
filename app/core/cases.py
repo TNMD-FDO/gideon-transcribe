@@ -90,6 +90,10 @@ class Case(models.Model):
     # one key per offer, so the same set of videos is not offered twice.
     declined_offers = models.JSONField(default=list, blank=True)
 
+    # When the Admin's switch Remember voices went off (v1.144.0): the tab
+    # says "voices were forgotten on <date>" until a print is learnt again.
+    voices_forgotten_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ["name"]
         indexes = [models.Index(fields=["owner", "name"])]

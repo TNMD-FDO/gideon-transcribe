@@ -100,6 +100,8 @@
               {% if not card.system %}<button type="button" class="{% if card.named %}ghost {% else %}primary {% endif %}tiny name-or-merge" title="Say who this speaker is: a person of the case, another speaker on this call, or someone new">Name or merge...</button>{% endif %}
               <span class="suggested" hidden></span>
             </div>
+            {% comment %}Sounds like (Phase 5 chapter 2, v1.144.0): a match, a conflict or the Side alarm, drawn by the script from the check's state, with the Person's voice to play beside this one.{% endcomment %}
+            <div class="sounds-box" hidden></div>
             {% comment %}The merge hint (Phase 8 chapter 8): a fragment with a neighbour is offered the merge; one without is said to be alone.{% endcomment %}
             {% if card.hint_other %}
               <div class="hint-line">Never speaks while {{ card.hint_other }} does, and its {{ card.lines }} line{{ card.lines|pluralize }} sit{{ card.lines|pluralize:"s," }} inside {{ card.hint_other }}'s turns; see the lanes.

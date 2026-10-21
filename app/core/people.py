@@ -42,6 +42,19 @@ class Person(models.Model):
     # name rules, to Search and to Gideon. Neither list labels a Speaker:
     # the label on every page is the Person's name.
     also_called = models.JSONField(default=list, blank=True)
+    # The Voice print (Phase 5 chapter 2 in force, ADR 0021 decision 6,
+    # v1.144.0): {"vector": [...], "parts": {recording id: {"vector",
+    # "label", "lines", "seconds", "how", "by", "at"}}, "scope": "case"},
+    # learnt only from names and matches people accept; None until then.
+    # Content: never logged, exported or sent anywhere; deleted with the
+    # Person, by Unlearn, or when the Admin's switch goes off. The scope
+    # and kept_for_unit are the hook for the unit's voice book (V4b),
+    # always "case" and False until that release.
+    voice_print = models.JSONField(null=True, blank=True)
+    voice_scope = models.CharField(max_length=10, default="case")
+    kept_for_unit = models.BooleanField(default=False)
+    voice_unlearnt_at = models.DateTimeField(null=True, blank=True)
+    voice_unlearnt_by = models.CharField(max_length=150, blank=True, default="")
     added_by = models.ForeignKey(
         "core.User", on_delete=models.SET_NULL, null=True, blank=True
     )

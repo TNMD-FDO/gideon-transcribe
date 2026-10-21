@@ -607,9 +607,12 @@
     pill.disabled = false;
     var count = (check.pending || []).length;
     var handovers = check.handovers || [];
-    pill.hidden = !count && !handovers.length;
+    // Sounds like (v1.144.0): the voices waiting to be decided on the page.
+    var sounds = ((check.voice_matches || {}).matches || []).length;
+    pill.hidden = !count && !handovers.length && !sounds;
     var text = count ? count + (count === 1 ? " change proposed" : " changes proposed") : "";
     if (handovers.length) { text += (text ? " \u00b7 " : "") + "another voice under " + handovers[0].speaker; }
+    if (sounds) { text += (text ? " \u00b7 " : "") + sounds + (sounds === 1 ? " voice sounds like someone" : " voices sound like someone"); }
     pill.textContent = text;
   }
   var correctionsPill = document.getElementById("corrections-pill");

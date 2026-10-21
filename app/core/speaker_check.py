@@ -375,6 +375,10 @@ def _voice_notes(transcript, kept: dict, check=None) -> dict:
             summary["cost"] = answer["cost"]
             summary.update(voices.counts(judge))
             _write_fits(transcript, judge)
+            # One vector per label kept for the Case's prints (v1.144.0).
+            from core import voice_prints
+
+            voice_prints.keep_prints(check, judge)
         except voices.Unavailable as why:
             summary["voice"] = "unavailable"
             summary["voice_unavailable"] = str(why)[:120]
@@ -724,6 +728,16 @@ def run(check_id, attempt: int = 1) -> None:
         )
         # The one run (ADR 0021, V3): the names, in the same job.
         _names_pass(check)
+        # The Case remembers (V4, v1.144.0): each unnamed voice against the
+        # Case's prints; a failure here never fails the run.
+        try:
+            from core import voice_prints
+
+            voice_prints.match(check)
+        except Exception:  # noqa: BLE001 - a match is a proposal, never the run
+            log.exception(
+                "speaker check for %s: the voice matches failed", transcript.pk
+            )
     except engine.Problem as problem:
         # What was found before the problem is kept: every one passed the checks.
         if kept:
@@ -1091,10 +1105,16 @@ def state_json(transcript) -> dict:
             "source": one.source,
         }
 
+    from core import voice_prints
     from core.assistant import Handover
 
+    voice_prints.settle(transcript)
     return {
         "offered": offered(transcript),
+        # Sounds like, the conflicts and the Side alarm (v1.144.0), and the
+        # labels Unlearn returned.
+        "voice_matches": voice_prints.rows_for(transcript),
+        "remember_voices": voice_prints.on(),
         "pending": [row(one) for one in rows],
         "speakers": cards,
         "stretches": stretches(rows, cards),

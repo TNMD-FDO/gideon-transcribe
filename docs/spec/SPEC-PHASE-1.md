@@ -4097,7 +4097,7 @@ These rules cut across every chapter. Each one is stated once in the chapter tha
 9. **Nothing is discarded early to make room.** Below the free-space floor, uploads are refused and IT is told; nothing already accepted is touched. (Workspace lifecycle)
 10. **Exports and Clip downloads are the only ways anything leaves a Workspace**, and every export carries exactly one notice, the Translation notice or the Transcription notice, never both and never on Captions. (Exports; Transcription, translation, and diarization choices)
 11. **Content is never in a log, an audit row, or a message.** Transcript text, Corrections, Chat questions and answers, Summary text, Vocabulary, search terms, file contents, passwords, tokens, Speaker names, Clip titles, and Clip notes are never written anywhere but the database rows that hold them. The audit log is metadata; container logs go to the host's journal and hold no content. (Audit log and logging)
-12. **Speaker embeddings are never requested or stored.** The WhisperX service keeps its door for them; the app never opens it in either phase. (Deferred and ruled out; the WhisperX service API document)
+12. **Speaker embeddings are never requested or stored.** The WhisperX service keeps its door for them; the app never opens it in either phase. (Deferred and ruled out; the WhisperX service API document) **Amended by Phase 5 chapter 2, v1.144.0:** behind the Admin's switch Remember voices across a case, Off as shipped, a Person's Voice print is kept inside its Case under that chapter's rules; with the switch off this item stands as written.
 
 ### Who may do what
 
