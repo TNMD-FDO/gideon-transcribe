@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Re-read after a name</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--accent); white-space: nowrap; border: 1px solid var(--accent); border-radius: var(--radius); padding: 0 6px; min-height: 22px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .label.ok { color: var(--ok); } .label.bad { color: var(--bad); }
+  .n { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+
+  /* the head of the Speakers page */
+  .head { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+  .head .state { font-size: 14px; }
+  .head .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .head .reread { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding: 6px 8px; border-radius: var(--radius); background: var(--accent-soft); }
+  .head .reread.quiet { background: transparent; border-top: 1px dashed var(--line); border-radius: 0; padding: 6px 0 0; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; }
+  .tick { color: var(--ok); font-weight: 700; }
+  .toast { position: relative; display: inline-flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: var(--radius-lg); background: var(--text); color: var(--bg); font-size: 13px; box-shadow: 0 6px 24px rgba(0,0,0,.2); max-width: 520px; }
+  .toast .x { margin-left: auto; opacity: .7; }
+
+  /* proposal rows */
+  .read-rows { border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: 40px auto minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: 7px 6px; border-bottom: 1px solid var(--line); font-size: 13px; background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .row.settled { background: var(--ok-soft); border-left-color: var(--ok); }
+  .row.plain { background: transparent; border-left-color: transparent; }
+  .row .t { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 3px; }
+  .row .who { font-size: 12px; font-weight: 600; white-space: nowrap; padding-top: 2px; }
+  .row .who s { color: var(--muted); font-weight: 400; }
+  .row .w { min-width: 0; }
+  .row .ctl { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .row .why { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
+  .row .why s { color: var(--bad); }
+  .blockhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 8px; font-size: 13px; background: var(--surface-2); border-radius: var(--radius) var(--radius) 0 0; }
+
+  /* cards */
+  .col { width: 320px; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: var(--radius-lg); position: relative; }
+  .col .colnote { position: absolute; top: -9px; left: 12px; background: var(--surface); padding: 0 6px; font-size: 11px; color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; background: var(--surface); }
+  .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .card .h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card .h .nm { font-weight: 600; }
+  .card .h .lab { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .card .stats { font-size: 12px; color: var(--muted); margin-left: 15px; }
+  .card .samples { display: flex; flex-direction: column; gap: 3px; margin-left: 15px; }
+  .card .sp { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .card .sp .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .card .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card .line1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: 15px; font-size: 12px; }
+  .card .sounds { margin-left: 15px; border: 1px solid var(--accent); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .card .sounds .acts, .card .sounds .hear { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .card .closed { margin-left: 15px; font-size: 12px; color: var(--muted); }
+  .card .closed s { color: var(--muted); }
+  .strip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-lg); font-size: 13px; }
+  .strip .chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The re-read after a name: what the page says while the proposals catch up</h1>
+    <p class="lede"><b>Drawn 2026-10-21</b> for the maintainer to pick, after their find on v1.144.0: once a speaker is named, the check's proposals no longer take the change into account. The fix chosen is the local re-read ("A"): after every rename, merge, split or Sounds like accepted, the app rewrites each pending proposal with the current names, closes what the name settled, re-matches the unnamed voices against the case's prints and re-scores the voice, with no engine call. This drawing is how the page tells the person that is happening, and what changed. Every name and line is made up.</p>
+    <p class="lede"><b>Three rules.</b> It never blocks: the name lands at once and the re-read follows in the same second. It says what it did in counts, on the page, in the voice the check already uses. And it is honest about its limit: the lines are re-read against the new names; the words are not, and Run again is how the words get re-read.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The second after Accept</div><h2>The name lands, the toast says the proposals are catching up, the head's line says what changed</h2></div>
+    <div class="work">
+      <div class="label">Just after "Accept: Speaker 2 is Dana Reyes" (or Name or merge, a Split, a merge)</div>
+      <div class="toast"><span class="spin"></span> Speaker 2 is now Dana Reyes. Re-reading 9 proposals for the new name…</div>
+      <div class="label" style="margin-top: 10px;">A moment later, the head of the Speakers page</div>
+      <div class="head">
+        <div class="state"><b>Checked today 11:52</b>, the whole call. 7 changes proposed, 5 of them backed by the voice; 1 hand-over. Read down; accept or leave each as you go.</div>
+        <div class="acts"><span class="btn primary">Accept the 5 changes the voice backs</span><span class="btn ghost">Run again</span></div>
+        <div class="reread"><span class="tick">&#10003;</span> <span><b>Re-read for Dana Reyes</b> a moment ago: 2 proposals were settled by the name, 6 now read against her, 1 name suggestion closed, and 1 more voice on this call sounds like her. The words were read before the name; <a href="#">Run again</a> re-reads them too.</span><span class="btn quiet">dismiss</span></div>
+      </div>
+      <div class="caption">
+        <p><b>The toast is the one moving part.</b> It appears as the name lands, with the small spinner the app uses for a job in hand, and goes when the re-read is done, usually within a second. The page never waits for it: the cards, the lanes and the counts change at once as they do today.</p>
+        <p><b>The head's line is the record.</b> One line under the check's state, in the accent tint the check uses for a note, said in counts: settled, re-read, closed, newly sounds like. It stays until the person dismisses it or the next run, so somebody coming back to the page sees why the proposals read differently from an hour ago.</p>
+        <p><b>The limit is in the same sentence.</b> "The words were read before the name; Run again re-reads them too." No second warning box: the fact sits where the person is already reading, with the button beside it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · The proposals in the reading pane, before and after</div><h2>Each proposal follows the name, says so once, and the settled ones say what settled them</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div>
+          <div class="label bad">Before the re-read (v1.144.0): the labels moved, the words did not</div>
+          <div class="read-rows">
+            <div class="row">
+              <span class="t">0:12</span><span class="who"><span class="c2"><s>Dana Reyes</s></span> &rarr; <span class="c1">Speaker 1</span></span><span class="w">Dispatch, unit twelve, we're on scene at the harbour car park.</span>
+              <span class="why">the voice sounds like <s>Speaker 1</s>; a question and its answer under one name</span>
+              <span class="ctl"><span class="pill ok">the voice agrees</span><span class="n">2</span><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+            </div>
+            <div class="row">
+              <span class="t">3:14</span><span class="who"><span class="c1"><s>Speaker 1</s></span> &rarr; <span class="c2">Dana Reyes</span></span><span class="w">Step out of the car for me, please.</span>
+              <span class="why">the voice sounds like <s>Speaker 2</s></span>
+              <span class="ctl"><span class="pill">the voice could not tell</span><span class="n">3</span><span class="btn tiny">Accept</span><span class="btn ghost tiny">Leave</span></span>
+            </div>
+          </div>
+          <p class="tiny muted" style="margin: 8px 0 0;">The reason still names the label the run saw; the voice's word is the old one; nothing says the name just changed.</p>
+        </div>
+        <div>
+          <div class="label ok">After the re-read</div>
+          <div class="read-rows">
+            <div class="blockhead"><b>2 lines</b> <span class="muted">shown as Dana Reyes, read as Speaker 1's</span> <span class="pill ok">the voice agrees</span> <span class="pill acc">re-read for Dana Reyes</span> <span style="flex: 1"></span><span class="btn tiny primary">Accept all 2</span><span class="btn ghost tiny">Leave</span></div>
+            <div class="row">
+              <span class="t">0:12</span><span class="who"><span class="c2"><s>Dana Reyes</s></span> &rarr; <span class="c1">Speaker 1</span></span><span class="w">Dispatch, unit twelve, we're on scene at the harbour car park.</span>
+              <span class="why">the voice sounds like Speaker 1, not Dana Reyes; a question and its answer under one name</span>
+              <span class="ctl"><span class="pill ok">the voice agrees</span><span class="n">2</span><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+            </div>
+            <div class="row settled">
+              <span class="t">3:14</span><span class="who"><span class="c1"><s>Speaker 1</s></span> &rarr; <span class="c2">Dana Reyes</span></span><span class="w">Step out of the car for me, please.</span>
+              <span class="ctl"><span class="pill ok">settled: this line is Dana Reyes's now</span><span class="muted tiny">by naming Speaker 2 as Dana Reyes</span><span class="btn ghost tiny">Undo</span></span>
+            </div>
+            <div class="row plain">
+              <span class="t">3:28</span><span class="who"><span class="c3">Speaker 3</span></span><span class="w">Is this really necessary?</span>
+            </div>
+          </div>
+          <p class="tiny muted" style="margin: 8px 0 0;">The reason is rewritten with the current names and the voice's word re-scored; a block that the re-read touched carries one quiet pill; a proposal the name settled stays in place, tinted, with what settled it and Undo, as an accepted one does today.</p>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Nothing jumps.</b> The rows stay where they are, in reading order. A settled row keeps its place and its tint so the reading never loses a line; Undo on it is the viewer's Undo of the name, which puts the proposal back as it was.</p>
+        <p><b>One pill, not a banner per row.</b> "re-read for Dana Reyes" sits on the block head of each run of lines the re-read touched, and on a single line's row when it stands alone. It goes with the next run or when the head's line is dismissed.</p>
+        <p><b>The voice's word may change.</b> A line the voice could not tell before may now agree or disagree, because the prints were rebuilt from the cast as it stands. The pill's tint moves with it; nothing is accepted by itself.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · The cards after the re-read</div><h2>A name suggestion the name closed, and a Sounds like that appeared because a print was just taught</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="col"><span class="colnote">the card that was just named</span>
+          <div class="card on">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Dana Reyes</span><span class="pill">Client</span><span class="pill">named</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">14 lines, 1 min 51 s, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Can I call my sister first?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"I was only there twenty minutes."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="closed"><s>Probably Riley, called that by another speaker at 00:05:09</s> &middot; closed: this speaker is Dana Reyes now <span class="btn quiet">dismiss</span></div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+        </div>
+        <div class="col"><span class="colnote">another card on the same call</span>
+          <div class="card">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">6 lines, 0 min 40 s, first at 5:02</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">5:02</span><span class="q">"Yeah, this is him."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds">
+              <div><b>Sounds like Dana Reyes</b> <span class="pill">Client</span> <span class="pill warn">medium</span> <span class="pill acc">new: her print was just taught from this call</span></div>
+              <div class="hear"><span class="prev">&#9654; Dana on this call, 1:36</span><span class="muted tiny">the samples above are this voice</span></div>
+              <div class="acts"><span class="btn tiny primary">Accept: Speaker 3 is also Dana Reyes</span><span class="btn ghost tiny">Not her</span></div>
+              <div class="muted tiny">Two labels, one person? Accept merges Speaker 3 into Dana Reyes on this call. Undo puts the label back.</div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>A closed suggestion says why, once.</b> The name the words suggested for the label is struck through with "closed: this speaker is Dana Reyes now" and a dismiss; the row goes with the next run. Nothing silently vanishes from a card the person was looking at.</p>
+        <p><b>A match born of the re-read says so.</b> The print taught a second ago can match another label on the same call, which means two labels may be one person. The pill says the match is new and why; the button says plainly that Accept is a merge on this call; the Preview plays Dana from this very call, since that is where her print came from.</p>
+        <p><b>Nothing else on the card moves.</b> Samples, not this voice, Name or merge and the hand-over keep their places; the re-read adds a line or strikes one, and that is all.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · The quiet version, and the strip</div><h2>When the re-read changed nothing, one short line; on the recording page, the pill says the proposals follow the name</h2></div>
+    <div class="work">
+      <div class="label">The head, when the name touched no proposal</div>
+      <div class="head">
+        <div class="state"><b>Checked today 11:52</b>, the whole call. 7 changes proposed, 5 of them backed by the voice. Read down; accept or leave each as you go.</div>
+        <div class="acts"><span class="btn primary">Accept the 5 changes the voice backs</span><span class="btn ghost">Run again</span></div>
+        <div class="reread quiet"><span class="tick">&#10003;</span> <span>Re-read for Lee Ortiz a moment ago: the proposals already read against the new name; nothing changed. The words were read before the name; <a href="#">Run again</a> re-reads them too.</span></div>
+      </div>
+      <div class="label" style="margin-top: 12px;">The recording page's Speakers strip</div>
+      <div class="strip"><b>Speakers</b> <span class="chip"><span class="dot c2"></span> Dana Reyes</span><span class="chip"><span class="dot c1"></span> Speaker 1</span><span class="chip"><span class="dot c3"></span> Speaker 3</span><span style="flex: 1"></span><span class="pill acc">7 changes proposed &middot; re-read for Dana Reyes</span><span class="btn ghost tiny">Manage speakers</span></div>
+      <div class="caption">
+        <p><b>Quiet when there is nothing to say.</b> The same line, without the tint and without counts, so the person knows the re-read ran and the page is current.</p>
+        <p><b>The strip's pill carries the fact to the recording page.</b> "re-read for Dana Reyes" after the count, until the next run; a press opens the Speakers page as today.</p>
+        <p><b>Where the words stay stale.</b> After the re-read the check's state line keeps its time ("Checked today 11:52"), since the words were read then. Only Run again moves it. The head's line is what says the lines were re-read since.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What this is not</div><h2>Kept as it is</h2></div>
+    <div class="work">
+      <div class="caption">
+        <p><b>No engine call.</b> The re-read rewrites, closes, re-matches and re-scores from what the run kept; Run again stays a person's press (an automatic Run again is a later Admin choice if wanted).</p>
+        <p><b>Nothing is accepted by itself.</b> A proposal the name made true is marked settled with Undo, as the merge already does today; a new Sounds like waits for a press.</p>
+        <p><b>Where it lands.</b> Phase 5 chapter 3, "The Speakers page", one amendment: the re-read after a name and its line; the Sounds like block gains the "new" pill. One release, v1.144.1.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

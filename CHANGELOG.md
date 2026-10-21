@@ -21,6 +21,39 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.144.1, 2026-10-21
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The re-read after a name** (the maintainer's find on v1.144.0: once a
+  speaker was named, the check's proposals no longer took the change into
+  account; drawn in `docs/spec/mockups/phase-5-reread-after-a-name.html`
+  and chosen). After every rename, merge, Sounds like accepted or name
+  suggestion accepted, the proposals catch up without an engine call: each
+  pending proposal's reason is rewritten with the current names, a name
+  suggestion for a label now named is closed (not rejected), the labels'
+  kept prints follow the name, the unnamed voices are matched again against
+  the case's prints with the one just taught among them, and the voice's
+  word is re-scored. A name accepted from a suggestion now makes the
+  proposals follow it too, which it did not before. The page says what
+  happened: a toast as the name lands ("Speaker 2 is now Dana Reyes.
+  Re-reading 9 proposals for the new name..."), one line under the check's
+  state in counts (settled, now read against her, name suggestions closed,
+  more voices that sound like her) with the limit in the same sentence
+  ("the words were read before the name; Run again re-reads them too") and
+  a dismiss, a quiet "re-read for Dana Reyes" pill on each block or row the
+  re-read touched, the proposals the name settled kept in place and tinted
+  with what settled them and Undo, the closed suggestion struck through on
+  the named card with why, a "new: their print was just taught from this
+  call" pill on a Sounds like the re-read made, whose Preview plays the
+  person on this call, and the recording page's strip pill carrying
+  "re-read for Dana Reyes". Undo of the name re-reads for the label again
+  and takes the line away. The check's "Checked at" time keeps the time the
+  words were read.
+
 ## v1.144.0, 2026-10-21
 
 ```

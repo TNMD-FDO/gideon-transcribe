@@ -2333,6 +2333,17 @@ details.inline[open] summary::after { content: ": "; }
 .sp-card .sounds .hear, .sp-card .sounds .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sp-card .sounds .hear .hear-else { font-size: 11px; min-height: 22px; padding: 0 6px; }
 .sp-card .pill.was-voice { background: var(--surface-2); color: var(--muted); font-size: 0.72em; font-style: italic; }
+/* The re-read after a name (v1.144.1): the line under the check's state,
+   the pill on what it touched, the settled rows in place. */
+.sp-corrections .reread { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; margin: 6px 0 0; border-radius: var(--radius); background: var(--accent-soft); }
+.sp-corrections .reread.quiet { background: transparent; border-top: 1px dashed var(--line); border-radius: 0; padding: 6px 0 0; color: var(--muted); }
+.sp-corrections .reread .tick { color: var(--ok, var(--accent)); font-weight: 700; }
+.sp-corrections .reread .said { flex: 1; min-width: 0; }
+.sp-corrections .reread .linklike { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font: inherit; }
+.sp-corrections .reread .reread-dismiss { flex: none; }
+.sp-read .seg.change.settled { background: var(--ok-soft, var(--surface-2)); border-left-color: var(--ok, var(--accent)); }
+.sp-read .seg.change.settled .actions { visibility: visible; }
+.pill.reread-pill { font-weight: 400; }
 /* The Case tab's Voice column (v1.144.0). */
 .tbl td .voice { display: flex; flex-direction: column; gap: 3px; min-width: 16rem; }
 .tbl td .voice .chain { font-size: 12px; color: var(--muted); }

@@ -930,6 +930,113 @@ def unfollow(transcript, was: str, now: str, followed: dict | None) -> int:
     return count
 
 
+def _relabel(text: str, was: str, now: str) -> str:
+    """The old label, as a whole word, becomes the new name in a sentence."""
+    import re
+
+    if not text or not was:
+        return text
+    return re.sub(r"(?<![\w-])" + re.escape(was) + r"(?![\w-])", now, text)
+
+
+def reread_after_name(
+    transcript, was: str, now: str, *, by=None, followed: dict | None = None
+) -> dict:
+    """The re-read after a name (v1.144.1; the drawing
+    phase-5-reread-after-a-name.html): once a label has taken a name (a
+    rename, a merge, a Sounds like accepted, a suggestion accepted), the
+    pending proposals are rewritten with the current names, the name
+    suggestions for a label now named are closed, the labels' kept prints
+    follow the name and the unnamed voices are matched again against the
+    Case's prints (the one just taught among them), and the voice's word is
+    re-scored. No engine call. A note of what changed, in counts and ids,
+    goes on the newest finished run for the page to show; an undo back to a
+    label (`now` is a label) takes the note away."""
+    from core import voice_prints
+    from core.assistant import Suggestion, VoiceMatch, _is_a_label
+
+    followed = followed or {}
+    last = transcript.speaker_checks.filter(state=DONE).first()
+    note: dict = {
+        "for": now,
+        "was": was,
+        "at": timezone.now().isoformat(timespec="seconds"),
+        "settled": list(followed.get("accepted", [])) + list(followed.get("moot", [])),
+        "touched": list(followed.get("from", [])) + list(followed.get("to", [])),
+        "closed": [],
+        "new_matches": [],
+        "reread": 0,
+    }
+    # The words: every pending proposal's reason, with the current names.
+    if was:
+        for one in transcript.corrections.filter(state=SpeakerCorrection.PENDING):
+            fixed = _relabel(one.reason, was, now)
+            if fixed != one.reason:
+                one.reason = fixed
+                one.save(update_fields=["reason"])
+                if str(one.pk) not in note["touched"]:
+                    note["touched"].append(str(one.pk))
+    # The names: a suggestion for a label that is now named has nothing left
+    # to say; it is closed, not rejected, and the card says so once.
+    if was and not _is_a_label(now):
+        from core import exports
+
+        for one in transcript.suggestions.filter(
+            state=Suggestion.PENDING, speaker__in=[was, now]
+        ):
+            one.state = Suggestion.CLOSED
+            one.save(update_fields=["state"])
+            note["closed"].append(
+                {
+                    "name": one.name,
+                    "clock": exports.clock(one.start),
+                    "start": one.start,
+                }
+            )
+    # The prints kept on the runs follow the name.
+    if was:
+        for check in transcript.speaker_checks.exclude(prints={}):
+            prints = dict(check.prints or {})
+            if was in prints:
+                mine = prints.pop(was)
+                kept = prints.get(now)
+                if kept is None or float(mine.get("seconds", 0)) > float(
+                    kept.get("seconds", 0)
+                ):
+                    prints[now] = mine
+                check.prints = prints
+                check.save(update_fields=["prints"])
+    # The voices, matched again against the Case's prints as they stand now.
+    with_prints = transcript.speaker_checks.exclude(prints={}).first()
+    if with_prints is not None and voice_prints.on():
+        try:
+            voice_prints.match(with_prints)
+            if not _is_a_label(now):
+                note["new_matches"] = list(
+                    VoiceMatch.objects.filter(
+                        transcript=transcript,
+                        state=VoiceMatch.PENDING,
+                        kind=VoiceMatch.MATCH,
+                        person__name=now,
+                    ).values_list("pk", flat=True)
+                )
+        except Exception:  # noqa: BLE001 - a match is a proposal, never the name
+            log.exception("re-read for %s: the voice matches failed", transcript.pk)
+    rescore(transcript)
+    note["reread"] = transcript.corrections.filter(
+        state=SpeakerCorrection.PENDING
+    ).count()
+    if last is not None:
+        look = dict(last.second_look or {})
+        if _is_a_label(now):
+            look.pop("reread", None)
+        else:
+            look["reread"] = note
+        last.second_look = look
+        last.save(update_fields=["second_look"])
+    return note
+
+
 def live_rows(transcript) -> list:
     """The pending corrections whose line still carries the label the check
     saw; one moved since (by hand, a merge, a swap) is left out."""
@@ -1109,8 +1216,24 @@ def state_json(transcript) -> dict:
     from core.assistant import Handover
 
     voice_prints.settle(transcript)
+    # The rows a name settled since the run (v1.144.1), shown in place.
+    done_run = transcript.speaker_checks.filter(state=DONE).first()
+    note = ((done_run.second_look or {}).get("reread") or {}) if done_run else {}
+    settled_rows = (
+        list(transcript.corrections.filter(pk__in=note.get("settled") or []))
+        if note
+        else []
+    )
     return {
         "offered": offered(transcript),
+        "settled": [
+            dict(
+                row(one),
+                state=one.state,
+                settled_by={"was": note.get("was", ""), "now": note.get("for", "")},
+            )
+            for one in settled_rows
+        ],
         # Sounds like, the conflicts and the Side alarm (v1.144.0), and the
         # labels Unlearn returned.
         "voice_matches": voice_prints.rows_for(transcript),

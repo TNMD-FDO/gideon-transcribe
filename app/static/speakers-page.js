@@ -294,6 +294,7 @@
     var previous = null;
     segments.forEach(function (segment, index) {
       var change = drawnChange(segment);
+      if (change && change.settled) { previous = null; return; }
       if (change && previous && previous.change.from === change.from && previous.change.to === change.to && segment.start - previous.end <= 20) {
         runIds[previous.head].push(change.id);
         previous = { change: change, end: segment.end, head: previous.head };
@@ -307,12 +308,12 @@
     });
     segments.forEach(function (segment, index) {
       var change = drawnChange(segment);
-      if (change && runStart[index] && runIds[index].length > 1) {
+      if (change && !change.settled && runStart[index] && runIds[index].length > 1) {
         var head = document.createElement("li");
         head.className = "block-head";
         head.dataset.index = index;
         head.dataset.ids = runIds[index].join(",");
-        head.innerHTML = "<b>" + runIds[index].length + " lines</b> <span class='muted'>shown as " + escape(change.from) + ", read as " + escape(change.to) + "'s</span> " + changePill(change) +
+        head.innerHTML = "<b>" + runIds[index].length + " lines</b> <span class='muted'>shown as " + escape(change.from) + ", read as " + escape(change.to) + "'s</span> " + changePill(change) + rereadPill(change) +
           "<span class='grow'></span>" + hearThree(change) +
           "<button type='button' class='tiny" + (change.voice === "agrees" ? " primary" : "") + " block-accept'>Accept all " + runIds[index].length + "</button>" +
           "<button type='button' class='ghost tiny block-leave'>Leave</button>";
@@ -326,14 +327,27 @@
         row.style.borderLeftColor = colours[segment.speaker] || "transparent";
       }
       if (index > 0 && segments[index - 1].speaker === segment.speaker && !change) { row.classList.add("cont"); }
-      if (change) {
+      if (change && change.settled) {
+        // A proposal the name settled (v1.144.1): in place, tinted, with
+        // what settled it and the viewer's Undo of the name.
+        row.classList.add("change", "settled");
+        row.dataset.correction = change.id;
+        var by = change.settled_by || {};
+        row.innerHTML =
+          "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
+          "<div class='who'><span class='name'><s>" + escape(change.from) + "</s> <span class='to' style='--speaker: " + (colours[change.to] || "") + "'>" + escape(change.to) + "</span></span><span class='tags'>" + guessPill(segment) + "</span></div>" +
+          "<div class='words'><p class='txt'>" + wordsOf(segment) + "</p></div>" +
+          "<span class='actions change-acts'><span class='pill small ok'>settled: this line is " + escape(change.to) + "'s now</span>" +
+          (by.was ? "<span class='muted tiny'>by naming " + escape(by.was) + " as " + escape(by.now) + "</span>" : "") +
+          "<button type='button' class='ghost tiny undo-name' title='Undo the name; the proposal comes back as it was'>Undo</button></span>";
+      } else if (change) {
         row.classList.add("change", change.voice || "quiet");
         row.dataset.correction = change.id;
         row.innerHTML =
           "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
           "<div class='who'><span class='name'><s>" + escape(change.from) + "</s> <span class='to' style='--speaker: " + (colours[change.to] || "") + "'>" + escape(change.to) + "</span></span><span class='tags'>" + guessPill(segment) + "</span></div>" +
           "<div class='words'><p class='txt'>" + wordsOf(segment) + "</p></div>" +
-          "<span class='actions change-acts'>" + changePill(change) + hearThree(change) +
+          "<span class='actions change-acts'>" + changePill(change) + rereadPill(change) + hearThree(change) +
           "<button type='button' class='tiny" + (change.voice === "agrees" ? " primary" : "") + " accept-change' title='Move this line to " + escape(change.to) + "'>Accept</button>" +
           "<button type='button' class='ghost tiny leave-change' title='Leave the line as it is and put the proposal away'>Leave</button>" +
           "</span>";
@@ -606,8 +620,65 @@
   function drawnChange(segment) {
     var change = changes[String(segment.id)];
     if (!change) { return null; }
+    if (change.settled) { return change; }
     if (!change.voice && !showQuiet) { return null; }
     return change;
+  }
+
+  // The re-read after a name (v1.144.1): the pill on a block or a row the
+  // re-read touched, and the line under the check's state.
+  function rereadPill(change) {
+    if (!rereadNote || !change || (rereadNote.touched || []).indexOf(change.id) < 0) { return ""; }
+    return " <span class='pill small acc reread-pill' title='This proposal was rewritten for the new name'>re-read for " + escape(rereadNote["for"]) + "</span>";
+  }
+  function agoText(iso) {
+    var then = Date.parse(iso || "");
+    if (!then) { return ""; }
+    var minutes = (Date.now() - then) / 60000;
+    if (minutes < 2) { return "a moment ago"; }
+    var d = new Date(then);
+    return "at " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  function drawRereadLine(check) {
+    var line = document.getElementById("reread-line");
+    if (!line) { return; }
+    var note = rereadNote;
+    var dismissed = false;
+    try { dismissed = !!note && window.sessionStorage.getItem("reread-dismissed") === note.at; } catch (e) { dismissed = false; }
+    if (!note || !note["for"] || dismissed) { line.hidden = true; line.innerHTML = ""; return; }
+    var parts = [];
+    var settled = (note.settled || []).length;
+    var touched = (note.touched || []).length;
+    var closed = (note.closed || []).length;
+    var fresh = (note.new_matches || []).length;
+    if (settled) { parts.push(plural(settled, "proposal") + (settled === 1 ? " was" : " were") + " settled by the name"); }
+    if (touched) { parts.push(touched + " now read" + (touched === 1 ? "s" : "") + " against " + escape(note["for"])); }
+    if (closed) { parts.push(plural(closed, "name suggestion") + " closed"); }
+    if (fresh) { parts.push(fresh + " more voice" + (fresh === 1 ? "" : "s") + " on this call sound" + (fresh === 1 ? "s" : "") + " like " + escape(note["for"])); }
+    var said = parts.length
+      ? "<b>Re-read for " + escape(note["for"]) + "</b> " + agoText(note.at) + ": " + parts.join(", ") + "."
+      : "<b>Re-read for " + escape(note["for"]) + "</b> " + agoText(note.at) + ": the proposals already read against the new name; nothing changed.";
+    line.className = "reread small" + (parts.length ? "" : " quiet");
+    line.innerHTML = "<span class='tick'>\u2713</span> <span class='said'>" + said +
+      " The words were read before the name; <button type='button' class='linklike reread-run'>Run again</button> re-reads them too.</span>" +
+      "<button type='button' class='ghost tiny reread-dismiss' title='Hide this line'>dismiss</button>";
+    line.hidden = false;
+  }
+  document.addEventListener("click", function (event) {
+    if (event.target.closest(".reread-run")) { var run = document.getElementById("check-speakers"); if (run) { run.click(); } return; }
+    if (event.target.closest(".reread-dismiss")) {
+      try { if (rereadNote) { window.sessionStorage.setItem("reread-dismissed", rereadNote.at); } } catch (e) { /* no storage */ }
+      var line = document.getElementById("reread-line");
+      if (line) { line.hidden = true; }
+      return;
+    }
+    if (event.target.closest(".undo-name")) { var undo = document.getElementById("speakers-undo"); if (undo) { undo.click(); } }
+  });
+  function pendingNow() { return Object.keys(changes).filter(function (id) { return !changes[id].settled; }).length; }
+  function sayRereading(was, to) {
+    var n = pendingNow();
+    if (!n) { return; }
+    UI.toast(escape(was) + " is now " + escape(to) + ". Re-reading " + plural(n, "proposal") + " for the new name\u2026", { icon: "info" });
   }
 
   // The three sounds: the line, the voice it has, the voice proposed.
@@ -837,6 +908,7 @@
       : Promise.resolve(true);
     go.then(function (yes) {
       if (!yes) { return; }
+      sayRereading(was, to);
       send("/recording/" + V.recording + "/speakers", { from: was, to: to, role: role || "" }).then(function (answer) {
         if (!answer.ok) { UI.toast(answer.said.error || "Not renamed.", { problem: true, icon: "warning" }); return; }
         tell({ kind: "speakers-changed" });
@@ -852,6 +924,7 @@
       ok: "Merge"
     }).then(function (yes) {
       if (!yes) { return; }
+      sayRereading(was, onto);
       send("/recording/" + V.recording + "/speakers", { from: was, to: onto }).then(function (answer) {
         if (!answer.ok) { UI.toast(answer.said.error || "Not merged.", { problem: true, icon: "warning" }); return; }
         tell({ kind: "speakers-changed" });
@@ -975,6 +1048,12 @@
       // Name or merge (v1.143.0): the one picker, beside the card, asks
       // "<speaker> is"; rename, same person as and the name box folded into it.
       if (event.target.closest(".name-or-merge")) { nameOrMerge(card); return; }
+      if (event.target.closest(".closed-dismiss")) {
+        try { if (rereadNote) { window.sessionStorage.setItem("reread-closed-dismissed", rereadNote.at); } } catch (e) { /* no storage */ }
+        var closedBox = card.querySelector(".suggested");
+        if (closedBox) { closedBox.hidden = true; closedBox.innerHTML = ""; }
+        return;
+      }
       // Sounds like (v1.144.0): Accept names the label as the Person on every
       // line and teaches the print; Not them sets the match aside; Neither
       // sets a conflict's rows aside; the Side alarm's "Not X on this call"
@@ -982,6 +1061,7 @@
       var matchAccept = event.target.closest(".match-accept");
       if (matchAccept) {
         matchAccept.disabled = true;
+        if (pendingNow()) { UI.toast("Re-reading " + plural(pendingNow(), "proposal") + " for the new name\u2026", { icon: "info" }); }
         send("/voice-match/" + matchAccept.dataset.match + "/accept").then(function (answer) {
           if (!answer.ok) { matchAccept.disabled = false; UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
           tell({ kind: "speakers-changed" });
@@ -1055,6 +1135,7 @@
   var suggestLine = document.getElementById("suggest-line");
   var suggestTimer = null;
   var suggestedFor = {};  // speaker -> the name the check suggested (v1.143.0: lit in the picker)
+  var rereadNote = null;  // the last re-read after a name (v1.144.1), from the run
   var checkLine = document.getElementById("check-line");
   var correctionsBox = document.getElementById("corrections");
 
@@ -1110,6 +1191,20 @@
         "<button type='button' class='tiny accept' data-suggestion='" + one.id + "' data-name='" + escape(one.name) + "'>Accept</button> " +
         "<button type='button' class='ghost tiny reject' data-suggestion='" + one.id + "'>Reject</button>";
     });
+    // A suggestion the name closed (v1.144.1): struck through on the named
+    // card, with why, once, until dismissed or the next run.
+    var closedShown = false;
+    try { closedShown = !!rereadNote && window.sessionStorage.getItem("reread-closed-dismissed") === rereadNote.at; } catch (e) { closedShown = false; }
+    if (rereadNote && (rereadNote.closed || []).length && !closedShown) {
+      var named = cardOf(rereadNote["for"]);
+      var closedBox = named ? named.querySelector(".suggested") : null;
+      if (closedBox) {
+        closedBox.hidden = false;
+        closedBox.innerHTML = rereadNote.closed.map(function (one) {
+          return "<s>Probably " + escape(one.name) + ", from " + escape(one.clock) + "</s> \u00b7 closed: this speaker is " + escape(rereadNote["for"]) + " now";
+        }).join("<br>") + " <button type='button' class='ghost tiny closed-dismiss'>dismiss</button>";
+      }
+    }
     return !!busy;
   }
 
@@ -1121,13 +1216,16 @@
   // else; the Case tab only points back.
   function previewButtons(person) {
     return (person.heard || []).slice(0, 2).map(function (one) {
-      return "<button type='button' class='tiny ghost hear-else' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' title='Hear " + escape(person.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " " + escape(person.name.split(" ")[0]) + " on " + escape(one.title.length > 28 ? one.title.slice(0, 26) + "\u2026" : one.title) + ", " + escape(one.clock) + "</button>";
+      var where = one.here ? "this call" : (one.title.length > 28 ? one.title.slice(0, 26) + "\u2026" : one.title);
+      return "<button type='button' class='tiny ghost hear-else' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' title='Hear " + escape(person.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " " + escape(person.name.split(" ")[0]) + " on " + escape(where) + ", " + escape(one.clock) + "</button>";
     }).join("");
   }
   function ratingPill(person) {
     var word = person.rating === "high" ? "high" : "medium";
     var more = person.rating !== "high" && person.recordings === 1 ? ", from one recording" : "";
-    return "<span class='pill small " + (word === "high" ? "ok" : "") + "'>" + word + more + "</span>";
+    // A match the last re-read made (v1.144.1): born of the print just taught.
+    var fresh = person["new"] ? " <span class='pill small acc' title='This match appeared when the print was taught a moment ago'>new: their print was just taught from this call</span>" : "";
+    return "<span class='pill small " + (word === "high" ? "ok" : "") + "'>" + word + more + "</span>" + fresh;
   }
   function drawVoiceMatches(body) {
     var state = (body.speaker_check || {}).voice_matches || {};
@@ -1307,6 +1405,7 @@
     // The changes live in the transcript now (ADR 0021): by segment id.
     changes = {};
     pending.forEach(function (one) { changes[String(one.segment)] = one; });
+    (check.settled || []).forEach(function (one) { one.settled = true; changes[String(one.segment)] = one; });
     handovers = waitingHandovers;
     var acceptBacked = document.getElementById("accept-corrections");
     acceptBacked.hidden = backedLines < 1;
@@ -1404,9 +1503,12 @@
     window.UI.whenVisible().then(function () { return fetch("/recording/" + V.recording + "/assistant"); })
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
+        var sc = body.speaker_check || {};
+        rereadNote = (sc.run && sc.run.voice_notes && sc.run.voice_notes.reread) || null;
         var busy = drawNameSuggestions(body);
         busy = drawCorrections(body) || busy;
         drawVoiceMatches(body);
+        drawRereadLine(sc);
         if (suggestTimer) { window.clearTimeout(suggestTimer); suggestTimer = null; }
         if (busy) { suggestTimer = window.setTimeout(refreshSuggestions, 2000); }
       })

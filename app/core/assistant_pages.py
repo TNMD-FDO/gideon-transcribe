@@ -670,6 +670,21 @@ def decide(request: HttpRequest, suggestion_id, verdict: str) -> JsonResponse:
     else:
         suggestion.state = Suggestion.REJECTED
     suggestion.save(update_fields=["state"])
+    if verdict == "accept":
+        # The check's proposals follow the name and are re-read for it
+        # (v1.144.1); until now a name accepted here left them as they were.
+        from core import speaker_check
+
+        followed = speaker_check.follow(
+            suggestion.transcript, suggestion.speaker, suggestion.name, by=request.user
+        )
+        speaker_check.reread_after_name(
+            suggestion.transcript,
+            suggestion.speaker,
+            suggestion.name,
+            by=request.user,
+            followed=followed,
+        )
     audit.write(
         audit.Category.EDITS,
         "Suggestion accepted" if verdict == "accept" else "Suggestion rejected",

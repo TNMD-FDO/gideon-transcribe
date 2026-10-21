@@ -149,7 +149,9 @@ def learn(recording, label: str, person, *, by, how: str = HAND) -> bool:
     transcript = getattr(recording, "transcript", None)
     if transcript is None:
         return False
-    found = print_of(transcript, label)
+    # The label's print, or the one already filed under the name when the
+    # run's prints followed the name first.
+    found = print_of(transcript, label) or print_of(transcript, person.name)
     if found is None:
         return False
     kept = person.voice_print or {"vector": None, "parts": {}, "scope": "case"}
@@ -378,6 +380,21 @@ def rows_for(transcript) -> dict:
         by_label.setdefault(row.speaker, []).append(row)
     out = []
     recording = transcript.recording
+    # The matches the last re-read made (v1.144.1): "new" on the card.
+    done_run = transcript.speaker_checks.filter(state="done").first()
+    fresh = (
+        set(((done_run.second_look or {}).get("reread") or {}).get("new_matches") or [])
+        if done_run
+        else set()
+    )
+
+    def heard_of(person) -> list[dict]:
+        found = where_heard(person)
+        for one in found:
+            one["here"] = one["recording"] == str(recording.pk)
+        # The other recordings first, this one last.
+        return sorted(found, key=lambda one: one["here"])
+
     for label, rows in by_label.items():
         side = [one for one in rows if one.kind == VoiceMatch.SIDE]
         matches = [one for one in rows if one.kind == VoiceMatch.MATCH]
@@ -393,7 +410,7 @@ def rows_for(transcript) -> dict:
                             "name": one.person.name,
                             "role": one.person.role,
                             "rating": one.rating,
-                            "heard": where_heard(one.person, exclude=recording.pk),
+                            "heard": heard_of(one.person),
                         }
                     ],
                 }
@@ -412,7 +429,8 @@ def rows_for(transcript) -> dict:
                             "recordings": len(
                                 (one.person.voice_print or {}).get("parts") or {}
                             ),
-                            "heard": where_heard(one.person, exclude=recording.pk),
+                            "heard": heard_of(one.person),
+                            "new": one.pk in fresh,
                         }
                         for one in matches
                     ],
@@ -476,6 +494,7 @@ def accept(row, *, by, request=None) -> int:
     recording = transcript.recording
     person = row.person
     changed = 0
+    followed = None
     with transaction.atomic():
         if row.kind == VoiceMatch.MATCH and row.speaker != person.name:
             moved = list(
@@ -527,7 +546,10 @@ def accept(row, *, by, request=None) -> int:
             state=VoiceMatch.WITHDRAWN, decided_by=by, decided_at=timezone.now()
         )
     if row.kind == VoiceMatch.MATCH:
-        speaker_check.rescore(transcript)
+        # The re-read after a name (v1.144.1).
+        speaker_check.reread_after_name(
+            transcript, row.speaker, person.name, by=by, followed=followed
+        )
     _row(
         "Sounds like accepted"
         if row.kind == VoiceMatch.MATCH
@@ -629,6 +651,15 @@ def unlearn(person, *, by, request=None) -> dict:
                 .values_list("speaker", flat=True)
                 .distinct()
             )
+            # The check's proposals follow the name back to the label, and
+            # are re-read for it (v1.144.1).
+            from core import speaker_check
+
+            for label in labels:
+                followed = speaker_check.follow(transcript, person.name, label, by=by)
+                speaker_check.reread_after_name(
+                    transcript, person.name, label, by=by, followed=followed
+                )
             for label in labels:
                 VoiceMatch.objects.create(
                     transcript=transcript,

@@ -488,6 +488,9 @@ class Suggestion(models.Model):
     """A name for a Speaker who has none, with the line it came from."""
 
     PENDING, ACCEPTED, REJECTED = "pending", "accepted", "rejected"
+    # Closed (v1.144.1): the label was named by hand or by voice before the
+    # suggestion was answered; nothing left to accept, and not a rejection.
+    CLOSED = "closed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # On the Transcript, so Process again takes the suggestions with it.

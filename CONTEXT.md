@@ -157,6 +157,9 @@ The proposal a Voice print makes (v1.144.0): after the Speaker check's one run o
 **Unlearn**:
 On the Case's Speakers tab, on a Person with a Voice print (v1.144.0): deletes the print, returns every Speaker the voice named to unnamed and marks it on its card ("was <Person>, by voice"), withdraws the matches waiting, and leaves every name given by hand. The box lists each recording by what happens to it, from the Chain, before anything is pressed. An audit row of counts. Avoid: forget (that is the Admin's switch going off, for every print), reset.
 
+**Re-read**:
+What the Speaker check's proposals do when a Speaker is named while they wait (v1.144.1): each pending proposal is rewritten with the current names, a name suggestion for a label now named is closed, the labels' prints follow the name, the unnamed voices are matched again against the Case's Voice prints, and the voice's word is re-scored, all from what the run kept and with no engine call. The page says what changed in counts, under the check's state, with the limit in the same sentence: the words were read before the name, and Run again re-reads them. Avoid: refresh, recheck (that is Run again), re-run.
+
 **Chain**:
 How each recording came to carry a Person's name, in one line under the Person on the Case's Speakers tab (v1.144.0): "named by hand on <recording> (<date>, <who>) · matched by voice on <recording> (<date>, <who>)". Read from the Voice print's parts; it is what Unlearn would undo, so it is shown before Unlearn is pressed. Avoid: history, provenance (that is a line's engine label).
 

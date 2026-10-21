@@ -914,7 +914,6 @@ def _speakers_under_the_lock(request, recording, transcript, was, now, role):
     from core import speaker_check
 
     followed = speaker_check.follow(transcript, was, now, by=request.user)
-    speaker_check.rescore(transcript)
     # Remembered on the Transcript, so a merge made by mistake can be undone
     # later, exactly: these Segments go back to that name and no others do.
     changes = list(transcript.speaker_changes or [])
@@ -944,6 +943,11 @@ def _speakers_under_the_lock(request, recording, transcript, was, now, role):
     from core import voice_prints
 
     voice_prints.learn_on_name(recording, was, now, by=request.user)
+    # The re-read after a name (v1.144.1): the proposals catch up with it,
+    # the print just taught among what the voices are matched against.
+    speaker_check.reread_after_name(
+        transcript, was, now, by=request.user, followed=followed
+    )
 
     audit.write(
         audit.Category.EDITS,
@@ -1356,7 +1360,11 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
     )
     from core import speaker_check
 
-    speaker_check.rescore(transcript)
+    # Undo of a name is a name back (v1.144.1): the proposals are re-read for
+    # the label again and the re-read's note goes.
+    speaker_check.reread_after_name(
+        transcript, last.get("to", ""), last.get("from", ""), by=request.user
+    )
     return JsonResponse({"restored": restored, "undo": last_change_line(transcript)})
 
 

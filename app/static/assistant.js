@@ -613,6 +613,9 @@
     var text = count ? count + (count === 1 ? " change proposed" : " changes proposed") : "";
     if (handovers.length) { text += (text ? " \u00b7 " : "") + "another voice under " + handovers[0].speaker; }
     if (sounds) { text += (text ? " \u00b7 " : "") + sounds + (sounds === 1 ? " voice sounds like someone" : " voices sound like someone"); }
+    // The re-read after a name (v1.144.1): the fact carried to the recording page.
+    var reread = check.run && check.run.voice_notes && check.run.voice_notes.reread;
+    if (reread && reread["for"] && text) { text += " \u00b7 re-read for " + reread["for"]; }
     pill.textContent = text;
   }
   var correctionsPill = document.getElementById("corrections-pill");

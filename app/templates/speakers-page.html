@@ -132,6 +132,8 @@
               <b class="grow" id="corrections-title">What the check found</b>
             </div>
             <p class="small muted" id="corrections-state"></p>
+          {% comment %}The re-read after a name (v1.144.1): one line in counts under the check's state, with Run again's limit in the same sentence.{% endcomment %}
+          <div class="reread small" id="reread-line" hidden></div>
             {% comment %}The count that goes down (v1.129.0): found, settled, left.{% endcomment %}
             <div class="progress small muted" id="corrections-progress" hidden>
               <span id="corrections-found"></span>
