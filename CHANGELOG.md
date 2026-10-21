@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.147.1, 2026-10-21
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The no-type line** (the maintainer's find on the server: a check on a
+  recording with no type ran words first with no stages, no Sounds like
+  and no Call system, since the voice listens by type). On a recording in
+  a case with no type, while the Speaker check is on and Voices help the
+  check lists some types, the recording page and the Speakers page carry
+  one quiet line: "This recording has no type, so the check reads the
+  words alone. The voice listens on: Jail call. Pick the type, then Check
+  the speakers again", with the type picker in the line. The pick saves at
+  once, as it does on the case page, and the line then says whether the
+  voice listens on the type chosen. Nothing runs by itself; the next
+  check is the person's press.
+
 ## v1.147.0, 2026-10-21
 
 ```

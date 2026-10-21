@@ -398,6 +398,8 @@ The maintainer's ask and answers of 2026-09-12; the mockups the maintainer chose
 
 ## Amendments applied
 
+- **2026-10-21, v1.147.1 (the no-type line).** Chapter 3's Speakers page and the recording page gain one quiet line on a Recording in a Case with no type, while the check is on and Voices help the check lists some types: why the check read the words alone, the types the voice listens on, and the type picker in the line, saving as the case page's does; the line then says whether the voice listens on the type chosen. Nothing runs by itself.
+
 - **2026-10-21, v1.147.0 (units for every office).** Chapter 2's Units bullet amended: the group, attribute and everyone forms beside the folder chain, and the unit pinned by hand on any account, with the People page showing what placed each person. Migration 0087.
 
 - **2026-10-21, v1.146.0 (the unit's voice book).** Chapter 2's rule 1 amended and the section "The unit's voice book" added to the drawing `docs/spec/mockups/phase-5-voice-book.html`: units from the directory's folders, Keep for the unit on the Case tab, the book's weighted print, the check by a press on a card, the Voices place with Forget, the switch and the roles, who may, what is stored. ADR 0021 noted. Migration 0086. Appendix B gains three rows.

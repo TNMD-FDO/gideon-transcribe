@@ -271,6 +271,34 @@ def _assignment_context(recording, user) -> dict:
     }
 
 
+def type_hint(recording) -> dict | None:
+    """The quiet line with the type picker (v1.147.1): on a Recording in a
+    Case with no type, while the Speaker check is on and Voices help the
+    check lists some types, so a person sees why the check read the words
+    alone and can give the type where they stand. None otherwise."""
+    from core import cases
+
+    if recording.case_id is None or not cases.folder_management_on():
+        return None
+    if (recording.recording_type or "").strip():
+        return None
+    if not settings_store.get("speaker_check_available"):
+        return None
+    listed = [
+        one.strip()
+        for one in (settings_store.get("voices_types") or "").splitlines()
+        if one.strip()
+    ]
+    if not listed:
+        return None
+    return {
+        "listed": listed,
+        "listed_text": ", ".join(listed),
+        "types": cases.recording_types(),
+        "description": recording.description or "",
+    }
+
+
 def _page_context(request: HttpRequest, recording: Recording) -> dict:
     """What the viewer's page and its windows are drawn from."""
     from core import exports
@@ -290,6 +318,9 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
 
     return {
         "recording": recording,
+        # The no-type line (v1.147.1): a recording in a Case with no type,
+        # while the voice listens on some types, says so with the picker.
+        "type_hint": type_hint(recording),
         # All cameras (Phase 6 chapter 1): the incident page at this moment,
         # for a placed camera of an incident.
         "all_cameras": incidents.link_for(recording),
