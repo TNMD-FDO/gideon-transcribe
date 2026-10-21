@@ -171,7 +171,7 @@ def test_the_page_is_reached_from_the_strip_and_shows_the_cards(person, client):
     assert f'data-href="/recording/{recording.pk}/speakers"' in page
     assert "tag-speakers" not in page and "Tag speakers" not in page
 
-    answer = client.get(f"/recording/{recording.pk}/speakers")
+    answer = client.get(f"/recording/{recording.pk}/speakers/classic")
     assert answer.status_code == 200
     body = answer.content.decode()
     assert 'class="viewer speakers-page"' in body
@@ -209,7 +209,7 @@ def test_the_page_is_reached_from_the_strip_and_shows_the_cards(person, client):
 
     # Sound alone: an audio element and the waveform strip.
     sound = a_recording(person, video=False)
-    body = client.get(f"/recording/{sound.pk}/speakers").content.decode()
+    body = client.get(f"/recording/{sound.pk}/speakers/classic").content.decode()
     assert '<audio id="player"' in body and 'id="wave"' in body and "<video" not in body
     assert 'class="sp-desk sound"' in body
 
@@ -243,7 +243,7 @@ def test_the_window_route_shows_the_page_and_names_count_as_named(person, client
         data=json.dumps({"from": "Speaker 1", "to": "Ofc. Ruiz"}),
         content_type="application/json",
     )
-    body = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    body = client.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     assert "1 of 4 speakers named" in body
     # The named card's Name or merge... is quiet; the unnamed ones' is primary.
     assert 'data-name="Ofc. Ruiz"' in body

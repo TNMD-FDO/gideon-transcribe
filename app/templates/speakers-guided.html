@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Speakers of {{ recording.title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block body_class %}viewer speakers-guided{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The guided Speakers page (Phase 5 chapter 3, "The guided page", v1.148.0;
+    the drawing docs/spec/mockups/phase-5-speakers-page-redesign.html):
+    one question at a time with its context beside it, and the six rules
+    the page keeps: where am I, what do I do now, what comes next, how do I
+    go back, one question with its context, tools out of the way. The guide
+    at the top, the question on the left, its context on the right, the
+    player at the foot. The script draws every screen from the check's
+    state and the transcript; this template is the frame.
+  {% endcomment %}
+  <div class="sg" id="sg" data-recording="{{ recording.pk }}">
+    <div class="sg-top">
+      <div class="sg-title"><span class="muted small">Speakers of</span> <b>{{ recording.title }}</b></div>
+      {% if is_someone_elses %}{% if recording.case_id %}{% include "admin-pill.html" with owner=recording.user what="case" %}{% else %}{% include "admin-pill.html" with owner=recording.user what="recording" %}{% endif %}{% endif %}
+    </div>
+
+    {% if type_hint %}
+      {% comment %}The no-type line (v1.147.1): why the check read the words alone, with the type picker right here.{% endcomment %}
+      <div class="type-hint small muted" data-recording="{{ recording.pk }}" data-description="{{ type_hint.description }}" data-listed="{{ type_hint.listed|join:'|' }}">
+        <span>This recording has no type, so the check reads the words alone. The voice listens on: {{ type_hint.listed_text }}. Pick the type, then Check the speakers again.</span>
+        <select aria-label="Recording type">
+          <option value="">No type</option>
+          {% for one in type_hint.types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    {% if not cards %}
+      <p class="muted" style="padding: 20px">
+        This recording has no speaker labels to tag.
+        <a href="{{ back_url }}">Back to the recording</a>.
+      </p>
+    {% else %}
+      <div class="sg-guide" id="guide">
+        <div class="sg-where">
+          <span class="sg-step" id="sg-step">Loading the check...</span>
+          <span class="sg-bars" id="sg-bars" aria-hidden="true"></span>
+          <span class="sg-count" id="sg-count"></span>
+          <span class="sg-chips" id="sg-chips"></span>
+        </div>
+        <div class="sg-acts">
+          <button type="button" class="ghost tiny" id="sg-undo" hidden title="Take back the last change">Undo</button>
+          <button type="button" class="small" id="sg-back">Back</button>
+          <button type="button" class="primary" id="sg-next">Next</button>
+        </div>
+        <p class="sg-now" id="sg-now"></p>
+      </div>
+
+      <div class="sg-desk">
+        <section class="sg-focus" id="sg-focus" aria-live="polite"></section>
+        <aside class="sg-context" id="sg-context"></aside>
+      </div>
+
+      <div class="sg-foot">
+        {% if media_url %}
+          {% if is_video %}<video id="player" src="{{ media_url }}" preload="metadata" hidden></video>{% else %}<audio id="player" src="{{ media_url }}" preload="metadata" hidden></audio>{% endif %}
+          <button type="button" class="small" id="sg-play" title="Play or pause (Space)">{% icon "play" %} Play</button>
+          <span class="mono small" id="sg-time">0:00 / 0:00</span>
+          <input type="range" id="sg-scrub" min="0" max="1000" value="0" aria-label="Where the recording is">
+        {% else %}
+          <span class="muted small">This page cannot play the recording here; the recording's page still can.</span>
+        {% endif %}
+        <details class="sg-tools">
+          <summary class="btn small">Tools</summary>
+          <div class="sg-tools-menu">
+            <button type="button" class="small ghost" id="sg-whole">Show the whole call</button>
+            <a class="small ghost" href="{% url 'speakers-classic' recording.pk %}" title="The lanes, zoom and Swap two speakers, on the page as it was">Lanes, zoom and swap (the classic page)</a>
+            <button type="button" class="small ghost" id="sg-window" data-href="{{ window_url }}">Open in a window</button>
+          </div>
+        </details>
+        <a class="button small" id="sg-done" href="{{ back_url }}" title="Leave the page at this step; it brings you back here">Done for now</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {{ cards|json_script:"sg-cards" }}
+  {{ speakers|json_script:"speaker-colours" }}
+  <script>
+    window.VIEWER = {
+      recording: "{{ recording.pk }}",
+      hasTranscript: {% if transcript %}true{% else %}false{% endif %},
+      canPlay: {% if media_url %}true{% else %}false{% endif %},
+      isVideo: {% if is_video %}true{% else %}false{% endif %},
+      inCase: {% if in_case %}true{% else %}false{% endif %},
+      assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, speakerCheck: {% if assistant.speaker_check %}true{% else %}false{% endif %} }{% else %}null{% endif %},
+      backUrl: "{{ back_url }}",
+      windowUrl: "{{ window_url }}",
+      guided: true
+    };
+  </script>
+  <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'picker.js' %}"></script>
+  <script src="{% static 'speakers-guided.js' %}"></script>
+  <script src="{% static 'type-hint.js' %}"></script>
+{% endblock %}

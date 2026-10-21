@@ -237,7 +237,7 @@ def test_the_check_runs_as_the_transcript_lands_and_the_page_decides(
     assert pending["reason"] == "the officer points"
     # The Speakers page carries the button and the section; the recording
     # page the strip's pill.
-    page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    page = client.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     assert 'id="check-speakers"' in page and 'id="corrections"' in page
     # The sketch stays on the run and off the page (v1.129.0).
     assert 'id="check-sketch"' not in page
@@ -465,7 +465,7 @@ def test_the_check_says_the_big_thing_first_and_the_voice_is_the_one_measure(
     assert runs[0]["voice"] == "agrees" or runs[0]["voice"] == "silent"
     assert state["run"]["voice_notes"]["rows"] == 6
     assert speaker_check.pending_count(transcript) == 6
-    page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    page = client.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     assert 'id="speaker-cards"' in page and 'id="stretches"' in page
     assert 'id="stretches-quiet"' in page and 'id="corrections-progress"' in page
     assert 'id="corrections-aside"' not in page
@@ -538,7 +538,7 @@ def test_a_press_runs_now_and_the_switch_off_runs_nothing(
     speaker_check.on_transcript(recording)
     assert deferred == [] and not SpeakerCheck.objects.exists()
     assert client.post(f"/recording/{recording.pk}/speaker-check").status_code == 404
-    page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    page = client.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     assert 'id="check-speakers"' not in page and "speakerCheck: false" in page
     assert (
         client.get(f"/recording/{recording.pk}/assistant").json()["speaker_check"][
@@ -702,7 +702,7 @@ def test_a_swap_between_times_moves_both_ways_and_undo_puts_both_back(
             ).status_code
             == status
         ), body
-    page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    page = client.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     assert 'id="swap-form"' in page and 'id="swap-open"' in page
 
 

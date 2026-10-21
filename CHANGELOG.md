@@ -21,6 +21,35 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.148.0, 2026-10-21
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The guided Speakers page** (the maintainer's word that the page had
+  grown squished and should be designed from the user's seat; drawn in
+  `docs/spec/mockups/phase-5-speakers-page-redesign.html` and chosen
+  2026-10-21; Phase 5 chapter 3 gains "The guided page"). The page is
+  now a process, one question at a time with its context beside it,
+  under a guide that always says where you are (the step and the count
+  inside it), what to do now (one sentence), what comes next (one
+  primary button) and how to go back (Back, Undo, a finished step
+  pressable). Step 1 shows one voice at a time with its samples and
+  the answers ranked best first in plain words (the case's voices, the
+  unit's book, a name said on the call), one button each; step 2 shows
+  one line at a time with what the voice and the words say and the two
+  lines around it, with "Accept all N the voice and the words agree on"
+  first where the voice listened; the last step is a receipt. On a
+  recording the voice does not listen to the same guide has two steps.
+  The player is a bar at the foot; Tools holds Show the whole call, Open
+  in a window and the classic page (the page as it was, at
+  /speakers/classic, for the lanes, zoom and Swap two speakers until the
+  second release folds them in). Nothing is decided by the page itself:
+  every act goes through the endpoints the page already had. Words:
+  Guided page, Guide, Step, Classic page.
+
 ## v1.147.2, 2026-10-21
 
 ```

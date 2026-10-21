@@ -70,7 +70,7 @@ def test_the_lines_the_pages_read_carry_the_flag_and_the_cards_skip_it(
     rows = client.get(f"/recording/{recording.pk}/segments").json()["segments"]
     flags = {row["id"]: row["guess"] for row in rows}
     assert flags[stutter.pk] is True and sum(flags.values()) == 1
-    page = client.get(f"/recording/{recording.pk}/speakers").content.decode()
+    page = client.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     # Speaker 2 has a sure line at 12.4 and the stutter: the sample is the sure one.
     assert 'data-start="12.4"' in page and 'data-start="30.0"' not in page
 

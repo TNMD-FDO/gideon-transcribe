@@ -415,7 +415,22 @@ def context(request: HttpRequest, recording: Recording, *, in_window: bool) -> d
 
 @login_required
 def page(request: HttpRequest, recording_id) -> HttpResponse:
-    """The Speakers page of one Recording."""
+    """The Speakers page of one Recording: the guided page (Phase 5
+    chapter 3, v1.148.0), one question at a time with its context."""
+    recording = viewer.open_recording(request, recording_id)
+    if recording is None:
+        return redirect(reverse("recordings"))
+    cases.used(recording, by=request.user)
+    return render(
+        request, "speakers-guided.html", context(request, recording, in_window=False)
+    )
+
+
+@login_required
+def classic(request: HttpRequest, recording_id) -> HttpResponse:
+    """The page as it was before v1.148.0, under the guided page's Tools:
+    the lanes, zoom and Swap two speakers live here until the second
+    release folds them into the guided page."""
     recording = viewer.open_recording(request, recording_id)
     if recording is None:
         return redirect(reverse("recordings"))

@@ -194,7 +194,7 @@ def test_the_pages_draw_it_grey_and_without_controls(admin, tmp_path, settings, 
     recording = a_call(admin, tmp_path, settings)
     call_system.mark(recording.transcript)
     browser = signed_in(client, admin)
-    page = browser.get(f"/recording/{recording.pk}/speakers").content.decode()
+    page = browser.get(f"/recording/{recording.pk}/speakers/classic").content.decode()
     assert "not a person" in page
     assert 'class="sp-card system"' in page or "sp-card system" in page
     viewer = browser.get(f"/recording/{recording.pk}").content.decode()

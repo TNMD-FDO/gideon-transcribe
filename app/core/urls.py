@@ -116,6 +116,11 @@ urlpatterns = [
     ),
     # GET is the Speakers page (v1.50.0); POST renames or merges, as before.
     path(
+        "recording/<uuid:recording_id>/speakers/classic",
+        speakers_page.classic,
+        name="speakers-classic",
+    ),
+    path(
         "recording/<uuid:recording_id>/speakers",
         speakers_page.route,
         name="speakers",

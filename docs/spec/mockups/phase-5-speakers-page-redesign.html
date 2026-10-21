@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Speakers page, guided</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sp5: #00838f; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #5fc9d6; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #5fc9d6; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.big { font-size: 14px; padding: 8px 14px; min-height: 36px; }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .btn.off { opacity: .55; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .play.big { width: 44px; height: 44px; border-radius: 50%; font-size: 16px; background: var(--accent); color: var(--accent-ink); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .c4 { --c: var(--sp4); color: var(--sp4); } .c5 { --c: var(--sp5); color: var(--sp5); } .csys { --c: var(--sys); color: var(--sys); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  a { color: var(--accent); }
+
+  /* the page's frame: the guide across the top, the question on the left, its context on the right, the player at the foot */
+  .frame { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .guide { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); align-items: center; }
+  .guide .where { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .guide .where .step { font-weight: 600; }
+  .guide .where .steps { display: flex; gap: 4px; }
+  .guide .where .steps i { display: inline-block; width: 28px; height: 6px; border-radius: 3px; background: var(--line); }
+  .guide .where .steps i.done { background: var(--ok); } .guide .where .steps i.on { background: var(--accent); }
+  .guide .now { font-size: 14px; }
+  .guide .acts { display: flex; gap: 8px; align-items: center; grid-column: 2; grid-row: 1 / span 2; justify-content: flex-end; }
+  .guide .where, .guide .now { grid-column: 1; }
+  .desk { display: grid; grid-template-columns: minmax(380px, 460px) minmax(0, 1fr); min-height: 320px; }
+  .focus { border-right: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .focus .q { font-size: 16px; font-weight: 600; }
+  .focus .h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .focus .h .lab { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .samples { display: flex; flex-direction: column; gap: 4px; }
+  .sp { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .sp .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .choices { display: flex; flex-direction: column; gap: 6px; }
+  .choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; }
+  .choice.best { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .choice .nm { font-weight: 600; } .choice .why { color: var(--muted); font-size: 12px; }
+  .choice .acts { display: flex; gap: 6px; align-items: center; }
+  .choice.plain { border-style: dashed; color: var(--muted); }
+  .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--accent); white-space: nowrap; border: 1px solid var(--accent); border-radius: var(--radius); padding: 0 6px; min-height: 22px; }
+  .walk { display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .context { padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+  .context .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .line { display: grid; grid-template-columns: 44px 110px minmax(0, 1fr); gap: 8px; padding: 3px 4px; border-radius: var(--radius); }
+  .line .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .line .s { font-weight: 600; font-size: 12px; }
+  .line.lit { background: var(--accent-soft); }
+  .line.dim { color: var(--muted); }
+  .line.here { outline: 2px solid var(--warn); outline-offset: -2px; }
+  .gap { text-align: center; color: var(--muted); font-size: 12px; padding: 2px 0; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; white-space: nowrap; font-size: 12px; display: inline-flex; gap: 4px; align-items: center; }
+  .chip.done { border-color: var(--ok); } .chip.on { border-color: var(--accent); background: var(--accent-soft); }
+  .foot { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: 12px; flex-wrap: wrap; }
+  .foot .grow { flex: 1; }
+  .sounds { display: flex; flex-direction: column; gap: 6px; }
+  .sound { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: center; }
+  .sound .k { color: var(--muted); font-size: 12px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .stat { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; }
+  .stat .n { font-size: 22px; font-weight: 600; } .stat .w { color: var(--muted); font-size: 12px; }
+  .phone { width: 300px; border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+  .phone .guide { grid-template-columns: 1fr; padding: 8px; border-radius: 8px; border: 1px solid var(--line); }
+  .phone .guide .acts { grid-row: auto; grid-column: 1; }
+  .phone .focus { border: 0; padding: 4px 0; }
+  .phone .choice { padding: 8px; }
+  .phone .foot { border-radius: 8px; border: 1px solid var(--line); }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .rule { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; }
+  .rule b { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The Speakers page, guided: one question at a time, its context beside it, and the way forward always in the same place</h1>
+    <p class="lede"><b>Drawn 2026-10-21, second drawing,</b> after the maintainer's word that the first still bunched: this one is designed from the user's seat, for a process that is complex (six voices, four hundred lines, suggestions from three places, a phone system, a player and lanes) and must not feel so. Every name, call and line here is made up.</p>
+    <p class="lede"><b>What a user has to do on a jail call</b> is three things in order: say who each voice is, settle the lines the app is unsure of, and finish. So the page is those three steps, and inside each step it asks one question at a time: this voice, then the next; this line, then the next. Everything else (the whole transcript, the lanes, swap, zoom) is context or a tool, shown beside the question or kept under a button, never in the way.</p>
+    <p class="lede"><b>What does not move.</b> The recording's Speakers page stays the one place a proposal is accepted or declined; the number keys, not this voice, Name or merge, Undo, Open in a window, Done, the audit rows, the ratings and the re-read are as they are. The Case tab stays an overview plus Unlearn.</p>
+  </header>
+
+  <!-- The rules -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">The six rules the page keeps</div><h2>What a user can always see and always do, on every screen of the process</h2></div>
+    <div class="work">
+      <div class="rules">
+        <div class="rule"><b>Where am I.</b> The step (1 of 3, its name) and the count inside it ("Voice 2 of 6", "Line 3 of 39") in the guide at the top, with a bar per step that fills.</div>
+        <div class="rule"><b>What do I do now.</b> One plain sentence under the step, written for this screen ("Listen, then say who this is"), never a paragraph.</div>
+        <div class="rule"><b>What comes next.</b> One primary button at the right of the guide, always the same place, always the one thing that moves you on ("Next voice", "Next line", "Finish").</div>
+        <div class="rule"><b>How do I go back.</b> Back beside the primary, Undo beside Back, and every finished step a button in the guide. Nothing is a dead end.</div>
+        <div class="rule"><b>One question, its context.</b> The question on the left at a fixed width; on the right, only what bears on it: this voice's lines, or this line with the two before and after. The full transcript is a press away, not on the page.</div>
+        <div class="rule"><b>Tools out of the way.</b> The player is a bar at the foot with Play, the time and a scrub line; lanes, zoom, Swap two speakers and Open in a window sit under one "Tools" button. Someone who knows the page finds them in one press; someone who does not never meets them.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · Step 1, Who is speaking: one voice at a time</div><h2>The guide, the voice as the question, the best answers ranked, this voice's lines as the context</h2></div>
+    <div class="work">
+      <div class="frame">
+        <div class="guide">
+          <div class="where"><span class="step">Step 1 of 3 · Who is speaking</span><span class="steps"><i class="on"></i><i></i><i></i></span><span>Voice 2 of 6 · 1 named</span><span class="chips"><span class="chip done c1">&#10003; Dana Reyes</span><span class="chip on c2">Speaker 2</span><span class="chip c3">Speaker 3</span><span class="chip c4">Speaker 4</span><span class="chip c5">Speaker 5</span><span class="chip csys">phone system</span></span></div>
+          <div class="acts"><span class="btn tiny">Undo</span><span class="btn">Back</span><span class="btn primary big">Next voice</span></div>
+          <div class="now">Listen to this voice, then say who it is. Skip it if you are not sure; you can come back.</div>
+        </div>
+        <div class="desk">
+          <div class="focus">
+            <div class="h"><span class="play big">&#9654;</span><div><div class="q c2">Speaker 2</div><div class="tiny muted">14 lines, 1 min 51 s, first at 0:12 · the big play plays the three samples in a row</div></div><span class="lab">SPEAKER_01</span></div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Can I call my sister first?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"I was only there twenty minutes."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Tell him I said it's fine."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="q" style="font-size: 14px; margin-top: 4px;">Who is this?</div>
+            <div class="choices">
+              <div class="choice best"><div><span class="nm">Riley Park</span> <span class="pill">Caller</span> <span class="pill ok">sounds very like</span><div class="why">her voice on 3 calls in this case</div></div><div class="acts"><span class="prev">&#9654; hear Riley</span><span class="btn primary">It's Riley</span></div></div>
+              <div class="choice"><div><span class="nm">Lee Ortiz</span> <span class="pill">Officer</span> <span class="pill">sounds a bit like</span><div class="why">the Appeals unit's known voices, 4 cases</div></div><div class="acts"><span class="prev">&#9654; hear Lee</span><span class="btn">It's Lee</span></div></div>
+              <div class="choice"><div><span class="nm">"Morgan"</span> <span class="pill">a name said on the call</span><div class="why">at 1:36: "Morgan, it's me" · the words only, no voice</div></div><div class="acts"><span class="play">&#9654;</span><span class="btn">Use this name</span></div></div>
+              <div class="choice plain"><div>Someone else, or the same person as another voice</div><div class="acts"><span class="btn">Choose...</span></div></div>
+            </div>
+            <div class="walk"><span>Accept names every line of this voice. Undo takes it back.</span><span class="btn quiet">Skip this voice</span></div>
+          </div>
+          <div class="context">
+            <div class="label">This voice's lines, in the call</div>
+            <div class="line dim"><span class="t">0:04</span><span class="s c1">Dana Reyes</span><span>Hello? Is this the right number for Dana?</span></div>
+            <div class="line lit"><span class="t">0:12</span><span class="s c2">Speaker 2</span><span>Yeah, it's me. Where are you calling from?</span></div>
+            <div class="line dim"><span class="t">0:19</span><span class="s csys">The phone system</span><span>This call is from a correctional facility and may be monitored.</span></div>
+            <div class="line dim"><span class="t">0:31</span><span class="s c1">Dana Reyes</span><span>You know where. Did you talk to him?</span></div>
+            <div class="line lit"><span class="t">0:40</span><span class="s c2">Speaker 2</span><span>Not yet. I was going to go by this afternoon.</span></div>
+            <div class="gap">0:52 to 1:30, the others</div>
+            <div class="line lit"><span class="t">1:36</span><span class="s c2">Speaker 2</span><span>Can I call my sister first? Morgan, it's me.</span></div>
+            <div class="line lit"><span class="t">2:04</span><span class="s c2">Speaker 2</span><span>I was only there twenty minutes.</span></div>
+            <div class="gap"><span class="btn quiet">show the whole call</span></div>
+          </div>
+        </div>
+        <div class="foot"><span class="btn tiny">&#9654; Play</span><span class="mono">0:12 / 7:58</span><span class="grow" style="height: 6px; border-radius: 3px; background: var(--line);"></span><span class="btn tiny">Tools</span><span class="btn tiny">Done for now</span></div>
+      </div>
+      <div class="caption">
+        <p><b>The guide is the page's one fixed thing.</b> Top left: the step, its bar, the voice count, and the cast as chips that tick as they are named (the lit chip is the one on screen; any chip is a press to that voice). Top right: Undo, Back, and the one primary. Under them: the sentence for this screen.</p>
+        <p><b>The voice is the question.</b> A big play that plays the three samples in a row, the samples under it with "not this voice", then "Who is this?" and the answers ranked best first, each in plain words ("sounds very like", "sounds a bit like", "a name said on the call") with where it comes from, a play of the candidate's own voice, and one button. The best answer is lit; the last choice opens the picker for anyone else or a merge. Skip is quiet and allowed.</p>
+        <p><b>The context is only this voice's lines</b>, lit, with the others dimmed and long stretches folded; the whole call is one press. No proposals here: step 1 is names.</p>
+        <p><b>The foot is the player</b>: Play, the time, a scrub line, Tools (lanes, zoom, swap, open in a window), and "Done for now", which leaves the page at this step and brings you back to it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · Step 2, Lines in doubt: the first question, then one line at a time</div><h2>"12 lines the voice and the words agree on: accept them all?" first; then each remaining line with its three sounds and the lines around it</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="frame">
+          <div class="guide">
+            <div class="where"><span class="step">Step 2 of 3 · Lines in doubt</span><span class="steps"><i class="done"></i><i class="on"></i><i></i></span><span>39 lines · 0 decided</span></div>
+            <div class="acts"><span class="btn tiny">Undo</span><span class="btn">Back</span><span class="btn primary big">Accept all 12</span></div>
+            <div class="now">The words read the 39 lines against the names you gave. On 12 of them the voice and the words agree. Accept those first, or go through them one by one.</div>
+          </div>
+          <div class="desk" style="grid-template-columns: 1fr;">
+            <div class="focus" style="border: 0;">
+              <div class="summary">
+                <div class="stat"><div class="n">12</div><div class="w">voice and words agree</div></div>
+                <div class="stat"><div class="n">5</div><div class="w">the words read the other way</div></div>
+                <div class="stat"><div class="n">22</div><div class="w">the voice cannot tell</div></div>
+              </div>
+              <div class="walk"><span class="btn">Go one by one instead</span><span>Accepting moves the lines as the number keys do; Undo takes it back.</span></div>
+            </div>
+          </div>
+          <div class="foot"><span class="btn tiny">&#9654; Play</span><span class="mono">0:52 / 7:58</span><span class="grow" style="height: 6px; border-radius: 3px; background: var(--line);"></span><span class="btn tiny">Tools</span><span class="btn tiny">Done for now</span></div>
+        </div>
+        <div class="frame">
+          <div class="guide">
+            <div class="where"><span class="step">Step 2 of 3 · Lines in doubt</span><span class="steps"><i class="done"></i><i class="on"></i><i></i></span><span>Line 14 of 39 · 12 decided</span></div>
+            <div class="acts"><span class="btn tiny">Undo</span><span class="btn">Back</span><span class="btn primary big">Next line</span></div>
+            <div class="now">The voice and the words disagree here. Listen, then say whose line it is.</div>
+          </div>
+          <div class="desk" style="grid-template-columns: minmax(300px, 1fr) minmax(0, 1fr);">
+            <div class="focus">
+              <div class="h"><span class="play big">&#9654;</span><div><div class="q">Whose line is this?</div><div class="tiny muted">1:48 · 4 s</div></div></div>
+              <div class="line here" style="grid-template-columns: 1fr;"><span>"We were both there that night, him and me."</span></div>
+              <div class="sounds">
+                <div class="sound"><span class="k">now marked</span><span><b class="c4">Sam Burke</b></span></div>
+                <div class="sound"><span class="k">the voice says</span><span><span class="pill">cannot tell between Sam and Marcus</span></span></div>
+                <div class="sound"><span class="k">the words say</span><span><b class="c3">Marcus Hale</b> <span class="muted tiny">"him and me": the speaker is not Sam</span></span></div>
+              </div>
+              <div class="choices">
+                <div class="choice"><div><span class="nm c3">Marcus Hale</span><div class="why">what the words say</div></div><div class="acts"><span class="prev">&#9654; hear Marcus</span><span class="btn primary">It's Marcus</span></div></div>
+                <div class="choice"><div><span class="nm c4">Sam Burke</span><div class="why">as marked now</div></div><div class="acts"><span class="prev">&#9654; hear Sam</span><span class="btn">Keep Sam</span></div></div>
+                <div class="choice plain"><div>Someone else</div><div class="acts"><span class="btn">Choose...</span></div></div>
+              </div>
+              <div class="walk"><span class="btn quiet">Leave it for now</span><span>A mixed line offers "Split at the word" here instead.</span></div>
+            </div>
+            <div class="context">
+              <div class="label">Around this line</div>
+              <div class="line dim"><span class="t">1:36</span><span class="s c2">Riley Park</span><span>Can I call my sister first? Morgan, it's me.</span></div>
+              <div class="line dim"><span class="t">1:41</span><span class="s c3">Marcus Hale</span><span>Tell him I was with you.</span></div>
+              <div class="line here"><span class="t">1:48</span><span class="s c4">Sam Burke</span><span>We were both there that night, him and me.</span></div>
+              <div class="line dim"><span class="t">1:53</span><span class="s c2">Riley Park</span><span>That's not what you said before.</span></div>
+              <div class="line dim"><span class="t">1:58</span><span class="s c3">Marcus Hale</span><span>I know what I said.</span></div>
+            </div>
+          </div>
+          <div class="foot"><span class="btn tiny">&#9654; Play</span><span class="mono">1:48 / 7:58</span><span class="grow" style="height: 6px; border-radius: 3px; background: var(--line);"></span><span class="btn tiny">Tools</span><span class="btn tiny">Done for now</span></div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The first screen of step 2 is a choice, not a list.</b> Three numbers and one primary: accept the lines the voice and the words agree on, or go one by one. Most people press the primary and are left with the 27 that need an ear.</p>
+        <p><b>Then one line at a time.</b> The line as the question, with a big play; three rows that read as a sentence each (now marked, the voice says, the words say); the answers as buttons with the candidate's own voice to hear; "Leave it for now" quiet below. The context is the two lines before and the two after, the line itself outlined. Next line moves on whether or not you answered.</p>
+        <p><b>The kinds of doubt become wording, not boxes:</b> "the voice and the words disagree", "the voice cannot tell", "two voices in one line" (with Split at the word as the primary), each in the guide's sentence.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · Step 3, Done</div><h2>What was done, what is left, and the one button that finishes</h2></div>
+    <div class="work">
+      <div class="frame">
+        <div class="guide">
+          <div class="where"><span class="step">Step 3 of 3 · Done</span><span class="steps"><i class="done"></i><i class="done"></i><i class="on"></i></span><span>checked against the names at 14:12</span></div>
+          <div class="acts"><span class="btn tiny">Undo</span><span class="btn">Back</span><span class="btn primary big">Finish</span></div>
+          <div class="now">The words read the whole call once against the names and found 3 more lines to look at. Look at them now, or finish and come back later.</div>
+        </div>
+        <div class="desk" style="grid-template-columns: 1fr;">
+          <div class="focus" style="border: 0;">
+            <div class="summary">
+              <div class="stat"><div class="n">6 of 6</div><div class="w">voices named</div></div>
+              <div class="stat"><div class="n">35 of 39</div><div class="w">lines in doubt decided</div></div>
+              <div class="stat"><div class="n">4</div><div class="w">left for later</div></div>
+              <div class="stat"><div class="n">3</div><div class="w">more lines the words flagged</div></div>
+            </div>
+            <div class="chips"><span class="chip done c1">Dana Reyes</span><span class="chip done c2">Riley Park</span><span class="chip done c3">Marcus Hale</span><span class="chip done c4">Sam Burke</span><span class="chip done c5">Tom Hale</span><span class="chip csys">the phone system, 23 lines</span></div>
+            <div class="walk"><span class="btn">Look at the 7 left, one by one</span><span class="btn quiet">Run the check again</span><span>The recording page's pill reads "7 lines to look at" until they are decided or left.</span></div>
+          </div>
+        </div>
+        <div class="foot"><span class="btn tiny">&#9654; Play</span><span class="mono">4:40 / 7:58</span><span class="grow" style="height: 6px; border-radius: 3px; background: var(--line);"></span><span class="btn tiny">Tools</span><span class="btn tiny">Done for now</span></div>
+      </div>
+      <div class="caption">
+        <p><b>Done reads like a receipt.</b> Four numbers, the cast ticked, and two ways on: look at what is left the same one-at-a-time way, or Finish. Finish returns to the recording at the same moment, as Done does today.</p>
+        <p><b>Back is a real way back.</b> Step 1 again names a voice late and the proposals catch up as today's re-read does; step 2 again walks the lines left.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · On a phone: the same screens, one column</div><h2>The guide folds to one line and the sentence, the question fills the screen, the context is a sheet</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="phone">
+          <div class="guide"><div class="where"><span class="step">1 of 3 · Who is speaking</span><span class="steps"><i class="on"></i><i></i><i></i></span></div><div class="now">Voice 2 of 6. Listen, then say who it is.</div></div>
+          <div class="focus">
+            <div class="h"><span class="play big">&#9654;</span><div><div class="q c2">Speaker 2</div><div class="tiny muted">14 lines · 1:51</div></div></div>
+            <div class="samples"><div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Can I call my sister first?"</span></div><div class="sp"><span class="play">&#9654;</span><span class="t">2:04</span><span class="q">"I was only there twenty..."</span></div><div class="sp"><span class="play">&#9654;</span><span class="t">6:58</span><span class="q">"Tell him I said it's fine."</span></div></div>
+            <div class="choices">
+              <div class="choice best"><div><span class="nm">Riley Park</span> <span class="pill ok">sounds very like</span></div><div class="acts"><span class="btn primary">It's Riley</span></div></div>
+              <div class="choice"><div><span class="nm">Lee Ortiz</span> <span class="pill">a bit like</span></div><div class="acts"><span class="btn">It's Lee</span></div></div>
+              <div class="choice"><div><span class="nm">"Morgan"</span> <span class="pill">said on the call</span></div><div class="acts"><span class="btn">Use</span></div></div>
+              <div class="choice plain"><div>Someone else...</div><div class="acts"><span class="btn">Choose</span></div></div>
+            </div>
+            <div class="walk"><span class="btn quiet">their lines</span><span class="btn quiet">Skip</span></div>
+          </div>
+          <div class="foot"><span class="btn tiny">Back</span><span class="btn tiny">&#9654;</span><span class="mono">0:12</span><span class="btn primary" style="margin-left: auto;">Next voice</span></div>
+        </div>
+        <div class="phone">
+          <div class="guide"><div class="where"><span class="step">2 of 3 · Lines in doubt</span><span class="steps"><i class="done"></i><i class="on"></i><i></i></span></div><div class="now">Line 14 of 39. The voice and the words disagree. Listen, then choose.</div></div>
+          <div class="focus">
+            <div class="h"><span class="play big">&#9654;</span><div><div class="q">Whose line?</div><div class="tiny muted">1:48 · 4 s</div></div></div>
+            <div class="line here" style="grid-template-columns: 1fr;"><span>"We were both there that night, him and me."</span></div>
+            <div class="sounds"><div class="sound"><span class="k">now marked</span><b class="c4">Sam Burke</b></div><div class="sound"><span class="k">the voice</span><span class="pill">cannot tell</span></div><div class="sound"><span class="k">the words</span><b class="c3">Marcus Hale</b></div></div>
+            <div class="choices">
+              <div class="choice"><div><span class="nm c3">Marcus Hale</span></div><div class="acts"><span class="btn primary">It's Marcus</span></div></div>
+              <div class="choice"><div><span class="nm c4">Sam Burke</span></div><div class="acts"><span class="btn">Keep Sam</span></div></div>
+            </div>
+            <div class="walk"><span class="btn quiet">around this line</span><span class="btn quiet">Leave it</span></div>
+          </div>
+          <div class="foot"><span class="btn tiny">Back</span><span class="btn tiny">&#9654;</span><span class="mono">1:48</span><span class="btn primary" style="margin-left: auto;">Next line</span></div>
+        </div>
+        <div class="phone">
+          <div class="guide"><div class="where"><span class="step">3 of 3 · Done</span><span class="steps"><i class="done"></i><i class="done"></i><i class="on"></i></span></div><div class="now">3 more lines to look at. Now, or later.</div></div>
+          <div class="focus">
+            <div class="summary" style="grid-template-columns: 1fr 1fr;"><div class="stat"><div class="n">6 of 6</div><div class="w">voices named</div></div><div class="stat"><div class="n">35 of 39</div><div class="w">lines decided</div></div><div class="stat"><div class="n">4</div><div class="w">left for later</div></div><div class="stat"><div class="n">3</div><div class="w">more flagged</div></div></div>
+            <div class="walk"><span class="btn">Look at the 7 left</span></div>
+          </div>
+          <div class="foot"><span class="btn tiny">Back</span><span class="btn primary" style="margin-left: auto;">Finish</span></div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Nothing is bunched because nothing shares the screen.</b> One voice, or one line, or the receipt; the guide as one line and a sentence; Back, play and the primary fixed at the foot where thumbs are. The context ("their lines", "around this line") is a sheet that slides up and away. Tools are not on a phone at all: the lanes and swap are desk work.</p>
+        <p><b>The same words everywhere.</b> "It's Riley", "Keep Sam", "Leave it", "Next voice", "Next line", "Finish": a person who learnt the page on a desk knows the phone, and the other way round.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 5 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5 · A recording the voice does not listen to (body camera, words first)</div><h2>The same guide with two steps: who is speaking, then the check's proposals one at a time</h2></div>
+    <div class="work">
+      <div class="frame">
+        <div class="guide">
+          <div class="where"><span class="step">Step 2 of 2 · The check's proposals</span><span class="steps"><i class="done"></i><i class="on"></i></span><span>Line 7 of 14 · 6 decided</span></div>
+          <div class="acts"><span class="btn tiny">Undo</span><span class="btn">Back</span><span class="btn primary big">Next line</span></div>
+          <div class="now">The check read the words of this recording (the voice does not listen on body camera recordings). It thinks this line was given to the wrong speaker.</div>
+        </div>
+        <div class="desk" style="grid-template-columns: minmax(300px, 1fr) minmax(0, 1fr);">
+          <div class="focus">
+            <div class="h"><span class="play big">&#9654;</span><div><div class="q">Whose line is this?</div><div class="tiny muted">2:18 · 5 s</div></div></div>
+            <div class="line here" style="grid-template-columns: 1fr;"><span>"Plate comes back clean. Registered to a Morgan Whitfield."</span></div>
+            <div class="sounds"><div class="sound"><span class="k">now marked</span><b class="c1">Lee Ortiz</b></div><div class="sound"><span class="k">the words say</span><span><b class="c2">Speaker 2</b> <span class="muted tiny">the officer reads the plate, not the driver</span></span></div></div>
+            <div class="choices">
+              <div class="choice"><div><span class="nm c2">Speaker 2</span><div class="why">what the words say</div></div><div class="acts"><span class="prev">&#9654; hear</span><span class="btn primary">It's Speaker 2</span></div></div>
+              <div class="choice"><div><span class="nm c1">Lee Ortiz</span><div class="why">as marked now</div></div><div class="acts"><span class="btn">Keep Lee</span></div></div>
+            </div>
+            <div class="walk"><span class="btn quiet">Leave it for now</span><span class="btn quiet">Accept all 8 the check is sure of</span></div>
+          </div>
+          <div class="context">
+            <div class="label">Around this line</div>
+            <div class="line dim"><span class="t">2:04</span><span class="s c2">Speaker 2</span><span>Go ahead, slowly.</span></div>
+            <div class="line here"><span class="t">2:18</span><span class="s c1">Lee Ortiz</span><span>Plate comes back clean. Registered to a Morgan Whitfield.</span></div>
+            <div class="line dim"><span class="t">2:32</span><span class="s c2">Speaker 2</span><span>That's me. Morgan.</span></div>
+          </div>
+        </div>
+        <div class="foot"><span class="btn tiny">&#9654; Play</span><span class="mono">2:18 / 12:40</span><span class="grow" style="height: 6px; border-radius: 3px; background: var(--line);"></span><span class="btn tiny">Tools</span><span class="btn tiny">Done for now</span></div>
+      </div>
+      <div class="caption">
+        <p><b>Two steps instead of three.</b> Step 1 is the same voice-at-a-time screen with the words' name hints as the only candidates (and the unit's Check greyed with its reason). Step 2 walks the check's proposals one at a time, the same line screen as a jail call's, with "Accept all the check is sure of" as a quiet shortcut. The guide's sentence says in one clause why there is no voice.</p>
+        <p><b>Nothing voices-first is forced on it</b>, and nothing is taken away: the lanes, swap and zoom are under Tools here too.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 6 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 6 · The phone system</div><h2>Found by its phrases and its voice; shown once, in step 1, with nothing to answer</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="frame" style="max-width: 560px;">
+          <div class="guide">
+            <div class="where"><span class="step">Step 1 of 3 · Who is speaking</span><span class="steps"><i class="on"></i><i></i><i></i></span><span>Voice 6 of 6 · 5 named</span></div>
+            <div class="acts"><span class="btn tiny">Undo</span><span class="btn">Back</span><span class="btn primary big">Next: lines in doubt</span></div>
+            <div class="now">This is the phone system, not a person. Nothing to name; check its lines if you like.</div>
+          </div>
+          <div class="desk" style="grid-template-columns: 1fr;">
+            <div class="focus" style="border: 0;">
+              <div class="h"><span class="play big" style="background: var(--sys); border-color: var(--sys);">&#9654;</span><div><div class="q csys">The phone system</div><div class="tiny muted">23 lines: 14 by its phrases, 9 more by its voice, which sounds like no party on this call</div></div></div>
+              <div class="samples">
+                <div class="sp"><span class="play">&#9654;</span><span class="t">0:19</span><span class="q">"This call is from a correctional facility..."</span><span class="pill">phrase</span></div>
+                <div class="sp"><span class="play">&#9654;</span><span class="t">5:02</span><span class="q">"You have one minute remaining."</span><span class="pill">phrase</span></div>
+                <div class="sp"><span class="play">&#9654;</span><span class="t">6:41</span><span class="q">"...please hold while your call is..."</span><span class="pill">voice</span><span class="btn quiet">not the system</span></div>
+              </div>
+              <div class="tiny muted">Its lines never move, never take a name, stay out of the check, and the memo says the call system announced them. A line given to it by voice alone carries "not the system" in case the voice was wrong.</div>
+            </div>
+          </div>
+        </div>
+        <div class="caption" style="margin-top: 0;">
+          <p><b>Why it blends into Speaker 1 today.</b> The diarizer groups by similarity across the whole call and the system's recorded voice is one more voice to it. With the phrase lines as an anchor, the app pulls the rest of its cluster out at the voices-first run: lines whose print sits far from every party's and near the phrase lines' own. ADR 0021 promised this half; it is built here and measured on the office's jail calls before the switch is turned.</p>
+          <p><b>Last in the walk, never a question.</b> It appears once, at the end of step 1, as a screen that says what it is; its chip in the guide is grey and never ticks.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What this is not</div><h2>Left as it is, and what is kept</h2></div>
+    <div class="work">
+      <div class="caption">
+        <p><b>No new judgement.</b> Every candidate on a voice screen exists today (the case's print, the unit's book, the words' hint); the screen only ranks them in one list with one wording. The ratings, the thresholds, the re-read, the stages' jobs and the audit rows do not change. "Sounds very like" is high, "sounds a bit like" is medium; low is never shown.</p>
+        <p><b>The one new finding is the phone system by voice</b>, promised in ADR 0021, decided by the same rule as a hand-over, with "not the system" as the way back.</p>
+        <p><b>The old page's tools are all still there</b>, under Tools: the lanes as the scrub bar, zoom, Swap two speakers, Open in a window, show the whole call. Someone who worked the old page loses nothing; someone new never has to find them.</p>
+        <p><b>Built in two releases</b>, if chosen: the guide, the voice screen and the line screen for every recording first (words first included), then the stages as steps and the phone system's voice for jail calls, each walked on the server's calls before the next.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
