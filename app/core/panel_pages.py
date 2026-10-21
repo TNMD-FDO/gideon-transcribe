@@ -697,7 +697,7 @@ def users(request: HttpRequest) -> HttpResponse:
             }
         )
 
-    from core import mail
+    from core import mail, units
 
     return render(
         request,
@@ -707,6 +707,8 @@ def users(request: HttpRequest) -> HttpResponse:
             "rows": rows,
             "no_email": no_email,
             "without_email": mail.people_without_email(),
+            # The unit's voice book (v1.146.0): the Unit column's picker.
+            "units": units.names(),
         },
     )
 
@@ -787,6 +789,24 @@ def user_action(request: HttpRequest, username: str) -> HttpResponse:
             affected_user=person,
         )
         _tell(request, f"{person.username} may sign in again.")
+
+    elif doing == "unit":
+        # A Local admin's unit, by hand (v1.146.0); a directory account's is
+        # the directory's to decide.
+        from core import units
+
+        try:
+            units.set_by_hand(
+                person, request.POST.get("unit", ""), by=request.user, request=request
+            )
+            _tell(
+                request,
+                f"{person.username} is in the {person.unit} unit."
+                if person.unit
+                else f"{person.username} is in no unit.",
+            )
+        except ValueError as refused:
+            _tell(request, str(refused))
 
     elif doing == "admin-flag":
         # Greyed on the page for a group-held Admin and for a Local admin,

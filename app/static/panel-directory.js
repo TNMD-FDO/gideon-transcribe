@@ -26,6 +26,25 @@
     }).then(function (answer) { return answer.json(); });
   }
 
+  // The unit's voice book (v1.146.0): the accounts per unit as the Units
+  // lines place them, and the ones in no listed unit with their folder
+  // chains, so the lines can be tried before anyone signs in.
+  function units(placed) {
+    if (!placed || !placed.listed) { return ""; }
+    var counts = Object.keys(placed.counts).map(function (unit) {
+      return escape(unit) + " " + placed.counts[unit];
+    });
+    var html = "<p class='small'>Units: " + (counts.length ? counts.join(" \u00b7 ") : "none listed") +
+      " \u00b7 in no listed unit " + placed.none.length + "</p>";
+    if (placed.none.length) {
+      html += "<table class='small'><thead><tr><th>In no listed unit</th><th>Folder chain</th></tr></thead><tbody>" +
+        placed.none.map(function (one) {
+          return "<tr><td>" + escape(one.username) + "</td><td><code>" + escape(one.folder || "(no folder read yet: signs in next)") + "</code></td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+    return html;
+  }
+
   test.addEventListener("click", function () {
     test.disabled = true;
     said.innerHTML = "<p class='quiet'>Asking the directory...</p>";
@@ -66,7 +85,7 @@
               ? "<ul class='small'>" + result.changes.map(function (one) {
                   return "<li>" + escape(one) + "</li>";
                 }).join("") + "</ul>"
-              : "");
+              : "") + units(result.units);
         })
         .catch(function () {
           said.innerHTML = "<p class='notice danger'>The check could not be run.</p>";

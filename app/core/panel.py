@@ -103,6 +103,25 @@ def tray_rows(tray: dict) -> list[dict]:
                 f"across {held['cases']} case{'' if held['cases'] == 1 else 's'}. "
                 "The names stay; only the voices are forgotten."
             )
+        if key == "unit_voices" and not wanted:
+            # Off deletes every unit's voice book (v1.146.0); the note counts
+            # the voices per unit before the switch is thrown.
+            from core import voice_book
+
+            per_unit = voice_book.counts_for_switch()
+            note = (
+                "Off deletes every voice book: "
+                + (
+                    ", ".join(
+                        f"{n} voice{'' if n == 1 else 's'} in the {unit} unit"
+                        for unit, n in per_unit.items()
+                    )
+                    if per_unit
+                    else "none is kept yet"
+                )
+                + ". The cases' own prints and names stay; the Voices place leaves "
+                "the rail."
+            )
         rows.append(
             {
                 "key": key,

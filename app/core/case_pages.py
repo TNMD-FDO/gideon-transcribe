@@ -314,7 +314,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "deletes_line": retention.deletes_line(left),
             # The Speakers tab: the Case's People and the Recordings still unnamed.
             **(
-                _speakers_tab(case)
+                _speakers_tab(case, request.user)
                 if tab == "speakers"
                 else {"people_count": case.people.count()}
             ),
@@ -507,10 +507,10 @@ def _clips_in(case: Case, asker) -> list:
     ]
 
 
-def _speakers_tab(case: Case) -> dict:
+def _speakers_tab(case: Case, user=None) -> dict:
     from core import people_pages
 
-    shown = people_pages.tab_context(case)
+    shown = people_pages.tab_context(case, user)
     shown["people_count"] = len(shown["people"])
     # A voice named across the case (Phase 9 chapter 2).
     shown["side_rule"] = vocabulary.side_rule(case)

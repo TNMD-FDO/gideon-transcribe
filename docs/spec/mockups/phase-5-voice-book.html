@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The unit's voice book</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 14px 0 6px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); border-color: var(--bad); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .btn.off { opacity: .55; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--accent); white-space: nowrap; border: 1px solid var(--accent); border-radius: var(--radius); padding: 0 6px; min-height: 22px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .c4 { --c: var(--sp4); color: var(--sp4); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  /* the rail */
+  .rail { width: 232px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+  .rail .grp { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin: 8px 6px 2px; }
+  .rail .item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: var(--radius); color: var(--text); text-decoration: none; }
+  .rail .item.on { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
+  .rail .item .ico { width: 16px; height: 16px; border-radius: 4px; background: var(--muted); opacity: .5; flex: none; margin-top: 3px; }
+  .rail .item.on .ico { background: var(--accent); opacity: 1; }
+  .rail .item .words { display: flex; flex-direction: column; min-width: 0; }
+  .rail .item .words b { font-weight: 600; }
+  .rail .item .words .line { font-size: 11px; color: var(--muted); }
+  .rail .do { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+
+  /* the Speakers page card, at its real width */
+  .col { width: 340px; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: var(--radius-lg); position: relative; }
+  .col .colnote { position: absolute; top: -9px; left: 12px; background: var(--surface); padding: 0 6px; font-size: 11px; color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; background: var(--surface); }
+  .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .card .h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card .h .nm { font-weight: 600; }
+  .card .h .lab { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .card .stats { font-size: 12px; color: var(--muted); margin-left: 15px; }
+  .card .samples { display: flex; flex-direction: column; gap: 3px; margin-left: 15px; }
+  .card .sp { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .card .sp .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .card .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card .line1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: 15px; font-size: 12px; }
+  .card .sounds { margin-left: 15px; border: 1px solid var(--accent); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .card .sounds.none { border-color: var(--line); color: var(--muted); }
+  .card .sounds .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .card .sounds .hear { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--muted); }
+  .card .sounds .ask { color: var(--muted); }
+  .card .why { margin-left: 15px; font-size: 11px; color: var(--muted); }
+
+  /* the Voices place and the Case tab */
+  .tab { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .lead { margin: 0; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  .toolbar .find { border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; color: var(--muted); min-width: 220px; }
+  table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.tbl th, table.tbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.tbl th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  .summ { color: var(--accent); font-size: 13px; }
+  .voice { display: flex; flex-direction: column; gap: 2px; }
+  .chain { font-size: 12px; color: var(--muted); }
+  .acts-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  .alarm { font-size: 12px; color: var(--warn); }
+  .block { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; }
+  .block .t { font-weight: 600; margin-bottom: 6px; }
+  .numbers table { border-collapse: collapse; font-size: 13px; }
+  .numbers th, .numbers td { padding: 3px 12px 3px 0; text-align: left; border-bottom: 1px solid var(--line); }
+  .numbers th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .confirm { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 14px 16px; max-width: 520px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .confirm .t { font-weight: 600; font-size: 15px; }
+  .confirm ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .confirm .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  .setting { display: grid; grid-template-columns: 220px minmax(0, 1fr) minmax(0, auto); gap: 8px 16px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .setting .k { font-weight: 600; }
+  .setting .v { color: var(--muted); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .toggle i { display: inline-block; width: 30px; height: 16px; border-radius: 8px; background: var(--line); position: relative; }
+  .toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); }
+  .toggle.on i { background: var(--accent); } .toggle.on i::after { left: 16px; }
+  .notice { border: 1px solid var(--warn); border-radius: var(--radius); padding: 6px 10px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+  table.tbl td.mono, table.tbl .mono { overflow-wrap: anywhere; word-break: break-all; }
+  .box { border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 8px; background: var(--surface); font-family: var(--mono); font-size: 12px; white-space: pre; color: var(--text); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The unit's voice book: officers' voices kept beyond one case, checked by hand, per unit</h1>
+    <p class="lede"><b>Drawn 2026-10-21</b> for the maintainer to pick before the voice plan's release V4b is built (ADR 0021 amended; Phase 5 chapter 2 gains a section). Every name, unit, call and line here is made up; the office's own unit names and directory paths are values the Admin types, never words in the app.</p>
+    <p class="lede"><b>What changes and what does not.</b> V4 keeps a voice print inside one Case and matches it there on its own. This release adds one more place a print may live: the unit's voice book, where a person who may open the case chooses to keep a Person's voice, and only a Person in a role the Admin allows (officers, interpreters; never a client, a defendant, a witness or a victim). The book never proposes a name by itself: a card is checked against it by hand, on the recording's Speakers page, the one place a proposal is accepted or declined. Units come from the directory: the Admin lists each unit with the directory folder its accounts sit under, and every sign-in reads the account's folder. A person in no unit sees none of this. An Admin sees every unit's book, side by side, and acts in a case as the case's unit does.</p>
+    <p class="lede"><b>Four things on four pages.</b> A new place on the rail, Voices, listing the unit's book (figures 1 and 2). A line under a Person on the Case's Speakers tab, Keep for the unit (figure 3). A button on an unnamed card, Check against the unit's voices, and what it answers (figure 4). The Admin's units, how an account is placed in one from its directory folder, the roles allowed and the switch (figure 5).</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The rail</div><h2>Voices joins the places, for a person in a unit, while the Admin's switch is on</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="rail">
+          <div class="do"><span class="btn primary">Upload files</span></div>
+          <div class="grp">Places</div>
+          <span class="item"><span class="ico"></span><span class="words"><b>Home</b><span class="line">What is running, and what needs you</span></span></span>
+          <span class="item"><span class="ico"></span><span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span></span>
+          <span class="item"><span class="ico"></span><span class="words"><b>My recordings</b><span class="line">This session only, then gone</span></span></span>
+          <span class="item"><span class="ico"></span><span class="words"><b>Clips</b><span class="line">Pieces cut for a hearing</span></span></span>
+          <span class="item on"><span class="ico"></span><span class="words"><b>Voices</b><span class="line">The Appeals unit's known voices</span></span></span>
+          <div class="grp">Office</div>
+          <span class="item"><span class="ico"></span><span class="words"><b>Panel</b><span class="line">Settings, status, people</span></span></span>
+          <span class="item"><span class="ico"></span><span class="words"><b>Help</b><span class="line">The guide, at this page</span></span></span>
+        </div>
+        <div class="caption" style="margin-top: 0;">
+          <p><b>One place, named for the unit.</b> Its line reads the unit's name as the Admin typed it, so a person in the Appeals unit sees "The Appeals unit's known voices" and a person in the Trial unit their own. The two never see each other's book, and the book has no page for the other unit at all.</p>
+          <p><b>When it is absent.</b> The place is not on the rail when the Admin's switch is off, when the person's account sits in no listed unit, or while Folder management or Remember voices across a case is off. Nothing in a case shows then either: no Keep for the unit, no Check button.</p>
+          <p><b>An Admin sees every unit.</b> Their rail line reads "Every unit's known voices" and the place opens with a chooser, one tab per unit (figure 2). An Admin's own unit is still read from the directory, or set by hand for a Local admin (figure 5); it decides where their own cases keep voices, not what they may see.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · The Voices place</div><h2>The voice book: who is kept, from where, by whom, and Forget; an Admin sees every unit</h2></div>
+    <div class="work">
+      <div class="tab">
+        <h2>Voices <span class="muted small" style="font-weight: 400;">· every unit</span></h2>
+        <div class="toolbar"><span class="pill acc">Appeals · 7 voices</span><span class="pill">Trial · 4 voices</span><span class="muted tiny">An Admin's view: one tab per unit. A person in the Appeals unit sees this book alone, titled "the Appeals unit", and no chooser.</span></div>
+        <p class="lead">7 voices are kept for the Appeals unit, from 11 cases. A voice is kept here only when someone on a case chooses to keep it, and only for people in an allowed role: Officer, Interpreter, Interviewer. Clients, defendants, witnesses and victims are never kept here.</p>
+        <div class="toolbar"><span class="find">Find a name...</span><span class="pill acc">All roles</span><span class="pill">Officer 5</span><span class="pill">Interpreter 2</span><span class="muted small" style="margin-left: auto;">A card on any recording in this unit can be checked against these by hand.</span></div>
+
+        <table class="tbl">
+          <thead><tr><th>Name</th><th>Role</th><th>Voice</th><th>Kept</th><th>Checks</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Lee Ortiz</b><div class="tiny muted">also called Sergeant Ortiz</div></td>
+              <td class="muted">Officer</td>
+              <td>
+                <div class="voice">
+                  <span>print from 4 cases, 9 recordings <span class="prev">&#9654; hear him</span> <span class="pill ok">well taught</span></span>
+                  <span class="chain">Kept from <a href="#">State v. Marsh</a> by J. Park (3 Oct) · taught since by 3 more cases, 2 of them yours to open</span>
+                </div>
+              </td>
+              <td><span class="small">3 Oct 2026</span><div class="tiny muted">J. Park</div></td>
+              <td><span class="small">accepted 6 · not him 1</span><div class="tiny muted">last heard 19 Oct</div></td>
+              <td><span class="summ">Forget</span></td>
+            </tr>
+            <tr>
+              <td><b>Ana Villar</b></td>
+              <td class="muted">Interpreter</td>
+              <td>
+                <div class="voice">
+                  <span>print from 1 case, 2 recordings <span class="prev">&#9654; hear her</span> <span class="pill warn">matches rate medium at best</span></span>
+                  <span class="chain">Kept from <a href="#">State v. Okafor</a> by R. Diaz (14 Oct) · taught by that case only</span>
+                </div>
+              </td>
+              <td><span class="small">14 Oct 2026</span><div class="tiny muted">R. Diaz</div></td>
+              <td><span class="small">accepted 1 · not her 0</span><div class="tiny muted">last heard 14 Oct</div></td>
+              <td><span class="summ">Forget</span></td>
+            </tr>
+            <tr>
+              <td><b>Sam Burke</b></td>
+              <td class="muted">Officer</td>
+              <td>
+                <div class="voice">
+                  <span>print from 2 cases, 3 recordings <span class="prev">&#9654; hear him</span></span>
+                  <span class="chain">Kept from a case you may not open, by M. Chen (8 Oct) · taught since by 1 more case</span>
+                  <span class="alarm">Checks against Sam were turned down 3 times this month. If his print keeps being wrong, forget it and keep him again from a clean recording.</span>
+                </div>
+              </td>
+              <td><span class="small">8 Oct 2026</span><div class="tiny muted">M. Chen</div></td>
+              <td><span class="small">accepted 2 · not him 3</span><div class="tiny muted">last heard 20 Oct</div></td>
+              <td><span class="summ">Forget</span></td>
+            </tr>
+            <tr>
+              <td><b>Dev Kaur</b></td>
+              <td class="muted">Officer</td>
+              <td>
+                <div class="voice">
+                  <span class="muted">forgotten 17 Oct by J. Park</span>
+                  <span class="chain">Kept from State v. Marsh (5 Oct). The 2 names it gave on other cases stay, accepted by people there; the cases' own prints stay.</span>
+                </div>
+              </td>
+              <td><span class="small muted">forgotten</span></td>
+              <td><span class="small">accepted 2 · not him 0</span></td>
+              <td><span class="summ muted">Keep again from a case</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="cols">
+          <div class="block numbers">
+            <div class="t">Decided from the book, this unit</div>
+            <table>
+              <tr><th>Month</th><th>Checks</th><th>Accepted</th><th>Not them</th><th>No match</th></tr>
+              <tr><td>October</td><td>19</td><td>11</td><td>4</td><td>4</td></tr>
+              <tr><td>September</td><td>6</td><td>3</td><td>1</td><td>2</td></tr>
+            </table>
+          </div>
+          <div class="block">
+            <div class="t">What this page never shows</div>
+            <div class="small muted">No line of any recording, no time, no name of a case the reader may not open (it reads "a case you may not open" and counts). The voice is heard only through Preview, from a recording the reader may open; where there is none, the Preview is greyed with the reason.</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>One table, one row per voice.</b> Name with Also called, Role, the Voice (how many cases and recordings taught it, Preview, the chain), who kept it and when, and what the checks against it decided. The same Voice column the Case tab has, so the two read alike.</p>
+        <p><b>Forget is the row's one action</b>, danger, with a box like Unlearn's: the book's print is deleted; names accepted from it stay (people accepted them, on their cards); every case's own print stays. The row stays a while, greyed, with "Keep again from a case".</p>
+        <p><b>The dismissal line</b> is V4's, carried over: three Not-them in a month, in words, with the way out.</p>
+        <p><b>Who may open it.</b> Everyone in the unit, to read, hear through Preview and Forget; every Admin, for every unit, the tabs above the table picking the book. Forget is an act of the unit, written to the audit as counts and who. There is no Accept here: a check is made and decided on a recording's card (figure 4).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · The Case's Speakers tab</div><h2>Keep for the unit: one line under an allowed Person, and the box that says what it means</h2></div>
+    <div class="work">
+      <div class="cols" style="grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);">
+        <div>
+          <div class="label">The Voice column, on three People</div>
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Role</th><th>Voice</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><b>Lee Ortiz</b></td>
+                <td class="muted">Officer</td>
+                <td>
+                  <div class="voice">
+                    <span>print from 2 recordings <span class="prev">&#9654; hear him</span></span>
+                    <span class="chain">Named by hand on Body camera 1 (2 Oct, J. Park) · matched by voice on Interview 1, accepted by J. Park (3 Oct)</span>
+                    <span class="small"><span class="pill acc">Kept for the Appeals unit</span> <span class="muted">since 3 Oct, by J. Park · this case teaches the book</span> <span class="btn quiet">Stop keeping</span></span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><b>Tom Hale</b></td>
+                <td class="muted">Witness</td>
+                <td>
+                  <div class="voice">
+                    <span>print from 1 recording <span class="prev">&#9654; hear him</span></span>
+                    <span class="chain">Named by hand on Call 2 (13 Oct, J. Park)</span>
+                    <span class="tiny muted">A witness's voice is never kept for the unit.</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><b>Ana Villar</b></td>
+                <td class="muted">Interpreter</td>
+                <td>
+                  <div class="voice">
+                    <span>print from 2 recordings <span class="prev">&#9654; hear her</span></span>
+                    <span class="chain">Named by hand on Interview 2 (14 Oct, R. Diaz) · matched by voice on Interview 3, accepted by R. Diaz (15 Oct)</span>
+                    <span class="acts-row" style="margin-top: 2px;"><span class="btn tiny">Keep for the Appeals unit...</span></span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="label">The box</div>
+          <div class="confirm">
+            <div class="t">Keep Ana Villar's voice for the Appeals unit?</div>
+            <div class="small">Her voice print is copied into the unit's voice book, where anyone in the Appeals unit can check an unnamed speaker against it by hand, on any recording in their cases.</div>
+            <ul>
+              <li><b>Nothing is named by it on its own.</b> A match is proposed only when someone presses Check, and is accepted or declined on that card.</li>
+              <li><b>This case keeps teaching the book</b> while she is kept: each name or match accepted for her here refines the book's print. Other cases that accept her from the book teach it too.</li>
+              <li><b>Her role, Interpreter, goes with the voice.</b> Her notes, Also heard as and this case's name do not. The book says "kept from" this case only to people who may open it.</li>
+              <li><b>Stop keeping</b> here, or Forget on the Voices page, deletes the book's print. This case's own print stays either way.</li>
+            </ul>
+            <div class="small muted">Written to this case's audit and the unit's: kept, by whom, when. No voice and no line.</div>
+            <div class="acts"><span class="btn tiny">Cancel</span><span class="btn tiny primary">Keep for the Appeals unit</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Opt-in, per Person, by a person on the case.</b> The line appears only under a Person with a print, in an allowed role, in a case whose owner sits in a unit with the switch on. A role outside the list reads one muted sentence and offers nothing. Changing a kept Person's role to one not allowed stops the keeping, and the box says so.</p>
+        <p><b>The case stays the teacher.</b> The book's print is the case prints' average, weighted by how much each heard; Unlearn in a case takes that case's share out of the book too. So the book is never more sure than the cases behind it.</p>
+        <p><b>Which unit.</b> The case's owner's unit, read at their sign-in. An Admin on the case acts in that unit, whatever their own. A collaborator from the other unit sees the Person kept "for a unit you are not in" and no actions; that is the one time a unit's name is not shown.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · A recording's Speakers page</div><h2>Check against the unit's voices: pressed by hand on an unnamed card, answered on the card</h2></div>
+    <div class="work">
+      <div class="cols">
+        <div class="col"><span class="colnote">before the check</span>
+          <div class="card">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">31 lines, 4 min 02 s, first at 0:40</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">0:40</span><span class="q">"Step out of the vehicle for me."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">3:12</span><span class="q">"Do you have anything on you I should know about?"</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span><span class="btn tiny">Check against the Appeals unit's voices</span></div>
+            <div class="why">Compares this voice with the 7 kept for the unit. A few seconds; the answer lands here.</div>
+          </div>
+          <div class="card" style="opacity: .75;">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">6 lines, 0 min 41 s, first at 1:05</div>
+            <div class="line1"><span class="btn ghost tiny">Name or merge...</span><span class="btn tiny off">Check against the Appeals unit's voices</span></div>
+            <div class="why">Too little to compare: under 10 seconds of clean voice. Checked against nothing.</div>
+          </div>
+        </div>
+        <div class="col"><span class="colnote">after the check, three answers</span>
+          <div class="card on">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">31 lines, 4 min 02 s, first at 0:40</div>
+            <div class="sounds">
+              <div><b>Sounds like Lee Ortiz</b> <span class="pill">Officer</span> <span class="pill acc">the unit's voices</span> <span class="pill ok">high</span> <span class="muted">· kept from 4 cases</span></div>
+              <div class="hear"><span class="prev">&#9654; Lee on State v. Marsh, Body camera 1, 2:10</span><span class="muted tiny">the samples above are this voice</span></div>
+              <div class="acts"><span class="btn tiny primary">Accept: Speaker 3 is Lee Ortiz</span><span class="btn ghost tiny">Not him</span></div>
+              <div class="ask">Accept adds Lee Ortiz to this case as an Officer, names every line of Speaker 3 here, and teaches both this case's print and the book. Undo takes it all back.</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="dot c4"></span><span class="nm c4">Speaker 4</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_03</span></div>
+            <div class="sounds">
+              <div><b>Sounds like two of the unit's voices</b> <span class="pill warn">Sam Burke and Dev Kaur</span></div>
+              <div class="ask">Both prints claim this voice. Nothing is proposed until you have heard all three.</div>
+              <div class="hear"><span class="prev">&#9654; Sam, Interview 1, 0:55</span><span class="prev">&#9654; Dev, Body camera 2, 1:20</span></div>
+              <div class="acts"><span class="btn tiny">Sam Burke</span><span class="btn tiny">Dev Kaur</span><span class="btn ghost tiny">Neither</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_00</span></div>
+            <div class="sounds none">
+              <div><b>No voice in the Appeals unit's book sounds like Speaker 1</b> <span class="muted">· 7 compared, 21 Oct 14:02</span></div>
+              <div class="acts"><span class="btn ghost tiny">Name or merge...</span><span class="btn quiet">Check again</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Pressed, never automatic.</b> The case's own prints keep proposing Sounds like on their own, as V4 has it; the book answers only when asked. The button sits beside Name or merge on every unnamed card, with one line saying what it compares and that the answer lands here. It is greyed with the reason when the voice did not listen on this recording (its type is not under Voices help the check) or the speaker has too little clean voice.</p>
+        <p><b>The answer is V4's Sounds like block</b> with one more pill, "the unit's voices", and a Preview from a recording the reader may open, or "heard on a case you may not open" and the samples alone. High and medium only; a book print taught by one case rates medium at best. The conflict offers both, as in a case.</p>
+        <p><b>Accept does three things and says so:</b> adds the Person to the case with the book's name and role (or names the Speaker as an existing Person of that name), names the lines, teaches. Undo reverses all three. Not him is written to the book's count and to nothing else. No match is a plain line with Check again.</p>
+        <p><b>Which book.</b> The case's owner's unit's, for an Admin too: the one book a case has. <b>A named card has no Check.</b> The Side rule's alarm and the case's own matches stay as drawn in V4.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 5 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5 · The Admin's part</div><h2>Units from the directory, the roles allowed, the switch, and a Local admin's unit by hand</h2></div>
+    <div class="work">
+      <div class="label">Sign-in settings</div>
+      <div class="setting">
+        <div class="k">Units</div>
+        <div class="v">The office's units, one per line: the unit's name, a vertical bar, then the directory folder (OU) its accounts sit under. At each sign-in the account's own folder path is read and the first line it falls under is the person's unit. An account under none is in no unit. Changing a line takes effect at the person's next sign-in.</div>
+        <div class="box">Appeals | OU=Appeals,OU=Staff
+Trial   | OU=Trial,OU=Staff</div>
+      </div>
+      <div class="label" style="margin-top: 12px;">How an account is placed, read at every sign-in</div>
+      <div class="cols" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);">
+        <div class="block">
+          <div class="t">The rule</div>
+          <ol class="small" style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
+            <li>The directory names every account by a path: the account's own name first, then the folders it sits in, nearest first, then the domain. The sign-in already reads this path to prove the password.</li>
+            <li>The path is cut at its commas. The account's own name (CN) and the domain parts (DC) are set aside. What is left is the <b>folder chain</b>.</li>
+            <li>A Units line matches when its folders appear in the chain <b>in the same order and next to each other</b>, letter case ignored. A line with one folder matches any account anywhere under a folder of that name.</li>
+            <li>The <b>first</b> matching line wins, so a unit nested inside another is listed above it. No match: the account is in no unit.</li>
+            <li>The unit's name and the chain it was read from are kept on the account, as words. An account moved between folders changes unit at its next sign-in, and the nightly directory check reads the folder again and says what moved.</li>
+          </ol>
+        </div>
+        <div class="block">
+          <div class="t">Worked, against the Units above</div>
+          <table class="tbl">
+            <thead><tr><th>The directory's path for the account</th><th>Folder chain</th><th>Unit</th></tr></thead>
+            <tbody>
+              <tr><td class="mono tiny">CN=J. Park,OU=Appeals,OU=Staff,DC=example,DC=local</td><td class="mono tiny">OU=Appeals,OU=Staff</td><td><b>Appeals</b></td></tr>
+              <tr><td class="mono tiny">CN=M. Chen,OU=Investigators,OU=Trial,OU=Staff,DC=example,DC=local</td><td class="mono tiny">OU=Investigators,OU=Trial,OU=Staff</td><td><b>Trial</b> <span class="tiny muted">a folder inside Trial's</span></td></tr>
+              <tr><td class="mono tiny">CN=R. Diaz,OU=Admin,OU=Staff,DC=example,DC=local</td><td class="mono tiny">OU=Admin,OU=Staff</td><td class="muted">none</td></tr>
+              <tr><td class="mono tiny">CN=S. Ng,OU=Trial,OU=Interns,DC=example,DC=local</td><td class="mono tiny">OU=Trial,OU=Interns</td><td class="muted">none <span class="tiny">· Trial is there, but not under Staff; a line "Trial | OU=Trial" would place it</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="block">
+        <div class="t">Check the placement <span class="btn tiny" style="margin-left: 8px;">Read every account's folder now</span></div>
+        <div class="small muted">Beside the Units box. Reads the folder of every account the app knows from the directory, without signing anyone in, and lists the result so the Units lines can be tried before anyone signs in: 26 accounts read · Appeals 14 · Trial 9 · in no listed unit 3. The three are listed with their folder chains, so the missing line is plain to see. The nightly directory check carries the same count on the Panel's Status page.</div>
+        <table class="tbl" style="margin-top: 8px; max-width: 640px;">
+          <thead><tr><th>In no listed unit</th><th>Folder chain</th></tr></thead>
+          <tbody>
+            <tr><td>R. Diaz</td><td class="mono tiny">OU=Admin,OU=Staff</td></tr>
+            <tr><td>S. Ng</td><td class="mono tiny">OU=Trial,OU=Interns</td></tr>
+            <tr><td>svc-scanner</td><td class="mono tiny">OU=Service accounts</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="label" style="margin-top: 12px;">Speakers settings</div>
+      <div class="setting">
+        <div class="k">Keep voices for the unit</div>
+        <div class="v">Whether a case may keep a Person's voice print in their unit's voice book, by choice, for people in the roles listed below, so an unnamed speaker on any recording in that unit can be checked against it by hand. Needs Units, Folder management and Remember voices across a case. Off as shipped.</div>
+        <div class="toggle on"><i></i> On</div>
+      </div>
+      <div class="setting">
+        <div class="k">Roles kept for the unit</div>
+        <div class="v">The Roles a Person may be kept in, one per line, from the Speaker roles list. Officer, Interpreter and Interviewer as shipped. Defendant, Victim and Witness cannot be added; the box says so if they are typed.</div>
+        <div class="box">Officer
+Interpreter
+Interviewer</div>
+      </div>
+      <div class="notice">Turning Keep voices for the unit off deletes every voice book: 7 voices in the Appeals unit, 4 in the Trial unit. The cases' own prints and names stay. The Voices place leaves the rail. Turning it on again starts from empty books.</div>
+      <div class="label" style="margin-top: 12px;">The People page, one more column</div>
+      <table class="tbl">
+        <thead><tr><th>User</th><th>Role</th><th>Unit</th><th>Status</th><th>Last sign-in</th></tr></thead>
+        <tbody>
+          <tr><td>J. Park</td><td class="muted">User</td><td>Appeals <span class="tiny muted mono">OU=Appeals,OU=Staff</span></td><td><span class="pill ok">active</span></td><td class="muted">today</td></tr>
+          <tr><td>M. Chen</td><td class="muted">Admin</td><td>Trial <span class="tiny muted mono">OU=Investigators,OU=Trial,OU=Staff</span></td><td><span class="pill ok">active</span></td><td class="muted">yesterday</td></tr>
+          <tr><td>local-admin</td><td class="muted">Local admin</td><td><span class="btn tiny">No unit ▾</span> <span class="tiny muted">set by hand</span></td><td><span class="pill ok">active</span></td><td class="muted">3 days ago</td></tr>
+          <tr><td>R. Diaz</td><td class="muted">User</td><td class="muted">none <span class="tiny mono">OU=Admin,OU=Staff</span></td><td><span class="pill ok">active</span></td><td class="muted">today</td></tr>
+        </tbody>
+      </table>
+      <div class="caption">
+        <p><b>Units are a list, not a model.</b> One text setting; the unit's name and the folder chain are kept on the account at sign-in as words, next to the directory address the account already carries, and the People page shows both so a wrong placement is seen, not guessed. No office value is in the app: the folder paths are typed by the Admin and the drawing's are made up.</p>
+        <p><b>The roles allowed are a list the Admin owns</b>, drawn from Speaker roles, with the three roles that name a client's side or a witness refused outright, so no setting can put a defendant's voice in a book.</p>
+        <p><b>Off is honest and loud</b>, as V4's switch is: the counts per unit before the throw, the books gone at once, the cases untouched.</p>
+        <p><b>A Local admin's unit</b> is picked by hand on the People page, since the account is not in the directory. A directory account's unit cannot be changed by hand; the list and the folder decide.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What this is not</div><h2>Left as it is, and what is kept</h2></div>
+    <div class="work">
+      <div class="caption">
+        <p><b>Nothing is named by the book alone.</b> No automatic match from the book, no Accept all, no list of "voices found" anywhere. A press, an answer on the card, a person's Accept or Not.</p>
+        <p><b>Nothing crosses a unit.</b> A book is read and written by its unit only; a case owned in one unit keeps to that unit's book; a collaborator from the other unit sees that a voice is kept and nothing more. An Admin reads every book and gains nothing more in a case: the check there uses the case's unit's book.</p>
+        <p><b>Nothing of a client's side is kept.</b> The roles allowed exclude Defendant, Victim and Witness by rule, and a Person with no role is not allowed either.</p>
+        <p><b>What is stored.</b> One vector per kept Person per unit, with name, role, who kept it and when, and which cases teach it, in a table of its own; the unit's name as a word on each account; the checks' outcomes as counts. Never logged, never exported, never sent anywhere, deleted by Forget, Stop keeping, Delete person in the last teaching case, or the switch.</p>
+        <p><b>The ADR.</b> ADR 0021's rule "nothing crosses a Case" is amended to "nothing crosses a Case on its own: a print may be kept for the unit by choice, for allowed roles, and matched only by hand", with this drawing as the record.</p>
+        <p><b>Phones.</b> The Voices table stacks as the Case tab's does under 600; the card's Check button wraps under Name or merge.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

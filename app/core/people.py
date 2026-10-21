@@ -257,10 +257,15 @@ def rename(person: Person, new_name: str, *, by, request=None) -> int:
     other = find(person.case, wanted)
     if other is not None and other.pk != person.pk:
         raise ValueError("already in this case; merge instead")
+    was = person.name
     with transaction.atomic():
         changed = person.segments().update(speaker=wanted)
         person.name = wanted
         person.save(update_fields=["name", "changed"])
+        # The unit's voice book follows the name (v1.146.0).
+        from core import voice_book
+
+        voice_book.follow_rename(person, was)
     _row("Person renamed", person, by, request, segments_relinked=changed)
     return changed
 
@@ -283,6 +288,11 @@ def edit(
     if fields:
         person.save(update_fields=[*fields, "changed"])
         _row("Person edited", person, by, request, fields=fields)
+        if "role" in fields:
+            # A role no longer kept for the unit stops the keeping (v1.146.0).
+            from core import voice_book
+
+            voice_book.follow_role(person, by=by, request=request)
     return fields
 
 
@@ -290,7 +300,10 @@ def merge(merged: Person, survivor: Person, *, by, request=None) -> tuple[int, i
     """Every Speaker of the merged Person is renamed; the merged Person goes."""
     if merged.pk == survivor.pk or merged.case_id != survivor.case_id:
         raise ValueError("merge two different people of one case")
+    from core import voice_book
+
     with transaction.atomic():
+        voice_book.stop_keeping(merged, by=by, request=request, why="merged")
         recordings = (
             merged.segments()
             .values_list("transcript__recording_id", flat=True)
@@ -319,11 +332,12 @@ def merge(merged: Person, survivor: Person, *, by, request=None) -> tuple[int, i
 
 def delete(person: Person, *, by, request=None) -> int:
     """The Person's Speakers go back to their labels; the row goes."""
-    from core import queue
+    from core import queue, voice_book
     from core.jobs import Transcript
 
     unnamed = 0
     with transaction.atomic():
+        voice_book.stop_keeping(person, by=by, request=request, why="deleted")
         transcripts = Transcript.objects.filter(
             pk__in=person.segments().values_list("transcript_id", flat=True).distinct()
         )

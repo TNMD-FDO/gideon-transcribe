@@ -174,6 +174,10 @@ def learn(recording, label: str, person, *, by, how: str = HAND) -> bool:
     if case.voices_forgotten_at is not None:
         case.voices_forgotten_at = None
         case.save(update_fields=["voices_forgotten_at"])
+    # A kept Person teaches the unit's book too (v1.146.0).
+    from core import voice_book
+
+    voice_book.teach(person)
     return True
 
 
@@ -203,6 +207,9 @@ def forget_recording(recording, name: str) -> bool:
     del parts[str(recording.pk)]
     _rebuild(person)
     person.save(update_fields=["voice_print"])
+    from core import voice_book
+
+    voice_book.teach(person)
     return True
 
 
@@ -681,6 +688,10 @@ def unlearn(person, *, by, request=None) -> dict:
         person.save(
             update_fields=["voice_print", "voice_unlearnt_at", "voice_unlearnt_by"]
         )
+        # Unlearn takes this case's share out of the unit's book (v1.146.0).
+        from core import voice_book
+
+        voice_book.teach(person)
     _row(
         "Voice unlearnt",
         person.case,

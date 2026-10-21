@@ -170,3 +170,32 @@ who), never an Accept of their own. A mixed line is split at the word, with
 Undo. Where the voice is off for the type the words-first run stands as
 written above. Drawn in `docs/spec/mockups/phase-5-voices-first.html`.
 
+**Noted 2026-10-21, at V4b's build (v1.146.0, the unit's voice book).**
+The maintainer's direction of the 21st is drawn
+(`docs/spec/mockups/phase-5-voice-book.html`), chosen and built, and
+decision 6's "never across Cases" is amended to: nothing crosses a Case
+on its own. By a person's choice, on the Case's Speakers tab, a Person's
+print may also be kept in their unit's voice book, for a Person in a
+Role the Admin allows (Officer, Interpreter and Interviewer as shipped;
+Defendant, Victim and Witness refused by rule, and a Person with no Role
+never), while the Admin's switch Keep voices for the unit is on. The
+book's print is the mean of the case prints that teach it, weighted by
+how much each heard, and loses a case's share when that case unlearns,
+stops keeping, or deletes the Person; so the book is never more sure
+than the cases behind it. The book never proposes on its own: an unnamed
+card is checked against it by a press, and the answer (Sounds like, a
+conflict, or no match) is accepted or declined on that card, as every
+proposal is; Accept adds the Person to the case with the book's name and
+role, names the lines, and teaches both prints. Units are a list the
+Admin keeps (a unit's name and the directory folder its accounts sit
+under); the sign-in reads the account's folder chain from the path it
+already binds with, places the account in the first unit whose folders
+appear in the chain in order and next to each other, and keeps the unit
+and the chain on the account as words; a Local admin's unit is set by
+hand. A book is read and written by its unit only; an Admin reads every
+book and acts in a case as the case's unit does (the case's owner's
+unit, which is the one book a case has). Off deletes every book; the
+cases' prints and names stay. Nothing of a book is logged, exported or
+sent anywhere, and the Voices place shows a case's name only to a reader
+who may open it.
+

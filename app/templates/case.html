@@ -412,6 +412,26 @@
                             {% endif %}
                             {% if v.chain %}<span class="chain">{% for link in v.chain %}{{ link|capfirst }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>{% endif %}
                             {% if v.called_out %}<span class="called-out">Matches to {{ row.person.name }} were turned down {{ voice.dismissals_to_call_out|default:3 }} times this month. If the print keeps being wrong, unlearn it and name them by hand once more.</span>{% endif %}
+                            {% comment %}The unit's voice book (Phase 5 chapter 2, v1.146.0; the drawing phase-5-voice-book.html, figure 3): kept with Stop keeping, Keep for the unit with its box, or one muted sentence for a role not kept.{% endcomment %}
+                            {% with b=row.book %}
+                              {% if b.state == "kept" %}
+                                <span class="book-line"><span class="pill small acc">Kept for the {{ b.unit }} unit</span> <span class="muted small">since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %}{% if b.mine %} &middot; this case teaches the book{% endif %}</span>
+                                  {% if b.mine %}
+                                    <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Stop keeping {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="This case's share leaves the unit's voice book{% if b.cases <= 1 %}, and the book forgets the voice, since no other case teaches it{% endif %}. This case's own print stays. The names accepted from the book stay." data-confirm-ok="Stop keeping">
+                                      {% csrf_token %}<input type="hidden" name="action" value="stop-keeping"><button type="submit" class="ghost tiny">Stop keeping</button>
+                                    </form>
+                                  {% else %}<span class="muted tiny">for a unit you are not in</span>{% endif %}
+                                </span>
+                              {% elif b.state == "offer" and b.mine %}
+                                <span class="book-line">
+                                  <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Keep {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="Their voice print is copied into the unit's voice book, where anyone in the {{ b.unit }} unit can check an unnamed speaker against it by hand, on any recording in their cases. Nothing is named by it on its own: a match is proposed only when someone presses Check, and is decided on that card. This case keeps teaching the book while they are kept. Their role, {{ row.person.role }}, goes with the voice; their notes and this case's name do not. Stop keeping here, or Forget on the Voices page, deletes the book's print; this case's own print stays. Written to the audit as counts only." data-confirm-ok="Keep for the {{ b.unit }} unit">
+                                    {% csrf_token %}<input type="hidden" name="action" value="keep"><button type="submit" class="tiny">Keep for the {{ b.unit }}...</button>
+                                  </form>
+                                </span>
+                              {% elif b.state == "not-kept" %}
+                                <span class="muted tiny">{% if b.role %}A {{ b.role|lower }}'s voice is never kept for the unit.{% else %}A person with no role is not kept for the unit; give them a role first.{% endif %}</span>
+                              {% endif %}
+                            {% endwith %}
                             {% if v.waiting %}
                               <span class="waiting">{{ v.waiting|length }} call{{ v.waiting|length|pluralize }} sound{{ v.waiting|length|pluralize:"s," }} like them, waiting:
                                 {% for w in v.waiting %}<a href="{% url 'speakers' w.recording.pk %}?pick={{ w.speaker|urlencode }}">{{ w.recording.title }}, {{ w.speaker }}</a> ({{ w.rating }}){% if w.others %} &middot; and like {{ w.others }} other{{ w.others|pluralize }}: the card offers both{% endif %}{% if not forloop.last %} &middot; {% endif %}{% endfor %}

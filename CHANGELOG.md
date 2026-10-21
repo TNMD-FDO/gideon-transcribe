@@ -21,6 +21,47 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.146.0, 2026-10-21
+
+```
+Models: unchanged
+Database: migrates (0086: the unit's voice book, the checks against it, the unit and folder on an account)
+```
+
+- **The unit's voice book** (the maintainer's direction of 2026-10-21:
+  the office meets the same officers across cases; drawn in
+  `docs/spec/mockups/phase-5-voice-book.html`, chosen the same day; ADR
+  0021 amended, Phase 5 chapter 2 gains the section). Three Admin
+  settings: **Units** on the Sign-in page, one line per unit with the
+  directory folder its accounts sit under, read against each account's
+  own folder chain at every sign-in (the first line whose folders appear
+  in the chain in order wins; a Local admin's unit is set by hand on the
+  People page, which shows everyone's unit and chain; Check directory now
+  counts per unit and lists the accounts in no listed unit with their
+  chains); **Keep voices for the unit** under Remember voices across a
+  case, Off as shipped, Off deleting every book; **Roles kept for the
+  unit** (Officer, Interpreter, Interviewer; Defendant, Victim, Witness and
+  Client refused). On the Case's Speakers tab a Person with a print in an
+  allowed role offers **Keep for the <unit>...** with a box, then reads
+  kept since when by whom, with Stop keeping; the book's print is the
+  mean of the case prints that teach it, weighted by the seconds each
+  heard, and loses a case's share on Unlearn, Stop keeping or Delete
+  person. On every unnamed card of a recording in a case with a book,
+  **Check against the <unit>'s voices**, pressed and never automatic,
+  answers on the card: Sounds like with the pill "the unit's voices" and
+  a play from a recording the reader may open, a conflict offered
+  together, or no match with the count compared and Check again; Accept
+  adds the Person to the case with the book's name and role, names the
+  lines and teaches both prints, with Undo. A new place on the rail,
+  **Voices**, lists the unit's book (an Admin's, every unit, one tab per
+  unit): the name, role, how many cases taught it, the chain (a case the
+  reader may not open is named as such), who kept it, what the checks
+  decided, the dismissal line, **Forget** as the one action, and Decided
+  from the book per month. Nothing is named by the book on its own; a
+  book is read and written by its unit only; nothing of it is logged,
+  exported or sent anywhere. Words: Unit, Voice book, Keep for the unit,
+  Check against the unit's voices. Migration 0086.
+
 ## v1.145.0, 2026-10-21
 
 ```

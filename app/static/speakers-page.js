@@ -1106,6 +1106,35 @@
         });
         return;
       }
+      // The unit's voice book (v1.146.0): Check compares by a press; Accept
+      // names the label as the book's Person; Not them counts against it.
+      var bookCheck = event.target.closest(".book-check, .book-check-again");
+      if (bookCheck) {
+        bookCheck.disabled = true;
+        UI.toast("Comparing " + name + " with the unit's voices\u2026", { icon: "info" });
+        send("/recording/" + V.recording + "/book-check", { speaker: name }).then(function (answer) {
+          bookCheck.disabled = false;
+          if (!answer.ok) { UI.toast(answer.said.error || "The book could not be checked.", { problem: true, icon: "warning" }); return; }
+          refreshSuggestions();
+        });
+        return;
+      }
+      var bookAccept = event.target.closest(".book-accept");
+      if (bookAccept) {
+        bookAccept.disabled = true;
+        send("/book-check/" + bookAccept.dataset.check + "/accept").then(function (answer) {
+          if (!answer.ok) { bookAccept.disabled = false; UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
+          tell({ kind: "speakers-changed" });
+          reloadHere(answer.said.made || name);
+        });
+        return;
+      }
+      var bookDismiss = event.target.closest(".book-dismiss");
+      if (bookDismiss) {
+        var checkIds = (bookDismiss.dataset.checks || bookDismiss.dataset.check || "").split(",").filter(Boolean);
+        Promise.all(checkIds.map(function (id) { return send("/book-check/" + id + "/dismiss"); })).then(function () { refreshSuggestions(); });
+        return;
+      }
       var matchDismiss = event.target.closest(".match-dismiss");
       if (matchDismiss) {
         var ids = (matchDismiss.dataset.matches || matchDismiss.dataset.match || "").split(",").filter(Boolean);
@@ -1339,6 +1368,62 @@
       }
       if (!html) { return; }
       box.innerHTML = html;
+      box.hidden = false;
+    });
+  }
+
+  // The unit's voice book (v1.146.0; the drawing phase-5-voice-book.html,
+  // figure 4): Check against the unit's voices on every unnamed card,
+  // pressed and never automatic, greyed with the reason; the answer
+  // (Sounds like with the pill "the unit's voices", a conflict, or no
+  // match) drawn under the case's own Sounds like, with Accept, Not them,
+  // Neither and Check again.
+  function drawBookChecks(body) {
+    var book = (body.speaker_check || {}).voice_book || {};
+    cards().forEach(function (card) {
+      var button = card.querySelector(".book-check");
+      var why = card.querySelector(".book-why");
+      if (!button) { return; }
+      var name = card.dataset.name;
+      var can = (book.can || {})[name];
+      if (!book.on || !can) { button.hidden = true; if (why) { why.hidden = true; } return; }
+      button.hidden = false;
+      button.textContent = "Check against the " + book.unit + " unit's voices";
+      button.disabled = !can.ok;
+      button.title = can.ok ? "Compares this voice with the voices kept for the " + book.unit + " unit. A few seconds; the answer lands here." : can.why;
+      if (why) {
+        why.textContent = can.ok ? "Compares this voice with the " + book.unit + " unit's known voices. A few seconds; the answer lands here." : can.why;
+        why.hidden = false;
+      }
+    });
+    (book.checks || []).forEach(function (group) {
+      var card = cardOf(group.speaker);
+      var box = card ? card.querySelector(".sounds-box") : null;
+      if (!box) { return; }
+      var html = "";
+      var unitPill = " <span class='pill small acc'>the unit's voices</span>";
+      if (group.kind === "match") {
+        var voice = group.voices[0];
+        html = "<div class='sounds book'>" +
+          "<div><b>Sounds like " + escape(voice.name) + "</b>" + (voice.role ? " <span class='pill small role'>" + escape(voice.role) + "</span>" : "") + unitPill + " " + ratingPill({ rating: voice.rating, recordings: voice.cases }) +
+          " <span class='muted'>\u00b7 kept from " + voice.cases + (voice.cases === 1 ? " case" : " cases") + "</span></div>" +
+          "<div class='hear'>" + (voice.heard.length ? previewButtons(voice) : (voice.openable ? "" : "<span class='pill small' title='The voice is heard only from a recording you may open'>heard on a case you may not open</span>")) + "<span class='muted tiny'>the samples above are this voice</span></div>" +
+          "<div class='acts'><button type='button' class='tiny primary book-accept' data-check='" + voice.id + "'>Accept: " + escape(group.speaker) + " is " + escape(voice.name) + "</button>" +
+          "<button type='button' class='ghost tiny book-dismiss' data-check='" + voice.id + "'>Not them</button></div>" +
+          "<div class='ask muted tiny'>Accept adds " + escape(voice.name) + " to this case" + (voice.role ? " as " + escape(voice.role) : "") + ", names every line of " + escape(group.speaker) + " here, and teaches both this case's print and the book. Undo takes it all back.</div></div>";
+      } else if (group.kind === "conflict") {
+        html = "<div class='sounds book'>" +
+          "<div><b>Sounds like two of the unit's voices</b> <span class='pill small warn'>" + group.voices.map(function (one) { return escape(one.name); }).join(" and ") + "</span>" + unitPill + "</div>" +
+          "<div class='ask muted tiny'>Both prints claim this voice. Nothing is proposed until you have heard all three.</div>" +
+          "<div class='hear'>" + group.voices.map(function (one) { return one.heard.length ? previewButtons(one) : (one.openable ? "" : "<span class='pill small'>" + escape(one.name.split(" ")[0]) + ": heard on a case you may not open</span>"); }).join("") + "</div>" +
+          "<div class='acts'>" + group.voices.map(function (one) { return "<button type='button' class='tiny book-accept' data-check='" + one.id + "'>" + escape(one.name) + "</button>"; }).join("") +
+          "<button type='button' class='ghost tiny book-dismiss' data-checks='" + group.voices.map(function (one) { return one.id; }).join(",") + "'>Neither</button></div></div>";
+      } else {
+        html = "<div class='sounds book none'>" +
+          "<div><b>No voice in the " + escape(group.unit) + " unit's book sounds like " + escape(group.speaker) + "</b> <span class='muted'>\u00b7 " + group.compared + " compared, " + escape(group.at) + "</span></div>" +
+          "<div class='acts'><button type='button' class='quiet tiny book-check-again'>Check again</button></div></div>";
+      }
+      box.innerHTML += html;
       box.hidden = false;
     });
   }
@@ -1643,6 +1728,7 @@
         var busy = drawNameSuggestions(body);
         busy = drawCorrections(body) || busy;
         drawVoiceMatches(body);
+        drawBookChecks(body);
         drawRereadLine(sc);
         if (suggestTimer) { window.clearTimeout(suggestTimer); suggestTimer = null; }
         if (busy) { suggestTimer = window.setTimeout(refreshSuggestions, 2000); }

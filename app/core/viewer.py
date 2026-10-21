@@ -1457,6 +1457,11 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
             request=request,
         )
         # Undo takes the name back and the print forgets this call (v1.144.0).
+        if last.get("book_check"):
+            # The book's row goes back to waiting (v1.146.0).
+            from core import voice_book
+
+            voice_book.undo_accept(transcript, last)
         voice_prints.forget_recording(recording, last.get("to", ""))
     audit.write(
         audit.Category.EDITS,

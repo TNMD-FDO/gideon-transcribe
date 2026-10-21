@@ -165,6 +165,12 @@ def find_person(held, username: str) -> dict | None:
     return None
 
 
+def _folder(dn: str) -> str:
+    from core import units
+
+    return units.folder_of(dn or "")
+
+
 def _one(value) -> str:
     if not value:
         return ""
@@ -291,6 +297,9 @@ def sign_in(username: str, password: str) -> dict:
             "in_admin_group": bool(
                 where["admin_group"] and where["admin_group"] in groups
             ),
+            # The unit's voice book (v1.146.0): the account's folder chain,
+            # from the path the sign-in just bound with.
+            "folder": _folder(person["dn"]),
         }
     finally:
         with contextlib.suppress(Exception):
@@ -510,6 +519,9 @@ def check_accounts(actor=None) -> dict:
 
             changes += _bring_into_line(person, found, allowed, in_admin_group, actor)
 
+        from core import units
+
+        placed = units.summary() if units.names() else None
         audit.write(
             audit.Category.ACCOUNTS,
             "Directory check ran",
@@ -530,6 +542,7 @@ def check_accounts(actor=None) -> dict:
             "signin_group_members": len(signin_members),
             "admin_group_members": len(admin_members),
             "changes": changes,
+            "units": placed,
         }
     finally:
         with contextlib.suppress(Exception):
@@ -615,6 +628,11 @@ def _bring_into_line(person, found, allowed, in_admin_group, actor) -> list[str]
             ),
             "email": found.get("mail", ""),
         }
+        # The unit's voice book (v1.146.0): the folder chain and the unit
+        # follow the directory overnight too.
+        from core import units
+
+        fresh["folder"], fresh["unit"] = units.placed(found["dn"])
         if any(getattr(person, name) != value for name, value in fresh.items()):
             mail_changed = person.email != fresh["email"]
             for name, value in fresh.items():

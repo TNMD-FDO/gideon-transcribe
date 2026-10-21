@@ -25,7 +25,7 @@ from collections import Counter
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from core import assistant, audit, engine, prompts, settings_store
+from core import assistant, audit, engine, prompts, settings_store, voice_book
 from core.assistant import (
     DONE,
     FAILED,
@@ -1215,7 +1215,7 @@ def stretches(rows: list, cards: list[dict]) -> list[dict]:
     return out
 
 
-def state_json(transcript) -> dict:
+def state_json(transcript, user=None) -> dict:
     """The corrections pending, as cards, and the last run, for the state answer."""
     from core import exports
 
@@ -1293,6 +1293,9 @@ def state_json(transcript) -> dict:
         # labels Unlearn returned.
         "voice_matches": voice_prints.rows_for(transcript),
         "remember_voices": voice_prints.on(),
+        # The unit's voice book (v1.146.0): whether Check is here, per label
+        # whether it is lit and why not, and the answers on the cards.
+        "voice_book": voice_book.state_for(transcript, user),
         "pending": [row(one) for one in rows],
         "speakers": cards,
         "stretches": stretches(rows, cards),

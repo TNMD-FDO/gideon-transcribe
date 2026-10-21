@@ -20,7 +20,7 @@ from core.case_pages import _on_or_404, _their_case
 from core.people import Person
 
 
-def tab_context(case) -> dict:
+def tab_context(case, user=None) -> dict:
     """What the tab shows: the People with where they appear, and the
     unnamed. A handful of queries for the case (v1.134.0): the People, every
     Speaker's recordings grouped, the recordings' rows once."""
@@ -51,8 +51,12 @@ def tab_context(case) -> dict:
     from core import voice_prints
 
     voice = voice_prints.tab_rows(case, everyone)
+    from core import voice_book
+
     for row in rows:
         row["voice"] = voice["per_person"].get(row["person"].pk)
+        # The unit's voice book (v1.146.0): kept, an offer, or a role not kept.
+        row["book"] = voice_book.tab_line(row["person"], user) if user else None
     line = (
         f"{len(rows)} {'person' if len(rows) == 1 else 'people'}, "
         f"{len(unnamed)} recording{'' if len(unnamed) == 1 else 's'} "
@@ -131,6 +135,23 @@ def person_action(request: HttpRequest, person_id) -> HttpResponse:
             people.merge(person, survivor, by=request.user, request=request)
         elif action == "delete":
             people.delete(person, by=request.user, request=request)
+        elif action in ("keep", "stop-keeping"):
+            # The unit's voice book (v1.146.0).
+            from core import voice_book
+
+            if action == "keep":
+                book = voice_book.keep(person, by=request.user, request=request)
+                request.session["people_said"] = (
+                    f"{person.name}'s voice is kept for the {book.unit} unit. "
+                    "Anyone in the unit can now check an unnamed speaker against it "
+                    "by hand; nothing is named by it on its own."
+                )
+            else:
+                voice_book.stop_keeping(person, by=request.user, request=request)
+                request.session["people_said"] = (
+                    f"{person.name}'s voice is no longer kept for the unit from this "
+                    "case. The case's own print stays."
+                )
         elif action == "unlearn":
             from core import voice_prints
 

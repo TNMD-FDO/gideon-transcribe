@@ -27,6 +27,7 @@ from core import (
     viewer,
     views,
     vocabulary_pages,
+    voice_book_pages,
 )
 
 urlpatterns = [
@@ -221,6 +222,23 @@ urlpatterns = [
         "handover/<int:handover_id>/<str:verdict>",
         assistant_pages.decide_handover,
         name="decide-handover",
+    ),
+    # The unit's voice book (Phase 5 chapter 2, v1.146.0).
+    path("voices", voice_book_pages.voices, name="voices"),
+    path(
+        "voices/<uuid:voice_id>/forget",
+        voice_book_pages.forget,
+        name="voices-forget",
+    ),
+    path(
+        "recording/<uuid:recording_id>/book-check",
+        voice_book_pages.check,
+        name="book-check",
+    ),
+    path(
+        "book-check/<int:check_id>/<str:verdict>",
+        voice_book_pages.decide,
+        name="decide-book-check",
     ),
     path(
         "voice-match/<int:match_id>/<str:verdict>",

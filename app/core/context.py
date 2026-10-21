@@ -5,6 +5,12 @@ from __future__ import annotations
 from core import reports, settings_store
 
 
+def _voice_book(user) -> dict:
+    from core import voice_book
+
+    return voice_book.rail(user)
+
+
 def workspace(request) -> dict:
     """The idle timeout, which the countdown on every page is worked out from.
 
@@ -38,6 +44,9 @@ def workspace(request) -> dict:
             settings_store.get("folder_management")
             and settings_store.get("live_recording")
         ),
+        # The unit's voice book (v1.146.0): the Voices place, for a person in
+        # a unit while the switch is on; an Admin's reads every unit.
+        "voice_book": _voice_book(request.user),
         "dictation": bool(
             settings_store.get("folder_management")
             and settings_store.get("live_recording")

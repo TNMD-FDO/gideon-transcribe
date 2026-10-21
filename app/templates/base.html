@@ -84,6 +84,13 @@
             <span class="words"><b>Clips</b><span class="line">Pieces cut for a hearing</span></span>
           </a>
         {% endif %}
+        {% if voice_book.on %}
+          {% comment %}The unit's voice book (Phase 5 chapter 2, v1.146.0): the Voices place, for a person in a unit while the Admin's switch is on.{% endcomment %}
+          <a class="item{% if page == "voices" %} on{% endif %}" href="{% url 'voices' %}"{% if page == "voices" %} aria-current="page"{% endif %} title="Voices: {{ voice_book.line|lower }}">
+            <span class="ico">{% icon "voices" %}</span>
+            <span class="words"><b>Voices</b><span class="line">{{ voice_book.line }}</span></span>
+          </a>
+        {% endif %}
         <div class="grp">Office</div>
         {% if user.is_admin %}
           <a class="item{% if page == "panel" %} on{% endif %}" href="{% url 'panel' %}"{% if page == "panel" %} aria-current="page"{% endif %} title="Panel: settings, status, people">

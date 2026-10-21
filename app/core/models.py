@@ -94,6 +94,13 @@ class User(AbstractBaseUser):
 
     is_local = models.BooleanField(default=False)
 
+    # The unit's voice book (Phase 5 chapter 2, v1.146.0): the unit the
+    # sign-in placed the account in from its directory folder chain, and
+    # the chain it was read from, both as words. A Local admin's unit is
+    # set by hand on the People page and has no chain.
+    unit = models.CharField(max_length=40, blank=True, default="")
+    folder = models.CharField(max_length=320, blank=True, default="")
+
     # The three sources of admin status. The group only ever adds: a manual
     # flag cannot demote a member of the Admin group, so removing a group
     # member's admin status means removing them from the group in the
@@ -301,3 +308,4 @@ from core.reports import Report  # noqa: E402, F401
 from core.settings_store import Setting  # noqa: E402, F401
 from core.sharing import Share  # noqa: E402, F401
 from core.vision import VisionRequest  # noqa: E402, F401
+from core.voice_book import UnitVoice, UnitVoiceCheck  # noqa: E402, F401

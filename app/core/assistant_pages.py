@@ -447,7 +447,7 @@ def state(request: HttpRequest, recording_id) -> JsonResponse:
             "pending": suggestions,
             "suggestion_run": run,
             # The Speaker check (Phase 5 chapter 3): its corrections and its run.
-            "speaker_check": speaker_check.state_json(transcript),
+            "speaker_check": speaker_check.state_json(transcript, request.user),
         }
     )
 

@@ -2311,6 +2311,48 @@ def _rows() -> list[Definition]:
                 "once and each case says so; the names stay."
             ),
         ),
+        # The unit's voice book (Phase 5 chapter 2, the drawing
+        # phase-5-voice-book.html; the voice plan's V4b, v1.146.0).
+        Definition(
+            key="unit_voices",
+            page=SPEAKERS,
+            group="The voice",
+            name="Keep voices for the unit",
+            kind=TOGGLE,
+            default=False,
+            needs="remember_voices",
+            what_it_does=(
+                "Whether a case may keep a person's voice print in their unit's "
+                "voice book, by a person's choice on the case's Speakers tab, for "
+                "the roles listed below, so an unnamed speaker on any recording in "
+                "that unit can be checked against it by a press on its card. Needs "
+                "Units on the Sign-in page. Nothing is named by the book on its "
+                "own; a book is read and written by its unit only; an Admin reads "
+                "every unit's book."
+            ),
+            when_changed=(
+                "On: the Voices place appears for people in a unit. Off: every "
+                "voice book is deleted at once; the cases' own prints and names "
+                "stay; the place leaves the rail."
+            ),
+        ),
+        Definition(
+            key="unit_voice_roles",
+            page=SPEAKERS,
+            group="The voice",
+            name="Roles kept for the unit",
+            kind=TEXT,
+            default="Officer\nInterpreter\nInterviewer",
+            lines=4,
+            needs="unit_voices",
+            what_it_does=(
+                "The roles a person may be kept for the unit in, one per line, "
+                "from the Speaker roles list. Defendant, Victim, Witness and "
+                "Client cannot be kept and are refused if typed. A kept person "
+                "whose role is changed to one not listed stops being kept."
+            ),
+            when_changed="The next Keep for the unit.",
+        ),
         # The Call system (ADR 0021, the voice plan's first release, v1.138.0).
         Definition(
             key="call_system_available",
@@ -2912,6 +2954,30 @@ def _rows() -> list[Definition]:
                 "warning stands."
             ),
         ),
+        # The unit's voice book (Phase 5 chapter 2, v1.146.0): the units,
+        # each with the directory folder its accounts sit under.
+        Definition(
+            key="units",
+            page=SIGN_IN,
+            name="Units",
+            kind=TEXT,
+            default="",
+            lines=4,
+            what_it_does=(
+                "The office's units, one per line: the unit's name, a vertical "
+                "bar, then the directory folder (OU) its accounts sit under, as "
+                "Appeals | OU=Appeals,OU=Staff. At each sign-in the account's own "
+                "folder chain is read from its directory path (the account's name "
+                "and the domain parts set aside) and the first line whose folders "
+                "appear in that chain, in order and next to each other, is the "
+                "person's unit; an account under none is in no unit. A nested "
+                "unit goes above its parent. The People page shows each person's "
+                "unit and chain; a Local admin's unit is set by hand there. Check "
+                "directory now counts the accounts per unit and lists the ones in "
+                "no listed unit with their chains."
+            ),
+            when_changed=("Each person's next sign-in, and the next directory check."),
+        ),
         Definition(
             key="directory_check_hour",
             page=SIGN_IN,
@@ -3133,6 +3199,14 @@ def check(key: str, value):
         return wanted
 
     text = str(value)
+    if key == "units":
+        from core import units
+
+        return units.check_setting(text)
+    if key == "unit_voice_roles":
+        from core import voice_book
+
+        return voice_book.check_roles_setting(text)
     if key == "engine_address":
         why = outside_the_building(text.strip())
         if why:
@@ -3225,10 +3299,17 @@ def set_to(key: str, value) -> None:
     forget(key)
 
     if key == "remember_voices" and not wanted:
-        # Off deletes every print (Phase 5 chapter 2 rule 4), at once.
-        from core import voice_prints
+        # Off deletes every print (Phase 5 chapter 2 rule 4), at once, and
+        # with them every unit's voice book (v1.146.0).
+        from core import voice_book, voice_prints
 
+        voice_book.forget_everything()
         voice_prints.forget_everything()
+    if key == "unit_voices" and not wanted:
+        # Off deletes every voice book; the cases' prints stay (v1.146.0).
+        from core import voice_book
+
+        voice_book.forget_everything()
 
     if key == "folder_management":
         # The days nobody could reach a Case are recorded as they pass,

@@ -39,6 +39,26 @@
               <b>{{ row.user.username }}</b>
               {% if row.user.display_name %}<div class="small">{{ row.user.display_name }}</div>{% endif %}
               {% if row.user.directory_address %}<div class="muted small">Directory address: {{ row.user.directory_address }}</div>{% endif %}
+              {% comment %}The unit's voice book (v1.146.0): the unit the directory placed them in and the folder chain it was read from, under the name so the table keeps its eight columns; a picker for a Local admin.{% endcomment %}
+              <div class="muted small unit-line">Unit:
+              {% if row.user.is_local %}
+                {% if units %}
+                  <form method="post" action="{% url 'panel-user' row.user.username %}" class="row small" style="gap: 4px">
+                    {% csrf_token %}
+                    <select name="unit" aria-label="Unit, set by hand">
+                      <option value=""{% if not row.user.unit %} selected{% endif %}>No unit</option>
+                      {% for one in units %}<option value="{{ one }}"{% if one == row.user.unit %} selected{% endif %}>{{ one }}</option>{% endfor %}
+                    </select>
+                    <button type="submit" name="action" value="unit" class="small ghost">Set</button>
+                  </form>
+                  <div class="muted tiny">set by hand</div>
+                {% else %}<span class="muted">none</span>{% endif %}
+              {% elif row.user.unit %}
+                {{ row.user.unit }}{% if row.user.folder %} <span class="muted tiny mono">{{ row.user.folder }}</span>{% endif %}
+              {% else %}
+                <span class="muted">none</span>{% if row.user.folder %} <span class="muted tiny mono">{{ row.user.folder }}</span>{% endif %}
+              {% endif %}
+              </div>
             </td>
             <td class="small">
               {% if row.user.email %}{{ row.user.email }}{% else %}<span class="pill warn">No email address</span>{% endif %}

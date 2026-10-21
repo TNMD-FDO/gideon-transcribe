@@ -262,7 +262,9 @@ def test_a_hand_move_closes_the_proposals_it_made_moot_and_frees_the_vectors(
 
 def test_the_pages_carry_the_release():
     template = (HERE / "templates" / "speakers-page.html").read_text(encoding="utf-8")
-    assert "Run again" in template and "Check again" not in template
+    # The old button's markup, not the words: "Check against the unit's
+    # voices" (v1.146.0) begins with the same letters.
+    assert "Run again" in template and ">Check again<" not in template
     assert 'id="sp-foot"' in template and 'class="sp-cast"' in template
     assert "The check also suggests names" in template
     script = (HERE / "static" / "speakers-page.js").read_text(encoding="utf-8")
