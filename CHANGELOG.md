@@ -21,6 +21,38 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.145.0, 2026-10-21
+
+```
+Models: unchanged
+Database: migrates (0085: the words' reading and the split on a correction)
+```
+
+- **Voices first** (the maintainer's read of the test_2 call: 202 proposals
+  from the words on 573 lines, six checks and four reprocesses, and the call
+  fixed in the end by naming voices; drawn in
+  `docs/spec/mockups/phase-5-voices-first.html` and chosen 2026-10-21). On a
+  recording the voice listens to, the Speaker check's run is turned over: as
+  the transcript lands the voice does its work with no engine call for
+  moves (the cast's prints, the hand-overs, Sounds like, and the lines in
+  doubt: a line nearer another speaker's print than its own, a line the
+  voice cannot tell between two, a line carrying two voices), and the words
+  run only for names, which become hints on the cards with the quote and
+  Play, never an Accept of their own; Name or merge opens with the hinted
+  name typed. The Speakers page then has three stages above the check's
+  head. **Who is speaking**: the transcript reads plain, the named cards
+  fold to a line, the unnamed stay open, and Next lights when every voice
+  is named. **Lines in doubt**: only those lines, each with its three
+  sounds, the words' second reading landing a few seconds later as pills
+  ("voice and words agree", "the voice alone", "the words read it the other
+  way; listen first", "the voice cannot tell"), the one primary accepting
+  the lines voice and words agree on, and a mixed line split at the marked
+  word with one press (Undo puts it back whole). **Done**: the words run
+  once over the whole call against the named cast and show what little is
+  left. The recording page's pill reads "N voices to name", then "N lines
+  in doubt". Where the voice is off for the type, or could not be read, the
+  run and the page are as before. Less engine time per call, not more.
+
 ## v1.144.1, 2026-10-21
 
 ```

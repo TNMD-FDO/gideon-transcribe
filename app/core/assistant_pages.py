@@ -728,6 +728,29 @@ def decide_voice_match(
     return JsonResponse({"ok": True, "changed": 0})
 
 
+# Voices first (Phase 5 chapter 3, v1.145.0) ---------------------------------
+
+
+@login_required
+@require_POST
+def speakers_stage(request: HttpRequest, recording_id, stage: int) -> JsonResponse:
+    """The person moves the Speakers page to a stage: 1 the voices, 2 the
+    lines in doubt (the words' second reading is asked for), 3 done (the
+    words' run over the whole call against the named cast)."""
+    from core import voices_first
+
+    recording = _recording(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None:
+        return JsonResponse({"error": "no transcript"}, status=404)
+    answer = voices_first.set_stage(
+        transcript, int(stage), by=request.user, request=request
+    )
+    return JsonResponse(answer, status=200 if answer.get("ok") else 409)
+
+
 # The Speaker check (Phase 5 chapter 3) ----------------------------------------
 
 

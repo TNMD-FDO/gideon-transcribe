@@ -154,3 +154,19 @@ it is drawn and built (V4b, the unit's voice book); this release carries
 only the hook: a scope on the print, always "case", and a reserved mark
 on the Person, always off.
 
+**Noted 2026-10-21, later (v1.145.0, voices first).** Reading the test_2
+call back (202 proposals from the words on 573 lines, six checks and four
+reprocesses, the call fixed by naming voices: one Sounds like settled 167
+proposals) showed the run upside down: the words ran first and loudest on
+labels, the voice only commented, and naming came last though it did the
+work. The run is turned over where the voice listens (decision 2's per-type
+switch): the voice's work and the names at arrival with no engine call for
+moves; the lines in doubt from the voice alone (near another print, cannot
+tell, two voices in one line); three stages on the page; the engine asked
+twice and only after the names, narrowly about the lines in doubt at stage
+2 and once over the whole call at stage 3. The name suggestions become
+hints on the cards (the maintainer: usually wrong, but they tell you who is
+who), never an Accept of their own. A mixed line is split at the word, with
+Undo. Where the voice is off for the type the words-first run stands as
+written above. Drawn in `docs/spec/mockups/phase-5-voices-first.html`.
+

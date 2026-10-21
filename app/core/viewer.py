@@ -718,6 +718,101 @@ def replacement_failed(recording) -> str:
     return last.failure_message or "the transcription service failed"
 
 
+def split_line(
+    transcript, segment, *, at: int, part: str, to: str, by, request=None
+) -> int:
+    """A mixed line split at a word (v1.145.0): the words from `at` become a
+    line of their own; the `part` named ("second" or "first") goes to `to`,
+    the other keeps the line's speaker. One change Undo puts back whole."""
+    from core import people
+    from core.jobs import Segment, Transcript
+
+    words = [w for w in (segment.words or []) if isinstance(w, dict)]
+    if not to or at <= 0 or at >= len(words):
+        return 0
+
+    def text_of(ws) -> str:
+        return " ".join(
+            str(w.get("word") or w.get("text") or "").strip() for w in ws
+        ).strip()
+
+    first, second = words[:at], words[at:]
+    recording = transcript.recording
+    with transaction.atomic():
+        Transcript.objects.select_for_update().get(pk=transcript.pk)
+        segment.refresh_from_db()
+        old = {
+            "end": segment.end,
+            "text": segment.text,
+            "words": segment.words,
+            "speaker": segment.speaker,
+        }
+        try:
+            new_start = float(second[0].get("start", segment.start))
+            first_end = float(first[-1].get("end", new_start))
+        except (TypeError, ValueError):
+            return 0
+        made = Segment.objects.create(
+            transcript=transcript,
+            side=segment.side,
+            start=new_start,
+            end=segment.end,
+            text=text_of(second) or segment.text,
+            speaker=to if part == "second" else segment.speaker,
+            speaker_label=(
+                str(second[0].get("speaker") or segment.speaker_label)
+                if part == "second"
+                else segment.speaker_label
+            ),
+            words=second,
+            corrected=True,
+        )
+        segment.end = first_end
+        segment.text = text_of(first) or segment.text
+        segment.words = first
+        if part == "first":
+            segment.speaker = to
+        segment.corrected = True
+        segment.voice_fit = None
+        segment.save(
+            update_fields=["end", "text", "words", "speaker", "corrected", "voice_fit"]
+        )
+        changes = list(transcript.speaker_changes or [])
+        changes.append(
+            {
+                "split_line": True,
+                "segment": segment.pk,
+                "made": made.pk,
+                "from": old["speaker"],
+                "to": to,
+                "part": part,
+                "original_end": old["end"],
+                "original_text": old["text"],
+                "original_words": old["words"],
+                "original_speaker": old["speaker"],
+                "at": timezone.now().isoformat(),
+            }
+        )
+        transcript.speaker_changes = changes[-20:]
+        transcript.save(update_fields=["speaker_changes"])
+    people.on_named(recording, to, by=by, how="named in the viewer", request=request)
+    audit.write(
+        audit.Category.EDITS,
+        "Line split at a word",
+        actor=by,
+        request=request,
+        affected_user=(
+            recording.user if by is not None and recording.user_id != by.pk else None
+        ),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.original_filename,
+        part=part,
+        words_moved=len(second if part == "second" else first),
+    )
+    return 1
+
+
 def being_replaced(recording) -> bool:
     """Whether a Process again is running against this Recording.
 
@@ -1158,6 +1253,11 @@ def last_change_line(transcript) -> str:
     if not changes:
         return ""
     last = changes[-1]
+    if last.get("split_line"):
+        return (
+            f"splitting one line of {last['from']} at a word, "
+            f"the {last.get('part', 'second')} part to {last['to']}"
+        )
     if last.get("split"):
         return (
             f"splitting {last['from']} at {_clock(last.get('at_seconds', 0))} "
@@ -1307,7 +1407,22 @@ def speakers_undo(request: HttpRequest, recording_id) -> JsonResponse:
 
     changes = list(transcript.speaker_changes)
     last = changes.pop()
-    if last.get("swap"):
+    if last.get("split_line"):
+        # A line split at a word (v1.145.0) goes back whole: the part made
+        # is deleted and the line takes its old end, words, text and name.
+        made = transcript.segments.filter(pk=last.get("made")).first()
+        original = transcript.segments.filter(pk=last.get("segment")).first()
+        restored = 0
+        if original is not None:
+            original.end = float(last.get("original_end", original.end))
+            original.text = last.get("original_text", original.text)
+            original.words = last.get("original_words", original.words)
+            original.speaker = last.get("original_speaker", original.speaker)
+            original.save(update_fields=["end", "text", "words", "speaker"])
+            restored = 1
+        if made is not None:
+            made.delete()
+    elif last.get("swap"):
         # A swap goes back on both sides, each line only where it still
         # carries the other's name (v1.56.0).
         restored = transcript.segments.filter(

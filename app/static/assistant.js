@@ -611,6 +611,16 @@
     var sounds = ((check.voice_matches || {}).matches || []).length;
     pill.hidden = !count && !handovers.length && !sounds;
     var text = count ? count + (count === 1 ? " change proposed" : " changes proposed") : "";
+    // Voices first (v1.145.0): the pill says the stage's count instead.
+    if (check.stage === 1 && check.cast) {
+      var left = Math.max(0, (check.cast.total || 0) - (check.cast.named || 0));
+      text = left ? left + (left === 1 ? " voice to name" : " voices to name") : "";
+      pill.hidden = !text && !sounds && !handovers.length;
+    } else if (check.stage === 2 && check.doubt) {
+      var inDoubt = (check.doubt.near || 0) + (check.doubt.unsure || 0) + (check.doubt.mixed || 0);
+      text = inDoubt ? inDoubt + (inDoubt === 1 ? " line in doubt" : " lines in doubt") : "";
+      pill.hidden = !text && !sounds && !handovers.length;
+    }
     if (handovers.length) { text += (text ? " \u00b7 " : "") + "another voice under " + handovers[0].speaker; }
     if (sounds) { text += (text ? " \u00b7 " : "") + sounds + (sounds === 1 ? " voice sounds like someone" : " voices sound like someone"); }
     // The re-read after a name (v1.144.1): the fact carried to the recording page.

@@ -327,7 +327,25 @@
         row.style.borderLeftColor = colours[segment.speaker] || "transparent";
       }
       if (index > 0 && segments[index - 1].speaker === segment.speaker && !change) { row.classList.add("cont"); }
-      if (change && change.settled) {
+      if (change && change.split_at !== null && change.split_at !== undefined && !change.settled) {
+        // A mixed line (v1.145.0): the part the voice hears as another's is
+        // marked; Accept splits the line at that word.
+        row.classList.add("change", "mixed");
+        row.dataset.correction = change.id;
+        var ws = (segment.words || []).map(function (w) { return escape(String(w.word || w.text || "")); });
+        var marked = change.split_part === "first"
+          ? "<mark>" + ws.slice(0, change.split_at).join(" ") + "</mark> " + ws.slice(change.split_at).join(" ")
+          : ws.slice(0, change.split_at).join(" ") + " <mark>" + ws.slice(change.split_at).join(" ") + "</mark>";
+        row.innerHTML =
+          "<button type='button' class='t' title='Play from here'>" + clock(segment.start) + "</button>" +
+          "<div class='who'><span class='name'>" + escape(segment.speaker) + " <span class='pill small warn'>two voices</span></span></div>" +
+          "<div class='words'><p class='txt'>" + (ws.length ? marked : wordsOf(segment)) + "</p></div>" +
+          "<div class='why small muted'>" + escape(change.reason) + (change.words_why ? "; " + escape(change.words_why) : "") + "</div>" +
+          "<span class='actions change-acts'>" + hearThree(change) +
+          "<button type='button' class='tiny accept-change' title='Split the line at the marked word and give that part to " + escape(change.to) + "'>Split at the word, " + escape(change.split_part || "second") + " part to " + escape(change.to) + "</button>" +
+          "<button type='button' class='ghost tiny leave-change' title='Leave the line as it is and put the proposal away'>Leave</button>" +
+          "</span>";
+      } else if (change && change.settled) {
         // A proposal the name settled (v1.144.1): in place, tinted, with
         // what settled it and the viewer's Undo of the name.
         row.classList.add("change", "settled");
@@ -495,6 +513,13 @@
       if (!answer.ok) { UI.toast(answer.said.error || "That was not changed.", { problem: true, icon: "warning" }); return; }
       if (accept) {
         if (answer.said.stale) { UI.toast("This line changed since the check, so it was left as it is.", { icon: "info" }); }
+        else if (change && change.split_at !== null && change.split_at !== undefined) {
+          // A line split at the word (v1.145.0): a new line exists, so the
+          // page loads again at this moment rather than moving a row.
+          tell({ kind: "segments-changed" });
+          reloadHere(picked);
+          return;
+        }
         else { sayUndo(answer.said.undo); if (change) { moved(segment.id, change.to); } }
       }
       refreshSuggestions();
@@ -612,6 +637,14 @@
 
   // A change's voice word as a pill, in the pills' colours.
   function changePill(change) {
+    // Voices first (v1.145.0): on a line in doubt the words' second reading
+    // sits beside the voice's word.
+    if (stageNow && change.source === "voice" && !change.settled) {
+      if (change.words === "agrees") { return "<span class='pill small ok' title='The voice and the words both read this line as " + escape(change.to) + "\'s.'>voice and words agree</span>"; }
+      if (change.words === "against") { return "<span class='pill small warn' title='" + escape(change.words_why || "The words read this line as it is labelled.") + "'>the words read it the other way; listen first</span>"; }
+      if (!change.voice) { return "<span class='pill small' title='" + escape(change.reason) + "'>the voice cannot tell</span>"; }
+      return "<span class='pill small acc' title='" + escape(change.reason) + (change.words_why ? "; " + escape(change.words_why) : "") + "'>the voice alone</span>";
+    }
     if (change.voice === "agrees") { return "<span class='pill small ok' title='The voice on this line sounds like " + escape(change.to) + ".'>the voice agrees</span>"; }
     if (change.voice === "against") { return "<span class='pill small danger' title='The voice on this line sounds like " + escape(change.from) + ", not " + escape(change.to) + ". Listen before you accept.'>the voice disagrees, listen first</span>"; }
     return "<span class='pill small' title='The line is short, or the two speakers sound alike on it; the words alone propose this.'>the voice could not judge</span>";
@@ -1011,6 +1044,7 @@
       current: name,
       currentPill: "this one",
       merging: true,
+      prefill: stageNow ? (((card.querySelector(".suggested.hint b") || {}).textContent) || suggestedFor[name] || "") : "",
       suggested: suggestedFor[name] || "",
       newGo: "Name",
       newHint: "Names every line of " + name + "; inside a case it also makes the person, and a name already in the case joins that person.",
@@ -1048,6 +1082,9 @@
       // Name or merge (v1.143.0): the one picker, beside the card, asks
       // "<speaker> is"; rename, same person as and the name box folded into it.
       if (event.target.closest(".name-or-merge")) { nameOrMerge(card); return; }
+      // Voices first (v1.145.0): a named card is folded to a line; its
+      // stats line opens it again.
+      if (stageNow && event.target.closest(".stats") && !card.classList.contains("unnamed")) { card.classList.toggle("open"); return; }
       if (event.target.closest(".closed-dismiss")) {
         try { if (rereadNote) { window.sessionStorage.setItem("reread-closed-dismissed", rereadNote.at); } } catch (e) { /* no storage */ }
         var closedBox = card.querySelector(".suggested");
@@ -1136,6 +1173,17 @@
   var suggestTimer = null;
   var suggestedFor = {};  // speaker -> the name the check suggested (v1.143.0: lit in the picker)
   var rereadNote = null;  // the last re-read after a name (v1.144.1), from the run
+  var stageNow = null;    // voices first (v1.145.0): 1, 2, 3, or null where the words ran first
+  var lastCheck = null;
+  function sendForm(url, fields) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": cookie("csrftoken") },
+      body: new URLSearchParams(fields || {}).toString()
+    }).then(function (answer) {
+      return answer.json().then(function (said) { return { ok: answer.ok, said: said }; });
+    }).catch(function () { return { ok: false, said: {} }; });
+  }
   var checkLine = document.getElementById("check-line");
   var correctionsBox = document.getElementById("corrections");
 
@@ -1180,6 +1228,17 @@
       if (!box) { return; }
       suggestedFor[one.speaker] = one.name;
       box.hidden = false;
+      if ((body.speaker_check || {}).stage) {
+        // Voices first (v1.145.0): the words' name is evidence on the card,
+        // never an Accept of its own; Name or merge... starts with it typed.
+        var basis2 = one.basis === "introduces" ? "said by this voice" : (one.basis === "addressed" ? "said to this voice" : "heard here");
+        box.className = "suggested hint";
+        box.innerHTML = "<span class='who'>The words point at a name: <b>" + escape(one.name) + "</b>" + (one.role ? " (" + escape(one.role) + ")" : "") + "</span>" +
+          "<span class='q'>\u201c" + escape(one.quote) + "\u201d <a href='#' class='cite' data-seconds='" + one.start + "'>" + escape(one.clock) + "</a>, " + basis2 + "</span>" +
+          "<span class='tiny muted'>Evidence, not an answer: Name or merge... starts with it typed.</span>";
+        return;
+      }
+      box.className = "suggested";
       // Which way the line points (v1.105.0): the app says whether the
       // speaker gave the name themselves or was called by it.
       var basis = one.basis === "introduces" ? ", who says so themselves at " : (one.basis === "addressed" ? ", called that by another speaker at " : ", from ");
@@ -1283,6 +1342,68 @@
       box.hidden = false;
     });
   }
+
+  // Voices first (v1.145.0; the drawing phase-5-voices-first.html): the
+  // stages strip, the head's sentence per stage, the next button, the
+  // named cards folded, the strip's count. The stage lives on the run.
+  function drawStages(check, run, cards) {
+    var strip = document.getElementById("stages");
+    var next = document.getElementById("stage-next");
+    var note = document.getElementById("stage-note");
+    var said = document.getElementById("corrections-state");
+    if (!strip) { return; }
+    var stage = check.stage || null;
+    strip.hidden = !stage;
+    document.body.classList.toggle("voices-first", !!stage);
+    if (!stage) { if (next) { next.hidden = true; } if (note) { note.hidden = true; } return; }
+    var cast = check.cast || { total: 0, named: 0 };
+    var doubt = check.doubt || { near: 0, unsure: 0, mixed: 0, agree: 0, words_against: 0 };
+    var inDoubt = doubt.near + doubt.unsure + doubt.mixed;
+    var reading = check.reading || null;
+    var hints = (lastBody && lastBody.pending ? lastBody.pending.length : 0);
+    Array.prototype.forEach.call(strip.querySelectorAll(".stage"), function (one) {
+      var n = parseInt(one.dataset.stage, 10);
+      one.classList.toggle("on", n === stage);
+      one.classList.toggle("done", n < stage);
+      var sub = one.querySelector(".sub");
+      if (n === 1) { sub.textContent = plural(cast.total, "voice") + ", " + cast.named + " named"; }
+      if (n === 2) { sub.textContent = stage < 2 ? (inDoubt ? inDoubt + " so far" : "after the names") : plural(inDoubt, "line") + (reading && reading.state === "done" && reading.against ? ", " + reading.against + " the words read the other way" : ""); }
+      if (n === 3) { sub.textContent = stage < 3 ? "the words, once more" : "checked against the names"; }
+    });
+    if (stage === 1) {
+      said.textContent = "The voice heard " + plural(cast.total, "voice") + " on this call" + (hints ? " and the words suggest " + plural(hints, "name") : "") + ". Name each voice from its samples; the lines in doubt come after" + (inDoubt ? " (" + inDoubt + " so far)" : "") + ".";
+      next.textContent = "Next: lines in doubt" + (inDoubt ? " (" + inDoubt + ")" : "");
+      next.hidden = false;
+      next.classList.toggle("primary", cast.named >= cast.total && cast.total > 0);
+      note.textContent = cast.named < cast.total ? "You can go on with the unnamed as labels; they can be named later from their cards." : "Every voice is named.";
+      note.hidden = false;
+    } else if (stage === 2) {
+      var parts = [];
+      if (doubt.near) { parts.push(doubt.near + " sound" + (doubt.near === 1 ? "s" : "") + " more like another speaker"); }
+      if (doubt.unsure) { parts.push(doubt.unsure + " the voice cannot tell"); }
+      if (doubt.mixed) { parts.push(doubt.mixed + " carr" + (doubt.mixed === 1 ? "ies" : "y") + " two voices"); }
+      var words = "";
+      if (!reading || reading.state === "queued" || reading.state === "running") { words = " The words are reading them against the names\u2026"; }
+      else if (reading.state === "done") { words = reading.rows ? " The words read " + (reading.against || 0) + " of them the other way" + (reading.agree ? " and agree on " + reading.agree : "") + "." : ""; }
+      else if (reading.state === "failed") { words = " The words could not read them this time" + (reading.said ? ": " + reading.said : "") + "."; }
+      said.textContent = inDoubt
+        ? plural(inDoubt, "line") + " the voice puts in doubt" + (parts.length ? ": " + parts.join(", ") : "") + "." + words + " Read down; accept or leave each as you go."
+        : "Nothing in doubt: the voice is sure of every line it could judge.";
+      next.textContent = "Next: done";
+      next.hidden = false;
+      next.classList.remove("primary");
+      note.textContent = "Done runs the words once over the whole call, against the names as they stand.";
+      note.hidden = false;
+    } else {
+      next.hidden = true;
+      note.hidden = true;
+      if (run && run.state === "done" && check.mode === "words") {
+        var leftover = (check.pending || []).length;
+        said.textContent = "Checked against the names, " + run.when + ". " + (leftover ? "The words found " + leftover + " more line" + (leftover === 1 ? "" : "s") + " worth a look, below." : "The words found nothing more to move.") + " The names stand; the voice has heard every line.";
+      }
+    }
+  }
+  var lastBody = null;
 
   // What the check found (v1.129.0): one list of proposals, each a question
   // with a yes and a no, the biggest first. A proposal about a whole
@@ -1404,11 +1525,24 @@
     document.getElementById("speaker-cards").innerHTML = cards.map(speakerCard).join("");
     // The changes live in the transcript now (ADR 0021): by segment id.
     changes = {};
-    pending.forEach(function (one) { changes[String(one.segment)] = one; });
+    lastCheck = check;
+    stageNow = check.stage || null;
+    // Voices first (v1.145.0): at stage 1 the transcript reads plain; the
+    // lines in doubt come at stage 2, the words' leftovers at stage 3.
+    if (stageNow !== 1) { pending.forEach(function (one) { changes[String(one.segment)] = one; }); }
     (check.settled || []).forEach(function (one) { one.settled = true; changes[String(one.segment)] = one; });
+    drawStages(check, run, cards);
     handovers = waitingHandovers;
     var acceptBacked = document.getElementById("accept-corrections");
     acceptBacked.hidden = backedLines < 1;
+    if (stageNow === 2) {
+      var agreeing = pending.filter(function (one) { return one.source === "voice" && one.words === "agrees" && (one.split_at === null || one.split_at === undefined); });
+      acceptBacked.hidden = agreeing.length < 1;
+      acceptBacked.textContent = "Accept the " + agreeing.length + " the voice and the words agree on";
+      acceptBacked.dataset.ids = agreeing.map(function (one) { return one.id; }).join(",");
+    } else if (stageNow === 1) {
+      acceptBacked.hidden = true;
+    } else { acceptBacked.textContent = "Accept the changes the voice backs"; acceptBacked.dataset.ids = ""; }
     acceptBacked.textContent = "Accept the " + backedLines + " change" + (backedLines === 1 ? "" : "s") + " the voice backs";
     document.getElementById("corrections-where").hidden = !pending.length;
     var quietButton = document.getElementById("show-quiet");
@@ -1504,6 +1638,7 @@
       .then(function (answer) { return answer.json(); })
       .then(function (body) {
         var sc = body.speaker_check || {};
+        lastBody = body;
         rereadNote = (sc.run && sc.run.voice_notes && sc.run.voice_notes.reread) || null;
         var busy = drawNameSuggestions(body);
         busy = drawCorrections(body) || busy;
@@ -1519,6 +1654,21 @@
         if (suggestTimer) { window.clearTimeout(suggestTimer); }
         suggestTimer = window.setTimeout(refreshSuggestions, 6000);
       });
+  }
+
+  // Voices first (v1.145.0): the stage lives on the run; 2 asks the words
+  // for their second reading, 3 queues the words' run over the whole call.
+  function moveToStage(stage) {
+    if (!stage || stage > 3 || stage < 1) { return; }
+    var next = document.getElementById("stage-next");
+    if (next) { next.disabled = true; }
+    send("/recording/" + V.recording + "/stage/" + stage).then(function (answer) {
+      if (next) { next.disabled = false; }
+      if (!answer.ok) { UI.toast(answer.said.error || "That stage could not be opened.", { problem: true, icon: "warning" }); return; }
+      if (stage === 2 && answer.said.queued === "reading") { UI.toast("The words are reading the lines in doubt against the names\u2026", { icon: "info" }); }
+      if (stage === 3 && answer.said.queued === "words") { UI.toast("Checking the whole call against the names\u2026", { icon: "info" }); }
+      refreshSuggestions();
+    });
   }
 
   // A correction accepted moves the line here as give() does, so the lanes,
@@ -1555,6 +1705,21 @@
       var cite = event.target.closest(".cite");
       if (cite) { event.preventDefault(); seek(parseFloat(cite.dataset.seconds)); play(); return; }
       if (event.target.closest("#check-again")) { document.getElementById("check-speakers").click(); return; }
+      var stageButton = event.target.closest(".stage[data-stage]");
+      if (stageButton) { moveToStage(parseInt(stageButton.dataset.stage, 10)); return; }
+      if (event.target.closest("#stage-next")) { moveToStage((stageNow || 1) + 1); return; }
+      if (event.target.closest("#accept-corrections") && event.target.closest("#accept-corrections").dataset.ids) {
+        var acceptIds = event.target.closest("#accept-corrections").dataset.ids;
+        var acceptButton = event.target.closest("#accept-corrections");
+        acceptButton.disabled = true;
+        sendForm("/recording/" + V.recording + "/corrections/accept-many", { ids: acceptIds }).then(function (answer) {
+          acceptButton.disabled = false;
+          if (!answer.ok) { UI.toast(answer.said.error || "Not changed.", { problem: true, icon: "warning" }); return; }
+          tell({ kind: "speakers-changed" });
+          reloadHere(picked);
+        });
+        return;
+      }
       if (event.target.closest("#accept-corrections")) {
         send("/recording/" + V.recording + "/corrections/accept-all").then(function (answer) {
           if (!answer.ok) { UI.toast(answer.said.error || "Nothing was moved.", { problem: true, icon: "warning" }); return; }

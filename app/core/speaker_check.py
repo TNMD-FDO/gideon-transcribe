@@ -110,7 +110,9 @@ def seconds_until_the_night(now=None) -> int:
     return int((opens - moment).total_seconds())
 
 
-def queue_check(recording, *, by=None, how: str = "landed") -> SpeakerCheck | None:
+def queue_check(
+    recording, *, by=None, how: str = "landed", mode: str = ""
+) -> SpeakerCheck | None:
     """One check queued for this Recording's Transcript, now or at the night's
     start, if the switch is on and there is something to check. Nothing is
     queued twice."""
@@ -121,7 +123,12 @@ def queue_check(recording, *, by=None, how: str = "landed") -> SpeakerCheck | No
 
     try:
         with transaction.atomic():
-            check = SpeakerCheck.objects.create(transcript=transcript, asked_by=by)
+            check = SpeakerCheck.objects.create(
+                transcript=transcript,
+                asked_by=by,
+                # Voices first (v1.145.0): the words' run asked for at stage 3.
+                second_look={"mode": mode} if mode else {},
+            )
     except IntegrityError:
         # Two asks at once: the database keeps one live check (v1.131.0).
         return None
@@ -338,7 +345,7 @@ def voice_of(heard: Counter, from_: str, to: str) -> tuple[str, str]:
     return "", ""
 
 
-def _voice_notes(transcript, kept: dict, check=None) -> dict:
+def _voice_notes(transcript, kept: dict, check=None, doubt: bool = False) -> dict:
     """The voice's word on each proposed line, and its own proposals.
 
     With the voice on for the Recording's type (ADR 0021, v1.139.0) the
@@ -398,7 +405,14 @@ def _voice_notes(transcript, kept: dict, check=None) -> dict:
             one["voice"], _ = voice_of(
                 heard.get(one["segment_id"]) or Counter(), one["from"], one["to"]
             )
-    if judge is not None:
+    if judge is not None and doubt:
+        # Voices first (v1.145.0): the lines in doubt, from the voice alone.
+        from core import voices_first
+
+        summary["doubt"] = voices_first.doubt_rows(transcript, judge, kept)
+        summary["voice_proposals"] = summary["doubt"]["near"]
+        summary["handovers"] = judge.handovers()
+    elif judge is not None:
         from core.jobs import Segment
 
         proposals = judge.own_proposals(set(kept), voices.CAP)
@@ -625,6 +639,20 @@ def run(check_id, attempt: int = 1) -> None:
         speakers = speakers_of(transcript)
         if len(speakers) < 2:
             raise engine.Problem(engine.ERROR, "fewer than two speakers")
+        # Voices first (v1.145.0): where the voice listens, the arrival run
+        # is the voice's; the words run for names only, and over the whole
+        # call at stage 3. With the voice unreadable the words run as before.
+        from core import voices_first
+
+        mode = voices_first.mode_of(check) or (
+            voices_first.VOICES
+            if voices_first.on_for(recording)
+            else voices_first.WORDS
+        )
+        if mode == voices_first.VOICES and voices_first.arrival(
+            check, transcript, recording
+        ):
+            return
         lines = prompts.lines_of(transcript, without_system=True)
         system = prompts.system_message(
             ground.text, template.text, prompts.SPEAKER_CHECK_FORMAT
@@ -738,6 +766,8 @@ def run(check_id, attempt: int = 1) -> None:
             log.exception(
                 "speaker check for %s: the voice matches failed", transcript.pk
             )
+        # Voices first (v1.145.0): the words have run; the page's stage follows.
+        voices_first.after_words_run(check)
     except engine.Problem as problem:
         # What was found before the problem is kept: every one passed the checks.
         if kept:
@@ -802,6 +832,9 @@ def _store_under_the_lock(transcript, kept: dict) -> None:
             aside_why=one.get("aside_why", ""),
             voice=one.get("voice", ""),
             source=one.get("source", SpeakerCorrection.WORDS),
+            words=one.get("words", ""),
+            split_at=one.get("split_at"),
+            split_part=one.get("split_part", ""),
         )
 
 
@@ -1210,9 +1243,14 @@ def state_json(transcript) -> dict:
             "reason": one.reason,
             "voice": one.voice,
             "source": one.source,
+            # Voices first (v1.145.0): the words' second reading and a split.
+            "words": one.words,
+            "words_why": one.words_why,
+            "split_at": one.split_at,
+            "split_part": one.split_part,
         }
 
-    from core import voice_prints
+    from core import voice_prints, voices_first
     from core.assistant import Handover
 
     voice_prints.settle(transcript)
@@ -1224,8 +1262,25 @@ def state_json(transcript) -> dict:
         if note
         else []
     )
+    stage = voices_first.stage_of(transcript)
+    from core import call_system
+    from core.assistant import _is_a_label
+
+    cast_names = [
+        one for one in speakers_of(transcript) if not call_system.is_system(one)
+    ]
     return {
         "offered": offered(transcript),
+        # Voices first (v1.145.0): the stage, the mode, the words' reading,
+        # the lines in doubt by kind, and the cast's count.
+        "stage": stage,
+        "mode": voices_first.mode_of(last) if last is not None else "",
+        "reading": ((last.second_look or {}).get("reading") or None) if last else None,
+        "doubt": voices_first.doubt_counts(transcript) if stage else None,
+        "cast": {
+            "total": len(cast_names),
+            "named": sum(1 for one in cast_names if not _is_a_label(one)),
+        },
         "settled": [
             dict(
                 row(one),
@@ -1320,15 +1375,27 @@ def _accept_under_the_lock(correction, *, by, request, viewer) -> int:
         correction.decided_at = timezone.now()
         correction.save(update_fields=["state", "decided_by", "decided_at"])
         return 0
-    changed = viewer.move_line(
-        transcript,
-        segment,
-        correction.speaker_to,
-        by=by,
-        request=request,
-        event="Speaker correction accepted",
-        how="check",
-    )
+    if correction.split_at is not None:
+        # A mixed line (v1.145.0): split at the word, that part to the other.
+        changed = viewer.split_line(
+            transcript,
+            segment,
+            at=correction.split_at,
+            part=correction.split_part or "second",
+            to=correction.speaker_to,
+            by=by,
+            request=request,
+        )
+    else:
+        changed = viewer.move_line(
+            transcript,
+            segment,
+            correction.speaker_to,
+            by=by,
+            request=request,
+            event="Speaker correction accepted",
+            how="check",
+        )
     correction.state = SpeakerCorrection.ACCEPTED
     correction.decided_by = by
     correction.decided_at = timezone.now()

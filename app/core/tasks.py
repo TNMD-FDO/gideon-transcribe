@@ -543,6 +543,15 @@ def check_speakers(check_id: str, attempt: int = 1) -> None:
     speaker_check.run(check_id, attempt)
 
 
+@app.task(queue="llm", name="read_doubts")
+def read_doubts(check_id: str) -> None:
+    """Voices first (v1.145.0): the words' second reading of the lines in
+    doubt, with the named cast in hand."""
+    from core import voices_first
+
+    voices_first.read_doubts(check_id)
+
+
 @app.task(queue="llm", name="describe_moment")
 def describe_moment(moment_id: str) -> None:
     """One Moment: the clip cut here, on this worker, and shown to the engine."""

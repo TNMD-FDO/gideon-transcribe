@@ -157,6 +157,15 @@ The proposal a Voice print makes (v1.144.0): after the Speaker check's one run o
 **Unlearn**:
 On the Case's Speakers tab, on a Person with a Voice print (v1.144.0): deletes the print, returns every Speaker the voice named to unnamed and marks it on its card ("was <Person>, by voice"), withdraws the matches waiting, and leaves every name given by hand. The box lists each recording by what happens to it, from the Chain, before anything is pressed. An audit row of counts. Avoid: forget (that is the Admin's switch going off, for every print), reset.
 
+**Lines in doubt**:
+On a Recording the voice listened to (v1.145.0), the lines the Speaker check puts to a person at its second stage, found by the voice alone from the prints it built: a line whose own print sits nearer another speaker's than its own, a line the voice cannot tell between two (folded), and a line that carries two voices (a split at the word). The words read them afterwards, with the names in hand, as a second opinion on each row. Avoid: proposals (the words' word), suspects, flags.
+
+**Hint**:
+A name the words point at, shown on a Speaker's card as evidence (v1.145.0): "The words point at a name: Riley", the quote with Play and whether it was said by this voice or to it. Never an Accept of its own; Name or merge... opens with the name typed. Before v1.145.0, and still where the voice is off, the same finding is a Suggestion with Accept and Reject. Avoid: suggestion (where the voice listened), guess.
+
+**Stage**:
+One of the three steps of the Speakers page where the voice listened (v1.145.0): who is speaking, lines in doubt, done. The stage lives on the check's run; a person moves it with Next or the strip above the head, and may go on with voices unnamed. Avoid: step (on the page, as a word), phase (the specification's).
+
 **Re-read**:
 What the Speaker check's proposals do when a Speaker is named while they wait (v1.144.1): each pending proposal is rewritten with the current names, a name suggestion for a label now named is closed, the labels' prints follow the name, the unnamed voices are matched again against the Case's Voice prints, and the voice's word is re-scored, all from what the run kept and with no engine call. The page says what changed in counts, under the check's state, with the limit in the same sentence: the words were read before the name, and Run again re-reads them. Avoid: refresh, recheck (that is Run again), re-run.
 

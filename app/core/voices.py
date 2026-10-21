@@ -388,6 +388,25 @@ class Judge:
             for m, sid, other in found[:cap]
         ]
 
+    def unsure_lines(self, taken: set, cap: int = 40) -> list[dict]:
+        """Lines the voice cannot tell between two speakers (v1.145.0):
+        long enough to judge, their margin inside the threshold either way,
+        the smallest margins first, under a cap."""
+        found = []
+        for sid, row in self.stretches.items():
+            if int(sid) in taken or not row["timed"] or row["net"] < self.floor:
+                continue
+            s = self.scores(sid)
+            t = self.threshold(row["net"])
+            if s is None or t is None or abs(s["margin"]) >= t:
+                continue
+            found.append((abs(s["margin"]), sid, s["other_name"]))
+        found.sort()
+        return [
+            {"segment_id": int(sid), "from": self.name_of(sid), "to": other}
+            for _m, sid, other in found[:cap]
+        ]
+
     def handovers(self) -> list[dict]:
         """Two or three voices under one label, apart and in time order,
         not differing mainly in loudness."""

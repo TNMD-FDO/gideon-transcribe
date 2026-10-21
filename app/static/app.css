@@ -2333,6 +2333,28 @@ details.inline[open] summary::after { content: ": "; }
 .sp-card .sounds .hear, .sp-card .sounds .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sp-card .sounds .hear .hear-else { font-size: 11px; min-height: 22px; padding: 0 6px; }
 .sp-card .pill.was-voice { background: var(--surface-2); color: var(--muted); font-size: 0.72em; font-style: italic; }
+/* Voices first (v1.145.0): the stages strip, the hint on a card, the folded
+   named card, the mixed line and its marked part. */
+.sp-corrections .stages { display: flex; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 8px; }
+.sp-corrections .stage { flex: 1; display: flex; gap: 8px; align-items: center; padding: 6px 10px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; font-size: var(--t-small); text-align: left; cursor: pointer; }
+.sp-corrections .stage:last-child { border-right: 0; }
+.sp-corrections .stage .num { width: 20px; height: 20px; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
+.sp-corrections .stage.on { background: var(--accent-soft); color: var(--text); }
+.sp-corrections .stage.on .num { background: var(--accent); color: var(--accent-ink); }
+.sp-corrections .stage.done .num { background: var(--ok); color: var(--accent-ink); }
+.sp-corrections .stage .sub { font-size: 11px; color: var(--muted); }
+.sp-card .suggested.hint { display: flex; flex-direction: column; gap: 2px; margin: 6px 0 0 16px; padding: 5px 8px; border-left: 2px solid var(--line); color: var(--muted); font-size: var(--t-small); }
+.sp-card .suggested.hint .q { font-style: italic; }
+.sp-card .suggested.hint .who { color: var(--text); }
+body.voices-first .sp-card:not(.unnamed):not(.system):not(.open) .samples,
+body.voices-first .sp-card:not(.unnamed):not(.system):not(.open) .acts-line,
+body.voices-first .sp-card:not(.unnamed):not(.system):not(.open) .hint-line,
+body.voices-first .sp-card:not(.unnamed):not(.system):not(.open) .mixed-line { display: none; }
+body.voices-first .sp-card:not(.unnamed):not(.system) .stats::after { content: " · change"; color: var(--accent); cursor: pointer; }
+body.voices-first .sp-card.open .stats::after { content: " · fold"; }
+.sp-read .seg.change.mixed { background: var(--warn-soft, var(--surface-2)); border-left-color: var(--warn, var(--accent)); }
+.sp-read .seg.change.mixed .txt mark { background: var(--warn-soft, var(--surface-2)); color: inherit; border-bottom: 2px solid var(--warn, var(--accent)); }
+.sp-read .seg.change .why { grid-column: 2 / -1; }
 /* The re-read after a name (v1.144.1): the line under the check's state,
    the pill on what it touched, the settled rows in place. */
 .sp-corrections .reread { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; margin: 6px 0 0; border-radius: var(--radius); background: var(--accent-soft); }

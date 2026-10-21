@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voices first</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sp5: #0e7490; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #67c3d6; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #67c3d6; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 70ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .btn.off { opacity: .5; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .prev { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--accent); white-space: nowrap; border: 1px solid var(--accent); border-radius: var(--radius); padding: 0 6px; min-height: 22px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .c4 { --c: var(--sp4); color: var(--sp4); } .c5 { --c: var(--sp5); color: var(--sp5); } .csys { --c: var(--sys); color: var(--sys); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .n { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+
+  /* the stages strip and the head */
+  .stages { display: flex; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; font-size: 13px; }
+  .stage { flex: 1; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-right: 1px solid var(--line); color: var(--muted); }
+  .stage:last-child { border-right: 0; }
+  .stage .num { width: 20px; height: 20px; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
+  .stage.on { background: var(--accent-soft); color: var(--text); }
+  .stage.on .num { background: var(--accent); color: var(--accent-ink); }
+  .stage.done .num { background: var(--ok); color: #fff; }
+  .stage .sub { font-size: 12px; color: var(--muted); }
+  .head { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+  .head .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .head .bar { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; margin-top: 4px; }
+  .head .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 3px; }
+
+  /* the desk */
+  .desk { display: grid; grid-template-columns: 340px minmax(0, 1fr) 280px; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .desk > div { padding: 10px; min-width: 0; }
+  .desk .cards { border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+  .desk .read { border-right: 1px solid var(--line); font-size: 12px; }
+  .desk .side { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
+  .desk .player { height: 60px; border-radius: var(--radius); background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
+  .desk .lanes { height: 110px; border-radius: var(--radius); background: var(--surface-2); }
+  .dim { opacity: .6; }
+
+  /* cards */
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; background: var(--surface); }
+  .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .card.named { opacity: .85; }
+  .card .h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card .h .nm { font-weight: 600; }
+  .card .h .lab { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .card .stats { color: var(--muted); margin-left: 15px; }
+  .card .samples { display: flex; flex-direction: column; gap: 3px; margin-left: 15px; }
+  .card .sp { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .card .sp .q { font-style: italic; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card .line1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: 15px; }
+  .card .hint { margin-left: 15px; display: flex; flex-direction: column; gap: 3px; padding: 5px 8px; border-left: 2px solid var(--line); color: var(--muted); }
+  .card .hint .q { font-style: italic; }
+  .card .hint .who { color: var(--text); }
+  .card .sounds { margin-left: 15px; border: 1px solid var(--accent); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .card .sounds .acts, .card .sounds .hear { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .card .ho { margin-left: 15px; border: 1px solid var(--bad); border-left-width: 3px; border-radius: var(--radius); padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .card .ho .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .card.slim { padding: 6px 10px; }
+  .card.slim .h { font-size: 12px; }
+
+  /* rows */
+  .read-rows { border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: 40px auto minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: 7px 6px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .row.doubt { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .row.against { background: var(--bad-soft); border-left: 3px solid var(--bad); }
+  .row.mixed { background: var(--warn-soft); border-left: 3px solid var(--warn); }
+  .row.plain { border-left: 3px solid transparent; }
+  .row .t { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 3px; }
+  .row .who { font-size: 12px; font-weight: 600; white-space: nowrap; padding-top: 2px; }
+  .row .who s { color: var(--muted); font-weight: 400; }
+  .row .w { min-width: 0; }
+  .row .w mark { background: var(--warn-soft); color: inherit; border-bottom: 2px solid var(--warn); }
+  .row .why { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
+  .row .ctl { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .fold { padding: 8px 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .step { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+  .step .t { font-weight: 600; }
+  .step .m { color: var(--muted); font-size: 12px; }
+  .step.engine { border-color: var(--warn); }
+  .step.voice { border-color: var(--accent); }
+  .step.person { border-color: var(--ok); }
+  .strip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-lg); font-size: 13px; }
+  .strip .chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
+  table.cmp { border-collapse: collapse; font-size: 13px; width: 100%; }
+  table.cmp th, table.cmp td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.cmp th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>Voices first: the Speakers page in three stages</h1>
+    <p class="lede"><b>Drawn 2026-10-21</b> for the maintainer to pick, after reading the test_2 call back: 202 proposals from the words on 573 lines, six checks and four reprocesses, and the call fixed in the end by naming voices, one Sounds like settling 167 proposals at a press. The page today is a list of proposals with the voices underneath; this drawing turns it over. Every name and line is made up.</p>
+    <p class="lede"><b>The order.</b> The voice does its work as the transcript lands: the cast as voices with samples, the hand-overs, the Sounds like against the case's prints, and the words' name hints as evidence. <b>Stage 1</b> names the voices. <b>Stage 2</b> is only the lines the voice puts in doubt, each with its three sounds. <b>Stage 3</b> runs the words once against the named cast and shows what little is left. The engine's work moves later and shrinks; the voice's work moves first and carries the names.</p>
+    <p class="lede"><b>What stays.</b> The line-up with lanes, the cards and their samples, the picker, Sounds like, the hand-over, the re-read after a name, Run again, Undo, the strip's pill. What changes is the order the run does its work in and the shape of the page.</p>
+  </header>
+
+  <!-- Figure 1 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1 · The page as a call lands: stage 1, who is speaking</div><h2>The voices with their evidence, nothing proposed about lines yet</h2></div>
+    <div class="work">
+      <div class="stages">
+        <div class="stage on"><span class="num">1</span><span><b>Who is speaking</b><br><span class="sub">5 voices, 0 named</span></span></div>
+        <div class="stage"><span class="num">2</span><span>Lines in doubt<br><span class="sub">after the names</span></span></div>
+        <div class="stage"><span class="num">3</span><span>Done<br><span class="sub">the words, once more</span></span></div>
+      </div>
+      <div class="head">
+        <div><b>The voice heard 5 voices on this call</b> and the words suggest two of their names. Name each voice from its samples; the lines in doubt come after, and there are far fewer of them once the names are in.</div>
+        <div class="bar"><i style="width: 0%"></i></div>
+        <div class="acts"><span class="btn off">Next: lines in doubt</span><span class="muted small">lit when every voice is named, or skip to it with the unnamed left as labels</span></div>
+      </div>
+      <div class="desk">
+        <div class="cards">
+          <div class="card on">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Speaker 2</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">387 lines, 21 min talking, first at 0:12</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">1:36</span><span class="q">"Can I call my sister first?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">9:04</span><span class="q">"I was only there twenty minutes."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">16:58</span><span class="q">"Tell him I said it's fine."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds">
+              <div><b>Sounds like Dana Reyes</b> <span class="pill">Client</span> <span class="pill ok">high</span></div>
+              <div class="hear"><span class="prev">&#9654; Dana on Call 1, 0:48</span><span class="prev">&#9654; Dana on Call 3, 4:12</span></div>
+              <div class="acts"><span class="btn tiny primary">Accept: Speaker 2 is Dana Reyes</span><span class="btn ghost tiny">Not her</span></div>
+            </div>
+            <div class="hint"><span class="who">The words also point at a name: <b>Riley</b></span><span class="q">"Riley, I'm going to call you back tonight." <span class="play">&#9654;</span> 5:06, said to this voice by Speaker 1</span><span class="tiny">Evidence, not an answer: Name or merge... starts with it typed.</span></div>
+            <div class="line1"><span class="btn tiny">Name or merge...</span></div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="dot c1"></span><span class="nm c1">Speaker 1</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_00</span></div>
+            <div class="stats">120 lines, 6 min talking, first at 0:04</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">0:31</span><span class="q">"Is this the right number for Dana?"</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">7:15</span><span class="q">"He's my brother, so yeah."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="ho">
+              <div><b>Another voice from 14:03</b>, 31 lines after it.</div>
+              <div class="acts"><span class="btn quiet">&#9654; before</span><span class="btn quiet">&#9654; after</span><span class="btn tiny">Split here...</span><span class="btn ghost tiny">Not a different person</span></div>
+            </div>
+            <div class="hint"><span class="who">The words point at a name: <b>Marcus</b></span><span class="q">"This is Marcus." <span class="play">&#9654;</span> 0:06, said by this voice</span></div>
+            <div class="line1"><span class="btn tiny">Name or merge...</span></div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">40 lines, 2 min talking, first at 5:02</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">5:02</span><span class="q">"Yeah, this is him."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="line1"><span class="btn tiny">Name or merge...</span></div>
+          </div>
+          <div class="card dim">
+            <div class="h"><span class="dot csys"></span><span class="nm csys"><i>Call system</i></span><span class="pill">not a person</span><span class="lab">SIDE_2</span></div>
+            <div class="stats">14 lines, 0 min 50 s</div>
+          </div>
+        </div>
+        <div class="read dim">
+          <div class="label">Transcript, plain while the voices are named</div>
+          <div class="read-rows">
+            <div class="row plain"><span class="t">0:04</span><span class="who c1">Speaker 1</span><span class="w">Hello? Yeah, this is Marcus.</span></div>
+            <div class="row plain"><span class="t">0:12</span><span class="who c2">Speaker 2</span><span class="w">Hey. Did you talk to her?</span></div>
+            <div class="row plain"><span class="t">0:31</span><span class="who c1">Speaker 1</span><span class="w">Is this the right number for Dana?</span></div>
+            <div class="row plain"><span class="t">0:40</span><span class="who c2">Speaker 2</span><span class="w">Yeah, it's me. What's the problem?</span></div>
+          </div>
+        </div>
+        <div class="side dim">
+          <div class="player">Play &nbsp; 3s &nbsp; 5s &nbsp; 5s &nbsp; 0:00 / 24:10</div>
+          <div class="lanes"></div>
+          <div class="tiny">Click a block to play from there. Drag a speaker's name onto another to merge them.</div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The page opens on voices, not proposals.</b> The run's first job is the voice step: the cast with its samples, the hand-over, the Sounds like against the case's prints. The words run too, but only to find <i>names</i>, and what they find is shown on the card as evidence with the quote and Play, never as Accept or Reject. Name or merge... opens with the hinted name typed, so taking it is one press and ignoring it costs nothing.</p>
+        <p><b>Nothing about lines is proposed yet.</b> The transcript reads plain under the cards. On test_2 this is the difference between 202 proposals and none, at the moment the person first opens the page.</p>
+        <p><b>The order of the cards is the order of the work.</b> The most talking first; the Call system last, with no controls. A Sounds like is the quickest way through a card, and the biggest: on test_2 one Accept named 387 lines.</p>
+        <p><b>The strip's pill on the recording page</b> reads "5 voices to name" instead of a count of changes, and opens here.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2 · Stage 1 in progress</div><h2>A named voice folds to one line; the bar fills; the next stage lights when the cast is named</h2></div>
+    <div class="work">
+      <div class="stages">
+        <div class="stage on"><span class="num">1</span><span><b>Who is speaking</b><br><span class="sub">5 voices, 3 named</span></span></div>
+        <div class="stage"><span class="num">2</span><span>Lines in doubt<br><span class="sub">23 so far</span></span></div>
+        <div class="stage"><span class="num">3</span><span>Done<br><span class="sub">the words, once more</span></span></div>
+      </div>
+      <div class="head">
+        <div><b>3 of 5 voices named.</b> Speaker 3 and Speaker 4 are still labels; the lines in doubt are being re-read as each name lands.</div>
+        <div class="bar"><i style="width: 60%"></i></div>
+        <div class="acts"><span class="btn">Next: lines in doubt (23)</span><span class="muted small">you can go on with Speaker 3 and 4 as labels; they can be named later from their cards</span></div>
+      </div>
+      <div class="desk" style="grid-template-columns: 340px minmax(0, 1fr);">
+        <div class="cards">
+          <div class="card slim named">
+            <div class="h"><span class="dot c2"></span><span class="nm c2">Dana Reyes</span><span class="pill">Client</span><span class="pill ok">named by voice</span><span class="lab">SPEAKER_01</span></div>
+            <div class="stats">387 lines <span class="muted">&middot;</span> <span class="play">&#9654;</span> <span class="muted">sample</span> <span class="muted">&middot;</span> <a href="#">change</a></div>
+          </div>
+          <div class="card slim named">
+            <div class="h"><span class="dot c1"></span><span class="nm c1">Marcus Hale</span><span class="pill">Witness</span><span class="pill">named by hand</span><span class="lab">SPEAKER_00</span></div>
+            <div class="stats">89 lines <span class="muted">&middot;</span> <span class="play">&#9654;</span> <span class="muted">sample</span> <span class="muted">&middot;</span> <a href="#">change</a></div>
+          </div>
+          <div class="card slim named">
+            <div class="h"><span class="dot c4"></span><span class="nm c4">Tom Hale</span><span class="pill">Witness</span><span class="pill">split at 14:03, named by hand</span><span class="lab">SPEAKER_03</span></div>
+            <div class="stats">31 lines <span class="muted">&middot;</span> <span class="play">&#9654;</span> <span class="muted">sample</span> <span class="muted">&middot;</span> <a href="#">change</a></div>
+          </div>
+          <div class="card on">
+            <div class="h"><span class="dot c3"></span><span class="nm c3">Speaker 3</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_02</span></div>
+            <div class="stats">40 lines, 2 min talking, first at 5:02</div>
+            <div class="samples">
+              <div class="sp"><span class="play">&#9654;</span><span class="t">5:02</span><span class="q">"Yeah, this is him."</span><span class="btn quiet">not this voice</span></div>
+              <div class="sp"><span class="play">&#9654;</span><span class="t">11:40</span><span class="q">"Put her on, then."</span><span class="btn quiet">not this voice</span></div>
+            </div>
+            <div class="sounds">
+              <div><b>Sounds like Tom Hale</b> <span class="pill warn">medium</span> <span class="pill acc">new: his print was just taught from this call</span></div>
+              <div class="hear"><span class="prev">&#9654; Tom on this call, 14:10</span></div>
+              <div class="acts"><span class="btn tiny">Accept: Speaker 3 is also Tom Hale</span><span class="btn ghost tiny">Not him</span></div>
+              <div class="muted tiny">Two labels, one person? Accept merges Speaker 3 into Tom Hale on this call.</div>
+            </div>
+            <div class="line1"><span class="btn tiny">Name or merge...</span></div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="dot c5"></span><span class="nm c5">Speaker 4</span><span class="pill warn">unnamed</span><span class="lab">SPEAKER_04</span></div>
+            <div class="stats">3 lines, 0 min 12 s, first at 19:50</div>
+            <div class="line1"><span class="btn tiny">Name or merge...</span><span class="muted">3 short lines, never over anyone else's</span></div>
+          </div>
+        </div>
+        <div class="read dim">
+          <div class="label">Transcript, plain; the names already in place</div>
+          <div class="read-rows">
+            <div class="row plain"><span class="t">0:04</span><span class="who c1">Marcus Hale</span><span class="w">Hello? Yeah, this is Marcus.</span></div>
+            <div class="row plain"><span class="t">0:12</span><span class="who c2">Dana Reyes</span><span class="w">Hey. Did you talk to her?</span></div>
+            <div class="row plain"><span class="t">0:31</span><span class="who c1">Marcus Hale</span><span class="w">Is this the right number for Dana?</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>A named voice folds.</b> One line: the name, how it was named (by voice, by hand, split at a time), its count, one sample and "change", which opens the full card again. The unnamed cards stay open and move up, so the eye goes to what is left.</p>
+        <p><b>Each name re-reads the rest</b> (v1.144.1): the prints learn, a new Sounds like can appear on another card, the lines in doubt are re-scored, and the stage 2 count on the strip moves. Nothing waits for Run again.</p>
+        <p><b>Going on early is allowed.</b> A voice nobody can name stays a label; the next stage's lines still work on it. The bar says how far the cast is named, not whether the person may continue.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3 · Stage 2, lines in doubt</div><h2>Only the lines the voice puts in doubt, each with its three sounds; the words' reading as the reason</h2></div>
+    <div class="work">
+      <div class="stages">
+        <div class="stage done"><span class="num">&#10003;</span><span>Who is speaking<br><span class="sub">5 voices, 4 named</span></span></div>
+        <div class="stage on"><span class="num">2</span><span><b>Lines in doubt</b><br><span class="sub">23 lines, 9 the words read the other way</span></span></div>
+        <div class="stage"><span class="num">3</span><span>Done<br><span class="sub">the words, once more</span></span></div>
+      </div>
+      <div class="head">
+        <div><b>23 lines the voice puts in doubt</b> out of 573: 14 sound more like another named speaker, 6 the voice cannot tell, 3 carry two voices. The words read 9 of them the other way too. Read down; accept or leave each as you go.</div>
+        <div class="acts"><span class="btn primary">Accept the 11 the voice and the words agree on</span><span class="btn ghost">Leave the rest</span><span class="btn ghost">Next: done</span></div>
+      </div>
+      <div class="read-rows">
+        <div class="row doubt">
+          <span class="t">3:14</span><span class="who"><span class="c1"><s>Marcus Hale</s></span> &rarr; <span class="c2">Dana Reyes</span></span><span class="w">Step out of the car for me, please.</span>
+          <span class="why">the voice sounds like Dana Reyes, not Marcus; the words read it as hers too: an answer to his question</span>
+          <span class="ctl"><span class="pill ok">voice and words agree</span><span class="btn quiet">&#9654; line</span><span class="btn quiet">&#9654; Marcus</span><span class="btn quiet">&#9654; Dana</span><span class="btn tiny primary">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+        <div class="row doubt">
+          <span class="t">6:40</span><span class="who"><span class="c2"><s>Dana Reyes</s></span> &rarr; <span class="c1">Marcus Hale</span></span><span class="w">No, I told you already.</span>
+          <span class="why">the voice sounds like Marcus; the words say nothing either way</span>
+          <span class="ctl"><span class="pill acc">the voice alone</span><span class="btn quiet">&#9654; line</span><span class="btn quiet">&#9654; Dana</span><span class="btn quiet">&#9654; Marcus</span><span class="btn tiny">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+        <div class="row mixed">
+          <span class="t">9:52</span><span class="who"><span class="c2">Dana Reyes</span> <span class="pill warn">two voices</span></span><span class="w">I don't know, maybe Thursday <mark>what did he say about the car</mark></span>
+          <span class="why">the voice hears Marcus from the fourth word; split the line there and give the second part to him</span>
+          <span class="ctl"><span class="btn quiet">&#9654; first part</span><span class="btn quiet">&#9654; second part</span><span class="btn tiny">Split at the word, second part to Marcus</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+        <div class="row against">
+          <span class="t">12:08</span><span class="who"><span class="c1"><s>Marcus Hale</s></span> &rarr; <span class="c3">Speaker 3</span></span><span class="w">Put her on, then.</span>
+          <span class="why">the words read it as Speaker 3's; the voice says it is Marcus. Listen before you accept.</span>
+          <span class="ctl"><span class="pill bad">the voice disagrees</span><span class="btn quiet">&#9654; line</span><span class="btn quiet">&#9654; Marcus</span><span class="btn quiet">&#9654; Speaker 3</span><span class="btn tiny">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+        <div class="fold">6 more lines the voice could not tell, one way or the other &middot; <a href="#">Show them in place</a></div>
+      </div>
+      <div class="caption">
+        <p><b>The voice decides what is in doubt.</b> A line is here because the voice puts it near another named speaker, cannot tell, or hears two voices in it. The words are read against the named cast and appear as the reason, agreeing or not; a words-only proposal with the voice silent is folded, never on the page by default.</p>
+        <p><b>The words' reading arrives after the voice</b> (added 2026-10-21 at the maintainer's question). Stage 2 opens on the voice's list at once; the model is then asked one narrow question about just these lines, with the names, roles and Also called names in hand, and its reading lands on the rows a few seconds later, as the page already polls. With the engine unavailable every pill reads "the voice alone" and nothing else changes. The model is never asked about labels: both of its readings, here and at stage 3, come after the names.</p>
+        <p><b>The one primary is the agreement.</b> "Accept the 11 the voice and the words agree on" is the one-press path; the voice alone waits for a press; the voice against is red and never in the one-press path, as today.</p>
+        <p><b>Mixed lines are split here</b>, at the word, with both parts to play, instead of being moved whole or fixed by hand line by line, which is what the 7 single-line moves on test_2 were.</p>
+        <p><b>Counts, not a flood.</b> On a call like test_2 this stage is tens of lines, because the voice is asked first and the words are asked about the named cast.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 4 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4 · Stage 3, done</div><h2>The words run once against the named cast; what is left is small, and the page says it is finished</h2></div>
+    <div class="work">
+      <div class="stages">
+        <div class="stage done"><span class="num">&#10003;</span><span>Who is speaking<br><span class="sub">5 voices, 4 named</span></span></div>
+        <div class="stage done"><span class="num">&#10003;</span><span>Lines in doubt<br><span class="sub">23 decided: 17 moved, 6 left</span></span></div>
+        <div class="stage on"><span class="num">3</span><span><b>Done</b><br><span class="sub">checked against the names</span></span></div>
+      </div>
+      <div class="head">
+        <div><b>Checked against the names, today 14:20, the whole call.</b> The words found 4 more lines worth a look, all below. The names stand; the voice has heard every line. Decided so far on this call: 17 moves from the voice, 3 names by voice, 2 by hand, 1 hand-over.</div>
+        <div class="acts"><span class="btn primary">Done</span><span class="btn ghost">Run again</span><span class="muted small">Run again re-reads the words against the names as they stand now.</span></div>
+      </div>
+      <div class="read-rows">
+        <div class="row doubt">
+          <span class="t">18:02</span><span class="who"><span class="c3"><s>Speaker 3</s></span> &rarr; <span class="c4">Tom Hale</span></span><span class="w">Fine. Tell him Thursday.</span>
+          <span class="why">the words read it as Tom's: it answers Dana's question to him; the voice cannot tell on a line this short</span>
+          <span class="ctl"><span class="pill">the words alone</span><span class="btn quiet">&#9654; line</span><span class="btn quiet">&#9654; Speaker 3</span><span class="btn quiet">&#9654; Tom</span><span class="btn tiny">Accept</span><span class="btn ghost tiny">Leave</span></span>
+        </div>
+        <div class="fold">3 more lines the words alone would move &middot; <a href="#">Show them in place</a></div>
+      </div>
+      <div class="caption">
+        <p><b>The engine's run comes last and small.</b> Today it runs first, on labels, and proposes hundreds. Here it runs once the cast is named, reads the whole call with the names in hand, and proposes the few lines the voice could not settle. On test_2 this is the difference between 202 and a handful.</p>
+        <p><b>Done means done.</b> The page says the names stand and the voice has heard every line; the strip's pill on the recording page goes. Run again is there for the person who changes a name later, and the re-read keeps the page current in between.</p>
+        <p><b>Decided so far</b> counts the sources as today, and feeds the Case tab's table.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 5 -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5 · What runs when</div><h2>The run turned over: the voice at arrival, the person in the middle, the words at the end</h2></div>
+    <div class="work">
+      <div class="flow">
+        <div class="step voice"><span class="t">As the transcript lands</span><span class="m">the voice step</span>Lines cut by their words and read by the voice; a print per label; hand-overs; Sounds like against the case's prints; the mixed lines found.</div>
+        <div class="step engine"><span class="t">In the same job</span><span class="m">the words, for names only</span>The names pass reads the call for who is called what; what it finds is evidence on the cards.</div>
+        <div class="step person"><span class="t">Stage 1</span><span class="m">the person</span>Names the voices from their samples, Sounds like and hints; each name re-reads the rest.</div>
+        <div class="step person"><span class="t">Stage 2</span><span class="m">the person</span>Decides the lines the voice puts in doubt, with the words' reading as the reason; splits the mixed lines at the word.</div>
+        <div class="step engine"><span class="t">Stage 3</span><span class="m">the words, against the names</span>One run of the check with the named cast; the few lines left; Done.</div>
+      </div>
+      <table class="cmp">
+        <tr><th></th><th>Today</th><th>Voices first</th></tr>
+        <tr><td>What the person sees first</td><td>a list of proposals between labels (202 on test_2)</td><td>the voices, with samples and evidence (5 on test_2)</td></tr>
+        <tr><td>When the words propose moves</td><td>at arrival, on labels</td><td>last, on the named cast</td></tr>
+        <tr><td>What the name suggestions are</td><td>Accept or Reject on a card, counted in the run</td><td>evidence on the card: the quote, Play, the name typed into Name or merge</td></tr>
+        <tr><td>Mixed lines</td><td>moved whole, or fixed by hand line by line</td><td>split at the word in stage 2</td></tr>
+        <tr><td>Re-running</td><td>six checks and four reprocesses on test_2</td><td>each name re-reads; one words run at the end; Run again by hand</td></tr>
+        <tr><td>The strip's pill</td><td>"202 changes proposed"</td><td>"5 voices to name", then "23 lines in doubt", then nothing</td></tr>
+      </table>
+      <div class="caption">
+        <p><b>Cost of the engine.</b> One names pass at arrival and one check at the end, instead of a check at arrival and the re-runs. Less engine time per call, not more.</p>
+        <p><b>Where it lands.</b> Phase 5 chapter 3 rewritten in its "The Speakers page" and "The run" sections (the order of the one run; the stages), chapter 1's cards (the hint block, the folded named card), and the Phase 1 strip pill. One release, with the voice step's "lines in doubt" rule as the new piece of logic; the rest is the order and the page. Drawn here first; the spec follows your pick.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">What this is not</div><h2>Kept as it is</h2></div>
+    <div class="work">
+      <div class="caption">
+        <p><b>Nothing is named by the voice alone.</b> Every name is a person's press on a card; every move is a press on a line. The one-press path is the agreement of voice and words, as today.</p>
+        <p><b>The picker, the samples, Sounds like, the hand-over, the re-read, Undo and the lanes</b> are unchanged in what they do; they move on the page and gain the stage they belong to.</p>
+        <p><b>The phone</b> keeps its one column: the stages strip at the top, the cards in a row, then the lines of the stage in hand.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

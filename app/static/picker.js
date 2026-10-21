@@ -250,6 +250,13 @@
       if (hinted >= 0) { first = hinted; }
     }
     light(first < 0 ? 0 : first);
+    // Voices first (v1.145.0): a name the words point at, matching no row,
+    // opens Someone new with it typed, so taking the hint is one press.
+    if (options.prefill && !all.some(function (one) { return one.dataset.name === options.prefill; })) {
+      openNewBox();
+      var typed = box.querySelector(".newbox input");
+      if (typed) { typed.value = options.prefill; typed.select(); }
+    }
     box.addEventListener("click", function (event) {
       var hearOne = event.target.closest(".hear-one");
       var hearElse = event.target.closest(".hear-else");

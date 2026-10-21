@@ -622,6 +622,14 @@ class SpeakerCorrection(models.Model):
     BACKED, ASIDE = "backed", "aside"
     VOICE_AGREES, VOICE_AGAINST = "agrees", "against"
     second = models.CharField(max_length=10, blank=True, default="")
+    # Voices first (v1.145.0): the words' second reading of a line in doubt
+    # (agrees with the voice, against it, or empty), with its reason; and a
+    # mixed line's split, the word the second part starts at and which part
+    # the move takes.
+    words = models.CharField(max_length=10, blank=True, default="")
+    words_why = models.CharField(max_length=160, blank=True, default="")
+    split_at = models.IntegerField(null=True, blank=True)
+    split_part = models.CharField(max_length=6, blank=True, default="")
     aside_why = models.CharField(max_length=120, blank=True, default="")
     voice = models.CharField(max_length=10, blank=True, default="")
     # Who proposed it (ADR 0021, v1.139.0): the words (the engine's reading)

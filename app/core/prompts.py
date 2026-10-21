@@ -1567,6 +1567,95 @@ def suggestions_schema(unnamed: list[str]) -> dict:
     return schema
 
 
+# Voices first (v1.145.0): the words' second reading of the lines in doubt,
+# with the named cast in hand. The template is fixed; the ground rules are
+# the editable ones.
+LINES_IN_DOUBT = (
+    "You are shown a few lines of a transcript around one line whose speaker "
+    "the voice could not settle. The speakers are listed by name, with their "
+    "roles and the other names people use for them. For each line in doubt, "
+    "say which of the listed speakers said it, using what is said, who is "
+    "addressed, who answers whom, and the roles. Never invent a speaker; when "
+    "the words give no clue, keep the speaker the line is shown with."
+)
+LINES_IN_DOUBT_FORMAT = (
+    "Answer with the JSON asked for: a list under lines, each item the line's "
+    "number as shown in brackets, the speaker from the list, and a reason of "
+    "a few words."
+)
+
+
+def cast_lines(transcript, speakers: list[str]) -> str:
+    """The named cast as the engine reads it: name, role, the other names
+    people use for them."""
+    from core import people
+
+    recording = transcript.recording
+    out = []
+    for name in speakers:
+        role = people.role_of(recording, name) if recording.case_id else ""
+        called = []
+        if recording.case_id:
+            person = people.find(recording.case, name)
+            called = list((person.also_called or []) if person else [])
+        bits = [name]
+        if role:
+            bits.append(role)
+        if called:
+            bits.append("also called " + ", ".join(called))
+        out.append(
+            " (".join(bits[:1]) + (" (" + "; ".join(bits[1:]) + ")" if bits[1:] else "")
+        )
+    return "Speakers: " + "; ".join(out)
+
+
+def doubt_block(number: int, shown_as: str, around: list) -> str:
+    """One line in doubt with its neighbours, the doubtful line marked."""
+    rows = []
+    for line in around:
+        mark = ">> " if line.number == number else "   "
+        rows.append(f"{mark}[{line.number}] {plain_speaker(line.speaker)}: {line.text}")
+    return f"Line in doubt [{number}], shown as {shown_as}:\n" + "\n".join(rows)
+
+
+def lines_in_doubt_input(cast: str, blocks: list[str]) -> str:
+    return cast + "\n\n" + "\n\n".join(blocks)
+
+
+def lines_in_doubt_schema(speakers: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "lines": {
+                "type": "array",
+                "maxItems": 200,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line": {"type": "integer"},
+                        "speaker": {"type": "string", "enum": list(speakers)},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["line", "speaker", "reason"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["lines"],
+        "additionalProperties": False,
+    }
+
+
+def parse_json(text: str) -> dict:
+    """The engine's answer as JSON, salvaged when it is wrapped in prose."""
+    import json
+
+    try:
+        return json.loads(text)
+    except ValueError:
+        return json.loads(salvage_json(text))
+
+
 def speaker_check_schema(speakers: list[str]) -> dict:
     """The Speaker check's answer: a list of moves, each to a Speaker already
     on the Transcript, so the engine cannot answer with a name of its own."""

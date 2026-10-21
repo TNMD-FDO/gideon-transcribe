@@ -228,6 +228,11 @@ urlpatterns = [
         name="decide-voice-match",
     ),
     path(
+        "recording/<uuid:recording_id>/stage/<int:stage>",
+        assistant_pages.speakers_stage,
+        name="speakers-stage",
+    ),
+    path(
         "recording/<uuid:recording_id>/corrections/<str:verdict>-many",
         assistant_pages.decide_corrections,
         name="decide-corrections",
