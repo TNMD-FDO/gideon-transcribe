@@ -2965,16 +2965,17 @@ def _rows() -> list[Definition]:
             lines=4,
             what_it_does=(
                 "The office's units, one per line: the unit's name, a vertical "
-                "bar, then the directory folder (OU) its accounts sit under, as "
-                "Appeals | OU=Appeals,OU=Staff. At each sign-in the account's own "
-                "folder chain is read from its directory path (the account's name "
-                "and the domain parts set aside) and the first line whose folders "
-                "appear in that chain, in order and next to each other, is the "
-                "person's unit; an account under none is in no unit. A nested "
-                "unit goes above its parent. The People page shows each person's "
-                "unit and chain; a Local admin's unit is set by hand there. Check "
-                "directory now counts the accounts per unit and lists the ones in "
-                "no listed unit with their chains."
+                "bar, then how the directory tells its accounts, in one of four "
+                "forms: a folder chain (Appeals | OU=Appeals,OU=Staff), a group "
+                "(Trial | group=Trial Attorneys), an attribute (Trial | "
+                "department=Trial Division), or everyone (Office | everyone). The "
+                "lines are tried in order at each sign-in and the first that fits "
+                "places the account; an account no line fits is in no unit. A "
+                "nested unit goes above its parent. The People page shows each "
+                "person's unit and the line that placed them, and an Admin may pin "
+                "any account's unit by hand there, which the directory then leaves "
+                "alone. Check directory now counts the accounts per unit and lists "
+                "the ones in no listed unit with their folder chains."
             ),
             when_changed=("Each person's next sign-in, and the next directory check."),
         ),

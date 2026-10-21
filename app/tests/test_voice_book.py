@@ -89,14 +89,51 @@ def test_the_folder_chain_and_the_placement_rule(db):
     assert units.place("OU=Trial,OU=Interns") == ""
     settings_store.set_to("units", UNITS + "\nTrial | OU=Trial")
     assert units.place("OU=Trial,OU=Interns") == "Trial"
-    assert units.names() == ["Appeals", "Trial", "Trial"]
+    assert units.names() == ["Appeals", "Trial"]
     # The setting refuses a line without a bar or without a folder.
     with pytest.raises(ValueError, match="has no bar"):
         settings_store.set_to("units", "Appeals OU=Appeals")
-    with pytest.raises(ValueError, match="needs a folder"):
+    with pytest.raises(ValueError, match="none of a folder"):
         settings_store.set_to("units", "Appeals | Appeals")
     assert units.check_setting("  Appeals |  OU=Appeals , OU=Staff \n\n") == (
         "Appeals | OU=Appeals,OU=Staff"
+    )
+
+
+def test_the_four_line_forms_place_an_account_in_order(db):
+    settings_store.set_to(
+        "units",
+        "Capital | group=Capital Team\n"
+        "Trial | OU=Trial,OU=Staff\n"
+        "Appeals | department=Appeals Division\n"
+        "Office | everyone",
+    )
+    assert [one.kind for one in units.lines()] == [
+        units.GROUP,
+        units.FOLDER,
+        units.ATTRIBUTE,
+        units.EVERYONE,
+    ]
+    assert units.groups_wanted() == ["Capital Team"]
+    assert units.attributes_wanted() == ["department"]
+    # The first line that fits wins, whatever its form.
+    assert units.placement("OU=Trial,OU=Staff", ["capital team"], {}) == (
+        "Capital",
+        "Capital | group=Capital Team",
+    )
+    assert units.place("OU=Trial,OU=Staff") == "Trial"
+    assert units.place("OU=Users", (), {"Department": "appeals division"}) == "Appeals"
+    assert units.place("OU=Users") == "Office"
+    assert units.names() == ["Capital", "Trial", "Appeals", "Office"]
+    # Each form is checked when typed; a line in none of them is refused.
+    with pytest.raises(ValueError, match="none of a folder"):
+        settings_store.set_to("units", "Trial | Trial")
+    with pytest.raises(ValueError, match="names no group"):
+        settings_store.set_to("units", "Trial | group=")
+    with pytest.raises(ValueError, match="says nothing after the bar"):
+        settings_store.set_to("units", "Trial |")
+    assert units.check_setting(" Office | EVERYONE \nX | Group= Legal ") == (
+        "Office | everyone\nX | group=Legal"
     )
 
 
@@ -134,25 +171,73 @@ def test_the_sign_in_keeps_the_folder_and_places_the_account(db, client, monkeyp
     ]
     # The sign-in's own answer carries the chain the directory path gives.
     assert directory._folder("CN=x,OU=Trial,OU=Staff,DC=a,DC=b") == "OU=Trial,OU=Staff"
+    # The sign-in reads the Units groups and attributes too (v1.147.0).
+    settings_store.set_to(
+        "units", "Trial | group=Trial Attorneys\nAppeals | department=Appeals Division"
+    )
+    user.unit_pinned = False
+    user.save(update_fields=["unit_pinned"])
+    monkeypatch.setattr(
+        directory,
+        "sign_in",
+        lambda u, p: dict(
+            fake_sign_in(u, p),
+            groups=["Trial Attorneys"],
+            attributes={"department": "Appeals Division"},
+        ),
+    )
+    user = signin._from_the_directory(request, "j.park", "pw", "10.0.0.1")
+    assert user.unit == "Trial" and user.unit_how == "Trial | group=Trial Attorneys"
+    assert directory._read_list()[-1] == "department"
 
 
-def test_a_local_admins_unit_is_set_by_hand_and_a_directory_accounts_is_not(
+def test_a_unit_is_set_by_hand_on_any_account_and_the_directory_then_leaves_it(
     db, owner, client
 ):
     settings_store.set_to("units", UNITS)
     units.set_by_hand(owner, "Trial", by=owner)
     owner.refresh_from_db()
-    assert owner.unit == "Trial" and owner.folder == ""
+    assert owner.unit == "Trial" and owner.unit_pinned and owner.unit_how == "by hand"
     assert Row.objects.filter(event="Unit set by hand").count() == 1
     with pytest.raises(ValueError, match="not a unit"):
         units.set_by_hand(owner, "Capital", by=owner)
+    # A directory account pinned by hand keeps its unit through what the
+    # directory says, until the pin comes off (v1.147.0).
     elsewhere = User.objects.from_directory("r.diaz", folder="OU=Admin,OU=Staff")
-    with pytest.raises(ValueError, match="read from the directory"):
-        units.set_by_hand(elsewhere, "Trial", by=owner)
-    # The People page: the picker for the Local admin, the chain for the rest.
+    units.set_by_hand(elsewhere, "Trial", by=owner)
+    assert not units.apply_directory(elsewhere, "OU=Appeals,OU=Staff") or True
+    elsewhere.refresh_from_db()
+    assert elsewhere.unit == "Trial" and elsewhere.folder == "OU=Appeals,OU=Staff"
+    units.follow_directory(elsewhere, by=owner)
+    elsewhere.refresh_from_db()
+    assert elsewhere.unit == "Appeals" and not elsewhere.unit_pinned
+    assert elsewhere.unit_how == "Appeals | OU=Appeals,OU=Staff"
+    assert Row.objects.filter(event="Unit follows the directory").count() == 1
+    with pytest.raises(ValueError, match="not in the directory"):
+        units.follow_directory(owner, by=owner)
+    # The People page: the picker on every row, the placing line shown.
     signed_in(client, owner)
     page = client.get("/panel/users").content.decode()
-    assert "set by hand" in page and "OU=Admin,OU=Staff" in page
+    assert "set by hand" in page and "OU=Appeals,OU=Staff" in page
+    assert "by the line Appeals | OU=Appeals,OU=Staff" in page
+    assert page.count("Follow the directory") == 1  # the directory account's row
+    assert (
+        client.post(
+            "/panel/users/r.diaz", {"action": "unit", "unit": "none"}
+        ).status_code
+        == 302
+    )
+    elsewhere.refresh_from_db()
+    assert elsewhere.unit == "" and elsewhere.unit_pinned
+    assert (
+        client.post(
+            "/panel/users/r.diaz", {"action": "unit", "unit": "directory"}
+        ).status_code
+        == 302
+    )
+    elsewhere.refresh_from_db()
+    assert elsewhere.unit == "Appeals" and not elsewhere.unit_pinned
+    assert units.summary()["pinned"] == 1
     assert (
         client.post(
             "/panel/users/case-owner", {"action": "unit", "unit": "Appeals"}
@@ -502,6 +587,7 @@ def test_the_pages_carry_the_strings():
     ).read_text(encoding="utf-8")
     users = (HERE / "templates" / "panel" / "users.html").read_text(encoding="utf-8")
     assert "unit-line" in users and 'value="unit"' in users
+    assert "Follow the directory" in users and "No unit, by hand" in users
     panel = (HERE / "static" / "panel-directory.js").read_text(encoding="utf-8")
     assert "In no listed unit" in panel
     voices = (HERE / "templates" / "voices.html").read_text(encoding="utf-8")

@@ -21,6 +21,29 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.147.0, 2026-10-21
+
+```
+Models: unchanged
+Database: migrates (0087: the pin by hand and the placing line on an account)
+```
+
+- **Units for every office** (the maintainer's point of 2026-10-21: other
+  offices lay their directories out differently, and some people have to
+  be placed by hand). The Units box takes four line forms beside the
+  folder chain: a group (`Trial | group=Trial Attorneys`, a name or a
+  path, membership direct or nested, read as the Sign-in group is), an
+  attribute (`Trial | department=Trial Division`), and `everyone` for an
+  office with one book; the lines are tried in order and the first that
+  fits places the account. An Admin can pin any account's unit by hand
+  on the People page, or pin it to no unit, and every sign-in and
+  directory check then leaves it alone until "Follow the directory" is
+  chosen; a Local admin is always by hand. The People page shows beside
+  each person's unit the line that placed them or "set by hand", with
+  the picker on every row; Check directory now adds the number pinned.
+  The admin guide and the install guide show the four forms with made-up
+  examples. Migration 0087.
+
 ## v1.146.0, 2026-10-21
 
 ```

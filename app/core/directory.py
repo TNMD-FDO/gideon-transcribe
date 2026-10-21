@@ -36,6 +36,15 @@ NETWORK_TIMEOUT_SECONDS = 5
 WHAT_IS_READ = ["sAMAccountName", "userPrincipalName", "givenName", "sn", "mail"]
 
 
+def _read_list() -> list[str]:
+    """What is read of an account: the five, and the attributes the Units
+    lines name (v1.147.0)."""
+    from core import units
+
+    extra = [one for one in units.attributes_wanted() if one not in WHAT_IS_READ]
+    return WHAT_IS_READ + extra
+
+
 class Unreachable(Exception):
     """The directory could not be reached, or would not answer."""
 
@@ -152,7 +161,7 @@ def find_person(held, username: str) -> dict | None:
             where["search_base"],
             ldap.SCOPE_SUBTREE,
             f"(&(objectClass=user)(sAMAccountName={_escaped(username)}))",
-            WHAT_IS_READ + ["userAccountControl"],
+            _read_list() + ["userAccountControl"],
         )
     except ldap.LDAPError as problem:
         raise Unreachable(_said(problem)) from problem
@@ -217,6 +226,65 @@ def groups_of(held, person_dn: str) -> set[str]:
         if any(dn is not None for dn, _ in answer):
             found.add(group_dn)
     return found
+
+
+def unit_groups_of(held, person_dn: str) -> list[str]:
+    """Which of the groups the Units lines name this person is in, directly
+    or nested (v1.147.0), as the lines name them. A group named rather
+    than given as a path is looked up once under the search base; one the
+    directory does not have is skipped and logged."""
+    import ldap
+
+    from core import units
+
+    where = facts()
+    found = []
+    for wanted in units.groups_wanted():
+        group_dn = wanted
+        if "=" not in wanted:
+            try:
+                answer = held.search_s(
+                    where["search_base"],
+                    ldap.SCOPE_SUBTREE,
+                    f"(&(objectClass=group)(|(cn={_escaped(wanted)})"
+                    f"(sAMAccountName={_escaped(wanted)})))",
+                    ["cn"],
+                )
+            except ldap.LDAPError as problem:
+                raise Unreachable(_said(problem)) from problem
+            group_dn = next((dn for dn, _ in answer if dn is not None), "")
+            if not group_dn:
+                log.warning("a Units line names a group the directory does not have")
+                continue
+        try:
+            answer = held.search_s(
+                group_dn,
+                ldap.SCOPE_BASE,
+                f"(member:{IN_CHAIN}:={_escaped(person_dn)})",
+                ["cn"],
+            )
+        except ldap.NO_SUCH_OBJECT:
+            log.warning("a Units line names a group the directory does not have")
+            continue
+        except ldap.LDAPError as problem:
+            raise Unreachable(_said(problem)) from problem
+        if any(dn is not None for dn, _ in answer):
+            found.append(wanted)
+    return found
+
+
+def _unit_facts(held, person: dict) -> dict:
+    """The folder chain, the Units groups and the Units attributes of an
+    account, for the placement (v1.147.0)."""
+    from core import units
+
+    return {
+        "folder": _folder(person["dn"]),
+        "groups": unit_groups_of(held, person["dn"]),
+        "attributes": {
+            name: person.get(name, "") for name in units.attributes_wanted()
+        },
+    }
 
 
 def members_of(held, group_dn: str) -> list[str]:
@@ -297,9 +365,10 @@ def sign_in(username: str, password: str) -> dict:
             "in_admin_group": bool(
                 where["admin_group"] and where["admin_group"] in groups
             ),
-            # The unit's voice book (v1.146.0): the account's folder chain,
-            # from the path the sign-in just bound with.
-            "folder": _folder(person["dn"]),
+            # The unit's voice book (v1.146.0, the four forms in v1.147.0): the
+            # account's folder chain from the path the sign-in just bound
+            # with, the Units groups it is in, and the Units attributes.
+            **_unit_facts(held, person),
         }
     finally:
         with contextlib.suppress(Exception):
@@ -517,7 +586,9 @@ def check_accounts(actor=None) -> dict:
                     where["admin_group"] and where["admin_group"] in groups
                 )
 
-            changes += _bring_into_line(person, found, allowed, in_admin_group, actor)
+            changes += _bring_into_line(
+                person, found, allowed, in_admin_group, actor, held
+            )
 
         from core import units
 
@@ -562,7 +633,9 @@ def _now():
     return timezone.now()
 
 
-def _bring_into_line(person, found, allowed, in_admin_group, actor) -> list[str]:
+def _bring_into_line(
+    person, found, allowed, in_admin_group, actor, held=None
+) -> list[str]:
     """One account, brought into line with what the directory says.
 
     One audit row per change, and never a row for something that did not
@@ -628,11 +701,15 @@ def _bring_into_line(person, found, allowed, in_admin_group, actor) -> list[str]
             ),
             "email": found.get("mail", ""),
         }
-        # The unit's voice book (v1.146.0): the folder chain and the unit
-        # follow the directory overnight too.
+        # The unit's voice book (v1.146.0, v1.147.0): the folder chain and
+        # the unit follow the directory overnight too, unless pinned.
         from core import units
 
-        fresh["folder"], fresh["unit"] = units.placed(found["dn"])
+        placed = _unit_facts(held, found)
+        if units.apply_directory(
+            person, placed["folder"], placed["groups"], placed["attributes"]
+        ):
+            changes.append(f"{person.username} placed in {person.unit or 'no unit'}")
         if any(getattr(person, name) != value for name, value in fresh.items()):
             mail_changed = person.email != fresh["email"]
             for name, value in fresh.items():

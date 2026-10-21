@@ -15,7 +15,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.utils import timezone
 
-from core import audit, directory, settings_store
+from core import audit, directory, settings_store, units
 from core.models import LoginSession, SignInAttempt, User, normalise_username
 
 log = logging.getLogger("transcribe.signin")
@@ -105,12 +105,6 @@ def sign_in(request, typed_username: str, password: str) -> User:
     return user
 
 
-def _unit_of(folder: str) -> str:
-    from core import units
-
-    return units.place(folder)
-
-
 def _from_the_directory(request, username: str, password: str, address) -> User:
     """Ask the directory, and make or update the account it describes.
 
@@ -163,13 +157,17 @@ def _from_the_directory(request, username: str, password: str, address) -> User:
         display_name=answer["display_name"],
         email=answer["email"],
         in_admin_group=answer["in_admin_group"],
-        # The unit's voice book (v1.146.0): the folder chain and the unit
-        # it places the account in, read again at every sign-in.
-        folder=answer.get("folder", ""),
-        unit=_unit_of(answer.get("folder", "")),
         # The directory admits them, so a deactivation the check made is
         # lifted here rather than waiting for the night.
         deactivated_at=None,
+    )
+    # The unit's voice book (v1.146.0, v1.147.0): the folder chain is kept
+    # and the unit follows the Units lines, unless an Admin pinned it.
+    units.apply_directory(
+        user,
+        answer.get("folder", ""),
+        answer.get("groups", ()),
+        answer.get("attributes", {}),
     )
     # The directory's mail value is the Email address, and a change to it,
     # its removal included, is written down: it is where the app's mail goes.

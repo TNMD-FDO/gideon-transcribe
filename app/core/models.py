@@ -100,6 +100,11 @@ class User(AbstractBaseUser):
     # set by hand on the People page and has no chain.
     unit = models.CharField(max_length=40, blank=True, default="")
     folder = models.CharField(max_length=320, blank=True, default="")
+    # v1.147.0: pinned by an Admin's hand, the directory leaves the unit
+    # alone; unit_how is the Units line that placed the account, or
+    # "by hand", shown on the People page.
+    unit_pinned = models.BooleanField(default=False)
+    unit_how = models.CharField(max_length=200, blank=True, default="")
 
     # The three sources of admin status. The group only ever adds: a manual
     # flag cannot demote a member of the Admin group, so removing a group

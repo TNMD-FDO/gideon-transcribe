@@ -795,16 +795,28 @@ def user_action(request: HttpRequest, username: str) -> HttpResponse:
         # the directory's to decide.
         from core import units
 
+        wanted = request.POST.get("unit", "")
         try:
-            units.set_by_hand(
-                person, request.POST.get("unit", ""), by=request.user, request=request
-            )
-            _tell(
-                request,
-                f"{person.username} is in the {person.unit} unit."
-                if person.unit
-                else f"{person.username} is in no unit.",
-            )
+            if wanted == "directory":
+                units.follow_directory(person, by=request.user, request=request)
+                _tell(
+                    request,
+                    f"{person.username}'s unit follows the directory again: "
+                    + (f"the {person.unit} unit." if person.unit else "no unit."),
+                )
+            else:
+                units.set_by_hand(
+                    person,
+                    "" if wanted == "none" else wanted,
+                    by=request.user,
+                    request=request,
+                )
+                _tell(
+                    request,
+                    f"{person.username} is in the {person.unit} unit, by hand."
+                    if person.unit
+                    else f"{person.username} is in no unit, by hand.",
+                )
         except ValueError as refused:
             _tell(request, str(refused))
 

@@ -35,7 +35,7 @@
       return escape(unit) + " " + placed.counts[unit];
     });
     var html = "<p class='small'>Units: " + (counts.length ? counts.join(" \u00b7 ") : "none listed") +
-      " \u00b7 in no listed unit " + placed.none.length + "</p>";
+      " \u00b7 in no listed unit " + placed.none.length + (placed.pinned ? " \u00b7 set by hand " + placed.pinned : "") + "</p>";
     if (placed.none.length) {
       html += "<table class='small'><thead><tr><th>In no listed unit</th><th>Folder chain</th></tr></thead><tbody>" +
         placed.none.map(function (one) {
