@@ -21,6 +21,24 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.147.2, 2026-10-21
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Call system's pass follows a type set later** (the maintainer's
+  find on the server: a call transcribed before it was typed Jail call
+  kept its announcements under ordinary speakers, since the pass ran only
+  as the transcript landed). A recording typed a jail call after it landed
+  gets the pass at that moment, once, from the case page's picker or the
+  no-type line (which then says how many lines went to the Call system),
+  and a Speaker check's run gives it first to a transcript that never had
+  it. A transcript that had the pass is left alone. The voice's half of
+  the finding (the system's voice unlike every party) is still to come
+  with the Speakers page redesign.
+
 ## v1.147.1, 2026-10-21
 
 ```

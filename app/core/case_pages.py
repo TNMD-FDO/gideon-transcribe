@@ -1181,11 +1181,20 @@ def set_details(request: HttpRequest, recording_id) -> JsonResponse:
     if not recording.case.may_be_opened_by(request.user):
         raise Http404("not this person's case")
 
+    was = recording.recording_type
     recording.recording_type = request.POST.get("recording_type", "").strip()[:60]
     recording.description = request.POST.get("description", "").strip()[:2000]
     recording.save(update_fields=["recording_type", "description"])
     cases.note_activity(recording.case, by=request.user)
-    return JsonResponse({"ok": True})
+    # A recording typed a jail call after it landed gets the Call system's
+    # pass now (v1.147.2), once.
+    marked = 0
+    transcript = getattr(recording, "transcript", None)
+    if transcript is not None and recording.recording_type != was:
+        from core import call_system
+
+        marked = call_system.mark_if_missed(transcript)
+    return JsonResponse({"ok": True, "call_system": marked})
 
 
 @login_required

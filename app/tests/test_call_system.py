@@ -222,6 +222,49 @@ def test_landing_marks_when_on(admin, tmp_path, settings, monkeypatch):
     call_system.on_landed(recording.transcript)
 
 
+def test_the_pass_follows_a_type_set_later_and_a_run(
+    admin, tmp_path, settings, client, monkeypatch
+):
+    """A transcript that landed with no type gets the pass when it is typed a
+    jail call (v1.147.2), once; a check's run gives it to one that never had
+    it; one that had it is left alone."""
+    from core.cases import Case
+
+    settings_store.set_to("folder_management", True)
+    settings_store.set_to("call_system_available", True)
+    case = Case.objects.create(owner=admin, name="Ramirez")
+    recording = a_call(admin, tmp_path, settings, kind="", case=case)
+    transcript = recording.transcript
+    call_system.on_landed(transcript)
+    assert transcript.segments.filter(speaker=call_system.NAME).count() == 0
+    transcript.refresh_from_db()
+    assert (transcript.provenance or {}).get("call_system") is None
+    # Typed later, through the page's endpoint: the pass runs now.
+    signed_in(client, admin)
+    answer = client.post(
+        f"/recording/{recording.pk}/case-details",
+        {"recording_type": "Jail call", "description": ""},
+    )
+    assert answer.status_code == 200 and answer.json()["call_system"] == 3
+    assert transcript.segments.filter(speaker=call_system.NAME).count() == 3
+    transcript.refresh_from_db()
+    assert transcript.provenance["call_system"]["lines"] == 3
+    # Once: a second type change, and a run, leave it alone.
+    answer = client.post(
+        f"/recording/{recording.pk}/case-details",
+        {"recording_type": "Jail call", "description": "a note"},
+    )
+    assert answer.json()["call_system"] == 0
+    assert call_system.mark_if_missed(transcript) == 0
+    # A transcript that never had the pass gets it from mark_if_missed, which
+    # the check's run calls first; a failure inside never raises.
+    other = a_call(admin, tmp_path, settings, kind="Jail call", case=case)
+    assert call_system.mark_if_missed(other.transcript) == 3
+    monkeypatch.setattr(call_system, "mark", lambda transcript: 1 / 0)
+    third = a_call(admin, tmp_path, settings, kind="Jail call", case=case)
+    assert call_system.mark_if_missed(third.transcript) == 0
+
+
 def test_the_export_says_what_it_is(admin, tmp_path, settings, client):
     settings_store.set_to("call_system_available", True)
     recording = a_call(admin, tmp_path, settings)

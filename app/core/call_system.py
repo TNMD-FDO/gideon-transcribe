@@ -147,6 +147,29 @@ def mark(transcript) -> int:
     return len(marked)
 
 
+def mark_if_missed(transcript) -> int:
+    """The pass a Transcript never had (v1.147.2): it landed before the
+    recording was typed a jail call, or before the switch was on. Given once,
+    when the type is set or a check runs; a Transcript that had the pass is
+    left alone, and a failure inside never fails the caller."""
+    if not on() or not qualifies(transcript.recording):
+        return 0
+    if (transcript.provenance or {}).get("call_system") is not None:
+        return 0
+    try:
+        count = mark(transcript)
+    except Exception:  # noqa: BLE001 - never fails a type change or a run
+        log.exception("the call system's lines could not be marked later")
+        return 0
+    if count:
+        log.info(
+            "call system, given later: %d lines on recording %s",
+            count,
+            transcript.recording_id,
+        )
+    return count
+
+
 def on_landed(transcript) -> None:
     """As a transcript lands: the Call system's lines, when the office has it on."""
     try:

@@ -43,6 +43,7 @@
       var listed = (box.dataset.listed || "").split("|").filter(Boolean);
       var listens = listed.some(function (one) { return one.toLowerCase() === typed.toLowerCase(); });
       box.innerHTML = "<span>Type set to <b>" + escape(typed) + "</b>. " +
+        (said.call_system ? said.call_system + (said.call_system === 1 ? " line went" : " lines went") + " to the Call system. " : "") +
         (listens
           ? "The voice listens on this type: press Check the speakers again to hear the voices."
           : "The voice does not listen on this type, so the check reads the words alone.") +

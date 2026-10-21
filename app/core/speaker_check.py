@@ -25,7 +25,15 @@ from collections import Counter
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from core import assistant, audit, engine, prompts, settings_store, voice_book
+from core import (
+    assistant,
+    audit,
+    call_system,
+    engine,
+    prompts,
+    settings_store,
+    voice_book,
+)
 from core.assistant import (
     DONE,
     FAILED,
@@ -615,6 +623,9 @@ def run(check_id, attempt: int = 1) -> None:
         return
     transcript = check.transcript
     recording = transcript.recording
+    # The Call system's pass, where the transcript never had it (v1.147.2):
+    # before the run, so its lines are nobody's to move or to name.
+    call_system.mark_if_missed(transcript)
     started = time.monotonic()
     ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
     template = PromptTemplate.named(PromptTemplate.SPEAKER_CHECK)
