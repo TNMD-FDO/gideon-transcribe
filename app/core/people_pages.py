@@ -57,6 +57,53 @@ def tab_context(case, user=None) -> dict:
         row["voice"] = voice["per_person"].get(row["person"].pk)
         # The unit's voice book (v1.146.0): kept, an offer, or a role not kept.
         row["book"] = voice_book.tab_line(row["person"], user) if user else None
+        # The card's facts (v1.151.0, the tab as people): what waits on this
+        # person, and the kinds the filter chips sort by.
+        v = row["voice"] or {}
+        row["waiting_count"] = len(v.get("waiting") or [])
+        kinds = []
+        if v.get("has_print"):
+            kinds.append("voice")
+        else:
+            kinds.append("novoice")
+        if (row["book"] or {}).get("state") == "kept":
+            kinds.append("kept")
+        if row["waiting_count"]:
+            kinds.append("waiting")
+        row["kinds"] = " ".join(kinds)
+        row["lines_heard"] = len(row["recordings"])
+    # Anyone with something waiting first, then by how much they are heard,
+    # the same order every time.
+    rows.sort(
+        key=lambda row: (-row["waiting_count"], -row["lines_heard"], row["person"].name)
+    )
+    counts = {
+        "all": len(rows),
+        "voice": sum(1 for row in rows if "voice" in row["kinds"].split()),
+        "novoice": sum(1 for row in rows if "novoice" in row["kinds"].split()),
+        "kept": sum(1 for row in rows if "kept" in row["kinds"].split()),
+        "waiting": sum(1 for row in rows if "waiting" in row["kinds"].split()),
+    }
+    # What needs you (v1.151.0): the review workflow in a strip of cards,
+    # each pointing at the place that decides.
+    # (`unnamed` is (recording, count) here; the case page adds each one's
+    # minutes of talk and fills unnamed_minutes in.)
+    needs = {
+        "unnamed_voices": sum(one[1] for one in unnamed),
+        "unnamed_recordings": len(unnamed),
+        "unnamed_minutes": 0,
+        "first_unnamed": unnamed[0][0] if unnamed else None,
+        "waiting": voice["waiting"],
+        # One button per call and speaker, though two people may claim it.
+        "waiting_rows": list(
+            {
+                (one["recording"].pk, one["speaker"]): one
+                for row in rows
+                for one in ((row["voice"] or {}).get("waiting") or [])
+            }.values()
+        )[:3],
+        "alarms": len(voice["side_alarms"]),
+    }
     line = (
         f"{len(rows)} {'person' if len(rows) == 1 else 'people'}, "
         f"{len(unnamed)} recording{'' if len(unnamed) == 1 else 's'} "
@@ -77,6 +124,8 @@ def tab_context(case, user=None) -> dict:
         "roles": people.roles(),
         "people_line": line,
         "voice": voice,
+        "people_counts": counts,
+        "needs": needs,
     }
 
 

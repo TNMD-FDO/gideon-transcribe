@@ -170,7 +170,13 @@
     var person = (data.people || []).filter(function (one) { return one.name === opt.dataset.name; })[0];
     if (!person || !person.sample) { return; }
     if (window.Preview && window.Preview.open) {
-      window.Preview.open({ recording: person.sample.recording, seconds: person.sample.start, from: from });
+      // The Preview as the page's panel (v1.151.0): with the person, so the
+      // panel's head names them and offers their samples on that recording.
+      window.Preview.open({
+        recording: person.sample.recording, seconds: person.sample.start, from: from,
+        person: person.name, role: person.role || "", speaker: person.name,
+        tabs: [{ recording: person.sample.recording, title: person.sample.title, start: person.sample.start }]
+      });
     } else if (window.UI && window.UI.toast) {
       window.UI.toast("Their voice is in " + person.sample.title + "; open that recording to hear it.", { icon: "info" });
     }

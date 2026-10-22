@@ -613,10 +613,15 @@ def heard_of(book: UnitVoice, user) -> list[dict]:
                     transcript__recording_id=rid, speaker=person.name
                 )
                 .order_by("start")
-                .values_list("start", "end")[:40]
+                .values_list("start", "end", "clock")[:40]
             )
             if not lines:
                 continue
+            # A line whose clock the audio doubts (v1.151.0) is never the
+            # one the Preview seeks to, while any other remains.
+            lines = [(start, end) for start, end, clock in lines if not clock] or [
+                (start, end) for start, end, _ in lines
+            ]
             recording = Recording.objects.filter(pk=rid).first()
             if recording is None:
                 continue

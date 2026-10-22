@@ -329,128 +329,129 @@
           {% endwith %}
         {% elif tab == "speakers" %}
           {% comment %}
-            The Speakers tab: inside a case a name means a person. The People
-            list, each with where they appear; Add person; and the recordings
-            whose speakers are still unnamed, which is the review workflow.
+            The Speakers tab (v1.151.0, the drawing phase-5-speakers-tab-and-voices.html):
+            inside a case a name means a person. What needs you first, in a strip
+            of cards that each point at the place that decides; then the people as
+            cards, anyone with something waiting first; every action in one menu.
+            The tab is an overview plus Unlearn: no proposal is accepted or declined
+            here. The Preview opens in the right pane.
           {% endcomment %}
           <p class="lead" style="margin: 12px 0 8px">{{ people_line }}</p>
           {% if people_said %}<p class="notice warn">{{ people_said }}</p>{% endif %}
 
-          {% if two_channel_count %}
-            {% comment %}
-              A voice named across the case (Phase 9 chapter 2): on every
-              two-channel call in this case, one side is the same person.
-            {% endcomment %}
-            <div class="card side-rule" id="side-rule" style="margin: 0 0 14px">
-              {% if side_rule %}
-                <form method="post" action="{% url 'case-side-rule' case.pk %}" class="row" style="gap: 8px; flex-wrap: wrap">
-                  {% csrf_token %}
-                  <input type="hidden" name="action" value="remove">
-                  <span>On every call in this case, <b>Side {{ side_rule.side }}</b> is <b>{{ side_rule.person.name }}</b>: named on each call that has a transcript, and on each new one as it lands. A side somebody named by hand keeps that name.</span>
-                  <span class="grow"></span>
-                  <button type="submit" class="small ghost">Remove the rule</button>
-                </form>
-              {% else %}
-                <form method="post" action="{% url 'case-side-rule' case.pk %}" class="row" style="gap: 8px; flex-wrap: wrap">
-                  {% csrf_token %}
-                  <span>On every call in this case,</span>
-                  <select name="side" aria-label="Side">
-                    <option value="1">Side 1</option>
-                    <option value="2">Side 2</option>
-                  </select>
-                  <span>is</span>
-                  <select name="person" aria-label="Person">
-                    <option value="">a new name:</option>
-                    {% for row in people %}<option value="{{ row.person.pk }}">{{ row.person.name }}</option>{% endfor %}
-                  </select>
-                  <input type="text" name="name" maxlength="60" placeholder="Name" aria-label="Name" style="max-width: 14rem">
-                  <button type="submit" class="small">Name that side everywhere</button>
-                  <span class="muted small" style="flex-basis: 100%">{{ two_channel_count }} two-channel call{{ two_channel_count|pluralize }} in this case. The other side stays Caller until somebody names it on the call.{% if single_channel_calls %} {{ single_channel_calls }} call{{ single_channel_calls|pluralize }} with both voices in one track {{ single_channel_calls|pluralize:"is,are" }} not covered: name those with Suggest names or by hand.{% endif %}</span>
-                </form>
-              {% endif %}
-            </div>
+          <div class="needs" id="needs">
+            {% if needs.unnamed_voices %}
+              <div class="need">
+                <div class="n">{{ needs.unnamed_voices }} voice{{ needs.unnamed_voices|pluralize }} to name</div>
+                <div class="w">on {{ needs.unnamed_recordings }} recording{{ needs.unnamed_recordings|pluralize }}, {{ needs.unnamed_minutes }} min of talk</div>
+                <div class="to">
+                  {% for recording, count, minutes in unnamed|slice:":3" %}
+                    <a class="btn tiny{% if forloop.first %} primary{% endif %}" href="{% url 'speakers' recording.pk %}" title="{{ count }} unnamed, {{ minutes }} min of talk">{{ recording.title|truncatechars:28 }} · name them</a>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+            {% if needs.waiting %}
+              <div class="need">
+                <div class="n">{{ needs.waiting }} sounds like</div>
+                <div class="w">waiting to be decided on {{ needs.waiting|pluralize:"its call,their calls" }}</div>
+                <div class="to">
+                  {% for w in needs.waiting_rows %}
+                    <a class="btn tiny" href="{% url 'speakers' w.recording.pk %}?pick={{ w.speaker|urlencode }}">{{ w.recording.title|truncatechars:22 }} · {{ w.speaker }}</a>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+            {% for alarm in voice.side_alarms %}
+              <div class="need alarm">
+                <div class="n">{{ alarm.speaker }} on {{ alarm.recording.title|truncatechars:24 }}</div>
+                <div class="w">is {{ alarm.person }} by the case rule, but does not sound like them. Nothing is renamed.</div>
+                <div class="to"><a class="btn tiny" href="{% url 'speakers' alarm.recording.pk %}?pick={{ alarm.speaker|urlencode }}">Hear it on that call</a></div>
+              </div>
+            {% endfor %}
+            {% if two_channel_count %}
+              {% comment %}A voice named across the case (Phase 9 chapter 2): on every two-channel call in this case, one side is the same person.{% endcomment %}
+              <div class="need calm" id="side-rule">
+                {% if side_rule %}
+                  <div class="n small">On every call, <b>Side {{ side_rule.side }}</b> is <b>{{ side_rule.person.name }}</b></div>
+                  <div class="w">named on each call that has a transcript, and on each new one as it lands. A side somebody named by hand keeps that name.</div>
+                  <form method="post" action="{% url 'case-side-rule' case.pk %}" class="to">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <button type="submit" class="btn tiny ghost">Remove the rule</button>
+                  </form>
+                {% else %}
+                  <details>
+                    <summary class="small">On every call in this case, one side is the same person · <span class="muted">set the rule</span></summary>
+                    <form method="post" action="{% url 'case-side-rule' case.pk %}" class="row" style="gap: 6px; flex-wrap: wrap; margin-top: 6px">
+                      {% csrf_token %}
+                      <select name="side" aria-label="Side">
+                        <option value="1">Side 1</option>
+                        <option value="2">Side 2</option>
+                      </select>
+                      <span>is</span>
+                      <select name="person" aria-label="Person">
+                        <option value="">a new name:</option>
+                        {% for row in people %}<option value="{{ row.person.pk }}">{{ row.person.name }}</option>{% endfor %}
+                      </select>
+                      <input type="text" name="name" maxlength="60" placeholder="Name" aria-label="Name" style="max-width: 14rem">
+                      <button type="submit" class="small">Name that side everywhere</button>
+                    </form>
+                    <span class="muted tiny" style="display: block; margin-top: 4px">{{ two_channel_count }} two-channel call{{ two_channel_count|pluralize }} in this case. The other side stays Caller until somebody names it on the call.{% if single_channel_calls %} {{ single_channel_calls }} call{{ single_channel_calls|pluralize }} with both voices in one track {{ single_channel_calls|pluralize:"is,are" }} not covered: name those with Suggest names or by hand.{% endif %}</span>
+                  </details>
+                {% endif %}
+              </div>
+            {% endif %}
+            {% if not needs.unnamed_voices and not needs.waiting and not voice.side_alarms %}
+              <div class="need calm"><div class="n small">Nothing waits on you in this case.</div><div class="w">Every speaker has a name and no voice is waiting to be decided.</div></div>
+            {% endif %}
+          </div>
+          {% if voice.forgotten_at %}
+            <p class="notice warn" style="margin-top: 10px">Voices were forgotten on {{ voice.forgotten_at|date:"j M Y" }}, when the Admin turned Remember voices off. The names stayed; a print is learnt again the next time a speaker is named with the voice on.</p>
           {% endif %}
 
+          <div class="people-toolbar">
+            <div class="chips" data-filter-for="people">
+              <button type="button" class="chip on" data-filter="all">All {{ people_counts.all }}</button>
+              <button type="button" class="chip" data-filter="voice">Voice known {{ people_counts.voice }}</button>
+              <button type="button" class="chip" data-filter="novoice">No voice yet {{ people_counts.novoice }}</button>
+              {% if people_counts.kept %}<button type="button" class="chip" data-filter="kept">Kept for the unit {{ people_counts.kept }}</button>{% endif %}
+              {% if people_counts.waiting %}<button type="button" class="chip" data-filter="waiting">Something waiting {{ people_counts.waiting }}</button>{% endif %}
+            </div>
+            <span class="grow"></span>
+            <details class="add-person">
+              <summary class="btn small">Add a person</summary>
+              <form method="post" action="{% url 'add-person' case.pk %}" class="card row" style="gap: 8px; margin-top: 6px">
+                {% csrf_token %}
+                <input type="text" name="name" maxlength="60" placeholder="Name" required aria-label="Name">
+                <select name="role" aria-label="Role">
+                  <option value="">No role</option>
+                  {% for one in roles %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
+                </select>
+                <input type="text" name="notes" maxlength="1000" placeholder="Notes (optional)" class="grow" aria-label="Notes">
+                <button type="submit" class="primary small">Add</button>
+              </form>
+            </details>
+          </div>
+
           {% if people %}
-            <table class="tbl" id="people">
-              <thead>
-                <tr><th>Name</th><th>Role</th><th>Notes</th><th>Appears in</th>{% if voice.remember or voice.any_voice %}<th>Voice</th>{% endif %}<th></th></tr>
-              </thead>
-              <tbody>
-                {% for row in people %}
-                  <tr>
-                    <td><b>{{ row.person.name }}</b></td>
-                    <td class="muted">{{ row.person.role }}</td>
-                    <td class="muted small">{{ row.first_line }}</td>
-                    <td>
-                      {% if row.recordings %}
-                        <details>
-                          <summary class="small">in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }}</summary>
-                          <ul class="small" style="margin: 4px 0 0; padding-left: 18px">
-                            {% for recording, start in row.recordings %}
-                              <li><a href="{% url 'viewer' recording.pk %}?t={{ start|floatformat:1 }}">{{ recording.title }}</a></li>
-                            {% endfor %}
-                          </ul>
-                        </details>
-                      {% else %}
-                        <span class="muted small">in 0 recordings</span>
-                      {% endif %}
-                    </td>
-                    {% if voice.remember or voice.any_voice %}
-                      {% comment %}The Voice column (Phase 5 chapter 2, v1.144.0; the drawing phase-5-voice-prints.html, figure 2): the print's state, a play of the voice, the chain, what waits with where it is decided, the dismissal line.{% endcomment %}
-                      <td>
-                        <div class="voice">
-                          {% with v=row.voice %}
-                            {% if v.has_print %}
-                              <span>print from {{ v.parts }} recording{{ v.parts|pluralize }}
-                                {% if v.heard %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ v.heard.recording }}" data-preview-at="{{ v.heard.start }}" title="Hear {{ row.person.name }} on {{ v.heard.title }}">{% icon "play" %} hear them</button>{% endif %}
-                                {% if v.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% endif %}</span>
-                            {% elif v.unlearnt_at %}
-                              <span class="muted small">voice unlearnt {{ v.unlearnt_at|date:"j M" }}{% if v.unlearnt_by %} by {{ v.unlearnt_by }}{% endif %}</span>
-                            {% else %}
-                              <span class="muted small">no print yet: a print is made when a line of theirs is named with the voice on</span>
-                            {% endif %}
-                            {% if v.chain %}<span class="chain">{% for link in v.chain %}{{ link|capfirst }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>{% endif %}
-                            {% if v.called_out %}<span class="called-out">Matches to {{ row.person.name }} were turned down {{ voice.dismissals_to_call_out|default:3 }} times this month. If the print keeps being wrong, unlearn it and name them by hand once more.</span>{% endif %}
-                            {% comment %}The unit's voice book (Phase 5 chapter 2, v1.146.0; the drawing phase-5-voice-book.html, figure 3): kept with Stop keeping, Keep for the unit with its box, or one muted sentence for a role not kept.{% endcomment %}
-                            {% with b=row.book %}
-                              {% if b.state == "kept" %}
-                                <span class="book-line"><span class="pill small acc">Kept for the {{ b.unit }} unit</span> <span class="muted small">since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %}{% if b.mine %} &middot; this case teaches the book{% endif %}</span>
-                                  {% if b.mine %}
-                                    <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Stop keeping {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="This case's share leaves the unit's voice book{% if b.cases <= 1 %}, and the book forgets the voice, since no other case teaches it{% endif %}. This case's own print stays. The names accepted from the book stay." data-confirm-ok="Stop keeping">
-                                      {% csrf_token %}<input type="hidden" name="action" value="stop-keeping"><button type="submit" class="ghost tiny">Stop keeping</button>
-                                    </form>
-                                  {% else %}<span class="muted tiny">for a unit you are not in</span>{% endif %}
-                                </span>
-                              {% elif b.state == "offer" and b.mine %}
-                                <span class="book-line">
-                                  <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Keep {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="Their voice print is copied into the unit's voice book, where anyone in the {{ b.unit }} unit can check an unnamed speaker against it by hand, on any recording in their cases. Nothing is named by it on its own: a match is proposed only when someone presses Check, and is decided on that card. This case keeps teaching the book while they are kept. Their role, {{ row.person.role }}, goes with the voice; their notes and this case's name do not. Stop keeping here, or Forget on the Voices page, deletes the book's print; this case's own print stays. Written to the audit as counts only." data-confirm-ok="Keep for the {{ b.unit }} unit">
-                                    {% csrf_token %}<input type="hidden" name="action" value="keep"><button type="submit" class="tiny">Keep for the {{ b.unit }}...</button>
-                                  </form>
-                                </span>
-                              {% elif b.state == "not-kept" %}
-                                <span class="muted tiny">{% if b.role %}A {{ b.role|lower }}'s voice is never kept for the unit.{% else %}A person with no role is not kept for the unit; give them a role first.{% endif %}</span>
-                              {% endif %}
-                            {% endwith %}
-                            {% if v.waiting %}
-                              <span class="waiting">{{ v.waiting|length }} call{{ v.waiting|length|pluralize }} sound{{ v.waiting|length|pluralize:"s," }} like them, waiting:
-                                {% for w in v.waiting %}<a href="{% url 'speakers' w.recording.pk %}?pick={{ w.speaker|urlencode }}">{{ w.recording.title }}, {{ w.speaker }}</a> ({{ w.rating }}){% if w.others %} &middot; and like {{ w.others }} other{{ w.others|pluralize }}: the card offers both{% endif %}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
-                              </span>
-                            {% endif %}
-                          {% endwith %}
-                        </div>
-                      </td>
-                    {% endif %}
-                    <td>
-                      <details class="person-acts">
-                        <summary class="small">Rename, edit, merge, delete{% if row.voice.has_print %}, unlearn{% endif %}</summary>
-                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
+            <div class="people" id="people">
+              {% for row in people %}
+                {% with v=row.voice b=row.book %}
+                <article class="person-card{% if row.waiting_count %} waiting{% endif %}{% if not v.has_print %} dim{% endif %}" data-kinds="{{ row.kinds }}">
+                  <div class="h">
+                    <span class="nm">{{ row.person.name }}</span>
+                    {% if row.person.role %}<span class="pill small">{{ row.person.role }}</span>{% endif %}
+                    <details class="menu">
+                      <summary class="btn quiet" aria-label="Rename, edit, merge, delete{% if v.has_print %}, unlearn{% endif %}" title="Rename, edit, merge, delete{% if v.has_print %}, unlearn{% endif %}">···</summary>
+                      <div class="menu-body">
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px">
                           {% csrf_token %}
                           <input type="hidden" name="action" value="rename">
                           <input type="text" name="name" value="{{ row.person.name }}" maxlength="60" aria-label="New name">
                           <button type="submit" class="small">Rename everywhere</button>
                         </form>
-                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px">
                           {% csrf_token %}
                           <input type="hidden" name="action" value="edit">
                           <select name="role" aria-label="Role">
@@ -460,10 +461,10 @@
                             {% endfor %}
                           </select>
                           <input type="text" name="notes" value="{{ row.person.notes }}" maxlength="1000" placeholder="Notes, a few lines" class="grow" aria-label="Notes">
-                          <button type="submit" class="small">Save</button>
+                          <button type="submit" class="small">Save role and notes</button>
                         </form>
                         {% if row.others %}
-                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px"
+                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px"
                                 data-confirm-title="Merge {{ row.person.name }} into the chosen person?" data-confirm="Their speakers in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }} take that person's name. Their notes are kept under the old name." data-confirm-ok="Merge">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="merge">
@@ -476,16 +477,16 @@
                             <button type="submit" class="small">Merge</button>
                           </form>
                         {% endif %}
-                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 6px"
-                              data-confirm-title="Delete {{ row.person.name }} from this case?" data-confirm="Their speakers go back to Speaker 1, Speaker 2 and so on. Nothing in the recordings is lost." data-confirm-ok="Delete person" data-danger>
-                          {% csrf_token %}
-                          <input type="hidden" name="action" value="delete">
-                          <button type="submit" class="small ghost danger">Delete person</button>
-                        </form>
-                        {% if row.voice.has_print %}
-                          {% comment %}Unlearn (ADR 0021 decision 6; figure 4 of the drawing): the chain above it, the box lists each recording by what happens to it.{% endcomment %}
-                          {% with p=row.voice.preview %}
-                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; margin-top: 10px; align-items: center"
+                        <div class="sep"></div>
+                        {% if b and b.state == "kept" and b.mine %}
+                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" data-confirm-title="Stop keeping {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="This case's share leaves the unit's voice book{% if b.cases <= 1 %}, and the book forgets the voice, since no other case teaches it{% endif %}. This case's own print stays. The names accepted from the book stay." data-confirm-ok="Stop keeping">
+                            {% csrf_token %}<input type="hidden" name="action" value="stop-keeping"><button type="submit" class="small ghost">Stop keeping for the {{ b.unit }} unit</button>
+                          </form>
+                        {% endif %}
+                        {% if v.has_print %}
+                          {% comment %}Unlearn (ADR 0021 decision 6): the box lists each recording by what happens to it.{% endcomment %}
+                          {% with p=v.preview %}
+                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px; align-items: center"
                                 data-confirm-title="Unlearn {{ row.person.name }}'s voice?"
                                 data-confirm="The voice print is deleted and this case stops recognising {{ row.person.name }} by sound until a name is accepted again.{% if p.returned %} The speakers the voice named go back to unnamed and are marked on {{ p.returned|join:", " }}, with the samples kept so they can be named again by ear.{% endif %}{% if p.kept %} Named by hand, {{ p.kept|join:", " }} stay{{ p.kept|length|pluralize:"s," }} {{ row.person.name }}.{% endif %}{% if p.waiting %} {{ p.waiting }} match{{ p.waiting|pluralize:"es" }} waiting {{ p.waiting|pluralize:"is,are" }} withdrawn.{% endif %} Written to the case's audit as counts only."
                                 data-confirm-ok="Unlearn" data-danger>
@@ -496,70 +497,108 @@
                           </form>
                           {% endwith %}
                         {% endif %}
-                      </details>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small"
+                              data-confirm-title="Delete {{ row.person.name }} from this case?" data-confirm="Their speakers go back to Speaker 1, Speaker 2 and so on. Nothing in the recordings is lost." data-confirm-ok="Delete person" data-danger>
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="delete">
+                          <button type="submit" class="small ghost danger">Delete from this case</button>
+                        </form>
+                      </div>
+                    </details>
+                  </div>
+
+                  {% if voice.remember or voice.any_voice %}
+                    {% comment %}The voice line (Phase 5 chapter 2): the print's state, a play that opens the Preview beside the cards, the unit's book as one pill.{% endcomment %}
+                    <div class="voice">
+                      {% if v.has_print %}
+                        {% if v.heard %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ v.heard.recording }}" data-preview-at="{{ v.heard.start }}" data-preview-person="{{ row.person.name }}" data-preview-role="{{ row.person.role }}" data-preview-speaker="{{ row.person.name }}" title="Hear {{ row.person.name }} on {{ v.heard.title }}">{% icon "play" %} hear them</button>{% endif %}
+                        <span>voice known · print from {{ v.parts }} recording{{ v.parts|pluralize }}</span>
+                        {% if v.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% endif %}
+                        {% if b and b.state == "kept" %}<span class="pill small acc" title="since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %}{% if b.mine %}; this case teaches the book{% endif %}">Kept for the {{ b.unit }} unit</span>{% endif %}
+                      {% elif v.unlearnt_at %}
+                        <span class="muted">voice unlearnt {{ v.unlearnt_at|date:"j M" }}{% if v.unlearnt_by %} by {{ v.unlearnt_by }}{% endif %}</span>
+                      {% else %}
+                        <span class="muted">no print yet · a print is made when a line of theirs is named with the voice on</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+
+                  <div class="where">
+                    {% for recording, start in row.recordings %}
+                      <a class="rec" href="{% url 'viewer' recording.pk %}?t={{ start|floatformat:1 }}" title="Open {{ recording.title }} at their first line">{{ recording.title|truncatechars:26 }}</a>
+                    {% empty %}
+                      <span class="muted tiny">in 0 recordings</span>
+                    {% endfor %}
+                  </div>
+
+                  {% if v.chain %}<div class="chain">{% for link in v.chain %}{{ link|capfirst }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</div>{% endif %}
+                  {% if row.first_line %}<div class="chain">{{ row.first_line }}</div>{% endif %}
+                  {% if b %}
+                    {% if b.state == "kept" and b.mine %}
+                      <div class="chain">Kept for the {{ b.unit }} unit since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %} &middot; this case teaches the book &middot; Stop keeping is in the menu</div>
+                    {% elif b.state == "kept" %}
+                      <div class="chain">Kept for the {{ b.unit }} unit, for a unit you are not in</div>
+                    {% elif b.state == "offer" %}
+                      <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Keep {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="Their voice print is copied into the unit's voice book, where anyone in the {{ b.unit }} unit can check an unnamed speaker against it by hand, on any recording in their cases. Nothing is named by it on its own: a match is proposed only when someone presses Check, and is decided on that card. This case keeps teaching the book while they are kept. Their role, {{ row.person.role }}, goes with the voice; their notes and this case's name do not. Stop keeping here, or Forget on the Voices page, deletes the book's print; this case's own print stays. Written to the audit as counts only." data-confirm-ok="Keep for the {{ b.unit }} unit">
+                        {% csrf_token %}<input type="hidden" name="action" value="keep"><button type="submit" class="small">Keep for the {{ b.unit }}...</button>
+                      </form>
+                    {% elif b.state == "not-kept" %}
+                      <div class="chain">{% if b.role %}A {{ b.role|lower }}'s voice is never kept for the unit.{% else %}A person with no role is not kept for the unit; give them a role first.{% endif %}</div>
+                    {% endif %}
+                  {% endif %}
+                  {% if v.called_out %}<div class="called-out">Matches to {{ row.person.name }} were turned down {{ voice.dismissals_to_call_out|default:3 }} times this month. If the print keeps being wrong, unlearn it and name them by hand once more.</div>{% endif %}
+
+                  {% if v.waiting %}
+                    <div class="wait"><b>Waiting:</b> {{ v.waiting|length }} call{{ v.waiting|length|pluralize }} sound{{ v.waiting|length|pluralize:"s," }} like them, waiting:
+                      {% for w in v.waiting %}<a href="{% url 'speakers' w.recording.pk %}?pick={{ w.speaker|urlencode }}">{{ w.recording.title }}, {{ w.speaker }}</a> ({{ w.rating }}){% if w.others %} <span class="muted">with {{ w.others }} other{{ w.others|pluralize }} claiming it</span>{% endif %}{% if not forloop.last %}; {% endif %}{% endfor %}
+                      &middot; decided on that call's Speakers page
+                    </div>
+                  {% endif %}
+                </article>
+                {% endwith %}
+              {% endfor %}
+            </div>
           {% else %}
             <p class="muted small">No people yet. Name a speaker in a recording's viewer, accept a suggestion, or add one here.</p>
           {% endif %}
 
-          {% comment %}The Case remembers (v1.144.0): the Side rule's alarm, the forgotten note, and Decided so far per source and per person.{% endcomment %}
-          {% if voice.forgotten_at %}
-            <p class="notice warn" style="margin-top: 10px">Voices were forgotten on {{ voice.forgotten_at|date:"j M Y" }}, when the Admin turned Remember voices off. The names stayed; a print is learnt again from the next name or match accepted while it is on.</p>
-          {% endif %}
-          {% for alarm in voice.side_alarms %}
-            <div class="voice-alarm">
-              <b>{{ alarm.speaker }} on {{ alarm.recording.title }} is {{ alarm.person }} by the case rule, but does not sound like them.</b>
-              <div class="muted">Nothing is renamed. The card on <a href="{% url 'speakers' alarm.recording.pk %}?pick={{ alarm.speaker|urlencode }}">that call's Speakers page</a> plays their voice beside that side and asks whether it is them on this call.</div>
-            </div>
-          {% endfor %}
           {% if voice.remember and voice.any_voice %}
-            <div class="decided-so-far">
-              <div class="card">
-                <b>Decided so far in this case</b>
-                <table>
-                  <tr><th>Source</th><th>Accepted</th><th>Dismissed</th></tr>
-                  {% for d in voice.decided %}<tr><td>{{ d.source }}</td><td>{{ d.accepted }}</td><td>{{ d.dismissed }}</td></tr>{% endfor %}
-                </table>
+            <details class="numbers-fold">
+              <summary class="small muted">Numbers · Decided so far in this case</summary>
+              <div class="decided-so-far">
+                <div class="card">
+                  <b>Decided so far in this case</b>
+                  <table>
+                    <tr><th>Source</th><th>Accepted</th><th>Dismissed</th></tr>
+                    {% for d in voice.decided %}<tr><td>{{ d.source }}</td><td>{{ d.accepted }}</td><td>{{ d.dismissed }}</td></tr>{% endfor %}
+                  </table>
+                </div>
+                {% if voice.per_person_counts %}
+                <div class="card">
+                  <b>Sounds like, per person</b>
+                  <table>
+                    <tr><th>Person</th><th>Accepted</th><th>Dismissed</th><th>Waiting</th></tr>
+                    {% for c in voice.per_person_counts %}<tr><td>{{ c.person.name }}</td><td>{{ c.accepted }}{% if c.unlearnt %} (unlearnt){% endif %}</td><td>{{ c.dismissed }}</td><td>{{ c.waiting }}</td></tr>{% endfor %}
+                  </table>
+                </div>
+                {% endif %}
               </div>
-              {% if voice.per_person_counts %}
-              <div class="card">
-                <b>Sounds like, per person</b>
-                <table>
-                  <tr><th>Person</th><th>Accepted</th><th>Dismissed</th><th>Waiting</th></tr>
-                  {% for c in voice.per_person_counts %}<tr><td>{{ c.person.name }}</td><td>{{ c.accepted }}{% if c.unlearnt %} (unlearnt){% endif %}</td><td>{{ c.dismissed }}</td><td>{{ c.waiting }}</td></tr>{% endfor %}
-                </table>
-              </div>
-              {% endif %}
-            </div>
+            </details>
           {% endif %}
 
-          <form method="post" action="{% url 'add-person' case.pk %}" class="card row" style="gap: 8px; margin-top: 14px">
-            {% csrf_token %}
-            <b>Add person</b>
-            <input type="text" name="name" maxlength="60" placeholder="Name" required aria-label="Name">
-            <select name="role" aria-label="Role">
-              <option value="">No role</option>
-              {% for one in roles %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
-            </select>
-            <input type="text" name="notes" maxlength="1000" placeholder="Notes (optional)" class="grow" aria-label="Notes">
-            <button type="submit" class="primary small">Add</button>
-          </form>
-
-          <h2 style="margin-top: 22px">Unnamed speakers</h2>
-          {% if unnamed %}
-            <ul class="small">
-              {% for recording, count, minutes in unnamed %}
-                <li><a href="{% url 'viewer' recording.pk %}#cast">{{ recording.title }}</a>: {{ count }} unnamed<span class="muted small"> · {{ minutes }} min of talk</span></li>
-              {% endfor %}
-            </ul>
-            <p class="muted small">Longest talkers first. Open one, use Suggest names or type the names in its Speakers panel, and come back.</p>
-          {% else %}
-            <p class="muted small">Every speaker in this case has a name.</p>
-          {% endif %}
+          <details class="numbers-fold" {% if unnamed %}open{% endif %}>
+            <summary class="small muted">Unnamed speakers, by recording</summary>
+            {% if unnamed %}
+              <ul class="small">
+                {% for recording, count, minutes in unnamed %}
+                  <li><a href="{% url 'speakers' recording.pk %}">{{ recording.title }}</a>: {{ count }} unnamed<span class="muted small"> · {{ minutes }} min of talk</span></li>
+                {% endfor %}
+              </ul>
+              <p class="muted small">Longest talkers first. Open one, name its voices on its Speakers page, and come back.</p>
+            {% else %}
+              <p class="muted small">Every speaker in this case has a name.</p>
+            {% endif %}
+          </details>
 
         {% elif tab == "clips" %}
           <div class="row" style="margin: 12px 0 10px">
@@ -858,6 +897,8 @@
       </div>
 
       <aside class="pane-detail about-case">
+        {% comment %}The Preview (v1.151.0) opens here, at the top of the right pane, while a voice, a citation or a hit is being heard; hidden otherwise.{% endcomment %}
+        <div class="preview-side" data-preview-host hidden></div>
         <h2>About this case</h2>
         <dl class="kv">
           {% if role == "collaborator" %}
@@ -963,6 +1004,7 @@
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
+  {% if tab == "speakers" %}<script src="{% static 'people-cards.js' %}"></script>{% endif %}
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}
   <script src="{% static 'preview.js' %}"></script>
   {% if case_chat_available %}

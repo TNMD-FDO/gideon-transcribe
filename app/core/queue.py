@@ -390,9 +390,13 @@ def merge(job: Job) -> Job:
 
     # The Call system's lines (ADR 0021, v1.138.0), before anything reads the
     # Speakers: the check, the names and the side rule never see them.
-    from core import call_system
+    from core import call_system, clock_check
 
     call_system.on_landed(transcript)
+    # The clock verdict (ADR 0022, v1.151.0): the lines against the audio's
+    # own pauses, before the check reads anything and while the prepared
+    # audio is still on disk.
+    clock_check.on_landed(transcript)
 
     for run in job.runs.all():
         whisperx.delete(run.service_job_id, run.lane)

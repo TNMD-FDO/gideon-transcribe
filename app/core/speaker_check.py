@@ -626,6 +626,11 @@ def run(check_id, attempt: int = 1) -> None:
     # The Call system's pass, where the transcript never had it (v1.147.2):
     # before the run, so its lines are nobody's to move or to name.
     call_system.mark_if_missed(transcript)
+    # The clock verdict a transcript from before v1.151.0 never had: before
+    # the voice measures anything, so a marked line gives no vector.
+    from core import clock_check
+
+    clock_check.mark_if_missed(transcript)
     started = time.monotonic()
     ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
     template = PromptTemplate.named(PromptTemplate.SPEAKER_CHECK)

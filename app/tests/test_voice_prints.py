@@ -407,8 +407,12 @@ def test_the_case_tab_shows_the_voice_column_the_chain_and_the_counts(
     )
     signed_in(client, owner)
     body = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
-    assert "<th>Voice</th>" in body
+    # The tab as cards (v1.151.0): a card per person, the voice line on it,
+    # the needs strip pointing at the call where the match is decided.
+    assert 'class="person-card' in body and 'class="needs"' in body
+    assert "1 sounds like" in body and "Something waiting 1" in body
     assert "print from 2 recordings" in body and "hear them" in body
+    assert 'data-preview-person="Dana Reyes"' in body
     assert "Named by hand on Call 1" in body and "Matched by voice on Call 2" in body
     assert "1 call sounds like them, waiting" in body
     assert f"/recording/{waiting.pk}/speakers?pick=Speaker%201" in body

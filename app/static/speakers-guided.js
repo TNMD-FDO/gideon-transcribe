@@ -267,7 +267,10 @@
 
   function hearButtons(candidate) {
     return (candidate.heard || []).slice(0, 1).map(function (one) {
-      return "<button type='button' class='sg-prev' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' title='Hear " + escape(candidate.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " hear " + escape(shortName(candidate.name)) + "</button>";
+      // The Preview opens as the page's panel (v1.151.0) with the person,
+      // their role, a tab per recording that taught the print, and their
+      // samples on the recording it plays.
+      return "<button type='button' class='sg-prev' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' data-preview-person='" + escape(candidate.name) + "' data-preview-role='" + escape(candidate.role || "") + "' data-preview-speaker='" + escape(candidate.name) + "' data-preview-tabs='" + escape(JSON.stringify((candidate.heard || []).map(function (h) { return { recording: h.recording, title: h.title, start: h.start }; }))) + "' title='Hear " + escape(candidate.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " hear " + escape(shortName(candidate.name)) + "</button>";
     }).join("") + (!(candidate.heard || []).length && candidate.kind === "book" && !candidate.openable ? "<span class='pill small' title='The voice is heard only from a recording you may open'>heard on a case you may not open</span>" : "");
   }
 
@@ -438,10 +441,19 @@
       }
     });
     var said = lineWords(row);
-    var html = "<div class='sg-h'><button type='button' class='sg-bigplay sg-play' data-start='" + Math.max(0, row.start - 0.5) + "' data-end='" + (segmentEnd(row) + 0.5) + "' title='Play this line'>" + UI.icon("play") + "</button><div><div class='sg-q'>Whose line is this?</div><div class='tiny muted'>" + clock(row.start) + "</div></div></div>";
+    // The clock verdict (v1.151.0): on a marked line the play runs to where
+    // the sound is, the clock says what the audio suggests, and a strip
+    // under the question shows the window, the line's clock and the sound.
+    var verdict = verdictOf(row);
+    var playFrom = verdict ? verdict.play_from : Math.max(0, row.start - 0.5);
+    var playTo = verdict ? verdict.play_to : segmentEnd(row) + 0.5;
+    var clockLine = clock(row.start) + (verdict ? " <span class='sg-about'>· heard about " + clock(verdict.about) + "</span> · plays " + clock(playFrom) + " to " + clock(playTo) : "");
+    var html = "<div class='sg-h'><button type='button' class='sg-bigplay sg-play' data-start='" + playFrom + "' data-end='" + playTo + "' title='Play this line" + (verdict ? ", on to where the sound is" : "") + "'>" + UI.icon("play") + "</button><div><div class='sg-q'>Whose line is this?</div><div class='tiny muted mono'>" + clockLine + "</div></div></div>";
+    if (verdict) { html += stripHtml(row, verdict, playFrom, playTo); }
     html += "<div class='sg-line here'>" + (mixed ? markedQuote(row) : "“" + escape(row.quote) + "”") + "</div>";
     html += "<div class='sg-sounds'><div class='sg-sound'><span class='k'>now marked</span><span><b>" + escape(row.from) + "</b></span></div>";
-    if (row.source === "voice" || row.voice) { html += "<div class='sg-sound'><span class='k'>the voice says</span><span>" + said.voice + "</span></div>"; }
+    if (verdict) { html += "<div class='sg-sound'><span class='k'>the voice says</span><span class='muted'>nothing: this line’s clock is unsure, so the voice did not measure it</span></div>"; }
+    else if (row.source === "voice" || row.voice) { html += "<div class='sg-sound'><span class='k'>the voice says</span><span>" + said.voice + "</span></div>"; }
     html += "<div class='sg-sound'><span class='k'>the words say</span><span>" + said.words + "</span></div></div>";
     html += "<div class='sg-choices'>";
     if (mixed) {
@@ -466,6 +478,23 @@
   function segmentEnd(row) {
     var seg = segments.find(function (one) { return one.id === row.segment; });
     return seg ? seg.end : row.start + 5;
+  }
+  // The clock verdict of a line (v1.151.0), from the segments the page read.
+  function verdictOf(row) {
+    var seg = segments.find(function (one) { return one.id === row.segment; });
+    return seg && seg.clock ? seg.clock : null;
+  }
+  // The sound strip under a marked line's question: the window being played
+  // as a bar, the line's own clock marked, and where the sound is lit.
+  function stripHtml(row, verdict, from, to) {
+    var span = Math.max(1, to - from);
+    function pct(t) { return Math.max(0, Math.min(100, 100 * (t - from) / span)); }
+    var hole = verdict.hole && verdict.hole.length === 2 ? verdict.hole : [verdict.about, verdict.to];
+    return "<div class='sg-strip' aria-hidden='true'><div class='bar'>" +
+      "<i class='sound' style='left: " + pct(hole[0]).toFixed(1) + "%; width: " + (pct(hole[1]) - pct(hole[0])).toFixed(1) + "%'></i>" +
+      "<b class='own' style='left: " + pct(row.start).toFixed(1) + "%'></b></div>" +
+      "<div class='scale mono'><span>" + clock(from) + "</span><span>the line’s clock</span><span>where the sound is</span><span>" + clock(to) + "</span></div>" +
+      "<span class='pill small warn'>clock unsure · up to " + Math.round(verdict.bound) + " s early</span></div>";
   }
   function sampleButton(name) {
     var card = cards.find(function (one) { return one.name === name; });
@@ -524,7 +553,11 @@
   // The context --------------------------------------------------------------------------------------
 
   function lineHtml(seg, cls) {
-    return "<div class='sg-ctx-line " + cls + "' data-start='" + seg.start + "' data-end='" + seg.end + "'><span class='t'>" + clock(seg.start) + "</span><span class='s' style='--speaker: " + escape(colourOf(seg.speaker)) + "'>" + escape(seg.speaker) + "</span><span>" + escape(seg.text) + "</span></div>";
+    // A line whose clock is unsure (v1.151.0) carries a dotted rule and,
+    // at the head of its block, the clock the audio suggests.
+    var mark = seg.clock ? " unsure" : "";
+    var about = seg.clock && seg.clock.head ? " <span class='sg-about'>→ ~" + clock(seg.clock.about) + "</span>" : "";
+    return "<div class='sg-ctx-line " + cls + mark + "' data-start='" + (seg.clock ? seg.clock.play_from : seg.start) + "' data-end='" + (seg.clock ? seg.clock.play_to : seg.end) + "'><span class='t'>" + clock(seg.start) + about + "</span><span class='s' style='--speaker: " + escape(colourOf(seg.speaker)) + "'>" + escape(seg.speaker) + "</span><span>" + escape(seg.text) + "</span></div>";
   }
   function renderContextForVoice(card) {
     if (!segments.length) { el.context.innerHTML = ""; return; }

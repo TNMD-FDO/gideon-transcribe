@@ -591,7 +591,10 @@ def test_the_pages_carry_the_strings():
     panel = (HERE / "static" / "panel-directory.js").read_text(encoding="utf-8")
     assert "In no listed unit" in panel
     voices = (HERE / "templates" / "voices.html").read_text(encoding="utf-8")
-    assert "What this page never shows" in voices and "Decided from the book" in voices
+    # The place as cards (v1.151.0): the month at the top, the fold of numbers.
+    assert "no name of a case you may not open" in voices
+    assert "decided from the book, by month" in voices and 'class="month"' in voices
+    assert "data-preview-host" in voices and "people-cards.js" in voices
 
 
 def test_the_read_list_is_the_five_before_the_apps_load(db, monkeypatch):

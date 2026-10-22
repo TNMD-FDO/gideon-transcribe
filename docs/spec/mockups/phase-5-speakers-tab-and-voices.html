@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Case's Speakers tab and the Voices place, as people</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sp5: #00838f; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #5fc9d6; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #5fc9d6; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .rule { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; }
+  .rule b { display: block; margin-bottom: 4px; }
+  a { color: var(--accent); }
+
+  /* the case page's frame: tabs, then the tab's body with a right column for the Preview */
+  .frame { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .tabs { display: flex; gap: 4px; padding: 8px 14px 0; border-bottom: 1px solid var(--line); background: var(--surface-2); font-size: 13px; }
+  .tab { padding: 6px 12px; border: 1px solid transparent; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; color: var(--muted); }
+  .tab.on { background: var(--surface); border-color: var(--line); color: var(--text); font-weight: 600; }
+  .tab .count { font-size: 11px; color: var(--muted); margin-left: 4px; }
+  .body { display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
+  .body.alone { grid-template-columns: 1fr; }
+  .main { padding: 14px; display: flex; flex-direction: column; gap: 14px; font-size: 13px; min-width: 0; }
+  .right { border-left: 1px solid var(--line); padding: 10px; background: var(--bg); }
+
+  /* what needs you: the overview that points at the one place things are decided */
+  .needs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .need { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .need .n { font-size: 20px; font-weight: 600; line-height: 1.1; }
+  .need .w { color: var(--muted); font-size: 12px; }
+  .need .to { display: flex; gap: 6px; flex-wrap: wrap; }
+  .need.calm { border-style: dashed; }
+  .need.alarm { border-color: var(--bad); }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .toolbar .grow { flex: 1; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 12px; color: var(--muted); }
+  .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+  /* the person cards */
+  .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .person { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; position: relative; background: var(--surface); }
+  .person.waiting { border-color: var(--accent); }
+  .person.dim { opacity: .75; }
+  .person .h { display: flex; gap: 8px; align-items: center; }
+  .person .h .nm { font-weight: 600; font-size: 14px; }
+  .person .h .more { margin-left: auto; }
+  .person .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .person .voice { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+  .person .where { display: flex; gap: 4px; flex-wrap: wrap; }
+  .person .where .rec { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; font-size: 11px; color: var(--accent); white-space: nowrap; }
+  .person .wait { font-size: 12px; border-top: 1px dashed var(--line); padding-top: 6px; }
+  .person .counts { font-size: 11px; color: var(--muted); }
+  .menu { position: absolute; right: 10px; top: 36px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 6px 18px rgba(0,0,0,.12); padding: 4px; display: flex; flex-direction: column; min-width: 190px; z-index: 2; font-size: 13px; }
+  .menu span { padding: 6px 10px; border-radius: var(--radius); }
+  .menu span.sep { border-top: 1px solid var(--line); margin: 4px 0; padding: 0; }
+  .menu span.danger { color: var(--bad); }
+  .menu span.on { background: var(--accent-soft); }
+
+  /* the Preview panel, as the companion drawing has it */
+  .panel { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
+  .panel .head { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .panel .head .who { font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .panel .head .from { color: var(--muted); font-size: 12px; }
+  .panel .head .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .panel .pbody { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .panel .samples { display: flex; gap: 6px; flex-wrap: wrap; }
+  .panel .samples .sp { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px 2px 4px; }
+  .panel .samples .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .panel .samples .sp .q { font-style: italic; color: var(--muted); font-size: 12px; }
+  .line { display: grid; grid-template-columns: 40px 90px minmax(0, 1fr); gap: 8px; padding: 3px 6px; border-radius: var(--radius); font-size: 12px; }
+  .line .t { font-family: var(--mono); font-size: 11px; color: var(--muted); } .line .s { font-weight: 600; }
+  .line.lit { background: var(--accent-soft); } .line.dim { color: var(--muted); }
+  .panel .player { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: 12px; }
+  .panel .player .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--line); position: relative; }
+  .panel .player .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; background: var(--accent); border-radius: 2px; }
+
+  /* the Voices place */
+  .phead { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-bottom: 1px solid var(--line); }
+  .phead h3 { margin: 0; font-size: 18px; }
+  .units { display: flex; gap: 6px; flex-wrap: wrap; }
+  .month { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .month .m { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; }
+  .month .m .n { font-size: 18px; font-weight: 600; } .month .m .w { font-size: 11px; color: var(--muted); }
+
+  .phone { width: 300px; border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; background: var(--surface); }
+  .phone .people { grid-template-columns: 1fr; }
+  .phone .needs { grid-template-columns: 1fr 1fr; }
+  .phone .need .n { font-size: 16px; }
+  @media (max-width: 900px) {
+    .body { grid-template-columns: 1fr; }
+    .right { border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The Case's Speakers tab and the Voices place, as people rather than rows: who is in this case, what the app knows of their voice, and what still needs you</h1>
+    <p class="lede"><b>Drawn 2026-10-22</b> at the maintainer's word that the tab should look, feel and act more intuitively than the list it is, and that the Voices place should follow. Drawn from the user's seat: a lawyer or paralegal opens the tab to answer three questions, who is in this case, is anything waiting on me, and can I trust what the app says about a voice. Every name, case and recording here is made up.</p>
+    <p class="lede"><b>What does not move.</b> The recording's Speakers page stays the one place a proposal is accepted or declined; this tab points at it and never decides. The tab keeps everything it does today (rename, role and notes, merge, delete, Unlearn, Keep for the unit, the Side rule, Add person, the unnamed speakers, Decided so far) and loses nothing; it changes where those sit and how they read. The Voices place shows no line, no time and no case the reader may not open, as before. The Preview opens as the panel of the companion drawing, never as a card over the page.</p>
+  </header>
+
+  <!-- Figure 1: the tab -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>The Speakers tab: what needs you first, then the people as cards, the Preview beside them</h2></div>
+    <div class="frame">
+      <div class="tabs"><span class="tab">Overview</span><span class="tab">Recordings <span class="count">6</span></span><span class="tab on">Speakers <span class="count">5</span></span><span class="tab">Cameras</span><span class="tab">Notes</span><span class="tab">Chat</span></div>
+      <div class="body">
+        <div class="main">
+          <div class="needs">
+            <div class="need"><div class="n">2 voices to name</div><div class="w">on 1 recording, 14 min of talk</div><div class="to"><span class="btn tiny primary">Call 3 · name them</span></div></div>
+            <div class="need"><div class="n">1 sounds like</div><div class="w">Dana Reyes, medium, waiting on Call 3</div><div class="to"><span class="btn tiny">Call 3 · Speaker 1</span></div></div>
+            <div class="need alarm"><div class="n">Side 2 on Call 2</div><div class="w">is Dana Reyes by the case rule, but does not sound like her</div><div class="to"><span class="btn tiny">Hear it on Call 2</span></div></div>
+            <div class="need calm"><div class="n" style="font-size: 13px">On every call, Side 2 is Dana Reyes</div><div class="w">the Side rule names each new call as it lands · <a href="#">change</a></div></div>
+          </div>
+          <div class="toolbar">
+            <div class="chips"><span class="chip on">All 5</span><span class="chip">Voice known 3</span><span class="chip">No voice yet 1</span><span class="chip">Kept for the unit 1</span><span class="chip">Something waiting 2</span></div>
+            <span class="grow"></span>
+            <span class="btn tiny">Add a person</span>
+          </div>
+          <div class="people">
+            <div class="person waiting">
+              <div class="h"><span class="dot c2"></span><span class="nm">Dana Reyes</span><span class="pill">Client</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="play">▶</span><span>voice known · 2 recordings</span><span class="pill ok">clock sure</span></div>
+              <div class="where"><span class="rec">Call 1 · 0:48</span><span class="rec">Call 2 · 1:10</span></div>
+              <div class="row">named by hand on Call 1 · by voice on Call 2 (accepted by Pat)</div>
+              <div class="wait"><b>Waiting:</b> Call 3, Speaker 1 sounds like her (medium) · <a href="#">decide on Call 3</a></div>
+              <div class="counts">sounds like: 1 accepted · 0 not them</div>
+            </div>
+            <div class="person">
+              <div class="h"><span class="dot c1"></span><span class="nm">Officer Hale</span><span class="pill">Officer</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="play">▶</span><span>voice known · 3 recordings</span><span class="pill acc">kept for the Trial unit</span></div>
+              <div class="where"><span class="rec">Cam 1 · 0:12</span><span class="rec">Cam 2 · 0:05</span><span class="rec">Call 1 · 0:41</span></div>
+              <div class="row">named by hand on Cam 1 · by voice on Cam 2 and Call 1</div>
+              <div class="counts">sounds like: 2 accepted · 0 not them · the unit's book: 4 checks, 3 accepted</div>
+              <div class="menu">
+                <span>Rename everywhere</span><span>Role and notes</span><span>Merge into...</span><span class="sep"></span><span>Stop keeping for the Trial unit</span><span class="danger">Unlearn their voice</span><span class="danger">Delete from this case</span>
+              </div>
+            </div>
+            <div class="person">
+              <div class="h"><span class="dot c3"></span><span class="nm">Lee Ortiz</span><span class="pill">Interpreter</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="play">▶</span><span>voice known · 1 recording</span><span class="pill">matches rate medium at best</span></div>
+              <div class="where"><span class="rec">Cam 2 · 3:30</span></div>
+              <div class="row">named by hand on Cam 2</div>
+              <div class="row"><span class="btn tiny">Keep for the Trial unit...</span></div>
+            </div>
+            <div class="person dim">
+              <div class="h"><span class="dot"></span><span class="nm">Sam Pruitt</span><span class="pill">Witness</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="muted">no voice yet · a print is made when a line of theirs is named with the voice on</span></div>
+              <div class="where"><span class="rec">Cam 1 · 7:02</span></div>
+              <div class="row">named by hand on Cam 1 · a witness's voice is never kept for the unit</div>
+            </div>
+            <div class="person dim">
+              <div class="h"><span class="dot"></span><span class="nm">Morgan Vale</span><span class="pill">Officer</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="muted">voice unlearnt 20 Oct by Pat</span></div>
+              <div class="where"><span class="rec">Cam 2 · 9:14</span></div>
+              <div class="row">the names given by hand stayed; Call 1's Speaker 3 went back to a number, marked "was Morgan, by voice"</div>
+            </div>
+          </div>
+          <details><summary class="small muted">Numbers · decided so far in this case</summary><div class="row small muted" style="padding: 6px 0">By source: sounds like 3 accepted, 1 dismissed · the words' suggestions 4 accepted, 2 dismissed · the unit's book 3 accepted, 1 not them. Per person on each card.</div></details>
+        </div>
+        <div class="right">
+          <div class="panel">
+            <div class="head">
+              <div class="who">Dana Reyes <span class="pill">Client</span> <span class="pill ok">clock sure</span></div>
+              <div class="from">her voice on <b>Call 1</b>, 0:48 · one of 2 recordings that taught her print</div>
+              <div class="acts"><span class="btn tiny acc">Call 1</span><span class="btn tiny">Call 2</span><span class="btn tiny ghost">Open the recording</span><span class="btn quiet">Close</span></div>
+            </div>
+            <div class="pbody">
+              <div class="samples"><span class="sp"><span class="play">▶</span><span class="t">0:48</span><span class="q">"Yes, it's mine."</span></span><span class="sp"><span class="play">▶</span><span class="t">3:10</span><span class="q">"I told him Tuesday."</span></span><span class="sp"><span class="play">▶</span><span class="t">7:02</span><span class="q">"No, before."</span></span></div>
+              <div><div class="line dim"><span class="t">0:41</span><span class="s c1">Officer Hale</span><span>Is this your bag, ma'am?</span></div><div class="line lit"><span class="t">0:48</span><span class="s c2">Dana Reyes</span><span>Yes, it's mine. What's the problem?</span></div><div class="line"><span class="t">0:52</span><span class="s c1">Officer Hale</span><span>Step over here for me.</span></div></div>
+              <div class="tiny muted">Nothing of what you listen to is logged.</div>
+            </div>
+            <div class="player"><span class="btn tiny">❚❚</span><span class="mono">0:51 / 12:40</span><span class="bar"><i></i></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>What needs you, first.</b> The strip at the top is the review workflow in four cards: voices still to name (with the button that opens that recording's guided Speakers page), Sounds like waiting (to the card where it is decided), the Side rule's alarm, and the Side rule itself as a quiet statement with "change". Nothing is decided here; every button goes to the place that decides. When nothing waits, the strip is one calm line: "Nothing waits on you in this case."</p>
+      <p><b>One card per person,</b> in the same order every time: anyone with something waiting first, then by how much they are heard. Each card reads top to bottom: who (name, role), the voice (play, how many recordings taught it, the clock verdict of the sample, the unit's book as one pill), where they appear (a chip per recording that opens it at their first line), the chain in one line (named by hand here, by voice there, accepted by whom), what waits, and the counts. The chips filter the grid; "Add a person" opens the small form in place.</p>
+      <p><b>Every action is in one menu</b> behind the card's three dots: Rename everywhere, Role and notes, Merge into..., then apart from them Keep or Stop keeping for the unit, Unlearn their voice and Delete from this case, with the same confirm boxes as today. A card never shows six forms at once, and a destructive act is never one press.</p>
+      <p><b>The Preview is the right column.</b> Play on a card opens the person's voice beside the cards, as the companion drawing has it: the samples, the lines around the moment, a tab per recording, the clock pill. The column is empty until a play is pressed and gives itself back on Close.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: states -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>The card's states, and the Unlearn and Keep boxes that stay as they are</h2></div>
+    <div class="cols">
+      <div class="work">
+        <div class="eyebrow">A card's voice line, in its five states</div>
+        <div class="rules" style="grid-template-columns: 1fr">
+          <div class="rule"><span class="play">▶</span> <b style="display: inline">voice known · 3 recordings</b> <span class="pill ok">clock sure</span><br><span class="muted">the print exists; play opens the Preview at the surest sample; the pill is the sample's clock verdict</span></div>
+          <div class="rule"><span class="play">▶</span> <b style="display: inline">voice known · 1 recording</b> <span class="pill">matches rate medium at best</span><br><span class="muted">a print from one recording; the rating rule written where the person is</span></div>
+          <div class="rule"><span class="play">▶</span> <b style="display: inline">voice known · 2 recordings</b> <span class="pill acc">kept for the Trial unit</span><br><span class="muted">kept in the book; Stop keeping is in the menu with its box</span></div>
+          <div class="rule"><b style="display: inline" class="muted">no voice yet</b><br><span class="muted">a print is made when a line of theirs is named with the voice on; a witness, victim, defendant or client adds "never kept for the unit"</span></div>
+          <div class="rule"><b style="display: inline" class="muted">voice unlearnt 20 Oct by Pat</b><br><span class="muted">the chain says what went back to a number; the card dims until a name is accepted again</span></div>
+        </div>
+      </div>
+      <div class="work">
+        <div class="eyebrow">The boxes do not change</div>
+        <div class="rule"><b>Unlearn Dana Reyes's voice?</b>The voice print is deleted and this case stops recognising Dana Reyes by sound until a name is accepted again. Call 2's Speaker 2 goes back to a number, marked "was Dana Reyes, by voice"; Call 1, named by hand, stays. The names given by hand stay.<div style="margin-top: 8px; display: flex; gap: 6px; justify-content: flex-end"><span class="btn tiny">Cancel</span><span class="btn tiny danger">Unlearn</span></div></div>
+        <div class="rule"><b>Keep Officer Hale's voice for the Trial unit?</b>Their voice print is copied into the unit's voice book, where anyone in the Trial unit can check an unnamed speaker against it by hand, on any recording in their cases. Nothing is named by it on its own. Their role goes with the voice; their notes and this case's name do not.<div style="margin-top: 8px; display: flex; gap: 6px; justify-content: flex-end"><span class="btn tiny">Cancel</span><span class="btn tiny primary">Keep for the Trial unit</span></div></div>
+        <p class="tiny muted" style="margin: 0">The words of every confirm box are the words the pages have today; only the button that opens them moved into the menu.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3: the Voices place -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3</div><h2>The Voices place: the unit's book as the same cards, with what the book did this month at the top</h2></div>
+    <div class="frame">
+      <div class="phead">
+        <h3>Voices <span class="muted" style="font-weight: 400">· the Trial unit</span></h3>
+        <div class="units"><span class="chip on">Trial · 4 voices</span><span class="chip">CHU · 2 voices</span><span class="muted tiny" style="align-self: center">an Admin sees every unit; a person in a unit sees their own</span></div>
+        <div class="month">
+          <div class="m"><div class="n">4</div><div class="w">voices kept, from 3 cases</div></div>
+          <div class="m"><div class="n">9</div><div class="w">checks this month</div></div>
+          <div class="m"><div class="n">6</div><div class="w">accepted on a card</div></div>
+          <div class="m"><div class="n">2</div><div class="w">not them</div></div>
+          <div class="m"><div class="n">1</div><div class="w">no match</div></div>
+        </div>
+        <div class="tiny muted">A voice is kept here only when someone on a case chooses to keep it, for Officers, Interpreters and Interviewers. A card on any recording in this unit can be checked against these by hand; the answer is decided on that card, never here. No line, no time, no case you may not open.</div>
+      </div>
+      <div class="body">
+        <div class="main">
+          <div class="toolbar"><div class="chips"><span class="chip on">All 4</span><span class="chip">Well taught 1</span><span class="chip">Medium at best 2</span><span class="chip">Forgotten 1</span></div></div>
+          <div class="people">
+            <div class="person">
+              <div class="h"><span class="dot c1"></span><span class="nm">Officer Hale</span><span class="pill">Officer</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="play">▶</span><span>from 3 cases · 5 recordings</span><span class="pill ok">well taught</span></div>
+              <div class="row">kept from Harbour Street stop by Pat, 20 Oct · also called Hale, Sgt Hale</div>
+              <div class="counts">checks: 4 · accepted 3 · not them 1 · last heard 21 Oct</div>
+            </div>
+            <div class="person">
+              <div class="h"><span class="dot c3"></span><span class="nm">Lee Ortiz</span><span class="pill">Interpreter</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="play">▶</span><span>from 1 case · 2 recordings</span><span class="pill">matches rate medium at best</span></div>
+              <div class="row">kept from a case you may not open, 19 Oct</div>
+              <div class="counts">checks: 2 · accepted 1 · not them 1</div>
+              <div class="menu"><span>Hear them</span><span class="sep"></span><span class="danger">Forget for the Trial unit</span></div>
+            </div>
+            <div class="person">
+              <div class="h"><span class="dot c2"></span><span class="nm">Riley Ash</span><span class="pill">Interviewer</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="pill small">heard on a case you may not open</span><span>from 1 case · 1 recording</span><span class="pill">matches rate medium at best</span></div>
+              <div class="row">kept from a case you may not open, 18 Oct</div>
+              <div class="counts">checks: 3 · accepted 2 · not them 0 · <span class="pill warn">turned down 3 times this month</span></div>
+            </div>
+            <div class="person dim">
+              <div class="h"><span class="dot"></span><span class="nm">Morgan Vale</span><span class="pill">Officer</span><span class="btn quiet more">···</span></div>
+              <div class="voice"><span class="muted">forgotten 20 Oct by Pat</span></div>
+              <div class="row">the names it gave stay, accepted by people on their cards; the cases' own prints stay · keep again from a case</div>
+            </div>
+          </div>
+        </div>
+        <div class="right">
+          <div class="panel">
+            <div class="head">
+              <div class="who">Officer Hale <span class="pill">Officer</span> <span class="pill ok">clock sure</span></div>
+              <div class="from">his voice on <b>Cam 1</b>, 0:12 · one of 5 recordings that taught the book, 2 you may open</div>
+              <div class="acts"><span class="btn tiny acc">Cam 1</span><span class="btn tiny">Call 1</span><span class="btn tiny ghost">Open the recording</span><span class="btn quiet">Close</span></div>
+            </div>
+            <div class="pbody">
+              <div class="samples"><span class="sp"><span class="play">▶</span><span class="t">0:12</span><span class="q">"Evening. Licence and insurance."</span></span><span class="sp"><span class="play">▶</span><span class="t">2:40</span><span class="q">"Step out for me."</span></span></div>
+              <div><div class="line lit"><span class="t">0:12</span><span class="s c1">Officer Hale</span><span>Evening. Licence and insurance, please.</span></div><div class="line"><span class="t">0:17</span><span class="s c2">Driver</span><span>It's in the glove box.</span></div></div>
+              <div class="tiny muted">Only recordings you may open play here. Nothing of what you listen to is logged.</div>
+            </div>
+            <div class="player"><span class="btn tiny">❚❚</span><span class="mono">0:14 / 41:02</span><span class="bar"><i style="width: 8%"></i></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The same card, the book's facts.</b> Name and role; the voice with how many cases and recordings taught it and the rating rule as a pill (well taught, medium at best); who kept it from which case, or "a case you may not open"; the checks' counts and the last time it was heard; the turned-down call-out when a print keeps being wrong. The menu holds Hear them and Forget, with the confirm box as it is today. A forgotten voice dims and says how to keep it again.</p>
+      <p><b>The month at the top</b> replaces the two tables at the foot: five numbers a unit lead can read in a glance, and the chooser of units for an Admin as chips. The Decided-by-month table stays under a "Numbers" fold for anyone who wants the history.</p>
+      <p><b>The Preview here plays only what the reader may open,</b> as the rule has always been; the heading says how many of the recordings that taught the book are open to them.</p>
+    </div>
+  </section>
+
+  <!-- Figure 4: phone and the rules -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4</div><h2>On a phone, and the rules the tab keeps</h2></div>
+    <div class="cols">
+      <div class="phone">
+        <div class="needs">
+          <div class="need"><div class="n">2 to name</div><div class="w">Call 3</div></div>
+          <div class="need"><div class="n">1 sounds like</div><div class="w">Dana, Call 3</div></div>
+        </div>
+        <div class="chips"><span class="chip on">All 5</span><span class="chip">Waiting 2</span><span class="chip">Kept 1</span></div>
+        <div class="people">
+          <div class="person waiting">
+            <div class="h"><span class="dot c2"></span><span class="nm">Dana Reyes</span><span class="pill">Client</span><span class="btn quiet more">···</span></div>
+            <div class="voice"><span class="play">▶</span><span>voice known · 2 recordings</span></div>
+            <div class="wait"><b>Waiting:</b> Call 3, Speaker 1 · <a href="#">decide</a></div>
+          </div>
+          <div class="person">
+            <div class="h"><span class="dot c1"></span><span class="nm">Officer Hale</span><span class="pill">Officer</span><span class="btn quiet more">···</span></div>
+            <div class="voice"><span class="play">▶</span><span>voice known · 3 recordings</span><span class="pill acc">kept</span></div>
+          </div>
+        </div>
+        <div class="tiny muted">Play opens the Preview as a sheet from the foot.</div>
+      </div>
+      <div class="work">
+        <div class="rules" style="grid-template-columns: 1fr">
+          <div class="rule"><b>The tab is an overview plus Unlearn.</b> No proposal is accepted or declined here. Every "waiting" line and every strip button opens the recording's Speakers page at the card in question. Unlearn, Keep and the Side rule stay here because they are facts about the case, not about one call.</div>
+          <div class="rule"><b>Nothing is lost from today's tab.</b> Rename, role and notes, merge, delete, Unlearn, Keep and Stop keeping, the Side rule, Add person, Unnamed speakers and Decided so far are all present; six forms became one menu, two tables became a fold and a line per card, the unnamed list became the first card of the strip.</div>
+          <div class="rule"><b>The Voices place follows the tab.</b> One card design in both places, so a person seen in a case is recognised in the book; the book's card carries the book's facts (cases, kept by, checks) and never a line, a time or a case the reader may not open.</div>
+          <div class="rule"><b>The Preview is one panel everywhere.</b> Play on either page opens the companion drawing's panel in the right column, with the clock verdict; on a phone, the sheet.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

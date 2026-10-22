@@ -50,28 +50,96 @@
         card.classList.remove("preview-card", "mounted", "whole");
       } else {
         card.remove();
+        // The page's column gives itself back (v1.151.0).
+        if (placed) {
+          placed.hidden = true;
+          placed.classList.remove("has-preview");
+          if (placed.parentElement) { placed.parentElement.classList.remove("has-preview"); }
+          placed = null;
+        }
       }
       card = null; told = null; noting = null;
       if (asked && asked.from) { asked.from.classList.remove("previewing"); }
       asked = null;
     }
 
+    // Where the floating Preview goes (v1.151.0): into the page's own column
+    // when the page offers one ([data-preview-host]) and the window is wide,
+    // else a sheet from the foot. Never a card over the page any more.
+    var placed = null;
+    function columnOf() {
+      var found = document.querySelector("[data-preview-host]");
+      return found && window.innerWidth >= 900 ? found : null;
+    }
+
     function build() {
+      var column = host ? null : columnOf();
       card = host || document.createElement("div");
-      card.className = "preview-card" + (host ? " mounted" : "") + (options.whole ? " whole" : "");
+      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : " sheet")) + (options.whole ? " whole" : "");
       card.setAttribute("role", host ? "region" : "dialog");
       card.setAttribute("aria-label", "Preview");
       card.innerHTML =
+        (host ? "" : "<div class='preview-handle' aria-hidden='true'></div>") +
         "<div class='preview-head'><b class='grow' id='preview-title'></b>" +
         "<span class='mono muted' id='preview-clock'></span>" +
         (host ? "" : "<button type='button' class='tiny ghost' data-preview-act='close' aria-label='Close the preview'>Close</button>") + "</div>" +
+        "<div class='preview-person' id='preview-person' hidden></div>" +
+        "<div class='preview-samples' id='preview-samples' hidden></div>" +
         "<div class='preview-media'></div>" +
         "<div class='preview-lines' id='preview-lines'></div>" +
         "<div class='preview-foot'></div>" +
         "<div class='preview-note' hidden></div>";
-      if (!host) { document.body.appendChild(card); }
+      if (column) {
+        column.hidden = false;
+        column.classList.add("has-preview");
+        if (column.parentElement) { column.parentElement.classList.add("has-preview"); }
+        column.appendChild(card);
+        placed = column;
+      } else if (!host) {
+        document.body.appendChild(card);
+      }
       card.addEventListener("click", pressed);
-      if (!host) { drag(card.querySelector(".preview-head")); }
+    }
+
+    // The person whose voice this is (v1.151.0): their name and role, the
+    // clock verdict of the moment, a tab per recording that taught the
+    // print, and their samples on this recording as a row of plays.
+    function drawPerson() {
+      var box = card.querySelector("#preview-person");
+      var samples = card.querySelector("#preview-samples");
+      if (!box || !samples) { return; }
+      var verdict = told.clock_verdict;
+      var pill = verdict
+        ? "<span class='pill small warn' title='The recogniser placed this block early; the player runs to where the sound is'>clock unsure · heard about " + escape(clockOf(verdict.about)) + "</span>"
+        : (asked.person ? "<span class='pill small ok'>clock sure</span>" : "");
+      var tabs = (asked.tabs || []).map(function (one) {
+        var on = one.recording === asked.recording;
+        return "<button type='button' class='tiny" + (on ? " acc" : " ghost") + "' data-preview-tab='" + escape(one.recording) + "' data-preview-tab-at='" + one.start + "'" + (on ? " aria-current='true'" : "") + ">" + escape(one.title || "a recording") + "</button>";
+      }).join("");
+      if (asked.person || verdict) {
+        box.innerHTML =
+          "<div class='who'>" + (asked.person ? "<b>" + escape(asked.person) + "</b> " : "") + (asked.role ? "<span class='pill small'>" + escape(asked.role) + "</span> " : "") + pill + "</div>" +
+          (asked.person ? "<div class='from muted small'>" + (asked.person ? "their voice on " : "") + "<b>" + escape(told.title) + "</b>" + (asked.tabs && asked.tabs.length > 1 ? " · one of " + asked.tabs.length + " recordings that taught the print" : "") + "</div>" : "") +
+          (tabs && asked.tabs.length > 1 ? "<div class='tabs'>" + tabs + "</div>" : "");
+        box.hidden = false;
+      } else {
+        box.innerHTML = "";
+        box.hidden = true;
+      }
+      if (told.samples && told.samples.length) {
+        samples.innerHTML = told.samples.map(function (one) {
+          return "<button type='button' class='sample' data-preview-sample='" + one.start + "' data-preview-sample-end='" + one.end + "' title='Play this sample'>▶ <span class='mono'>" + escape(one.clock) + "</span>" + (one.quote ? " <i>“" + escape(one.quote) + "”</i>" : "") + "</button>";
+        }).join("") + "<span class='muted tiny'>their samples here, the lines nearest their voice</span>";
+        samples.hidden = false;
+      } else {
+        samples.innerHTML = "";
+        samples.hidden = true;
+      }
+    }
+    function clockOf(seconds) {
+      var whole = Math.max(0, Math.floor(seconds || 0));
+      var m = Math.floor(whole / 60), s = whole % 60;
+      return m + ":" + (s < 10 ? "0" : "") + s;
     }
 
     // The rows under the picture: the lines and what was seen, by their times.
@@ -214,12 +282,16 @@
     function draw(first) {
       card.querySelector("#preview-title").textContent = told.title;
       card.querySelector("#preview-clock").textContent = told.clock;
+      drawPerson();
       if (first) {
         var holder = card.querySelector(".preview-media");
         if (!told.media) {
           holder.innerHTML = "<p class='muted small preview-none'>This recording has no copy to play yet. The lines are below.</p>";
         } else {
-          var from = Math.max(0, told.seconds - 10);
+          // On a line whose clock is unsure (v1.151.0) the player starts at
+          // the line's own clock and runs on to where the sound is, instead
+          // of ten seconds before a moment that may not be there.
+          var from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, told.seconds - 10);
           holder.innerHTML = told.is_video
             ? "<video controls autoplay playsinline preload='metadata'></video>"
             : "<audio controls autoplay preload='metadata'></audio>";
@@ -262,7 +334,8 @@
     }
 
     function url(seconds) {
-      return "/recording/" + asked.recording + "/around?t=" + encodeURIComponent(seconds.toFixed(2)) + (options.whole ? "&whole=1" : "");
+      return "/recording/" + asked.recording + "/around?t=" + encodeURIComponent(seconds.toFixed(2)) + (options.whole ? "&whole=1" : "") +
+        (asked.speaker ? "&speaker=" + encodeURIComponent(asked.speaker) : "");
     }
 
     function read(seconds, first) {
@@ -440,7 +513,15 @@
       var seconds = Math.max(0, parseFloat(given.seconds) || 0);
       var same = card && asked && asked.recording === given.recording;
       if (asked && asked.from && asked.from !== given.from) { asked.from.classList.remove("previewing"); }
-      asked = { recording: given.recording, seconds: seconds, from: given.from || null };
+      // Whose voice (v1.151.0): the person, their role, the recordings that
+      // taught the print (tabs) and the speaker label to fetch samples for.
+      var tabs = given.tabs;
+      if (typeof tabs === "string") { try { tabs = JSON.parse(tabs); } catch (e) { tabs = []; } }
+      asked = {
+        recording: given.recording, seconds: seconds, from: given.from || null,
+        person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
+        speaker: given.speaker || given.person || ""
+      };
       noting = null;
       if (!card) { build(); }
       if (same && media()) {
@@ -506,10 +587,29 @@
 
   // A hit of the case page's Search plays here too: a button beside its time.
   document.addEventListener("click", function (event) {
+    // Inside the card (v1.151.0): a tab is another recording of the same
+    // person; a sample seeks to it and plays.
+    var tab = event.target.closest(".preview-card [data-preview-tab]");
+    if (tab) {
+      var was = floating.asked() || {};
+      floating.open({ recording: tab.dataset.previewTab, seconds: tab.dataset.previewTabAt, from: was.from, person: was.person, role: was.role, tabs: was.tabs, speaker: was.speaker });
+      return;
+    }
+    var sample = event.target.closest(".preview-card [data-preview-sample]");
+    if (sample) {
+      floating.seek(parseFloat(sample.dataset.previewSample));
+      var player = floating.media();
+      if (player) { player.play(); }
+      return;
+    }
     var hit = event.target.closest("[data-preview-recording]");
     if (!hit) { return; }
     event.preventDefault();
-    floating.open({ recording: hit.dataset.previewRecording, seconds: hit.dataset.previewAt, from: hit });
+    floating.open({
+      recording: hit.dataset.previewRecording, seconds: hit.dataset.previewAt, from: hit,
+      person: hit.dataset.previewPerson || "", role: hit.dataset.previewRole || "",
+      tabs: hit.dataset.previewTabs || "", speaker: hit.dataset.previewSpeaker || ""
+    });
   });
 
   window.Preview = {

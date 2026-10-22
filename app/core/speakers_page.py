@@ -65,6 +65,9 @@ class Line:
     text: str = ""
     # The line's closeness to its speaker's voice print (v1.142.0), or None.
     fit: float | None = None
+    # The clock verdict (ADR 0022, v1.151.0): True when the audio says this
+    # line's clock may be off; such a line is never a Sample.
+    unsure: bool = False
 
     @property
     def length(self) -> float:
@@ -142,6 +145,11 @@ def pick_samples(lines: list[Line]) -> list[Line]:
     sure = [one for one in lines if not one.guess]
     if sure:
         lines = sure
+    # Nor a line whose clock the audio doubts (v1.151.0), while any other
+    # remains: a sample must play the voice it names.
+    timed = [one for one in lines if not one.unsure]
+    if timed:
+        lines = timed
     if len(lines) <= SAMPLES:
         return list(lines)
     # By the voice (v1.142.0): where the voice step scored the lines, the
@@ -169,6 +177,42 @@ def pick_samples(lines: list[Line]) -> list[Line]:
         else:
             chosen.append(max(part, key=lambda one: one.length))
     return chosen
+
+
+def samples_for(transcript, speaker: str) -> list[dict]:
+    """One Speaker's Samples on this transcript, as the Preview's row of
+    plays reads them (v1.151.0): the same rule as the cards, so a sample is
+    a line the voice itself agrees is that Speaker and whose clock the audio
+    does not doubt. Empty for a Speaker with no lines."""
+    if not speaker:
+        return []
+    guessed = guesses(transcript)
+    mine = [
+        Line(
+            start,
+            end,
+            pk in guessed,
+            id=pk,
+            text=text or "",
+            fit=fit,
+            unsure=bool(clock),
+        )
+        for pk, start, end, text, fit, clock in transcript.segments.filter(
+            same_as_other_side=False, speaker=speaker
+        )
+        .order_by("start", "id")
+        .values_list("id", "start", "end", "text", "voice_fit", "clock")
+    ]
+    return [
+        {
+            "id": one.id,
+            "start": one.start,
+            "end": one.end,
+            "clock": short_clock(one.start),
+            "quote": one.text[:60],
+        }
+        for one in pick_samples(mine)
+    ]
 
 
 def overlaps(mine: list[Line], theirs: list[Line]) -> bool:
@@ -243,16 +287,31 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
     lines: dict[str, list[Line]] = {}
     labels: dict[str, str] = {}
     guessed = guesses(transcript)
-    for pk, start, end, name, label, text, fit in (
+    for pk, start, end, name, label, text, fit, clock in (
         transcript.segments.filter(same_as_other_side=False)
         .exclude(speaker="")
         .order_by("start", "id")
         .values_list(
-            "id", "start", "end", "speaker", "speaker_label", "text", "voice_fit"
+            "id",
+            "start",
+            "end",
+            "speaker",
+            "speaker_label",
+            "text",
+            "voice_fit",
+            "clock",
         )
     ):
         lines.setdefault(name, []).append(
-            Line(start, end, pk in guessed, id=pk, text=text or "", fit=fit)
+            Line(
+                start,
+                end,
+                pk in guessed,
+                id=pk,
+                text=text or "",
+                fit=fit,
+                unsure=bool(clock),
+            )
         )
         labels.setdefault(name, label)
 
@@ -302,6 +361,9 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
                 # Whether the samples are the lines nearest the voice print
                 # (v1.142.0), or chosen by length alone.
                 "by_voice": any(one.fit is not None for one in mine),
+                # Lines whose clock the audio doubts (v1.151.0), left out of
+                # the samples and the voice's measure; the card says so.
+                "unsure": sum(1 for one in mine if one.unsure),
                 "hint_other": other,
                 "fragment": fragment,
             }

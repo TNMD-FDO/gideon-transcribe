@@ -1305,7 +1305,7 @@
   function previewButtons(person) {
     return (person.heard || []).slice(0, 2).map(function (one) {
       var where = one.here ? "this call" : (one.title.length > 28 ? one.title.slice(0, 26) + "\u2026" : one.title);
-      return "<button type='button' class='tiny ghost hear-else' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' title='Hear " + escape(person.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " " + escape(person.name.split(" ")[0]) + " on " + escape(where) + ", " + escape(one.clock) + "</button>";
+      return "<button type='button' class='tiny ghost hear-else' data-preview-recording='" + escape(one.recording) + "' data-preview-at='" + one.start + "' data-preview-person='" + escape(person.name) + "' data-preview-role='" + escape(person.role || "") + "' data-preview-speaker='" + escape(person.name) + "' data-preview-tabs='" + escape(JSON.stringify((person.heard || []).map(function (h) { return { recording: h.recording, title: h.title, start: h.start }; }))) + "' title='Hear " + escape(person.name) + " on " + escape(one.title) + "'>" + UI.icon("play") + " " + escape(person.name.split(" ")[0]) + " on " + escape(where) + ", " + escape(one.clock) + "</button>";
     }).join("");
   }
   function ratingPill(person) {

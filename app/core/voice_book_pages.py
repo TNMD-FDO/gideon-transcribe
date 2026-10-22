@@ -35,6 +35,19 @@ def voices(request: HttpRequest) -> HttpResponse:
     live = [one for one in rows if one["live"]]
     roles = voice_book.roles_allowed()
     counts = voice_book.counts_for_switch()
+    decided = voice_book.decided_by_month(unit)
+    from django.utils import timezone
+
+    first_of_month = timezone.now().replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    month = UnitVoiceCheck.objects.filter(unit=unit, created__gte=first_of_month)
+    this_month = {
+        "checks": month.count(),
+        "accepted": month.filter(state=UnitVoiceCheck.ACCEPTED).count(),
+        "dismissed": month.filter(state=UnitVoiceCheck.DISMISSED).count(),
+        "none": month.filter(kind="none").count(),
+    }
     return render(
         request,
         "voices.html",
@@ -54,7 +67,16 @@ def voices(request: HttpRequest) -> HttpResponse:
                 }
             ),
             "roles": roles,
-            "decided": voice_book.decided_by_month(unit),
+            "decided": decided,
+            # The month at the top (v1.151.0, the place as cards): the five
+            # numbers a unit lead reads at a glance, and the filter chips.
+            "this_month": this_month,
+            "filter_counts": {
+                "all": len(rows),
+                "taught": sum(1 for one in live if one["cases"] >= 3),
+                "medium": sum(1 for one in live if one["medium_at_best"]),
+                "forgotten": sum(1 for one in rows if not one["live"]),
+            },
             "said": request.session.pop("voices_said", ""),
         },
     )

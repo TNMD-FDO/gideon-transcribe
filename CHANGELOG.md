@@ -21,6 +21,52 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.151.0, 2026-10-22
+
+```
+Models: unchanged
+Database: migrates
+```
+
+- **The clock verdict** (ADR 0022; the maintainer heard a saying sixteen
+  seconds later than the page said on one of the office's calls; measured
+  against the audio, a block of lines sat early, and the same shape nine
+  times across the call). As every transcript lands the audio's pauses
+  are measured once and held against the lines: a hole the audio fills
+  with sound, a line over a pause, and a block with such a line before
+  such a hole is marked "clock unsure · up to 16 s early · heard about
+  2:21". Nothing moves and no word changes. The recording page draws the
+  block with a dotted rule and one pill; play on a marked line runs to the
+  end of the hole; the guided page's line screen shows the window, the
+  line's clock and where the sound is, and the voice row says the line
+  was not measured. Marked lines are never samples, give the voice step no
+  vector, teach no print and rate no match; the "hear" buttons and the
+  Preview choose sure lines. Older transcripts are marked once when a
+  check runs. Migration 0088. Words: Clock verdict.
+- **The Preview is a panel of the page** (the maintainer's word that it
+  should look cleaner and more integrated than a card popping up at the
+  bottom; drawn in `docs/spec/mockups/phase-5-preview-and-clock.html`). It
+  opens in the page's own right column where the page has one (the case
+  page's right pane, the guided Speakers page's context column, the Voices
+  place) and as a sheet from the foot elsewhere, never dragged. One design
+  for the chat's citation, the search's hit, the picker's play, a Sounds
+  like's hear button and the Voices place. When a person's voice is heard
+  it carries the person, their role, the clock verdict as a pill, a tab
+  per recording that taught the print and their samples as a row of plays.
+- **The Case's Speakers tab and the Voices place as people** (the
+  maintainer's word that the tab should look, feel and act more
+  intuitively than a list; drawn in
+  `docs/spec/mockups/phase-5-speakers-tab-and-voices.html`). The tab
+  opens with what needs you (voices to name, Sounds like waiting, the
+  Side rule's alarm, the rule itself), then one card per person, anyone
+  with something waiting first, with filter chips, Add a person in place
+  and every action behind one menu with the same confirm boxes; Decided so
+  far and the unnamed speakers fold. The Voices place has the month's
+  numbers at the top and the same cards with the book's facts, Hear them
+  and Forget in the menu. Nothing is decided on either page; nothing is
+  lost from today's tab. Phase 5 chapters 2 and 3 and Phase 7 chapter 5
+  amended.
+
 ## v1.150.0, 2026-10-22
 
 ```

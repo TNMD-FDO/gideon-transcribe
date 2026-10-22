@@ -47,7 +47,11 @@
 
       <div class="sg-desk">
         <section class="sg-focus" id="sg-focus" aria-live="polite"></section>
-        <aside class="sg-context" id="sg-context"></aside>
+        {% comment %}The context column; the Preview (v1.151.0) takes it while a person's voice is being heard, and gives it back on Close.{% endcomment %}
+        <aside class="sg-side">
+          <div class="sg-preview" data-preview-host hidden></div>
+          <div class="sg-context" id="sg-context"></div>
+        </aside>
       </div>
 
       <div class="sg-foot">

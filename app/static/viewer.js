@@ -310,6 +310,20 @@
       var tags = document.createElement("span");
       tags.className = "tags";
       body.appendChild(tags);
+      // The clock verdict (ADR 0022, v1.151.0): a dotted rule down a marked
+      // block and, on its first line, one pill with the bound and the clock
+      // the audio suggests. Nothing moves; play runs on past the hole.
+      if (segment.clock) {
+        row.classList.add("unsure");
+        when.title = "Play from here; the clock of this line may be off by up to " + Math.round(segment.clock.bound) + " s";
+        if (segment.clock.head) {
+          var pill = document.createElement("span");
+          pill.className = "pill small warn clock-pill";
+          pill.title = "The recogniser placed this block before where it is heard; the audio has speech in the gap after it";
+          pill.textContent = "clock unsure · up to " + Math.round(segment.clock.bound) + " s early · heard about " + clock(segment.clock.about);
+          tags.appendChild(pill);
+        }
+      }
 
       var said = document.createElement("p");
       said.className = "txt";

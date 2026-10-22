@@ -403,12 +403,15 @@ def where_heard(person, *, exclude=None) -> list[dict]:
         lines = list(
             Segment.objects.filter(transcript=transcript, speaker=person.name)
             .order_by("start")
-            .values_list("start", "end")[:40]
+            .values_list("start", "end", "clock")[:40]
         )
         if not lines:
             continue
-        long = [one for one in lines if one[1] - one[0] >= 2.0]
-        line = (long or lines)[0]
+        # A line whose clock the audio doubts (v1.151.0) is never the one the
+        # Preview seeks to, while any other remains.
+        timed = [one for one in lines if not one[2]] or lines
+        long = [one for one in timed if one[1] - one[0] >= 2.0]
+        line = (long or timed)[0]
         from core import exports
 
         out.append(
@@ -920,25 +923,27 @@ def tab_rows(case, people) -> dict:
     }
     lines: dict = {}
     if part_ids and with_prints:
-        for rid, name, start, end in (
+        for rid, name, start, end, clock in (
             Segment.objects.filter(
                 transcript__recording_id__in=list(part_ids),
                 speaker__in=[one.name for one in with_prints],
             )
             .order_by("start")
-            .values_list("transcript__recording_id", "speaker", "start", "end")
+            .values_list("transcript__recording_id", "speaker", "start", "end", "clock")
         ):
             kept = lines.setdefault((str(rid), name), [])
             if len(kept) < 40:
-                kept.append((start, end))
+                kept.append((start, end, bool(clock)))
 
     def heard(person) -> dict | None:
         for rid in (person.voice_print or {}).get("parts") or {}:
             found = lines.get((rid, person.name))
             if not found:
                 continue
-            long = [one for one in found if one[1] - one[0] >= 2.0]
-            start = (long or found)[0][0]
+            # Lines whose clock the audio doubts (v1.151.0) come last.
+            timed = [one for one in found if not one[2]] or found
+            long = [one for one in timed if one[1] - one[0] >= 2.0]
+            start = (long or timed)[0][0]
             return {
                 "recording": rid,
                 "title": titles.get(rid, "a recording"),

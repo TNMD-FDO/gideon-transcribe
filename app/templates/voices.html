@@ -6,12 +6,14 @@
 {% block content %}
   {% comment %}
     The Voices place (Phase 5 chapter 2, the unit's voice book, v1.146.0;
-    the drawing phase-5-voice-book.html, figure 2): one row per voice kept
-    for the unit, the same Voice column the Case tab has, who kept it, what
-    the checks decided, and Forget. An Admin sees every unit, one tab per
-    unit. No line of a recording, no time, no name of a case the reader
-    may not open. There is no Accept here: a check is decided on the
-    recording's card.
+    redrawn as cards in v1.151.0, the drawing
+    phase-5-speakers-tab-and-voices.html, figure 3): the month's numbers at
+    the top, one card per voice kept for the unit with the book's facts (the
+    cases and recordings that taught it, who kept it from where, the checks'
+    counts), Hear them and Forget in the card's menu. An Admin sees every
+    unit, a chip per unit. No line of a recording, no time, no name of a
+    case the reader may not open. There is no Accept here: a check is
+    decided on the recording's card. The Preview opens in the right pane.
   {% endcomment %}
   <div class="page roomy">
     <header class="page-head">
@@ -21,85 +23,101 @@
     {% if said %}<p class="notice ok" style="margin-bottom: 12px">{{ said }}</p>{% endif %}
 
     {% if chooser %}
-      <div class="row" style="gap: 6px; flex-wrap: wrap; margin-bottom: 12px">
+      <div class="chips" style="margin-bottom: 12px">
         {% for one in units %}
-          <a class="pill{% if one.name == unit %} acc{% endif %}" href="{% url 'voices' %}?unit={{ one.name|urlencode }}">{{ one.name }} &middot; {{ one.count }} voice{{ one.count|pluralize }}</a>
+          <a class="chip{% if one.name == unit %} on{% endif %}" href="{% url 'voices' %}?unit={{ one.name|urlencode }}">{{ one.name }} &middot; {{ one.count }} voice{{ one.count|pluralize }}</a>
         {% endfor %}
-        <span class="muted small">An Admin sees every unit's book. A person in a unit sees their own alone.</span>
+        <span class="muted tiny" style="align-self: center">An Admin sees every unit's book. A person in a unit sees their own alone.</span>
       </div>
     {% endif %}
 
-    <p class="lead">
-      {{ live_count }} voice{{ live_count|pluralize }} {{ live_count|pluralize:"is,are" }} kept for the {{ unit }} unit{% if cases_count %}, from {{ cases_count }} case{{ cases_count|pluralize }}{% endif %}.
+    <div class="month">
+      <div class="m"><div class="n">{{ live_count }}</div><div class="w">voice{{ live_count|pluralize }} kept for the {{ unit }} unit{% if cases_count %}, from {{ cases_count }} case{{ cases_count|pluralize }}{% endif %}</div></div>
+      <div class="m"><div class="n">{{ this_month.checks }}</div><div class="w">check{{ this_month.checks|pluralize }} this month</div></div>
+      <div class="m"><div class="n">{{ this_month.accepted }}</div><div class="w">accepted on a card</div></div>
+      <div class="m"><div class="n">{{ this_month.dismissed }}</div><div class="w">not them</div></div>
+      <div class="m"><div class="n">{{ this_month.none }}</div><div class="w">no match</div></div>
+    </div>
+    <p class="muted small" style="margin: 8px 0 14px">
       A voice is kept here only when someone on a case chooses to keep it, and only for people in an allowed role{% if roles %}: {{ roles|join:", " }}{% endif %}.
-      Clients, defendants, witnesses and victims are never kept here. A card on any recording in this unit can be checked against these by hand.
+      Clients, defendants, witnesses and victims are never kept here. A card on any recording in this unit can be checked against these by hand; the answer is decided on that card, never here. No line of any recording, no time, no name of a case you may not open.
     </p>
 
-    {% if rows %}
-      <table class="tbl voices-table">
-        <thead><tr><th>Name</th><th>Role</th><th>Voice</th><th>Kept</th><th>Checks</th><th></th></tr></thead>
-        <tbody>
-          {% for row in rows %}
-            <tr{% if not row.live %} class="forgotten"{% endif %}>
-              <td>
-                <b>{{ row.book.name }}</b>
-                {% if row.also_called %}<div class="tiny muted">also called {{ row.also_called|join:", " }}</div>{% endif %}
-              </td>
-              <td class="muted">{{ row.book.role|default:"no role" }}</td>
-              <td>
-                <div class="voice">
+    <div class="panes voices-panes">
+      <div class="pane-list">
+        {% if rows %}
+          <div class="people-toolbar">
+            <div class="chips" data-filter-for="voices">
+              <button type="button" class="chip on" data-filter="all">All {{ filter_counts.all }}</button>
+              <button type="button" class="chip" data-filter="taught">Well taught {{ filter_counts.taught }}</button>
+              <button type="button" class="chip" data-filter="medium">Medium at best {{ filter_counts.medium }}</button>
+              {% if filter_counts.forgotten %}<button type="button" class="chip" data-filter="forgotten">Forgotten {{ filter_counts.forgotten }}</button>{% endif %}
+            </div>
+          </div>
+          <div class="people" id="voices">
+            {% for row in rows %}
+              <article class="person-card{% if not row.live %} dim forgotten{% endif %}" data-kinds="{% if row.live %}live{% if row.cases >= 3 %} taught{% endif %}{% if row.medium_at_best %} medium{% endif %}{% else %}forgotten{% endif %}">
+                <div class="h">
+                  <span class="nm">{{ row.book.name }}</span>
+                  <span class="pill small">{{ row.book.role|default:"no role" }}</span>
                   {% if row.live %}
-                    <span>print from {{ row.cases }} case{{ row.cases|pluralize }}, {{ row.recordings }} recording{{ row.recordings|pluralize }}
-                      {% for h in row.heard %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ h.recording }}" data-preview-at="{{ h.start }}" title="Hear {{ row.book.name }} on {{ h.title }}">{% icon "play" %} hear them</button>{% empty %}{% if not row.openable %}<span class="pill small" title="The voice is heard only from a recording you may open">heard on a case you may not open</span>{% endif %}{% endfor %}
-                      {% if row.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% elif row.cases >= 3 %}<span class="pill small ok">well taught</span>{% endif %}</span>
-                    <span class="chain">Kept from {% if row.from_case %}<a href="{% url 'case' row.from_case.pk %}?tab=speakers">{{ row.from_text }}</a>{% else %}{{ row.from_text }}{% endif %}{% if row.book.kept_by %} by {{ row.book.kept_by.username }}{% endif %} ({{ row.book.kept_at|date:"j M" }}){% if row.others %} &middot; taught since by {{ row.others }} more case{{ row.others|pluralize }}{% if row.openable %}, {{ row.openable }} of them yours to open{% endif %}{% else %} &middot; taught by that case only{% endif %}</span>
-                    {% if row.called_out %}<span class="called-out">Checks against {{ row.book.name }} were turned down 3 times this month. If the print keeps being wrong, forget it and keep them again from a clean recording.</span>{% endif %}
-                  {% else %}
-                    <span class="muted small">forgotten {{ row.book.forgotten_at|date:"j M" }}{% if row.book.forgotten_by %} by {{ row.book.forgotten_by }}{% endif %}</span>
-                    <span class="chain">The names it gave stay, accepted by people on their cards; the cases' own prints stay.</span>
+                    <details class="menu">
+                      <summary class="btn quiet" aria-label="Hear them, Forget" title="Hear them, Forget">···</summary>
+                      <div class="menu-body">
+                        {% for h in row.heard %}<button type="button" class="small ghost hear-else" data-preview-recording="{{ h.recording }}" data-preview-at="{{ h.start }}" data-preview-person="{{ row.book.name }}" data-preview-role="{{ row.book.role }}" data-preview-speaker="{{ row.book.name }}" title="Hear {{ row.book.name }} on {{ h.title }}">{% icon "play" %} Hear them on {{ h.title|truncatechars:24 }}</button>{% endfor %}
+                        <div class="sep"></div>
+                        <form method="post" action="{% url 'voices-forget' row.book.pk %}"
+                              data-confirm-title="Forget {{ row.book.name }}'s voice for the {{ unit }} unit?"
+                              data-confirm="The book's print is deleted and {{ row.cases }} case{{ row.cases|pluralize }} stop{{ row.cases|pluralize:"s," }} keeping it. The names people accepted from it stay, and so do the cases' own prints. Keep again from a case to bring it back. Written to the audit as counts only."
+                              data-confirm-ok="Forget" data-danger>
+                          {% csrf_token %}
+                          <button type="submit" class="small ghost danger">Forget for the {{ unit }} unit</button>
+                        </form>
+                      </div>
+                    </details>
                   {% endif %}
                 </div>
-              </td>
-              <td class="small">{% if row.live %}{{ row.book.kept_at|date:"j M Y" }}{% if row.book.kept_by %}<div class="tiny muted">{{ row.book.kept_by.username }}</div>{% endif %}{% else %}<span class="muted">forgotten</span>{% endif %}</td>
-              <td class="small">accepted {{ row.accepted }} &middot; not them {{ row.dismissed }}{% if row.live %}<div class="tiny muted">last heard {{ row.last_heard|date:"j M" }}</div>{% endif %}</td>
-              <td>
+                <div class="voice">
+                  {% if row.live %}
+                    {% for h in row.heard|slice:":1" %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ h.recording }}" data-preview-at="{{ h.start }}" data-preview-person="{{ row.book.name }}" data-preview-role="{{ row.book.role }}" data-preview-speaker="{{ row.book.name }}" title="Hear {{ row.book.name }} on {{ h.title }}">{% icon "play" %} hear them</button>{% empty %}{% if not row.openable %}<span class="pill small" title="The voice is heard only from a recording you may open">heard on a case you may not open</span>{% endif %}{% endfor %}
+                    <span>print from {{ row.cases }} case{{ row.cases|pluralize }}, {{ row.recordings }} recording{{ row.recordings|pluralize }}</span>
+                    {% if row.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% elif row.cases >= 3 %}<span class="pill small ok">well taught</span>{% endif %}
+                  {% else %}
+                    <span class="muted">forgotten {{ row.book.forgotten_at|date:"j M" }}{% if row.book.forgotten_by %} by {{ row.book.forgotten_by }}{% endif %}</span>
+                  {% endif %}
+                </div>
                 {% if row.live %}
-                  <form method="post" action="{% url 'voices-forget' row.book.pk %}"
-                        data-confirm-title="Forget {{ row.book.name }}'s voice for the {{ unit }} unit?"
-                        data-confirm="The book's print is deleted and {{ row.cases }} case{{ row.cases|pluralize }} stop{{ row.cases|pluralize:"s," }} keeping it. The names people accepted from it stay on their cards, and every case's own print stays. Written to the audit as a count."
-                        data-confirm-ok="Forget" data-danger>
-                    {% csrf_token %}
-                    <button type="submit" class="small ghost danger">Forget</button>
-                  </form>
+                  <div class="chain">Kept from {% if row.from_case %}<a href="{% url 'case' row.from_case.pk %}?tab=speakers">{{ row.from_text }}</a>{% else %}{{ row.from_text }}{% endif %}{% if row.others %} and {{ row.others }} other case{{ row.others|pluralize }}{% endif %}{% if row.book.kept_by %} by {{ row.book.kept_by.username }}{% endif %}, {{ row.book.kept_at|date:"j M Y" }}{% if row.also_called %} &middot; also called {{ row.also_called|join:", " }}{% endif %}</div>
+                  <div class="counts">checks: {{ row.accepted|add:row.dismissed }} &middot; accepted {{ row.accepted }} &middot; not them {{ row.dismissed }} &middot; last heard {{ row.last_heard|date:"j M" }}{% if row.called_out %} &middot; <span class="pill small warn">turned down 3 times this month</span>{% endif %}</div>
+                  {% if row.called_out %}<div class="called-out">Checks against {{ row.book.name }} were turned down 3 times this month. If the print keeps being wrong, forget it and keep them again from a case where the voice is sure.</div>{% endif %}
                 {% else %}
-                  <span class="muted small">Keep again from a case</span>
+                  <div class="chain">The names it gave stay, accepted by people on their cards; the cases' own prints stay. <span class="muted">Keep again from a case</span> to bring it back.</div>
                 {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="muted">No voice is kept for the {{ unit }} unit yet. On a case's Speakers tab, a person with a voice print in an allowed role offers <b>Keep for the {{ unit }}...</b> in the Voice column.</p>
-    {% endif %}
-
-    <div class="row" style="gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 18px">
-      <div class="card" style="min-width: 280px">
-        <h3 style="margin-top: 0">Decided from the book, this unit</h3>
-        {% if decided %}
-          <table class="numbers">
-            <tr><th>Month</th><th>Checks</th><th>Accepted</th><th>Not them</th><th>No match</th></tr>
-            {% for d in decided %}<tr><td>{{ d.month }}</td><td>{{ d.checks }}</td><td>{{ d.accepted }}</td><td>{{ d.dismissed }}</td><td>{{ d.none }}</td></tr>{% endfor %}
-          </table>
+              </article>
+            {% endfor %}
+          </div>
         {% else %}
-          <p class="muted small" style="margin: 0">No card has been checked against this book yet.</p>
+          <p class="muted">No voice is kept for the {{ unit }} unit yet. On a case's Speakers tab, a person with a voice print in an allowed role offers <b>Keep for the {{ unit }}...</b> on their card; the voice then appears here for everyone in the unit.</p>
         {% endif %}
+
+        <details class="numbers-fold" style="margin-top: 18px">
+          <summary class="small muted">Numbers &middot; decided from the book, by month</summary>
+          {% if decided %}
+            <table class="numbers" style="margin-top: 6px">
+              <tr><th>Month</th><th>Checks</th><th>Accepted</th><th>Not them</th><th>No match</th></tr>
+              {% for d in decided %}<tr><td>{{ d.month }}</td><td>{{ d.checks }}</td><td>{{ d.accepted }}</td><td>{{ d.dismissed }}</td><td>{{ d.none }}</td></tr>{% endfor %}
+            </table>
+          {% else %}
+            <p class="muted small" style="margin: 6px 0 0">No card has been checked against this book yet.</p>
+          {% endif %}
+        </details>
       </div>
-      <div class="card" style="min-width: 280px; max-width: 480px">
-        <h3 style="margin-top: 0">What this page never shows</h3>
-        <p class="muted small" style="margin: 0">No line of any recording, no time, no name of a case you may not open. The voice is heard only through Preview, from a recording you may open. There is no Accept here: a voice is checked and decided on a recording's Speakers page card.</p>
-      </div>
+      <aside class="pane-detail voices-side">
+        {% comment %}The Preview (v1.151.0) opens here while a voice is being heard; only recordings the reader may open play.{% endcomment %}
+        <div class="preview-side" data-preview-host hidden></div>
+      </aside>
     </div>
   </div>
   <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'people-cards.js' %}"></script>
 {% endblock %}

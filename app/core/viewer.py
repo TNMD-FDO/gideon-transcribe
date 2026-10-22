@@ -18,7 +18,17 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import assistant, audit, cases, documents, engine, home, notes, settings_store
+from core import (
+    assistant,
+    audit,
+    cases,
+    clock_check,
+    documents,
+    engine,
+    home,
+    notes,
+    settings_store,
+)
 from core.jobs import Segment
 from core.media_access import media_root
 from core.recordings import Recording
@@ -467,6 +477,9 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
                     "speaker": segment.speaker,
                     "corrected": segment.corrected,
                     "guess": segment.pk in guessed,
+                    # The clock verdict (ADR 0022, v1.151.0): None when the
+                    # audio agrees with the line's clock.
+                    "clock": clock_check.verdict_json(segment),
                     # The word timings, unless ?words=0 asked for the lines
                     # alone (v1.134.0): the Speakers page draws no words,
                     # and they were most of the answer.
@@ -523,7 +536,7 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
     camera showed around one moment, with what the card needs to play it, to
     open it and to write a note. Read by whoever may read the transcript;
     nothing is written and the moment is never logged."""
-    from core import exports, incidents
+    from core import exports, incidents, speakers_page
     from core.assistant import DONE, Moment
 
     recording = Recording.objects.filter(pk=recording_id).first()
@@ -642,6 +655,16 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
             "cited": cited.pk if cited is not None else None,
             "cited_seen": str(shown.pk) if shown is not None else None,
             "note_on": spoken.pk if spoken is not None else None,
+            # The clock verdict of the moment's line (ADR 0022, v1.151.0),
+            # so the Preview plays to where the sound is and says so; and
+            # the samples of one speaker on this recording, when asked
+            # (?speaker=), for the Preview's row of plays.
+            "clock_verdict": clock_check.verdict_json(spoken) if spoken else None,
+            "samples": (
+                speakers_page.samples_for(transcript, request.GET.get("speaker", ""))
+                if transcript is not None and request.GET.get("speaker")
+                else []
+            ),
             # v1.99.0: where the Note button writes, and the silence it is in.
             "note_at_url": f"/recording/{recording.pk}/note-at",
             "silence": (
@@ -665,6 +688,7 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
                     "clock": exports.clock(one.start),
                     "speaker": one.speaker,
                     "text": one.text,
+                    "verdict": clock_check.verdict_json(one),
                     **notes.line_json(one),
                 }
                 for one in lines

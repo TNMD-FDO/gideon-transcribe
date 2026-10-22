@@ -119,6 +119,10 @@ def stretches_of(transcript) -> dict[int, list[dict]]:
     ):
         if call_system.is_system(segment.speaker):
             continue
+        # A line whose clock is unsure (ADR 0022, v1.151.0) would be measured
+        # on somebody else's audio, or nobody's: no vector, no print, no word.
+        if segment.clock:
+            continue
         spans, timed = own_spans(segment)
         number = sides.get(segment.side_id) or (
             next(iter(sides.values())) if len(sides) == 1 else 1

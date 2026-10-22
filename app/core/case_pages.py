@@ -547,6 +547,10 @@ def _speakers_tab(case: Case, user=None) -> dict:
     ]
     ordered.sort(key=lambda one: (-one[2], -one[1]))
     shown["unnamed"] = ordered
+    # The needs strip (v1.151.0) reads the minutes and the first recording
+    # from the ordered list.
+    shown["needs"]["unnamed_minutes"] = sum(one[2] for one in ordered)
+    shown["needs"]["first_unnamed"] = ordered[0][0] if ordered else None
     return shown
 
 

@@ -341,6 +341,10 @@ class Segment(models.Model):
     # when the line changes hands by hand, refilled while the run's vectors
     # last.
     voice_fit = models.FloatField(null=True, blank=True)
+    # The clock verdict (ADR 0022, v1.151.0): None when the audio agrees
+    # with this line's clock; else the bound in seconds, where the sound is
+    # ("to", "hole") and the block it belongs to, as clock_check writes it.
+    clock = models.JSONField(null=True, blank=True)
 
     # A person's own line under this one (Phase 8 chapter 2): the words, who
     # last wrote them, when they last changed. Never the assistant's, never

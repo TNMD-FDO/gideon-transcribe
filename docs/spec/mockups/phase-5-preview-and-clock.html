@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The clock verdict and the Preview in the page</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa; --sp5: #00838f; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #5fc9d6; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sp4: #c77ddb; --sp5: #5fc9d6; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.quiet { font-size: 11px; padding: 0 5px; min-height: 20px; color: var(--muted); border-color: transparent; background: transparent; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; background: var(--surface); flex: none; }
+  .play.big { width: 44px; height: 44px; border-radius: 50%; font-size: 16px; background: var(--accent); color: var(--accent-ink); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .c1 { --c: var(--sp1); color: var(--sp1); } .c2 { --c: var(--sp2); color: var(--sp2); } .c3 { --c: var(--sp3); color: var(--sp3); } .csys { --c: var(--sys); color: var(--sys); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .rule { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; }
+  .rule b { display: block; margin-bottom: 4px; }
+
+  /* the sound strip: the audio's energy as a row of bars, the transcript's claim under it */
+  .strip { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .strip .bars { display: flex; align-items: flex-end; gap: 1px; height: 34px; border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+  .strip .bars i { flex: 1; background: var(--muted); opacity: .55; border-radius: 1px 1px 0 0; min-width: 2px; }
+  .strip .bars i.q { height: 8% !important; opacity: .25; }
+  .strip .bars i.hi { background: var(--accent); opacity: .9; }
+  .strip .claim { display: flex; gap: 2px; height: 14px; }
+  .strip .claim i { display: block; border-radius: 3px; background: var(--sp2); opacity: .8; }
+  .strip .claim i.c1 { background: var(--sp1); }
+  .strip .claim i.hole { background: transparent; border: 1px dashed var(--warn); opacity: 1; }
+  .strip .claim i.moved { background: transparent; border: 1px solid var(--ok); opacity: 1; }
+  .strip .scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .strip .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); }
+  .strip .legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+
+  /* transcript lines as the pages draw them */
+  .lines { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+  .line { display: grid; grid-template-columns: 52px 112px minmax(0, 1fr) auto; gap: 8px; padding: 3px 6px; border-radius: var(--radius); align-items: center; }
+  .line .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .line .s { font-weight: 600; font-size: 12px; }
+  .line.lit { background: var(--accent-soft); }
+  .line.dim { color: var(--muted); }
+  .line.unsure { border-left: 3px dotted var(--warn); margin-left: -3px; }
+  .line .t .about { color: var(--warn); }
+  .blockhead { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); padding: 4px 6px; }
+  .gap { text-align: center; color: var(--muted); font-size: 12px; padding: 2px 0; }
+
+  /* the Speakers page frame, as the guided drawing has it */
+  .frame { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .guide { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); align-items: center; }
+  .guide .where { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .guide .where .step { font-weight: 600; }
+  .guide .now { font-size: 14px; }
+  .guide .acts { display: flex; gap: 8px; align-items: center; grid-column: 2; grid-row: 1 / span 2; justify-content: flex-end; }
+  .guide .where, .guide .now { grid-column: 1; }
+  .desk { display: grid; grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); min-height: 300px; }
+  .focus { border-right: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .focus .q { font-size: 16px; font-weight: 600; }
+  .focus .h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .side { padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+  .side .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .sounds { display: flex; flex-direction: column; gap: 6px; }
+  .sound { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: center; }
+  .sound .k { color: var(--muted); font-size: 12px; }
+  .choices { display: flex; flex-direction: column; gap: 6px; }
+  .choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; }
+  .choice.best { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .choice .nm { font-weight: 600; } .choice .why { color: var(--muted); font-size: 12px; }
+  .choice .acts { display: flex; gap: 6px; align-items: center; }
+  .choice.plain { border-style: dashed; color: var(--muted); }
+  .foot { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: 12px; flex-wrap: wrap; }
+  .foot .grow { flex: 1; }
+
+  /* the picker, beside the card */
+  .picker { border: 1px solid var(--accent); border-radius: var(--radius-lg); padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+  .picker .grp { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-top: 4px; }
+  .person { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .person.on { border-color: var(--accent); background: var(--accent-soft); }
+  .person .w { color: var(--muted); font-size: 12px; }
+
+  /* the Preview as a panel of the page */
+  .panel { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
+  .panel .head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); align-items: center; }
+  .panel .head .who { font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .panel .head .from { color: var(--muted); font-size: 12px; }
+  .panel .head .acts { display: flex; gap: 6px; grid-column: 2; grid-row: 1 / span 2; }
+  .panel .body { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .panel .samples { display: flex; gap: 6px; flex-wrap: wrap; }
+  .panel .samples .sp { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px 2px 4px; max-width: 100%; }
+  .panel .samples .sp .q { font-style: italic; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .panel .samples .sp .t { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .panel .pic { height: 92px; border-radius: var(--radius); background: linear-gradient(135deg, var(--surface-2), var(--line)); display: flex; align-items: flex-end; padding: 6px 8px; color: var(--muted); font-size: 11px; }
+  .panel .note { color: var(--muted); font-size: 12px; }
+  .panel .player { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: 12px; }
+  .panel .player .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--line); position: relative; }
+  .panel .player .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; background: var(--accent); border-radius: 2px; }
+  .panel .player .bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--warn); left: 46%; }
+  .panel .player .bar u { position: absolute; top: -2px; bottom: -2px; border-left: 1px dashed var(--ok); border-right: 1px dashed var(--ok); left: 42%; width: 14%; }
+
+  .sheet { width: 300px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; font-size: 12px; background: var(--surface); }
+  .sheet .pagebit { padding: 10px; color: var(--muted); border-bottom: 1px dashed var(--line); font-size: 12px; min-height: 120px; display: flex; flex-direction: column; gap: 6px; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 0; }
+  .sheet .panel { border: 0; border-radius: 0; }
+
+  .where-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .where-list .rule { font-size: 12px; }
+  a { color: var(--accent); }
+  /* under 900 wide the desk is one column, as the app's own page is; the panel's head stacks */
+  @media (max-width: 900px) {
+    .desk { grid-template-columns: 1fr; }
+    .focus { border-right: 0; border-bottom: 1px solid var(--line); }
+    .panel .head { grid-template-columns: 1fr; }
+    .panel .head .acts { grid-column: 1; grid-row: auto; flex-wrap: wrap; }
+    .line { grid-template-columns: 44px 90px minmax(0, 1fr) auto; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Gideon Transcribe, a mock-up</div>
+    <h1>The clock verdict and the Preview in the page: every play button tells the truth about where the sound is, and the Preview is part of the page it serves</h1>
+    <p class="lede"><b>Drawn 2026-10-22</b> after the maintainer found, on one of the office's calls, that a block of lines read 2:05 on the page but was spoken at about 2:21. Measured against the audio's own energy, the block sat sixteen seconds early: the transcript had a hole where the audio had speech, then the block, then another hole. The words and the speaker proposals were right; the clock was not. The same shape appeared nine times across the call. Every name, call and line here is made up.</p>
+    <p class="lede"><b>Two decisions this drawing proposes.</b> First, the clock verdict is a fact of the Transcript, written as it lands for every Recording of every type, and read by every place that plays a moment: the transcript, the samples, the line screen, the "hear" buttons, the Preview, the chat's citations and the search's hits. Second, the Preview stops being a card that pops up at the bottom right and becomes a panel of the page it opened from, one design for all the places it opens.</p>
+    <p class="lede"><b>What does not move.</b> No word changes and no line moves. The Speakers page stays the one place a proposal is accepted or declined. The recogniser's stack stays pinned; the verdict is made from the finished transcript and the audio, not by changing how the words are recognised.</p>
+  </header>
+
+  <!-- Figure 1: the check -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>The clock check as a transcript lands: the audio's energy against the transcript's claim</h2></div>
+    <div class="work">
+      <div class="strip">
+        <div class="legend"><span><i style="background: var(--muted); opacity: .55"></i>sound in the audio</span><span><i style="background: var(--muted); opacity: .25"></i>a pause</span><span><i style="background: var(--sp2); opacity: .8"></i>lines, as the transcript places them</span><span><i style="border: 1px dashed var(--warn)"></i>a hole the audio fills with sound</span><span><i style="border: 1px solid var(--ok)"></i>where the block is heard</span></div>
+        <div class="bars">
+          <i style="height: 60%"></i><i style="height: 70%"></i><i style="height: 55%"></i><i style="height: 75%"></i><i class="q"></i><i class="q"></i><i style="height: 65%"></i><i style="height: 80%"></i><i style="height: 60%"></i><i style="height: 70%"></i><i style="height: 75%"></i><i style="height: 55%"></i><i style="height: 68%"></i><i style="height: 72%"></i><i style="height: 58%"></i><i style="height: 76%"></i><i style="height: 64%"></i><i style="height: 70%"></i><i class="q"></i><i class="q"></i><i style="height: 66%"></i><i style="height: 74%"></i><i style="height: 62%"></i><i class="q"></i><i class="hi" style="height: 78%"></i><i class="hi" style="height: 70%"></i><i class="hi" style="height: 80%"></i><i class="hi" style="height: 66%"></i><i class="hi" style="height: 74%"></i><i class="hi" style="height: 72%"></i><i class="hi" style="height: 60%"></i><i class="hi" style="height: 76%"></i><i class="q"></i><i class="q"></i><i style="height: 70%"></i><i style="height: 64%"></i><i style="height: 72%"></i><i style="height: 58%"></i>
+        </div>
+        <div class="claim">
+          <i class="c1" style="flex: 4"></i><i style="flex: 2"></i><i class="c1" style="flex: 3"></i><i class="hole" style="flex: 9" title="21 s with no lines; the audio speaks throughout"></i><i style="flex: 7" title="the block, placed at 2:05"></i><i class="hole" style="flex: 6" title="16 s with no lines; 14 s of it sound"></i><i class="c1" style="flex: 5"></i>
+        </div>
+        <div class="claim" style="height: 10px">
+          <i style="flex: 4; background: transparent"></i><i style="flex: 2; background: transparent"></i><i style="flex: 3; background: transparent"></i><i style="flex: 9; background: transparent"></i><i style="flex: 1; background: transparent"></i><i class="moved" style="flex: 7" title="the same block, where the sound is"></i><i style="flex: 5; background: transparent"></i><i style="flex: 5; background: transparent"></i>
+        </div>
+        <div class="scale"><span>1:30</span><span>1:45</span><span>2:00</span><span>2:15</span><span>2:30</span><span>2:45</span></div>
+      </div>
+      <div class="rules">
+        <div class="rule"><b>Rule 1. A hole the audio fills.</b> Eight seconds or more with no line, where the audio has sound for most of it (over seven tenths). The lines on either side of the hole are the suspects.</div>
+        <div class="rule"><b>Rule 2. A line over a pause.</b> A line of two seconds or more whose words are said to run across a pause the audio shows (over a second of quiet inside it). Words are not spoken through silence.</div>
+        <div class="rule"><b>Rule 3. The bound.</b> A block that fails rule 2 and sits beside a hole from rule 1 is marked "the clock here may be off by up to N s", N being the hole's length, never a guess beyond it. The block is not moved; the mark says where to listen.</div>
+        <div class="rule"><b>When it runs.</b> As every transcript lands, after the Call system's pass and before the Speaker check, on every type of recording, and again on Process again. Older transcripts get it once, the way the Call system's pass was given later. The audio's pauses are measured once and kept with the transcript as facts about the processing, never as content.</div>
+      </div>
+      <div class="caption">
+        <p><b>Why these two rules and not the recogniser's own confidence.</b> The recogniser cuts the audio by voice activity, writes words per chunk, and the aligner places each word inside its chunk's window. When it writes words for only part of a chunk, the words land at the window's start and a hole appears after them where the speech really is. The recogniser reports no doubt about this; only the audio does. Measured on the office's call: nine sound-filled holes and twenty-nine lines over a pause, out of a hundred and ninety-nine longer lines.</p>
+        <p><b>What a mark changes elsewhere.</b> A marked line plays a wider window and says so (figures 2 and 3), gives the voice step no vector and so teaches no print and rates no match (figure 6), is never a Sample, and a Preview that would seek to it seeks to the sound instead (figure 4). The "timing is a guess" mark of v1.141.0 stays for thin and repeated lines; this is the second kind of doubt, about a whole block.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2: on the recording page -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>On the recording page's transcript: a marked block, and what its play does</h2></div>
+    <div class="work">
+      <div class="lines">
+        <div class="line"><span class="t">1:39</span><span class="s c1"><span class="dot c1"></span> Jordan Cole</span><span>I got it yesterday. The hearing's on the fourteenth.</span><span class="play">▶</span></div>
+        <div class="line"><span class="t">1:42</span><span class="s c1"><span class="dot c1"></span> Jordan Cole</span><span>Did she say anything about the witness?</span><span class="play">▶</span></div>
+        <div class="gap">1:44 to 2:05, nothing written · <span class="pill warn">the audio speaks here</span></div>
+        <div class="blockhead"><span class="pill warn">clock unsure · up to 16 s early</span><span>6 lines · the recogniser placed these before where they are heard · <a href="#">hear the stretch</a></span></div>
+        <div class="line unsure"><span class="t">2:05 <span class="about">→ ~2:21</span></span><span class="s c2"><span class="dot c2"></span> Speaker 1</span><span>Only that she might not come. Her sister's sick.</span><span class="play" title="plays 2:04 to 2:40, where the sound is">▶</span></div>
+        <div class="line unsure"><span class="t">2:06</span><span class="s c1"><span class="dot c1"></span> Jordan Cole</span><span>Tell her it matters. Tell her I said please, and that it's the one day.</span><span class="play">▶</span></div>
+        <div class="line unsure"><span class="t">2:13</span><span class="s c2"><span class="dot c2"></span> Speaker 1</span><span>Do you need anything on your account?</span><span class="play">▶</span></div>
+        <div class="line unsure dim"><span class="t">2:16</span><span class="s c1"><span class="dot c1"></span> Jordan Cole</span><span>Twenty for the phone, if you can.</span><span class="play">▶</span></div>
+        <div class="gap">2:22 to 2:38, nothing written · <span class="pill warn">the audio speaks here</span></div>
+        <div class="line"><span class="t">2:38</span><span class="s c2"><span class="dot c2"></span> Speaker 1</span><span>I'll do it Friday.</span><span class="play">▶</span></div>
+      </div>
+      <div class="caption">
+        <p><b>The mark is quiet.</b> A dotted rule down the block's left edge, one pill at its head with the bound, and on the first line the clock the audio suggests ("→ ~2:21") in the warning colour. Nothing is moved and no word is touched; the number keys, not this speaker and the notes work as before.</p>
+        <p><b>The play of a marked line plays wider:</b> from half a second before its own clock to the end of the hole beside it, so the saying is inside what plays, and the button's title says the window. "Hear the stretch" on the block's head plays the whole block's window once. Where the clock is sure, play is as it is today, half a second either side.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 3: the guided page's line screen -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3</div><h2>The guided page's line screen on a marked line: the clock, the wider play, the voice's silence</h2></div>
+    <div class="frame">
+      <div class="guide">
+        <div class="where"><span class="step">Step 2 of 3 · Lines in doubt</span><span class="muted">Line 14 of 39</span></div>
+        <div class="now">Listen, then say whose line this is. The clock here is unsure, so the play is wider than the line.</div>
+        <div class="acts"><span class="btn">Undo</span><span class="btn">Back</span><span class="btn primary">Next line</span></div>
+      </div>
+      <div class="desk">
+        <div class="focus">
+          <div class="h"><span class="play big">▶</span><div><div class="q">Whose line is this?</div><div class="tiny muted mono">2:05 <span style="color: var(--warn)">· heard about 2:21</span> · plays 2:04 to 2:40</div></div></div>
+          <div class="strip"><div class="bars" style="height: 22px"><i class="q"></i><i class="q"></i><i class="q"></i><i class="q"></i><i class="q"></i><i class="q"></i><i class="q"></i><i class="q"></i><i class="hi" style="height: 80%"></i><i class="hi" style="height: 66%"></i><i class="hi" style="height: 74%"></i><i class="hi" style="height: 60%"></i><i class="hi" style="height: 78%"></i><i class="hi" style="height: 70%"></i><i class="q"></i><i class="q"></i></div><div class="scale"><span>2:04</span><span>the line's clock</span><span>where the sound is</span><span>2:40</span></div></div>
+          <div class="pill warn" style="align-self: flex-start">clock unsure · up to 16 s early · one of 6 lines in this block</div>
+          <div class="sounds">
+            <div class="sound"><span class="k">now marked</span><span><span class="dot c2"></span> Speaker 1</span></div>
+            <div class="sound"><span class="k">the voice says</span><span class="muted">nothing: this line's clock is unsure, so the voice did not measure it</span></div>
+            <div class="sound"><span class="k">the words say</span><span><span class="dot c1"></span> Jordan Cole · "the account is his to top up; the other side asks"</span></div>
+          </div>
+          <div class="choices">
+            <div class="choice best"><div><span class="nm">It's Jordan Cole</span><div class="why">the words' reading, from the sketch of the call</div></div><div class="acts"><span class="btn primary">Yes, Jordan</span></div></div>
+            <div class="choice"><div><span class="nm">Leave it as Speaker 1</span></div><div class="acts"><span class="btn">Leave it</span></div></div>
+            <div class="choice plain"><div>Someone else</div><div class="acts"><span class="btn">Choose...</span></div></div>
+          </div>
+        </div>
+        <div class="side">
+          <div class="label">Around this line · the clock of this block is unsure</div>
+          <div class="line dim"><span class="t">1:42</span><span class="s c1">Jordan Cole</span><span>Did she say anything about the witness?</span><span></span></div>
+          <div class="gap">1:44 to 2:05, nothing written; the audio speaks</div>
+          <div class="line lit unsure"><span class="t">2:05</span><span class="s c2">Speaker 1</span><span>Only that she might not come. Her sister's sick.</span><span></span></div>
+          <div class="line unsure"><span class="t">2:06</span><span class="s c1">Jordan Cole</span><span>Tell her it matters. Tell her I said please, and that it's the one day.</span><span></span></div>
+          <div class="line unsure dim"><span class="t">2:13</span><span class="s c2">Speaker 1</span><span>Do you need anything on your account?</span><span></span></div>
+          <div class="gap">2:22 to 2:38, nothing written; the audio speaks</div>
+        </div>
+      </div>
+      <div class="foot"><span class="btn tiny">▶ Play</span><span class="mono">2:04 / 31:24</span><span class="grow" style="height: 4px; background: var(--line); border-radius: 2px"></span><span class="btn tiny">Tools</span><span class="btn tiny ghost">Done for now</span></div>
+    </div>
+    <div class="caption">
+      <p><b>The guide's sentence changes for a marked line</b> and says why the play is wider. Under the question a small sound strip shows the window being played, the line's own clock and where the sound is, so what you hear and what you read are reconciled on the screen rather than in your head.</p>
+      <p><b>The voice says nothing on a marked line.</b> Its vector would have been taken from the wrong audio, so the voice step skips it: no "agrees", no "against", no Accept all for this line, and it never teaches a print. The words' reading stands, which is why the proposal the maintainer saw still matched.</p>
+    </div>
+  </section>
+
+  <!-- Figure 4: the Preview as a panel, from the picker -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4</div><h2>The Preview as a panel of the page: picking a name in the case, the person's voice opens beside the picker</h2></div>
+    <div class="frame">
+      <div class="guide">
+        <div class="where"><span class="step">Step 1 of 3 · Who is speaking</span><span class="muted">Voice 2 of 4 · 1 named</span></div>
+        <div class="now">Listen to this voice, then say who it is. Hearing Dana first: her voice from Call 1 plays on the right.</div>
+        <div class="acts"><span class="btn">Undo</span><span class="btn">Back</span><span class="btn primary">Next voice</span></div>
+      </div>
+      <div class="desk">
+        <div class="focus">
+          <div class="h"><span class="play big">▶</span><div><b>Speaker 1</b> <span class="pill">unnamed</span><div class="tiny muted">11 lines, 55 s talking, first at 0:54</div></div></div>
+          <div class="picker">
+            <div><b>Speaker 1 is</b></div>
+            <div class="grp">On this call</div>
+            <div class="person"><div><span class="dot c1"></span> Jordan Cole <span class="w">· the same person: merge</span></div><span class="play">▶</span></div>
+            <div class="grp">In this case, not yet on this call</div>
+            <div class="person on"><div><b>Dana Reyes</b> <span class="pill">Client</span> <span class="w">· heard on Call 1 and Call 2</span></div><div class="choice acts"><span class="pill acc">playing →</span><span class="btn tiny primary">It's Dana</span></div></div>
+            <div class="person"><div>Lee Ortiz <span class="pill">Officer</span> <span class="w">· heard on Cam 2</span></div><div class="choice acts"><span class="play">▶</span><span class="btn tiny">It's Lee</span></div></div>
+            <div class="grp">Someone new</div>
+            <div class="person"><div><span class="w">a name and a role</span></div><span class="btn tiny">Add</span></div>
+          </div>
+        </div>
+        <div class="side" style="padding: 10px">
+          <div class="panel">
+            <div class="head">
+              <div class="who">Dana Reyes <span class="pill">Client</span> <span class="pill ok">clock sure</span></div>
+              <div class="from">her voice on <b>Call 1</b>, 0:48 · one of 2 recordings that taught her print</div>
+              <div class="acts"><span class="btn tiny">Call 2</span><span class="btn tiny ghost">Open the recording</span><span class="btn quiet">Close</span></div>
+            </div>
+            <div class="body">
+              <div class="samples">
+                <span class="sp"><span class="play">▶</span><span class="t">0:48</span><span class="q">"Yes, it's mine. What's the problem?"</span></span>
+                <span class="sp"><span class="play">▶</span><span class="t">3:10</span><span class="q">"I told him Tuesday."</span></span>
+                <span class="sp"><span class="play">▶</span><span class="t">7:02</span><span class="q">"No, that was before."</span></span>
+              </div>
+              <div class="lines">
+                <div class="line dim"><span class="t">0:41</span><span class="s c1">Officer Hale</span><span>Is this your bag, ma'am?</span><span></span></div>
+                <div class="line lit"><span class="t">0:48</span><span class="s c2">Dana Reyes</span><span>Yes, it's mine. What's the problem?</span><span></span></div>
+                <div class="line"><span class="t">0:52</span><span class="s c1">Officer Hale</span><span>Step over here for me.</span><span></span></div>
+              </div>
+              <div class="note">The samples are the lines nearest her print; play them against the samples on the left. Nothing of what you listen to is logged.</div>
+            </div>
+            <div class="player"><span class="btn tiny">❚❚</span><span class="mono">0:51 / 12:40</span><span class="bar"><i></i><b></b></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span class="btn tiny">▶ Play</span><span class="mono">0:54 / 31:24</span><span class="grow" style="height: 4px; background: var(--line); border-radius: 2px"></span><span class="btn tiny">Tools</span><span class="btn tiny ghost">Done for now</span></div>
+    </div>
+    <div class="caption">
+      <p><b>Where it opens.</b> The panel takes the context column while a person's voice is being heard, so this voice's lines on the left and her voice on the right are side by side; Close, Escape or picking a name gives the column back. On the recording page and the case page it takes the page's own right column the same way (figure 5). It never floats over anything.</p>
+      <p><b>What it carries, every time.</b> A heading with the person, their role, the recording and the moment, and the clock verdict as a pill; the person's samples from that recording as a row of plays; the picture where there is one; the few lines around the moment with the one being heard lit; a tab per recording that taught the print; Open the recording; its own small player. The note box and All cameras stay where the chat and the Notes page need them (figure 5).</p>
+      <p><b>The clock verdict reaches it.</b> The moment the Preview seeks to is a line of the other recording. When that line is marked, the pill reads "clock unsure · heard about 1:04", the player's window widens to where the sound is, drawn as the dashed span on its bar, and the samples offered are only lines whose clock is sure. The picker's play buttons and the "hear" buttons on a Sounds like read the same verdict, so no place in the app plays a confident wrong moment.</p>
+    </div>
+  </section>
+
+  <!-- Figure 5: the same panel from the chat, the search and the Voices place -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 5</div><h2>The same panel from the case chat, a search hit and the unit's Voices place</h2></div>
+    <div class="cols">
+      <div class="work">
+        <div class="eyebrow">From a chat citation, on the case page</div>
+        <div class="panel">
+          <div class="head">
+            <div class="who">Call 1 <span class="pill ok">clock sure</span></div>
+            <div class="from">cited at 3:10 by the answer "when the Tuesday meeting was set"</div>
+            <div class="acts"><span class="btn tiny ghost">Open the recording</span><span class="btn quiet">Close</span></div>
+          </div>
+          <div class="body">
+            <div class="pic">the camera, ten seconds before the moment</div>
+            <div class="lines">
+              <div class="line dim"><span class="t">3:04</span><span class="s c1">Officer Hale</span><span>When did you two last talk?</span><span></span></div>
+              <div class="line lit"><span class="t">3:10</span><span class="s c2">Dana Reyes</span><span>I told him Tuesday.</span><span></span></div>
+              <div class="line"><span class="t">3:13</span><span class="s c1">Officer Hale</span><span>This Tuesday?</span><span></span></div>
+            </div>
+            <div class="note">Note on this line: <span class="btn quiet">write one</span> · All cameras</div>
+          </div>
+          <div class="player"><span class="btn tiny">▶</span><span class="mono">3:10 / 12:40</span><span class="bar"><i style="width: 25%"></i><b style="left: 25%"></b></span></div>
+        </div>
+        <p class="tiny muted" style="margin: 0">The case page's right column holds it, beside the chat; the chat's text does not scroll away. The note box and All cameras are here, as they are today, because this is where a reader annotates.</p>
+      </div>
+      <div class="work">
+        <div class="eyebrow">From a search hit, and from the unit's Voices place</div>
+        <div class="panel">
+          <div class="head">
+            <div class="who">Cam 2 <span class="pill warn">clock unsure · heard about 14:40</span></div>
+            <div class="from">your search "account" hit at 14:24 · the play is wider, 14:23 to 14:52</div>
+            <div class="acts"><span class="btn tiny ghost">Open the recording</span><span class="btn quiet">Close</span></div>
+          </div>
+          <div class="body">
+            <div class="lines">
+              <div class="line unsure lit"><span class="t">14:24 <span class="about">→ ~14:40</span></span><span class="s c3">Lee Ortiz</span><span>Check the account first.</span><span></span></div>
+              <div class="line unsure"><span class="t">14:27</span><span class="s c1">Officer Hale</span><span>Already did.</span><span></span></div>
+              <div class="gap">14:30 to 14:52, nothing written; the audio speaks</div>
+            </div>
+            <div class="note">This block was placed early by the recogniser; the player runs to the end of the hole so the words are inside what plays.</div>
+          </div>
+          <div class="player"><span class="btn tiny">▶</span><span class="mono">14:23 / 41:02</span><span class="bar"><i style="width: 35%"></i><u style="left: 35%; width: 12%"></u><b style="left: 35%"></b></span></div>
+        </div>
+        <p class="tiny muted" style="margin: 0">The Voices place (the unit's book) opens the same panel for "hear Lee from a recording you may open": the person's heading, their samples, the clock pill. One panel, five doors.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 6: narrow screens and the voice step -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 6</div><h2>On a phone, a sheet from the foot; and what the voice step does with marked lines</h2></div>
+    <div class="cols">
+      <div class="sheet">
+        <div class="pagebit"><b style="color: var(--text)">Speaker 1 is</b><div class="person on"><div><b>Dana Reyes</b> <span class="pill">Client</span></div><span class="pill acc">playing ↓</span></div><div class="person"><div>Lee Ortiz <span class="pill">Officer</span></div><span class="play">▶</span></div></div>
+        <div class="handle"></div>
+        <div class="panel">
+          <div class="head" style="grid-template-columns: 1fr">
+            <div class="who">Dana Reyes <span class="pill ok">clock sure</span></div>
+            <div class="from">Call 1, 0:48 · <span class="btn quiet">Close</span></div>
+          </div>
+          <div class="body">
+            <div class="samples"><span class="sp"><span class="play">▶</span><span class="t">0:48</span></span><span class="sp"><span class="play">▶</span><span class="t">3:10</span></span><span class="sp"><span class="play">▶</span><span class="t">7:02</span></span></div>
+            <div class="lines"><div class="line lit" style="grid-template-columns: 40px 80px 1fr"><span class="t">0:48</span><span class="s c2">Dana</span><span>Yes, it's mine. What's the problem?</span></div></div>
+          </div>
+          <div class="player"><span class="btn tiny">❚❚</span><span class="mono">0:51</span><span class="bar"><i></i><b></b></span></div>
+        </div>
+      </div>
+      <div class="work">
+        <div class="eyebrow">The voice step and the marks</div>
+        <div class="rules" style="grid-template-columns: 1fr">
+          <div class="rule"><b>No vector from a marked line.</b> The voice step measures a line's voice on the audio between its clock and its end. On a marked line that audio is somebody else's or nobody's, so the line gets no vector, no "agrees" or "against", and it is left out of the Speaker's print on the recording.</div>
+          <div class="rule"><b>No sample from a marked line.</b> The three Samples on a card, the big play of the guided page and the samples the Preview offers come only from lines whose clock is sure. A card says, quietly, "3 lines with an unsure clock, left out".</div>
+          <div class="rule"><b>No print taught from a marked line.</b> When a Speaker is named, its print on the recording is the mean of its sure lines; the marked ones teach nothing, so a wrong clock never becomes a wrong voice remembered across the case or in the unit's book.</div>
+          <div class="rule"><b>The words are not touched.</b> The Speaker check reads the words as before; the proposals stand and are accepted or declined where they always were. On the receipt: "6 lines had an unsure clock; their words were read, their voice was not".</div>
+        </div>
+        <p class="tiny muted" style="margin: 0">On a phone the Preview is a sheet that slides up from the foot over the lower half of the page, with a handle to pull it taller or away; the page behind stays where it was. The same heading, samples, lines and player as the panel, one column.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The one number, and the measurement first -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Before the build</div><h2>The one number, measured on the office's recordings first</h2></div>
+    <div class="work">
+      <div class="rules">
+        <div class="rule"><b>What is fixed by rule.</b> A hole is eight seconds or more; a pause inside a line is over a second; a hole counts when sound fills over seven tenths of it. These come from the shape measured on the office's call, where the holes were sixteen and twenty-one seconds and the pauses inside lines over a second.</div>
+        <div class="rule"><b>What is measured before it decides anything.</b> On the office's jail calls and body-camera recordings, by ear on a local sheet: how many blocks the two rules mark, how many of those the ear agrees are early, and how many early blocks the rules miss. The thresholds move only if that sheet says so; the sheet never leaves the building.</div>
+        <div class="rule"><b>What is left for later, named.</b> Sliding a marked block into the hole beside it, by its own length, with its words re-aligned there. That changes the transcript's clock, so it is an ADR with the measurement behind it, after the marks have been lived with.</div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

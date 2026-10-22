@@ -2460,6 +2460,54 @@ body.voices-first .sp-card.open .stats::after { content: " · fold"; }
 .tbl td .voice .waiting { font-size: 12px; }
 .tbl td .voice .called-out { font-size: 12px; color: var(--warn, var(--muted)); }
 .tbl td .voice .hear-else { font-size: 11px; min-height: 22px; padding: 0 6px; }
+/* The people as cards (v1.151.0; the drawing phase-5-speakers-tab-and-voices.html): the Case's Speakers tab and the Voices place. */
+.needs { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin: 4px 0 12px; }
+.need { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: var(--t-small); min-width: 0; }
+.need .n { font-size: 20px; font-weight: 600; line-height: 1.15; }
+.need .n.small { font-size: 14px; }
+.need .w { color: var(--muted); font-size: 12px; }
+.need .to { display: flex; gap: 6px; flex-wrap: wrap; margin: 0; }
+.need.calm { border-style: dashed; }
+.need.alarm { border-color: var(--danger); border-left-width: 3px; }
+.need details summary { cursor: pointer; }
+.people-toolbar { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin: 0 0 10px; }
+.people-toolbar .grow { flex: 1; }
+.people-toolbar .add-person summary { list-style: none; }
+.people-toolbar .add-person summary::-webkit-details-marker { display: none; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 12px; color: var(--muted); background: var(--surface); cursor: pointer; text-decoration: none; }
+.chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.person-card { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); font-size: var(--t-small); min-width: 0; }
+.person-card.waiting { border-color: var(--accent); }
+.person-card.dim { opacity: .8; }
+.person-card .h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.person-card .h .nm { font-weight: 600; font-size: 14px; }
+.person-card .h .menu { margin-left: auto; position: relative; }
+.person-card .voice { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.person-card .voice .hear-else { font-size: 11px; min-height: 22px; padding: 0 6px; }
+.person-card .where { display: flex; gap: 4px; flex-wrap: wrap; }
+.person-card .where .rec { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; font-size: 11px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.person-card .chain { font-size: 12px; color: var(--muted); }
+.person-card .called-out { font-size: 12px; color: var(--warn, var(--muted)); }
+.person-card .wait { font-size: 12px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.person-card .counts { font-size: 11px; color: var(--muted); }
+.person-card form.inline { display: inline; margin: 0; }
+details.menu summary { list-style: none; cursor: pointer; }
+details.menu summary::-webkit-details-marker { display: none; }
+details.menu .menu-body { position: absolute; right: 0; top: 28px; z-index: 6; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 300px; max-width: min(420px, 90vw); }
+details.menu .menu-body .sep { border-top: 1px solid var(--line); margin: 2px 0; }
+details.menu .menu-body form.row { margin: 0; }
+.numbers-fold { margin-top: 14px; }
+.numbers-fold summary { cursor: pointer; }
+.month { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.month .m { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; }
+.month .m .n { font-size: 18px; font-weight: 600; }
+.month .m .w { font-size: 11px; color: var(--muted); }
+.voices-panes { grid-template-columns: 1fr; }
+.voices-panes:has(.has-preview) { grid-template-columns: minmax(0, 1fr) 400px; }
+.voices-panes .voices-side:not(.has-preview) { display: none; }
+@media (max-width: 1100px) { .voices-panes:has(.has-preview) { grid-template-columns: 1fr; } }
 .voice-alarm { border: 1px solid var(--danger); border-left-width: 3px; border-radius: var(--radius); padding: 8px 10px; margin: 10px 0; font-size: var(--t-small); }
 .decided-so-far { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
 .decided-so-far table { border-collapse: collapse; font-size: 13px; }
@@ -3311,6 +3359,40 @@ body.gideon-window .gideon-grip { display: none; }
 .np-notes .panels .panel { padding: 0; }
 .np-notes #panel-notes { padding: 4px 8px 8px; }
 .np-panel-body { padding: 10px 12px; }
+/* The Preview in the page (v1.151.0): a panel of the page's own column where the page offers one, a sheet from the foot elsewhere; never a card over the page. */
+.preview-card.in-page { position: static; right: auto; bottom: auto; z-index: auto; width: auto; max-width: none; max-height: none; box-shadow: none; }
+.preview-card.in-page .preview-head { cursor: default; }
+.preview-card.in-page .preview-lines { max-height: 40vh; }
+.preview-card.sheet { right: 0; left: 0; bottom: 0; width: auto; max-width: none; max-height: 62vh; border-radius: 14px 14px 0 0; border-bottom: 0; box-shadow: 0 -8px 24px rgba(0, 0, 0, .18); }
+.preview-card.sheet .preview-head { cursor: default; }
+.preview-card .preview-handle { display: none; }
+.preview-card.sheet .preview-handle { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 0; }
+.preview-person { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: var(--t-small); }
+.preview-person .who { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.preview-person .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.preview-samples { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.preview-samples .sample { font-size: 12px; padding: 1px 8px 1px 6px; min-height: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); display: inline-flex; gap: 6px; align-items: center; max-width: 100%; }
+.preview-samples .sample i { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-preview-host] { min-width: 0; }
+[data-preview-host][hidden] { display: none; }
+/* The guided page's column: the context, or the Preview in its place. */
+.sg-side { min-width: 0; display: flex; flex-direction: column; }
+.sg-side.has-preview .sg-context { display: none; }
+.sg-side .sg-preview { padding: 10px; }
+/* The case page's right pane and the Voices place hold the Preview at the top while it is open. */
+.pane-detail .preview-side, .voices-side .preview-side { margin-bottom: 14px; }
+/* The clock verdict (ADR 0022, v1.151.0): a dotted rule down a marked block, one pill at its head, the clock the audio suggests in the warning colour. */
+.seg.unsure { box-shadow: inset 3px 0 0 0 transparent; border-left-style: dotted !important; }
+.seg.unsure .t { color: var(--warn); }
+.clock-pill { margin: 0 6px 2px 0; }
+.sg-ctx-line.unsure { border-left: 3px dotted var(--warn); margin-left: -3px; }
+.sg-about { color: var(--warn); }
+.sg-strip { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 6px; font-size: 11px; color: var(--muted); }
+.sg-strip .bar { position: relative; height: 10px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--line); }
+.sg-strip .bar .sound { position: absolute; top: 0; bottom: 0; background: var(--accent); opacity: .55; border-radius: 2px; }
+.sg-strip .bar .own { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--warn); }
+.sg-strip .scale { display: flex; justify-content: space-between; gap: 6px; }
+.sg-strip .pill { align-self: flex-start; }
 .preview-card.mounted .preview-media audio { display: none; }
 /* The page's Note at this moment stands in for the Preview's own foot button (v1.127.0). */
 .preview-card.mounted .preview-foot [data-preview-moment], .preview-card.mounted .preview-foot [data-preview-note] { display: none; }
