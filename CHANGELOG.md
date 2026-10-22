@@ -21,6 +21,34 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.153.0, 2026-10-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The clock re-read has the words fitted over the whole piece (WhisperX service 0.7.0).
+
+- **Why.** On the office's call the v1.152.1 re-read in pieces still
+  placed the long saying at the exact start of its piece. A probe of all
+  three marked windows showed the matching was not at fault: Whisper
+  stamps the words it writes at the start of what it is given when that
+  audio opens with speech it does not write down, and WhisperX fits the
+  words only inside that stamp. Cutting finer cannot remove that.
+- **The service.** A new request field, `fit_words_over_whole` (false by
+  default): before the word fitting runs, every segment's text is joined
+  into one segment spanning the whole file, so the fitter, a forced
+  alignment of the text against the sound, may place every word anywhere
+  in it and skips the sound that has no words. Refused over 60 seconds of
+  audio and with the diarize task; reported in `settings_used`. The
+  service's version is 0.7.0; `docs/whisperx-api.md` carries the field.
+  The upgrade builds the new service image on the server.
+- **The app.** The re-read asks for it on every piece. Nothing else
+  changes: the pieces, the matching and the landing stand, for every
+  transcript as it lands and at its Speaker check, on every recording
+  type. ADR 0023 and Phase 5 chapter 3 amended; the admin guide follows.
+
 ## v1.152.1, 2026-10-22
 
 ```

@@ -20,7 +20,7 @@ from typing import Any, Protocol
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from service import diarizer_client, errors, pins
+from service import diarizer_client, errors, fitting, pins
 from service.audio import Audio, probe
 from service.auth import Tokens, bearer
 from service.models_file import Models
@@ -189,6 +189,15 @@ def create_app(
 
         try:
             facts = probe_audio(path)
+            if (
+                submission.fit_words_over_whole
+                and facts.duration_seconds > fitting.FIT_WHOLE_MAX_SECONDS
+            ):
+                raise errors.invalid(
+                    "fit_words_over_whole is for a short file: this one is "
+                    f"{facts.duration_seconds:.0f} seconds long, and the most is "
+                    f"{fitting.FIT_WHOLE_MAX_SECONDS:.0f}"
+                )
             if facts.duration_seconds > settings.max_audio_seconds:
                 hours = settings.max_audio_seconds / 3600
                 raise errors.too_long(

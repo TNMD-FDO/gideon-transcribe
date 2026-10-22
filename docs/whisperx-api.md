@@ -61,6 +61,7 @@ Request: a multipart body with two parts.
 | `return_speaker_embeddings` | boolean | `true`, `false` | `false` | One vector per Speaker in the result. Needs `diarize`. Not requested or stored by the app in Phase 1; the flag exists for the day voice matching arrives. |
 | `priority` | whole number | 0 to 100 | 0 | Where the job goes in the line: a higher number runs before a lower one, and equal numbers run in arrival order. Added in service 0.2.0 for the app's Live recordings, which ask 100 so a meeting that has just ended is transcribed before the batches waiting. `position` and `audio_minutes_ahead` count what will run before this job under the rule. |
 | `client_reference` | string | any | none (optional) | The Consumer's own id for this request, used for duplicate protection. The app sends the Run id. |
+| `fit_words_over_whole` | boolean | `true`, `false` | `false` | Service 0.7.0 (the app's ADR 0023). Before the word fitting runs, every segment's text is joined into one segment spanning the whole file, so the fitter may place every word anywhere in it and skips sound that has no words. For a Consumer re-reading a short window to place its words: Whisper stamps the words it writes at the start of what it was given when the file opens with speech it does not write down, and the fitting is otherwise confined to that stamp. Refused (`400`) over 60 seconds of audio and with `task=diarize`. Changes nothing when alignment does not run (translate, no alignment model). Reported back in `settings_used`. |
 
 **A `speakers` hint without `diarize` is refused**, `400` with a `reason_class`, not ignored (settled 2026-09-03; the two sources disagreed and the refusal was chosen). A Consumer that sends a Speaker-count hint without asking for Diarization has a bug, and silently dropping the hint hides it until someone wonders why the result has no Speakers.
 
@@ -254,6 +255,8 @@ After transcription, WhisperX aligns the text to the audio with a per-language a
 | transcribe, a language WhisperX cannot align | No alignment. | `false`, reason `no_alignment_model` |
 
 Which languages have alignment models, from the pinned stack research file: torchaudio bundles for English, Spanish, French, German, and Italian (fetched from `download.pytorch.org` into `TORCH_HOME`), and HuggingFace wav2vec2 models for 36 other languages (ja, zh, nl, uk, pt, ar, cs, ru, pl, hu, fi, fa, el, tr, da, he, vi, ko, ur, te, hi, ca, ml, no, nn, sk, sl, hr, ro, eu, gl, ka, lv, tl, sv, id); anything else has no default alignment model. The `pull` command fetches the models for the languages in `WHISPERX_ALIGN_LANGUAGES`, default `en,es`, so English and Spanish are aligned offline from the first run; any other language's model is fetched on first use when the network allows. The HuggingFace alignment models are hosted in third-party repositories that can disappear, which is why the pulled ones are pinned and cached.
+
+**Fitted over the whole file** (`fit_words_over_whole`, service 0.7.0): the text of every segment is joined into one segment over the whole file before the alignment model runs, so a word may land anywhere in the file; meant for a file under a minute, and refused above 60 seconds, because on a long file the segments are what keep the fitting tractable. The result's segments are then the fitter's, one per file unless it splits them.
 
 Alignment facts a Consumer should know: one alignment model is used for the whole file; characters outside its dictionary map to a wildcard and Segments with no dictionary characters are left unaligned; numerals and currency cannot be aligned, so those words carry only `word`; a word without timing gets no `speaker`.
 
@@ -525,6 +528,7 @@ and not a history. What was decided, on 2026-09-03:
 
 ## Amendments applied
 
+- 2026-10-22, service 0.7.0 (v1.153.0, the app's ADR 0023): the request field `fit_words_over_whole`, its two refusals (over 60 seconds; with `task=diarize`), the Alignment section's paragraph, `settings_used.fit_words_over_whole`. Found on an office jail call: a re-read of a short window placed a block's words at the window's start twice over, because Whisper's own utterance stamps confined the fitting; fitted over the whole piece the words land where they are said.
 - 2026-10-19, service 0.6.0 (v1.139.0, ADR 0021): the voices built; the shape as drafted with `id`, `spans`, `net_seconds`, `rms_dbfs`, the label rows' counts and `sure_seconds` added; the refusals named; `models.yaml` gains `voices` with its one file; the status body's `diarizers.voices`.
 - 2026-10-19, not yet built (ADR 0021; the voice plan, stage two): the diarizer container's second duty, `POST /v1/voices` with TitaNet-large, and the Consumer-facing request the WhisperX service will carry for it; the shape as drafted here, the refusals left to the build.
 

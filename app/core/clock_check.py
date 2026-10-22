@@ -444,6 +444,9 @@ def reread_request(recording, transcript, head: int, piece: int = 0) -> dict:
         "return_speaker_embeddings": False,
         "diarizer": settings_store.diarizer(),
         "client_reference": f"clock-{transcript.pk}-{head}-{piece}-{int(time.time())}",
+        # The words fitted over the whole piece (service 0.7.0, v1.153.0):
+        # the recogniser's own stamps no longer trap them.
+        "fit_words_over_whole": True,
         "priority": REREAD_PRIORITY,
     }
 

@@ -142,6 +142,7 @@ FIELDS = {
     "client_reference",
     "priority",
     "diarizer",
+    "fit_words_over_whole",
 }
 
 # Which model tells voices apart (Phase 5 chapter 4): Nemotron 3 Diarization in
@@ -190,6 +191,9 @@ class Submission:
     priority: int = 0
     # nemotron or pyannote; meaningful only with diarize (service 0.3.0).
     diarizer: str = NEMOTRON
+    # The words fitted over the whole file (service 0.7.0), for a Consumer
+    # re-reading a short window; refused over FIT_WHOLE_MAX_SECONDS at submit.
+    fit_words_over_whole: bool = False
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -205,6 +209,7 @@ class Submission:
             "client_reference": self.client_reference,
             "priority": self.priority,
             "diarizer": self.diarizer,
+            "fit_words_over_whole": self.fit_words_over_whole,
         }
 
 
@@ -333,6 +338,12 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
     if diarize and diarizer == NEMOTRON and embeddings:
         raise errors.embeddings_not_supported()
 
+    fit_whole = _boolean(body, "fit_words_over_whole", False)
+    if fit_whole and task == DIARIZE:
+        raise errors.invalid(
+            "fit_words_over_whole was asked for with task diarize, which writes "
+            "no words to fit"
+        )
     reference = body.get("client_reference")
     if reference is not None and not isinstance(reference, str):
         raise errors.invalid("client_reference must be text")
@@ -356,4 +367,5 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
         client_reference=reference,
         priority=priority,
         diarizer=diarizer,
+        fit_words_over_whole=fit_whole,
     )

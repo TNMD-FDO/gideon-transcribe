@@ -1,7 +1,8 @@
 # 23. The clock re-read: a squeezed block is placed again by the audio, and the Preview of a voice is a snippet
 
 Date: 2026-10-22. Status: accepted. Release: v1.152.0; decision 2 amended
-in v1.152.1 (the window is read in pieces). Amends ADR 0022 (its decisions
+in v1.152.1 (the window is read in pieces) and in v1.153.0 (the words
+fitted over the whole piece, service 0.7.0). Amends ADR 0022 (its decisions
 2 and 6 give way to this one; the rest stand).
 
 ## Context
@@ -57,7 +58,17 @@ relates to the speaker, a couple of lines around it, cleanly.
    the block's words there, the long saying starting at 2:21 as the
    maintainer heard it; a piece a few seconds long, none shorter than two
    seconds and none longer than twelve without a pause in it, cannot carry
-   words across a pause), and when the pieces' readings come back, read
+   words across a pause), **each piece asked for with the service's
+   `fit_words_over_whole`** (v1.153.0, service 0.7.0: on the office's call
+   the pieces too placed the saying at the exact start of its piece,
+   because Whisper stamps the words it writes at the start of what it is
+   given when that opens with speech it does not write down, and WhisperX
+   fits the words only inside that stamp; a probe of all three windows
+   showed the anchor-on-the-longest-run idea changed nothing; so the
+   service joins the piece's text into one segment over the whole piece
+   before the fitting, and the fitter, a forced alignment of the text
+   against the sound, places the words where they are said and skips the
+   sound that has no words), and when the pieces' readings come back, read
    together in time order, matches their words against the lines it
    already has (a sequence match on the
    words, punctuation and case set aside). A line at least half of whose

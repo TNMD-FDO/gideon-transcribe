@@ -480,6 +480,7 @@ def test_the_pass_through_the_service(owner, tmp_path, settings, monkeypatch):
     request = sent[0]
     assert request["task"] == "transcribe" and request["diarize"] is False
     assert request["language"] == "en" and request["priority"] == 90
+    assert request["fit_words_over_whole"] is True
     assert request["client_reference"].startswith(f"clock-{transcript.pk}-")
     transcript.refresh_from_db()
     assert transcript.provenance["clock_check"]["reread"]["state"] == "waiting"

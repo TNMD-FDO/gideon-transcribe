@@ -22,7 +22,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from service import errors
+from service import errors, fitting
 from service.detection import Window, combine, decide
 from service.prompt import build as build_prompt
 from service.version import API_VERSION, SERVICE_VERSION
@@ -340,8 +340,13 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
             stage("aligning")
             at = time.monotonic()
             model, metadata = aligner
+            segments = transcribed["segments"]
+            if request.get("fit_words_over_whole"):
+                # Service 0.7.0: one segment over the whole file, so the
+                # fitter may place every word anywhere in it.
+                segments = fitting.one_segment_over(segments, duration)
             transcribed = whisperx.align(
-                transcribed["segments"],
+                segments,
                 model,
                 metadata,
                 audio,
@@ -711,6 +716,7 @@ def _settings_used(
         "context_given": bool(request.get("context")),
         "prompt_tokens": prompt.prompt_tokens,
         "return_speaker_embeddings": bool(request.get("return_speaker_embeddings")),
+        "fit_words_over_whole": bool(request.get("fit_words_over_whole")),
     }
 
 
