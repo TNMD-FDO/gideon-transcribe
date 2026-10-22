@@ -33,7 +33,7 @@ import numpy as np
 from django.db import models, transaction
 from django.utils import timezone
 
-from core import audit, settings_store, units
+from core import audit, clock_check, settings_store, units
 
 log = logging.getLogger(__name__)
 
@@ -619,9 +619,11 @@ def heard_of(book: UnitVoice, user) -> list[dict]:
                 continue
             # A line whose clock the audio doubts (v1.151.0) is never the
             # one the Preview seeks to, while any other remains.
-            lines = [(start, end) for start, end, clock in lines if not clock] or [
-                (start, end) for start, end, _ in lines
-            ]
+            lines = [
+                (start, end)
+                for start, end, clock in lines
+                if not clock_check.unsure(clock)
+            ] or [(start, end) for start, end, _ in lines]
             recording = Recording.objects.filter(pk=rid).first()
             if recording is None:
                 continue

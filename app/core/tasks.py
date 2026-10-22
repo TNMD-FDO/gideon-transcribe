@@ -268,6 +268,40 @@ def prepare_stretch(recording_id: str, number: int, attempt: int = 1) -> None:
     hand_over_job.defer(job_id=str(live.open_job(recording).pk))
 
 
+@app.task(queue="default", name="reread_clock")
+def reread_clock(transcript_id: str) -> None:
+    """The clock re-read (ADR 0023): send every marked block's window to the
+    service, outside the Queue, and start asking after it."""
+    from core import clock_check
+    from core.jobs import Transcript
+
+    transcript = Transcript.objects.filter(pk=transcript_id).first()
+    if transcript is None:
+        return
+    state = clock_check.ask(transcript)
+    if state.get("state") == "waiting":
+        poll_reread.configure(
+            schedule_in={"seconds": clock_check.REREAD_POLL_SECONDS}
+        ).defer(transcript_id=transcript_id)
+
+
+@app.task(queue="default", name="poll_reread")
+def poll_reread(transcript_id: str) -> None:
+    """Ask after the windows out for one Transcript; land what is done; ask
+    again in ten seconds while any is still out."""
+    from core import clock_check
+    from core.jobs import Transcript
+
+    transcript = Transcript.objects.filter(pk=transcript_id).first()
+    if transcript is None:
+        return
+    state = clock_check.poll(transcript)
+    if state.get("state") == "waiting":
+        poll_reread.configure(
+            schedule_in={"seconds": clock_check.REREAD_POLL_SECONDS}
+        ).defer(transcript_id=transcript_id)
+
+
 @app.task(queue="default", name="poll_service")
 def poll_service(attempt: int = 1) -> None:
     """Ask the service about every Run at once, then ask again in a moment.

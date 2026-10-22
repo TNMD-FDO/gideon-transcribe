@@ -3377,7 +3377,20 @@ body.gideon-window .gideon-grip { display: none; }
 [data-preview-host][hidden] { display: none; }
 /* The guided page's column: the context, or the Preview in its place. */
 .sg-side { min-width: 0; display: flex; flex-direction: column; }
-.sg-side.has-preview .sg-context { display: none; }
+.sg-side.has-preview:not(.has-snippet) .sg-context { display: none; }
+.sg-side.has-snippet .sg-context { max-height: 40vh; }
+/* The Preview as a snippet (ADR 0023, v1.152.0): the line heard with one either side; the context lines dim. */
+.preview-card.snippet .preview-lines { max-height: none; flex: none; }
+.preview-card.snippet .preview-line.context { color: var(--muted); }
+.preview-card.snippet .preview-line.context .who { color: var(--muted); }
+.preview-card.snippet .preview-line [data-preview-note] { display: none; }
+.preview-card.snippet .preview-foot { padding: 6px 10px; }
+.preview-card.snippet .preview-media video { max-height: 26vh; }
+/* A block the re-read placed again (v1.152.0): the rule stays, in the calm colour. */
+.seg.retimed { border-left-style: dotted !important; }
+.seg.retimed .t { color: var(--ok); }
+.sg-ctx-line.retimed { border-left: 3px dotted var(--ok); margin-left: -3px; }
+.sg-about.ok { color: var(--ok); }
 .sg-side .sg-preview { padding: 10px; }
 /* The case page's right pane and the Voices place hold the Preview at the top while it is open. */
 .pane-detail .preview-side, .voices-side .preview-side { margin-bottom: 14px; }

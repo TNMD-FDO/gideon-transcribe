@@ -313,14 +313,27 @@
       // The clock verdict (ADR 0022, v1.151.0): a dotted rule down a marked
       // block and, on its first line, one pill with the bound and the clock
       // the audio suggests. Nothing moves; play runs on past the hole.
-      if (segment.clock) {
+      if (segment.clock && segment.clock.retimed) {
+        // Re-read (ADR 0023, v1.152.0): the audio placed this line again.
+        row.classList.add("retimed");
+        when.title = "The clock of this line was re-read against the audio; it was " + clock(segment.clock.was);
+        if (segment.clock.head) {
+          var done = document.createElement("span");
+          done.className = "pill small ok clock-pill";
+          done.title = "The recogniser had placed this block early; the audio was read again and the lines now carry the time their words were heard";
+          done.textContent = "clock re-read · was " + clock(segment.clock.was);
+          tags.appendChild(done);
+        }
+      } else if (segment.clock) {
         row.classList.add("unsure");
         when.title = "Play from here; the clock of this line may be off by up to " + Math.round(segment.clock.bound) + " s";
         if (segment.clock.head) {
           var pill = document.createElement("span");
           pill.className = "pill small warn clock-pill";
-          pill.title = "The recogniser placed this block before where it is heard; the audio has speech in the gap after it";
-          pill.textContent = "clock unsure · up to " + Math.round(segment.clock.bound) + " s early · heard about " + clock(segment.clock.about);
+          pill.title = segment.clock.unplaced
+            ? "The recogniser placed this block before where it is heard; the audio was read again but these words were not found in it"
+            : "The recogniser placed this block before where it is heard; the audio has speech in the gap after it";
+          pill.textContent = "clock unsure · up to " + Math.round(segment.clock.bound) + " s early · heard about " + clock(segment.clock.about) + (segment.clock.unplaced ? " · not found by the re-read" : "");
           tags.appendChild(pill);
         }
       }

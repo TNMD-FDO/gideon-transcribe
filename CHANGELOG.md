@@ -21,6 +21,48 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.152.0, 2026-10-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The clock re-read (ADR 0023), and the Preview of a voice as a snippet.
+
+- **The clock verdict is narrowed to the squeeze.** Of a block the audio
+  shows was placed early, only the lines within forty-five seconds of the
+  hole's end are marked (the recogniser's window and a half), the line
+  over a pause among them. On the office's measured call the earlier
+  rule had marked 280 of 433 lines, most of them in their place.
+- **A marked block is placed again by the audio.** The app cuts the
+  window from the prepared audio, sends it to the WhisperX service as a
+  small job of its own, outside the Queue, and gives each line whose
+  words the reading finds the time those words were heard, in order,
+  the old clock and the shift kept in the mark. The words, the speaker,
+  the corrections, the notes and the proposals on a line stay; the
+  words' own times move with it. A line the reading cannot find keeps
+  its clock and its "clock unsure" pill; a re-timed line reads "clock
+  re-read · was 2:05" at the block's head and is a sure line again: the
+  voice measures it, it may be a sample, the Preview may seek to it.
+  The pass is kept in the transcript's provenance (waiting, done or
+  failed; polled every ten seconds, given up after half an hour) and
+  written as one audit row, Clock re-read, with the lines moved and the
+  lines left. A failed re-read leaves the marks. Older transcripts are
+  marked and re-read once when a Speaker check runs on them.
+- **The Preview of a person's voice is a snippet.** The hear buttons on
+  the guided Speakers page, the case's Speakers tab and the Voices place
+  open the Preview with the line heard, one line before and one after,
+  a player that plays that line and stops, and the samples as plays;
+  it reads no further lines and never scrolls on, and on the guided
+  page the context column stays beside it. A Preview opened from a
+  citation or a search hit reads around the moment as before.
+- **A sample's clock comes first.** Picking a speaker's samples sets a
+  line whose clock is unsure aside before it sets a guessed one aside: a
+  guessed line in its place beats a line that plays somebody else's words.
+- Spec: Phase 5 chapter 3 and Phase 7 chapter 5 amended; ADR 0023; the
+  glossary's Clock verdict and Preview; the user and admin guides.
+
 ## v1.151.0, 2026-10-22
 
 ```

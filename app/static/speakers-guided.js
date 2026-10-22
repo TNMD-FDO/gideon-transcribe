@@ -444,10 +444,14 @@
     // The clock verdict (v1.151.0): on a marked line the play runs to where
     // the sound is, the clock says what the audio suggests, and a strip
     // under the question shows the window, the line's clock and the sound.
+    // A line the re-read placed again (v1.152.0) is a sure line: no strip,
+    // the voice's word stands, and the clock line says what it was.
     var verdict = verdictOf(row);
+    var retimed = verdict && verdict.retimed ? verdict : null;
+    if (retimed) { verdict = null; }
     var playFrom = verdict ? verdict.play_from : Math.max(0, row.start - 0.5);
     var playTo = verdict ? verdict.play_to : segmentEnd(row) + 0.5;
-    var clockLine = clock(row.start) + (verdict ? " <span class='sg-about'>· heard about " + clock(verdict.about) + "</span> · plays " + clock(playFrom) + " to " + clock(playTo) : "");
+    var clockLine = clock(row.start) + (verdict ? " <span class='sg-about'>· heard about " + clock(verdict.about) + "</span> · plays " + clock(playFrom) + " to " + clock(playTo) : "") + (retimed ? " <span class='sg-about ok'>· clock re-read, was " + clock(retimed.was) + "</span>" : "");
     var html = "<div class='sg-h'><button type='button' class='sg-bigplay sg-play' data-start='" + playFrom + "' data-end='" + playTo + "' title='Play this line" + (verdict ? ", on to where the sound is" : "") + "'>" + UI.icon("play") + "</button><div><div class='sg-q'>Whose line is this?</div><div class='tiny muted mono'>" + clockLine + "</div></div></div>";
     if (verdict) { html += stripHtml(row, verdict, playFrom, playTo); }
     html += "<div class='sg-line here'>" + (mixed ? markedQuote(row) : "“" + escape(row.quote) + "”") + "</div>";
@@ -555,8 +559,8 @@
   function lineHtml(seg, cls) {
     // A line whose clock is unsure (v1.151.0) carries a dotted rule and,
     // at the head of its block, the clock the audio suggests.
-    var mark = seg.clock ? " unsure" : "";
-    var about = seg.clock && seg.clock.head ? " <span class='sg-about'>→ ~" + clock(seg.clock.about) + "</span>" : "";
+    var mark = seg.clock ? (seg.clock.retimed ? " retimed" : " unsure") : "";
+    var about = seg.clock && seg.clock.head ? (seg.clock.retimed ? " <span class='sg-about ok'>was " + clock(seg.clock.was) + "</span>" : " <span class='sg-about'>→ ~" + clock(seg.clock.about) + "</span>") : "";
     return "<div class='sg-ctx-line " + cls + mark + "' data-start='" + (seg.clock ? seg.clock.play_from : seg.start) + "' data-end='" + (seg.clock ? seg.clock.play_to : seg.end) + "'><span class='t'>" + clock(seg.start) + about + "</span><span class='s' style='--speaker: " + escape(colourOf(seg.speaker)) + "'>" + escape(seg.speaker) + "</span><span>" + escape(seg.text) + "</span></div>";
   }
   function renderContextForVoice(card) {

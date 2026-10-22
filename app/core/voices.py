@@ -24,7 +24,7 @@ from collections import Counter, defaultdict
 
 import numpy as np
 
-from core import call_system, settings_store, whisperx
+from core import call_system, clock_check, settings_store, whisperx
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,8 @@ def stretches_of(transcript) -> dict[int, list[dict]]:
             continue
         # A line whose clock is unsure (ADR 0022, v1.151.0) would be measured
         # on somebody else's audio, or nobody's: no vector, no print, no word.
-        if segment.clock:
+        # A line the re-read placed again (v1.152.0) is sure.
+        if clock_check.unsure(segment.clock):
             continue
         spans, timed = own_spans(segment)
         number = sides.get(segment.side_id) or (

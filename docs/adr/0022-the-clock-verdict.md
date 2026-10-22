@@ -1,6 +1,7 @@
 # 22. The clock verdict: the transcript's clock is checked against the audio, marked, and never moved by the app
 
-Date: 2026-10-22. Status: accepted. Release: v1.151.0.
+Date: 2026-10-22. Status: accepted; decisions 2 and 6 amended by ADR 0023
+(v1.152.0), which places a marked block again by the audio. Release: v1.151.0.
 
 ## Context
 

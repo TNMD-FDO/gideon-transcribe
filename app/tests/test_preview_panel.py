@@ -38,10 +38,31 @@ def test_the_preview_script_places_itself_in_the_page_or_as_a_sheet():
         ".preview-card.sheet {",
         ".preview-person {",
         ".preview-samples {",
-        ".sg-side.has-preview .sg-context { display: none; }",
+        ".sg-side.has-preview:not(.has-snippet) .sg-context { display: none; }",
         ".voices-panes:has(.has-preview)",
+        # The snippet (ADR 0023, v1.152.0).
+        ".preview-card.snippet .preview-lines {",
+        ".preview-card.snippet .preview-line.context {",
     ):
         assert rule in css, rule
+    # The Preview of a voice is a snippet (v1.152.0): the line heard with one
+    # either side, the player stopping after it, no reading on, the page's
+    # column kept beside it.
+    for piece in (
+        "function isSnippet()",
+        "function snippetRows()",
+        "function snippetLine()",
+        '" snippet"',
+        '"has-snippet"',
+        "stopAt = told.clock_verdict ? told.clock_verdict.play_to",
+        "player.pause(); stopAt = null;",
+        "!isSnippet() && noting === null",
+        "function playSpan(",
+        "floating.playSpan(",
+        "the line heard, with a line either side",
+        "more of their voice here: each plays one line",
+    ):
+        assert piece in script, piece
 
 
 def test_the_pages_offer_the_column_and_the_buttons_carry_the_person():

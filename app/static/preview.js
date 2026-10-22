@@ -54,7 +54,7 @@
         if (placed) {
           placed.hidden = true;
           placed.classList.remove("has-preview");
-          if (placed.parentElement) { placed.parentElement.classList.remove("has-preview"); }
+          if (placed.parentElement) { placed.parentElement.classList.remove("has-preview", "has-snippet"); }
           placed = null;
         }
       }
@@ -72,10 +72,16 @@
       return found && window.innerWidth >= 900 ? found : null;
     }
 
+    // A snippet (ADR 0023, v1.152.0): opened on a person's voice, the card
+    // shows the line heard with one line either side, plays that line and
+    // stops, reads no further, and leaves the page's own column beside it.
+    function isSnippet() { return !!(asked && (asked.person || asked.speaker)); }
+    var stopAt = null;
+
     function build() {
       var column = host ? null : columnOf();
       card = host || document.createElement("div");
-      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : " sheet")) + (options.whole ? " whole" : "");
+      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : " sheet")) + (options.whole ? " whole" : "") + (isSnippet() ? " snippet" : "");
       card.setAttribute("role", host ? "region" : "dialog");
       card.setAttribute("aria-label", "Preview");
       card.innerHTML =
@@ -92,7 +98,7 @@
       if (column) {
         column.hidden = false;
         column.classList.add("has-preview");
-        if (column.parentElement) { column.parentElement.classList.add("has-preview"); }
+        if (column.parentElement) { column.parentElement.classList.add("has-preview"); column.parentElement.classList.toggle("has-snippet", isSnippet()); }
         column.appendChild(card);
         placed = column;
       } else if (!host) {
@@ -109,9 +115,11 @@
       var samples = card.querySelector("#preview-samples");
       if (!box || !samples) { return; }
       var verdict = told.clock_verdict;
-      var pill = verdict
-        ? "<span class='pill small warn' title='The recogniser placed this block early; the player runs to where the sound is'>clock unsure · heard about " + escape(clockOf(verdict.about)) + "</span>"
-        : (asked.person ? "<span class='pill small ok'>clock sure</span>" : "");
+      var pill = verdict && verdict.retimed
+        ? "<span class='pill small ok' title='The recogniser had placed this block early; the audio was read again and the line carries the time its words were heard'>clock re-read · was " + escape(clockOf(verdict.was)) + "</span>"
+        : verdict
+          ? "<span class='pill small warn' title='The recogniser placed this block early; the player runs to where the sound is'>clock unsure · heard about " + escape(clockOf(verdict.about)) + "</span>"
+          : (asked.person ? "<span class='pill small ok'>clock sure</span>" : "");
       var tabs = (asked.tabs || []).map(function (one) {
         var on = one.recording === asked.recording;
         return "<button type='button' class='tiny" + (on ? " acc" : " ghost") + "' data-preview-tab='" + escape(one.recording) + "' data-preview-tab-at='" + one.start + "'" + (on ? " aria-current='true'" : "") + ">" + escape(one.title || "a recording") + "</button>";
@@ -129,7 +137,7 @@
       if (told.samples && told.samples.length) {
         samples.innerHTML = told.samples.map(function (one) {
           return "<button type='button' class='sample' data-preview-sample='" + one.start + "' data-preview-sample-end='" + one.end + "' title='Play this sample'>▶ <span class='mono'>" + escape(one.clock) + "</span>" + (one.quote ? " <i>“" + escape(one.quote) + "”</i>" : "") + "</button>";
-        }).join("") + "<span class='muted tiny'>their samples here, the lines nearest their voice</span>";
+        }).join("") + "<span class='muted tiny'>" + (isSnippet() ? "more of their voice here: each plays one line" : "their samples here, the lines nearest their voice") + "</span>";
         samples.hidden = false;
       } else {
         samples.innerHTML = "";
@@ -153,10 +161,32 @@
       return all;
     }
 
+    // The line the snippet is of: the line cited, else the one being spoken
+    // at the moment, else the nearest line that starts before it.
+    function snippetLine() {
+      var lines = told.lines || [];
+      var found = null;
+      lines.some(function (one) { if (one.id === told.cited || one.id === told.note_on) { found = one; return true; } return false; });
+      if (!found) {
+        lines.forEach(function (one) { if (one.start <= told.seconds + 0.05) { found = one; } });
+      }
+      return found || lines[0] || null;
+    }
+    function snippetRows() {
+      var all = rows().filter(function (row) { return row.line; });
+      var line = snippetLine();
+      if (!line) { return all.slice(0, 3); }
+      var at = all.findIndex(function (row) { return row.line.id === line.id; });
+      if (at < 0) { return all.slice(0, 3); }
+      return all.slice(Math.max(0, at - 1), at + 2).map(function (row) {
+        return Object.assign({}, row, { context: row.line.id !== line.id });
+      });
+    }
+
     function drawLines() {
       var box = card.querySelector(".preview-lines");
       var html = "";
-      rows().forEach(function (row) {
+      (isSnippet() ? snippetRows() : rows()).forEach(function (row) {
         if (row.seen) {
           html += "<div class='preview-line seen" + (told.cited_seen === row.seen.id ? " cited" : "") + "' data-at='" + row.seen.at + "'>" +
             "<a href='#' class='t mono' data-preview-seek='" + row.seen.at + "'>" + escape(row.seen.clock) + "</a>" +
@@ -176,7 +206,7 @@
           return;
         }
         var one = row.line;
-        html += "<div class='preview-line" + (told.cited === one.id ? " cited" : "") + "' data-at='" + one.start + "' data-end='" + one.end + "' data-line='" + one.id + "'>" +
+        html += "<div class='preview-line" + (told.cited === one.id ? " cited" : "") + (row.context ? " context" : "") + "' data-at='" + one.start + "' data-end='" + one.end + "' data-line='" + one.id + "'>" +
           "<a href='#' class='t mono' data-preview-seek='" + one.start + "'>" + escape(one.clock) + "</a>" +
           "<span class='said'>" + (one.speaker ? "<span class='who'>" + escape(one.speaker) + "</span> " : "") + escape(one.text) +
           (one.note ? "<span class='noted small'>Note" + (one.note_by ? ", " + escape(one.note_by) : "") + ": " + escape(one.note) + "</span>" : "") + "</span>" +
@@ -206,6 +236,12 @@
     }
 
     function drawFoot() {
+      if (isSnippet()) {
+        card.querySelector(".preview-foot").innerHTML =
+          "<span class='muted tiny grow'>the line heard, with a line either side</span>" +
+          (host ? "" : "<a class='btn small ghost' href='" + escape(told.open) + "'>Open the recording</a>");
+        return;
+      }
       var noteOn = told.note_on;
       // On the line being spoken; at the moment itself where nothing is (v1.99.0).
       card.querySelector(".preview-foot").innerHTML =
@@ -280,6 +316,8 @@
     }
 
     function draw(first) {
+      card.classList.toggle("snippet", isSnippet());
+      if (placed && placed.parentElement) { placed.parentElement.classList.toggle("has-snippet", isSnippet()); }
       card.querySelector("#preview-title").textContent = told.title;
       card.querySelector("#preview-clock").textContent = told.clock;
       drawPerson();
@@ -292,13 +330,22 @@
           // the line's own clock and runs on to where the sound is, instead
           // of ten seconds before a moment that may not be there.
           var from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, told.seconds - 10);
+          if (isSnippet()) {
+            var line = snippetLine();
+            from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, (line ? line.start : told.seconds) - 0.5);
+            stopAt = told.clock_verdict ? told.clock_verdict.play_to : ((line ? line.end : told.seconds) + 0.5);
+          } else { stopAt = null; }
           holder.innerHTML = told.is_video
             ? "<video controls autoplay playsinline preload='metadata'></video>"
             : "<audio controls autoplay preload='metadata'></audio>";
           var player = holder.firstChild;
           player.src = told.media + "#t=" + from;
           player.addEventListener("loadedmetadata", function () { try { player.currentTime = from; } catch (ignored) { /* the fragment then */ } }, { once: true });
-          player.addEventListener("timeupdate", function () { follow(player.currentTime); });
+          player.addEventListener("timeupdate", function () {
+            follow(player.currentTime);
+            // A snippet stops where the line ends (v1.152.0).
+            if (stopAt !== null && player.currentTime >= stopAt && !player.paused) { player.pause(); stopAt = null; }
+          });
         }
       }
       drawLines();
@@ -328,7 +375,7 @@
         }
       }
       if (options.onLit) { options.onLit(lit, now, told); }
-      if (!options.whole && noting === null && (now > told.to - 10 || now < told.from) && Date.now() - lastFetch > 3000) {
+      if (!options.whole && !isSnippet() && noting === null && (now > told.to - 10 || now < told.from) && Date.now() - lastFetch > 3000) {
         read(now, false);
       }
     }
@@ -479,6 +526,11 @@
       if (player) { player.currentTime = at; player.play(); }
       follow(at, true);
     }
+    // One sample: from half a second before it to half a second after (v1.152.0).
+    function playSpan(start, end) {
+      stopAt = isNaN(end) ? null : end + 0.5;
+      seekTo(Math.max(0, start - 0.5));
+    }
 
     // Dragged by its head, kept inside the window.
     function drag(head) {
@@ -537,6 +589,12 @@
             if (!card || mine !== asking || !got) { return; }
             told = got;
             draw(false);
+            if (isSnippet()) {
+              // A snippet of the same recording: the line heard, and stop after it.
+              var line = snippetLine();
+              from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, (line ? line.start : seconds) - 0.5);
+              stopAt = told.clock_verdict ? told.clock_verdict.play_to : ((line ? line.end : seconds) + 0.5);
+            } else { stopAt = null; }
             player.currentTime = given.keepTime ? player.currentTime : from;
             if (!given.quiet) { player.play(); }
             follow(given.keepTime ? player.currentTime : seconds, true);
@@ -578,6 +636,7 @@
       told: function () { return told; },
       asked: function () { return asked; },
       seek: seekTo,
+      playSpan: playSpan,
       noteOnLit: noteOnLit,
       cancelNote: function () { if (card && noting !== null) { noting = null; drawNote(null); return true; } return false; }
     };
@@ -597,9 +656,7 @@
     }
     var sample = event.target.closest(".preview-card [data-preview-sample]");
     if (sample) {
-      floating.seek(parseFloat(sample.dataset.previewSample));
-      var player = floating.media();
-      if (player) { player.play(); }
+      floating.playSpan(parseFloat(sample.dataset.previewSample), parseFloat(sample.dataset.previewSampleEnd));
       return;
     }
     var hit = event.target.closest("[data-preview-recording]");

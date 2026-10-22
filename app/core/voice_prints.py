@@ -36,7 +36,7 @@ import numpy as np
 from django.db import transaction
 from django.utils import timezone
 
-from core import audit, call_system, settings_store
+from core import audit, call_system, clock_check, settings_store
 
 log = logging.getLogger(__name__)
 
@@ -409,7 +409,7 @@ def where_heard(person, *, exclude=None) -> list[dict]:
             continue
         # A line whose clock the audio doubts (v1.151.0) is never the one the
         # Preview seeks to, while any other remains.
-        timed = [one for one in lines if not one[2]] or lines
+        timed = [one for one in lines if not clock_check.unsure(one[2])] or lines
         long = [one for one in timed if one[1] - one[0] >= 2.0]
         line = (long or timed)[0]
         from core import exports
@@ -933,7 +933,7 @@ def tab_rows(case, people) -> dict:
         ):
             kept = lines.setdefault((str(rid), name), [])
             if len(kept) < 40:
-                kept.append((start, end, bool(clock)))
+                kept.append((start, end, clock_check.unsure(clock)))
 
     def heard(person) -> dict | None:
         for rid in (person.voice_print or {}).get("parts") or {}:

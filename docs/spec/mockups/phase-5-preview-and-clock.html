@@ -393,6 +393,58 @@
     </div>
   </section>
 
+  <!-- Figure 7 (v1.152.0, ADR 0023): the Preview of a voice as a snippet, and the re-read -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 7 · v1.152.0</div><h2>The Preview of a voice as a snippet, beside the page; and a block the audio placed again</h2></div>
+    <div class="cols">
+      <div>
+        <div class="panel">
+          <div class="head">
+            <div class="who">Dana Reyes <span class="pill">Client</span> <span class="pill ok">clock re-read · was 0:45</span></div>
+            <div class="from">her voice on <b>Call 1</b> · one of 2 recordings that taught her print</div>
+            <div class="acts"><span class="btn tiny">Call 2</span><span class="btn quiet">Close</span></div>
+          </div>
+          <div class="body">
+            <div class="samples">
+              <span class="sp"><span class="play">▶</span><span class="t">0:55</span><span class="q">"Yes, it's mine. What's the problem?"</span></span>
+              <span class="sp"><span class="play">▶</span><span class="t">3:10</span><span class="q">"I told him Tuesday."</span></span>
+              <span class="sp"><span class="play">▶</span><span class="t">7:02</span><span class="q">"No, that was before."</span></span>
+              <span class="tiny muted">more of her voice here: each plays one line</span>
+            </div>
+            <div class="player"><span class="btn tiny">❚❚</span><span class="mono">0:55 / 12:40</span><span class="bar"><i></i><b></b></span></div>
+            <div class="lines">
+              <div class="line dim"><span class="t">0:41</span><span class="s c1">Officer Hale</span><span>Is this your bag, ma'am?</span><span></span></div>
+              <div class="line lit"><span class="t">0:55</span><span class="s c2">Dana Reyes</span><span>Yes, it's mine. What's the problem?</span><span></span></div>
+              <div class="line dim"><span class="t">1:06</span><span class="s c1">Officer Hale</span><span>Step over here for me.</span><span></span></div>
+            </div>
+            <div class="note">the line heard, with a line either side <span class="btn tiny ghost" style="float: right">Open the recording</span></div>
+          </div>
+        </div>
+        <div class="caption">
+          <p><b>A snippet, not a transcript.</b> Opened on a person's voice (a hear button, a tab, a sample) the Preview shows the line heard with one line before and one after, dimmed; the player starts half a second before the line and stops half a second after it; the samples are more of the same voice, one line each. It reads no further lines and never scrolls on. On the guided page the context column stays below it rather than giving way, so the voice being named and the voice being heard sit on one screen. Open the recording is for the whole; a Preview from a citation or a search hit reads around the moment as before.</p>
+        </div>
+      </div>
+      <div>
+        <div class="panel">
+          <div class="head"><div class="who"><b>The transcript after the re-read</b></div><div class="from">the block that read 2:05, placed again by the audio</div></div>
+          <div class="body">
+            <div class="lines">
+              <div class="line"><span class="t">1:44</span><span class="s c1">Speaker 2</span><span>... the last line before the hole.</span><span></span></div>
+              <div class="line lit"><span class="t">2:13</span><span class="s c2">Speaker 1</span><span><span class="pill ok">clock re-read · was 2:05</span> Is it cold down there?</span><span></span></div>
+              <div class="line"><span class="t">2:21</span><span class="s c1">Speaker 2</span><span>Hey man, back when y'all was nineteen or twenty ...</span><span></span></div>
+              <div class="line dim"><span class="t">2:16</span><span class="s c1">Speaker 2</span><span><span class="pill warn">clock unsure · not found by the re-read</span> You sure about that?</span><span></span></div>
+              <div class="line"><span class="t">2:37</span><span class="s c1">Speaker 2</span><span>All right then.</span><span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="caption">
+          <p><b>Placed again, not slid.</b> On the office's call a line early in the block was eight seconds early and a line late in it sixteen: thirty-three seconds of talk squeezed into seventeen. So the app cuts the window from the prepared audio, sends it to the recogniser as a small job of its own, outside the Queue, and gives each line whose words the reading finds the time those words were heard, in order. The block keeps its dotted rule and the pill at its head says what happened; a line the reading cannot find keeps its time and says so. The words, the speaker, the corrections and the notes stay with the line; the voice measures a re-timed line again and it may be a sample.</p>
+          <p><b>Narrowed first.</b> Only the lines within forty-five seconds of the hole's end are marked, the recogniser's window and a half; the earlier rule had marked most of the call.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- The one number, and the measurement first -->
   <section>
     <div class="fig-head"><div class="eyebrow">Before the build</div><h2>The one number, measured on the office's recordings first</h2></div>
@@ -400,7 +452,7 @@
       <div class="rules">
         <div class="rule"><b>What is fixed by rule.</b> A hole is eight seconds or more; a pause inside a line is over a second; a hole counts when sound fills over seven tenths of it. These come from the shape measured on the office's call, where the holes were sixteen and twenty-one seconds and the pauses inside lines over a second.</div>
         <div class="rule"><b>What is measured before it decides anything.</b> On the office's jail calls and body-camera recordings, by ear on a local sheet: how many blocks the two rules mark, how many of those the ear agrees are early, and how many early blocks the rules miss. The thresholds move only if that sheet says so; the sheet never leaves the building.</div>
-        <div class="rule"><b>What is left for later, named.</b> Sliding a marked block into the hole beside it, by its own length, with its words re-aligned there. That changes the transcript's clock, so it is an ADR with the measurement behind it, after the marks have been lived with.</div>
+        <div class="rule"><b>What was left for later, and built in v1.152.0 (figure 7).</b> Not a slide: a marked block is placed again by the audio, line by line, from a second reading of its window. Named here first as sliding a marked block into the hole beside it, by its own length, with its words re-aligned there. That changes the transcript's clock, so it is an ADR with the measurement behind it, after the marks have been lived with.</div>
       </div>
     </div>
   </section>

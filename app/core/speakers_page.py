@@ -17,7 +17,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from core import cases, viewer
+from core import cases, clock_check, viewer
 from core.recordings import Recording
 
 # Samples: up to three lines a Speaker spoke, one from each third of their
@@ -142,14 +142,17 @@ def pick_samples(lines: list[Line]) -> list[Line]:
     """The Samples of one Speaker, by the rule above; all of them when few.
     A line whose timing is a guess (v1.141.0) is passed over while any sure
     line remains."""
-    sure = [one for one in lines if not one.guess]
-    if sure:
-        lines = sure
-    # Nor a line whose clock the audio doubts (v1.151.0), while any other
-    # remains: a sample must play the voice it names.
+    # Never a line whose clock the audio doubts (v1.151.0) while any other
+    # remains: a sample must play the voice it names. Then, among those, a
+    # line whose timing is a guess is passed over while a sure one remains.
+    # The clock first (v1.152.0): a guessed line in its place beats a line
+    # that plays somebody else's words.
     timed = [one for one in lines if not one.unsure]
     if timed:
         lines = timed
+    sure = [one for one in lines if not one.guess]
+    if sure:
+        lines = sure
     if len(lines) <= SAMPLES:
         return list(lines)
     # By the voice (v1.142.0): where the voice step scored the lines, the
@@ -195,7 +198,7 @@ def samples_for(transcript, speaker: str) -> list[dict]:
             id=pk,
             text=text or "",
             fit=fit,
-            unsure=bool(clock),
+            unsure=clock_check.unsure(clock),
         )
         for pk, start, end, text, fit, clock in transcript.segments.filter(
             same_as_other_side=False, speaker=speaker
@@ -310,7 +313,7 @@ def cards(transcript, speakers: list[dict]) -> list[dict]:
                 id=pk,
                 text=text or "",
                 fit=fit,
-                unsure=bool(clock),
+                unsure=clock_check.unsure(clock),
             )
         )
         labels.setdefault(name, label)
