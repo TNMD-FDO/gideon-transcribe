@@ -21,6 +21,29 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.152.1, 2026-10-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The clock re-read reads the window in pieces.
+
+- **Why.** On the office's call the v1.152.0 re-read of the whole window
+  put the block's words where the first reading had them, while a probe
+  reading of the gap alone found them there, the long saying starting at
+  2:21 as the maintainer heard it. Whisper writes its own rough stamps for
+  each utterance and the word fitting is trapped inside them, so a whole
+  window read again repeats the error.
+- **What changes.** The window is cut at the middle of each pause inside
+  it, no piece shorter than two seconds and none longer than twelve
+  without a pause in it, each piece a small job of its own; a block is
+  landed when all its pieces are in, their words read together in time
+  order. The clock a line first had is kept through a second re-read. The
+  audit row Clock re-read adds the count of pieces. ADR 0023 amended;
+  Phase 5 chapter 3 and the admin guide follow.
+
 ## v1.152.0, 2026-10-22
 
 ```

@@ -1,7 +1,8 @@
 # 23. The clock re-read: a squeezed block is placed again by the audio, and the Preview of a voice is a snippet
 
-Date: 2026-10-22. Status: accepted. Release: v1.152.0. Amends ADR 0022
-(its decisions 2 and 6 give way to this one; the rest stand).
+Date: 2026-10-22. Status: accepted. Release: v1.152.0; decision 2 amended
+in v1.152.1 (the window is read in pieces). Amends ADR 0022 (its decisions
+2 and 6 give way to this one; the rest stand).
 
 ## Context
 
@@ -45,11 +46,20 @@ relates to the speaker, a couple of lines around it, cleanly.
 2. **A marked block is placed again by the audio.** When a landing or a
    late pass marks any block, the app cuts that window of the prepared
    audio (from a second before the first marked line to half a second
-   after the hole's end), sends it to the WhisperX service as a small job
+   after the hole's end), sends it to the WhisperX service as small jobs
    of its own (the recording's task, model and language, no speakers, the
    same vocabulary, priority with the speakers pass, behind a Live
-   recording's stretches), and when the reading comes back matches its
-   words against the lines it already has (a sequence match on the
+   recording's stretches), **in pieces cut at the audio's own pauses**
+   (v1.152.1: the first build sent the window whole, and on the office's
+   call the second reading repeated the first reading's error, because
+   Whisper writes its own rough stamps for each utterance and the word
+   fitting is trapped inside them; a probe reading of the gap alone found
+   the block's words there, the long saying starting at 2:21 as the
+   maintainer heard it; a piece a few seconds long, none shorter than two
+   seconds and none longer than twelve without a pause in it, cannot carry
+   words across a pause), and when the pieces' readings come back, read
+   together in time order, matches their words against the lines it
+   already has (a sequence match on the
    words, punctuation and case set aside). A line at least half of whose
    words are found takes its clock from where those words were heard,
    the first found word's start to the last's end, the order of the lines

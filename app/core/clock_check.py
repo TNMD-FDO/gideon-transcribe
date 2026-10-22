@@ -37,9 +37,12 @@ never a Sample.
 
 Then the re-read (v1.152.0): the window of prepared audio, from a second
 before the first marked line to half a second after the hole's end, goes
-to the WhisperX service as a small job of its own, outside the Queue, and
-when the reading comes back each line whose words it finds takes its
-clock from where those words were heard. The old clock and the shift stay
+to the WhisperX service as small jobs of its own, outside the Queue, in
+pieces cut at the audio's own pauses (v1.152.1: the recogniser's rough
+utterance stamps trap the word fitting, and a piece a few seconds long
+cannot carry words across a pause), and when the readings come back each
+line whose words they find takes its clock from where those words were
+heard. The old clock and the shift stay
 in the mark ("retimed"); a line the reading cannot find keeps its clock
 and its pill ("unplaced"). A re-timed line is a sure line again. The pass
 lives in the Transcript's provenance under clock_check.reread and is
@@ -93,6 +96,10 @@ MATCH_SHARE = 0.5
 REREAD_POLL_SECONDS = 10
 REREAD_GIVE_UP_SECONDS = 1800
 REREAD_PRIORITY = 90
+# The window is read in pieces cut at the audio's pauses (v1.152.1): none
+# shorter than this, none longer than this without a pause in it.
+PIECE_SHORTEST = 2.0
+PIECE_LONGEST = 12.0
 CUT_TIMEOUT = 120
 
 
@@ -420,9 +427,9 @@ def _cut(source: Path, target: Path, start: float, end: float) -> bool:
     return True
 
 
-def reread_request(recording, transcript, head: int) -> dict:
-    """What the service is asked for one window: the recording's own task,
-    model and language, the same vocabulary, no speakers."""
+def reread_request(recording, transcript, head: int, piece: int = 0) -> dict:
+    """What the service is asked for one piece of a window: the recording's
+    own task, model and language, the same vocabulary, no speakers."""
     from core import queue, settings_store
 
     return {
@@ -436,7 +443,7 @@ def reread_request(recording, transcript, head: int) -> dict:
         "context": recording.context or "",
         "return_speaker_embeddings": False,
         "diarizer": settings_store.diarizer(),
-        "client_reference": f"clock-{transcript.pk}-{head}-{int(time.time())}",
+        "client_reference": f"clock-{transcript.pk}-{head}-{piece}-{int(time.time())}",
         "priority": REREAD_PRIORITY,
     }
 
@@ -455,10 +462,44 @@ def _write_reread(transcript, state: dict) -> None:
     transcript.save(update_fields=["provenance"])
 
 
+def pieces_of(
+    start: float, end: float, quiet: list[tuple[float, float]]
+) -> list[tuple[float, float]]:
+    """One window cut into short pieces at the audio's own pauses
+    (v1.152.1): the recogniser writes its own rough stamps for each
+    utterance and the word fitting is trapped inside them, so on the
+    office's call a whole block was stamped sixteen seconds early, and a
+    second reading of the same window repeated it. A piece a few seconds
+    long cannot carry words across a pause. Cut at the middle of every
+    pause inside the window; a piece shorter than PIECE_SHORTEST joins its
+    neighbour; one longer than PIECE_LONGEST with no pause in it is shared
+    evenly. Pure, for the tests."""
+    cuts = [start]
+    for a, b in sorted(quiet):
+        mid = (a + b) / 2
+        if start + PIECE_SHORTEST <= mid <= end - PIECE_SHORTEST:
+            cuts.append(mid)
+    cuts.append(end)
+    pieces: list[list[float]] = []
+    for a, b in zip(cuts, cuts[1:], strict=False):
+        if pieces and (b - a) < PIECE_SHORTEST:
+            pieces[-1][1] = b
+        else:
+            pieces.append([a, b])
+    out: list[tuple[float, float]] = []
+    for a, b in pieces:
+        n = max(1, math.ceil((b - a) / PIECE_LONGEST))
+        step = (b - a) / n
+        for i in range(n):
+            out.append((round(a + step * i, 3), round(a + step * (i + 1), 3)))
+    return out
+
+
 def ask(transcript) -> dict:
-    """Send every marked block's window to the service and write the pass's
-    state. Returns that state: waiting while any job is out, failed when
-    none could be sent, done when there was nothing to send."""
+    """Send every marked block's window to the service, in pieces cut at
+    the audio's pauses, and write the pass's state. Returns that state:
+    waiting while any piece is out, failed when none could be sent, done
+    when there was nothing to send."""
     from core import whisperx
 
     recording = transcript.recording
@@ -471,28 +512,37 @@ def ask(transcript) -> dict:
     only_side = next(iter(sides.values())) if len(sides) == 1 else None
     folder = recording.folder / "clock"
     lane = whisperx.lane_for(recording)
+    quiet_by_side: dict[int, list[tuple[float, float]] | None] = {}
     jobs: dict[str, dict] = {}
     for block in blocks:
         side = sides.get(block["side"]) or only_side
         if side is None or not side.asr_path.exists():
             continue
+        if side.pk not in quiet_by_side:
+            quiet_by_side[side.pk] = _measure(side.asr_path)
+        quiet = quiet_by_side[side.pk]
+        if quiet is None:
+            continue
         folder.mkdir(parents=True, exist_ok=True)
-        cut = folder / f"{block['head']}.wav"
-        if not _cut(side.asr_path, cut, block["from"], block["to"]):
-            continue
-        try:
-            submitted = whisperx.submit(
-                cut, reread_request(recording, transcript, block["head"]), lane
-            )
-        except Exception as problem:  # noqa: BLE001 - one window's failure
-            log.warning("the clock window could not be sent: %s", problem)
-            continue
-        jobs[str(block["head"])] = {
-            "id": submitted.id,
-            "lane": lane,
-            "from": round(block["from"], 3),
-            "state": "waiting",
-        }
+        for i, (a, b) in enumerate(pieces_of(block["from"], block["to"], quiet)):
+            key = f"{block['head']}:{i}"
+            cut = folder / _cut_name(key)
+            if not _cut(side.asr_path, cut, a, b):
+                continue
+            try:
+                submitted = whisperx.submit(
+                    cut, reread_request(recording, transcript, block["head"], i), lane
+                )
+            except Exception as problem:  # noqa: BLE001 - one piece's failure
+                log.warning("a clock piece could not be sent: %s", problem)
+                continue
+            jobs[key] = {
+                "id": submitted.id,
+                "lane": lane,
+                "head": block["head"],
+                "from": round(a, 3),
+                "state": "waiting",
+            }
     state = {
         "state": "waiting" if jobs else "failed",
         "jobs": jobs,
@@ -502,14 +552,22 @@ def ask(transcript) -> dict:
     }
     _write_reread(transcript, state)
     log.info(
-        "clock re-read: %d window(s) sent for recording %s", len(jobs), recording.pk
+        "clock re-read: %d piece(s) of %d window(s) sent for recording %s",
+        len(jobs),
+        len(blocks),
+        recording.pk,
     )
     return state
 
 
+def _cut_name(key: str) -> str:
+    return key.replace(":", "-") + ".wav"
+
+
 def poll(transcript) -> dict:
-    """Ask the service about the windows still out, land the readings that
-    are done, and write the state. Returns it; "waiting" means ask again."""
+    """Ask the service about the pieces still out; when every piece of a
+    block is in, read them together and land the block; write the state.
+    Returns it; "waiting" means ask again."""
     from core import whisperx
 
     state = _reread_state(transcript)
@@ -517,7 +575,7 @@ def poll(transcript) -> dict:
     if state.get("state") != "waiting":
         return state
     asked = state.get("asked") or ""
-    for head, job in jobs.items():
+    for job in jobs.values():
         if job.get("state") != "waiting":
             continue
         try:
@@ -527,27 +585,57 @@ def poll(transcript) -> dict:
             continue
         if told is None or told.get("state") in ("failed", "cancelled"):
             job["state"] = "failed"
+        elif told.get("state") == "done":
+            job["state"] = "ready"
+    # A block whose pieces are all in: read them together and land it.
+    heads = sorted(
+        {int(job.get("head") or key.split(":")[0]) for key, job in jobs.items()}
+    )
+    for head in heads:
+        mine = {
+            key: job
+            for key, job in jobs.items()
+            if int(job.get("head") or key.split(":")[0]) == head
+        }
+        if any(job.get("state") == "waiting" for job in mine.values()):
             continue
-        if told.get("state") != "done":
+        ready = {key: job for key, job in mine.items() if job.get("state") == "ready"}
+        if not ready:
             continue
-        try:
-            result = whisperx.result(job["id"], job.get("lane", ""))
-        except Exception as problem:  # noqa: BLE001
-            log.warning("the clock re-read's result could not be read: %s", problem)
-            job["state"] = "failed"
-            continue
-        try:
-            counts = retime(transcript, int(head), result, float(job.get("from") or 0))
-        except Exception:  # noqa: BLE001 - one window's reading
-            log.exception("the clock re-read of block %s could not be applied", head)
-            job["state"] = "failed"
-            continue
-        job["state"] = "done"
-        state["retimed"] = int(state.get("retimed") or 0) + counts["retimed"]
-        state["unplaced"] = int(state.get("unplaced") or 0) + counts["unplaced"]
-        with contextlib.suppress(Exception):
-            whisperx.delete(job["id"], job.get("lane", ""))
-        _remove_cut(transcript.recording, head)
+        heard: list[tuple[str, float, float]] = []
+        failed = False
+        for job in ready.values():
+            try:
+                result = whisperx.result(job["id"], job.get("lane", ""))
+            except Exception as problem:  # noqa: BLE001
+                log.warning("a clock piece's result could not be read: %s", problem)
+                job["state"] = "failed"
+                failed = True
+                continue
+            heard.extend(heard_words(result, float(job.get("from") or 0)))
+        heard.sort(key=lambda one: one[1])
+        if heard:
+            try:
+                counts = retime(transcript, head, heard)
+            except Exception:  # noqa: BLE001 - one block's reading
+                log.exception(
+                    "the clock re-read of block %s could not be applied", head
+                )
+                counts = None
+            if counts is not None:
+                state["retimed"] = int(state.get("retimed") or 0) + counts["retimed"]
+                state["unplaced"] = int(state.get("unplaced") or 0) + counts["unplaced"]
+                for job in ready.values():
+                    if job.get("state") == "ready":
+                        job["state"] = "done"
+        if failed or not heard:
+            for job in ready.values():
+                if job.get("state") == "ready":
+                    job["state"] = "failed"
+        for key, job in mine.items():
+            with contextlib.suppress(Exception):
+                whisperx.delete(job["id"], job.get("lane", ""))
+            _remove_cut(transcript.recording, key)
     waiting = [one for one in jobs.values() if one.get("state") == "waiting"]
     if waiting:
         started = None
@@ -570,15 +658,15 @@ def poll(transcript) -> dict:
     )
     state["finished"] = timezone.now().isoformat(timespec="seconds")
     _write_reread(transcript, state)
-    for head in jobs:
-        _remove_cut(transcript.recording, head)
+    for key in jobs:
+        _remove_cut(transcript.recording, key)
     _note(transcript, state)
     return state
 
 
-def _remove_cut(recording, head) -> None:
+def _remove_cut(recording, key) -> None:
     try:
-        cut = recording.folder / "clock" / f"{head}.wav"
+        cut = recording.folder / "clock" / _cut_name(str(key))
         if cut.exists():
             cut.unlink()
         folder = recording.folder / "clock"
@@ -594,6 +682,7 @@ def _note(transcript, state: dict) -> None:
     from core import audit
 
     recording = transcript.recording
+    jobs = state.get("jobs") or {}
     audit.write(
         audit.Category.JOBS,
         "Clock re-read",
@@ -607,7 +696,10 @@ def _note(transcript, state: dict) -> None:
         object_label=recording.original_filename,
         lines_changed=int(state.get("retimed") or 0),
         lines_left=int(state.get("unplaced") or 0),
-        windows=len(state.get("jobs") or {}),
+        windows=len(
+            {str(job.get("head") or key.split(":")[0]) for key, job in jobs.items()}
+        ),
+        pieces=len(jobs),
     )
     log.info(
         "clock re-read for %s: %d line(s) re-timed, %d left",
@@ -710,10 +802,11 @@ def place(lines: list[Row], texts: dict[int, str], heard: list) -> Placed:
     return placed
 
 
-def retime(transcript, head: int, result: dict, offset: float) -> dict:
-    """Land one window's reading on its block: every line whose words were
-    found takes its clock from them, the old clock and the shift kept in
-    the mark; the rest are marked unplaced. Returns the counts."""
+def retime(transcript, head: int, heard: list) -> dict:
+    """Land the readings of one block's window on it: every line whose
+    words were heard takes its clock from them, the clock it first had and
+    the shift kept in the mark; the rest are marked unplaced. Returns the
+    counts."""
     from core.jobs import Segment
 
     # Every line of the block takes part in the matching, so the words of a
@@ -725,7 +818,7 @@ def retime(transcript, head: int, result: dict, offset: float) -> dict:
         return {"retimed": 0, "unplaced": 0}
     rows = [Row(one.pk, float(one.start), float(one.end)) for one in block]
     texts = {one.pk: one.text for one in block}
-    placed = place(rows, texts, heard_words(result, offset))
+    placed = place(rows, texts, heard)
     retimed = unplaced = 0
     for segment in segments:
         got = placed.get(segment.pk)
@@ -735,9 +828,11 @@ def retime(transcript, head: int, result: dict, offset: float) -> dict:
             segment.clock = clock
             unplaced += 1
             continue
-        was_start, was_end = float(segment.start), float(segment.end)
+        here_start, here_end = float(segment.start), float(segment.end)
+        # The clock the line first had, kept through a second re-read.
+        was = clock.get("was") or [here_start, here_end]
         start, end = got
-        shift = start - was_start
+        shift = start - here_start
         words = []
         for word in segment.words or []:
             if (
@@ -756,7 +851,11 @@ def retime(transcript, head: int, result: dict, offset: float) -> dict:
         segment.words = words
         clock.pop("unplaced", None)
         clock.update(
-            {"was": [was_start, was_end], "shift": round(shift, 1), "retimed": True}
+            {
+                "was": [float(was[0]), float(was[1])],
+                "shift": round(start - float(was[0]), 1),
+                "retimed": True,
+            }
         )
         segment.clock = clock
         retimed += 1

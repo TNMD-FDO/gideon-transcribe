@@ -105,6 +105,31 @@ def test_the_squeeze_marks_only_the_lines_inside_the_recognisers_window():
     assert not clock_check.unsure(None)
 
 
+def test_the_window_is_cut_into_pieces_at_the_pauses():
+    """v1.152.1: a piece a few seconds long cannot carry words across a
+    pause, so the recogniser's rough stamps cannot trap them."""
+    # No pause inside: one piece, or shared evenly when long.
+    assert clock_check.pieces_of(10.0, 18.0, []) == [(10.0, 18.0)]
+    assert clock_check.pieces_of(10.0, 40.0, []) == [
+        (10.0, 20.0),
+        (20.0, 30.0),
+        (30.0, 40.0),
+    ]
+    # Cut at the middle of each pause; a pause at the very edge is not used;
+    # a long piece between two pauses is shared evenly.
+    assert clock_check.pieces_of(10.0, 30.0, [(14.0, 16.0), (29.5, 31.0)]) == [
+        (10.0, 15.0),
+        (15.0, 22.5),
+        (22.5, 30.0),
+    ]
+    # A piece too short joins the one before it.
+    assert clock_check.pieces_of(10.0, 30.0, [(13.0, 14.0), (14.6, 15.4)]) == [
+        (10.0, 15.0),
+        (15.0, 22.5),
+        (22.5, 30.0),
+    ]
+
+
 @pytest.fixture
 def owner(db):
     return User.objects.create_local_admin("adm", PASSWORD)
@@ -343,7 +368,8 @@ def test_retime_moves_the_lines_and_keeps_everything_else(
     transcript = recording.transcript
     clock_check.on_landed(transcript)
     head = transcript.segments.get(start=125.0)
-    counts = clock_check.retime(transcript, head.pk, READING, 124.0)
+    heard = clock_check.heard_words(READING, 124.0)
+    counts = clock_check.retime(transcript, head.pk, heard)
     assert counts == {"retimed": 4, "unplaced": 2}
     head.refresh_from_db()
     assert head.start == 133.0 and head.end == 134.1
@@ -372,7 +398,7 @@ def test_retime_moves_the_lines_and_keeps_everything_else(
     cards = speakers_page.cards(transcript, [{"name": "Speaker 2"}])
     assert cards[0]["unsure"] == 1
     # Done once: a second landing of the same window finds nothing to move.
-    assert clock_check.retime(transcript, head.pk, READING, 124.0) == {
+    assert clock_check.retime(transcript, head.pk, heard) == {
         "retimed": 0,
         "unplaced": 2,
     }
@@ -394,25 +420,63 @@ def test_the_pass_through_the_service(owner, tmp_path, settings, monkeypatch):
     windows = clock_check.windows_of(transcript)
     assert len(windows) == 1
     assert windows[0]["from"] == 124.0 and windows[0]["to"] == 158.4
-    cuts = []
+    # The window is read in pieces cut at the audio's pauses (v1.152.1):
+    # the three pauses inside it, the long piece shared in two.
+    head = windows[0]["head"]
+    assert clock_check.pieces_of(124.0, 158.4, QUIET) == [
+        (124.0, 130.2),
+        (130.2, 134.75),
+        (134.75, 145.4),
+        (145.4, 156.05),
+        (156.05, 158.4),
+    ]
+    cuts = {}
 
     def cut(src, dst, a, b):
-        cuts.append((dst.name, a, b))
+        cuts[dst.name] = (a, b)
         return True
 
     monkeypatch.setattr(clock_check, "_cut", cut)
     sent = []
+    pieces = {}
 
     def submit(audio, request, lane=""):
         sent.append(request)
-        return whisperx.Submitted(id="svc-1", position=0, audio_minutes_ahead=0.0)
+        pieces[f"svc-{len(sent)}"] = cuts[audio.name]
+        return whisperx.Submitted(
+            id=f"svc-{len(sent)}", position=0, audio_minutes_ahead=0.0
+        )
+
+    def reading_of(job_id, lane=""):
+        # The reading of one piece: the words of READING that fall in it,
+        # with times from the piece's own start.
+        a, b = pieces[job_id]
+        out = []
+        for segment in READING["segments"]:
+            start = 124.0 + float(segment["start"])
+            if not (a <= start < b):
+                continue
+            moved = dict(segment)
+            moved["start"] = round(start - a, 3)
+            moved["end"] = round(124.0 + float(segment["end"]) - a, 3)
+            moved["words"] = [
+                {
+                    **w,
+                    "start": round(124.0 + w["start"] - a, 3),
+                    "end": round(124.0 + w["end"] - a, 3),
+                }
+                for w in segment["words"]
+            ]
+            out.append(moved)
+        return {"segments": out}
 
     monkeypatch.setattr(whisperx, "submit", submit)
     monkeypatch.setattr(whisperx, "lane_for", lambda recording: "")
     state = clock_check.ask(transcript)
     assert state["state"] == "waiting"
-    assert list(state["jobs"]) == [str(windows[0]["head"])]
-    assert cuts == [(f"{windows[0]['head']}.wav", 124.0, 158.4)]
+    assert list(state["jobs"]) == [f"{head}:{i}" for i in range(5)]
+    assert cuts[f"{head}-0.wav"] == (124.0, 130.2)
+    assert cuts[f"{head}-4.wav"] == (156.05, 158.4)
     request = sent[0]
     assert request["task"] == "transcribe" and request["diarize"] is False
     assert request["language"] == "en" and request["priority"] == 90
@@ -428,20 +492,28 @@ def test_the_pass_through_the_service(owner, tmp_path, settings, monkeypatch):
     monkeypatch.setattr(
         whisperx, "status_of", lambda job_id, lane="": {"state": "done"}
     )  # noqa: E501
-    monkeypatch.setattr(whisperx, "result", lambda job_id, lane="": READING)
+    monkeypatch.setattr(whisperx, "result", reading_of)
     deleted = []
     monkeypatch.setattr(
         whisperx, "delete", lambda job_id, lane="": deleted.append(job_id)
-    )  # noqa: E501
+    )
     state = clock_check.poll(transcript)
     assert state["state"] == "done" and state["retimed"] == 4 and state["unplaced"] == 2
-    assert deleted == ["svc-1"]
+    assert sorted(deleted) == [f"svc-{i}" for i in range(1, 6)]
     row = audit.Row.objects.get(event="Clock re-read")
     assert row.details["lines_changed"] == 4 and row.details["lines_left"] == 2
-    assert row.details["windows"] == 1
+    assert row.details["windows"] == 1 and row.details["pieces"] == 5
     assert transcript.segments.get(start=133.0).clock["retimed"] is True
     # Polled again when done: nothing changes.
     assert clock_check.poll(transcript)["state"] == "done"
+    # The clock a line first had is kept through a second re-read.
+    moved = transcript.segments.get(start=133.0)
+    later = [
+        (w, t + 1.0, e + 1.0) for w, t, e in clock_check.heard_words(READING, 124.0)
+    ]
+    clock_check.retime(transcript, head, later)
+    moved.refresh_from_db()
+    assert moved.start == 133.0 and moved.clock["was"] == [125.0, 125.8]
     # A window the service lost fails the pass, and the marks stay.
     other = a_call(owner, tmp_path, settings, monkeypatch=monkeypatch)
     clock_check.on_landed(other.transcript)
@@ -513,7 +585,7 @@ def test_the_pages_carry_the_verdict(owner, tmp_path, settings, monkeypatch, cli
     # After the re-read: the head line at its new clock, re-read, with the
     # clock it had; the Preview on it says so too.
     head = transcript.segments.get(start=125.0)
-    clock_check.retime(transcript, head.pk, READING, 124.0)
+    clock_check.retime(transcript, head.pk, clock_check.heard_words(READING, 124.0))
     told = client.get(f"/recording/{recording.pk}/segments?words=0").json()
     moved = next(one for one in told["segments"] if one["start"] == 133.0)
     assert moved["clock"]["retimed"] and moved["clock"]["was"] == 125.0
