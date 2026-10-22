@@ -21,6 +21,37 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.149.0, 2026-10-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Call system is found by its phrases on a recording with no type**
+  (the maintainer's find on the server: the office's call, uploaded twice
+  without a type, kept the phone system under a party both times, though
+  thirteen and fourteen of its lines carried the shipped phrases). The
+  pass had waited for the type Jail call or a two-channel call; from this
+  release three lines carrying the phrases are enough on an untyped
+  recording, as the transcript lands or when a check runs. The type is
+  not written by the app: the no-type line of v1.147.1 now says "The
+  call system's announcements were heard on 13 lines, so this sounds
+  like a jail call" and offers **Set the type to Jail call** in one
+  press beside the picker, on the recording page and both Speakers
+  pages (one include now carries the line). A recording typed something
+  else is left alone however many phrases it carries. The transcript's
+  provenance says whether the type or the phrases found it. Phase 5
+  chapter 3 amended; ADR 0021 noted, with the maintainer's direction
+  for the voice's half: the phone system's voice taught by the lines the
+  words found, with the second guided release.
+- **The upgrade's directory check runs inside Django** (the maintainer's
+  report: "The directory FAIL the checks could not be run (is the app
+  up?)" on every upgrade since v1.147.0). The check had run a bare
+  `python -c` that imported the Units lines before Django loaded; it
+  runs through `manage.py shell -c` now, and the list of what is read of
+  an account falls back to the five fields when the apps are not loaded.
+
 ## v1.148.0, 2026-10-21
 
 ```

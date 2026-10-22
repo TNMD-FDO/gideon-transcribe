@@ -86,5 +86,52 @@ def test_the_script_saves_and_rewrites_the_line():
     assert "description: box.dataset.description" in script
     assert "The voice listens on this type" in script
     assert "does not listen on this type" in script
+    # One button sets the jail-call type (v1.149.0) through the same save.
+    assert ".type-hint button[data-type]" in script and "function save(" in script
     css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
-    assert ".type-hint {" in css
+    assert ".type-hint {" in css and ".type-hint button {" in css
+    # One include carries the line on the three pages.
+    for name in ("viewer.html", "speakers-page.html", "speakers-guided.html"):
+        template = (HERE / "templates" / name).read_text(encoding="utf-8")
+        assert '{% include "type-hint.html" %}' in template, name
+
+
+def test_the_line_says_the_call_system_was_heard_and_offers_the_type(
+    owner, a_case, check_on, client
+):
+    """v1.149.0: when the Call system's pass found an untyped recording by
+    its phrases, the line says how many lines carried them and offers the
+    jail-call type in one press; the button saves through the same endpoint."""
+    recording = a_recording(owner, a_case)
+    transcript = recording.transcript
+    transcript.provenance = {
+        "call_system": {"lines": 14, "phrases": 33, "found_by": "phrases", "heard": 13}
+    }
+    transcript.save(update_fields=["provenance"])
+    hint = viewer.type_hint(recording)
+    assert hint["heard"] == 13 and hint["suggested"] == "Jail call"
+    signed_in(client, owner)
+    for url in (f"/recording/{recording.pk}", f"/recording/{recording.pk}/speakers"):
+        page = client.get(url).content.decode()
+        assert "announcements were heard on 13 lines" in page, url
+        assert 'data-type="Jail call"' in page and "Set the type to Jail call" in page
+        assert LINE not in page
+    # Found by the type, or never found: the plain line and no button.
+    transcript.provenance = {
+        "call_system": {"lines": 3, "found_by": "type", "heard": 3}
+    }
+    transcript.save(update_fields=["provenance"])
+    hint = viewer.type_hint(recording)
+    assert hint["heard"] == 0 and hint["suggested"] == ""
+    page = client.get(f"/recording/{recording.pk}").content.decode()
+    assert LINE in page and "data-type=" not in page
+    # The office's list without a jail-call type: the words, no button.
+    transcript.provenance = {"call_system": {"found_by": "phrases", "heard": 4}}
+    transcript.save(update_fields=["provenance"])
+    was = settings_store.get("recording_types")
+    settings_store.set_to("recording_types", "Interview\nHearing")
+    hint = viewer.type_hint(recording)
+    assert hint["heard"] == 4 and hint["suggested"] == ""
+    page = client.get(f"/recording/{recording.pk}").content.decode()
+    assert "announcements were heard on 4 lines" in page and "data-type=" not in page
+    settings_store.set_to("recording_types", was)

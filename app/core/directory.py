@@ -38,7 +38,14 @@ WHAT_IS_READ = ["sAMAccountName", "userPrincipalName", "givenName", "sn", "mail"
 
 def _read_list() -> list[str]:
     """What is read of an account: the five, and the attributes the Units
-    lines name (v1.147.0)."""
+    lines name (v1.147.0). Before Django's apps are loaded (a bare
+    `python -c` in a script, with no settings) the Units lines cannot be
+    read, so the five alone (v1.149.0): the upgrade's directory check had
+    printed FAIL since v1.147.0 for that reason."""
+    from django.apps import apps
+
+    if not apps.ready:
+        return list(WHAT_IS_READ)
     from core import units
 
     extra = [one for one in units.attributes_wanted() if one not in WHAT_IS_READ]

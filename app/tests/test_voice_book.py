@@ -592,3 +592,16 @@ def test_the_pages_carry_the_strings():
     assert "In no listed unit" in panel
     voices = (HERE / "templates" / "voices.html").read_text(encoding="utf-8")
     assert "What this page never shows" in voices and "Decided from the book" in voices
+
+
+def test_the_read_list_is_the_five_before_the_apps_load(db, monkeypatch):
+    """v1.149.0: a bare `python -c` has no apps loaded, so the Units lines
+    cannot be read and the five alone are; the upgrade's directory check
+    had failed on that import since v1.147.0."""
+    from django.apps import apps
+
+    settings_store.set_to("units", "Trial | department=Trial")
+    assert directory._read_list()[-1] == "department"
+    monkeypatch.setattr(apps, "ready", False)
+    assert directory._read_list() == directory.WHAT_IS_READ
+    assert directory._read_list() is not directory.WHAT_IS_READ

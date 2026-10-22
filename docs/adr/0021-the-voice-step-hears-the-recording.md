@@ -170,6 +170,20 @@ who), never an Accept of their own. A mixed line is split at the word, with
 Undo. Where the voice is off for the type the words-first run stands as
 written above. Drawn in `docs/spec/mockups/phase-5-voices-first.html`.
 
+**Noted 2026-10-22, at v1.149.0 (the Call system found by its phrases).**
+Decision 4 says the Call system is found by its phrases; the build had
+run that pass only on a Recording typed Jail call or heard on two
+channels, and the office's own call, uploaded twice without a type,
+kept the phone system under a party both times. From v1.149.0 three
+lines carrying the phrases make an untyped Recording a jail call for
+the pass by themselves, the type left to a person and offered in the
+no-type line. The maintainer's direction of the same day for the
+voice's half: not a print taught by hand, but one the words' own
+findings teach, the lines the phrases marked giving the system's voice,
+which then claims the fragments the words miss and the rule "unlike
+every party"; it comes with the second guided release and this ADR is
+amended again when it does.
+
 **Noted 2026-10-21, at V4b's build (v1.146.0, the unit's voice book).**
 The maintainer's direction of the 21st is drawn
 (`docs/spec/mockups/phase-5-voice-book.html`), chosen and built, and

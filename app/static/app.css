@@ -2412,6 +2412,7 @@ details.inline[open] summary::after { content: ": "; }
 /* The no-type line (v1.147.1): one quiet line with the type picker in it, on the recording page and the Speakers page. */
 .type-hint { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 6px; padding: 4px 8px; border-left: 2px solid var(--line); }
 .type-hint select { max-width: 12rem; font-size: inherit; }
+.type-hint button { font-size: inherit; padding: 2px 10px; }
 /* The unit's voice book (v1.146.0): the card's Check line, the book's answer, the Case tab's line, the Voices place. */
 .sp-card .book-why { margin: 2px 0 0 15px; }
 .sp-card .sounds.book { border-color: var(--accent); }

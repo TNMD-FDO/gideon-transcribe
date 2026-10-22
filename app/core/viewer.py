@@ -291,11 +291,24 @@ def type_hint(recording) -> dict | None:
     ]
     if not listed:
         return None
+    from core import call_system
+
+    types = cases.recording_types()
+    # The Call system found by its phrases (v1.149.0): the line says the
+    # announcements were heard and offers the jail-call type in one press,
+    # when the office's list has such a type.
+    heard = call_system.found_by_phrases(getattr(recording, "transcript", None))
+    suggested = next(
+        (one for one in types if one.strip().casefold() == call_system.JAIL_CALL_TYPE),
+        "",
+    )
     return {
         "listed": listed,
         "listed_text": ", ".join(listed),
-        "types": cases.recording_types(),
+        "types": types,
         "description": recording.description or "",
+        "heard": heard,
+        "suggested": suggested if heard else "",
     }
 
 

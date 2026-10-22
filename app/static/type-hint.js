@@ -4,7 +4,9 @@
 // at once through the case page's own endpoint (the description is sent
 // along, since that endpoint saves both), and the line then says what to
 // do next: check the speakers again, and whether the voice listens on the
-// type chosen.
+// type chosen. Since v1.149.0 the line may carry one button that sets the
+// jail-call type in a press, when the Call system's announcements were heard
+// on the recording; it saves the same way.
 
 (function () {
   "use strict";
@@ -23,20 +25,15 @@
     if (window.UI && window.UI.toast) { window.UI.toast(words, options); }
   }
 
-  document.addEventListener("change", function (event) {
-    var select = event.target.closest(".type-hint select");
-    if (!select) { return; }
-    var box = select.closest(".type-hint");
-    var typed = select.value;
-    if (!typed) { return; }
-    select.disabled = true;
+  function save(box, typed, controls) {
+    controls.forEach(function (one) { one.disabled = true; });
     fetch("/recording/" + box.dataset.recording + "/case-details", {
       method: "POST",
       headers: { "X-CSRFToken": cookie("csrftoken"), "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ recording_type: typed, description: box.dataset.description || "" })
     }).then(function (answer) { return answer.json(); }).then(function (said) {
       if (!said.ok) {
-        select.disabled = false;
+        controls.forEach(function (one) { one.disabled = false; });
         toast((said && said.why) || "That could not be saved.", { problem: true, icon: "warning" });
         return;
       }
@@ -50,8 +47,28 @@
         "</span>";
       toast("Saved.", { icon: "ok" });
     }).catch(function () {
-      select.disabled = false;
+      controls.forEach(function (one) { one.disabled = false; });
       toast("That could not be saved.", { problem: true, icon: "warning" });
     });
+  }
+
+  function controlsOf(box) {
+    return Array.prototype.slice.call(box.querySelectorAll("select, button"));
+  }
+
+  document.addEventListener("change", function (event) {
+    var select = event.target.closest(".type-hint select");
+    if (!select) { return; }
+    var typed = select.value;
+    if (!typed) { return; }
+    var box = select.closest(".type-hint");
+    save(box, typed, controlsOf(box));
+  });
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".type-hint button[data-type]");
+    if (!button) { return; }
+    var box = button.closest(".type-hint");
+    save(box, button.dataset.type, controlsOf(box));
   });
 })();

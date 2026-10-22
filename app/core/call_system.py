@@ -17,6 +17,12 @@ two-channel call heard it. The marking runs as a Transcript lands, on a
 Recording whose type is Jail call or that the app found to be a two-channel
 call, and only while the Admin's switch is on; switched off, nothing here
 runs and every Transcript is as it was.
+
+Found by its phrases (v1.149.0): a Recording with no type at all is a jail
+call when three of its lines carry the phrases, whatever the type field
+says, so the pass runs on it too and the no-type line offers the type. The
+type itself stays a person's word: nothing here writes it, and a Recording
+typed something else is left alone however many phrases it carries.
 """
 
 from __future__ import annotations
@@ -43,6 +49,17 @@ JAIL_CALL_TYPE = "jail call"
 # within the gap, and a single announcement mid-call has none either side.
 FILL_GAP_SECONDS = 15.0
 FILL_SHORT_WORDS = 6
+
+# Found by its phrases (v1.149.0): on a Recording with no type, this many
+# lines carrying the phrases make it a jail call for the pass. One line can
+# be a party quoting the system or a phrase said in passing; three distinct
+# lines of announcements are the system itself. The office's own calls
+# carried thirteen and fourteen.
+FOUND_BY_PHRASES_MIN = 3
+
+
+def untyped(recording) -> bool:
+    return not (recording.recording_type or "").strip()
 
 
 def is_system(name: str | None) -> bool:
@@ -119,7 +136,11 @@ def mark(transcript) -> int:
     system's.
     """
     recording = transcript.recording
-    if not on() or not qualifies(recording):
+    if not on():
+        return 0
+    by_type = qualifies(recording)
+    if not by_type and not untyped(recording):
+        # Typed something else: the type is a person's word and wins.
         return 0
     from core.queue import BOTH_SIDES
 
@@ -131,28 +152,53 @@ def mark(transcript) -> int:
     )
     system = {row.pk for row in rows if is_system(row.speaker)}
     marked = []
+    heard = 0
     for segment in rows:
         if segment.pk in system:
             continue
-        if segment.speaker == BOTH_SIDES or says_a_phrase(segment.text, made_phrases):
+        said = says_a_phrase(segment.text, made_phrases)
+        heard += 1 if said else 0
+        if segment.speaker == BOTH_SIDES or said:
             marked.append(segment.pk)
+    if not by_type and heard < FOUND_BY_PHRASES_MIN:
+        # Untyped and too few phrases to be sure: no pass, and nothing
+        # written, so the pass can still come with a type set later.
+        return 0
     system.update(marked)
     marked += fill_in(rows, system)
     if marked:
         transcript.segments.filter(pk__in=marked).update(speaker=NAME)
     provenance = dict(transcript.provenance or {})
-    provenance["call_system"] = {"lines": len(marked), "phrases": len(made_phrases)}
+    provenance["call_system"] = {
+        "lines": len(marked),
+        "phrases": len(made_phrases),
+        "found_by": "type" if by_type else "phrases",
+        "heard": heard,
+    }
     transcript.provenance = provenance
     transcript.save(update_fields=["provenance"])
     return len(marked)
+
+
+def found_by_phrases(transcript) -> int:
+    """How many lines carried the phrases when the pass found an untyped
+    Recording to be a jail call by them (v1.149.0); 0 when the pass never
+    ran, or ran because of the type. The no-type line reads this."""
+    if transcript is None:
+        return 0
+    given = (transcript.provenance or {}).get("call_system") or {}
+    if given.get("found_by") != "phrases":
+        return 0
+    return int(given.get("heard") or 0)
 
 
 def mark_if_missed(transcript) -> int:
     """The pass a Transcript never had (v1.147.2): it landed before the
     recording was typed a jail call, or before the switch was on. Given once,
     when the type is set or a check runs; a Transcript that had the pass is
-    left alone, and a failure inside never fails the caller."""
-    if not on() or not qualifies(transcript.recording):
+    left alone, and a failure inside never fails the caller. Whether the
+    Recording qualifies, by type or by its phrases, is `mark`'s to say."""
+    if not on():
         return 0
     if (transcript.provenance or {}).get("call_system") is not None:
         return 0

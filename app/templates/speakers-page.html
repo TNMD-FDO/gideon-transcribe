@@ -70,16 +70,8 @@
       {% if not in_window %}<a href="{{ back_url }}">Back to the recording</a>.{% endif %}
     </p>
   {% else %}
-    {% if type_hint %}
-  {% comment %}The no-type line (v1.147.1): why the check read the words alone, with the type picker right here; type-hint.js saves the pick and rewrites the line.{% endcomment %}
-  <div class="type-hint small muted" data-recording="{{ recording.pk }}" data-description="{{ type_hint.description }}" data-listed="{{ type_hint.listed|join:'|' }}">
-    <span>This recording has no type, so the check reads the words alone. The voice listens on: {{ type_hint.listed_text }}. Pick the type, then Check the speakers again.</span>
-    <select aria-label="Recording type">
-      <option value="">No type</option>
-      {% for one in type_hint.types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
-    </select>
-  </div>
-{% endif %}
+    {% comment %}The no-type line (v1.147.1; one include since v1.149.0): why the check read the words alone, with the type picker right here.{% endcomment %}
+    {% include "type-hint.html" %}
     <div class="sp-desk{% if not is_video %} sound{% endif %}">
       <div class="sp-cards" id="cards">
         {% comment %}The cards in a row of their own (v1.140.0): on a phone the row scrolls sideways and the check's section stays under it.{% endcomment %}

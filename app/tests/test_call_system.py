@@ -235,6 +235,9 @@ def test_the_pass_follows_a_type_set_later_and_a_run(
     case = Case.objects.create(owner=admin, name="Ramirez")
     recording = a_call(admin, tmp_path, settings, kind="", case=case)
     transcript = recording.transcript
+    # Two phrases, not three: since v1.149.0 three find an untyped call
+    # by themselves, and this test is about the type coming later.
+    transcript.segments.filter(start=880.0).delete()
     call_system.on_landed(transcript)
     assert transcript.segments.filter(speaker=call_system.NAME).count() == 0
     transcript.refresh_from_db()
@@ -245,10 +248,11 @@ def test_the_pass_follows_a_type_set_later_and_a_run(
         f"/recording/{recording.pk}/case-details",
         {"recording_type": "Jail call", "description": ""},
     )
-    assert answer.status_code == 200 and answer.json()["call_system"] == 3
-    assert transcript.segments.filter(speaker=call_system.NAME).count() == 3
+    assert answer.status_code == 200 and answer.json()["call_system"] == 2
+    assert transcript.segments.filter(speaker=call_system.NAME).count() == 2
     transcript.refresh_from_db()
-    assert transcript.provenance["call_system"]["lines"] == 3
+    assert transcript.provenance["call_system"]["lines"] == 2
+    assert transcript.provenance["call_system"]["found_by"] == "type"
     # Once: a second type change, and a run, leave it alone.
     answer = client.post(
         f"/recording/{recording.pk}/case-details",
@@ -275,3 +279,56 @@ def test_the_export_says_what_it_is(admin, tmp_path, settings, client):
     body = answer.content.decode()
     assert "Call system: You have one minute remaining." in body
     assert "Speaker 1: Hello?" in body
+
+
+def test_an_untyped_recording_is_found_by_its_phrases_and_keeps_no_type(
+    admin, tmp_path, settings
+):
+    """v1.149.0: a recording with no type whose lines carry three of the
+    phrases gets the pass as it lands, the provenance says the phrases
+    found it, and the type stays unwritten; too few phrases, no pass and
+    nothing written, so a type set later can still give it."""
+    settings_store.set_to("call_system_available", True)
+    recording = a_call(admin, tmp_path, settings, kind="")
+    transcript = recording.transcript
+    call_system.on_landed(transcript)
+    assert transcript.segments.filter(speaker=call_system.NAME).count() == 3
+    transcript.refresh_from_db()
+    given = transcript.provenance["call_system"]
+    assert given["found_by"] == "phrases" and given["heard"] == 3
+    assert call_system.found_by_phrases(transcript) == 3
+    recording.refresh_from_db()
+    assert recording.recording_type == ""
+    # Found once: the pass given later leaves it alone.
+    assert call_system.mark_if_missed(transcript) == 0
+    # One phrase is not enough.
+    few = a_call(admin, tmp_path, settings, kind="")
+    few.transcript.segments.filter(start__in=(6.0, 880.0)).delete()
+    call_system.on_landed(few.transcript)
+    assert few.transcript.segments.filter(speaker=call_system.NAME).count() == 0
+    few.transcript.refresh_from_db()
+    assert (few.transcript.provenance or {}).get("call_system") is None
+    assert call_system.found_by_phrases(few.transcript) == 0
+    # By type, the provenance says so and the hint reads nothing from it.
+    typed = a_call(admin, tmp_path, settings)
+    call_system.on_landed(typed.transcript)
+    typed.transcript.refresh_from_db()
+    assert typed.transcript.provenance["call_system"]["found_by"] == "type"
+    assert call_system.found_by_phrases(typed.transcript) == 0
+
+
+def test_a_recording_typed_something_else_is_left_alone_however_many_phrases(
+    admin, tmp_path, settings
+):
+    """The type is a person's word: an Interview that quotes the phrases is
+    not a jail call, and the switch off marks nothing on an untyped one."""
+    settings_store.set_to("call_system_available", True)
+    recording = a_call(admin, tmp_path, settings, kind="Interview")
+    call_system.on_landed(recording.transcript)
+    assert recording.transcript.segments.filter(speaker=call_system.NAME).count() == 0
+    recording.transcript.refresh_from_db()
+    assert (recording.transcript.provenance or {}).get("call_system") is None
+    settings_store.set_to("call_system_available", False)
+    other = a_call(admin, tmp_path, settings, kind="")
+    call_system.on_landed(other.transcript)
+    assert other.transcript.segments.filter(speaker=call_system.NAME).count() == 0

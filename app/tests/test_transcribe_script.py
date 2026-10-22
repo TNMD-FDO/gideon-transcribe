@@ -347,3 +347,15 @@ def test_the_check_sends_one_test_message_and_never_counts_mailboxes():
     sudo_note = backup.index("could not read the secrets folder without sudo")
     assert sudo_note < backup.index("secrets/backup_ssh_key is empty")
     assert "sudo -n true 2>/dev/null" in backup[:sudo_note]
+
+
+def test_the_directory_check_runs_inside_django():
+    """v1.149.0: the check's directory section had run a bare `python -c`
+    that imported the Units lines before Django loaded, and printed FAIL on
+    every upgrade since v1.147.0; it runs through manage.py shell now."""
+    source = text()
+    after = source.split('echo "The directory"', 1)[1]
+    section = after.split('echo "The WhisperX service"', 1)[0]
+    assert 'python manage.py shell -v 0 -c "' in section
+    assert "directory.test_connection()" in section
+    assert 'python -c "' not in section

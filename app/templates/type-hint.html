@@ -1,0 +1,22 @@
+{% comment %}
+The no-type line (v1.147.1): on a recording in a case with no type, while the
+voice listens on some types, why the check read the words alone, with the
+type picker right here; type-hint.js saves the pick and rewrites the line.
+Since v1.149.0 the line also says when the Call system's announcements were
+heard on the recording, and offers the jail-call type in one press. One
+include for the recording page, the guided Speakers page and the classic one.
+{% endcomment %}
+{% if type_hint %}
+  <div class="type-hint small muted" data-recording="{{ recording.pk }}" data-description="{{ type_hint.description }}" data-listed="{{ type_hint.listed|join:'|' }}">
+    {% if type_hint.heard %}
+      <span>The call system's announcements were heard on {{ type_hint.heard }} line{{ type_hint.heard|pluralize }}, so this sounds like a jail call, but the recording has no type and the check reads the words alone. The voice listens on: {{ type_hint.listed_text }}.{% if not type_hint.suggested %} Pick the type, then Check the speakers again.{% endif %}</span>
+      {% if type_hint.suggested %}<button type="button" class="secondary" data-type="{{ type_hint.suggested }}">Set the type to {{ type_hint.suggested }}</button><span>or pick another, then Check the speakers again.</span>{% endif %}
+    {% else %}
+      <span>This recording has no type, so the check reads the words alone. The voice listens on: {{ type_hint.listed_text }}. Pick the type, then Check the speakers again.</span>
+    {% endif %}
+    <select aria-label="Recording type">
+      <option value="">No type</option>
+      {% for one in type_hint.types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
+    </select>
+  </div>
+{% endif %}

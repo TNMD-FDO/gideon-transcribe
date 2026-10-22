@@ -754,7 +754,7 @@ cmd_check() {
   else
     # The same four checks the panel's button runs, so an office is never told
     # two different things about one directory.
-    compose exec -T app python -c "
+    compose exec -T app python manage.py shell -v 0 -c "
 from core import directory
 for one in directory.test_connection():
     mark = 'note' if one['warning'] else ('pass' if one['ok'] else 'FAIL')

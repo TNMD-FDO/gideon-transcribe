@@ -2368,11 +2368,16 @@ def _rows() -> list[Definition]:
                 "its own for the phone system's recorded announcements, never "
                 "a person. The Speaker check and the name suggestions leave "
                 "those lines alone, and the memo says the call system "
-                "announced them. Off by default."
+                "announced them. A recording with no type is a jail call for "
+                "this pass when three of its lines carry the phrases; the type "
+                "itself stays for a person to set, offered in the no-type "
+                "line. Off by default."
             ),
             when_changed=(
                 "The next transcript. Nothing already transcribed changes; "
-                "Process again applies the setting as it stands."
+                "Process again applies the setting as it stands. A recording "
+                "typed Jail call later gets the pass then, and a Speaker "
+                "check's run gives it to a transcript that never had it."
             ),
         ),
         Definition(
