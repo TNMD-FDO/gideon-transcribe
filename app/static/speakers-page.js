@@ -1313,7 +1313,13 @@
     var more = person.rating !== "high" && person.recordings === 1 ? ", from one recording" : "";
     // A match the last re-read made (v1.144.1): born of the print just taught.
     var fresh = person["new"] ? " <span class='pill small acc' title='This match appeared when the print was taught a moment ago'>new: their print was just taught from this call</span>" : "";
-    return "<span class='pill small " + (word === "high" ? "ok" : "") + "'>" + word + more + "</span>" + fresh;
+    // Across kinds (v1.150.0): taught on another kind of recording, the
+    // match is medium at most and says so in cautionOf.
+    var cross = person.cross_kind ? " <span class='pill small warn' title='Taught on another kind of recording'>another kind of recording</span>" : "";
+    return "<span class='pill small " + (word === "high" ? "ok" : "") + "'>" + word + more + "</span>" + cross + fresh;
+  }
+  function cautionOf(person) {
+    return person.caution ? "<div class='ask muted tiny'>" + escape(person.name) + ": " + escape(person.caution) + "</div>" : "";
   }
   function drawVoiceMatches(body) {
     var state = (body.speaker_check || {}).voice_matches || {};
@@ -1345,6 +1351,7 @@
         html = "<div class='sounds'>" +
           "<div><b>Sounds like " + escape(person.name) + "</b>" + (person.role ? " <span class='pill small role'>" + escape(person.role) + "</span>" : "") + " " + ratingPill(person) +
           " <span class='muted'>\u00b7 their voice is on " + person.recordings + (person.recordings === 1 ? " recording" : " recordings") + " of this case</span></div>" +
+          cautionOf(person) +
           "<div class='hear'>" + previewButtons(person) + "<span class='muted tiny'>the samples above are this voice</span></div>" +
           "<div class='acts'><button type='button' class='tiny primary match-accept' data-match='" + person.id + "'>Accept: " + escape(group.speaker) + " is " + escape(person.name) + "</button>" +
           "<button type='button' class='ghost tiny match-dismiss' data-match='" + person.id + "'>Not them</button></div>" +
@@ -1354,6 +1361,7 @@
         html = "<div class='sounds'>" +
           "<div><b>Sounds like two people</b> <span class='pill small warn'>" + names.join(" and ") + "</span></div>" +
           "<div class='ask muted tiny'>Two voice prints both claim this voice: brothers, or one print taught from the wrong call. Nothing is proposed until you have heard them all.</div>" +
+          group.people.map(cautionOf).join("") +
           "<div class='hear'>" + group.people.map(previewButtons).join("") + "</div>" +
           "<div class='acts'>" + group.people.map(function (one) { return "<button type='button' class='tiny match-accept' data-match='" + one.id + "'>" + escape(one.name) + "</button>"; }).join("") +
           "<button type='button' class='ghost tiny match-dismiss' data-matches='" + group.people.map(function (one) { return one.id; }).join(",") + "'>Neither</button></div></div>";

@@ -479,3 +479,64 @@ def test_the_state_answer_has_no_vector(owner, a_case, remembering, client):
     signed_in(client, owner)
     text = json.dumps(speaker_check.state_json(recording.transcript))
     assert "vector" not in text and "prints" not in text
+
+
+def test_a_match_across_kinds_rates_medium_at_most_and_says_so(
+    owner, a_case, remembering
+):
+    """v1.150.0: a print taught on body-camera recordings matched on a jail
+    call is medium at most, carries the kinds it was taught on and one
+    sentence of caution; on an untyped recording, or from untyped
+    recordings, nothing is called out and the rating stands."""
+    first = a_recording(owner, a_case, title="Cam 1", speakers=("Dana Reyes", "Tom"))
+    second = a_recording(owner, a_case, title="Cam 2", speakers=("Dana Reyes", "X"))
+    for one in (first, second):
+        one.recording_type = "Body camera"
+        one.save(update_fields=["recording_type"])
+    dana = Person.objects.create(
+        case=a_case,
+        name="Dana Reyes",
+        role="Officer",
+        voice_print=a_print((str(first.pk), part(1)), (str(second.pk), part(1))),
+    )
+    assert voice_prints.kinds_taught(dana) == ["Body camera"]
+    call = a_recording(owner, a_case, title="Call 3", speakers=("Speaker 1", "Y"))
+    call.recording_type = "Jail call"
+    call.save(update_fields=["recording_type"])
+    assert voice_prints.cross_kind(["Body camera"], call)
+    assert not voice_prints.cross_kind([], call)
+    voice_prints.match(a_check(call, {"Speaker 1": label_print(1)}))
+    row = VoiceMatch.objects.get(transcript=call.transcript, speaker="Speaker 1")
+    assert row.rating == voice_prints.MEDIUM  # the voice itself scores high
+    shown = voice_prints.rows_for(call.transcript)["matches"][0]["people"][0]
+    assert shown["cross_kind"] and shown["kinds"] == ["Body camera"]
+    assert shown["rating"] == "medium"
+    assert "taught on a Body camera; this is a Jail call" in shown["caution"]
+    assert "medium at most" in shown["caution"]
+    # Untyped recording: not judged, the rating stands.
+    untyped = a_recording(owner, a_case, title="Call 4", speakers=("Speaker 1", "Z"))
+    voice_prints.match(a_check(untyped, {"Speaker 1": label_print(1)}))
+    row = VoiceMatch.objects.get(transcript=untyped.transcript, speaker="Speaker 1")
+    assert row.rating == voice_prints.HIGH
+    shown = voice_prints.rows_for(untyped.transcript)["matches"][0]["people"][0]
+    assert not shown["cross_kind"] and shown["caution"] == ""
+    # Same kind: the rating stands.
+    same = a_recording(owner, a_case, title="Cam 3", speakers=("Speaker 1", "Q"))
+    same.recording_type = "body camera"
+    same.save(update_fields=["recording_type"])
+    assert not voice_prints.cross_kind(["Body camera"], same)
+    # A row rated high before this release shows medium when it crosses.
+    row = VoiceMatch.objects.get(transcript=call.transcript, speaker="Speaker 1")
+    row.rating = voice_prints.HIGH
+    row.save(update_fields=["rating"])
+    shown = voice_prints.rows_for(call.transcript)["matches"][0]["people"][0]
+    assert shown["rating"] == "medium"
+    # Both pages carry the caution and the guided page folds weak conflicts.
+    guided = (HERE / "static" / "speakers-guided.js").read_text(encoding="utf-8")
+    assert "person.caution" in guided and "weak matches in conflict" in guided
+    assert "sg-weak" in guided and "function choiceRow(" in guided
+    assert '(one.kind === "case" && !one.weak) || one.kind === "book"' in guided
+    classic = (HERE / "static" / "speakers-page.js").read_text(encoding="utf-8")
+    assert "function cautionOf(" in classic and "person.cross_kind" in classic
+    css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".sg-weak summary" in css

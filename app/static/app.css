@@ -2374,6 +2374,10 @@ details.inline[open] summary::after { content: ": "; }
 .sg-choices { display: flex; flex-direction: column; gap: 6px; }
 .sg-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; }
 .sg-choice.best { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.sg-choice.weak { opacity: .9; }
+.sg-weak { margin-top: 2px; }
+.sg-weak summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 4px 0; }
+.sg-weak[open] summary { margin-bottom: 6px; }
 .sg-choice.plain { border-style: dashed; color: var(--muted); }
 .sg-choice .nm { font-weight: 600; color: var(--speaker, var(--text)); } .sg-choice .why { color: var(--muted); font-size: 12px; }
 .sg-choice .acts { display: flex; gap: 6px; align-items: center; }

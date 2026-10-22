@@ -230,6 +230,49 @@ def _rating(score: float, part_count: int, seconds: float, medium_line: float) -
     return word
 
 
+def kinds_taught(person) -> list[str]:
+    """The Recording types the Person's print was taught on (v1.150.0), as
+    the Admin's list writes them, each once, blanks left out."""
+    from core.recordings import Recording
+
+    parts = (person.voice_print or {}).get("parts") or {}
+    if not parts:
+        return []
+    types = Recording.objects.filter(pk__in=list(parts)).values_list(
+        "recording_type", flat=True
+    )
+    out: list[str] = []
+    for one in types:
+        one = (one or "").strip()
+        if one and one.casefold() not in {k.casefold() for k in out}:
+            out.append(one)
+    return out
+
+
+def cross_kind(kinds: list[str], recording) -> bool:
+    """Whether a match on this Recording crosses kinds (v1.150.0): the print
+    was taught on typed recordings and none of them is this one's type. A
+    phone line, a body camera and a room each change a voice, so such a
+    match rates medium at most and says so. An untyped recording, or a
+    print taught on untyped ones, cannot be judged and is not called out."""
+    mine = (recording.recording_type or "").strip().casefold()
+    if not mine or not kinds:
+        return False
+    return mine not in {one.casefold() for one in kinds}
+
+
+def caution(kinds: list[str], recording) -> str:
+    """The one sentence a cross-kind match carries (v1.150.0)."""
+    if not cross_kind(kinds, recording):
+        return ""
+    taught = " and ".join(kinds)
+    return (
+        f"Their voice was taught on a {taught}; this is a "
+        f"{(recording.recording_type or '').strip()}. A different kind of "
+        "recording changes a voice, so this match rates medium at most."
+    )
+
+
 def match(check) -> int:
     """After a run inside a Case: every unnamed Speaker's print against every
     Person's; the matches, conflicts and the Side alarm as rows the card
@@ -256,6 +299,11 @@ def match(check) -> int:
     midpoint = ((check.second_look or {}).get("calibration") or {}).get("midpoint")
     medium_line = max(MEDIUM_COS, float(midpoint)) if midpoint else MEDIUM_COS
     rows: list[VoiceMatch] = []
+    # A print taught on another kind of recording rates medium at most
+    # here (v1.150.0); the kinds are read once per Person.
+    crosses = {
+        person.pk: cross_kind(kinds_taught(person), recording) for person in people
+    }
     for label, kept in prints.items():
         if not _is_a_label(label):
             continue
@@ -267,6 +315,8 @@ def match(check) -> int:
             )
             if not word:
                 continue
+            if crosses.get(person.pk):
+                word = MEDIUM
             rows.append(
                 VoiceMatch(
                     transcript=transcript,
@@ -402,6 +452,25 @@ def rows_for(transcript) -> dict:
         # The other recordings first, this one last.
         return sorted(found, key=lambda one: one["here"])
 
+    kinds_of: dict = {}
+
+    def kinds_for(person) -> list[str]:
+        if person.pk not in kinds_of:
+            kinds_of[person.pk] = kinds_taught(person)
+        return kinds_of[person.pk]
+
+    def crossing(row) -> dict:
+        """The cross-kind facts of one match (v1.150.0); a row rated high
+        before this release is shown medium when it crosses kinds."""
+        kinds = kinds_for(row.person)
+        crosses = cross_kind(kinds, recording)
+        return {
+            "kinds": kinds,
+            "cross_kind": crosses,
+            "caution": caution(kinds, recording),
+            "rating": MEDIUM if crosses and row.rating == HIGH else row.rating,
+        }
+
     for label, rows in by_label.items():
         side = [one for one in rows if one.kind == VoiceMatch.SIDE]
         matches = [one for one in rows if one.kind == VoiceMatch.MATCH]
@@ -432,12 +501,12 @@ def rows_for(transcript) -> dict:
                             "id": one.pk,
                             "name": one.person.name,
                             "role": one.person.role,
-                            "rating": one.rating,
                             "recordings": len(
                                 (one.person.voice_print or {}).get("parts") or {}
                             ),
                             "heard": heard_of(one.person),
                             "new": one.pk in fresh,
+                            **crossing(one),
                         }
                         for one in matches
                     ],

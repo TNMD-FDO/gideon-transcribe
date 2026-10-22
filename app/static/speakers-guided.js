@@ -215,10 +215,14 @@
     var book = check.voice_book || {};
     ((check.voice_matches || {}).matches || []).forEach(function (group) {
       if (group.speaker !== label || group.kind === "side") { return; }
+      // Weak in conflict (v1.150.0): two or more people over one voice and
+      // none of them better than medium. Such answers never lead the screen;
+      // they fold under Choose..., to be heard before anything is pressed.
+      var weak = group.kind === "conflict" && group.people.every(function (person) { return person.rating !== "high"; });
       group.people.forEach(function (person) {
         out.push({
-          kind: "case", name: person.name, role: person.role, rating: person.rating,
-          why: "their voice on " + plural(person.recordings, "recording") + " of this case" + (group.kind === "conflict" ? " · two of the case's voices claim this one" : ""),
+          kind: "case", name: person.name, role: person.role, rating: person.rating, weak: weak, cross: !!person.cross_kind,
+          why: "their voice on " + plural(person.recordings, "recording") + " of this case" + (group.kind === "conflict" ? " · two of the case's voices claim this one" : "") + (person.caution ? " · " + person.caution : ""),
           heard: person.heard || [],
           act: function () { return send("/voice-match/" + person.id + "/accept").then(function (a) { if (!a.ok) { problem(a.said); return false; } return true; }); }
         });
@@ -248,9 +252,15 @@
         act: function () { return rename(label, hint.name, ""); } });
     });
     var best = out.findIndex(function (one) { return one.kind === "case" && one.rating === "high"; });
-    if (best < 0) { best = out.findIndex(function (one) { return one.kind === "case" || one.kind === "book"; }); }
+    if (best < 0) { best = out.findIndex(function (one) { return (one.kind === "case" && !one.weak) || one.kind === "book"; }); }
     if (best >= 0) { out[best].best = true; }
     return out;
+  }
+
+  function choiceRow(one, i) {
+    var pill = one.kind === "hint" ? "<span class='pill small'>a name said on the call</span>" : "<span class='pill small " + (one.rating === "high" ? "ok" : "") + "'>" + ratingWords(one.rating) + "</span>" + (one.cross ? " <span class='pill small warn' title='Taught on another kind of recording'>another kind of recording</span>" : "");
+    var button = one.kind === "hint" ? "Use this name" : "It’s " + escape(shortName(one.name));
+    return "<div class='sg-choice" + (one.best ? " best" : "") + (one.weak ? " weak" : "") + "' data-candidate='" + i + "'><div><span class='nm'>" + escape(one.name) + "</span> " + (one.role ? "<span class='pill small'>" + escape(one.role) + "</span> " : "") + pill + "<div class='why'>" + escape(one.why) + "</div></div><div class='acts'>" + (one.kind === "hint" ? "<button type='button' class='sg-play tiny' data-start='" + one.start + "' data-end='" + (one.start + 6) + "'>" + UI.icon("play") + "</button>" : hearButtons(one)) + "<button type='button' class='small" + (one.best ? " primary" : "") + " sg-candidate' data-candidate='" + i + "'>" + button + "</button></div></div>";
   }
 
   function ratingWords(rating) { return rating === "high" ? "sounds very like" : "sounds a bit like"; }
@@ -298,19 +308,28 @@
       html += "<div class='sg-choices'><div class='sg-choice plain'><div>Named <b>" + escape(card.name) + "</b>. Not them?</div><div class='acts'><button type='button' class='small sg-else'>Change...</button></div></div></div>";
     } else {
       var candidates = candidatesFor(card);
+      var weak = candidates.filter(function (one) { return one.weak; });
+      var leads = candidates.some(function (one) { return one.best; });
       html += "<div class='sg-q small'>Who is this?</div><div class='sg-choices'>";
       candidates.forEach(function (one, i) {
+        if (one.weak) { return; }
         if (one.kind === "none") {
           html += "<div class='sg-choice plain'><div>" + escape(one.name) + "<div class='why'>" + escape(one.why) + "</div></div><div class='acts'><button type='button' class='small sg-bookcheck'>Check again</button></div></div>";
         } else if (one.kind === "bookcheck") {
           html += "<div class='sg-choice plain'><div>The " + escape(one.unit) + " unit's known voices" + (one.ok ? "" : "<div class='why'>" + escape(one.why) + "</div>") + "</div><div class='acts'><button type='button' class='small sg-bookcheck'" + (one.ok ? "" : " disabled title='" + escape(one.why) + "'") + ">Check</button></div></div>";
         } else {
-          var pill = one.kind === "hint" ? "<span class='pill small'>a name said on the call</span>" : "<span class='pill small " + (one.rating === "high" ? "ok" : "") + "'>" + ratingWords(one.rating) + "</span>";
-          var button = one.kind === "hint" ? "Use this name" : "It’s " + escape(shortName(one.name));
-          html += "<div class='sg-choice" + (one.best ? " best" : "") + "' data-candidate='" + i + "'><div><span class='nm'>" + escape(one.name) + "</span> " + (one.role ? "<span class='pill small'>" + escape(one.role) + "</span> " : "") + pill + "<div class='why'>" + escape(one.why) + "</div></div><div class='acts'>" + (one.kind === "hint" ? "<button type='button' class='sg-play tiny' data-start='" + one.start + "' data-end='" + (one.start + 6) + "'>" + UI.icon("play") + "</button>" : hearButtons(one)) + "<button type='button' class='small" + (one.best ? " primary" : "") + " sg-candidate' data-candidate='" + i + "'>" + button + "</button></div></div>";
+          html += choiceRow(one, i);
         }
       });
-      html += "<div class='sg-choice plain'><div>Someone else, or the same person as another voice</div><div class='acts'><button type='button' class='small sg-else'>Choose...</button></div></div></div>";
+      // The honest lead (v1.150.0): with no answer better than the weak
+      // ones, Choose... is the primary and the weak matches fold under it.
+      html += "<div class='sg-choice plain" + (leads ? "" : " best") + "'><div>Someone else, or the same person as another voice</div><div class='acts'><button type='button' class='small" + (leads ? "" : " primary") + " sg-else'>Choose...</button></div></div>";
+      if (weak.length) {
+        html += "<details class='sg-weak'><summary>" + weak.length + " weak matches in conflict · listen before choosing</summary><div class='sg-choices'>" +
+          weak.map(function (one) { return choiceRow(one, candidates.indexOf(one)); }).join("") +
+          "<div class='tiny muted'>Two of the case's voices both lean toward this one and neither is sure. Hear each, and hear the samples above, before you press anything.</div></div></details>";
+      }
+      html += "</div>";
       html += "<div class='sg-walk'><span>Accept names every line of this voice. Undo takes it back.</span><button type='button' class='quiet tiny sg-skip'>Skip this voice</button></div>";
     }
     el.focus.innerHTML = html;

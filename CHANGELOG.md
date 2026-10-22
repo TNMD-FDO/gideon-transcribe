@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.150.0, 2026-10-22
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **A voice match across kinds of recording says so and rates medium at
+  most** (the maintainer's report on the office's call: for the far party
+  none of the offered voices sounded alike, and the samples seemed
+  mistimed; the playback was measured in time on both copies, and the
+  offers were two medium matches in conflict from prints taught on other
+  kinds of recording). A Sounds like whose print was taught on recordings
+  of one type, matched on a recording of another, carries the pill
+  "another kind of recording" and one sentence: which kinds taught it,
+  and that a different kind of recording changes a voice. The rating is
+  capped at medium, at match time and on rows made before this release.
+  An untyped recording, or a print taught on untyped ones, is not judged.
+- **The honest lead on the guided page.** When every candidate for a voice
+  is a medium match and they conflict, neither leads the screen: Choose...
+  is the primary, and the weak matches fold under "2 weak matches in
+  conflict, listen before choosing", each with a play of that person's
+  voice. The classic page's Sounds like block and its conflict carry the
+  caution sentence. Phase 5 chapter 2 amended; ADR 0021 noted.
+
 ## v1.149.0, 2026-10-22
 
 ```

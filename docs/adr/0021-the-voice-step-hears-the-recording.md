@@ -182,7 +182,12 @@ voice's half: not a print taught by hand, but one the words' own
 findings teach, the lines the phrases marked giving the system's voice,
 which then claims the fragments the words miss and the rule "unlike
 every party"; it comes with the second guided release and this ADR is
-amended again when it does.
+amended again when it does. The same day, decision 6's "Sounds like"
+gains a link in its weakest-link rating (v1.150.0): a print taught on
+one kind of recording matched on another rates medium at most and says
+so, after the office's call offered two medium matches in conflict for
+the far party from prints taught on other kinds; and the guided page
+never leads with a conflict of mediums.
 
 **Noted 2026-10-21, at V4b's build (v1.146.0, the unit's voice book).**
 The maintainer's direction of the 21st is drawn
