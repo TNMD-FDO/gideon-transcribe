@@ -109,6 +109,37 @@ def names_in(case) -> list[str]:
     return out
 
 
+def recognition_names(case) -> list[str]:
+    """What recognition is given for a recording in this case: the People's
+    names and nicknames, the terms, and (v1.156.0) the names of the voices
+    the case's unit keeps that are told to recognition."""
+    from core import voice_book
+
+    names = names_in(case)
+    seen = {one.casefold() for one in names}
+    for one in voice_book.names_for_recognition(case):
+        if one.casefold() not in seen:
+            seen.add(one.casefold())
+            names.append(one)
+    return names
+
+
+def block_context(case) -> dict:
+    """The Names and places block (v1.156.0; the drawing
+    phase-9-notes-export-and-names.html, figure 2): the people, read-only,
+    the terms, and the unit's kept voices told to recognition."""
+    from core import voice_book
+
+    rows = entries(case)
+    unit = voice_book.unit_of_case(case) if case is not None else ""
+    return {
+        "people": [one for one in rows if one["kind"] == "person"],
+        "terms": [one for one in rows if one["kind"] == "term"],
+        "unit": unit,
+        "unit_count": len(voice_book.names_for_recognition(case)) if unit else 0,
+    }
+
+
 def count_in(case) -> int:
     return (
         Person.objects.filter(case=case).count()

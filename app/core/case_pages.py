@@ -348,6 +348,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "role": role,
             # The Case vocabulary block (Phase 9 chapter 2).
             "vocabulary": vocabulary.entries(case),
+            # Names and places (v1.156.0): the people read-only, the terms,
+            # the unit's kept voices told to recognition.
+            "names_block": vocabulary.block_context(case),
             "may_remove_terms": role != "collaborator",
             **_sharing_context(case, role, request.user, names),
             "recordings": shown_rows,

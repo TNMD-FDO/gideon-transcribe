@@ -24,13 +24,15 @@ to the Recording and not to the Transcript, so Process again leaves it be.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
+from pathlib import Path
 
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from core import audit, cases, exports, incidents
+from core import audit, cases, clock_check, exports, incidents
 from core.jobs import Segment
 
 NOTE_MOST = 2000
@@ -521,6 +523,8 @@ def _line_rows(case, links: dict | None = None) -> list[dict]:
                 "all_cameras": incidents.url_at(links.get(recording.pk), one.start),
                 "rests_on": one.text,
                 "who": one.speaker,
+                # The clock verdict of the line (ADR 0023), for the export's pill.
+                "verdict": clock_check.verdict_json(one),
             }
         )
     return rows
@@ -709,11 +713,18 @@ def count(case) -> int:
 
 def word(case, exported_by: str) -> bytes:
     """Download notes: every note in the case as a Word document, for the
-    office's own reading."""
+    office's own reading. One block per note (v1.156.0; the drawing
+    phase-9-notes-export-and-names.html, figure 1): the note first in the
+    largest type, where it rests under it, and for a note on a camera
+    recording a still from the playback copy at the moment, taken now and
+    kept nowhere. Grouped under the recording, newest recording first, and
+    an incident's event notes under the incident."""
     import io
+    import tempfile
 
+    from django.conf import settings
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Pt
+    from docx.shared import Inches, Pt, RGBColor
 
     listed = of_case(case)
     document = exports._open_record_document()
@@ -732,27 +743,190 @@ def word(case, exported_by: str) -> bytes:
     )
     line.alignment = WD_ALIGN_PARAGRAPH.CENTER
     line.runs[0].italic = True
-    document.add_paragraph()
+
     rows = listed["all"]
-    table = document.add_table(rows=1, cols=4)
-    table.style = "Light Grid Accent 1"
-    for cell, title in zip(
-        table.rows[0].cells, ("When", "Rests on", "Writer", "Note"), strict=True
-    ):
-        cell.text = title
-    for one in rows:
-        cells = table.add_row().cells
-        cells[0].text = f"{one['where']}, {one['when']}"
-        cells[1].text = (
-            f"{one['who']}: {one['rests_on']}" if one["who"] else one["rests_on"]
-        )
-        cells[2].text = f"{one['by']}, {one['on']}" if one["by"] else one["on"]
-        cells[3].text = one["text"]
+    groups = _grouped(rows)
+    Path(settings.SCRATCH_DIR).mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=str(settings.SCRATCH_DIR)) as folder:
+        stills, left_out = _stills_for(rows, Path(folder))
+        if left_out:
+            note = document.add_paragraph(
+                f"{len(stills)} stills are in this document; {left_out} more "
+                f"camera notes are without one, since the document carries at "
+                f"most {STILLS_MOST}."
+            )
+            note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            note.runs[0].italic = True
+            note.runs[0].font.size = Pt(9)
+        for group in groups:
+            head = document.add_paragraph()
+            head.paragraph_format.space_before = Pt(14)
+            head.paragraph_format.space_after = Pt(4)
+            title = head.add_run(group["title"])
+            title.bold = True
+            title.font.size = Pt(12)
+            if group["sub"]:
+                sub = head.add_run(f"   {group['sub']}")
+                sub.font.size = Pt(9)
+                sub.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+            for one in group["rows"]:
+                _note_block(document, one, stills.get(_key(one)), Inches, Pt, RGBColor)
     # The running head and the page marking every Word export carries (v1.121.3).
     exports.stamp_pages(document, case.name, "Notes", case.name)
     holder = io.BytesIO()
     document.save(holder)
     return holder.getvalue()
+
+
+# The document carries at most this many stills, so a download never runs away.
+STILLS_MOST = 300
+STILL_HEIGHT = 360
+STILL_WIDTH_INCHES = 2.0
+
+
+def _key(row: dict) -> str:
+    return f"{row['kind']}:{row.get('id', '')}"
+
+
+def _grouped(rows: list[dict]) -> list[dict]:
+    """The notes under their recording, newest recording first as the Notes
+    page lists them, then the incidents' event notes under their incident."""
+    by_recording: dict = {}
+    by_incident: dict = {}
+    for one in rows:
+        if one["kind"] == "event":
+            by_incident.setdefault(one["where"], []).append(one)
+        else:
+            by_recording.setdefault(one.get("recording_id"), []).append(one)
+    groups = []
+    for _recording_id, mine in sorted(
+        by_recording.items(),
+        key=lambda item: item[1][0].get("created") or 0,
+        reverse=True,
+    ):
+        first = mine[0]
+        made = first.get("created")
+        groups.append(
+            {
+                "title": first["where"],
+                "sub": " · ".join(
+                    part
+                    for part in (
+                        first.get("type") or "",
+                        f"{timezone.localtime(made):%d %B %Y}"
+                        if hasattr(made, "year")
+                        else "",
+                        f"{len(mine)} note{'' if len(mine) == 1 else 's'}",
+                    )
+                    if part
+                ),
+                "rows": sorted(mine, key=lambda one: float(one.get("at") or 0)),
+            }
+        )
+    for name, mine in by_incident.items():
+        groups.append(
+            {
+                "title": f"Incident: {name}",
+                "sub": f"Chronology · {len(mine)} note{'' if len(mine) == 1 else 's'}",
+                "rows": mine,
+            }
+        )
+    return groups
+
+
+def _stills_for(rows: list[dict], folder: Path) -> tuple[dict, int]:
+    """A still per note on a camera recording, at the note's moment, up to
+    STILLS_MOST; the count left without one. A frame that cannot be cut
+    leaves its note without a picture, and the document still prints."""
+    from core import media
+    from core.recordings import Recording
+
+    wanted = [one for one in rows if one["kind"] in ("line", "moment")]
+    recordings = {
+        one.pk: one
+        for one in Recording.objects.filter(
+            pk__in={one["recording_id"] for one in wanted}
+        )
+    }
+    stills: dict = {}
+    taken = 0
+    left_out = 0
+    for one in wanted:
+        recording = recordings.get(one["recording_id"])
+        source = recording.playback_path() if recording is not None else None
+        if source is None or Path(source).suffix != ".mp4":
+            continue
+        if taken >= STILLS_MOST:
+            left_out += 1
+            continue
+        target = folder / f"still-{len(stills)}"
+        target.mkdir(parents=True, exist_ok=True)
+        try:
+            written = media.grab_frames(
+                Path(source), target, [float(one["at"])], height=STILL_HEIGHT
+            )
+        except Exception:  # noqa: BLE001 - a still is never worth failing the export
+            continue
+        if written:
+            stills[_key(one)] = written[0]
+            taken += 1
+    return stills, left_out
+
+
+def _note_block(document, one: dict, still, Inches, Pt, RGBColor) -> None:
+    """One note: the still at the left when there is one, the note first in
+    the largest type, where it rests, the line quoted, the writer and date."""
+    muted = RGBColor(0x66, 0x66, 0x66)
+    table = document.add_table(rows=1, cols=2 if still else 1)
+    table.autofit = False
+    cells = table.rows[0].cells
+    if still:
+        cells[0].width = Inches(STILL_WIDTH_INCHES + 0.1)
+        picture = cells[0].paragraphs[0]
+        with contextlib.suppress(Exception):  # the words matter more than the picture
+            picture.add_run().add_picture(str(still), width=Inches(STILL_WIDTH_INCHES))
+        caption = cells[0].add_paragraph()
+        caption_run = caption.add_run(f"still at {one['when']}")
+        caption_run.font.size = Pt(8)
+        caption_run.font.color.rgb = muted
+        body = cells[1]
+        body.width = Inches(6.5 - STILL_WIDTH_INCHES - 0.1)
+    else:
+        cells[0].width = Inches(6.5)
+        body = cells[0]
+    text = body.paragraphs[0]
+    said = text.add_run(one["text"])
+    said.font.size = Pt(12.5)
+    where = body.add_paragraph()
+    when = where.add_run(one["when"])
+    when.bold = True
+    when.font.size = Pt(9.5)
+    if one["kind"] == "event":
+        rest = " on the incident clock · on the event"
+    elif one["kind"] == "moment":
+        rest = " · at a moment where nothing was said"
+    elif one.get("who"):
+        rest = f" · on {one['who']}'s line"
+    else:
+        rest = " · on a line"
+    tail = where.add_run(rest)
+    tail.font.size = Pt(9.5)
+    tail.font.color.rgb = muted
+    verdict = one.get("verdict") or {}
+    if verdict.get("retimed"):
+        pill = where.add_run(f"   clock re-read · was {exports.clock(verdict['was'])}")
+        pill.font.size = Pt(8)
+        pill.font.color.rgb = muted
+    if one.get("rests_on"):
+        quoted = body.add_paragraph()
+        quote = quoted.add_run(f"“{one['rests_on']}”")
+        quote.italic = True
+        quote.font.size = Pt(9.5)
+    by = body.add_paragraph()
+    who = by.add_run(f"{one['by']}, {one['on']}" if one.get("by") else one["on"])
+    who.font.size = Pt(8.5)
+    who.font.color.rgb = muted
+    document.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
 def export_name(case) -> str:

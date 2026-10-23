@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The notes export with a still, and names and places</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif: Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; } h2 { font-size: 17px; margin: 0; } h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.small { font-size: 12px; padding: 2px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+
+  /* the Word page, as it prints */
+  .sheet { background: #fff; color: #111; width: min(100%, 720px); margin: 0 auto; padding: 44px 52px; box-shadow: 0 10px 28px rgba(0,0,0,.18); font: 12.5px/1.45 var(--serif); }
+  .sheet .office { font: 600 11px/1.3 var(--font); color: #444; display: flex; justify-content: space-between; border-bottom: 1px solid #bbb; padding-bottom: 6px; margin-bottom: 22px; }
+  .sheet .title { text-align: center; font: 700 22px/1.2 var(--font); margin: 0 0 6px; }
+  .sheet .made { text-align: center; font: italic 11.5px/1.4 var(--serif); color: #444; margin: 0 0 20px; }
+  .sheet .rec { font: 600 13px/1.3 var(--font); color: #222; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin: 20px 0 10px; display: flex; justify-content: space-between; }
+  .sheet .rec span { font-weight: 400; color: #666; font-size: 11.5px; }
+  .note { display: grid; grid-template-columns: 150px 1fr; gap: 12px 16px; padding: 10px 0 14px; border-bottom: 1px dotted #ccc; break-inside: avoid; }
+  .note.nopic { grid-template-columns: 1fr; }
+  .note .still { width: 150px; aspect-ratio: 16/9; background: linear-gradient(135deg, #2b3a4a, #0e151d); border: 1px solid #889; position: relative; overflow: hidden; }
+  .note .still::after { content: "still at 0:48 · body camera"; position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.6); color: #eee; font: 9px/1.3 var(--mono); padding: 2px 5px; }
+  .note .still i { position: absolute; left: 36px; top: 24px; width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); }
+  .note .still i::after { content: ""; position: absolute; left: 10px; top: 46px; width: 26px; height: 30px; border: 2px solid rgba(255,255,255,.3); border-radius: 6px 6px 0 0; }
+  .note .body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .note .text { font: 15px/1.4 var(--serif); color: #111; }
+  .note .where { font: 11.5px/1.4 var(--font); color: #444; }
+  .note .where b { color: #222; }
+  .note .line { font: italic 11.5px/1.4 var(--serif); color: #333; padding-left: 10px; border-left: 2px solid #bbb; }
+  .note .by { font: 11px/1.3 var(--font); color: #666; }
+  .sheet .foot { margin-top: 26px; font: 10px/1.3 var(--font); color: #777; display: flex; justify-content: space-between; border-top: 1px solid #bbb; padding-top: 5px; }
+
+  /* the case page block */
+  .block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 13px; max-width: 620px; }
+  .block h3 { display: flex; gap: 8px; align-items: baseline; }
+  .block .people { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; margin: 10px 0; background: var(--surface-2); }
+  .block .people .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .block .chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; background: var(--surface); font-size: 12px; }
+  .block .chip .r { color: var(--muted); } .block .chip .n { color: var(--accent); }
+  .terms { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .terms li { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; }
+  .terms .sp { color: var(--muted); font-size: 12px; grid-column: 1 / -1; }
+  .add { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .add input { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  .readers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .readers div { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font-size: 12px; }
+  .readers b { display: block; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Phase 9 · drawn 2026-10-23 · for the maintainer's word</div>
+    <h1>The notes export with a still at the moment, and the case's names and places</h1>
+    <p class="lede">Two things the maintainer asked for on 2026-10-23. The Download notes document stops being a four-column table: each note is a block with the note itself first and, for a note on a camera recording, a still from the playback copy at the moment the note was made. And the case page's "Case vocabulary" block says plainly what it is: the people, who live on the Speakers tab, and the places and terms, which live here.</p>
+  </header>
+
+  <!-- Figure 1: the notes export -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>Download notes: one block per note, the note first, the camera's still at the moment beside it</h2></div>
+    <div class="sheet">
+      <div class="office"><span>Office of the Federal Defender (fictional)</span><span>Notes · State v. Nobody (fictional)</span></div>
+      <p class="title">Notes: State v. Nobody</p>
+      <p class="made">5 notes: 4 on lines of transcripts (1 of them at a moment where nothing was said), 1 on an event. Made 23 October 2026 14:40 by dmeehan. The office's own words, for the office's own reading.</p>
+
+      <div class="rec">Body camera 0412, Ofc. Hale <span>Body camera · 11 February 2026 · 3 notes</span></div>
+      <div class="note">
+        <div class="still"><i></i></div>
+        <div class="body">
+          <div class="text">Bag is already open before the consent question is asked. Compare with the report's paragraph 4.</div>
+          <div class="where"><b>0:48</b> · on Dana Reyes's line</div>
+          <div class="line">"Yes, it's mine. What's the problem?"</div>
+          <div class="by">dmeehan, 14 October 2026</div>
+        </div>
+      </div>
+      <div class="note">
+        <div class="still" style="background: linear-gradient(135deg, #3a3a2b, #14120b)"><i></i></div>
+        <div class="body">
+          <div class="text">Second officer arrives here; nobody speaks for nearly a minute. Check the CAD time against this.</div>
+          <div class="where"><b>2:31</b> · at a moment where nothing was said</div>
+          <div class="by">dmeehan, 14 October 2026</div>
+        </div>
+      </div>
+      <div class="note">
+        <div class="still" style="background: linear-gradient(135deg, #2b4a3a, #0e1d15)"><i></i></div>
+        <div class="body">
+          <div class="text">The "step over here" is said twice; the first time is off camera.</div>
+          <div class="where"><b>0:52</b> · on Officer Hale's line</div>
+          <div class="line">"Step over here for me."</div>
+          <div class="by">R. Singh, 16 October 2026</div>
+        </div>
+      </div>
+
+      <div class="rec">Call 0403 <span>Jail call · 11 February 2026 · 1 note</span></div>
+      <div class="note nopic">
+        <div class="body">
+          <div class="text">He names the second address here. Cross-check with the search warrant return.</div>
+          <div class="where"><b>2:15</b> · on Speaker 1's line <span class="pill" style="font: 10px/1.4 var(--font); background:#eef; color:#446">clock re-read · was 2:05</span></div>
+          <div class="line">"Hey man, back when you were 19 or 20, I never heard you say it was cold."</div>
+          <div class="by">dmeehan, 22 October 2026</div>
+        </div>
+      </div>
+
+      <div class="rec">Incident: the stop on Pike Street <span>Chronology · 1 note</span></div>
+      <div class="note nopic">
+        <div class="body">
+          <div class="text">Camera 3's clock runs 40 s ahead; the event order on the chronology is right, the stamps are not.</div>
+          <div class="where"><b>14:02:10</b> on the incident clock · on the event "Second unit arrives"</div>
+          <div class="by">dmeehan, 18 October 2026</div>
+        </div>
+      </div>
+      <div class="foot"><span>State v. Nobody · Notes</span><span>Page 1 of 2</span></div>
+    </div>
+    <div class="caption">
+      <p><b>The note first.</b> Each note is its own block, the office's words in the largest type on the page. Under them, where it rests: the time in bold and whose line, then the line itself quoted in italics as it reads in the transcript, then the writer and the date, small. The notes are grouped under their recording, newest recording first as the Notes page lists them, and an incident's event notes under the incident.</p>
+      <p><b>The still.</b> For a note on a camera recording, a still from the playback copy at the moment the note was made, a thumbnail at the left with its time and the camera's name burned in small. It is taken when the document is made and kept nowhere, as the chronology report's stills are. A note at a moment where nothing was said gets its still too, since the picture is often the point of such a note. Audio-only recordings and event notes have no still; their block is the full width.</p>
+      <p><b>Everything the table carried stays.</b> The cover line's counts, the writer and date, the kind of note, the running head and the page marking. A note whose line's clock was re-read says so in a small pill after the time, as the pages do. Nothing is said that is not in the case; nothing about what was downloaded goes beyond the one audit row the export already writes.</p>
+      <p><b>Cost.</b> One frame per camera note, a fraction of a second each; a case with hundreds of camera notes takes a few seconds longer to download. Over a cap of 300 stills the document says so at the top and leaves the rest without a picture, so a download never runs away.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: names and places -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>The case page's block as "Names and places": the people from the Speakers tab, the places and terms kept here</h2></div>
+    <div class="cols">
+      <div class="block">
+        <h3>Names and places <span class="muted small">4 people · 3 places and terms</span></h3>
+        <p class="muted small" style="margin: 4px 0 0">What the recogniser is told to listen for on every recording added here, and what Search and Gideon know. No transcript is ever rewritten by it.</p>
+        <div class="people">
+          <div class="small"><b>People</b> <span class="muted">· named and renamed on the <a href="#">Speakers tab</a>, which is where a nickname is added</span></div>
+          <div class="row">
+            <span class="chip"><b>Dana Reyes</b> <span class="r">Client</span> <span class="n">also called Dee</span></span>
+            <span class="chip"><b>Officer Hale</b> <span class="r">Officer</span></span>
+            <span class="chip"><b>Jordan Cole</b> <span class="r">Witness</span> <span class="n">also called Jay, Coach</span></span>
+            <span class="chip"><b>Tony Carruthers</b> <span class="r">Client</span></span>
+          </div>
+          <div class="muted tiny" style="margin-top: 6px">Their names and nicknames go to recognition. A spelling the recogniser got wrong is kept against the person on the Speakers tab as "also heard as", for Search; it is never sent to recognition.</div>
+        </div>
+        <ul class="terms">
+          <li><div><b>Pike Street</b></div><div class="row" style="gap: 6px"><span class="btn small ghost">Also heard as...</span><span class="btn small ghost">Remove</span></div><div class="sp">also heard as Pike Treat, Pikes Street</div></li>
+          <li><div><b>Riverside Correctional</b></div><div class="row" style="gap: 6px"><span class="btn small ghost">Also heard as...</span><span class="btn small ghost">Remove</span></div><div class="sp">no other spelling yet</div></li>
+          <li><div><b>CAD</b> <span class="muted small">(the dispatch log)</span></div><div class="row" style="gap: 6px"><span class="btn small ghost">Also heard as...</span><span class="btn small ghost">Remove</span></div><div class="sp">also heard as cat, cad log</div></li>
+        </ul>
+        <div class="add"><input type="text" placeholder="A place or a term" style="width: 220px"><input type="text" placeholder="Also heard as, with commas" style="width: 220px"><span class="btn small">Add</span></div>
+        <div class="readers">
+          <div><b>Recognition</b> the names, nicknames and terms, with the office's list ahead of them</div>
+          <div><b>Search and Find</b> the "also heard as" spellings stand for the name, marked</div>
+          <div><b>Gideon</b> is told the people and the terms, never a spelling</div>
+        </div>
+      </div>
+      <div class="caption" style="margin-top: 0">
+        <p><b>Two kinds, said so.</b> The people are shown as chips, read-only here, with the role and the nicknames the Speakers tab holds; the chip's link goes to the person's card. Adding a person, a nickname or a role is the Speakers tab's work, in one place, as the maintainer asked. The places and terms are added, given spellings and removed here, as today.</p>
+        <p><b>One answer to "what is it for".</b> The three readers under the block say in a line each what reads the list, so nobody has to guess whether a spelling helps recognition (it does not) or whether a nickname reaches Search (it does).</p>
+        <p><b>The unit's voices, if wanted.</b> Not drawn: the names of the voices a unit keeps could join recognition for recordings in that unit's cases, as officers' names are said across cases. It is a small change to the recognition list and a line in this block ("and the Trial unit's 6 kept voices"); it waits for the maintainer's word.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

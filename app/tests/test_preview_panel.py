@@ -123,7 +123,7 @@ def test_the_speakers_tab_and_the_voices_place_are_cards():
         'class="person-card',
         'details class="menu"',
         "Rename everywhere",
-        "Save role and notes",
+        "Save role, notes and names",
         "Merge into",
         "Unlearn their voice",
         "Delete from this case",

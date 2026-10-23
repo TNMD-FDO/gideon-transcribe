@@ -100,8 +100,8 @@ _Avoid_: hotwords, initial prompt (implementation terms)
 **Office Vocabulary**:
 Names and terms an Admin keeps for the whole office, sent with every Run ahead of the Batch's own Vocabulary.
 
-**Case vocabulary**:
-The list a Case keeps of names and places, each with its Also heard as spellings, carried into every Recording added to the Case (the names, between the Office Vocabulary and the Batch's own), into Search and Find (the spellings as forms, marked also heard as) and into what Gideon is told. A Person of the Case is an entry by itself. No Transcript is ever rewritten by it. Phase 9 chapter 2.
+**Case vocabulary** (on the page, "Names and places"):
+The list a Case keeps of names and places, each with its Also heard as spellings, carried into every Recording added to the Case (the names, between the Office Vocabulary and the Batch's own), into Search and Find (the spellings as forms, marked also heard as) and into what Gideon is told. A Person of the Case is an entry by itself, read-only in the block since v1.156.0: their Also called names and Also heard as spellings are kept on the person's card on the Speakers tab. From v1.156.0 the names of the voices the Case owner's unit keeps go to recognition too, each voice with a switch at the Voices place. No Transcript is ever rewritten by it. Phase 9 chapter 2.
 _Avoid_: alias list, dictionary, glossary (this file is the glossary), find and replace
 
 **Also heard as**:

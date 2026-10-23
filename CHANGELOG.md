@@ -21,6 +21,39 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.156.0, 2026-10-23
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Download notes as blocks with a still, Names and places, and the unit's
+kept voices told to recognition.
+
+- **Download notes.** One block per note instead of a table: the note
+  first in the largest type, then the time and whose line, the line
+  quoted, the writer and the date, grouped under each recording with an
+  incident's event notes under the incident. A note on a camera recording
+  carries a still from the playback copy at the note's moment, taken when
+  the document is made and kept nowhere; at most 300 stills, said at the
+  top when more notes are camera notes. A re-read line's clock is said.
+- **Names and places.** The case page's block is renamed and says what
+  it is: the people, read-only, with their role, nicknames and spellings,
+  each a link to the Speakers tab, where the person's card now keeps the
+  Also called names and the Also heard as spellings ("Save role, notes
+  and names"); the places and terms are kept in the block as before.
+  Three lines say what reads the list: recognition, Search and Find,
+  Gideon.
+- **The unit's kept voices told to recognition.** The names of the voices
+  the case owner's unit keeps go to recognition for the unit's
+  recordings, with a switch on each voice at the Voices place ("Stop
+  telling recognition this name"; a pill says which); one audit row,
+  Unit voice recognition switched. Migration 0090 adds the switch.
+- Drawn first in docs/spec/mockups/phase-9-notes-export-and-names.html;
+  Phase 9 chapter 2, Phase 8 chapter 2 and Phase 5 chapter 2 amended;
+  the glossary's Case vocabulary; the user and admin guides.
+
 ## v1.155.0, 2026-10-23
 
 ```

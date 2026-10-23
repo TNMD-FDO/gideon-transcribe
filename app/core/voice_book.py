@@ -76,6 +76,10 @@ class UnitVoice(models.Model):
     )
     forgotten_at = models.DateTimeField(null=True, blank=True)
     forgotten_by = models.CharField(max_length=150, blank=True, default="")
+    # Told to recognition (v1.156.0): the name goes with every recording in
+    # the unit's cases as a word to listen for; off per voice at the
+    # Voices place.
+    tell_recognition = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -186,6 +190,43 @@ def unit_of_case(case) -> str:
     """The one book a case has: its owner's unit."""
     owner = getattr(case, "owner", None)
     return units.of(owner) if owner is not None else ""
+
+
+def names_for_recognition(case) -> list[str]:
+    """The names of the voices the case's unit keeps that are told to
+    recognition (v1.156.0); none while the book is off or the owner is in
+    no unit."""
+    if case is None or not on():
+        return []
+    unit = unit_of_case(case)
+    if not unit:
+        return []
+    return list(
+        UnitVoice.objects.filter(
+            unit=unit, forgotten_at=None, vector__isnull=False, tell_recognition=True
+        )
+        .order_by("name")
+        .values_list("name", flat=True)
+    )
+
+
+def set_tell_recognition(book: UnitVoice, told: bool, *, by, request=None) -> None:
+    """The switch on one kept voice: whether its name goes to recognition
+    for the unit's cases. One audit row, naming the unit and the choice."""
+    if book.tell_recognition == told:
+        return
+    book.tell_recognition = told
+    book.save(update_fields=["tell_recognition"])
+    audit.write(
+        audit.Category.CASES,
+        "Unit voice recognition switched",
+        actor=by,
+        request=request,
+        object_type="unit",
+        object_id=book.unit,
+        object_label=book.unit,
+        told=told,
+    )
 
 
 def counts_for_switch() -> dict[str, int]:

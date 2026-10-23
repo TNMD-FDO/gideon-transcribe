@@ -177,6 +177,17 @@ def person_action(request: HttpRequest, person_id) -> HttpResponse:
                 by=request.user,
                 request=request,
             )
+            # Also called and Also heard as (v1.156.0), on the person's card.
+            if "called" in request.POST or "spellings" in request.POST:
+                from core import vocabulary
+
+                vocabulary.set_person_spellings(
+                    person,
+                    request.POST.get("spellings", ""),
+                    called=request.POST.get("called", ""),
+                    by=request.user,
+                    request=request,
+                )
         elif action == "merge":
             survivor = get_object_or_404(
                 Person, pk=request.POST.get("into", ""), case=case

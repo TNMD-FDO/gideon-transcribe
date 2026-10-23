@@ -438,7 +438,7 @@
             <div class="people" id="people">
               {% for row in people %}
                 {% with v=row.voice b=row.book %}
-                <article class="person-card{% if row.waiting_count %} waiting{% endif %}{% if not v.has_print %} dim{% endif %}" data-kinds="{{ row.kinds }}">
+                <article class="person-card{% if row.waiting_count %} waiting{% endif %}{% if not v.has_print %} dim{% endif %}" data-kinds="{{ row.kinds }}" id="person-{{ row.person.pk }}">
                   <div class="h">
                     <span class="nm">{{ row.person.name }}</span>
                     {% if row.person.role %}<span class="pill small">{{ row.person.role }}</span>{% endif %}
@@ -461,7 +461,10 @@
                             {% endfor %}
                           </select>
                           <input type="text" name="notes" value="{{ row.person.notes }}" maxlength="1000" placeholder="Notes, a few lines" class="grow" aria-label="Notes">
-                          <button type="submit" class="small">Save role and notes</button>
+                          {% comment %}The names people call them and the spellings the recogniser gave (v1.156.0): managed here, on the person, as the maintainer asked; the Names and places block only reads them.{% endcomment %}
+                          <input type="text" name="called" value="{{ row.person.also_called|join:", " }}" maxlength="2500" placeholder="Also called, with commas" class="grow" aria-label="Also called" title="The names people use for them on the recordings; each goes to recognition and to Search">
+                          <input type="text" name="spellings" value="{{ row.person.also_heard_as|join:", " }}" maxlength="2500" placeholder="Also heard as, with commas" class="grow" aria-label="Also heard as" title="Spellings the recogniser has been heard to give the name; Search reads them, recognition never does">
+                          <button type="submit" class="small">Save role, notes and names</button>
                         </form>
                         {% if row.others %}
                           <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px"

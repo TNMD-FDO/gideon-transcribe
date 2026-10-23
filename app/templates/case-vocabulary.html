@@ -1,34 +1,48 @@
 {% comment %}
-  The Case vocabulary (Phase 9 chapter 2): the names and places the case has
-  learned, each with the spellings the engine has been heard to give it. The
-  People from the Speakers tab are here by themselves. Plain forms, each
-  going back to the case page, as the Speakers tab's are.
+  Names and places (Phase 9 chapter 2; as cards from v1.156.0, the drawing
+  docs/spec/mockups/phase-9-notes-export-and-names.html, figure 2): the
+  people from the Speakers tab, read-only here, with their roles and the
+  names people call them; the places and terms the case keeps here, each
+  with the spellings the recogniser has been heard to give it; and, when
+  the unit keeps voices, how many of their names go to recognition too.
+  Three lines say what reads the list.
 {% endcomment %}
-<div class="case-vocabulary" id="case-vocabulary">
-  <h3>Case vocabulary <span class="muted small">{% if vocabulary|length == 1 %}1 name or place{% else %}{{ vocabulary|length }} names and places{% endif %}</span></h3>
-  <p class="muted small">They go with every recording added here and with Process again. Search and Gideon read the spellings too. The people from the Speakers tab are here by themselves.</p>
-  {% if vocabulary %}
+<div class="case-vocabulary names-places" id="case-vocabulary">
+  <h3>Names and places <span class="muted small">{{ names_block.people|length }} {% if names_block.people|length == 1 %}person{% else %}people{% endif %} · {{ names_block.terms|length }} place{{ names_block.terms|length|pluralize }} and term{{ names_block.terms|length|pluralize }}{% if names_block.unit_count %} · {{ names_block.unit_count }} kept voice{{ names_block.unit_count|pluralize }} of the {{ names_block.unit }} unit{% endif %}</span></h3>
+  <p class="muted small">What the recogniser is told to listen for on every recording added here and with Process again, and what Search and Gideon know. No transcript is ever rewritten by it.</p>
+  <div class="names-people">
+    <div class="small"><b>People</b> <span class="muted">· named and renamed on the <a href="{% url 'case' case.pk %}?tab=speakers">Speakers tab</a>, where a nickname or a spelling is added</span></div>
+    {% if names_block.people %}
+      <div class="chips-row">
+        {% for one in names_block.people %}
+          <a class="name-chip" href="{% url 'case' case.pk %}?tab=speakers#person-{{ one.id }}" title="{{ one.name }} on the Speakers tab"><b>{{ one.name }}</b>{% if one.role %} <span class="muted">{{ one.role }}</span>{% endif %}{% if one.called %} <span class="acc">also called {{ one.called|join:", " }}</span>{% endif %}{% if one.spellings %} <span class="muted">· heard as {{ one.spellings|join:", " }}</span>{% endif %}</a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="muted tiny">Nobody named yet. A speaker named on a recording becomes a person here.</div>
+    {% endif %}
+    <div class="muted tiny" style="margin-top: 6px">Their names and nicknames go to recognition. A spelling the recogniser got wrong is kept against the person as "also heard as", for Search; it is never sent to recognition.</div>
+  </div>
+  {% if names_block.terms %}
     <ul class="plain vocabulary-list">
-      {% for one in vocabulary %}
-        <li data-kind="{{ one.kind }}" data-id="{{ one.id }}">
+      {% for one in names_block.terms %}
+        <li data-kind="term" data-id="{{ one.id }}">
           <details>
             <summary>
-              <b>{{ one.name }}</b>{% if one.role %} <span class="muted small">({{ one.role }})</span>{% endif %}{% if one.kind == "person" %} <span class="muted small">from the Speakers tab</span>{% endif %}
-              <div class="muted small">{% if one.spellings %}also heard as {{ one.spellings|join:", " }}{% else %}no other spelling yet{% endif %}{% if one.called %} · also called {{ one.called|join:", " }}{% endif %}</div>
-              {% if one.shared %}<div class="small" style="color: var(--warn)">{{ one.shared|join:", " }}: also on another person here, so Suggest names will not use {% if one.shared|length == 1 %}it{% else %}them{% endif %}.</div>{% endif %}
+              <b>{{ one.name }}</b>
+              <div class="muted small">{% if one.spellings %}also heard as {{ one.spellings|join:", " }}{% else %}no other spelling yet{% endif %}</div>
             </summary>
             <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
               {% csrf_token %}
               <input type="hidden" name="action" value="spellings">
-              <input type="hidden" name="kind" value="{{ one.kind }}">
+              <input type="hidden" name="kind" value="term">
               <input type="hidden" name="id" value="{{ one.id }}">
               <input type="text" name="spellings" value="{{ one.spellings|join:", " }}" maxlength="2500" class="grow" placeholder="Also heard as, with commas" aria-label="Also heard as">
-              {% if one.kind == "person" %}<input type="text" name="called" value="{{ one.called|join:", " }}" maxlength="2500" class="grow" placeholder="Also called, with commas" aria-label="Also called" title="The names people use for this person on the recordings: Mama, Coach, a first name. Each goes to recognition, to Suggest names, to Search and to Gideon.">{% endif %}
               <button type="submit" class="small">Save</button>
             </form>
-            {% if one.kind == "term" and may_remove_terms %}
+            {% if may_remove_terms %}
               <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="margin-top: 4px"
-                    data-confirm-title="Remove {{ one.name }} from the case vocabulary?" data-confirm="Nothing in the recordings changes; the name stops going with new uploads and its spellings stop standing for it in Search." data-confirm-ok="Remove">
+                    data-confirm-title="Remove {{ one.name }} from the case's names and places?" data-confirm="Nothing in the recordings changes; the name stops going with new uploads and its spellings stop standing for it in Search." data-confirm-ok="Remove" data-danger>
                 {% csrf_token %}
                 <input type="hidden" name="action" value="remove">
                 <input type="hidden" name="id" value="{{ one.id }}">
@@ -43,8 +57,13 @@
   <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="vocabulary-add" style="margin-top: 8px">
     {% csrf_token %}
     <input type="hidden" name="action" value="add">
-    <input type="text" name="term" maxlength="120" placeholder="A name or a place" required aria-label="A name or a place">
+    <input type="text" name="term" maxlength="120" placeholder="A place or a term" required aria-label="A place or a term">
     <input type="text" name="spellings" maxlength="2500" placeholder="Also heard as, with commas" aria-label="Also heard as">
     <button type="submit" class="small">Add</button>
   </form>
+  <div class="names-readers">
+    <div><b>Recognition</b> the names, nicknames and terms{% if names_block.unit_count %}, and the {{ names_block.unit }} unit's kept voices' names{% endif %}, with the office's list ahead of them</div>
+    <div><b>Search and Find</b> the "also heard as" spellings stand for the name, marked</div>
+    <div><b>Gideon</b> is told the people and the terms, never a spelling</div>
+  </div>
 </div>

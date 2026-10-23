@@ -66,6 +66,13 @@
                       <div class="menu-body">
                         {% for h in row.heard %}<button type="button" class="small ghost hear-else" data-preview-recording="{{ h.recording }}" data-preview-at="{{ h.start }}" data-preview-person="{{ row.book.name }}" data-preview-role="{{ row.book.role }}" data-preview-speaker="{{ row.book.name }}" title="Hear {{ row.book.name }} on {{ h.title }}">{% icon "play" %} Hear them on {{ h.title|truncatechars:24 }}</button>{% endfor %}
                         <div class="sep"></div>
+                        {% comment %}Told to recognition (v1.156.0): the name goes with the unit's recordings as a word to listen for.{% endcomment %}
+                        <form method="post" action="{% url 'voices-recognition' row.book.pk %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="told" value="{% if row.book.tell_recognition %}0{% else %}1{% endif %}">
+                          <button type="submit" class="small ghost">{% if row.book.tell_recognition %}Stop telling recognition this name{% else %}Tell recognition this name again{% endif %}</button>
+                        </form>
+                        <div class="sep"></div>
                         <form method="post" action="{% url 'voices-forget' row.book.pk %}"
                               data-confirm-title="Forget {{ row.book.name }}'s voice for the {{ unit }} unit?"
                               data-confirm="The book's print is deleted and {{ row.cases }} case{{ row.cases|pluralize }} stop{{ row.cases|pluralize:"s," }} keeping it. The names people accepted from it stay, and so do the cases' own prints. Keep again from a case to bring it back. Written to the audit as counts only."
@@ -82,6 +89,7 @@
                     {% for h in row.heard|slice:":1" %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ h.recording }}" data-preview-at="{{ h.start }}" data-preview-person="{{ row.book.name }}" data-preview-role="{{ row.book.role }}" data-preview-speaker="{{ row.book.name }}" title="Hear {{ row.book.name }} on {{ h.title }}">{% icon "play" %} hear them</button>{% empty %}{% if not row.openable %}<span class="pill small" title="The voice is heard only from a recording you may open">heard on a case you may not open</span>{% endif %}{% endfor %}
                     <span>print from {{ row.cases }} case{{ row.cases|pluralize }}, {{ row.recordings }} recording{{ row.recordings|pluralize }}</span>
                     {% if row.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% elif row.cases >= 3 %}<span class="pill small ok">well taught</span>{% endif %}
+                    {% if row.book.tell_recognition %}<span class="pill small" title="The name goes with every recording in the unit's cases as a word to listen for">told to recognition</span>{% else %}<span class="pill small warn" title="The name is not sent to recognition; the voice is still kept">not told to recognition</span>{% endif %}
                   {% else %}
                     <span class="muted">forgotten {{ row.book.forgotten_at|date:"j M" }}{% if row.book.forgotten_by %} by {{ row.book.forgotten_by }}{% endif %}</span>
                   {% endif %}

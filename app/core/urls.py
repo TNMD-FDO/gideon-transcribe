@@ -231,6 +231,11 @@ urlpatterns = [
     # The unit's voice book (Phase 5 chapter 2, v1.146.0).
     path("voices", voice_book_pages.voices, name="voices"),
     path(
+        "voices/<uuid:voice_id>/recognition",
+        voice_book_pages.recognition,
+        name="voices-recognition",
+    ),
+    path(
         "voices/<uuid:voice_id>/forget",
         voice_book_pages.forget,
         name="voices-forget",

@@ -102,6 +102,27 @@ def forget(request: HttpRequest, voice_id) -> HttpResponse:
 
 @login_required
 @require_POST
+def recognition(request: HttpRequest, voice_id) -> HttpResponse:
+    """The switch on a kept voice (v1.156.0): whether its name is told to
+    recognition for the unit's cases."""
+    seen = _units_or_404(request)
+    book = get_object_or_404(UnitVoice, pk=voice_id, forgotten_at=None)
+    if book.unit not in seen:
+        raise Http404("not this person's unit")
+    told = request.POST.get("told") == "1"
+    voice_book.set_tell_recognition(book, told, by=request.user, request=request)
+    request.session["voices_said"] = (
+        f"{book.name}'s name is told to recognition again for the {book.unit} "
+        "unit's recordings."
+        if told
+        else f"{book.name}'s name is no longer told to recognition; the voice is "
+        "still kept."
+    )
+    return redirect(reverse("voices") + f"?unit={book.unit}")
+
+
+@login_required
+@require_POST
 def check(request: HttpRequest, recording_id) -> JsonResponse:
     """Check against the unit's voices, pressed on an unnamed card."""
     recording = _recording(request, recording_id)

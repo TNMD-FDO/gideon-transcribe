@@ -218,7 +218,10 @@ def test_also_called_is_kept_and_read_everywhere(owner, a_case, client):  # noqa
     assert "Mama" not in str(Row.objects.latest("at").details)
     page = client.get(f"/case/{a_case.pk}").content.decode()
     assert "also called Mama, Mum" in page
-    assert 'name="called"' in page and "Also called, with commas" in page
+    # Since v1.156.0 the nickname is typed on the Speakers tab's card; the
+    # Names and places block reads it.
+    tab = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
+    assert 'name="called"' in tab and "Also called, with commas" in tab
 
 
 # The moot rows ----------------------------------------------------------------------
@@ -280,7 +283,9 @@ def test_the_pages_carry_the_release():
     assert ".sp-cards .sp-cast { display: flex" in css
     assert ".sp-foot { display: flex" in css
     vocab = (HERE / "templates" / "case-vocabulary.html").read_text(encoding="utf-8")
-    assert 'name="called"' in vocab
+    assert 'name="called"' not in vocab  # read-only there since v1.156.0
+    speakers_tab = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
+    assert 'name="called"' in speakers_tab
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v1.140.0" in changelog
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")

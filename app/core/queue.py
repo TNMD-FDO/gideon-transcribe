@@ -74,7 +74,7 @@ def _case_vocabulary(recording) -> list[str]:
         return []
     from core import vocabulary
 
-    return vocabulary.names_in(recording.case)
+    return vocabulary.recognition_names(recording.case)
 
 
 def request_for(run: Run) -> dict:

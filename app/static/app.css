@@ -3379,6 +3379,15 @@ body.gideon-window .gideon-grip { display: none; }
 .sg-side { min-width: 0; display: flex; flex-direction: column; }
 .sg-side.has-preview:not(.has-snippet) .sg-context { display: none; }
 .sg-side.has-snippet .sg-context { max-height: 40vh; }
+/* Names and places (v1.156.0; the drawing phase-9-notes-export-and-names.html, figure 2). */
+.names-people { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; margin: 10px 0; background: var(--surface-2); }
+.chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.name-chip { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; background: var(--surface); color: var(--text); font-size: 12px; text-decoration: none; }
+.name-chip:hover { border-color: var(--accent); }
+.name-chip .acc { color: var(--accent); }
+.names-readers { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 10px; }
+.names-readers div { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font-size: 12px; color: var(--muted); }
+.names-readers b { display: block; color: var(--text); }
 /* A quota raised for a while (v1.155.0; the drawing phase-5-hearing-window-and-temporary-quota.html, figure 2). */
 .quota-raise { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 6px 8px; margin-top: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; max-width: 360px; }
 .quota-raise.winding { border-left-color: var(--warn); }
