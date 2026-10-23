@@ -75,10 +75,12 @@ def used_bytes(user: User) -> int:
 
 
 def quota_bytes(user: User) -> int:
-    """This person's space: their own figure if an Admin set one, else the default."""
-    if user.quota_gb:
-        return user.quota_gb * settings_store.GB
-    return settings_store.default_quota_bytes()
+    """This person's space now: the usual figure (an Admin's standing
+    override, else the default), the Raise's figure while one runs, or what
+    is stored while a Raise comes back down (v1.155.0, core.quota_raises)."""
+    from core import quota_raises
+
+    return quota_raises.effective_bytes(user)
 
 
 def free_disk_bytes() -> int:

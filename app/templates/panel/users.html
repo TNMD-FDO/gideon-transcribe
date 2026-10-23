@@ -90,6 +90,55 @@
                        value="{{ row.user.quota_gb|default_if_none:'' }}" placeholder="{{ row.quota }}">
                 <button type="submit" name="action" value="quota" class="small ghost">Set</button>
               </form>
+              {% comment %}
+                A quota raised for a while (v1.155.0; the drawing
+                phase-5-hearing-window-and-temporary-quota.html, figure 2):
+                the Raise in force with its state, or the last one closed as
+                one grey line; and the form, folded.
+              {% endcomment %}
+              {% with r=row.raise %}
+              {% if r %}
+                {% if r.state == "raised" %}
+                  <div class="quota-raise">
+                    <div><b>Raised to {{ r.raise.gigabytes }} GB until {{ r.ends }}</b> <span class="pill acc">{{ r.days_left }} day{{ r.days_left|pluralize }} left</span></div>
+                    <div class="muted tiny">raised by {{ r.by }} on {{ r.raised_on }}{% if r.raise.note %} · "{{ r.raise.note }}"{% endif %}</div>
+                    <div class="meter" title="{{ r.used_gb }} GB used; the line is the {{ r.usual_gb }} GB they come back to"><i style="width: {{ r.used_share }}%"></i><b style="left: {{ r.usual_share }}%"></b></div>
+                    <div class="muted tiny">{{ r.used_gb }} GB used · the line is the {{ r.usual_gb }} GB they come back to</div>
+                    <form method="post" action="{% url 'panel-user' row.user.username %}" class="row small">
+                      {% csrf_token %}
+                      <input type="hidden" name="raise_days" value="{{ raise_days }}">
+                      <button type="submit" name="action" value="raise-end" class="tiny ghost">End now</button>
+                      <button type="submit" name="action" value="raise-extend" class="tiny ghost">Another {{ raise_days }} days</button>
+                    </form>
+                  </div>
+                {% elif r.state == "winding" %}
+                  <div class="quota-raise winding">
+                    <div><b>Was raised to {{ r.raise.gigabytes }} GB; ran out on {{ r.ends }}</b> <span class="pill warn">coming back down</span></div>
+                    <div class="muted tiny">{{ r.used_gb }} GB still stored against {{ r.usual_gb }} GB: nothing new fits until it is under {{ r.usual_gb }} GB. Cases unused for {{ retention_days }} days go on their own under the Retention policy, or they delete.</div>
+                    <div class="meter"><i style="width: {{ r.used_share }}%"></i><b style="left: {{ r.usual_share }}%"></b></div>
+                    <form method="post" action="{% url 'panel-user' row.user.username %}" class="row small">
+                      {% csrf_token %}
+                      <input type="hidden" name="raise_days" value="{{ raise_days }}">
+                      <button type="submit" name="action" value="raise-extend" class="tiny ghost">Another {{ raise_days }} days</button>
+                    </form>
+                  </div>
+                {% else %}
+                  <div class="quota-raise closed muted tiny">Raised to {{ r.raise.gigabytes }} GB from {{ r.raised_on }}, back to {{ r.usual_gb }} GB on {{ r.closed_on }}</div>
+                {% endif %}
+              {% endif %}
+              {% if not r or r.state == "closed" %}
+                <details class="quota-raise-form">
+                  <summary class="tiny">Raise for a while...</summary>
+                  <form method="post" action="{% url 'panel-user' row.user.username %}" class="form small">
+                    {% csrf_token %}
+                    <label>Raise to <input type="number" name="raise_gb" min="1" max="5000" placeholder="100" aria-label="Raised quota in GB"> GB</label>
+                    <label>for <input type="number" name="raise_days" min="1" max="365" value="{{ raise_days }}" aria-label="Days"> days</label>
+                    <label>because <input type="text" name="raise_note" maxlength="200" placeholder="a note for the audit row" aria-label="Why"></label>
+                    <button type="submit" name="action" value="raise" class="tiny primary">Raise for a while</button>
+                  </form>
+                </details>
+              {% endif %}
+              {% endwith %}
             </td>
             <td class="muted">{% if row.user.last_sign_in %}{{ row.user.last_sign_in }}{% else %}never <span class="small">(cannot be added to a case until they sign in)</span>{% endif %}</td>
           </tr>

@@ -21,6 +21,36 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.155.0, 2026-10-23
+
+```
+Models: unchanged
+Database: migrates
+```
+
+A quota raised for a while (Phase 2, "Room: the per-user quota").
+
+- **Raise for a while.** On the Users page, beside the standing quota, an
+  Admin raises a person's space to a figure for a number of days, with a
+  note. The new setting **Temporary quota length** (Limits, 45 days as
+  shipped) is the form's default; the Admin may type another figure.
+  The person reads one quiet line on Home and the Upload page while it
+  runs.
+- **Coming back down, not cut.** When the days run out and more is
+  stored than the usual quota allows, the space becomes what is stored
+  now and no more: nothing new fits, nothing is deleted, and it reaches
+  the usual quota as cases go under the Retention policy or the person
+  deletes, when the raise closes by itself. End now and Another 45 days
+  sit on the row; a new raise replaces the one in force.
+- **One number everywhere.** The upload check, the storage warning, the
+  users list and the Status page read the same quota function, so a
+  raise reaches every one of them at once. An hourly pass moves the
+  states; each step writes an audit row under Accounts (raised, ran out,
+  closed, extended, ended early). Migration 0089 adds the raises table.
+- Drawn first in docs/spec/mockups/phase-5-hearing-window-and-temporary-
+  quota.html, figure 2; Phase 2's Room section, the catalogue, the
+  glossary (Raise), the user and admin guides follow.
+
 ## v1.154.0, 2026-10-23
 
 ```

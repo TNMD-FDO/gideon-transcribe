@@ -18,6 +18,7 @@
       <p class="notice danger">Transcription is not available right now. Uploading is paused until it is back; anything already in the line waits there.</p>
     {% endif %}
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
+    {% if quota_notice %}<p class="notice">{{ quota_notice }}</p>{% endif %}
 
     {% if ready %}
       <section class="home-sect ready" id="ready-to-download">

@@ -31,6 +31,7 @@ from core import (
     lifecycle,
     mail,
     pieces,
+    quota_raises,
     settings_store,
     uploads,
     whisperx,
@@ -691,6 +692,9 @@ def users(request: HttpRequest) -> HttpResponse:
                     if person.quota_gb
                     else f"Default ({settings_store.get('default_quota_gb')} GB)"
                 ),
+                # A quota raised for a while (v1.155.0): the Raise in force
+                # or the last one, and the form's default length.
+                "raise": quota_raises.row_for(person),
                 "admin_source": _admin_source(person),
                 "status": person.status.title(),
                 "counts": lifecycle.counts(person),
@@ -705,6 +709,8 @@ def users(request: HttpRequest) -> HttpResponse:
         {
             **furniture(request, "panel-users"),
             "rows": rows,
+            "raise_days": quota_raises.default_days(),
+            "retention_days": int(settings_store.get("retention_days")),
             "no_email": no_email,
             "without_email": mail.people_without_email(),
             # The unit's voice book (v1.146.0): the Unit column's picker.
@@ -879,6 +885,58 @@ def user_action(request: HttpRequest, username: str) -> HttpResponse:
                 f"{gone} case{'' if gone == 1 else 's'} of "
                 f"{person.username}'s deleted. This cannot be undone.",
             )
+
+    elif doing == "raise":
+        # A quota raised for a while (v1.155.0).
+        try:
+            made = quota_raises.raise_for(
+                person,
+                _whole(request.POST.get("raise_gb", "")),
+                _whole(request.POST.get("raise_days", ""))
+                or quota_raises.default_days(),
+                request.POST.get("raise_note", ""),
+                by=request.user,
+                request=request,
+            )
+            _tell(
+                request,
+                f"{person.username}'s space is {made.gigabytes} GB for "
+                f"{made.days} days, then back to what it was.",
+            )
+        except ValueError as refused:
+            _tell(request, str(refused))
+
+    elif doing in ("raise-end", "raise-extend"):
+        one = quota_raises.current(person)
+        if one is None:
+            _tell(request, f"{person.username} has no raised quota in force.")
+        elif doing == "raise-end":
+            quota_raises.end_now(one, by=request.user, request=request)
+            _tell(
+                request,
+                f"{person.username}'s raised quota is ended"
+                + (
+                    "."
+                    if one.state == quota_raises.CLOSED
+                    else "; their space comes back down as their storage does."
+                ),
+            )
+        else:
+            try:
+                quota_raises.extend(
+                    one,
+                    _whole(request.POST.get("raise_days", ""))
+                    or quota_raises.default_days(),
+                    by=request.user,
+                    request=request,
+                )
+                _tell(
+                    request,
+                    f"{person.username}'s space stays {one.gigabytes} GB for "
+                    f"{one.days_left} more days.",
+                )
+            except ValueError as refused:
+                _tell(request, str(refused))
 
     elif doing == "quota":
         wanted = request.POST.get("quota_gb", "").strip()
@@ -1187,6 +1245,12 @@ def _has_something(path: str) -> bool:
         return bool(path) and Path(path).is_file() and Path(path).stat().st_size > 0
     except OSError:
         return False
+
+
+def _whole(text: str) -> int:
+    """A whole number from a form field, 0 when it is not one."""
+    text = (text or "").strip()
+    return int(text) if text.isdigit() else 0
 
 
 def _tell(request, message: str) -> None:

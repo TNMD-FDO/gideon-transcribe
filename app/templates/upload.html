@@ -20,6 +20,9 @@
       </p>
     </header>
 
+    {% comment %}A quota raised for a while (v1.155.0): the person's one line, whatever else the page says.{% endcomment %}
+    {% if quota_notice %}<p class="notice">{{ quota_notice }}</p>{% endif %}
+
     {% if disk_is_low %}
       <p class="notice danger">
         Uploading is paused because the server is low on space. Ask IT.{% if user.is_admin %} The data drive has {{ disk_free_gb }} free and the floor is {{ disk_floor_gb }} GB, set on the panel's <a href="{% url 'panel-settings' 'limits' %}">Limits</a> page.{% endif %}

@@ -1138,6 +1138,24 @@ def _rows() -> list[Definition]:
             when_changed="The next upload. Nothing already stored is touched.",
         ),
         Definition(
+            key="temporary_quota_days",
+            page=LIMITS,
+            name="Temporary quota length",
+            kind=NUMBER,
+            default=45,
+            least=1,
+            most=365,
+            unit="days",
+            what_it_does=(
+                "How long a quota raised for a while runs, as the Users page's "
+                "form offers it; the Admin may type another figure per raise. "
+                "When the days run out the person's space comes back down only "
+                "as far as what they have stored, and reaches the usual quota "
+                "as cases go under the Retention policy or they delete."
+            ),
+            when_changed="The next raise. Raises already made keep their dates.",
+        ),
+        Definition(
             key="minimum_free_disk_gb",
             page=LIMITS,
             name="Minimum free disk space",

@@ -715,6 +715,17 @@ def check_audit_integrity(by_id: str = "") -> None:
     )
 
 
+@app.periodic(cron="15 * * * *")
+@app.task(queue="default", name="sweep_quota_raises")
+def sweep_quota_raises(timestamp: int) -> None:
+    """A quota raised for a while (v1.155.0): hourly, a Raise whose days ran
+    out closes or comes back down, and one coming back down closes when the
+    storage reaches the usual figure."""
+    from core import quota_raises
+
+    quota_raises.sweep()
+
+
 @app.periodic(cron="45 * * * *")
 @app.task(queue="default", name="forget_old_jobs")
 async def forget_old_jobs(timestamp: int) -> None:

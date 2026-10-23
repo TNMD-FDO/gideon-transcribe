@@ -3379,6 +3379,16 @@ body.gideon-window .gideon-grip { display: none; }
 .sg-side { min-width: 0; display: flex; flex-direction: column; }
 .sg-side.has-preview:not(.has-snippet) .sg-context { display: none; }
 .sg-side.has-snippet .sg-context { max-height: 40vh; }
+/* A quota raised for a while (v1.155.0; the drawing phase-5-hearing-window-and-temporary-quota.html, figure 2). */
+.quota-raise { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 6px 8px; margin-top: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; max-width: 360px; }
+.quota-raise.winding { border-left-color: var(--warn); }
+.quota-raise.closed { border-left-color: var(--line); }
+.quota-raise .meter { height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: visible; margin-top: 2px; }
+.quota-raise .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 4px; max-width: 100%; }
+.quota-raise .meter b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); }
+.quota-raise-form { margin-top: 6px; } .quota-raise-form summary { cursor: pointer; color: var(--accent); }
+.quota-raise-form .form { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; background: var(--surface-2); border-radius: var(--radius); padding: 6px 8px; margin-top: 4px; font-size: 12px; max-width: 360px; }
+.quota-raise-form .form input[type=number] { width: 64px; } .quota-raise-form .form input[type=text] { width: 180px; }
 /* The hearing window (v1.154.0; the drawing phase-5-hearing-window-and-temporary-quota.html): a person's voice in a window that floats over the page, plainly its own, with Close in words on a coloured bar. */
 .preview-card.hearing { right: 24px; bottom: 24px; width: 400px; max-height: calc(100vh - 48px); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgba(0, 0, 0, .28); z-index: 46; }
 .preview-card.hearing .preview-head { background: var(--accent); color: var(--accent-ink); cursor: grab; padding: 8px 10px; }

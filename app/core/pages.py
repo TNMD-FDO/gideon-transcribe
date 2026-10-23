@@ -27,6 +27,7 @@ from core import (
     lifecycle,
     pieces,
     pipeline,
+    quota_raises,
     settings_store,
     summaries_tonight,
     tasks,
@@ -321,6 +322,7 @@ def upload(request: HttpRequest) -> HttpResponse:
             "summaries": summaries_tonight.tick() if to_a_case else {"offered": False},
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
+            "quota_notice": quota_raises.notice(request.user),
             "service_is_up": whisperx.is_alive(),
             "transcription_installed": pieces.transcription_installed(),
             # The speaker hint is pyannote's alone (Phase 5 chapter 4).
