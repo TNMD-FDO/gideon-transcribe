@@ -1587,7 +1587,7 @@ body.no-speakers .seg .actions { grid-column: 3; }
 /* A tab in its own window -------------------------------------------------------
    The window has no nav and no guide; a head names what it is. The tab that
    is out is marked on the page. */
-body.window .nav, body.window .help-pane, body.window #help-beside { display: none; }
+body.window .nav, body.window .rail, body.window .help-pane, body.window #help-beside { display: none; }
 .winhead {
   display: flex;
   align-items: center;
@@ -3379,6 +3379,15 @@ body.gideon-window .gideon-grip { display: none; }
 .sg-side { min-width: 0; display: flex; flex-direction: column; }
 .sg-side.has-preview:not(.has-snippet) .sg-context { display: none; }
 .sg-side.has-snippet .sg-context { max-height: 40vh; }
+/* The hearing window (v1.154.0; the drawing phase-5-hearing-window-and-temporary-quota.html): a person's voice in a window that floats over the page, plainly its own, with Close in words on a coloured bar. */
+.preview-card.hearing { right: 24px; bottom: 24px; width: 400px; max-height: calc(100vh - 48px); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgba(0, 0, 0, .28); z-index: 46; }
+.preview-card.hearing .preview-head { background: var(--accent); color: var(--accent-ink); cursor: grab; padding: 8px 10px; }
+.preview-card.hearing .preview-head .grow { font-size: 14px; }
+.preview-card.hearing .preview-head #preview-clock { color: inherit; opacity: .85; }
+.preview-card.hearing .preview-close { background: var(--surface); color: var(--text); font-weight: 600; font-size: 13px; border: 0; border-radius: var(--radius); padding: 2px 12px; min-height: 26px; cursor: pointer; }
+.preview-card.hearing .preview-close:hover { background: var(--surface-2); }
+body.hearing-open::after { content: ''; position: fixed; inset: 0; background: rgba(0, 0, 0, .14); pointer-events: none; z-index: 45; }
+.sg-prev.previewing, .hear-else.previewing, .sample.previewing { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* The Preview as a snippet (ADR 0023, v1.152.0): the line heard with one either side; the context lines dim. */
 .preview-card.snippet .preview-lines { max-height: none; flex: none; }
 .preview-card.snippet .preview-line.context { color: var(--muted); }

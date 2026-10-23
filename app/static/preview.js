@@ -49,6 +49,7 @@
         card.innerHTML = "";
         card.classList.remove("preview-card", "mounted", "whole");
       } else {
+        document.body.classList.remove("hearing-open");
         card.remove();
         // The page's column gives itself back (v1.151.0).
         if (placed) {
@@ -77,18 +78,24 @@
     // stops, reads no further, and leaves the page's own column beside it.
     function isSnippet() { return !!(asked && (asked.person || asked.speaker)); }
     var stopAt = null;
+    // The hearing window (v1.154.0): a person's voice floats over the page
+    // in a window of its own, plainly separate, with Close in words; the
+    // page's column is never taken for it. Where it was dragged to is kept
+    // for the next one on this page.
+    var hearingPlace = null;
+    function isHearing() { return isSnippet() && !host && window.innerWidth >= 900; }
 
     function build() {
-      var column = host ? null : columnOf();
+      var column = (host || isSnippet()) ? null : columnOf();
       card = host || document.createElement("div");
-      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : " sheet")) + (options.whole ? " whole" : "") + (isSnippet() ? " snippet" : "");
+      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : (isHearing() ? " hearing" : " sheet"))) + (options.whole ? " whole" : "") + (isSnippet() ? " snippet" : "");
       card.setAttribute("role", host ? "region" : "dialog");
       card.setAttribute("aria-label", "Preview");
       card.innerHTML =
         (host ? "" : "<div class='preview-handle' aria-hidden='true'></div>") +
         "<div class='preview-head'><b class='grow' id='preview-title'></b>" +
         "<span class='mono muted' id='preview-clock'></span>" +
-        (host ? "" : "<button type='button' class='tiny ghost' data-preview-act='close' aria-label='Close the preview'>Close</button>") + "</div>" +
+        (host ? "" : "<button type='button' class='" + (isSnippet() ? "preview-close" : "tiny ghost") + "' data-preview-act='close' aria-label='Close the preview'>" + (isSnippet() ? "Close ✕" : "Close") + "</button>") + "</div>" +
         "<div class='preview-person' id='preview-person' hidden></div>" +
         "<div class='preview-samples' id='preview-samples' hidden></div>" +
         "<div class='preview-media'></div>" +
@@ -103,6 +110,14 @@
         placed = column;
       } else if (!host) {
         document.body.appendChild(card);
+      }
+      if (card.classList.contains("hearing")) {
+        document.body.classList.add("hearing-open");
+        drag(card.querySelector(".preview-head"));
+        if (hearingPlace) {
+          card.style.left = hearingPlace.left; card.style.top = hearingPlace.top;
+          card.style.right = "auto"; card.style.bottom = "auto";
+        }
       }
       card.addEventListener("click", pressed);
     }
@@ -126,7 +141,7 @@
       }).join("");
       if (asked.person || verdict) {
         box.innerHTML =
-          "<div class='who'>" + (asked.person ? "<b>" + escape(asked.person) + "</b> " : "") + (asked.role ? "<span class='pill small'>" + escape(asked.role) + "</span> " : "") + pill + "</div>" +
+          "<div class='who'>" + (asked.person && !isSnippet() ? "<b>" + escape(asked.person) + "</b> " : "") + (asked.role ? "<span class='pill small'>" + escape(asked.role) + "</span> " : "") + pill + "</div>" +
           (asked.person ? "<div class='from muted small'>" + (asked.person ? "their voice on " : "") + "<b>" + escape(told.title) + "</b>" + (asked.tabs && asked.tabs.length > 1 ? " · one of " + asked.tabs.length + " recordings that taught the print" : "") + "</div>" : "") +
           (tabs && asked.tabs.length > 1 ? "<div class='tabs'>" + tabs + "</div>" : "");
         box.hidden = false;
@@ -318,7 +333,7 @@
     function draw(first) {
       card.classList.toggle("snippet", isSnippet());
       if (placed && placed.parentElement) { placed.parentElement.classList.toggle("has-snippet", isSnippet()); }
-      card.querySelector("#preview-title").textContent = told.title;
+      card.querySelector("#preview-title").textContent = isSnippet() && asked.person ? "Hearing " + asked.person : told.title;
       card.querySelector("#preview-clock").textContent = told.clock;
       drawPerson();
       if (first) {
@@ -552,7 +567,12 @@
         card.style.right = "auto";
         card.style.bottom = "auto";
       });
-      function letGo() { from = null; }
+      function letGo() {
+        from = null;
+        if (card && card.classList.contains("hearing") && card.style.left) {
+          hearingPlace = { left: card.style.left, top: card.style.top };
+        }
+      }
       head.addEventListener("pointerup", letGo);
       head.addEventListener("pointercancel", letGo);
     }
@@ -574,7 +594,15 @@
         person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
         speaker: given.speaker || given.person || ""
       };
+      if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); }
       noting = null;
+      // A card of another kind (the page's panel for a citation, the window
+      // for a voice) is rebuilt rather than reused.
+      if (card && !host && card.classList.contains("snippet") !== isSnippet()) { close(); asked = {
+        recording: given.recording, seconds: seconds, from: given.from || null,
+        person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
+        speaker: given.speaker || given.person || ""
+      }; if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); } }
       if (!card) { build(); }
       if (same && media()) {
         // The same recording: the player goes there and the lines are read again.

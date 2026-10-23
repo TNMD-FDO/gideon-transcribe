@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The hearing window and the temporary quota</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sys: #98a4b1; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sys: #98a4b1; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.close { font-weight: 600; border-color: var(--line); background: var(--surface); color: var(--text); padding-inline: 12px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .play { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-size: 11px; background: var(--surface); }
+  .play.big { width: 44px; height: 44px; border-radius: 50%; font-size: 16px; background: var(--accent); color: var(--accent-ink); }
+  .c1 { color: var(--sp1); } .c2 { color: var(--sp2); } .c3 { color: var(--sp3); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+
+  /* the guided page, reduced */
+  .frame { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 420px; overflow: hidden; }
+  .guide { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .guide .where { display: flex; justify-content: space-between; } .guide .step { font-weight: 600; }
+  .desk { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; }
+  .focus { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .focus .h { display: flex; gap: 10px; align-items: center; }
+  .choice { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; }
+  .choice.best { border-color: var(--accent); background: var(--accent-soft); }
+  .choice .nm { font-weight: 600; } .choice .why { color: var(--muted); font-size: 12px; }
+  .choice .acts { display: flex; gap: 6px; align-items: center; }
+  .hearing { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .ctx { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+  .ctx .label { text-transform: uppercase; letter-spacing: .06em; font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .ctx .l { display: grid; grid-template-columns: 36px 70px 1fr; gap: 6px; } .ctx .l .t { font-family: var(--mono); font-size: 11px; color: var(--muted); } .ctx .l .s { font-weight: 600; }
+  .ctx .l.lit { background: var(--accent-soft); border-radius: 4px; } .ctx .l.dim { color: var(--muted); }
+
+  /* the hearing window, floating over the page */
+  .hear { position: absolute; right: 24px; bottom: 24px; width: 380px; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); font-size: 13px; overflow: hidden; }
+  .hear .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--accent); color: var(--accent-ink); cursor: grab; }
+  .hear .head b { font-size: 14px; } .hear .head .grow { flex: 1; min-width: 0; }
+  .hear .head .pill { background: rgba(255,255,255,.18); color: inherit; }
+  .hear .head .btn.close { background: var(--surface); color: var(--text); border-color: transparent; }
+  .hear .from { padding: 6px 10px 0; color: var(--muted); font-size: 12px; }
+  .hear .samples { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 10px; }
+  .hear .sp { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 1px 8px 1px 6px; font-size: 12px; }
+  .hear .sp .q { color: var(--muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hear .player { display: flex; gap: 8px; align-items: center; padding: 6px 10px; }
+  .hear .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; }
+  .hear .bar i { position: absolute; left: 0; width: 38%; top: 0; bottom: 0; background: var(--accent); border-radius: 3px; }
+  .hear .lines { border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+  .hear .line { display: grid; grid-template-columns: 40px 90px 1fr; gap: 8px; padding: 4px 10px; font-size: 12px; }
+  .hear .line .t { font-family: var(--mono); font-size: 11px; color: var(--muted); } .hear .line .s { font-weight: 600; }
+  .hear .line.dim { color: var(--muted); } .hear .line.lit { background: var(--accent-soft); }
+  .hear .foot { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .dimmed { opacity: .55; }
+
+  /* the users list, reduced */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--surface-2); }
+  input[type=number], input[type=text] { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); width: 64px; }
+  .quota { display: flex; flex-direction: column; gap: 6px; }
+  .quota .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .grant { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+  .grant.winding { border-left-color: var(--warn); }
+  .grant.closed { border-left-color: var(--line); color: var(--muted); }
+  .grant .k { color: var(--muted); }
+  .meter { height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; margin-top: 2px; }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .meter b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); }
+  .form { display: grid; grid-template-columns: auto auto; gap: 6px 10px; align-items: center; background: var(--surface-2); border-radius: var(--radius); padding: 8px 10px; font-size: 12px; }
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .state { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; background: var(--surface); }
+  .state b { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Phase 5 · drawn 2026-10-23 · for the maintainer's word</div>
+    <h1>The hearing window, and a quota raised for a while</h1>
+    <p class="lede">Two things the maintainer asked for on 2026-10-23. The first changes where the Preview of a person's voice sits on the guided Speakers page: a window that floats over the page and is plainly its own thing, with a Close anyone can read. The second gives an Admin a way to raise one person's space for a set time, after which it comes back down on its own, without pulling the floor out from under what is already stored.</p>
+  </header>
+
+  <!-- Figure 1: the hearing window -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>"Hear Tony" opens a window that floats over the guided page, plainly separate, with Close in the title bar</h2></div>
+    <div class="frame">
+      <div class="guide dimmed">
+        <div class="where"><span class="step">Step 1 of 3 · Who is speaking</span><span class="muted">Voice 1 of 2 · 0 named</span></div>
+        <div>Listen to this voice, then say who it is. Skip it if you are not sure; you can come back.</div>
+      </div>
+      <div class="desk">
+        <div class="focus dimmed">
+          <div class="h"><span class="play big">▶</span><div><b>Speaker 1</b> <span class="pill">unnamed</span><div class="tiny muted">6 lines, 20 s talking, first at 0:12</div></div></div>
+          <div class="choice best hearing"><div><span class="nm c1">Tony Carruthers</span> <span class="pill">Client</span> <span class="pill ok">high match</span><div class="why">the voice: a close match on Call 1</div></div><div class="acts"><span class="btn tiny ghost">▶ hear Tony</span><span class="btn tiny primary">It's Tony</span></div></div>
+          <div class="choice"><div><span class="nm c2">Dana Reyes</span> <span class="pill">Witness</span> <span class="pill warn">medium</span><div class="why">the voice: a looser match on Call 2</div></div><div class="acts"><span class="btn tiny ghost">▶ hear Dana</span><span class="btn tiny">It's Dana</span></div></div>
+          <div class="choice"><div><span class="nm">Someone else</span></div><div class="acts"><span class="btn tiny">Choose...</span></div></div>
+        </div>
+        <div class="ctx dimmed">
+          <div class="label">This voice's lines, in the call</div>
+          <div class="l lit"><span class="t">0:12</span><span class="s c1">Speaker 1</span><span>Hello? Who's this?</span></div>
+          <div class="l dim"><span class="t">0:15</span><span class="s c2">Side 2</span><span>It's me. Did you get the letter?</span></div>
+          <div class="l lit"><span class="t">0:19</span><span class="s c1">Speaker 1</span><span>I got it yesterday.</span></div>
+          <div class="l dim"><span class="t">0:24</span><span class="s c2">Side 2</span><span>Did Jordan say anything?</span></div>
+          <div class="l lit"><span class="t">0:28</span><span class="s c1">Speaker 1</span><span>Only that she might not come.</span></div>
+          <div class="l dim"><span class="t">0:33</span><span class="s c2">Side 2</span><span>Tell her I said please.</span></div>
+        </div>
+      </div>
+
+      <div class="hear" role="dialog" aria-label="Hearing Tony Carruthers">
+        <div class="head"><span>🔊</span><div class="grow"><b>Hearing Tony Carruthers</b> <span class="pill">Client</span></div><span class="pill">clock sure</span><span class="btn close">Close ✕</span></div>
+        <div class="from">his voice on <b>Call 1</b>, 0:48 · one of 2 recordings that taught his print · <span class="pill acc">Call 2</span></div>
+        <div class="samples"><span class="sp"><span class="play">▶</span><span class="mono">0:48</span><span class="q">"Yes, it's mine. What's the problem?"</span></span><span class="sp"><span class="play">▶</span><span class="mono">3:10</span><span class="q">"I told him Tuesday."</span></span><span class="sp"><span class="play">▶</span><span class="mono">7:02</span><span class="q">"No, that was before."</span></span></div>
+        <div class="player"><span class="btn tiny">❚❚</span><span class="mono tiny">0:49 / 0:52</span><span class="bar"><i></i></span></div>
+        <div class="lines">
+          <div class="line dim"><span class="t">0:41</span><span class="s c2">Officer Hale</span><span>Is this your bag, sir?</span></div>
+          <div class="line lit"><span class="t">0:48</span><span class="s c1">Tony Carruthers</span><span>Yes, it's mine. What's the problem?</span></div>
+          <div class="line dim"><span class="t">0:52</span><span class="s c2">Officer Hale</span><span>Step over here for me.</span></div>
+        </div>
+        <div class="foot"><span>the line heard, with a line either side · drag the bar to move me</span><span class="btn tiny ghost">Open the recording</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Plainly a window.</b> The card floats over the page at the bottom right, with a shadow, a coloured title bar in the app's accent that names what is being heard ("Hearing Tony Carruthers") and a Close button in full words at the bar's end, white on the bar so it cannot be missed. Escape closes it too. The page behind dims a shade while the window is up and the row whose button opened it keeps a ring, so the eye knows which voice this is for.</p>
+      <p><b>Not the page's column.</b> Nothing on the guided page moves or hides: the question stays where it was, the context lines stay in their column. The window can be dragged by its bar and comes back where it was left. Under 900 pixels it is a sheet from the foot of the page as now.</p>
+      <p><b>The same snippet inside.</b> What the window carries is what v1.152.0 settled: the person, their role, the clock pill, a tab per recording that taught the print, the samples as plays, the line heard with one line either side, a small player that plays the line and stops, Open the recording. Nothing is logged.</p>
+      <p><b>Everywhere a voice is heard.</b> The case page's Speakers tab and the Voices place open the same window; the chat's citation and the search's hit keep the in-page panel they have, since there the page is the reading and the player belongs beside it.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: the temporary quota -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>The users list: a quota raised for 45 days, and what happens when the days run out</h2></div>
+    <table>
+      <thead><tr><th>User</th><th>Status</th><th>Storage</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>jlopez</b><div class="muted tiny">Appeals</div></td>
+          <td><span class="pill ok">Active</span></td>
+          <td>3 in session, 2.1 GB<br><span class="muted">41 in cases, 68.4 GB</span></td>
+          <td>
+            <div class="quota">
+              <div class="row"><span class="small">Default 50 GB</span> <input type="number" placeholder="50" aria-label="Quota in GB"> <span class="btn tiny ghost">Set</span></div>
+              <div class="grant">
+                <div><b>Raised to 100 GB until 6 December 2026</b> <span class="pill acc">31 days left</span></div>
+                <div class="k">raised by dmeehan on 22 October 2026 · "Discovery dump for the Reyes matter" · <span class="btn tiny ghost">End now</span> <span class="btn tiny ghost">Another 45 days</span></div>
+                <div class="meter"><i style="width: 70%"></i><b style="left: 50%"></b></div>
+                <div class="k">70.5 GB used · the line is the 50 GB they come back to</div>
+              </div>
+              <div class="form"><span>Raise to</span><span><input type="number" placeholder="100"> GB</span><span>for</span><span><input type="number" placeholder="45" style="width: 44px"> days</span><span>because</span><span><input type="text" placeholder="a note for the audit row" style="width: 200px"></span><span></span><span><span class="btn tiny primary">Raise for a while</span></span></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><b>mkhan</b><div class="muted tiny">Trial</div></td>
+          <td><span class="pill ok">Active</span></td>
+          <td>0 in session<br><span class="muted">19 in cases, 57.9 GB</span></td>
+          <td>
+            <div class="quota">
+              <div class="row"><span class="small">Default 50 GB</span> <input type="number" placeholder="50" aria-label="Quota in GB"> <span class="btn tiny ghost">Set</span></div>
+              <div class="grant winding">
+                <div><b>Was raised to 100 GB; ran out on 18 October 2026</b> <span class="pill warn">coming back down</span></div>
+                <div class="k">57.9 GB still stored against a 50 GB quota: nothing new fits until it is under 50 GB. Cases unused for 30 days go on their own under the Retention policy, or mkhan deletes. <span class="btn tiny ghost">Another 45 days</span></div>
+                <div class="meter"><i style="width: 58%"></i><b style="left: 50%"></b></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><b>rsingh</b><div class="muted tiny">CHU</div></td>
+          <td><span class="pill ok">Active</span></td>
+          <td>1 in session, 0.4 GB<br><span class="muted">7 in cases, 12.0 GB</span></td>
+          <td>
+            <div class="quota">
+              <div class="row"><span class="small">Default 50 GB</span> <input type="number" placeholder="50" aria-label="Quota in GB"> <span class="btn tiny ghost">Set</span></div>
+              <div class="grant closed"><div>Raised to 80 GB from 1 to 15 September 2026, back to 50 GB on 15 September</div></div>
+              <div class="row"><span class="btn tiny ghost">Raise for a while...</span></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="states">
+      <div class="state"><b>Raised</b>The person's space is the raise's figure until its date. The storage warning near the limit and every refusal name the raised figure. The user sees one quiet line on Home while it runs: "Your space is 100 GB until 6 December, then 50 GB again."</div>
+      <div class="state"><b>Coming back down</b>The days ran out while more is stored than the usual figure allows. The quota becomes "what is stored now, and no more": nothing new fits, nothing is deleted, and as cases go under the Retention policy or the person deletes, the figure follows the storage down until it reaches the usual quota, when the raise closes by itself. The person reads why on the Upload page.</div>
+      <div class="state"><b>Closed</b>Back at the usual figure, by the date or by the storage coming down to it, or ended early by an Admin. The row keeps the last raise as one grey line for the record.</div>
+      <div class="state"><b>Recorded</b>Audit rows: "temporary quota raised" (figure, days, note), "temporary quota ran out", "temporary quota closed", "temporary quota ended early"; no name in any detail beyond the affected account. One setting, "Temporary quota length", 45 days as shipped, is the form's default; the Admin may type another.</div>
+    </div>
+    <div class="caption">
+      <p><b>Why "no more than is stored", not a cut.</b> A quota that drops below what is already kept would have the app refuse the person everything and tell them to delete, at once, on a date they did not choose. Holding the line at what is stored keeps the promise the Admin made while the raise ran and lets the storage come down the way it always does: the Retention policy's 30 days without activity, or the person's own deletions.</p>
+      <p><b>One figure to reason about.</b> A person's space is one number at any moment: the usual quota (the default or the Admin's standing override), the raise's figure while it runs, or what is stored while it comes back down. Every place that reads the quota today, the upload check, the warning, the users list, the Status page, reads that one number from one function.</p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

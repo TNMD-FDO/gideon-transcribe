@@ -2,7 +2,7 @@
 {% load static icons %}
 {% block title %}Speakers of {{ recording.title }}{% endblock %}
 {% block main_class %}wide{% endblock %}
-{% block body_class %}viewer speakers-guided{% endblock %}
+{% block body_class %}viewer speakers-guided{% if in_window %} window{% endif %}{% endblock %}
 
 {% block content %}
   {% comment %}
@@ -68,10 +68,15 @@
           <div class="sg-tools-menu">
             <button type="button" class="small ghost" id="sg-whole">Show the whole call</button>
             <a class="small ghost" href="{% url 'speakers-classic' recording.pk %}" title="The lanes, zoom and Swap two speakers, on the page as it was">Lanes, zoom and swap (the classic page)</a>
-            <button type="button" class="small ghost" id="sg-window" data-href="{{ window_url }}">Open in a window</button>
+            {% if not in_window %}<button type="button" class="small ghost" id="sg-window" data-href="{{ window_url }}">Open in a window</button>{% endif %}
           </div>
         </details>
-        <a class="button small" id="sg-done" href="{{ back_url }}" title="Leave the page at this step; it brings you back here">Done for now</a>
+        {% if in_window %}
+          <span class="small muted" id="sg-win-state"></span>
+          <button type="button" class="small" id="sg-done-window" title="Close this window; the recording's page is where you left it">Close this window</button>
+        {% else %}
+          <a class="button small" id="sg-done" href="{{ back_url }}" title="Leave the page at this step; it brings you back here">Done for now</a>
+        {% endif %}
       </div>
     {% endif %}
   </div>
@@ -88,6 +93,7 @@
       assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, speakerCheck: {% if assistant.speaker_check %}true{% else %}false{% endif %} }{% else %}null{% endif %},
       backUrl: "{{ back_url }}",
       windowUrl: "{{ window_url }}",
+      inWindow: {% if in_window %}true{% else %}false{% endif %},
       guided: true
     };
   </script>

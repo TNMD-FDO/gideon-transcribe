@@ -19,6 +19,37 @@ installs or upgrades to.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.154.0, 2026-10-23
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The hearing window, and the Speakers window on the guided page.
+
+- **The hearing window.** A person's voice, heard from the guided
+  Speakers page, the case's Speakers tab or the Voices place, opens in a
+  window that floats over the page at the bottom right, plainly its own:
+  a coloured title bar naming who is heard, with their role and the
+  clock verdict, and a Close button in words at its end; Escape closes it
+  too; the page dims a shade behind it and the row that opened it keeps
+  a ring; it is dragged by its bar and comes back where it was left.
+  Nothing on the page moves or hides any more. Inside it is the snippet
+  of v1.152.0. A citation and a search hit keep their in-page panel.
+  Drawn first in docs/spec/mockups/phase-5-hearing-window-and-temporary-
+  quota.html, figure 1.
+- **The Speakers window shows the guided page.** Tools, Open in a window,
+  and the recording page's Speakers window had still opened the classic
+  page, because the link between the window and the recording's page
+  lived only in that page's script. The window now shows the guided
+  page, which carries the link (the page follows the window's player,
+  the window follows the page's while its own is paused, the page hears
+  the window open and close), hides Open in a window and ends with
+  Close this window; the window opens at the guided page's size, and
+  the side rail stays out of a window of its own.
 - ADR 0023 records where the clock re-read stands on 2026-10-23: one
   saying on the office's call still in dispute between the word fitting
   and the voice, left as placed at the maintainer's word; two ways on

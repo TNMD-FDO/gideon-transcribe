@@ -231,11 +231,12 @@ def test_the_window_route_shows_the_page_and_names_count_as_named(person, client
     recording = a_recording(person)
     signed_in(client, person)
     body = client.get(f"/recording/{recording.pk}/window/speakers").content.decode()
-    assert 'class="viewer speakers-page window"' in body
-    assert "inWindow: true" in body and 'id="cards"' in body
-    assert 'id="done"' not in body and 'id="open-in-window"' not in body
+    # The guided page in the window (v1.154.0), with its link to the page.
+    assert 'class="viewer speakers-guided window"' in body
+    assert "inWindow: true" in body and 'id="sg-focus"' in body
+    assert 'id="sg-window"' not in body and 'id="sg-done"' not in body
+    assert 'id="sg-done-window"' in body and "Close this window" in body
     assert "roster" not in body and "nowbox" not in body
-    assert 'id="suggest-names"' in body
 
     # A name, and the progress line moves; the named card's box starts hidden.
     client.post(

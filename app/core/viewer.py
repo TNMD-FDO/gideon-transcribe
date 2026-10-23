@@ -235,12 +235,13 @@ def window(request: HttpRequest, recording_id, panel: str) -> HttpResponse:
         raise Http404
     if panel == "speakers":
         # The Speakers page in a window of its own (v1.50.0; before that a
-        # window with a roster of its own).
+        # window with a roster of its own): the guided page since v1.154.0,
+        # which the window had shown in its classic form until then.
         from core import speakers_page
 
         return render(
             request,
-            "speakers-page.html",
+            "speakers-guided.html",
             speakers_page.context(request, recording, in_window=True),
         )
     return render(

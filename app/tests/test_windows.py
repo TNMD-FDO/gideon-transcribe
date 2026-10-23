@@ -113,15 +113,14 @@ def test_the_speakers_window_is_the_speakers_page_with_a_key_each(person, client
     recording = a_recording(person)
     signed_in(client, person)
     body = client.get(f"/recording/{recording.pk}/window/speakers").content.decode()
-    assert 'class="viewer speakers-page window"' in body and 'id="cards"' in body
-    assert body.count('class="sp-card unnamed"') == 3
-    assert '<kbd class="k">1</kbd>' in body and '<kbd class="k">3</kbd>' in body
-    assert 'id="now-who"' in body and 'id="speakers-undo"' in body
-    assert "inWindow: true" in body and "speakers-page.js" in body
+    # The guided page in the window (v1.154.0): one question at a time, the
+    # context beside it, its own player, and the channel to the page.
+    assert 'class="viewer speakers-guided window"' in body and 'id="sg-focus"' in body
+    assert 'id="sg-context"' in body and "sg-cards" in body
+    assert "inWindow: true" in body and "speakers-guided.js" in body
     assert "assistant.js" not in body and "clip-tool.js" not in body
-    # The window plays the recording itself: the picture, the lanes, the transport.
-    assert '<video id="player"' in body and 'id="play"' in body
-    assert 'id="lanes"' in body and body.index('id="lanes"') > body.index('id="play"')
+    assert '<video id="player"' in body and 'id="sg-play"' in body
+    assert 'id="sg-done-window"' in body and 'id="sg-window"' not in body
     audio = a_recording(person, video=False)
     sound = client.get(f"/recording/{audio.pk}/window/speakers").content.decode()
     assert '<audio id="player"' in sound and "<video" not in sound

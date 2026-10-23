@@ -30,8 +30,10 @@ def test_the_preview_script_places_itself_in_the_page_or_as_a_sheet():
         'placed.classList.remove("has-preview")',
     ):
         assert piece in script, piece
-    # The card is no longer dragged about: the head is not a handle.
-    assert 'drag(card.querySelector(".preview-head"))' not in script
+    # Only the hearing window (v1.154.0) is dragged, by its bar; the page's
+    # panel and the sheet are not.
+    assert script.count('drag(card.querySelector(".preview-head"))') == 1
+    assert 'if (card.classList.contains("hearing")) {' in script
     css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
     for rule in (
         ".preview-card.in-page {",
@@ -61,8 +63,37 @@ def test_the_preview_script_places_itself_in_the_page_or_as_a_sheet():
         "floating.playSpan(",
         "the line heard, with a line either side",
         "more of their voice here: each plays one line",
+        # The hearing window (v1.154.0).
+        "function isHearing()",
+        '" hearing"',
+        "preview-close",
+        "Close ✕",
+        '"Hearing " + asked.person',
+        'document.body.classList.add("hearing-open")',
+        'classList.add("previewing")',
+        "hearingPlace",
     ):
         assert piece in script, piece
+    # A voice never takes the page's column now; a citation or a hit still may.
+    assert "var column = (host || isSnippet()) ? null : columnOf();" in script
+    for rule in (
+        ".preview-card.hearing {",
+        ".preview-card.hearing .preview-head {",
+        ".preview-card.hearing .preview-close {",
+        "body.hearing-open::after {",
+        ".sg-prev.previewing",
+    ):
+        assert rule in css, rule
+    guided_js = (HERE / "static" / "speakers-guided.js").read_text(encoding="utf-8")
+    for piece in (
+        'new BroadcastChannel("transcribe-" + V.recording)',
+        'kind: "window-time"',
+        'kind: "window-open", panel: "speakers"',
+        'kind: "window-closed", panel: "speakers"',
+        "function leave()",
+        "window.close()",
+    ):
+        assert piece in guided_js, piece
 
 
 def test_the_pages_offer_the_column_and_the_buttons_carry_the_person():

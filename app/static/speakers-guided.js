@@ -12,6 +12,8 @@
   "use strict";
 
   var V = window.VIEWER;
+  // Done: back to the recording's page, or, in a window, the window closes (v1.154.0).
+  function leave() { if (V.inWindow) { window.close(); return; } window.location.href = V.backUrl; }
   var root = document.getElementById("sg");
   if (!V || !root || !document.getElementById("sg-focus")) { return; }
   var UI = window.UI || { toast: function () {}, icon: function () { return ""; } };
@@ -33,6 +35,8 @@
     scrub: document.getElementById("sg-scrub"),
     whole: document.getElementById("sg-whole"),
     windowButton: document.getElementById("sg-window"),
+    closeWindow: document.getElementById("sg-done-window"),
+    winState: document.getElementById("sg-win-state"),
     player: document.getElementById("player")
   };
 
@@ -437,7 +441,7 @@
       onNext: function () {
         if (!last) { index += 1; render(); return; }
         if (mode === "voices" && step === 2) { setStage(3).then(function (ok) { if (ok) { sub = ""; index = 0; render(); } }); return; }
-        window.location.href = V.backUrl;
+        leave();
       }
     });
     var said = lineWords(row);
@@ -538,7 +542,7 @@
         if (mode === "voices") { setStage(2).then(function (ok) { if (ok) { sub = "lines"; index = 0; render(); } }); }
         else { step = 1; remember("step", 1); index = 0; render(); }
       },
-      onNext: function () { window.location.href = V.backUrl; }
+      onNext: leave
     });
     var html = "<div class='sg-summary'>" +
       "<div class='sg-stat'><div class='n'>" + named + " of " + voices.length + "</div><div class='w'>voices named</div></div>" +
@@ -769,6 +773,39 @@
     el.windowButton.addEventListener("click", function () {
       window.open(el.windowButton.dataset.href + "?t=" + Math.floor(el.player ? el.player.currentTime : 0), "transcribe-" + V.recording + "-speakers", "popup,width=1100,height=800");
     });
+  }
+  if (el.closeWindow) { el.closeWindow.addEventListener("click", function () { window.close(); }); }
+
+  // In a window (v1.154.0): the recording's page and this one keep in step
+  // through the browser's channel, as the classic page did. The page hears
+  // when the window opens and closes and follows its player; the window
+  // follows the page's player while its own is paused.
+  var channel = (V.inWindow && "BroadcastChannel" in window) ? new BroadcastChannel("transcribe-" + V.recording) : null;
+  function tell(message) { if (channel) { channel.postMessage(message); } }
+  if (channel) {
+    var lastTold = -1;
+    if (el.player) {
+      el.player.addEventListener("timeupdate", function () {
+        var tick = Math.floor(el.player.currentTime * 4);
+        if (tick === lastTold) { return; }
+        lastTold = tick;
+        tell({ kind: "window-time", at: el.player.currentTime, playing: !el.player.paused });
+      });
+    }
+    channel.onmessage = function (event) {
+      var said = event.data || {};
+      if (said.kind === "time") {
+        if (el.player) {
+          if (said.playing && !el.player.paused) { el.player.pause(); }
+          if (el.player.paused && Math.abs(el.player.currentTime - (said.at || 0)) > 1) { el.player.currentTime = said.at || 0; }
+        }
+        if (el.winState) { el.winState.textContent = said.playing ? "The recording's page is playing, " + clock(said.at || 0) : ""; }
+      } else if (said.kind === "page-closed") {
+        if (el.winState) { el.winState.textContent = "The recording's page has closed."; }
+      }
+    };
+    tell({ kind: "window-open", panel: "speakers" });
+    window.addEventListener("beforeunload", function () { tell({ kind: "window-closed", panel: "speakers" }); });
   }
 
   document.addEventListener("keydown", function (event) {

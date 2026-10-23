@@ -2107,7 +2107,7 @@
   function openWindow(panel) {
     if (windowOf(panel)) { windowOf(panel).focus(); return; }
     var url = "/recording/" + window.VIEWER.recording + "/window/" + panel;
-    var size = panel === "speakers" ? "width=560,height=720" : "width=780,height=900";
+    var size = panel === "speakers" ? "width=1100,height=800" : "width=780,height=900";
     windows[panel] = window.open(url, "transcribe-" + window.VIEWER.recording + "-" + panel, "popup," + size);
     if (!windows[panel]) {
       UI.toast("The browser blocked the window. Allow pop-ups for this site and try again.", { problem: true, icon: "warning" });
