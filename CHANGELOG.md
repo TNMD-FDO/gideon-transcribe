@@ -19,7 +19,10 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+- ADR 0023 records where the clock re-read stands on 2026-10-23: one
+  saying on the office's call still in dispute between the word fitting
+  and the voice, left as placed at the maintainer's word; two ways on
+  named, neither built.
 
 ## v1.153.0, 2026-10-22
 

@@ -123,3 +123,19 @@ relates to the speaker, a couple of lines around it, cleanly.
   and not built.
 - ADR 0022's measurement and rules stand; only its "nothing moves" gives
   way, to the audio.
+- **Where it stands, 2026-10-23.** On the office's call the pipeline runs
+  by itself from a plain reprocess (30 lines marked in 4 blocks, 21
+  pieces read, 23 lines placed again in ten seconds) and the maintainer
+  hears most of the block where the page now puts it. One saying is
+  still in dispute: the word fitting places it from 2:15 with its
+  highest confidence on the first words, while the diarizer hears that
+  speaker's one long turn from 2:20 and the maintainer hears the saying
+  begin at about 2:21. The two machine readings disagree with each other
+  and no further measurement decides it without a listener, so the clock
+  is left as the fitter placed it, at the maintainer's word. Two ways on
+  are named and not built: the voice constraining the words (the
+  diarizer's turns asked for on the re-read's pieces, a line placed
+  within its speaker's continuous turn, to be judged by ear on several
+  recordings first), and a by-hand "set this line's time" action on the
+  recording page, undoable like a rename, for the one line a reviewer
+  can hear.
