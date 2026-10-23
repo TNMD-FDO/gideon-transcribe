@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An Admin keeps a voice for any unit</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; } h2 { font-size: 17px; margin: 0; } h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.small { font-size: 12px; padding: 2px 8px; min-height: 24px; }
+  .btn.quiet { border-color: transparent; background: transparent; color: var(--muted); padding: 0 6px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+
+  /* a person card, as on the Speakers tab and the Voices place */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; max-width: 460px; display: flex; flex-direction: column; gap: 6px; }
+  .card .h { display: flex; gap: 8px; align-items: center; }
+  .card .nm { font-weight: 600; font-size: 15px; }
+  .card .h .menu { margin-left: auto; position: relative; }
+  .card .chain { color: var(--muted); font-size: 12px; }
+  .card .where { display: flex; gap: 6px; flex-wrap: wrap; }
+  .card .rec { font-size: 12px; color: var(--accent); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
+  .card .voice { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .bar { height: 6px; width: 90px; background: var(--surface-2); border-radius: 3px; overflow: hidden; } .bar i { display: block; height: 100%; width: 72%; background: var(--ok); }
+  .menu-body { position: absolute; right: 0; top: 28px; z-index: 2; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 260px; }
+  .menu-body .row { display: flex; gap: 6px; align-items: center; }
+  .menu-body hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; }
+  .menu-body .btn { justify-content: flex-start; }
+  .open-menu { height: 150px; }
+
+  /* the confirm box, the app's ui-dialog */
+  .dialog { background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 36px rgba(0,0,0,.25); padding: 18px 20px; width: min(100%, 440px); }
+  .dialog .title { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  .dialog .body { color: var(--muted); margin: 0 0 12px; }
+  .dialog .body p { margin: 0 0 6px; }
+  .units { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
+  .units label { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; font-size: 13px; }
+  .units label.on { border-color: var(--accent); background: var(--accent-soft); }
+  .units input { width: 15px; height: 15px; }
+  .units .why { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .dialog .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  .backdrop { background: rgba(10, 16, 22, 0.45); padding: 28px; border-radius: var(--radius-lg); display: flex; justify-content: center; }
+
+  .rules { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 16px; font-size: 13px; }
+  .rules ul { margin: 6px 0 0; padding-left: 18px; } .rules li { margin: 3px 0; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 10px; font-size: 13px; }
+  .tabs span { padding: 6px 12px; border: 1px solid transparent; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; color: var(--muted); }
+  .tabs span.on { border-color: var(--line); background: var(--surface); color: var(--text); margin-bottom: -1px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Phase 5 · chapter 2 · drawn 2026-10-23 · for the maintainer's word</div>
+    <h1>An Admin keeps a voice for any unit, or for several</h1>
+    <p class="lede">The maintainer's ask of 2026-10-23: as an Admin, add a voice to any unit they choose, whatever unit the case or the Admin is in. Everyone else keeps as now, into the case owner's unit only. Three places change: the Keep button on the case's Speakers tab, the kept card and its menu, and the chain on the Voices place. The names are the fictional office's.</p>
+  </header>
+
+  <!-- Figure 1: the Keep button and the chooser -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>The Speakers tab, as an Admin: "Keep for a unit..." opens a chooser of the office's units</h2></div>
+    <div class="cols">
+      <div>
+        <p class="eyebrow" style="margin-bottom: 8px">The card, before</p>
+        <article class="card">
+          <div class="h"><span class="nm">Tony Marsh</span><span class="pill">Officer</span><details class="menu"><summary class="btn quiet">···</summary></details></div>
+          <div class="voice"><span class="bar"><i></i></span> well taught · 2 recordings, 6 min</div>
+          <div class="where"><span class="rec">Call 0403</span><span class="rec">Call 0407</span></div>
+          <div class="chain">Named by Dana Reyes · confirmed by the voice</div>
+          <div><button class="btn small">Keep for a unit...</button></div>
+        </article>
+        <p class="muted small" style="margin: 10px 0 0">What everyone else sees on the same card is unchanged: <b>Keep for the Appeals...</b>, their own unit, when the case's owner is in one; nothing when the owner is in no unit.</p>
+      </div>
+      <div>
+        <p class="eyebrow" style="margin-bottom: 8px">The confirm box</p>
+        <div class="backdrop">
+          <div class="dialog">
+            <p class="title">Keep Tony Marsh's voice for a unit?</p>
+            <div class="body"><p>Tick the units whose voice book takes this print. This case's unit is ticked first.</p></div>
+            <div class="units">
+              <label class="on"><input type="checkbox" checked> Appeals <span class="why">this case's unit</span></label>
+              <label><input type="checkbox"> Trial</label>
+              <label><input type="checkbox"> Office <span class="why">everyone</span></label>
+            </div>
+            <div class="body"><p class="tiny">Each book gets the print as it stands and learns from this case as it is checked. Stop keeping, per unit, is in the card's menu.</p></div>
+            <div class="acts"><button class="btn">Cancel</button><button class="btn primary">Keep for 1 unit</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Who sees it.</b> Only an Admin gets the chooser. The units are the Panel's Units lines, in that order; the case owner's unit is ticked when there is one, otherwise nothing is ticked and the Admin ticks what they mean. The button counts the ticks: "Keep for 2 units".</p>
+      <p><b>The case owner in no unit</b> no longer stops an Admin: the chooser lists every unit anyway. So an Admin who owns a test case, and is in no unit themself, keeps straight from it. Non-admins still need the owner in a unit, as the chapter says.</p>
+      <p><b>The rules that stay.</b> The person needs a print and a kept role (Officer, Interpreter, Interviewer on the office's server); a client's side or a witness is never offered, to anyone. Keep voices for the unit must be on.</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: the kept card -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>The kept card: which units hold the voice, and the menu adds or removes one unit at a time</h2></div>
+    <div class="cols">
+      <article class="card open-menu" style="height: auto">
+        <div class="h"><span class="nm">Tony Marsh</span><span class="pill">Officer</span>
+          <details class="menu" open><summary class="btn quiet">···</summary>
+            <div class="menu-body">
+              <div class="row small"><input type="text" value="Tony Marsh" style="flex: 1; font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text)"><button class="btn small">Rename everywhere</button></div>
+              <hr>
+              <button class="btn small ghost">Also keep for the Trial unit</button>
+              <button class="btn small ghost">Also keep for the Office unit</button>
+              <button class="btn small ghost danger">Stop keeping for the Appeals unit</button>
+              <hr>
+              <button class="btn small ghost">Unlearn the voice</button>
+            </div>
+          </details>
+        </div>
+        <div class="voice"><span class="bar"><i></i></span> well taught · 2 recordings, 6 min</div>
+        <div class="where"><span class="rec">Call 0403</span><span class="rec">Call 0407</span></div>
+        <div class="chain">Kept for the <b>Appeals</b> unit since 23 Oct 2026, by dmeehan (Admin) · this case teaches the book · Stop keeping is in the menu</div>
+      </article>
+      <article class="card">
+        <div class="h"><span class="nm">Tony Marsh</span><span class="pill">Officer</span><details class="menu"><summary class="btn quiet">···</summary></details></div>
+        <div class="voice"><span class="bar"><i></i></span> well taught · 2 recordings, 6 min</div>
+        <div class="where"><span class="rec">Call 0403</span><span class="rec">Call 0407</span></div>
+        <div class="chain">Kept for the <b>Appeals</b> and <b>Trial</b> units since 23 Oct 2026, by dmeehan (Admin) · this case teaches both books · Stop keeping, per unit, is in the menu</div>
+        <p class="muted tiny" style="margin: 4px 0 0">The same card for everyone else reads "Kept for the Appeals unit, for a unit you are not in", or theirs with Stop keeping, as now.</p>
+      </article>
+    </div>
+    <div class="caption">
+      <p><b>Also keep for.</b> One line per unit that does not yet hold the voice. It needs no confirm box of its own: the chain changes at once and an audit row says which unit. The print copied is the person's as it stands today.</p>
+      <p><b>Stop keeping, per unit.</b> One line per unit that holds it. Stopping the last one marks the person not kept, as today; the book forgets the voice when no other case teaches it. The person's own print stays in every case.</p>
+      <p><b>Teaching.</b> Every book that holds this person's share is taught by this case's checks, not only the owner's unit's. The chain says "teaches both books" or "teaches 3 books".</p>
+    </div>
+  </section>
+
+  <!-- Figure 3: the Voices place -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3</div><h2>The Voices place: the voice sits on each unit's tab, and its chain says where else it is kept</h2></div>
+    <div class="tabs"><span>Appeals 4</span><span class="on">Trial 3</span><span>Office 1</span></div>
+    <div class="cols">
+      <article class="card">
+        <div class="h"><span class="nm">Tony Marsh</span><span class="pill">Officer</span><span class="pill ok">told to recognition</span><details class="menu"><summary class="btn quiet">···</summary></details></div>
+        <div class="voice"><span class="bar"><i></i></span> taught by 1 case, 2 recordings, 6 min</div>
+        <div class="chain">Kept from <b>State v. Nobody</b> by dmeehan (Admin) on 23 Oct 2026 · <b>also kept for the Appeals unit</b> · 0 cases have taught it since</div>
+        <div class="chain">Checks against it: 0 accepted, 0 not them · not yet heard</div>
+      </article>
+      <div class="rules">
+        <b>What does not change</b>
+        <ul>
+          <li>The recognition switch is per voice per unit, as v1.156.0 made it; the Trial tab's switch says nothing about the Appeals tab's.</li>
+          <li>Forget, on this place, forgets the voice for this unit only; the other unit's copy stays.</li>
+          <li>Which names recognition is told for a case still follows the case owner's unit. An Admin's case with an owner in no unit is told none.</li>
+          <li>Non-admins see their own unit's tab only, as now.</li>
+          <li>No migration: a unit's book already keys its shares by the person, so the same person may sit in two books today. The change is in who may put them there and how the pages say so.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

@@ -21,6 +21,41 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.157.0, 2026-10-23
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+An Admin keeps a voice for any unit, or several.
+
+- **Keep for a unit...** On a case's Speakers tab an Admin's Keep button
+  opens a box that lists the office's units with a tick box each, the
+  case's own unit ticked first when it has one, and keeps the voice for
+  every ticked unit at once, whatever unit the case or the Admin is in. A
+  case whose owner is in no unit no longer stops an Admin. Everyone else
+  keeps for the case owner's unit only, with the one button, as before.
+- **One unit at a time, afterwards.** The kept card names every unit that
+  holds the voice ("Kept for the Appeals and Trial units · this case
+  teaches both books"), and its menu has "Also keep for the <unit> unit"
+  and "Stop keeping for the <unit> unit", one line per unit. Stopping the
+  last unit ends the keeping as before; a voice kept for two units stays
+  kept when one unit's book forgets it.
+- **Every book learns.** A kept voice's share is written to every unit's
+  book that holds it: a name accepted in the case, a rename, a role change
+  and Unlearn follow into each.
+- **The Voices place** says "also kept for the <unit> unit" on a voice
+  another unit's book also holds, and "(Admin)" after the keeper's name
+  when an Admin kept it.
+- The roles rule and the recognition names are unchanged: a client's side
+  or a witness is never offered, and which names recognition is told for a
+  case still follows the case owner's unit.
+
+The drawing is `docs/spec/mockups/phase-5-admin-keeps-for-any-unit.html`.
+Phase 5 chapter 2, CONTEXT.md's Keep for the unit, and the user and admin
+guides are amended.
+
 ## v1.156.0, 2026-10-23
 
 ```

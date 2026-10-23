@@ -36,6 +36,8 @@
         "<div class='ui-dialog-body'></div>" +
         "<div class='ui-dialog-field' hidden><input type='text' class='ui-dialog-input' maxlength='200' autocomplete='off'></div>" +
         "<label class='ui-dialog-check row' hidden><input type='checkbox' class='ui-dialog-tick'> <span class='ui-dialog-check-label'></span></label>" +
+        "<div class='ui-dialog-choices' hidden></div>" +
+        "<div class='ui-dialog-choices' hidden></div>" +
         "<div class='ui-dialog-buttons'>" +
           "<button type='button' class='ui-cancel'>Cancel</button>" +
           "<button type='submit' class='primary ui-ok'>OK</button>" +
@@ -82,14 +84,55 @@
     var ok = box.querySelector(".ui-ok");
     var cancel = box.querySelector(".ui-cancel");
     ok.textContent = options.ok || "OK";
+    ok.disabled = false;
     cancel.textContent = options.cancel || "Cancel";
     cancel.hidden = options.cancel === false;
     ok.className = "ui-ok " + (options.danger ? "danger primary" : "primary");
     box.classList.toggle("danger", !!options.danger);
+    // Tick boxes under the words (v1.157.0, the Admin's Keep for a unit):
+    // options.choices is [{value, label, checked, why}], the OK button
+    // counts the ticks ("Keep for {n} unit{s}") and the answer is then
+    // {ok, chosen: [values]}.
+    var choices = box.querySelector(".ui-dialog-choices");
+    choices.textContent = "";
+    choices.hidden = !options.choices;
+    if (options.choices) {
+      options.choices.forEach(function (one) {
+        var label = el("label", "choice");
+        var box1 = document.createElement("input");
+        box1.type = "checkbox";
+        box1.value = one.value;
+        box1.checked = !!one.checked;
+        label.appendChild(box1);
+        label.appendChild(el("span", null, one.label || one.value));
+        if (one.why) { label.appendChild(el("span", "why", one.why)); }
+        choices.appendChild(label);
+      });
+      var count = function () {
+        var n = 0;
+        Array.prototype.forEach.call(choices.querySelectorAll("label"), function (label) {
+          var on = label.querySelector("input").checked;
+          label.classList.toggle("on", on);
+          if (on) { n += 1; }
+        });
+        ok.disabled = !n;
+        ok.textContent = (options.ok || "OK").replace("{n}", n).replace("{s}", n === 1 ? "" : "s");
+      };
+      choices.onchange = count;
+      count();
+    } else {
+      choices.onchange = null;
+    }
     return new Promise(function (resolve) {
       settle = options.check
         ? function (yes) { resolve({ ok: yes, checked: tick.checked }); }
-        : resolve;
+        : options.choices
+          ? function (yes) {
+              var chosen = [];
+              Array.prototype.forEach.call(choices.querySelectorAll("input:checked"), function (one) { chosen.push(one.value); });
+              resolve({ ok: yes, chosen: chosen });
+            }
+          : resolve;
       box.showModal();
       // The safe choice has the focus for a destructive question; the field
       // for a prompt; the action otherwise.
@@ -146,22 +189,42 @@
   // the same attributes asks before its form is submitted with that button.
 
   function asks(node) {
+    var choices = null;
+    if (node.dataset.confirmChoices) {
+      try { choices = JSON.parse(node.dataset.confirmChoices); } catch (ignored) { choices = null; }
+    }
     return {
       title: node.dataset.confirmTitle || "",
       body: node.dataset.confirm,
       ok: node.dataset.confirmOk || "OK",
       cancel: node.dataset.confirmCancel || "Cancel",
-      danger: node.hasAttribute("data-danger")
+      danger: node.hasAttribute("data-danger"),
+      choices: choices
     };
   }
 
+  // A form with data-confirm-choices (JSON, [{value, label, checked, why}])
+  // asks with tick boxes and posts each tick as a hidden field named by
+  // data-confirm-choice-name ("unit" when unsaid).
   document.addEventListener("submit", function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement) || !form.dataset.confirm || form.dataset.confirmed) { return; }
     event.preventDefault();
     var submitter = event.submitter;
-    confirm(asks(form)).then(function (yes) {
+    confirm(asks(form)).then(function (answer) {
+      var yes = answer && typeof answer === "object" ? answer.ok : answer;
       if (!yes) { return; }
+      if (answer && answer.chosen) {
+        Array.prototype.forEach.call(form.querySelectorAll("input[data-chosen]"), function (old) { old.remove(); });
+        answer.chosen.forEach(function (value) {
+          var field = document.createElement("input");
+          field.type = "hidden";
+          field.name = form.dataset.confirmChoiceName || "unit";
+          field.value = value;
+          field.setAttribute("data-chosen", "");
+          form.appendChild(field);
+        });
+      }
       form.dataset.confirmed = "yes";
       if (submitter && form.requestSubmit) { form.requestSubmit(submitter); }
       else if (form.requestSubmit) { form.requestSubmit(); }

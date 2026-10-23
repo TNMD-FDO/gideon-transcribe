@@ -482,9 +482,17 @@
                         {% endif %}
                         <div class="sep"></div>
                         {% if b and b.state == "kept" and b.mine %}
-                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" data-confirm-title="Stop keeping {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="This case's share leaves the unit's voice book{% if b.cases <= 1 %}, and the book forgets the voice, since no other case teaches it{% endif %}. This case's own print stays. The names accepted from the book stay." data-confirm-ok="Stop keeping">
-                            {% csrf_token %}<input type="hidden" name="action" value="stop-keeping"><button type="submit" class="small ghost">Stop keeping for the {{ b.unit }} unit</button>
-                          </form>
+                          {% comment %}An Admin may keep one voice for several units (v1.157.0): one line per unit to add, one per unit to let go.{% endcomment %}
+                          {% for more in b.more %}
+                            <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small">
+                              {% csrf_token %}<input type="hidden" name="action" value="keep"><input type="hidden" name="unit" value="{{ more }}"><button type="submit" class="small ghost">Also keep for the {{ more }} unit</button>
+                            </form>
+                          {% endfor %}
+                          {% for held in b.units %}
+                            <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" data-confirm-title="Stop keeping {{ row.person.name }}'s voice for the {{ held }} unit?" data-confirm="This case's share leaves the {{ held }} unit's voice book{% if b.cases <= 1 %}, and the book forgets the voice, since no other case teaches it{% endif %}. This case's own print stays{% if b.units|length == 2 %}, and so does the voice in the other unit's book{% elif b.units|length > 2 %}, and so does the voice in the other units' books{% endif %}. The names accepted from the book stay." data-confirm-ok="Stop keeping">
+                              {% csrf_token %}<input type="hidden" name="action" value="stop-keeping"><input type="hidden" name="unit" value="{{ held }}"><button type="submit" class="small ghost">Stop keeping for the {{ held }} unit</button>
+                            </form>
+                          {% endfor %}
                         {% endif %}
                         {% if v.has_print %}
                           {% comment %}Unlearn (ADR 0021 decision 6): the box lists each recording by what happens to it.{% endcomment %}
@@ -517,7 +525,7 @@
                         {% if v.heard %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ v.heard.recording }}" data-preview-at="{{ v.heard.start }}" data-preview-person="{{ row.person.name }}" data-preview-role="{{ row.person.role }}" data-preview-speaker="{{ row.person.name }}" title="Hear {{ row.person.name }} on {{ v.heard.title }}">{% icon "play" %} hear them</button>{% endif %}
                         <span>voice known · print from {{ v.parts }} recording{{ v.parts|pluralize }}</span>
                         {% if v.medium_at_best %}<span class="pill small">matches rate medium at best</span>{% endif %}
-                        {% if b and b.state == "kept" %}<span class="pill small acc" title="since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %}{% if b.mine %}; this case teaches the book{% endif %}">Kept for the {{ b.unit }} unit</span>{% endif %}
+                        {% if b and b.state == "kept" %}<span class="pill small acc" title="since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %}{% if b.mine %}; this case teaches the book{% endif %}">Kept for the {{ b.units|join:" and " }} unit{{ b.units|length|pluralize }}</span>{% endif %}
                       {% elif v.unlearnt_at %}
                         <span class="muted">voice unlearnt {{ v.unlearnt_at|date:"j M" }}{% if v.unlearnt_by %} by {{ v.unlearnt_by }}{% endif %}</span>
                       {% else %}
@@ -538,9 +546,14 @@
                   {% if row.first_line %}<div class="chain">{{ row.first_line }}</div>{% endif %}
                   {% if b %}
                     {% if b.state == "kept" and b.mine %}
-                      <div class="chain">Kept for the {{ b.unit }} unit since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %} &middot; this case teaches the book &middot; Stop keeping is in the menu</div>
+                      <div class="chain">Kept for the {% for held in b.units %}<b>{{ held }}</b>{% if not forloop.last %}{% if forloop.revcounter == 2 %} and {% else %}, {% endif %}{% endif %}{% endfor %} unit{{ b.units|length|pluralize }} since {{ b.since }}{% if b.by %}, by {{ b.by }}{% endif %} &middot; this case teaches {% if b.units|length == 1 %}the book{% elif b.units|length == 2 %}both books{% else %}{{ b.units|length }} books{% endif %} &middot; Stop keeping{% if b.units|length > 1 %}, per unit,{% endif %} is in the menu</div>
                     {% elif b.state == "kept" %}
-                      <div class="chain">Kept for the {{ b.unit }} unit, for a unit you are not in</div>
+                      <div class="chain">Kept for the {{ b.units|join:" and " }} unit{{ b.units|length|pluralize }}, for a unit you are not in</div>
+                    {% elif b.state == "offer" and b.admin %}
+                      {% comment %}An Admin keeps for any unit, or several (v1.157.0; the drawing phase-5-admin-keeps-for-any-unit.html, figure 1): the box lists the office's units as tick boxes, the case owner's ticked first.{% endcomment %}
+                      <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Keep {{ row.person.name }}'s voice for a unit?" data-confirm="Tick the units whose voice book takes this print.{% if b.unit %} This case's unit is ticked first.{% endif %} Each book gets the print as it stands and learns from this case as it is checked; anyone in a ticked unit can then check an unnamed speaker against it by hand, and nothing is named by it on its own. Their role, {{ row.person.role }}, goes with the voice; their notes and this case's name do not. Stop keeping, per unit, is in the card's menu. Written to the audit as counts only." data-confirm-ok="Keep for {n} unit{s}" data-confirm-choices="{{ b.choices_json }}" data-confirm-choice-name="unit">
+                        {% csrf_token %}<input type="hidden" name="action" value="keep"><button type="submit" class="small">Keep for a unit...</button>
+                      </form>
                     {% elif b.state == "offer" %}
                       <form method="post" action="{% url 'person-action' row.person.pk %}" class="inline" data-confirm-title="Keep {{ row.person.name }}'s voice for the {{ b.unit }} unit?" data-confirm="Their voice print is copied into the unit's voice book, where anyone in the {{ b.unit }} unit can check an unnamed speaker against it by hand, on any recording in their cases. Nothing is named by it on its own: a match is proposed only when someone presses Check, and is decided on that card. This case keeps teaching the book while they are kept. Their role, {{ row.person.role }}, goes with the voice; their notes and this case's name do not. Stop keeping here, or Forget on the Voices page, deletes the book's print; this case's own print stays. Written to the audit as counts only." data-confirm-ok="Keep for the {{ b.unit }} unit">
                         {% csrf_token %}<input type="hidden" name="action" value="keep"><button type="submit" class="small">Keep for the {{ b.unit }}...</button>

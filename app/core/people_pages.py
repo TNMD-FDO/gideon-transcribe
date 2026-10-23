@@ -9,6 +9,8 @@ a name in it. Hidden, like every Cases page, while Folder management is Off.
 
 from __future__ import annotations
 
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -57,6 +59,20 @@ def tab_context(case, user=None) -> dict:
         row["voice"] = voice["per_person"].get(row["person"].pk)
         # The unit's voice book (v1.146.0): kept, an offer, or a role not kept.
         row["book"] = voice_book.tab_line(row["person"], user) if user else None
+        line = row["book"] or {}
+        if line.get("state") == "offer" and line.get("admin"):
+            # The Admin's tick boxes (v1.157.0), as the confirm box reads them.
+            row["book"]["choices_json"] = json.dumps(
+                [
+                    {
+                        "value": one,
+                        "label": one,
+                        "checked": one == row["book"]["unit"],
+                        "why": "this case's unit" if one == row["book"]["unit"] else "",
+                    }
+                    for one in row["book"]["choices"]
+                ]
+            )
         # The card's facts (v1.151.0, the tab as people): what waits on this
         # person, and the kinds the filter chips sort by.
         v = row["voice"] or {}
@@ -199,7 +215,26 @@ def person_action(request: HttpRequest, person_id) -> HttpResponse:
             # The unit's voice book (v1.146.0).
             from core import voice_book
 
-            if action == "keep":
+            if action == "keep" and request.POST.getlist("unit"):
+                # An Admin's units of choice (v1.157.0).
+                books = voice_book.keep_for(
+                    person,
+                    request.POST.getlist("unit"),
+                    by=request.user,
+                    request=request,
+                )
+                names = [one.unit for one in books]
+                request.session["people_said"] = (
+                    (
+                        f"{person.name}'s voice is kept for the "
+                        f"{' and '.join(names)} unit{'' if len(names) == 1 else 's'}. "
+                        "Anyone in the unit can now check an unnamed speaker against "
+                        "it by hand; nothing is named by it on its own."
+                    )
+                    if names
+                    else f"{person.name}'s voice was already kept for those units."
+                )
+            elif action == "keep":
                 book = voice_book.keep(person, by=request.user, request=request)
                 request.session["people_said"] = (
                     f"{person.name}'s voice is kept for the {book.unit} unit. "
@@ -207,10 +242,19 @@ def person_action(request: HttpRequest, person_id) -> HttpResponse:
                     "by hand; nothing is named by it on its own."
                 )
             else:
-                voice_book.stop_keeping(person, by=request.user, request=request)
+                unit = request.POST.get("unit", "").strip()
+                voice_book.stop_keeping(
+                    person, by=request.user, request=request, unit=unit
+                )
+                person.refresh_from_db()
                 request.session["people_said"] = (
-                    f"{person.name}'s voice is no longer kept for the unit from this "
-                    "case. The case's own print stays."
+                    f"{person.name}'s voice is no longer kept for the "
+                    f"{unit + ' ' if unit else ''}unit from this case. "
+                    + (
+                        "It stays kept for the other unit."
+                        if person.kept_for_unit
+                        else "The case's own print stays."
+                    )
                 )
         elif action == "unlearn":
             from core import voice_prints

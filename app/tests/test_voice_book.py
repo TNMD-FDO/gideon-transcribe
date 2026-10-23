@@ -536,11 +536,13 @@ def test_the_case_tab_offers_keep_and_shows_kept(owner, a_case, book_on, client)
     an_officer(a_case, recording, seed=3, name="Tom Hale", role="Witness")
     signed_in(client, owner)
     tab = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
-    assert "Keep for the Appeals..." in tab
+    # The owner is an Admin, so the button is the chooser (v1.157.0); a
+    # post with no unit ticked still keeps for the case's own unit.
+    assert "Keep for a unit..." in tab
     assert "A witness's voice is never kept for the unit." in tab
     assert client.post(f"/person/{officer.pk}", {"action": "keep"}).status_code == 302
     tab = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
-    assert "Kept for the Appeals unit" in tab and "Stop keeping" in tab
+    assert "Kept for the <b>Appeals</b> unit" in tab and "Stop keeping" in tab
     assert "this case teaches the book" in tab
     assert (
         client.post(f"/person/{officer.pk}", {"action": "stop-keeping"}).status_code
@@ -552,6 +554,7 @@ def test_the_case_tab_offers_keep_and_shows_kept(owner, a_case, book_on, client)
     settings_store.set_to("unit_voices", False)
     tab = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
     assert "Keep for the" not in tab and "never kept for the unit" not in tab
+    assert "Keep for a unit" not in tab
 
 
 def test_the_switch_off_deletes_every_book_and_the_cases_keep_their_prints(

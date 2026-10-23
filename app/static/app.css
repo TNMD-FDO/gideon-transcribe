@@ -1449,6 +1449,14 @@ body.no-speakers .seg .actions { grid-column: 3; }
 
 /* The one tick a confirm box may carry (Process again). */
 .ui-dialog-check { margin: 10px 0 0; gap: 8px; align-items: center; font-size: var(--t-small); }
+/* Tick boxes in a confirm box (v1.157.0: an Admin's Keep for a unit; the
+   drawing phase-5-admin-keeps-for-any-unit.html, figure 1). */
+.ui-dialog-choices { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
+.ui-dialog-choices .choice { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; font-size: var(--t-small); cursor: pointer; }
+.ui-dialog-choices .choice.on { border-color: var(--accent); background: var(--accent-soft); }
+.ui-dialog-choices .choice input { width: 15px; height: 15px; margin: 0; }
+.ui-dialog-choices .choice .why { color: var(--muted); margin-left: auto; font-size: 12px; }
+.ui-dialog .ui-ok[disabled] { opacity: .5; }
 .followpill {
   display: block;
   width: max-content;

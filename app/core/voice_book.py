@@ -248,6 +248,18 @@ def find(unit: str, name: str) -> UnitVoice | None:
     ).first()
 
 
+def person_rule(person) -> str:
+    """Why this Person's voice cannot be kept for any unit, or "" when it
+    can: off, no print, role. The case's unit is the other half."""
+    if not on():
+        return "off"
+    if not (person.voice_print or {}).get("vector"):
+        return "no print"
+    if not person.role or person.role not in roles_allowed():
+        return "role"
+    return ""
+
+
 def may_keep(person) -> tuple[bool, str]:
     """Whether this Person's voice can be kept for the unit, and the unit
     when it can, or why not: off, no unit, no print, role."""
@@ -256,11 +268,38 @@ def may_keep(person) -> tuple[bool, str]:
     unit = unit_of_case(person.case)
     if not unit:
         return False, "no unit"
-    if not (person.voice_print or {}).get("vector"):
-        return False, "no print"
-    if not person.role or person.role not in roles_allowed():
-        return False, "role"
+    why = person_rule(person)
+    if why:
+        return False, why
     return True, unit
+
+
+def books_of(person) -> list[UnitVoice]:
+    """Every live book that holds this Person's share, in the Admin's
+    order of units (v1.157.0: an Admin may keep one voice for several)."""
+    found = list(
+        UnitVoice.objects.filter(forgotten_at=None, parts__has_key=str(person.pk))
+    )
+    order = {name: n for n, name in enumerate(units.names())}
+    found.sort(key=lambda one: (order.get(one.unit, len(order)), one.unit))
+    return found
+
+
+def units_kept(person) -> list[str]:
+    return [one.unit for one in books_of(person)]
+
+
+def units_offered(person, user) -> list[str]:
+    """The units this user may still keep the Person for: every listed unit
+    without them for an Admin; the case owner's unit for anyone else, when
+    the owner is in one. Empty when the Person's own rules refuse."""
+    if person_rule(person):
+        return []
+    held = set(units_kept(person))
+    if getattr(user, "is_admin", False):
+        return [one for one in units.names() if one not in held]
+    unit = unit_of_case(person.case)
+    return [unit] if unit and unit not in held else []
 
 
 def _part_of(person) -> dict | None:
@@ -312,12 +351,19 @@ def teach(person) -> bool:
     this case's share of the book follows. True when the book changed."""
     if not getattr(person, "kept_for_unit", False) or not on():
         return False
-    unit = unit_of_case(person.case)
-    book = find(unit, person.name) if unit else None
-    if book is None:
+    books = books_of(person)
+    if not books:
         return False
-    parts = dict(book.parts or {})
     part = _part_of(person)
+    for book in books:
+        _put_share(book, person, part)
+    return True
+
+
+def _put_share(book: UnitVoice, person, part: dict | None) -> None:
+    """This case's share of one book: written, or taken out when the
+    Person has no print left; a book with no share left is forgotten."""
+    parts = dict(book.parts or {})
     if part is None:
         parts.pop(str(person.pk), None)
     else:
@@ -327,7 +373,6 @@ def teach(person) -> bool:
     if book.vector is None:
         _mark_forgotten(book, None, "the last case that taught it")
     book.save(update_fields=["parts", "vector", "forgotten_at", "forgotten_by"])
-    return True
 
 
 def _row(event: str, case, actor, request=None, **details) -> None:
@@ -346,22 +391,61 @@ def _row(event: str, case, actor, request=None, **details) -> None:
     )
 
 
+REFUSALS = {
+    "off": "Voices are not kept for the unit.",
+    "no unit": "This case's owner is in no unit.",
+    "no print": "{name} has no voice print yet.",
+    "role": "A {role} is not kept for the unit.",
+}
+
+
+def _refusal(person, why: str) -> ValueError:
+    return ValueError(
+        REFUSALS[why].format(
+            name=person.name, role=person.role or "person with no role"
+        )
+    )
+
+
 def keep(person, *, by, request=None) -> UnitVoice:
     """Keep for the unit, from the Case's Speakers tab: the Person's print
     becomes this case's share of the book, made now if the name has none."""
     ok, unit = may_keep(person)
     if not ok:
-        raise ValueError(
-            {
-                "off": "Voices are not kept for the unit.",
-                "no unit": "This case's owner is in no unit.",
-                "no print": f"{person.name} has no voice print yet.",
-                "role": (
-                    f"A {person.role or 'person with no role'} is not kept for "
-                    "the unit."
-                ),
-            }[unit]
-        )
+        raise _refusal(person, unit)
+    return _keep_in(person, unit, by=by, request=request)
+
+
+def keep_for(person, wanted: list[str], *, by, request=None) -> list[UnitVoice]:
+    """An Admin keeps the Person for the units they tick (v1.157.0), whatever
+    unit the case or the Admin is in; a unit already holding them is passed
+    over. Anyone else is refused: their one unit is the case owner's."""
+    if not getattr(by, "is_admin", False):
+        raise ValueError("Only an Admin keeps a voice for a unit of their choosing.")
+    why = person_rule(person)
+    if why:
+        raise _refusal(person, why)
+    listed = units.names()
+    chosen = []
+    for one in wanted:
+        name = (one or "").strip()
+        if not name:
+            continue
+        if name not in listed:
+            raise ValueError(f"{name!r} is not a unit the Admin has listed.")
+        if name not in chosen:
+            chosen.append(name)
+    if not chosen:
+        raise ValueError("Tick at least one unit.")
+    held = set(units_kept(person))
+    return [
+        _keep_in(person, unit, by=by, request=request)
+        for unit in chosen
+        if unit not in held
+    ]
+
+
+def _keep_in(person, unit: str, *, by, request=None) -> UnitVoice:
     with transaction.atomic():
         book = find(unit, person.name)
         if book is None:
@@ -378,25 +462,33 @@ def keep(person, *, by, request=None) -> UnitVoice:
         person.kept_for_unit = True
         person.voice_scope = "unit"
         person.save(update_fields=["kept_for_unit", "voice_scope"])
-        teach(person)
+        _put_share(book, person, _part_of(person))
         book.refresh_from_db()
     _row("Voice kept for the unit", person.case, by, request, unit=unit)
     return book
 
 
-def stop_keeping(person, *, by, request=None, why: str = "") -> bool:
+def stop_keeping(person, *, by, request=None, why: str = "", unit: str = "") -> bool:
     """Stop keeping, from the tab, a Role change, Delete person or a merge:
     this case's share leaves the book; a book with no share left is
-    forgotten. The case's own print stays."""
+    forgotten. The case's own print stays. With a unit named (v1.157.0,
+    the card's per-unit line) only that book lets go, and the Person stays
+    kept while another unit's book holds them."""
     if not getattr(person, "kept_for_unit", False):
         return False
-    unit = unit_of_case(person.case)
+    books = books_of(person)
+    if unit:
+        books = [one for one in books if one.unit == unit]
+        if not books:
+            return False
+    letting_go = {one.unit for one in books}
+    left = [one.unit for one in books_of(person) if one.unit not in letting_go]
     with transaction.atomic():
-        person.kept_for_unit = False
-        person.voice_scope = "case"
-        person.save(update_fields=["kept_for_unit", "voice_scope"])
-        book = find(unit, person.name) if unit else None
-        if book is not None:
+        if not left:
+            person.kept_for_unit = False
+            person.voice_scope = "case"
+            person.save(update_fields=["kept_for_unit", "voice_scope"])
+        for book in books:
             parts = dict(book.parts or {})
             parts.pop(str(person.pk), None)
             book.parts = parts
@@ -404,14 +496,15 @@ def stop_keeping(person, *, by, request=None, why: str = "") -> bool:
             if book.vector is None:
                 _mark_forgotten(book, by, "the last case stopped keeping it")
             book.save(update_fields=["parts", "vector", "forgotten_at", "forgotten_by"])
-    _row(
-        "Voice no longer kept for the unit",
-        person.case,
-        by,
-        request,
-        unit=unit,
-        why=why,
-    )
+    for name in [one.unit for one in books] or [unit_of_case(person.case)]:
+        _row(
+            "Voice no longer kept for the unit",
+            person.case,
+            by,
+            request,
+            unit=name,
+            why=why,
+        )
     return True
 
 
@@ -420,23 +513,20 @@ def follow_rename(person, was: str) -> None:
     already has a book, in which case this case's share moves there."""
     if not getattr(person, "kept_for_unit", False):
         return
-    unit = unit_of_case(person.case)
-    book = find(unit, was) if unit else None
-    if book is None:
-        return
-    other = find(unit, person.name)
-    if other is None or other.pk == book.pk:
-        book.name = person.name
-        book.save(update_fields=["name"])
-        return
-    parts = dict(book.parts or {})
-    parts.pop(str(person.pk), None)
-    book.parts = parts
-    _rebuild(book)
-    if book.vector is None:
-        _mark_forgotten(book, None, "renamed into another")
-    book.save(update_fields=["parts", "vector", "forgotten_at", "forgotten_by"])
-    teach(person)
+    for book in books_of(person):
+        other = find(book.unit, person.name)
+        if other is None or other.pk == book.pk:
+            book.name = person.name
+            book.save(update_fields=["name"])
+            continue
+        parts = dict(book.parts or {})
+        parts.pop(str(person.pk), None)
+        book.parts = parts
+        _rebuild(book)
+        if book.vector is None:
+            _mark_forgotten(book, None, "renamed into another")
+        book.save(update_fields=["parts", "vector", "forgotten_at", "forgotten_by"])
+        _put_share(other, person, _part_of(person))
 
 
 def follow_role(person, *, by, request=None) -> None:
@@ -447,11 +537,10 @@ def follow_role(person, *, by, request=None) -> None:
     if not person.role or person.role not in roles_allowed():
         stop_keeping(person, by=by, request=request, why="the role is not kept")
         return
-    unit = unit_of_case(person.case)
-    book = find(unit, person.name) if unit else None
-    if book is not None and book.role != person.role:
-        book.role = person.role
-        book.save(update_fields=["role"])
+    for book in books_of(person):
+        if book.role != person.role:
+            book.role = person.role
+            book.save(update_fields=["role"])
 
 
 def forget(book: UnitVoice, *, by, request=None) -> int:
@@ -462,11 +551,17 @@ def forget(book: UnitVoice, *, by, request=None) -> int:
 
     with transaction.atomic():
         ids = [one for one in (book.parts or {}) if _is_uuid(one)]
-        stopped = Person.objects.filter(pk__in=ids, kept_for_unit=True).update(
-            kept_for_unit=False, voice_scope="case"
-        )
         _mark_forgotten(book, by)
         book.save(update_fields=["parts", "vector", "forgotten_at", "forgotten_by"])
+        stopped = 0
+        for person in Person.objects.filter(pk__in=ids, kept_for_unit=True):
+            # Kept for another unit too (v1.157.0): that book still holds them.
+            if books_of(person):
+                continue
+            person.kept_for_unit = False
+            person.voice_scope = "case"
+            person.save(update_fields=["kept_for_unit", "voice_scope"])
+            stopped += 1
     audit.write(
         audit.Category.CASES,
         "Unit voice forgotten",
@@ -849,6 +944,9 @@ def accept(row: UnitVoiceCheck, *, by, request=None) -> int:
             person.kept_for_unit = True
             person.voice_scope = "unit"
             person.save(update_fields=["kept_for_unit", "voice_scope"])
+            # The matched book takes this case's share; any other book that
+            # already holds them (v1.157.0) learns too.
+            _put_share(book, person, _part_of(person))
             teach(person)
         row.state = UnitVoiceCheck.ACCEPTED
         row.decided_by = by
@@ -911,29 +1009,44 @@ def tab_line(person, user) -> dict | None:
     one muted sentence for a Role not kept, or nothing."""
     if not on():
         return None
+    admin = bool(getattr(user, "is_admin", False))
     unit = unit_of_case(person.case)
-    if not unit:
+    if not unit and not admin:
         return None
-    mine = bool(getattr(user, "is_admin", False)) or units.of(user) == unit
-    if getattr(person, "kept_for_unit", False):
-        book = find(unit, person.name)
-        part = (book.parts or {}).get(str(person.pk)) if book else None
+    mine = admin or units.of(user) == unit
+    books = books_of(person) if getattr(person, "kept_for_unit", False) else []
+    if books:
+        # The owner's unit's book says since and by when it holds them, else
+        # the first (v1.157.0: an Admin may have kept them for several).
+        book = next((one for one in books if one.unit == unit), books[0])
+        part = (book.parts or {}).get(str(person.pk))
         since = (part or {}).get("at", "")[:10] if part else ""
+        held = [one.unit for one in books]
         return {
             "state": "kept",
             "unit": unit,
+            "units": held,
+            "more": units_offered(person, user) if admin else [],
+            "admin": admin,
             "mine": mine,
-            "since": since or (book.kept_at.date().isoformat() if book else ""),
-            "by": (book.kept_by.username if book and book.kept_by else ""),
-            "cases": len(book.parts or {}) if book else 0,
+            "since": since or book.kept_at.date().isoformat(),
+            "by": (book.kept_by.username if book.kept_by else ""),
+            "cases": len(book.parts or {}),
         }
-    ok, why = may_keep(person)
-    if ok:
-        return {"state": "offer", "unit": unit, "mine": mine}
+    why = person_rule(person)
+    if not why and (admin or unit):
+        return {
+            "state": "offer",
+            "unit": unit,
+            "admin": admin,
+            "choices": units.names() if admin else [unit],
+            "mine": mine,
+        }
     if why == "role" and (person.voice_print or {}).get("vector"):
         return {
             "state": "not-kept",
             "unit": unit,
+            "admin": admin,
             "mine": mine,
             "role": person.role,
         }
@@ -992,10 +1105,26 @@ def page_rows(unit: str, user) -> list[dict]:
         .values("voice_id")
         .annotate(latest=models.Max("created"))
     }
+    live_elsewhere = list(
+        UnitVoice.objects.filter(forgotten_at=None)
+        .exclude(unit=unit)
+        .values("unit", "parts")
+    )
+    order = {name: n for n, name in enumerate(units.names())}
     out = []
     for book in books:
         parts = book.parts or {}
         case_ids = {one.get("case") for one in parts.values() if one.get("case")}
+        # Also kept for (v1.157.0): the other units whose live books hold a
+        # share of the same people.
+        also_units = sorted(
+            {
+                one["unit"]
+                for one in live_elsewhere
+                if set(one["parts"] or {}) & set(parts)
+            },
+            key=lambda name: (order.get(name, len(order)), name),
+        )
         cases = {
             str(one.pk): one
             for one in Case.objects.filter(pk__in=[c for c in case_ids if _is_uuid(c)])
@@ -1037,6 +1166,11 @@ def page_rows(unit: str, user) -> list[dict]:
                 if from_text != "a case you may not open"
                 else None,
                 "others": others,
+                "also_units": also_units,
+                "kept_by_admin": bool(
+                    book.kept_by is not None
+                    and getattr(book.kept_by, "is_admin", False)
+                ),
                 "openable": openable,
                 "also_called": also[:4],
                 "accepted": decided.get((book.pk, UnitVoiceCheck.ACCEPTED), 0),
