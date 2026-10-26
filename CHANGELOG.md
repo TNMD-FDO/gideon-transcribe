@@ -21,6 +21,27 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.159.2, 2026-10-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+A recording is no longer transcribed with another recording's names.
+
+- **The names a recording is transcribed with are its own.** The
+  transcription service keeps Whisper loaded between jobs and gave it a
+  recording's names and terms only when the recording had some, while
+  Whisper keeps the last list it was given. So a recording with no names
+  of its own was transcribed with the previous recording's list, which
+  could belong to another case. The list now goes in on every job, empty
+  when there is none (WhisperX service 0.7.1), and a test pins it. On the
+  office's server the read-only count found one recording likely
+  affected, on 2026-10-20; the list steers what Whisper hears and is
+  never printed, so an affected transcript may carry a stray name and
+  nothing else. Processing it again gives a clean transcript.
+
 ## v1.159.1, 2026-10-26
 
 ```

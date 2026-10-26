@@ -303,8 +303,10 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
         list(request.get("vocabulary") or []),
         _counter(pipeline),
     )
-    if prompt.text:
-        pipeline.options = with_prompt(pipeline.options, prompt.text)
+    # Set on every job, an empty prompt as none (service 0.7.1): the pipeline
+    # is held across jobs and whisperx never clears the prompt, so a job with
+    # no vocabulary was read with the last job's names, another Case's.
+    pipeline.options = with_prompt(pipeline.options, prompt.text or None)
 
     # Transcribe --------------------------------------------------------------
 
@@ -572,8 +574,9 @@ def _run_diarize_only(engine: Engine, job: dict[str, Any], outbox, stage) -> Non
     )
 
 
-def with_prompt(options, text: str):
-    """The transcription options with the vocabulary prompt set (v1.141.1).
+def with_prompt(options, text: str | None):
+    """The transcription options with the vocabulary prompt set (v1.141.1),
+    or cleared when the text is None (service 0.7.1).
 
     faster-whisper 1.2 made TranscriptionOptions a dataclass; before it the
     options were a NamedTuple with `_replace`. The first service called
