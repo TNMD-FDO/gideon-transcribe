@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The phone system's voice, and a deleted case's chain</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; } h2 { font-size: 17px; margin: 0; } h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.small { font-size: 12px; padding: 2px 8px; min-height: 24px; }
+  .btn.quiet { border-color: transparent; background: transparent; color: var(--muted); padding: 0 6px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .chip { font-size: 13px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip.sys { border-style: dashed; }
+  .month { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .month .m { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; }
+  .month .n { font-size: 22px; font-weight: 600; line-height: 1.1; } .month .w { font-size: 12px; color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; max-width: 480px; display: flex; flex-direction: column; gap: 6px; }
+  .card .h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .card .nm { font-weight: 600; font-size: 15px; }
+  .card .h .menu { margin-left: auto; position: relative; }
+  .card .chain { color: var(--muted); font-size: 12px; }
+  .card .voice { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .bar { height: 6px; width: 90px; background: var(--surface-2); border-radius: 3px; overflow: hidden; } .bar i { display: block; height: 100%; width: 85%; background: var(--ok); }
+  .menu-body { position: absolute; right: 0; top: 28px; z-index: 2; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 250px; }
+  .menu-body .btn { justify-content: flex-start; }
+  .menu-body hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; }
+  .menu-body .row { display: flex; gap: 6px; align-items: center; }
+  .menu-body input { flex: 1; font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); }
+  .open { min-height: 230px; }
+  .note { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 16px; font-size: 13px; }
+  .note ul { margin: 6px 0 0; padding-left: 18px; } .note li { margin: 3px 0; }
+  /* the guided page's head */
+  .guide { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 13px; max-width: 720px; }
+  .guide .step { display: flex; gap: 10px; align-items: baseline; }
+  .guide .step b { font-size: 15px; }
+  .guide .lines { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .guide .l { display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: baseline; }
+  .guide .t { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .guide .q { color: var(--text); }
+  .guide .q.sys { color: var(--muted); font-style: italic; }
+  .sheet-link { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Phase 5 · chapters 2 and 3 · drawn 2026-10-26 · for the maintainer's word</div>
+    <h1>The phone system's voice, kept for the office; and a deleted case's chain</h1>
+    <p class="lede">Two things the maintainer asked for on 2026-10-26, and the guards they asked for the same day against a person taken for the system. The jail phone system's recorded announcements are already given to the Call system by their words; the second half of that plan teaches the app the system's voice from those lines, so on every jail call the lines the words missed are the system's too. The voice is the office's, not a unit's, and sits on the Voices place under its own tab. And a kept voice whose case has since been deleted says so. The names are the fictional office's.</p>
+  </header>
+
+  <!-- Figure 1: the Voices place -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>The Voices place: a tab of its own, "Phone systems", beside the units</h2></div>
+    <div class="chips">
+      <span class="chip">Appeals · 3 voices</span>
+      <span class="chip">Trial · 2 voices</span>
+      <span class="chip on sys">Phone systems · 1</span>
+      <span class="muted tiny" style="margin-left: 6px">A phone system's voice is the office's, not a unit's: everyone with a Voices place sees this tab.</span>
+    </div>
+    <div class="month">
+      <div class="m"><div class="n">1</div><div class="w">phone system heard</div></div>
+      <div class="m"><div class="n">14</div><div class="w">calls taught it</div></div>
+      <div class="m"><div class="n">312</div><div class="w">lines given by its words</div></div>
+      <div class="m"><div class="n">41</div><div class="w">more given by its voice</div></div>
+    </div>
+    <div class="cols">
+      <article class="card open">
+        <div class="h"><span class="nm">Call system</span><span class="pill">phone system</span><span class="pill warn">listening, not moving</span>
+          <details class="menu" open><summary class="btn quiet">···</summary>
+            <div class="menu-body">
+              <div class="row"><input type="text" value="Call system"><button class="btn small">Rename</button></div>
+              <button class="btn small ghost">Hear it</button>
+              <button class="btn small ghost">Start giving lines by its voice</button>
+              <hr>
+              <button class="btn small ghost danger">Forget this voice</button>
+            </div>
+          </details>
+        </div>
+        <div class="voice"><span class="bar"><i></i></span> well taught · 14 calls, 312 lines, 19 min of announcements</div>
+        <div class="chain">First heard on a call of 9 Oct 2026 · last heard 2 days ago · taught by the lines the phrase list finds, as each call lands</div>
+        <div class="chain">By its voice this month: <b>would have given 41 lines</b> on 6 calls that the words missed, 0 held back by the ceiling · giving is off until an Admin starts it</div>
+      </article>
+      <div class="note">
+        <b>What the tab holds</b>
+        <ul>
+          <li><b>One card per phone system the office meets.</b> The first is made the first time a jail call lands with enough Call system lines (three or more by their words) once the switch is on. A later call whose system lines do not sound like any known system makes a second card, "Call system 2", which an Admin may rename ("County jail phone system"). Most offices will have one.</li>
+          <li><b>Taught, never named.</b> The print is the mean of the system's lines on every call that taught it, weighted by seconds, exactly as a unit's book is taught. Nobody keeps it from a card and it is never a person; nothing of a party's voice goes into it, since only lines already the Call system's teach it.</li>
+          <li><b>Hear it</b> plays a few seconds of an announcement in the right pane, as a unit voice's Hear them does.</li>
+          <li><b>Off at first (the maintainer's worry of 2026-10-26).</b> A new phone system starts <i>listening, not moving</i>: the voice step counts the lines it would have given and the card says so ("would have given 41 lines on 6 calls this month"), and nothing on a transcript changes until an Admin presses <b>Start giving lines by its voice</b>, having judged the numbers on the office's own calls. <b>Stop giving lines by its voice</b> goes back to counting. <b>Forget</b> deletes the print; it is made again from the next call, off again.</li>
+          <li><b>Called out.</b> Three lines moved back by hand in a month stop the giving by themselves and the card says so, as a unit voice turned down three times is called out; an Admin starts it again when they are satisfied.</li>
+          <li><b>Who sees it.</b> Everyone who has the Voices place; the tab is the office's. Renaming, stopping and forgetting are an Admin's.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Figure 2: the guided Speakers page -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>The guided Speakers page on a jail call: the lines the voice gave to the Call system, and the way back</h2></div>
+    <div class="cols">
+      <div class="guide">
+        <div class="step"><b>Who is speaking</b><span class="muted">2 voices to name · the Call system's lines are set aside</span></div>
+        <div class="chain" style="margin-top: 6px; color: var(--muted); font-size: 12px">Call system: <b>27 lines</b> by its words, <b>4 more by its voice</b> · <span class="sheet-link">show them</span></div>
+        <div class="lines">
+          <div class="l"><span class="t">0:02</span><span class="q sys">This call is from a correctional facility and is subject to monitoring.</span><span class="pill tiny">by words</span></div>
+          <div class="l"><span class="t">0:09</span><span class="q sys">To accept this call, press one.</span><span class="pill tiny">by words</span></div>
+          <div class="l"><span class="t">0:14</span><span class="q sys">Thank you for using… (cut off)</span><span><span class="pill acc tiny">by voice</span> <span class="sheet-link tiny">Not the system</span></span></div>
+          <div class="l"><span class="t">9:41</span><span class="q sys">…one minute remaining.</span><span><span class="pill acc tiny">by voice</span> <span class="sheet-link tiny">Not the system</span></span></div>
+        </div>
+      </div>
+      <div class="note">
+        <b>How a line is given by its voice</b>
+        <ul>
+          <li>On a jail call the voice step already reads every line's own voice (the diarizer container, since v1.139.0). In that same reading, before the check and the name suggestions run, a line not yet the Call system's may be given to it by its voice. The worry is a person taken for the system, so five guards stand in the way, all constants judged on the office's calls, none a setting:</li>
+          <li><b>Taught from the words only.</b> The print is made from lines the phrase list found, never from a line given by voice, so a party's voice never teaches it.</li>
+          <li><b>Nearer the system than its own speaker, by a firm margin.</b> The line must be closer to the phone system's print than to every party's print on that call, by the margin the check uses for a sure move. A person who sounds like the system is still closer to their own print on nearly every line.</li>
+          <li><b>Next to the words.</b> Only within a short gap of a line the words found (announcements come in runs: the opening, the one-minute warning, the close), or when the match is very strong. A lone mid-call line is never taken on voice alone.</li>
+          <li><b>A ceiling per call.</b> If the voice would take more than a small share of one party's lines, it takes none on that call and the page says "held back": that party sounds like the system, and a person should look.</li>
+          <li><b>Counted and reversible.</b> Every line given by voice carries the pill and Not the system; three moved back in a month stop the giving (figure 1).</li>
+          <li>Every line given by voice carries the pill and <b>Not the system</b>, which gives the line back to the label the recogniser had, undoable as a rename is, and counts against the print on the Voices place ("moved back by hand"). The lines given by words have no way back, as now.</li>
+          <li>The memo, the exports and the check see the Call system exactly as they do today; nothing new reaches the engine.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The setting.</b> No new row: the Call system switch covers the voice half, and the voice step runs where Voices help the check lists Jail call. With the Call system off, nothing here runs and the tab is absent.</p>
+      <p><b>Stored.</b> One row per phone system in a table of its own (the vector, the name, the counts and dates, the parts per call); a migration. Never logged, exported or sent anywhere, as the books are.</p>
+      <p><b>Audit.</b> Counts and who only: phone system first heard, renamed, stopped, forgotten; a line moved back by hand. The lines given by voice go in the transcript's provenance as a count, as the words' lines do.</p>
+    </div>
+  </section>
+
+  <!-- Figure 3: the deleted case's chain -->
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3</div><h2>A kept voice whose case was deleted says so</h2></div>
+    <div class="cols">
+      <article class="card">
+        <div class="h"><span class="nm">Tony Marsh</span><span class="pill">Officer</span><span class="pill ok">told to recognition</span><details class="menu"><summary class="btn quiet">···</summary></details></div>
+        <div class="voice"><span class="bar"><i></i></span> taught by 2 cases, 3 recordings, 8 min</div>
+        <div class="chain">Kept <b>from a case since deleted</b> by dmeehan (Admin) on 23 Oct 2026 · taught since by 1 more case, yours to open · also kept for the Appeals unit</div>
+        <div class="chain">Checks against it: 3 accepted, 0 not them · last heard 4 days ago</div>
+      </article>
+      <div class="note">
+        <b>The wording</b>
+        <ul>
+          <li>Today the chain says "a case you may not open" both when the reader may not open the case and when the case no longer exists. The second becomes <b>from a case since deleted</b>.</li>
+          <li>The count of cases that taught it since follows the same rule: "1 more case, since deleted" where that case is gone.</li>
+          <li>The voice itself is unchanged: its print and shares stay, as the book was built to keep them.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

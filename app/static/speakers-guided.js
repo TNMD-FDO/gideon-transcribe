@@ -278,6 +278,35 @@
     }).join("") + (!(candidate.heard || []).length && candidate.kind === "book" && !candidate.openable ? "<span class='pill small' title='The voice is heard only from a recording you may open'>heard on a case you may not open</span>" : "");
   }
 
+  // The phone system's voice (v1.159.0; the drawing phase-5-system-voices.html,
+  // figure 2): under the Call system's card, the lines by its words and by
+  // its voice, each voice-given line with Not the system, each line given
+  // back with The system after all; while the voice only counts, what it
+  // would have given, and the labels held back by the ceiling.
+  function phoneSystemHtml() {
+    var ps = check.phone_system;
+    if (!ps) { return ""; }
+    var head = "Call system: <b>" + plural(ps.words, "line") + "</b> by its words";
+    if (ps.voice) { head += ", <b>" + plural(ps.voice, "more line") + " by its voice</b>"; }
+    else if (ps.would) { head += " · its voice would have given " + plural(ps.would, "more line") + " (" + escape(ps.name || "the phone system") + " is counting, not moving)"; }
+    var held = Object.keys(ps.held || {});
+    if (held.length) {
+      head += " · held back: " + held.map(function (name) { return plural(ps.held[name], "line") + " of " + escape(name); }).join(", ") + " (that voice sounds like the system; a person should look)";
+    }
+    var html = "<div class='sg-sys-lines'><div class='tiny muted'>" + head + "</div>";
+    (ps.voice_lines || []).forEach(function (one) {
+      html += "<div class='l'><button type='button' class='sg-play tiny' data-start='" + one.start + "' data-end='" + one.end + "'>" + UI.icon("play") + " " + escape(one.clock) + "</button>" +
+        "<span class='q'>" + escape(one.quote) + "</span>" +
+        "<span class='acts'><span class='pill small acc' title='Given to the Call system by its voice'>by voice</span><button type='button' class='quiet tiny sg-sys-back' data-segment='" + one.segment + "' title='Give this line back to " + escape(one.was) + "'>Not the system</button></span></div>";
+    });
+    (ps.back_lines || []).forEach(function (one) {
+      html += "<div class='l'><button type='button' class='sg-play tiny' data-start='" + one.start + "' data-end='" + one.end + "'>" + UI.icon("play") + " " + escape(one.clock) + "</button>" +
+        "<span class='q'>" + escape(one.quote) + "</span>" +
+        "<span class='acts'><span class='pill small'>given back to " + escape(one.was) + "</span><button type='button' class='quiet tiny sg-sys-again' data-segment='" + one.segment + "'>The system after all</button></span></div>";
+    });
+    return html + "</div>";
+  }
+
   function renderVoice() {
     var voices = voicesOrder();
     if (!voices.length) { el.focus.innerHTML = "<p class='muted'>No voices on this recording.</p>"; return; }
@@ -311,6 +340,7 @@
 
     if (card.system) {
       html += "<p class='tiny muted'>Its lines never move, never take a name, and stay out of the check; the memo says the call system announced them.</p>";
+      html += phoneSystemHtml();
     } else if (card.named) {
       html += "<div class='sg-choices'><div class='sg-choice plain'><div>Named <b>" + escape(card.name) + "</b>. Not them?</div><div class='acts'><button type='button' class='small sg-else'>Change...</button></div></div></div>";
     } else {
@@ -687,6 +717,19 @@
       busy = true;
       UI.toast("Comparing with the unit's voices…", { icon: "info" });
       send("/recording/" + V.recording + "/book-check", { speaker: card.name }).then(function (a) { busy = false; if (!a.ok) { problem(a.said); return; } reload(); });
+      return;
+    }
+    var sysLine = event.target.closest(".sg-sys-back, .sg-sys-again");
+    if (sysLine && !busy) {
+      // The phone system's voice (v1.159.0): the way back, and back again.
+      busy = true;
+      var verdict = sysLine.classList.contains("sg-sys-back") ? "back" : "again";
+      send("/recording/" + V.recording + "/speakers/system-line/" + verdict, { segment: parseInt(sysLine.dataset.segment, 10) }).then(function (a) {
+        busy = false;
+        if (!a.ok) { problem(a.said); return; }
+        UI.toast(verdict === "back" ? "The line is given back; its voice will not give it again." : "The line is the Call system's again.", { icon: "done" });
+        reloadCards();
+      });
       return;
     }
     if (event.target.closest(".sg-skip")) { index += 1; render(); return; }

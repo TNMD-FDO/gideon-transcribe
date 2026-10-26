@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Voices · Phone systems{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The Phone systems tab of the Voices place (v1.159.0; Phase 5 chapter 2,
+    "The phone system's voice"; the drawing phase-5-system-voices.html,
+    figure 1): one card per phone system the office has met, taught from
+    the Call system's lines by their words, counting the lines its voice
+    would give until an Admin starts the giving. The voice is the office's,
+    not a unit's; everyone with the place sees the tab, an Admin acts.
+  {% endcomment %}
+  <div class="page roomy">
+    <header class="page-head">
+      <div class="line"><h1>Voices <span class="muted" style="font-weight: 400">&middot; phone systems</span></h1></div>
+    </header>
+
+    {% if said %}<p class="notice ok" style="margin-bottom: 12px">{{ said }}</p>{% endif %}
+
+    <div class="chips" style="margin-bottom: 12px">
+      {% for one in units %}
+        <a class="chip" href="{% url 'voices' %}?unit={{ one.name|urlencode }}">{{ one.name }} &middot; {{ one.count }} voice{{ one.count|pluralize }}</a>
+      {% endfor %}
+      <a class="chip on sys" href="{% url 'voices-systems' %}">Phone systems &middot; {{ systems.count }}</a>
+      <span class="muted tiny" style="align-self: center">A phone system's voice is the office's, not a unit's: everyone with a Voices place sees this tab.</span>
+    </div>
+
+    <div class="month">
+      <div class="m"><div class="n">{{ rows|length }}</div><div class="w">phone system{{ rows|length|pluralize }} heard</div></div>
+      <div class="m"><div class="n">{{ month.calls }}</div><div class="w">call{{ month.calls|pluralize }} taught {% if rows|length == 1 %}it{% else %}them{% endif %} this month</div></div>
+      <div class="m"><div class="n">{{ month.given }}</div><div class="w">line{{ month.given|pluralize }} given by voice this month</div></div>
+      <div class="m"><div class="n">{{ month.would }}</div><div class="w">line{{ month.would|pluralize }} the voice would have given</div></div>
+    </div>
+    <p class="muted small" style="margin: 8px 0 14px">
+      A jail call's announcements are the Call system's by their words (the phrase list on the Panel). Those lines teach the app the phone system's voice as each call lands; nobody keeps it from a card and it is never a person.
+      A new phone system starts <b>listening, not moving</b>: the voice step counts the lines it would have given, and nothing on a transcript changes until an Admin starts the giving, having judged the numbers on the office's own calls.
+      Given lines carry a pill and <b>Not the system</b> on the Speakers page; {{ back_to_stop }} lines given back in a month stop the giving by themselves.
+    </p>
+
+    <div class="panes voices-panes">
+      <div class="pane-list">
+        {% if rows %}
+          <div class="people" id="phone-systems">
+            {% for row in rows %}
+              {% with v=row.voice m=row.month %}
+              <article class="person-card" id="system-{{ v.pk }}">
+                <div class="h">
+                  <span class="nm">{{ v.name }}</span>
+                  <span class="pill small">phone system</span>
+                  {% if v.giving %}<span class="pill small ok" title="The lines its voice finds go to the Call system, under the guards">giving lines by its voice</span>
+                  {% elif v.called_out_at %}<span class="pill small warn" title="{{ back_to_stop }} lines given back in a month stopped the giving">stopped: lines given back</span>
+                  {% else %}<span class="pill small warn" title="Counting what it would give; nothing moves until an Admin starts it">listening, not moving</span>{% endif %}
+                  {% if is_admin %}
+                    <details class="menu">
+                      <summary class="btn quiet" aria-label="Rename, hear it, start or stop, forget" title="Rename, hear it, start or stop, forget">···</summary>
+                      <div class="menu-body">
+                        <form method="post" action="{% url 'voices-system-act' v.pk 'rename' %}" class="row small" style="gap: 6px">
+                          {% csrf_token %}
+                          <input type="text" name="name" value="{{ v.name }}" maxlength="60" aria-label="New name">
+                          <button type="submit" class="small">Rename</button>
+                        </form>
+                        {% if row.heard %}<button type="button" class="small ghost hear-else" data-preview-recording="{{ row.heard.recording }}" data-preview-at="{{ row.heard.start }}" data-preview-person="{{ v.name }}" data-preview-role="phone system" data-preview-speaker="Call system" title="Hear an announcement on {{ row.heard.title }}">{% icon "play" %} Hear it on {{ row.heard.title|truncatechars:28 }}</button>{% endif %}
+                        <div class="sep"></div>
+                        <form method="post" action="{% url 'voices-system-act' v.pk 'giving' %}"
+                              {% if not v.giving %}data-confirm-title="Start giving lines by {{ v.name }}'s voice?" data-confirm="On every jail call from now on, a line that sounds like this phone system and not like any party, next to a line the words found (or a very strong match alone), becomes the Call system's. Each such line carries Not the system on the Speakers page; {{ back_to_stop }} given back in a month stop this again. This month the voice would have given {{ m.would }} line{{ m.would|pluralize }}." data-confirm-ok="Start giving"{% endif %}>
+                          {% csrf_token %}
+                          <input type="hidden" name="giving" value="{% if v.giving %}0{% else %}1{% endif %}">
+                          <button type="submit" class="small ghost">{% if v.giving %}Stop giving lines by its voice{% else %}Start giving lines by its voice{% endif %}</button>
+                        </form>
+                        <div class="sep"></div>
+                        <form method="post" action="{% url 'voices-system-act' v.pk 'forget' %}"
+                              data-confirm-title="Forget {{ v.name }}'s voice?"
+                              data-confirm="The print is deleted. The next jail call makes it again, counting and not moving. The Call system's lines on every transcript stay as they are."
+                              data-confirm-ok="Forget" data-danger>
+                          {% csrf_token %}
+                          <button type="submit" class="small ghost danger">Forget this voice</button>
+                        </form>
+                      </div>
+                    </details>
+                  {% endif %}
+                </div>
+                <div class="voice">
+                  {% if row.heard %}<button type="button" class="tiny ghost hear-else" data-preview-recording="{{ row.heard.recording }}" data-preview-at="{{ row.heard.start }}" data-preview-person="{{ v.name }}" data-preview-role="phone system" data-preview-speaker="Call system" title="Hear an announcement">{% icon "play" %}</button>{% endif %}
+                  <span>{% if row.well_taught %}well taught{% else %}taught so far{% endif %} &middot; {{ row.calls }} call{{ row.calls|pluralize }}, {{ row.lines }} line{{ row.lines|pluralize }}, {{ row.minutes }} min of announcements</span>
+                </div>
+                <div class="chain">First heard {{ v.first_heard|date:"j M Y" }}{% if v.last_heard %} &middot; last heard {{ v.last_heard|date:"j M" }}{% endif %} &middot; taught by the lines the phrase list finds, as each call lands</div>
+                <div class="chain">
+                  {% if v.giving %}By its voice this month: <b>{{ m.given }} line{{ m.given|pluralize }}</b> given to the Call system that the words missed{% if m.held %}, {{ m.held }} held back by the ceiling{% endif %} &middot; {{ m.back }} given back by hand
+                  {% else %}By its voice this month: <b>would have given {{ m.would }} line{{ m.would|pluralize }}</b> that the words missed{% if m.held %}, {{ m.held }} held back by the ceiling{% endif %} &middot; giving is off until an Admin starts it{% endif %}
+                </div>
+                {% if v.called_out_at %}<div class="called-out">{{ back_to_stop }} lines given by this voice were given back by hand this month, so the giving stopped on {{ v.called_out_at|date:"j M" }}. Hear it and the lines before starting it again.</div>{% endif %}
+              </article>
+              {% endwith %}
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">No phone system has been heard yet. The first jail call that lands with three or more Call system lines by their words makes the first card here, counting and not moving.</p>
+        {% endif %}
+      </div>
+      <aside class="pane-detail voices-side">
+        {% comment %}The Preview (v1.151.0) opens here while an announcement is being heard; only recordings the reader may open play.{% endcomment %}
+        <div class="preview-side" data-preview-host hidden></div>
+      </aside>
+    </div>
+  </div>
+  <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'people-cards.js' %}"></script>
+{% endblock %}

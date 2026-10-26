@@ -22,6 +22,7 @@ from core import (
     people_pages,
     reports,
     speakers_page,
+    system_voices_pages,
     template_pages,
     uploads,
     viewer,
@@ -239,6 +240,19 @@ urlpatterns = [
         "voices/<uuid:voice_id>/forget",
         voice_book_pages.forget,
         name="voices-forget",
+    ),
+    # The phone system's voice (v1.159.0): the Phone systems tab, its
+    # Admin acts, and the guided page's way back for a line given by voice.
+    path("voices/phone-systems", system_voices_pages.systems, name="voices-systems"),
+    path(
+        "voices/phone-systems/<uuid:voice_id>/<str:action>",
+        system_voices_pages.act,
+        name="voices-system-act",
+    ),
+    path(
+        "recording/<uuid:recording_id>/speakers/system-line/<str:verdict>",
+        system_voices_pages.line,
+        name="speakers-system-line",
     ),
     path(
         "recording/<uuid:recording_id>/book-check",

@@ -283,6 +283,7 @@ Admin settings catalogue and panel (its Answer; the facts it carries from the LD
 
 ## Amendments applied
 
+- 2026-10-26, v1.159.0: no new row; Call system's switch covers the phone system's voice too (Phase 5 chapter 2, "The phone system's voice"): Off deletes the phone systems' prints and leaves the transcripts as they are.
 - 2026-10-26, v1.158.0: Roles kept for the unit retired (ADR 0024): the Role no longer gates Keep for the unit; Keep voices for the unit's wording says "in any role".
 - 2026-10-22, v1.149.0: no new row; Call system's wording says an untyped recording is found by three lines carrying the phrases, with the type left to a person and offered in the no-type line.
 - 2026-10-21, v1.147.0: Units gains the group, attribute and everyone forms beside the folder chain, and the pin by hand on any account (the People page's picker on every row).

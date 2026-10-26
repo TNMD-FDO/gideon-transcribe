@@ -139,3 +139,5 @@ relates to the speaker, a couple of lines around it, cleanly.
   recordings first), and a by-hand "set this line's time" action on the
   recording page, undoable like a rename, for the one line a reviewer
   can hear.
+
+- **2026-10-26.** The maintainer set the voice fence aside as a future look, recorded in Phase 5 chapter 3's "Not in this phase"; the clock stays as placed.

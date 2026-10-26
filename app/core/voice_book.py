@@ -1107,17 +1107,27 @@ def page_rows(unit: str, user) -> list[dict]:
             if user is not None and one.may_be_opened_by(user)
         )
         from_case = book.from_case
+        # A case since deleted (v1.159.0): the link went with the case, so
+        # the chain says so rather than "a case you may not open".
+        from_deleted = from_case is None and bool(parts)
         from_text = (
             from_case.name
             if from_case is not None
             and user is not None
             and from_case.may_be_opened_by(user)
+            else "a case since deleted"
+            if from_deleted
             else "a case you may not open"
         )
         others = max(
             len(case_ids)
             - (1 if from_case is not None and str(from_case.pk) in case_ids else 0),
             0,
+        )
+        others_deleted = sum(
+            1
+            for one in case_ids
+            if _is_uuid(one) and one not in cases and one != str(book.from_case_id)
         )
         also = []
         for person in Person.objects.filter(pk__in=[p for p in parts if _is_uuid(p)]):
@@ -1138,6 +1148,7 @@ def page_rows(unit: str, user) -> list[dict]:
                 if from_text != "a case you may not open"
                 else None,
                 "others": others,
+                "others_deleted": others_deleted,
                 "also_units": also_units,
                 "kept_by_admin": bool(
                     book.kept_by is not None

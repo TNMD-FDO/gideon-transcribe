@@ -1449,6 +1449,15 @@ body.no-speakers .seg .actions { grid-column: 3; }
 
 /* The one tick a confirm box may carry (Process again). */
 .ui-dialog-check { margin: 10px 0 0; gap: 8px; align-items: center; font-size: var(--t-small); }
+/* The phone system's voice (v1.159.0; the drawing phase-5-system-voices.html):
+   the Phone systems chip beside the units, and the guided page's list of the
+   lines the voice gave, each with its way back. */
+.chip.sys { border-style: dashed; }
+.chip.sys.on { border-style: solid; }
+.sg-sys-lines { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 4px; font-size: var(--t-small); }
+.sg-sys-lines .l { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: baseline; }
+.sg-sys-lines .l .q { color: var(--muted); font-style: italic; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sg-sys-lines .l .acts { display: flex; gap: 6px; align-items: center; }
 /* Tick boxes in a confirm box (v1.157.0: an Admin's Keep for a unit; the
    drawing phase-5-admin-keeps-for-any-unit.html, figure 1). */
 .ui-dialog-choices { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }

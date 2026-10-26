@@ -21,6 +21,44 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.159.0, 2026-10-26
+
+```
+Models: unchanged
+Database: migrates
+```
+
+The phone system's voice, and a kept voice whose case was deleted.
+
+- **The phone system's voice.** On a jail call the announcement lines the
+  phrase list finds teach the app the phone system's own voice as the
+  call lands, in the reading the voice step already makes. One print per
+  phone system the office meets, the office's rather than a unit's.
+- **Lines given by its voice, under guards.** A line that sounds like the
+  phone system and not like any party, next to a line the words found or
+  a very strong match on its own, becomes the Call system's. The print is
+  taught from the words' lines only; the voice never takes more than a
+  fifth of one party's lines on a call, and says "held back" when it
+  would; every line given carries "by voice" and Not the system on the
+  guided Speakers page, with The system after all to undo that; three
+  lines given back in a month stop the giving.
+- **Off at first.** A new phone system starts listening, not moving: it
+  counts the lines its voice would have given, and an Admin starts the
+  giving from the Voices place once the numbers on the office's own calls
+  satisfy them.
+- **The Voices place** gains a Phone systems tab beside the units: one
+  card per system with its counts, Hear it, and for an Admin Rename, Start
+  or Stop giving lines by its voice, and Forget. No new setting: the Call
+  system switch covers it, and off deletes the prints.
+- **A case since deleted.** A kept voice's chain on the Voices place says
+  "from a case since deleted" where its case is gone, instead of "a case
+  you may not open"; the voice stays.
+
+Migration 0091 adds the phone systems' table. Phase 5 chapter 2, the
+settings catalogue, CONTEXT.md (Phone system voice), and the user and
+admin guides are amended; the drawing is
+`docs/spec/mockups/phase-5-system-voices.html`.
+
 ## v1.158.1, 2026-10-26
 
 ```

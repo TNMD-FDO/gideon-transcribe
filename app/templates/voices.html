@@ -22,12 +22,14 @@
 
     {% if said %}<p class="notice ok" style="margin-bottom: 12px">{{ said }}</p>{% endif %}
 
-    {% if chooser %}
+    {% if chooser or systems.shown %}
       <div class="chips" style="margin-bottom: 12px">
         {% for one in units %}
           <a class="chip{% if one.name == unit %} on{% endif %}" href="{% url 'voices' %}?unit={{ one.name|urlencode }}">{{ one.name }} &middot; {{ one.count }} voice{{ one.count|pluralize }}</a>
         {% endfor %}
-        <span class="muted tiny" style="align-self: center">An Admin sees every unit's book. A person in a unit sees their own alone.</span>
+        {% comment %}The phone system's voice (v1.159.0): the office's, on a tab of its own beside the units.{% endcomment %}
+        {% if systems.shown %}<a class="chip sys" href="{% url 'voices-systems' %}">Phone systems &middot; {{ systems.count }}</a>{% endif %}
+        {% if chooser %}<span class="muted tiny" style="align-self: center">An Admin sees every unit's book. A person in a unit sees their own alone.</span>{% endif %}
       </div>
     {% endif %}
 
@@ -95,7 +97,7 @@
                   {% endif %}
                 </div>
                 {% if row.live %}
-                  <div class="chain">Kept from {% if row.from_case %}<a href="{% url 'case' row.from_case.pk %}?tab=speakers">{{ row.from_text }}</a>{% else %}{{ row.from_text }}{% endif %}{% if row.others %} and {{ row.others }} other case{{ row.others|pluralize }}{% endif %}{% if row.book.kept_by %} by {{ row.book.kept_by.username }}{% if row.kept_by_admin %} (Admin){% endif %}{% endif %}, {{ row.book.kept_at|date:"j M Y" }}{% if row.also_units %} &middot; <b>also kept for the {{ row.also_units|join:" and " }} unit{{ row.also_units|length|pluralize }}</b>{% endif %}{% if row.also_called %} &middot; also called {{ row.also_called|join:", " }}{% endif %}</div>
+                  <div class="chain">Kept from {% if row.from_case %}<a href="{% url 'case' row.from_case.pk %}?tab=speakers">{{ row.from_text }}</a>{% else %}{{ row.from_text }}{% endif %}{% if row.others %} and {{ row.others }} other case{{ row.others|pluralize }}{% if row.others_deleted %} ({{ row.others_deleted }} since deleted){% endif %}{% endif %}{% if row.book.kept_by %} by {{ row.book.kept_by.username }}{% if row.kept_by_admin %} (Admin){% endif %}{% endif %}, {{ row.book.kept_at|date:"j M Y" }}{% if row.also_units %} &middot; <b>also kept for the {{ row.also_units|join:" and " }} unit{{ row.also_units|length|pluralize }}</b>{% endif %}{% if row.also_called %} &middot; also called {{ row.also_called|join:", " }}{% endif %}</div>
                   <div class="counts">checks: {{ row.accepted|add:row.dismissed }} &middot; accepted {{ row.accepted }} &middot; not them {{ row.dismissed }} &middot; last heard {{ row.last_heard|date:"j M" }}{% if row.called_out %} &middot; <span class="pill small warn">turned down 3 times this month</span>{% endif %}</div>
                   {% if row.called_out %}<div class="called-out">Checks against {{ row.book.name }} were turned down 3 times this month. If the print keeps being wrong, forget it and keep them again from a case where the voice is sure.</div>{% endif %}
                 {% else %}

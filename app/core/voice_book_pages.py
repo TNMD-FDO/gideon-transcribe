@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from core import units, voice_book
+from core import system_voices_pages, units, voice_book
 from core.assistant_pages import _body, _recording
 from core.voice_book import UnitVoice, UnitVoiceCheck
 
@@ -55,6 +55,8 @@ def voices(request: HttpRequest) -> HttpResponse:
             "unit": unit,
             "units": [{"name": one, "count": counts.get(one, 0)} for one in seen],
             "chooser": len(seen) > 1,
+            # The Phone systems tab (v1.159.0), the office's, beside the units.
+            "systems": system_voices_pages.tab_counts(),
             "rows": rows,
             "live_count": len(live),
             "cases_count": len(

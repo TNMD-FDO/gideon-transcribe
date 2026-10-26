@@ -3316,6 +3316,12 @@ def set_to(key: str, value) -> None:
         from core import voice_book
 
         voice_book.forget_everything()
+    if key == "call_system_available" and not wanted:
+        # Off deletes the phone systems' prints too (v1.159.0); the Call
+        # system's lines on the transcripts stay as they are.
+        from core import system_voices
+
+        system_voices.forget_everything()
 
     if key == "folder_management":
         # The days nobody could reach a Case are recorded as they pass,

@@ -384,6 +384,19 @@ def _voice_notes(transcript, kept: dict, check=None, doubt: bool = False) -> dic
             judge = voices.Judge(
                 transcript, answer["stretches"], voices.floor_for(recording)
             )
+            # The phone system's voice (v1.159.0): taught from the Call
+            # system's lines, and the lines its voice gives or would give.
+            # A line given moves to the Call system, so the judge is built
+            # again without it.
+            from core import system_voices
+
+            summary["phone_system"] = system_voices.on_voices(
+                transcript, answer["stretches"], judge
+            )
+            if summary["phone_system"].get("given"):
+                judge = voices.Judge(
+                    transcript, answer["stretches"], voices.floor_for(recording)
+                )
             if check is not None:
                 check.voices = voices.dump(answer)
             summary["voice"] = "titanet"
@@ -1266,7 +1279,7 @@ def state_json(transcript, user=None) -> dict:
             "split_part": one.split_part,
         }
 
-    from core import voice_prints, voices_first
+    from core import system_voices, voice_prints, voices_first
     from core.assistant import Handover
 
     voice_prints.settle(transcript)
@@ -1312,6 +1325,9 @@ def state_json(transcript, user=None) -> dict:
         # The unit's voice book (v1.146.0): whether Check is here, per label
         # whether it is lit and why not, and the answers on the cards.
         "voice_book": voice_book.state_for(transcript, user),
+        # The phone system's voice (v1.159.0): the lines by words and by
+        # voice, the way back, and whether the voice gives or counts.
+        "phone_system": system_voices.page_state(transcript),
         "pending": [row(one) for one in rows],
         "speakers": cards,
         "stretches": stretches(rows, cards),

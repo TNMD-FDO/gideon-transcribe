@@ -109,7 +109,9 @@ def own_spans(segment) -> tuple[list[list[float]], bool]:
 
 def stretches_of(transcript) -> dict[int, list[dict]]:
     """Per Side number, the stretches for the voices request: one per line,
-    the other Side's copies and the Call system's lines left out."""
+    the other Side's copies left out. The Call system's lines are read too
+    since v1.159.0, so the phone system's voice can be taught from them;
+    the judge leaves them out of every print and proposal as before."""
     by_side: dict[int, list[dict]] = defaultdict(list)
     sides = {side.pk: side.number for side in transcript.recording.sides.all()}
     for segment in (
@@ -117,8 +119,6 @@ def stretches_of(transcript) -> dict[int, list[dict]]:
         .exclude(speaker="")
         .order_by("start", "id")
     ):
-        if call_system.is_system(segment.speaker):
-            continue
         # A line whose clock is unsure (ADR 0022, v1.151.0) would be measured
         # on somebody else's audio, or nobody's: no vector, no print, no word.
         # A line the re-read placed again (v1.152.0) is sure.
