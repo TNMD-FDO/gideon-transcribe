@@ -614,3 +614,38 @@ def test_the_read_list_is_the_five_before_the_apps_load(db, monkeypatch):
     monkeypatch.setattr(apps, "ready", False)
     assert directory._read_list() == directory.WHAT_IS_READ
     assert directory._read_list() is not directory.WHAT_IS_READ
+
+
+def test_forgotten_rows_are_purged_after_sixty_days_with_their_checks(
+    owner, a_case, book_on
+):
+    """v1.158.1: a forgotten voice leaves the database with its check rows
+    once the sixty days the page shows it are up; a younger one stays, and
+    so does a no-match row, which belongs to the unit."""
+    from django.utils import timezone
+
+    book, _, recording = a_book(owner, a_case)
+    voice_book.forget(book, by=owner)
+    UnitVoiceCheck.objects.create(
+        transcript=recording.transcript, unit="Appeals", speaker="Speaker 2", voice=book
+    )
+    UnitVoiceCheck.objects.create(
+        transcript=recording.transcript,
+        unit="Appeals",
+        speaker="Speaker 2",
+        kind="none",
+    )
+    young, _, _ = a_book(owner, a_case, seed=2, name="Dev Kaur")
+    voice_book.forget(young, by=owner)
+    # Not yet sixty days: nothing goes.
+    assert voice_book.purge_forgotten() == {"voices": 0, "checks": 0}
+    UnitVoice.objects.filter(pk=book.pk).update(
+        forgotten_at=timezone.now() - timezone.timedelta(days=61)
+    )
+    assert voice_book.purge_forgotten() == {"voices": 1, "checks": 1}
+    assert not UnitVoice.objects.filter(pk=book.pk).exists()
+    assert UnitVoice.objects.filter(pk=young.pk).exists()
+    assert UnitVoiceCheck.objects.filter(kind="none").count() == 1
+    tasks = (HERE / "core" / "tasks.py").read_text(encoding="utf-8")
+    assert 'name="purge_forgotten_voices"' in tasks
+    assert "voice_book.purge_forgotten()" in tasks

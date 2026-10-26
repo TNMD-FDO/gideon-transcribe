@@ -43,7 +43,8 @@ log = logging.getLogger(__name__)
 # be kept, and the Role rides with the voice as a label only.
 # Turned down this often in thirty days, a book's print is called out.
 DISMISSALS_TO_CALL_OUT = 3
-# How long a forgotten row stays on the Voices page, greyed.
+# How long a forgotten row stays on the Voices page, greyed; then the
+# hourly purge deletes the row and its check rows (v1.158.1).
 FORGOTTEN_SHOWN_DAYS = 60
 
 
@@ -539,6 +540,19 @@ def forget(book: UnitVoice, *, by, request=None) -> int:
         cases=stopped,
     )
     return stopped
+
+
+def purge_forgotten(now=None) -> dict:
+    """Forgotten voices older than FORGOTTEN_SHOWN_DAYS leave the database
+    with their check rows (v1.158.1): the page stopped showing them, and a
+    forgotten row holds no print, only a name, a role and dates. A NONE row
+    (no voice) belongs to the unit, not a voice, and stays for the month's
+    numbers. Hourly, from the queue's sweep. Counts only."""
+    cutoff = (now or timezone.now()) - timezone.timedelta(days=FORGOTTEN_SHOWN_DAYS)
+    old = UnitVoice.objects.filter(forgotten_at__lt=cutoff)
+    checks, _ = UnitVoiceCheck.objects.filter(voice__in=old).delete()
+    voices, _ = old.delete()
+    return {"voices": voices, "checks": checks}
 
 
 def _is_uuid(text: str) -> bool:

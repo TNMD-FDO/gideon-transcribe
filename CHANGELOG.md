@@ -21,6 +21,22 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.158.1, 2026-10-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Forgotten voice rows are purged.
+
+- A voice forgotten on the Voices place has its print and shares cleared
+  at once and stays greyed for sixty days; until now the row itself, with
+  its name, role and dates, and the check rows against it stayed in the
+  database for good. An hourly pass now deletes both once the sixty days
+  are up. A no-match row belongs to the unit, not a voice, and stays for
+  the month's numbers.
+
 ## v1.158.0, 2026-10-26
 
 ```

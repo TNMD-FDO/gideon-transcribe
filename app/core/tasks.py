@@ -726,6 +726,18 @@ def sweep_quota_raises(timestamp: int) -> None:
     quota_raises.sweep()
 
 
+@app.periodic(cron="20 * * * *")
+@app.task(queue="default", name="purge_forgotten_voices")
+def purge_forgotten_voices(timestamp: int) -> None:
+    """The unit's voice book (v1.158.1): hourly, a forgotten voice older
+    than the sixty days the Voices place shows it is deleted with its check
+    rows. Nothing of a voice is in such a row; this is the database kept
+    tidy."""
+    from core import voice_book
+
+    voice_book.purge_forgotten()
+
+
 @app.periodic(cron="45 * * * *")
 @app.task(queue="default", name="forget_old_jobs")
 async def forget_old_jobs(timestamp: int) -> None:
