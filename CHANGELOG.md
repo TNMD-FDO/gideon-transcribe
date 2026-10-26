@@ -19,7 +19,7 @@ installs or upgrades to.
 
 ## Unreleased
 
-Nothing yet.
+- **Decided, not yet built:** Qwen3-ASR as a second recogniser beside Whisper (ADR 0025) and, under it, translation written by the chat engine from the words as spoken, which are kept (ADR 0026); the trial's facts and counts in `docs/research/qwen3-asr.md`, the chapter in Phase 1 chapter 7, the drawing in `docs/spec/mockups/phase-1-recogniser-and-translation.html`. The box ledger carries GIDEON's rules 2026-10-25.1 and our entry at v1.159.2.
 
 ## v1.159.2, 2026-10-26
 

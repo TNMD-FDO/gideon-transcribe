@@ -2210,8 +2210,8 @@ This chapter fixes what a user chooses for each Recording, what the app sends to
 ### Principles
 
 1. **English is the goal; the Spoken language is the means.** The one visible language choice is "Translate to English". The Spoken language is an advanced control that exists for the day detection guesses wrong.
-2. **One language per Run.** The service picks one language for a whole Run, and the app never splits a Recording, merges a transcribe Run with a translate Run, or re-runs a Recording on its own. A Recording that holds more than one language is translated wholesale to one English output.
-3. **What Whisper produced is the Transcript**, plus human Corrections. No LLM ever touches the translation path.
+2. **One language per Run.** The service picks one language for a whole Run, and the app never splits a Recording, merges a transcribe Run with a translate Run, or re-runs a Recording on its own. A Recording that holds more than one language is translated wholesale to one English output. (Under the Whisper recogniser; under Qwen3-ASR each piece keeps its own language, "The recogniser" below, ADR 0025.)
+3. **What Whisper produced is the Transcript**, plus human Corrections. No LLM ever touches the translation path. (Under the Whisper recogniser; under Qwen3-ASR, which does not translate, the English is written by the chat engine from the words as spoken, which are kept, "Translation from the words as spoken" below, ADR 0026.)
 4. **Machine text is always labelled as such**: markers in the viewer, a notice on every export, the facts in the Provenance.
 
 ### What the user chooses per Recording
@@ -2294,9 +2294,36 @@ For the Provenance and the viewer markers, the app keeps on the Recording: the t
 - **Kept**: Summaries and Chats, marked as based on an earlier Transcript once the new one lands; Clips keep their time spans and rendered files, and their transcript excerpts are refreshed from the new Transcript.
 - The Provenance keeps both processings. The audit log records the re-run as "Batch submitted" with its settings.
 
+### The recogniser (ADR 0025, 2026-10-26; not yet built)
+
+The model that writes the words is a Panel choice, **Recogniser**: **Whisper** (the default; everything in this chapter as written) or **Qwen3-ASR**, read when each Job is sent to the service and sent as the request field `recogniser`. Each Transcript records which wrote it, in the Provenance, on Details and in the notices. Switching is instant either way: the next Job uses the new choice, Jobs already sent finish as they started, nothing is converted. The facts behind the choice and the trial of 2026-10-26 are in `docs/research/qwen3-asr.md`.
+
+Under **Qwen3-ASR** the service runs a different path and returns the same result shape:
+
+- it cuts the ASR audio into pieces of about 45 seconds at pauses with its own voice detection (on the package's 180-second pieces the decoder stops early and leaves minutes empty; at 45 seconds it keeps up everywhere), and recognises each piece with the Vocabulary as context under the same 200-term rule;
+- **each piece keeps its own language**, detected by the model, so a mixed call stays Spanish where Spanish was spoken and English where English was; the result carries a language on every segment and the pieces' languages under `language`, and the Transcript's language is the most spoken;
+- Qwen's forced aligner times every word, and the lines are built from the words: cut at pauses and sentence ends under a longest line, then split where the diarizer's speaker changes; a word the aligner gives no length takes a short span from its neighbours and the count goes in `settings_used`;
+- the diarizer runs over the whole file as before, and each word takes its speaker;
+- `translate` is refused with its reason: Translate to English under Qwen3-ASR is the app's, below; the Fast lane and Live recordings stay on Whisper; the **Model** setting (large-v3 or turbo) is Whisper's and greys with its reason.
+
+An office with no chat engine keeps Whisper for translation: under Qwen3-ASR the Upload page's Translate to English greys with "needs the chat engine".
+
+### Translation from the words as spoken (ADR 0026, 2026-10-26; not yet built)
+
+Under Qwen3-ASR a Recording with Translate to English chosen (or found mixed, under the mixed rule's setting) is transcribed in the language spoken first and lands readable at once, each Segment carrying its language; the English follows:
+
+- **A translation run** is queued as the Transcript lands, after the Job is Done and before the Summaries tonight and Speaker check hooks, so they read the English once it is there. It is shaped like the Speaker check's run: one live per Transcript, deferred on commit to the llm queue, requeued by the minute sweep, waiting while the engine is away as Summaries tonight does. Only lines not in English are sent, in windows cut to a token budget with the lines numbered, one JSON answer per line, checked line by line; each window keeps a signature so a Correction on a spoken line remakes only its window's English. The instruction is a Prompt template (**Translation instructions**) the office can edit; the run has an Expectation key and a time limit (**Translation time limit**); one audit row, **Translation written**, of counts only.
+- **Both texts are kept**: the Segment's text is the words as spoken, and its English is the engine's rendering. Nothing is rewritten in either.
+- **"English to follow"** is the Recording's state while the run waits or works, in the Vision family of words ("English to follow", "English, 3 of 12", "English ready"), on the recording page's head, the case page's row and Home, with one Dashboard pill counting the Recordings that wait; the batch mail waits for it as it waits for a video's prepare.
+- **On the recording page one text shows at a time**, the English by default, with one switch in the Transcript's head, **English | As spoken**, remembered in the browser as the open tab is. Nothing is added to a line. A Find hit in the other text opens with that text showing. The Word export offers "with the words as spoken", as it offers "with notes"; Captions and Clips carry the English.
+- **Everything downstream reads the English** when it is there and the words as spoken when it is not: Summary, Chat, Case Chat, the Speaker check, Search and Find (which say which text a hit is in), the exports and their notices.
+- The Translation notice under this path reads that the English is a machine translation by the chat engine from the words as spoken, which are kept and can be shown; its wording is in the settings catalogue.
+
+Phase 1's rule 18 and chapter 17's ruling-out of keeping the original are reversed for Recordings recognised by Qwen3-ASR; for Whisper nothing moves, and "No LLM in the translation path" below stands for it.
+
 ### No LLM in the translation path
 
-No polishing, no rewriting, no post-editing by a model, because the original-language text is not kept and nothing could check the result. Chat and Summary prompts are told the Transcript is a machine translation (or a machine transcription) so they can say so when it matters.
+Under the Whisper recogniser: no polishing, no rewriting, no post-editing by a model, because the original-language text is not kept and nothing could check the result. Chat and Summary prompts are told the Transcript is a machine translation (or a machine transcription) so they can say so when it matters. Under Qwen3-ASR the words as spoken are kept, which is what lets a reader check the engine's English, and the section above applies.
 
 ### Marking in the viewer and the Provenance
 
@@ -2379,6 +2406,7 @@ Vocabulary terms, the context line, and Transcript text never appear in the audi
 - From the translation ticket to the WhisperX service contract: `task=translate_if_needed`, the `translate_if_mixed` request field, three-window detection with the `windows`, `combined`, and `mixed` result parts, `task_run` and `task_reason` in `settings_used`, and `word_timestamps.reason` of `translation` whenever the service ran translate; all written here as the request and storage rules.
 - From the Upload page ticket to the queue ticket: a Two-channel call with Diarize ticked sends each Side's Run with an empty speaker hint.
 - From the queue ticket to the translation ticket's open mechanics: Process again is a one-Recording Batch through the normal line, its audit row is "Batch submitted", and the old Transcript stays readable but locked until the new one lands.
+- 2026-10-26 (ADRs 0025 and 0026; not yet built): "The recogniser" and "Translation from the words as spoken" added; principles 2 and 3 and "No LLM in the translation path" scoped to the Whisper recogniser; rule 18 and chapter 17's ruling-out reversed for Recordings recognised by Qwen3-ASR. From the maintainer's decision after the trial of 2026-10-26 (`docs/research/qwen3-asr.md`).
 
 
 ## 8. Transcript viewer and player
@@ -4109,7 +4137,7 @@ These rules cut across every chapter. Each one is stated once in the chapter tha
 ### How features behave
 
 17. **Nothing runs by itself after a transcription.** Summary, Chat, and Speaker suggestions happen only when a user asks from the viewer, one Transcript at a time; Chat answers from the Transcript alone and declines everything else, and every claim is a Citation the app checks against a real Segment. (AI assistant)
-18. **No LLM ever touches the translation path.** What Whisper produced is the Transcript, plus human Corrections. Translation is to English only, and the original-language text is not kept. (Transcription, translation, and diarization choices)
+18. **No LLM ever touches the translation path.** What Whisper produced is the Transcript, plus human Corrections. Translation is to English only, and the original-language text is not kept. (Transcription, translation, and diarization choices) Under the Qwen3-ASR recogniser this rule is reversed by ADR 0026 (2026-10-26): the chat engine writes the English from the words as spoken, which are kept beside it; for Whisper the rule stands.
 19. **Diarization is always a user's choice per Recording**, with a speaker-count hint, and the pages warn that automatic speaker separation is sometimes wrong. Nothing is ever run twice for one Recording. (Transcription, translation, and diarization choices; Upload page and Batch page)
 20. **When the WhisperX service or the engine is down, the feature does not work.** There is no waiting state and nothing is deferred: the Upload page refuses a Batch, a Job fails with its reason class and offers Retry, an AI assistant click fails at once. (Queue and Jobs)
 21. **Cancel throws everything away; failure keeps everything.** A cancelled Recording is removed as if never uploaded; a Failed Job keeps its files and a Retry button. (Queue and Jobs)
@@ -4213,7 +4241,7 @@ A builder needs to know what not to build as much as what to build. The first li
 ### Ruled out
 
 - Restoring or reusing any earlier transcription app, engine wrapper, or saved container image (ADR 0002). Earlier apps may be read for facts only, never for code.
-- Translation to any language other than English, and keeping the original-language text alongside the English.
+- Translation to any language other than English, and keeping the original-language text alongside the English. (The second half is reversed for Recordings recognised by Qwen3-ASR, ADR 0026, 2026-10-26: chapter 7, "Translation from the words as spoken".)
 - SSO middleware or OIDC for sign-in. Sign-in is the office directory over LDAPS plus Local admin accounts.
 - Paid services, paid models, or anything cloud-hosted. Everything runs on the office's own server with free tools.
 - Network shares (Samba or the like) onto the App data folder.

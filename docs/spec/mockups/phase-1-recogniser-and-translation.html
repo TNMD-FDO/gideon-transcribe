@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The recogniser choice, and translation from the words as spoken</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sys: #98a4b1; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --sp1: #7ab4e6; --sp2: #f0956a; --sp3: #7bc67e; --sys: #98a4b1; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.off { color: var(--muted); background: var(--surface-2); }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; font-size: 13px; }
+  .card h3 { font-size: 15px; margin: 0 0 8px; }
+  .setting { display: grid; grid-template-columns: 180px 1fr; gap: 10px 16px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+  .setting:first-of-type { border-top: 0; }
+  .setting .k { font-weight: 600; } .setting .help { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .radio { display: flex; flex-direction: column; gap: 6px; }
+  .radio label { display: flex; gap: 8px; align-items: baseline; }
+  .radio input { margin: 0; }
+  .greyed { color: var(--muted); }
+  .greyed select, .greyed input[type=checkbox] { opacity: .5; }
+  select, input[type=text] { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  .why { font-size: 12px; color: var(--muted); font-style: normal; }
+
+  /* the recording page, reduced */
+  .rec { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; font-size: 13px; }
+  .rec .head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .rec .head b { font-size: 15px; }
+  .tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .tabs span { padding: 6px 10px; color: var(--muted); } .tabs span.on { color: var(--accent); border-bottom: 2px solid var(--accent); background: var(--surface); }
+  .strip { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .switch { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .switch span { padding: 2px 10px; } .switch span.on { background: var(--accent); color: var(--accent-ink); }
+  .line { display: grid; grid-template-columns: 52px 90px 1fr auto; gap: 10px; padding: 6px 14px; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .line .t { font-family: var(--mono); font-size: 12px; color: var(--muted); } .line .s { font-weight: 600; } .line .a { color: var(--muted); font-size: 12px; }
+  .line.lit { background: var(--accent-soft); }
+  .c1 { color: var(--sp1); } .c2 { color: var(--sp2); } .cs { color: var(--sys); }
+
+  /* states */
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .state { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; background: var(--surface); }
+  .state b { display: block; margin-bottom: 4px; }
+  .row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: 13px; align-items: center; }
+  .dash { display: flex; gap: 6px; flex-wrap: wrap; }
+  .menu { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 6px 0; font-size: 13px; width: 300px; }
+  .menu div { padding: 6px 14px; } .menu div.sep { border-top: 1px solid var(--line); padding: 0; margin: 4px 0; } .menu div.h { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  .menu div.on { background: var(--accent-soft); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Phase 1 chapter 7 · drawn 2026-10-26 · for the maintainer's word</div>
+    <h1>The recogniser choice, and translation from the words as spoken</h1>
+    <p class="lede">What a person sees when Qwen3-ASR is chosen beside Whisper (ADR 0025) and, under it, when the chat engine writes the English after the recording has landed in the language spoken (ADR 0026). Four figures: the one new setting, the recording page with its one switch, the states while the English is on its way, and the export. The names and words are made up.</p>
+  </header>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 1</div><h2>The Panel's Transcription defaults gain one setting, Recogniser; two others grey with their reason under Qwen3-ASR</h2></div>
+    <div class="cols">
+      <div class="card">
+        <h3>Transcription defaults · Recogniser on Whisper (as shipped)</h3>
+        <div class="setting"><div class="k">Recogniser</div><div><div class="radio"><label><input type="radio" checked> Whisper <span class="why">the app as it has always run; translates by itself</span></label><label><input type="radio"> Qwen3-ASR <span class="why">better words on the office's calls in the trial of October 2026; the English is written by the chat engine afterwards</span></label></div><div class="help">Read when each recording is sent. Recordings already sent finish as they started.</div></div></div>
+        <div class="setting"><div class="k">Model</div><div><select><option>large-v3-turbo</option><option>large-v3</option></select><div class="help">Whisper's model.</div></div></div>
+        <div class="setting"><div class="k">Diarizer</div><div><select><option>Nemotron 3</option><option>pyannote</option></select></div></div>
+        <div class="setting"><div class="k">"Translate to English" ticked by default</div><div><input type="checkbox"></div></div>
+      </div>
+      <div class="card">
+        <h3>The same page · Recogniser on Qwen3-ASR</h3>
+        <div class="setting"><div class="k">Recogniser</div><div><div class="radio"><label><input type="radio"> Whisper</label><label><input type="radio" checked> Qwen3-ASR</label></div></div></div>
+        <div class="setting greyed"><div class="k">Model</div><div><select disabled><option>large-v3-turbo</option></select><div class="help">Whisper's model; not used by Qwen3-ASR.</div></div></div>
+        <div class="setting"><div class="k">Diarizer</div><div><select><option>Nemotron 3</option><option>pyannote</option></select><div class="help">Unchanged: the diarizer runs with either recogniser.</div></div></div>
+        <div class="setting"><div class="k">"Translate to English" ticked by default</div><div><input type="checkbox"> <span class="why">Under Qwen3-ASR the English is written by the chat engine after the recording lands.</span></div></div>
+        <div class="setting greyed"><div class="k">"Translate to English" on the Upload page</div><div><input type="checkbox" disabled> <span class="why">Greyed on an office with no chat engine: "needs the chat engine". Whisper remains the recogniser that translates by itself.</span></div></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p class="small"><b>One new setting, nothing moved.</b> Recogniser sits first in the group, above Model, since it decides whether Model means anything. Switching is instant either way: the next recording uses the new choice and nothing already made is converted.</p>
+      <p class="small"><b>Greyed with the reason, never hidden</b>, as the diarizer greyed the speaker-count hint. Details and the exports name the recogniser that wrote each transcript.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 2</div><h2>The recording page shows one text at a time: the English by default, the words as spoken on one switch in the Transcript's head</h2></div>
+    <div class="cols">
+      <div class="rec">
+        <div class="head"><span class="muted">‹ Case 24-0183</span> <b>Call 2026-10-14 09:12</b> <span class="pill acc">Translated to English from Spanish</span> <span class="pill">Jail call</span></div>
+        <div class="tabs"><span class="on">Transcript</span><span>Clips</span><span>Summary</span><span>Chat</span><span>Details</span></div>
+        <div class="strip"><span>Translated by the office's language model from the words as spoken · 212 lines</span><span class="switch"><span class="on">English</span><span>As spoken</span></span></div>
+        <div class="line"><span class="t">00:12</span><span class="s cs">Call system</span><span>This call is from a correctional facility and may be recorded.</span><span class="a"></span></div>
+        <div class="line"><span class="t">00:41</span><span class="s c1">Marisol</span><span>Did you talk to the lawyer yesterday?</span><span class="a"></span></div>
+        <div class="line lit"><span class="t">00:46</span><span class="s c2">Esteban</span><span>Yes, he said the hearing is on the fourteenth. He needs the papers from the house.</span><span class="a">note · clip</span></div>
+        <div class="line"><span class="t">00:58</span><span class="s c1">Marisol</span><span>Which papers? The ones in the blue folder?</span><span class="a"></span></div>
+        <div class="line"><span class="t">01:03</span><span class="s c2">Esteban</span><span>The blue folder, yes, and the car title.</span><span class="a"></span></div>
+      </div>
+      <div class="rec">
+        <div class="head"><span class="muted">‹ Case 24-0183</span> <b>Call 2026-10-14 09:12</b> <span class="pill acc">Translated to English from Spanish</span> <span class="pill">Jail call</span></div>
+        <div class="tabs"><span class="on">Transcript</span><span>Clips</span><span>Summary</span><span>Chat</span><span>Details</span></div>
+        <div class="strip"><span>The words as spoken, as the recogniser heard them · Spanish 198 lines, English 14</span><span class="switch"><span>English</span><span class="on">As spoken</span></span></div>
+        <div class="line"><span class="t">00:12</span><span class="s cs">Call system</span><span>This call is from a correctional facility and may be recorded.</span><span class="a">en</span></div>
+        <div class="line"><span class="t">00:41</span><span class="s c1">Marisol</span><span>¿Hablaste con el abogado ayer?</span><span class="a"></span></div>
+        <div class="line lit"><span class="t">00:46</span><span class="s c2">Esteban</span><span>Sí, dijo que la audiencia es el catorce. Necesita los papeles de la casa.</span><span class="a">note · clip</span></div>
+        <div class="line"><span class="t">00:58</span><span class="s c1">Marisol</span><span>¿Cuáles papeles? ¿Los de la carpeta azul?</span><span class="a"></span></div>
+        <div class="line"><span class="t">01:03</span><span class="s c2">Esteban</span><span>La carpeta azul, sí, y el título del carro.</span><span class="a"></span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p class="small"><b>Nothing is added to a line.</b> The same lines, times, speakers, notes and clips; only the words change. The switch is remembered in the browser as the open tab is. A line said in English carries a small "en" on the As spoken side, since it has no other text.</p>
+      <p class="small"><b>A Correction is made on the words as spoken</b> (the switch moves to As spoken when Edit is pressed) and that window's English is written again, marked "English to follow" on the line meanwhile. A Find hit in the other text opens with that text showing and says "in the words as spoken".</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 3</div><h2>While the English is on its way the recording is readable in the language spoken, and says so where a state shows today</h2></div>
+    <div class="states">
+      <div class="state"><b>English to follow</b><span class="muted">The transcript has landed; the chat engine has not started on it yet (busy, or away: it waits, like Summaries tonight).</span></div>
+      <div class="state"><b>English, 3 of 12</b><span class="muted">Writing; windows done of windows to write, with "usually about 4 minutes" from the office's own runs.</span></div>
+      <div class="state"><b>English ready</b><span class="muted">Shown once, as "Enriched with vision" is; then the pill "Translated to English from Spanish" on the head is the only mark.</span></div>
+      <div class="state"><b>English not written: the engine was away all night</b><span class="muted">The run is tried again; Translate again on Details asks for it now.</span></div>
+    </div>
+    <div class="caption">
+      <p class="small"><b>Where it shows:</b> the recording page's head beside the pills, the case page's row in the state column (as "Preparing" and "Summary tonight" do), Home's rows, and the Dashboard line with one pill, <span class="pill">2 English to follow</span>, that opens the case's Recordings tab filtered to them.</p>
+      <p class="small"><b>The batch mail waits</b> for the English as it waits for a video's prepare. Summary, Chat and the Speaker check read the English once it is there and the words as spoken until then, and say which.</p>
+    </div>
+    <div style="margin-top:16px" class="row"><span><b>Call 2026-10-14 09:12</b> <span class="muted">Jail call · 31 min · Marisol, Esteban</span></span><span class="muted small">English, 3 of 12 · usually about 4 minutes</span><span class="btn tiny">Open</span></div>
+    <div style="margin-top:8px" class="dash"><span class="pill">1 transcribing</span><span class="pill">2 English to follow</span><span class="pill">Summaries tonight: 4</span><span class="pill ok">Shared with 2</span></div>
+  </section>
+
+  <section>
+    <div class="fig-head"><div class="eyebrow">Figure 4</div><h2>Export offers the words as spoken the way it offers the notes; the notice says what was done</h2></div>
+    <div class="cols">
+      <div class="menu">
+        <div class="h">Export</div>
+        <div>Word</div>
+        <div>Word, with notes</div>
+        <div class="on">Word, with the words as spoken</div>
+        <div>Plain text</div>
+        <div>Captions (SRT)</div>
+        <div class="sep"></div>
+        <div class="h">Also</div>
+        <div>Summary to Word</div>
+      </div>
+      <div class="card">
+        <h3>The notice on the export</h3>
+        <p class="small muted" style="margin:0 0 8px">Printed once, on the last page, from the settings catalogue's second wording:</p>
+        <p class="small" style="margin:0; padding:8px 10px; border:1px solid var(--line); border-radius: var(--radius)">Machine translation to English from Spanish by the office's language model, from the words as spoken by Qwen3-ASR 1.7B, which are kept and can be shown. This is not a certified translation.</p>
+        <p class="small muted" style="margin:8px 0 0">In "with the words as spoken" each line prints the English with the Spanish under it in the small type. Captions and clips carry the English; a recording recognised by Whisper keeps today's wording.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

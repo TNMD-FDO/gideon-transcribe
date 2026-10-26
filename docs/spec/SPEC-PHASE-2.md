@@ -2470,7 +2470,7 @@ A builder needs to know what not to build as much as what to build. The first li
 ### Ruled out
 
 - Restoring or reusing any earlier transcription app, engine wrapper, or saved container image (ADR 0002). Earlier apps may be read for facts only, never for code.
-- Translation to any language other than English, and keeping the original-language text alongside the English.
+- Translation to any language other than English, and keeping the original-language text alongside the English. (The second half is reversed for Recordings recognised by Qwen3-ASR, ADR 0026, 2026-10-26: Phase 1 chapter 7, "Translation from the words as spoken".)
 - SSO middleware or OIDC for sign-in. Sign-in is the office directory over LDAPS plus Local admin accounts.
 - Paid services, paid models, or anything cloud-hosted. Everything runs on the office's own server with free tools.
 - Network shares (Samba or the like) onto the App data folder.

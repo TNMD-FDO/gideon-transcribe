@@ -50,7 +50,7 @@ The text produced from a Recording: ordered Segments with timestamps and Speaker
 _Avoid_: transcription (that is the process), output
 
 **Segment**:
-One timed span of a Transcript attributed to one Speaker.
+One timed span of a Transcript attributed to one Speaker. Under the Qwen3-ASR Recogniser it carries its own language and, when the chat engine translated, its English beside the words As spoken (ADRs 0025 and 0026; not yet built).
 
 **Speaker**:
 A voice label in one Transcript, optionally given a name. Diarization creates Speakers, and the Sides of a Two-channel call are Speakers too. Inside a Case, Speakers given the same name are one Person.
@@ -72,17 +72,25 @@ The step that separates a Recording into Speakers. Always a user choice per Reco
 _Avoid_: separate speakers (in a label), speaker identification (that is naming)
 
 **Spoken language**:
-The language of the speech in a Recording, chosen by the user at upload or detected by the WhisperX service. A Transcript is in the Spoken language unless Translation applies.
+The language of the speech in a Recording, chosen by the user at upload or detected by the WhisperX service. A Transcript is in the Spoken language unless Translation applies. Under the Qwen3-ASR Recogniser (ADR 0025) each Segment carries its own language and the Transcript's is the most spoken.
 _Avoid_: source language, detected language (detection is one way the Spoken language becomes known)
 
+**Recogniser**:
+The model that writes the words of a Transcript, a Panel choice (ADR 0025, 2026-10-26; not yet built): **Whisper** (the default, large-v3 or turbo, as the app has always run) or **Qwen3-ASR** (the 1.7B model with its forced aligner, in a container of its own, the audio cut by the service into pieces of about 45 seconds, the lines built from the aligner's words, each piece in its own language). Each Transcript records which wrote it. Phase 1 chapter 7, "The recogniser".
+_Avoid_: engine (the AI assistant's word), ASR model (on a page), model alone (that is Whisper's large-v3 or turbo)
+
 **Translation**:
-Producing an English Transcript from speech in another language, either because the user chose "Translate to English" or because the Recording holds more than one language. Always to English; the original-language text is not kept. A translated Transcript is marked in the viewer and carries the Translation notice on every export.
+Producing an English Transcript from speech in another language, either because the user chose "Translate to English" or because the Recording holds more than one language. Always to English. Under the Whisper Recogniser the service translates and the original-language text is not kept. Under the Qwen3-ASR Recogniser (ADR 0026, 2026-10-26; not yet built) the Recording lands in the language spoken and the chat engine writes the English afterwards, line by line with the same times, in a run shaped like the Speaker check's; the words As spoken are kept beside the English, and the Recording reads "English to follow" until the run is done. A translated Transcript is marked in the viewer and carries the Translation notice on every export.
+
+**As spoken**:
+The words of a Transcript in the language they were said in, kept beside the English when the chat engine translated (ADR 0026): one Segment, two texts, the same time and Speaker. The recording page shows one at a time, the English by default, with the switch **English | As spoken** in the Transcript's head; the Word export offers "with the words as spoken". A Correction is made on the words as spoken, and its window's English is written again. Phase 1 chapter 7, "Translation from the words as spoken".
+_Avoid_: original (alone), source text, bilingual view, interlinear
 
 **Translation notice**:
-The admin-set wording printed on every export of a translated Transcript, saying the text is a machine translation and not a certified one.
+The admin-set wording printed on every export of a translated Transcript, saying the text is a machine translation and not a certified one; a second wording for an English the chat engine wrote from the words As spoken (ADR 0026).
 
 **Transcription notice**:
-The admin-set wording printed on every export of a Transcript that was not translated, saying the text is a machine transcription with Corrections marked and not a certified transcript. An export carries one notice, never both.
+The admin-set wording printed on every export of a Transcript that was not translated, saying the text is a machine transcription with Corrections marked and not a certified transcript. An export carries one notice, never both. The `{model}` it prints names the Recogniser from ADR 0025.
 
 **Export**:
 A file a user takes out of the app from a Transcript, Summary, or Chat: a Word document, a plain-text file, or Captions. Exports and Clip downloads are the only ways anything leaves a Workspace.
@@ -120,7 +128,7 @@ _Avoid_: alias, nickname (as the field's name), AKA, variant
 The viewer behaviour that keeps the current Segment in view while the Recording plays. On by default; pauses while the user scrolls the Transcript by hand and resumes on request.
 
 **Correction**:
-A user edit of a Segment's text in the viewer. Marked on the Segment and recorded in the audit log.
+A user edit of a Segment's text in the viewer. Marked on the Segment and recorded in the audit log. Where the words As spoken are kept, the Correction is made on them and the English of that window is written again (ADR 0026).
 
 **Timeline**:
 The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call. The Incident page's strip of lanes is not the Timeline, and a Chronology is a list of Events (Phase 6).
@@ -635,7 +643,7 @@ _Avoid_: reminder, alert
 ### LLM features
 
 **AI assistant**:
-The app's four language-model features together: Summary, Chat, Speaker suggestions, and Moments. Each runs only when a user asks, never by itself, and works from one Transcript, or from every Transcript in a Case as a Case Chat, and nothing else.
+The app's four language-model features together: Summary, Chat, Speaker suggestions, and Moments. Each runs only when a user asks, never by itself, and works from one Transcript, or from every Transcript in a Case as a Case Chat, and nothing else. (Since Phase 5 and Phase 9 the Speaker check and Summaries tonight run as a Transcript lands by the office's settings, and ADR 0026 adds the translation run; each still works from the Transcript alone.)
 _Avoid_: the LLM, the model (in anything a user reads)
 
 **Summary**:
