@@ -75,7 +75,7 @@ wrong voice.
 - One migration (0088): a nullable JSON field on the line.
 - The landing takes one ffmpeg pass over the prepared audio per Side, a
   few seconds on a half-hour call, before the check is queued.
-- The pages say "clock unsure" in plain words and never pretend to a
+- The pages say "clock unsure" in plain words (from v1.159.1 the recording page's pill says "time uncertain" alone, the numbers in its hover text, at the maintainer's ask) and never pretend to a
   precision the audio denies; a user who hears a saying later than the
   page says now reads why on the page itself.
 - The Preview's redesign (the same release) carries the verdict as a

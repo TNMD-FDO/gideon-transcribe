@@ -21,6 +21,25 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.159.1, 2026-10-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+A quieter clock pill, and a click on a line no longer pulls the page back.
+
+- **The clock pill** on the recording page reads "time uncertain" and
+  nothing more; how far the line may be off, where the words are heard
+  and why sit in the pill's hover text and on the Details tab, as the
+  maintainer asked.
+- **The scroll jump.** Clicking a line seeks the player and resumes the
+  follow, and the follow scrolled to the line the page had last marked,
+  which the player had not left yet, so the page jumped back to where it
+  had just been before jumping forward again. The follow now resumes at
+  the player's own time.
+
 ## v1.159.0, 2026-10-26
 
 ```

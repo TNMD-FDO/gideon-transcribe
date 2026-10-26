@@ -177,7 +177,7 @@
     // Going somewhere on purpose is asking to watch from there, so a follow
     // that was paused for reading comes back rather than leaving the
     // transcript behind at the place that was just left.
-    if (window.VIEWER.resumeFollowing) { window.VIEWER.resumeFollowing(); }
+    if (window.VIEWER.resumeFollowing) { window.VIEWER.resumeFollowing(wanted); }
   };
   window.VIEWER.play = function () { if (player) { player.play(); } };
   window.VIEWER.pause = function () { if (player) { player.pause(); } };
@@ -330,10 +330,12 @@
         if (segment.clock.head) {
           var pill = document.createElement("span");
           pill.className = "pill small warn clock-pill";
-          pill.title = segment.clock.unplaced
-            ? "The recogniser placed this block before where it is heard; the audio was read again but these words were not found in it"
-            : "The recogniser placed this block before where it is heard; the audio has speech in the gap after it";
-          pill.textContent = "clock unsure · up to " + Math.round(segment.clock.bound) + " s early · heard about " + clock(segment.clock.about) + (segment.clock.unplaced ? " · not found by the re-read" : "");
+          // Quiet on the page (v1.159.1, the maintainer's ask): two words,
+          // the numbers and the reason in the hover and on the Details tab.
+          pill.title = "This line's time may be off by up to " + Math.round(segment.clock.bound) + " s; heard about " + clock(segment.clock.about) + ". " + (segment.clock.unplaced
+            ? "The recogniser placed this block before where it is heard; the audio was read again, but these words were not found by the re-read."
+            : "The recogniser placed this block before where it is heard; the audio has speech in the gap after it.");
+          pill.textContent = "time uncertain";
           tags.appendChild(pill);
         }
       }
@@ -714,13 +716,18 @@
     return seen.top >= box.top - 1 && seen.bottom <= box.bottom + 1;
   }
 
-  function resumeFollowing() {
+  function resumeFollowing(time) {
     if (!paused) { return; }
     paused = false;
     following = true;
     if (followBox) { followBox.checked = true; }
     if (pill) { pill.hidden = true; }
-    var row = column ? column.children[here] : null;
+    // The line at the time just asked for, or the player's own, not the one
+    // the page last marked (v1.159.1): a click on a line seeks and resumes
+    // before the player has moved, and scrolling to the marked line pulled
+    // the page back to where it had just been.
+    var index = typeof time === "number" ? at(time) : (player ? at(player.currentTime) : here);
+    var row = column ? column.children[index] : null;
     if (row && !holding) { row.scrollIntoView({ block: "center", behavior: "smooth" }); }
   }
 

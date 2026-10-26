@@ -599,7 +599,14 @@ def test_the_pages_carry_the_verdict(owner, tmp_path, settings, monkeypatch, cli
 def test_the_scripts_and_the_styles_carry_the_marks():
     viewer = (HERE / "static" / "viewer.js").read_text(encoding="utf-8")
     assert "segment.clock" in viewer and "clock-pill" in viewer
-    assert "clock unsure · up to" in viewer and "heard about" in viewer
+    # Quiet on the page (v1.159.1): two words, the numbers in the hover.
+    assert 'pill.textContent = "time uncertain"' in viewer and "heard about" in viewer
+    assert "clock unsure · up to" not in viewer
+    # The follow resumes at the player's own time (v1.159.1), so a click on a
+    # line no longer pulls the page back to the line it had just left.
+    assert "function resumeFollowing(time)" in viewer
+    assert "window.VIEWER.resumeFollowing(wanted)" in viewer
+    assert 'typeof time === "number" ? at(time)' in viewer
     # The re-read (v1.152.0).
     assert "clock re-read · was" in viewer and 'classList.add("retimed")' in viewer
     assert "not found by the re-read" in viewer
