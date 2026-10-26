@@ -317,19 +317,22 @@ def test_two_cases_teach_one_book_weighted_by_what_each_heard(owner, a_case, boo
     assert Row.objects.filter(event="Voice no longer kept for the unit").count() == 1
 
 
-def test_the_roles_rule_and_the_persons_hooks(owner, a_case, book_on):
+def test_any_role_is_kept_and_the_persons_hooks(owner, a_case, book_on):
+    """Until v1.157.0 a Role gated the keeping; ADR 0024 (v1.158.0) lifted
+    it: a witness, a person with no role, anyone with a print may be kept,
+    and the Role rides as a label."""
     recording = a_recording(owner, a_case)
     witness = an_officer(a_case, recording, seed=3, name="Tom Hale", role="Witness")
-    assert voice_book.may_keep(witness) == (False, "role")
-    with pytest.raises(ValueError, match="not kept for the unit"):
-        voice_book.keep(witness, by=owner)
-    with pytest.raises(ValueError, match="never a client's side"):
-        settings_store.set_to("unit_voice_roles", "Officer\nDefendant")
-    assert voice_book.roles_allowed() == ["Officer", "Interpreter", "Interviewer"]
-    # A Person with no role is never kept either.
+    assert voice_book.may_keep(witness) == (True, "Appeals")
+    assert voice_book.keep(witness, by=owner).role == "Witness"
     nobody = an_officer(a_case, recording, seed=4, name="Sam Burke", role="")
-    assert voice_book.may_keep(nobody) == (False, "role")
-    # Rename follows; a role no longer kept stops the keeping; delete too.
+    assert voice_book.may_keep(nobody) == (True, "Appeals")
+    assert voice_book.keep(nobody, by=owner).role == ""
+    # The retired setting is no longer a setting.
+    with pytest.raises(KeyError):
+        settings_store.get("unit_voice_roles")
+    assert not hasattr(voice_book, "roles_allowed")
+    # Rename follows; a role change goes with the voice; delete stops it.
     from core import people
 
     officer = an_officer(a_case, recording, seed=5)
@@ -343,7 +346,7 @@ def test_the_roles_rule_and_the_persons_hooks(owner, a_case, book_on):
     people.edit(officer, role="Witness", by=owner)
     officer.refresh_from_db()
     book.refresh_from_db()
-    assert not officer.kept_for_unit and not book.live
+    assert officer.kept_for_unit and book.live and book.role == "Witness"
     again = an_officer(a_case, recording, seed=6, name="Dev Kaur")
     kept = voice_book.keep(again, by=owner)
     people.delete(again, by=owner)
@@ -539,7 +542,7 @@ def test_the_case_tab_offers_keep_and_shows_kept(owner, a_case, book_on, client)
     # The owner is an Admin, so the button is the chooser (v1.157.0); a
     # post with no unit ticked still keeps for the case's own unit.
     assert "Keep for a unit..." in tab
-    assert "A witness's voice is never kept for the unit." in tab
+    assert "never kept for the unit" not in tab  # ADR 0024: any role is kept
     assert client.post(f"/person/{officer.pk}", {"action": "keep"}).status_code == 302
     tab = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
     assert "Kept for the <b>Appeals</b> unit" in tab and "Stop keeping" in tab

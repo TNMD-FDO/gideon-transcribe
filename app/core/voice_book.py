@@ -37,9 +37,10 @@ from core import audit, clock_check, settings_store, units
 
 log = logging.getLogger(__name__)
 
-# The Roles that name a client's side or a witness: never kept, whatever
-# the Admin's list says.
-REFUSED_ROLES = ("Defendant", "Victim", "Witness", "Client")
+# Until v1.157.0 a Role gated the keeping (Officer, Interpreter and
+# Interviewer as shipped; Defendant, Victim, Witness and Client refused).
+# ADR 0024 lifted it at the maintainer's word: any Person with a print may
+# be kept, and the Role rides with the voice as a label only.
 # Turned down this often in thirty days, a book's print is called out.
 DISMISSALS_TO_CALL_OUT = 3
 # How long a forgotten row stays on the Voices page, greyed.
@@ -159,33 +160,6 @@ def on() -> bool:
     )
 
 
-def roles_allowed() -> list[str]:
-    text = settings_store.get("unit_voice_roles") or ""
-    return [
-        line.strip()
-        for line in text.splitlines()
-        if line.strip() and line.strip() not in REFUSED_ROLES
-    ]
-
-
-def check_roles_setting(text: str) -> str:
-    """The Roles kept for the unit as they would be kept, or a refusal: a
-    role that names a client's side or a witness is never allowed."""
-    kept = []
-    for raw in (text or "").splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        if line.casefold() in {one.casefold() for one in REFUSED_ROLES}:
-            raise ValueError(
-                f"Roles kept for the unit: {line} cannot be kept for the unit; "
-                "a voice book holds officers and the office's own people, never "
-                "a client's side or a witness"
-            )
-        kept.append(line[:40])
-    return "\n".join(kept)
-
-
 def unit_of_case(case) -> str:
     """The one book a case has: its owner's unit."""
     owner = getattr(case, "owner", None)
@@ -250,19 +224,18 @@ def find(unit: str, name: str) -> UnitVoice | None:
 
 def person_rule(person) -> str:
     """Why this Person's voice cannot be kept for any unit, or "" when it
-    can: off, no print, role. The case's unit is the other half."""
+    can: off, no print. The case's unit is the other half. The Role no
+    longer gates it (ADR 0024, v1.158.0)."""
     if not on():
         return "off"
     if not (person.voice_print or {}).get("vector"):
         return "no print"
-    if not person.role or person.role not in roles_allowed():
-        return "role"
     return ""
 
 
 def may_keep(person) -> tuple[bool, str]:
     """Whether this Person's voice can be kept for the unit, and the unit
-    when it can, or why not: off, no unit, no print, role."""
+    when it can, or why not: off, no unit, no print."""
     if not on():
         return False, "off"
     unit = unit_of_case(person.case)
@@ -395,16 +368,11 @@ REFUSALS = {
     "off": "Voices are not kept for the unit.",
     "no unit": "This case's owner is in no unit.",
     "no print": "{name} has no voice print yet.",
-    "role": "A {role} is not kept for the unit.",
 }
 
 
 def _refusal(person, why: str) -> ValueError:
-    return ValueError(
-        REFUSALS[why].format(
-            name=person.name, role=person.role or "person with no role"
-        )
-    )
+    return ValueError(REFUSALS[why].format(name=person.name))
 
 
 def keep(person, *, by, request=None) -> UnitVoice:
@@ -530,12 +498,10 @@ def follow_rename(person, was: str) -> None:
 
 
 def follow_role(person, *, by, request=None) -> None:
-    """The Person's Role changed: a Role no longer allowed stops the keeping;
-    an allowed one goes with the voice."""
+    """The Person's Role changed: it goes with the voice, as a label. Until
+    v1.157.0 a Role not on the Admin's list stopped the keeping (ADR 0024
+    lifted that)."""
     if not getattr(person, "kept_for_unit", False):
-        return
-    if not person.role or person.role not in roles_allowed():
-        stop_keeping(person, by=by, request=request, why="the role is not kept")
         return
     for book in books_of(person):
         if book.role != person.role:
@@ -940,7 +906,7 @@ def accept(row: UnitVoiceCheck, *, by, request=None) -> int:
             recording, row.speaker, person, by=by, how=voice_prints.VOICE
         )
         person.refresh_from_db()
-        if person.role in roles_allowed() and (person.voice_print or {}).get("vector"):
+        if (person.voice_print or {}).get("vector"):
             person.kept_for_unit = True
             person.voice_scope = "unit"
             person.save(update_fields=["kept_for_unit", "voice_scope"])
@@ -1041,14 +1007,6 @@ def tab_line(person, user) -> dict | None:
             "admin": admin,
             "choices": units.names() if admin else [unit],
             "mine": mine,
-        }
-    if why == "role" and (person.voice_print or {}).get("vector"):
-        return {
-            "state": "not-kept",
-            "unit": unit,
-            "admin": admin,
-            "mine": mine,
-            "role": person.role,
         }
     return None
 

@@ -2341,9 +2341,9 @@ def _rows() -> list[Definition]:
             needs="remember_voices",
             what_it_does=(
                 "Whether a case may keep a person's voice print in their unit's "
-                "voice book, by a person's choice on the case's Speakers tab, for "
-                "the roles listed below, so an unnamed speaker on any recording in "
-                "that unit can be checked against it by a press on its card. Needs "
+                "voice book, by a person's choice on the case's Speakers tab, in "
+                "any role, so an unnamed speaker on any recording in that unit can "
+                "be checked against it by a press on its card. Needs "
                 "Units on the Sign-in page. Nothing is named by the book on its "
                 "own; a book is read and written by its unit only; an Admin reads "
                 "every unit's book."
@@ -2354,23 +2354,9 @@ def _rows() -> list[Definition]:
                 "stay; the place leaves the rail."
             ),
         ),
-        Definition(
-            key="unit_voice_roles",
-            page=SPEAKERS,
-            group="The voice",
-            name="Roles kept for the unit",
-            kind=TEXT,
-            default="Officer\nInterpreter\nInterviewer",
-            lines=4,
-            needs="unit_voices",
-            what_it_does=(
-                "The roles a person may be kept for the unit in, one per line, "
-                "from the Speaker roles list. Defendant, Victim, Witness and "
-                "Client cannot be kept and are refused if typed. A kept person "
-                "whose role is changed to one not listed stops being kept."
-            ),
-            when_changed="The next Keep for the unit.",
-        ),
+        # Roles kept for the unit (key unit_voice_roles, v1.146.0) was retired
+        # in v1.158.0 (ADR 0024): any role may be kept. A stored row for the
+        # old key is left alone and never read.
         # The Call system (ADR 0021, the voice plan's first release, v1.138.0).
         Definition(
             key="call_system_available",
@@ -3227,10 +3213,6 @@ def check(key: str, value):
         from core import units
 
         return units.check_setting(text)
-    if key == "unit_voice_roles":
-        from core import voice_book
-
-        return voice_book.check_roles_setting(text)
     if key == "engine_address":
         why = outside_the_building(text.strip())
         if why:

@@ -21,6 +21,31 @@ installs or upgrades to.
 
 Nothing yet.
 
+## v1.158.0, 2026-10-26
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Any voice may be kept for a unit (ADR 0024).
+
+- **The role no longer gates keeping.** A person with a voice print may
+  be kept for a unit in any role, or none; the card's "never kept for the
+  unit" line is gone, and changing a kept person's role changes the label
+  on the voice and stops nothing. Until now only the roles on the Admin's
+  list could be kept, and a client's side or a witness never; the
+  maintainer chose to lift that for everyone after the concern was put to
+  them, and the choice is recorded in ADR 0024.
+- **The setting Roles kept for the unit is retired.** It leaves the
+  Speakers settings page and the catalogue; a value stored under it is
+  left alone and never read. Keep voices for the unit's wording says "in
+  any role".
+- **The Voices place** no longer lists allowed roles in its note.
+
+Phase 5 chapter 2, the settings catalogue, CONTEXT.md's Keep for the
+unit, and the user and admin guides are amended.
+
 ## v1.157.0, 2026-10-23
 
 ```

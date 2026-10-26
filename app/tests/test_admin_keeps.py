@@ -10,6 +10,7 @@ from core import units, voice_book, voice_prints
 from core.audit import Row
 from core.cases import Case
 from core.models import User
+from core.people import Person
 from core.voice_book import UnitVoice
 from tests.helpers import signed_in
 from tests.test_people import a_case as _a_case  # noqa: F401
@@ -106,11 +107,14 @@ def test_everyone_else_keeps_for_the_owners_unit_only(owner, a_case, book_on):  
         voice_book.keep_for(person, ["Capital"], by=owner)
     with pytest.raises(ValueError, match="at least one unit"):
         voice_book.keep_for(person, ["", "  "], by=owner)
-    # The person's own rules hold for an Admin too.
+    # The person's own rule holds for an Admin too: a print is needed. The
+    # role is not (ADR 0024, v1.158.0).
     witness = an_officer(a_case, recording, seed=3, name="Tom Hale", role="Witness")
-    assert voice_book.units_offered(witness, owner) == []
-    with pytest.raises(ValueError, match="not kept for the unit"):
-        voice_book.keep_for(witness, ["Appeals"], by=owner)
+    assert voice_book.units_offered(witness, owner) == ["Appeals", "Trial"]
+    unprinted = Person.objects.create(case=a_case, name="Kim Vale", role="Officer")
+    assert voice_book.units_offered(unprinted, owner) == []
+    with pytest.raises(ValueError, match="no voice print yet"):
+        voice_book.keep_for(unprinted, ["Appeals"], by=owner)
     # A colleague in a unit the person is kept for sees it as theirs; one in
     # another unit sees it kept for a unit they are not in.
     voice_book.keep_for(person, ["Trial"], by=owner)
@@ -187,10 +191,13 @@ def test_the_pages_offer_the_chooser_to_an_admin_only(owner, a_case, book_on, cl
     assert "also kept for the Appeals unit" in place and "(Admin)" in place
     # With the owner in a unit, that unit is ticked first.
     units.set_by_hand(owner, "Trial", by=owner)
-    another = an_officer(a_case, recording, seed=6, name="Sam Burke")
+    another = an_officer(a_case, recording, seed=6, name="Sam Burke", role="")
     tab = client.get(f"/case/{a_case.pk}?tab=speakers").content.decode()
     assert "this case&#x27;s unit" in tab or "this case's unit" in tab
-    assert another.name in tab
+    # A person with no role is offered too (ADR 0024), and the box does not
+    # read "Their role, , goes with the voice".
+    assert another.name in tab and "role, ," not in tab
+    assert "Their notes and this case's name do not go with the voice." in tab
     # Everyone else sees the one button for their own unit.
     colleague = a_colleague()
     theirs = Case.objects.create(owner=colleague, name="Okafor")

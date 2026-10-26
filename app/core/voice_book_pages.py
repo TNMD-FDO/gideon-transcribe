@@ -33,7 +33,6 @@ def voices(request: HttpRequest) -> HttpResponse:
     unit = wanted if wanted in seen else seen[0]
     rows = voice_book.page_rows(unit, request.user)
     live = [one for one in rows if one["live"]]
-    roles = voice_book.roles_allowed()
     counts = voice_book.counts_for_switch()
     decided = voice_book.decided_by_month(unit)
     from django.utils import timezone
@@ -66,7 +65,6 @@ def voices(request: HttpRequest) -> HttpResponse:
                     if share.get("case")
                 }
             ),
-            "roles": roles,
             "decided": decided,
             # The month at the top (v1.151.0, the place as cards): the five
             # numbers a unit lead reads at a glance, and the filter chips.
